@@ -3,6 +3,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { PageLoader } from '@/components/page-loader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/i18n'
+import { AlertCircle } from '@/lib/icons'
+import { cn } from '@/lib/utils'
 import {
   type ActionResponse,
   type CuratorStatusResponse,
@@ -18,14 +21,11 @@ import {
   runDoctor,
   runSecurityAudit,
   setCuratorPaused
-} from '@/hermes'
-import { useI18n } from '@/i18n'
-import { AlertCircle } from '@/lib/icons'
-import { cn } from '@/lib/utils'
+} from '@/scout'
 import { upsertDesktopActionTask } from '@/store/activity'
 import { confirm } from '@/store/confirm'
 import { notify, notifyError } from '@/store/notifications'
-import type { ActionStatusResponse } from '@/types/hermes'
+import type { ActionStatusResponse } from '@/types/scout'
 
 const ACTION_POLL_MS = 1200
 const ACTION_POLL_LIMIT = 240 // ~5 minutes of polling before giving up.
@@ -46,7 +46,7 @@ function formatBytes(size: number): string {
   return `${size} B`
 }
 
-/** Maintenance panel — desktop parity for `hermes doctor` / `security audit` /
+/** Maintenance panel — desktop parity for `scout doctor` / `security audit` /
  *  `backup` / `debug share` / `curator` / `memory` (the dashboard System page's
  *  ops section). Spawn-based actions tail their logs inline via the shared
  *  /api/actions status endpoint. */
@@ -230,7 +230,7 @@ export function MaintenancePanel() {
 
         {share && Object.keys(share.urls).length > 0 && (
           <div className="mt-2 rounded-lg border border-(--ui-stroke-tertiary) bg-(--ui-bg-quinary) p-3">
-            <div className="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="mb-1.5 text-[0.68rem] font-semibold text-muted-foreground">
               {mm.debugShareLinks}
             </div>
             {Object.entries(share.urls).map(([key, url]) => (
@@ -240,7 +240,7 @@ export function MaintenancePanel() {
                 </span>
                 <Button
                   onClick={() => {
-                    void window.hermesDesktop.writeClipboard(url)
+                    void window.scoutDesktop.writeClipboard(url)
                     notify({ durationMs: 1500, kind: 'success', message: mm.linkCopied })
                   }}
                   size="xs"
@@ -255,7 +255,7 @@ export function MaintenancePanel() {
 
         {actionStatus && (
           <div className="mt-2">
-            <div className="mb-1.5 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="mb-1.5 flex items-center gap-2 text-[0.68rem] font-semibold text-muted-foreground">
               {mm.viewLog}
               {actionStatus.running && <span className="normal-case tracking-normal">{mm.running}</span>}
             </div>
@@ -351,7 +351,7 @@ export function MaintenancePanel() {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <div className="mb-1.5 text-[0.625rem] font-medium uppercase tracking-[0.08em] text-(--ui-text-tertiary)">
+    <div className="mb-1.5 text-[0.6875rem] font-medium text-(--ui-text-tertiary)">
       {children}
     </div>
   )

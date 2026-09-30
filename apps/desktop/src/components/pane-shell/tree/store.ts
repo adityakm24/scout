@@ -49,7 +49,7 @@ import { tabStripVisibleForZone } from './renderer/strip-visibility'
 
 // v2: v1 trees were saved against placeholder panes with index-order zone
 // assignment (chat could land in a corner cell). Retire them wholesale.
-writeKey('hermes.desktop.layoutTree.v1', null)
+writeKey('scout.desktop.layoutTree.v1', null)
 
 const defaultTrees: Record<InterfaceMode, LayoutNode | null> = { advanced: null, simple: null }
 
@@ -882,7 +882,7 @@ export function activateTreeTabSlot(slot: number): null | string {
     return null
   }
 
-  activateTreePane(group.id, panes[slot - 1])
+  activateTreePane(group.id, panes[slot - 1], { byUser: true })
 
   return panes[slot - 1]
 }
@@ -911,7 +911,7 @@ export function cycleTreeTabInFocusedZone(direction: 1 | -1): null | string {
   const current = Math.max(0, panes.indexOf(group.active ?? ''))
   const idx = panes.includes(group.active ?? '') ? current : 0
   const nextId = panes[(idx + direction + panes.length) % panes.length]
-  activateTreePane(group.id, nextId)
+  activateTreePane(group.id, nextId, { byUser: true })
 
   // No strip repair here: cycling needs two shown tabs, which is exactly when
   // auto shows a strip anyway. The old force-show existed because a stray
@@ -1428,7 +1428,7 @@ interface PaneDockHint {
 // (token burned even when the heal was skipped; $userPlacedPanes exempt) left
 // exactly the users who had fought the old stacked layout stuck with it —
 // enforced docks (`enforce: true`) replaced it. Drop the stale key.
-writeKey('hermes.desktop.paneDockHeals.v1', null)
+writeKey('scout.desktop.paneDockHeals.v1', null)
 
 // Panes already enforced THIS boot: the invariant re-asserts at boot, not
 // against a live user — a mid-session drag out of the anchor strip sticks
@@ -1855,11 +1855,62 @@ export function mergeTreeZones(groupIds: string[], paneId: string | readonly str
   }
 }
 
-export function activateTreePane(groupId: string, paneId: string) {
+type PaneTabHook = 'onActivate' | 'onDeactivate'
+
+/** A pane contribution's tab hook: `onActivate` when the user brings its tab to
+ *  the front, `onDeactivate` when the user picks another tab over it (the
+ *  Dashboard tab opens and closes its page this way). */
+const paneTabHook = (paneId: string, hook: PaneTabHook) =>
+  (registry.getArea('panes').find(c => c.id === paneId)?.data as Partial<Record<PaneTabHook, () => void>> | undefined)?.[
+    hook
+  ]
+
+/** Front `paneId` in its group. `byUser`: the user chose this tab (a click, a
+ *  keyboard tab switch) — only then do the tab hooks run, so a restored layout
+ *  or an internal handoff never acts on the user's behalf. */
+export function activateTreePane(groupId: string, paneId: string, { byUser = false }: { byUser?: boolean } = {}) {
   const tree = $layoutTree.get()
+  const previous = byUser && tree ? findGroup(tree, groupId)?.active : undefined
 
   if (tree) {
     commit(setActivePaneOp(tree, groupId, paneId))
+  }
+
+  if (byUser) {
+    if (previous && previous !== paneId) {
+      paneTabHook(previous, 'onDeactivate')?.()
+    }
+
+    paneTabHook(paneId, 'onActivate')?.()
+  }
+}
+
+/** Panes whose tab mirrors a page (`data.route`, e.g. the Dashboard): arriving
+ *  on the route by any path (palette, notification, deep link) fronts the tab,
+ *  and leaving it hands the tab back to the pane it docks with. Never runs the
+ *  tab hooks — the route change already happened. */
+export function syncRouteTabs(pathname: string) {
+  const tree = $layoutTree.get()
+
+  if (!tree) {
+    return
+  }
+
+  for (const pane of registry.getArea('panes')) {
+    const data = pane.data as { dock?: { pane?: string }; route?: string } | undefined
+    const group = data?.route ? findGroupOfPane(tree, pane.id) : null
+
+    if (!group) {
+      continue
+    }
+
+    if (pathname === data?.route) {
+      if (group.active !== pane.id) {
+        activateTreePane(group.id, pane.id)
+      }
+    } else if (group.active === pane.id && data?.dock?.pane && group.panes.includes(data.dock.pane)) {
+      activateTreePane(group.id, data.dock.pane)
+    }
   }
 }
 
@@ -2268,7 +2319,7 @@ export function resetLayoutTree() {
 
 // Dev hook for automation.
 if ((import.meta.env.DEV || import.meta.env.VITE_PERF_PROBE === '1') && typeof window !== 'undefined') {
-  ;(window as unknown as Record<string, unknown>).__HERMES_LAYOUT_TREE__ = {
+  ;(window as unknown as Record<string, unknown>).__SCOUT_LAYOUT_TREE__ = {
     close: closeTreePane,
     dismissed: () => $dismissedPanes.get(),
     get: () => $layoutTree.get(),

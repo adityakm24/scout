@@ -13,10 +13,10 @@ controlled by the ``checkpoints`` config flag or ``--checkpoints`` CLI flag.
 Storage layout (single shared store, git objects deduplicated across projects)
 -----------------------------------------------------------------------------
 
-    ~/.hermes/checkpoints/
+    ~/.scout/checkpoints/
         store/                          — single bare-ish git repo
             HEAD, config, objects/      — standard git internals (shared)
-            refs/hermes/<hash16>        — per-project branch tip
+            refs/scout/<hash16>        — per-project branch tip
             indexes/<hash16>            — per-project git index
             projects/<hash16>.json      — {workdir, created_at, last_touch}
             info/exclude                — default excludes (shared)
@@ -57,9 +57,9 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
-from hermes_constants import get_hermes_home
-from hermes_cli._subprocess_compat import selected_git_env, windows_hide_flags
-from hermes_cli.gitlock import clear_stale_tmp_packs
+from scout_constants import get_scout_home
+from scout_cli._subprocess_compat import selected_git_env, windows_hide_flags
+from scout_cli.gitlock import clear_stale_tmp_packs
 from typing import Dict, List, Optional, Set, Tuple
 
 from utils import env_int, rmtree_readonly
@@ -70,20 +70,20 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-CHECKPOINT_BASE = get_hermes_home() / "checkpoints"
+CHECKPOINT_BASE = get_scout_home() / "checkpoints"
 _CHECKPOINT_BASE_AT_IMPORT = CHECKPOINT_BASE
 
 
 def _resolve_checkpoint_base() -> Path:
     """Active profile's checkpoint root at call time: the patched ``CHECKPOINT_BASE`` when a test
-    changed it, else live profile-scoped HERMES_HOME — under the multiplexed gateway one process
+    changed it, else live profile-scoped SCOUT_HOME — under the multiplexed gateway one process
     serves every profile, so the import-time constant would write every profile's code-edit
     checkpoints into the launch profile's store."""
-    return CHECKPOINT_BASE if CHECKPOINT_BASE != _CHECKPOINT_BASE_AT_IMPORT else get_hermes_home() / "checkpoints"
+    return CHECKPOINT_BASE if CHECKPOINT_BASE != _CHECKPOINT_BASE_AT_IMPORT else get_scout_home() / "checkpoints"
 
 # Single shared store directory under CHECKPOINT_BASE.
 _STORE_DIRNAME = "store"
-_REFS_PREFIX = "refs/hermes"
+_REFS_PREFIX = "refs/scout"
 _INDEXES_DIRNAME = "indexes"
 _PROJECTS_DIRNAME = "projects"
 _LEDGERS_DIRNAME = "ledgers"
@@ -120,7 +120,7 @@ DEFAULT_EXCLUDES = [
     ".git/",
     ".hg/",
     ".svn/",
-    # Worktrees (Hermes convention — don't recursively snapshot siblings)
+    # Worktrees (Scout convention — don't recursively snapshot siblings)
     ".worktrees/",
     # Native / compiled binaries
     "*.so",
@@ -157,7 +157,7 @@ DEFAULT_EXCLUDES = [
 ]
 
 # Git subprocess timeout (seconds).
-_GIT_TIMEOUT: int = max(10, min(60, env_int("HERMES_CHECKPOINT_TIMEOUT", 30)))
+_GIT_TIMEOUT: int = max(10, min(60, env_int("SCOUT_CHECKPOINT_TIMEOUT", 30)))
 
 # Max files to snapshot — skip huge directories to avoid slowdowns.
 _MAX_FILES = 50_000
@@ -252,7 +252,7 @@ def _load_ledger(store: Path, dir_hash: str) -> Dict[str, Dict]:
     """Load the agent-write ledger: {relpath: {"sha256": ..., "ts": ...}}.
 
     The ledger records the content hash of every file the last successful
-    ``write_file`` / ``patch`` produced, so restores can tell "Hermes wrote
+    ``write_file`` / ``patch`` produced, so restores can tell "Scout wrote
     this" apart from "the user hand-edited this afterwards".
     """
     try:
@@ -301,7 +301,7 @@ def _git_env(
 ) -> dict:
     """Build env dict that redirects git to the shared store.
 
-    The shared store is internal Hermes infrastructure — it must NOT inherit
+    The shared store is internal Scout infrastructure — it must NOT inherit
     the user's global or system git config.  User-level settings like
     ``commit.gpgsign = true``, signing hooks, or credential helpers would
     either break background snapshots or, worse, spawn interactive prompts
@@ -446,7 +446,7 @@ def _migrate_legacy_store(base: Path) -> Optional[Path]:
     Rather than delete the old data (users might want to recover), rename
     everything except our own v2 entries into ``legacy-<timestamp>/``.  The
     legacy dir is subject to the same retention sweep and can be manually
-    cleared with ``hermes checkpoints clear-legacy``.
+    cleared with ``scout checkpoints clear-legacy``.
 
     Returns the legacy-archive path, or None if nothing to migrate.
     """
@@ -480,7 +480,7 @@ def _migrate_legacy_store(base: Path) -> Optional[Path]:
     if legacy_root is not None:
         logger.info(
             "Migrated pre-v2 checkpoint repos to %s. "
-            "Clear with `hermes checkpoints clear-legacy` when safe.",
+            "Clear with `scout checkpoints clear-legacy` when safe.",
             legacy_root,
         )
     return legacy_root
@@ -543,8 +543,8 @@ def _init_store(store: Path, working_dir: str) -> Optional[str]:
     # Use the base dir as the working_dir for config commands — it always
     # exists since we just created the store inside it.
     cfg_wd = str(base)
-    _run_git(["config", "user.email", "hermes@local"], store, cfg_wd)
-    _run_git(["config", "user.name", "Hermes Checkpoint"], store, cfg_wd)
+    _run_git(["config", "user.email", "scout@local"], store, cfg_wd)
+    _run_git(["config", "user.name", "Scout Checkpoint"], store, cfg_wd)
     _run_git(["config", "commit.gpgsign", "false"], store, cfg_wd)
     _run_git(["config", "tag.gpgSign", "false"], store, cfg_wd)
     _run_git(["config", "gc.auto", "0"], store, cfg_wd)
@@ -692,7 +692,7 @@ def _pre_v2_shadow_repos(base: Path) -> List[Dict]:
             continue
         workdir: Optional[str] = None
         marker_unreadable = False
-        wd_marker = child / "HERMES_WORKDIR"
+        wd_marker = child / "SCOUT_WORKDIR"
         if wd_marker.exists():
             try:
                 workdir = wd_marker.read_text(encoding="utf-8-sig").strip()
@@ -804,11 +804,11 @@ class CheckpointManager:
     # ------------------------------------------------------------------
 
     def record_agent_write(self, file_path: str) -> None:
-        """Record the content hash of a file Hermes just successfully wrote.
+        """Record the content hash of a file Scout just successfully wrote.
 
         Feeds the agent-write ledger used by :meth:`restore` in safe mode:
         at restore time, a file whose current content no longer matches the
-        recorded hash was hand-edited by the user after Hermes last touched
+        recorded hash was hand-edited by the user after Scout last touched
         it, and is skipped instead of clobbered.
 
         Never raises — the ledger is best-effort bookkeeping.
@@ -836,9 +836,9 @@ class CheckpointManager:
 
         Returns ``{"success", "restore": [rel...], "skipped": [rel...],
         "error"?}`` where ``restore`` lists files whose current content
-        still matches what Hermes last wrote (per the agent-write ledger)
-        and ``skipped`` lists files the user hand-edited after Hermes'
-        last write or that Hermes never wrote at all.
+        still matches what Scout last wrote (per the agent-write ledger)
+        and ``skipped`` lists files the user hand-edited after Scout'
+        last write or that Scout never wrote at all.
         """
         hash_err = _validate_commit_hash(commit_hash)
         if hash_err:
@@ -868,7 +868,7 @@ class CheckpointManager:
         # Read the same marker-walked project key as record_agent_write.
         ledger = _load_ledger(store, self._ledger_key(abs_dir))
         if not ledger:
-            # No agent-write ledger yet (pre-existing store, or Hermes has
+            # No agent-write ledger yet (pre-existing store, or Scout has
             # not written any files here since the ledger was introduced).
             # Signal callers to fall back to a full restore rather than
             # skipping every file.
@@ -881,14 +881,14 @@ class CheckpointManager:
             entry = ledger.get(str(abs_path))
             recorded = entry.get("sha256") if isinstance(entry, dict) else None
             if recorded is None:
-                # Hermes never wrote this file (or the ledger predates it) —
+                # Scout never wrote this file (or the ledger predates it) —
                 # do not touch it in safe mode.
                 skipped.append(rel)
                 continue
             current = _hash_file(abs_path)
             if current is None:
-                # File deleted since Hermes wrote it: restoring it back is
-                # safe — its last content was Hermes-authored.
+                # File deleted since Scout wrote it: restoring it back is
+                # safe — its last content was Scout-authored.
                 restore.append(rel)
             elif current == recorded:
                 restore.append(rel)
@@ -1065,7 +1065,7 @@ class CheckpointManager:
     def session_diff(self, working_dir: str) -> Dict:
         """Show the cumulative diff of everything changed in this directory.
 
-        This powers ``/diff session``.  It answers "what has Hermes changed
+        This powers ``/diff session``.  It answers "what has Scout changed
         here?" by diffing the *earliest retained checkpoint* — the snapshot
         taken before the first recorded edit — against the current working
         tree.  Because checkpoints are captured just before each file-mutating
@@ -1075,7 +1075,7 @@ class CheckpointManager:
         Note: checkpoints are a persistent per-project ref, so the earliest
         *retained* checkpoint may predate the current session (or, after
         pruning, postdate its true start).  It is an approximation of "what
-        Hermes changed", not an exact per-session ledger.
+        Scout changed", not an exact per-session ledger.
 
         Returns the same shape as :meth:`diff` (``{"success", "stat",
         "diff"}``).  When no checkpoints exist yet — nothing has been edited —
@@ -1104,8 +1104,8 @@ class CheckpointManager:
         """Restore files to a checkpoint state.
 
         With ``safe=True`` (full-directory restores only), files the user
-        hand-edited after Hermes' last write — per the agent-write ledger —
-        are left untouched, and only Hermes-authored changes are reverted.
+        hand-edited after Scout's last write — per the agent-write ledger —
+        are left untouched, and only Scout-authored changes are reverted.
         The result gains ``skipped_user_edits`` listing the preserved paths,
         ``skipped_oversize`` listing paths kept because the size cap excluded
         them from every checkpoint, and — only when a delete failed —
@@ -1177,7 +1177,7 @@ class CheckpointManager:
 
         if restore_paths is not None:
             # Split into files present in the checkpoint (checkout) and
-            # Hermes-created files absent from it (delete to restore state).
+            # Scout-created files absent from it (delete to restore state).
             checkout_targets: List[str] = []
             delete_targets: List[str] = []
             for rel in restore_paths:
@@ -1190,7 +1190,7 @@ class CheckpointManager:
                 elif self._exceeds_size_cap(Path(abs_dir) / rel):
                     # Absent from the checkpoint because ``max_file_size_mb``
                     # kept it out (_drop_oversize_from_index), not because
-                    # Hermes created it. Deleting it would not restore a prior
+                    # Scout created it. Deleting it would not restore a prior
                     # state — no checkpoint holds one — it would destroy the
                     # only copy. The ledger records a content hash, not whether
                     # a write created or modified the file, so an oversize path

@@ -1,6 +1,6 @@
 """Skill Sync wire model: content-addressed objects, the HTTP client, tree walks.
 
-Independent of local skill state (no ``~/.hermes`` reads); ``tools/skills_sync_client.py``
+Independent of local skill state (no ``~/.scout`` reads); ``tools/skills_sync_client.py``
 orchestrates push/pull on top of it and re-exports these names. Wire contract version 1:
 ``hsp_version`` / ``X-HSP-Object-Type`` are deployed protocol identifiers and are NOT
 renamed with the product name "Skill Sync".
@@ -187,8 +187,8 @@ def _check_version(caps: Dict[str, Any]) -> None:
     """Reject an incompatible server major version."""
     ver = str(caps.get("hsp_version") or "")  # wire field name
     if ver.split(".", 1)[0] != WIRE_VERSION:
-        raise SyncError(f"this server speaks sync version {ver!r}, but this Hermes speaks "
-                        f"{WIRE_VERSION} — update Hermes to sync with it")
+        raise SyncError(f"this server speaks sync version {ver!r}, but this Scout speaks "
+                        f"{WIRE_VERSION} — update Scout to sync with it")
 
 
 def _body(r) -> Dict[str, Any]:
@@ -203,7 +203,7 @@ def checked_capabilities(client: "SyncClient") -> Tuple[Dict[str, Any], int]:
 
 
 class SyncClient:
-    """Sync client bound to a base URL + Nous bearer. Org refs/objects live behind SEPARATE ``org/``
+    """Sync client bound to a base URL + SpaceshipResearch bearer. Org refs/objects live behind SEPARATE ``org/``
     routes: the personal routes are hard-scoped to the token's owner and would silently answer an
     org query with personal data, so org readers MUST pass ``org_scope=True`` on every hop."""
 

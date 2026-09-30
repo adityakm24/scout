@@ -1,4 +1,4 @@
-import type { SubagentStatus } from '@hermes/shared/gateway-events'
+import type { SubagentStatus } from '@scout/shared/gateway-events'
 import { atom } from 'nanostores'
 
 import type { SpawnTreeLoadResponse } from '../gatewayTypes.js'

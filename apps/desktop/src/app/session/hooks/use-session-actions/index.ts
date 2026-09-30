@@ -11,13 +11,6 @@ import {
 import { defaultNewSessionTarget, prepareDefaultNewSession } from '@/app/session/new-session-route'
 import { revealTreePane } from '@/components/pane-shell/tree/store'
 import { setWorkspaceScope } from '@/components/pane-shell/workspace-scope'
-import {
-  deleteSession,
-  fetchStoredTranscriptAcrossBackends,
-  getAllSessionMessages,
-  getLatestSessionMessages,
-  setSessionArchived
-} from '@/hermes'
 import { useI18n } from '@/i18n'
 import {
   type ChatMessage,
@@ -32,6 +25,13 @@ import { isMissingRpcMethod } from '@/lib/gateway-rpc'
 import { recoverInFlightTurnJournal } from '@/lib/inflight-turn-journal'
 import { latestSessionTodoSnapshot } from '@/lib/todos'
 import { setSessionYolo } from '@/lib/yolo-session'
+import {
+  deleteSession,
+  fetchStoredTranscriptAcrossBackends,
+  getAllSessionMessages,
+  getLatestSessionMessages,
+  setSessionArchived
+} from '@/scout'
 import { $clarifyRequests, clearClarifyRequest } from '@/store/clarify'
 import { announceGoneSessionDraft, announceNewSessionDraftKey, migrateSessionDraft } from '@/store/composer'
 import { clearQueuedPrompts, migrateQueuedPrompts } from '@/store/composer-queue'
@@ -148,7 +148,7 @@ import type {
   SessionMessagesResponse,
   SessionResumeResult,
   UsageStats
-} from '@/types/hermes'
+} from '@/types/scout'
 
 import { navigateToWorkspacePage, NEW_CHAT_ROUTE, sessionRoute, SETTINGS_ROUTE } from '../../../routes'
 import type { ClientSessionState, SidebarNavItem } from '../../../types'
@@ -955,13 +955,13 @@ export function useSessionActions({
         //
         // No `hidden` here, in either mode. Only Bot Mode's PLUMBING sessions
         // are born hidden, and each mints its own row: the canonical Bot Chat
-        // (`hermes-bots/canonical-chat.ts`) and group member sessions
-        // (`hermes-bots/group-turns.ts`). Every session this path creates is a
+        // (`scout-bots/canonical-chat.ts`) and group member sessions
+        // (`scout-bots/group-turns.ts`). Every session this path creates is a
         // side chat the user asked for by hand — "New chat with this bot" and
         // the Bot Mode tab-strip "+" / ⌘T — so it is an ordinary conversation
         // in the bot's profile and stays listed, exactly as
         // `apps/desktop/src/AGENTS.md` and the hide sweep's title allow-list
-        // (`hermes-bots/session-sweep.ts`) already promise. Blanket-hiding the
+        // (`scout-bots/session-sweep.ts`) already promise. Blanket-hiding the
         // mode stranded them: unlisted in the Sessions sidebar, skipped by
         // `/resume`, and reachable only while their tab stayed open, since the
         // bot row opens the canonical chat and "Open recent session" reads

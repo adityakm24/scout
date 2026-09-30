@@ -4,15 +4,15 @@ import { $connection } from '@/store/session'
 
 import { reachablePreviewUrl } from './preview-reach'
 
-const desktopWindow = window as unknown as { hermesDesktop?: Window['hermesDesktop'] }
+const desktopWindow = window as unknown as { scoutDesktop?: Window['scoutDesktop'] }
 
 function installBridge(reachPreviewUrl?: unknown) {
-  desktopWindow.hermesDesktop = { reachPreviewUrl } as unknown as Window['hermesDesktop']
+  desktopWindow.scoutDesktop = { reachPreviewUrl } as unknown as Window['scoutDesktop']
 }
 
 afterEach(() => {
   $connection.set(null)
-  delete desktopWindow.hermesDesktop
+  delete desktopWindow.scoutDesktop
 })
 
 describe('reachablePreviewUrl', () => {

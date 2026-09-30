@@ -1,4 +1,4 @@
-import { SLASH_COMMAND_RE } from '@hermes/shared'
+import { SLASH_COMMAND_RE } from '@scout/shared'
 import { atom } from 'nanostores'
 
 import { type ComposerAttachment, revokeAttachmentPreviewUrls, revokeDiscardedAttachmentPreviews } from './composer'
@@ -42,7 +42,7 @@ export const isSteerableEntry = (entry: Pick<QueuedPromptEntry, 'attachments' | 
 
 type QueueState = Record<string, QueuedPromptEntry[]>
 
-const STORAGE_KEY = 'hermes.desktop.composerQueue.v1'
+const STORAGE_KEY = 'scout.desktop.composerQueue.v1'
 
 const load = (): QueueState => {
   if (typeof window === 'undefined') {

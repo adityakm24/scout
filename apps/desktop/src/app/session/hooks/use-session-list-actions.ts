@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 
-import { getApiRequestConnection, listAllProfileSessions, listSidebarSessions, type SessionInfo } from '@/hermes'
 import { sameCronSignature } from '@/lib/session-signatures'
 import {
   isMessagingSource,
@@ -8,6 +7,7 @@ import {
   MESSAGING_SESSION_SOURCE_IDS,
   normalizeSessionSource
 } from '@/lib/session-source'
+import { getApiRequestConnection, listAllProfileSessions, listSidebarSessions, type SessionInfo } from '@/scout'
 import { gatewayActivationEpoch } from '@/store/gateway'
 import {
   $pinnedSessionIds,
@@ -54,7 +54,7 @@ import { $sessionTiles, $workingSessionIds, getRecentlySettledSessionIds } from 
 import { refreshCronJobs as refreshCronJobsStore } from '../../cron/cron-actions'
 
 // The recents list is local-only: cron rows have their own section, kanban
-// dispatcher workers are read on the board, finite one-shot runs (`hermes -z`,
+// dispatcher workers are read on the board, finite one-shot runs (`scout -z`,
 // `chat -q`) are not conversations, and each messaging platform
 // (telegram, discord, …) is fetched separately into its own self-managed
 // sidebar section (refreshMessagingSessions). Excluding them here keeps

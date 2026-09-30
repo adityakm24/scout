@@ -1,9 +1,9 @@
-# nix/desktop.nix — Hermes Desktop (Electron) app build + wrapper
+# nix/desktop.nix — Scout Desktop (Electron) app build + wrapper
 #
-# `hermesAgent` is the fully-built `.#default` package — it ships the
-# `hermes` binary with the venv, runtime PATH, bundled skills/plugins, etc.
+# `scoutAgent` is the fully-built `.#default` package — it ships the
+# `scout` binary with the venv, runtime PATH, bundled skills/plugins, etc.
 # already wired up.  We point the desktop at it via the existing
-# `HERMES_DESKTOP_HERMES` override env var, so the desktop's resolver
+# `SCOUT_DESKTOP_SCOUT` override env var, so the desktop's resolver
 # uses our fully wrapped binary before the mutable managed install.
 # No reimplementation of the agent resolution in this wrapper.
 {
@@ -11,16 +11,16 @@
   lib,
   stdenv,
   makeWrapper,
-  hermesNpmLib,
+  scoutNpmLib,
   electron,
-  hermesAgent,
+  scoutAgent,
   installStampFile,
   generatedIcons,
   python3,
   # Environment to bake into the launcher. A GUI launcher reads none of the
   # shell profile, so a variable that an interactive shell exports does not
   # reach an app that the desktop menu starts. The Home Manager module passes
-  # HERMES_HOME and HERMES_MANAGED here, which gives the app the same state
+  # SCOUT_HOME and SCOUT_MANAGED here, which gives the app the same state
   # directory as the services.
   extraEnv ? { },
   # Shell lines to run before the app starts. A secret belongs here and never
@@ -50,7 +50,7 @@ let
     else if stdenv.hostPlatform.isLinux then
       "linux"
     else
-      throw "hermes-desktop: unsupported host platform for node-pty staging";
+      throw "scout-desktop: unsupported host platform for node-pty staging";
 
   targetArch =
     if stdenv.hostPlatform.isAarch64 then
@@ -58,10 +58,10 @@ let
     else if stdenv.hostPlatform.isx86_64 then
       "x64"
     else
-      throw "hermes-desktop: unsupported host arch for node-pty staging";
+      throw "scout-desktop: unsupported host arch for node-pty staging";
 
   # Build the renderer (dist/ + electron/ + package.json).
-  renderer = hermesNpmLib.buildNpmPackage {
+  renderer = scoutNpmLib.buildNpmPackage {
     dirs = [
       "apps/desktop"
       "apps/shared"
@@ -73,7 +73,7 @@ let
       "scripts/msix-shared.mjs"
       "scripts/release-content-types.json"
     ];
-    pname = "hermes-desktop-renderer";
+    pname = "scout-desktop-renderer";
 
     doCheck = true;
 
@@ -90,7 +90,7 @@ let
       # (node-gyp's --disturl path can't run in the sandbox), and is already
       # the --nodedir layout. Same pattern as signal-desktop / github-desktop /
       # session-desktop / rstudio in nixpkgs.
-      ${lib.getExe hermesNpmLib.node-gyp} rebuild \
+      ${lib.getExe scoutNpmLib.node-gyp} rebuild \
         --directory=node_modules/node-pty \
         --build-from-source \
         --runtime=electron \
@@ -149,7 +149,7 @@ in
 
 # Electron wrapper: nixpkgs' electron binary pointed at the renderer dir.
 stdenv.mkDerivation {
-  pname = "hermes-desktop";
+  pname = "scout-desktop";
   inherit (renderer) version;
 
   dontUnpack = true;
@@ -163,34 +163,34 @@ stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
 
-    mkdir -p $out/share/hermes-desktop $out/bin
-    cp -r ${renderer}/* $out/share/hermes-desktop/
+    mkdir -p $out/share/scout-desktop $out/bin
+    cp -r ${renderer}/* $out/share/scout-desktop/
 
     # Standard nixpkgs pattern for electron-builder apps: patch process.resourcesPath
     # to point to the app's directory. In Nix, unpackaged electron defaults this
     # to the electron distribution's resources path, breaking extraResources lookups.
-    substituteInPlace $out/share/hermes-desktop/dist/electron-main.mjs \
-      --replace-fail "process.resourcesPath" "'$out/share/hermes-desktop'"
+    substituteInPlace $out/share/scout-desktop/dist/electron-main.mjs \
+      --replace-fail "process.resourcesPath" "'$out/share/scout-desktop'"
 
     # Wrap the nixpkgs electron binary to launch our app.  Set
-    # HERMES_DESKTOP_HERMES to the absolute path of the nix-built `hermes`
+    # SCOUT_DESKTOP_SCOUT to the absolute path of the nix-built `scout`
     # binary so the deployment override selects our fully wrapped binary
     # before any mutable managed install — venv with all deps,
     # bundled skills/plugins, runtime PATH (ripgrep/git/ffmpeg/etc).
     # No reimplementation of the agent resolver in the wrapper.
-    makeWrapper ${lib.getExe electron} $out/bin/hermes-desktop \
-      --add-flags "$out/share/hermes-desktop" \
-      --set HERMES_DESKTOP_HERMES "${lib.getExe hermesAgent}" \
+    makeWrapper ${lib.getExe electron} $out/bin/scout-desktop \
+      --add-flags "$out/share/scout-desktop" \
+      --set SCOUT_DESKTOP_SCOUT "${lib.getExe scoutAgent}" \
       --set ELECTRON_IS_DEV 0${extraEnvFlags}${extraRunFlags}
 
     # XDG launcher entry
     mkdir -p $out/share/applications $out/share/icons/hicolor/1024x1024/apps
     install -m 0644 ${generatedIcons}/apps/desktop/assets/icon.png \
-      $out/share/icons/hicolor/1024x1024/apps/hermes.png
+      $out/share/icons/hicolor/1024x1024/apps/scout.png
     export PYTHONPATH=$(mktemp -d)
-    cp ${../hermes_cli/linux_desktop_entry.py} "$PYTHONPATH/linux_desktop_entry.py"
-    export DESKTOP_EXEC="$out/bin/hermes-desktop"
-    export DESKTOP_ICON="$out/share/icons/hicolor/1024x1024/apps/hermes.png"
+    cp ${../scout_cli/linux_desktop_entry.py} "$PYTHONPATH/linux_desktop_entry.py"
+    export DESKTOP_EXEC="$out/bin/scout-desktop"
+    export DESKTOP_ICON="$out/share/icons/hicolor/1024x1024/apps/scout.png"
     entry_name=$(python3 -c 'from linux_desktop_entry import DESKTOP_ENTRY_NAME; print(DESKTOP_ENTRY_NAME)')
     python3 -c 'import os; from linux_desktop_entry import render_desktop_entry; print(render_desktop_entry(os.environ["DESKTOP_EXEC"], os.environ["DESKTOP_ICON"]))' > "$out/share/applications/$entry_name"
     runHook postInstall
@@ -201,10 +201,10 @@ stdenv.mkDerivation {
   };
 
   meta = with lib; {
-    description = "Native Electron desktop shell for Hermes Agent";
-    homepage = "https://github.com/NousResearch/hermes-agent";
+    description = "Native Electron desktop shell for Scout Agent";
+    homepage = "https://github.com/SpaceshipResearch/scout-agent";
     license = licenses.mit;
     platforms = platforms.unix;
-    mainProgram = "hermes-desktop";
+    mainProgram = "scout-desktop";
   };
 }

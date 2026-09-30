@@ -1,6 +1,6 @@
 import { type AppendMessage, AssistantRuntimeProvider, type ThreadMessage } from '@assistant-ui/react'
-import type { ModelOptionsResult } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
+import type { ModelOptionsResult } from '@scout/shared'
 import { useQuery } from '@tanstack/react-query'
 import type { ReadableAtom } from 'nanostores'
 import type * as React from 'react'
@@ -17,7 +17,6 @@ import { usePaneGroup, usePaneVisible } from '@/components/pane-shell/pane-visib
 import { $hoveredTreeGroup, $sessionTileDragging, $sessionTileEdgeHover } from '@/components/pane-shell/tree/store'
 import { PromptOverlays } from '@/components/prompt-overlays'
 import { TitleMenuTrigger } from '@/components/ui/title-menu-trigger'
-import { type HermesGateway } from '@/hermes'
 import { useI18n } from '@/i18n'
 import type { ChatMessage } from '@/lib/chat-messages'
 import { NEW_SESSION_TITLE, quickModelOptions, sessionTitle } from '@/lib/chat-runtime'
@@ -25,6 +24,7 @@ import { useIncrementalExternalStoreRuntime } from '@/lib/incremental-external-s
 import { currentModelCapabilities, modelOptionsQueryKey, requestModelOptions } from '@/lib/model-options'
 import { useStoreSelector } from '@/lib/use-session-slice'
 import { cn } from '@/lib/utils'
+import { type ScoutGateway } from '@/scout'
 import { migrateSessionDraft } from '@/store/composer'
 import { migrateQueuedPrompts, parkQueuedPrompts } from '@/store/composer-queue'
 import { $introSplash } from '@/store/intro-splash'
@@ -89,7 +89,7 @@ import { advanceSessionTranscriptWindow, type SessionWindowMemo } from './transc
 import { useTranscriptRetention } from './use-transcript-retention'
 
 interface ChatViewProps extends Omit<React.ComponentProps<'div'>, 'onSubmit'> {
-  gateway: HermesGateway | null
+  gateway: ScoutGateway | null
   modelOptionsOwnerConnectionId?: string
   modelOptionsProfile?: string
   modelMenuContent?: React.ReactNode

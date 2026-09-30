@@ -4,6 +4,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ErrorBanner } from '@/components/ui/error-state'
 import { Input } from '@/components/ui/input'
+import { useI18n } from '@/i18n'
+import { openExternalLink } from '@/lib/external-link'
+import { Check, ExternalLink, QrCode, Save, X } from '@/lib/icons'
+import { isSubmitEnter } from '@/lib/ime'
+import { cn } from '@/lib/utils'
 import {
   applyTelegramOnboarding,
   cancelTelegramOnboarding,
@@ -12,12 +17,7 @@ import {
   startTelegramOnboarding,
   type TelegramOnboardingApplyResponse,
   type TelegramOnboardingStartResponse
-} from '@/hermes'
-import { useI18n } from '@/i18n'
-import { openExternalLink } from '@/lib/external-link'
-import { Check, ExternalLink, QrCode, Save, X } from '@/lib/icons'
-import { isSubmitEnter } from '@/lib/ime'
-import { cn } from '@/lib/utils'
+} from '@/scout'
 
 import { CREDENTIAL_CONTROL_CLASS } from '../settings/credential-key-ui'
 
@@ -60,7 +60,7 @@ export interface TelegramQrSetupProps {
 }
 
 /**
- * Telegram "Quick setup": the Nous pairing service mints a bot on the user's
+ * Telegram "Quick setup": the SpaceshipResearch pairing service mints a bot on the user's
  * behalf; we show its QR/deep link, poll until Telegram confirms, let the user
  * review the allowlist, and apply. Mirrors the dashboard's Channels flow so
  * the Desktop no longer sends users to @BotFather by hand.
@@ -306,7 +306,7 @@ export function TelegramQrSetup({ onApplied, platform, scopeProfile }: TelegramQ
 
                 <div className="grid gap-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    <span className="text-[0.7rem] font-semibold text-muted-foreground">
                       {q.allowedUsers}
                     </span>
                     {detectedOwnerId && allowedIds.includes(detectedOwnerId) && (

@@ -19,14 +19,14 @@ function stubGateway(
 }
 
 function stubDesktopLogs(lines: null | string[]) {
-  const original = window.hermesDesktop
+  const original = window.scoutDesktop
 
-  Object.defineProperty(window, 'hermesDesktop', {
+  Object.defineProperty(window, 'scoutDesktop', {
     configurable: true,
     value: lines ? { getRecentLogs: async () => ({ lines, path: '/tmp/desktop.log' }) } : undefined
   })
 
-  return () => Object.defineProperty(window, 'hermesDesktop', { configurable: true, value: original })
+  return () => Object.defineProperty(window, 'scoutDesktop', { configurable: true, value: original })
 }
 
 describe('send-diagnostics store', () => {
@@ -67,7 +67,7 @@ describe('send-diagnostics store', () => {
       expect(request).toHaveBeenCalledTimes(1)
       const [method, params] = request.mock.calls[0]
 
-      expect(method).toBe('diagnostics.share_nous')
+      expect(method).toBe('diagnostics.share_spaceshipresearch')
       expect(params.error_context).toContain('stream_drop')
       expect(params.extra_files['desktop.log']).toContain('ws connected')
 

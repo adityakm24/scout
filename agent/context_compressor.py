@@ -73,7 +73,7 @@ def _safe_int(value: Any) -> int | None:
 # deliberate main-model retry that must NOT re-issue the pin). The summary call is the ONLY auxiliary LLM
 # call a lean compaction attempt makes (#96603) — there are no sibling digest calls.
 _SUMMARY_ROUTE_PIN: contextvars.ContextVar[Optional[Dict[str, Any]]] = (
-    contextvars.ContextVar("hermes_summary_route_pin", default=None)
+    contextvars.ContextVar("scout_summary_route_pin", default=None)
 )
 
 # ``timeout`` is included so a fallback entry keeps its own deadline.
@@ -318,7 +318,7 @@ MODEL_ONLY_DISPLAY_METADATA_KEY = "model_only"
 # agent/chat_completion_helpers.py) strip every top-level ``_``-prefixed key before the request leaves the
 # process, so this never reaches a strict OpenAI-compatible gateway. CONTRACT (#92231): the marker asserts
 # "this dict's CONTENT is durable as written". Loaded rows are stamped at materialization time
-# (hermes_state._rows_to_conversation), so any code that mutates a loaded or flushed dict's content in place
+# (scout_state._rows_to_conversation), so any code that mutates a loaded or flushed dict's content in place
 # and needs the change persisted MUST pop the marker (and invalidate _db_flush_scan_prefix if the dict may
 # sit inside the bounded-scan prefix) — see agent/turn_finalizer.py (fill-empty-tail) and
 # agent/context_compressor.py (micro-compaction defrag) for the two canonical pop sites. Mutating without
@@ -1929,11 +1929,11 @@ def _today_for_prompt() -> str:
     """Date-only (user tz) for temporal anchoring; "" when the clock fails. Cache-safe: the summary is outside the prefix."""
     try:
         # Date-only granularity matches system_prompt.py:337 (PR #20451) and the user's configured timezone
-        # via hermes_time.now(). The compaction summary is a mid-conversation message that is NOT part of
+        # via scout_time.now(). The compaction summary is a mid-conversation message that is NOT part of
         # the cached prefix, so a date here never affects prompt-cache stability. Resolved defensively — a
         # clock failure must never block compaction.
-        from hermes_time import now as _hermes_now
-        return _hermes_now().strftime("%Y-%m-%d")
+        from scout_time import now as _scout_now
+        return _scout_now().strftime("%Y-%m-%d")
     except Exception:  # pragma: no cover - clock resolution is best-effort
         return ""
 
@@ -4378,7 +4378,7 @@ Write only the summary body. Do not include any preamble or prefix."""
             if not text:
                 continue
             text = re.sub(r"\s+", " ", text)
-            # Elide AFTER repr: repr would escape the marker's "Hermes's" and hide a copy from the
+            # Elide AFTER repr: repr would escape the marker's "Scout's" and hide a copy from the
             # guard. Text within the cap stays whole (the split-turn path relies on that).
             text = repr(text) if len(text) <= _ACTIVE_TASK_MAX_CHARS else elide(repr(text), _ACTIVE_TASK_MAX_CHARS)
             return (
@@ -5374,7 +5374,7 @@ Write only the summary body. Do not include any preamble or prefix."""
             # compressed-away message dicts), which makes this the natural point to hand allocator pages
             # back to the OS. #76905's trim lifecycle covers the gateway/TUI housekeeping loops but not the
             # CLI compression path, so RSS keeps the pre-compaction high-water mark until exit. (#70782)
-            from hermes_cli.mem_trim import trim_memory
+            from scout_cli.mem_trim import trim_memory
             trim_memory(reason="post-compression")
         except Exception as exc:
             logger.debug("post-compression memory trim failed: %s: %s", type(exc).__name__, exc)

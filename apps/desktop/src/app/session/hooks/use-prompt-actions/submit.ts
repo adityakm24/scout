@@ -1,7 +1,6 @@
-import type { PromptSubmitResult } from '@hermes/shared'
+import type { PromptSubmitResult } from '@scout/shared'
 import { type MutableRefObject, useCallback } from 'react'
 
-import { PROMPT_SUBMIT_REQUEST_TIMEOUT_MS } from '@/hermes'
 import type { Translations } from '@/i18n'
 import { type ChatMessage, textPart } from '@/lib/chat-messages'
 import { optimisticAttachmentRef } from '@/lib/chat-runtime'
@@ -14,6 +13,7 @@ import {
   stopVoicePlayback,
   takeVoicePlaybackInterrupted
 } from '@/lib/voice-playback'
+import { PROMPT_SUBMIT_REQUEST_TIMEOUT_MS } from '@/scout'
 import {
   $composerAttachments,
   type ComposerAttachment,
@@ -37,7 +37,7 @@ import {
   touchSessionActivity
 } from '@/store/session'
 import { $sessionStates, $sessionTiles } from '@/store/session-states'
-import type { SessionInfo } from '@/types/hermes'
+import type { SessionInfo } from '@/types/scout'
 
 import {
   profileScopeForTranscriptSession,
@@ -881,7 +881,7 @@ export function useSubmitPrompt(deps: SubmitPromptDeps) {
           // row display_kind=hidden so no client renders it as a bubble.
           ...(options?.displayKind === 'hidden' && { display_kind: 'hidden' }),
           // Typed into the floating HUD, so the user is looking at another app
-          // rather than at Hermes. The gateway turns this into a per-turn hint
+          // rather than at Scout. The gateway turns this into a per-turn hint
           // to read the window underneath and work in it.
           ...($hudMode.get() && { surface: 'hud' }),
           // A GPT-Live delegation: the text is a voice transcript and the reply

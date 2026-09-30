@@ -27,7 +27,7 @@ from tools.delegate_tool import (
     _resolve_child_credential_pool,
     _resolve_delegation_credentials,
 )
-from hermes_state import SessionDB
+from scout_state import SessionDB
 
 
 def _make_mock_parent(depth=0):
@@ -77,7 +77,7 @@ class TestStripBlockedTools(unittest.TestCase):
     def test_mixed_composite_is_subtracted_at_child_assembly(self):
         """A mixed platform bundle must not re-expose blocked leaf tools.
 
-        ``hermes-cli`` contains both allowed tools and every sensitive
+        ``scout-cli`` contains both allowed tools and every sensitive
         delegate tool, so it cannot be dropped wholesale. Child construction
         must instead pass exact one-tool deny toolsets to AIAgent, where
         model_tools applies them after resolving the composite.
@@ -85,7 +85,7 @@ class TestStripBlockedTools(unittest.TestCase):
         import model_tools
 
         parent = _make_mock_parent()
-        parent.enabled_toolsets = ["hermes-cli"]
+        parent.enabled_toolsets = ["scout-cli"]
         parent.disabled_toolsets = ["browser"]
 
         with patch("run_agent.AIAgent") as MockAgent:
@@ -130,7 +130,7 @@ class TestStripBlockedTools(unittest.TestCase):
         import model_tools
 
         parent = _make_mock_parent()
-        parent.enabled_toolsets = ["hermes-cli"]
+        parent.enabled_toolsets = ["scout-cli"]
         parent.disabled_toolsets = ["delegation", "browser"]
 
         with (
@@ -329,18 +329,18 @@ class TestDelegateTask(unittest.TestCase):
                     child_db.close()
                 parent_db.close()
 
-    def test_nous_child_rederives_api_mode_from_model(self):
+    def test_spaceshipresearch_child_rederives_api_mode_from_model(self):
         """Portal is dual-wire — same provider + different model prefix must
         not inherit the parent's Messages/chat_completions mode verbatim.
-        Native wire selected (opt-in since 2026-09-06, ``nous.anthropic_wire``)."""
-        with patch("hermes_cli.providers._nous_anthropic_wire", return_value="native"):
-            self._nous_child_rederives_api_mode_from_model()
+        Native wire selected (opt-in since 2026-09-06, ``spaceshipresearch.anthropic_wire``)."""
+        with patch("scout_cli.providers._spaceshipresearch_anthropic_wire", return_value="native"):
+            self._spaceshipresearch_child_rederives_api_mode_from_model()
 
-    def _nous_child_rederives_api_mode_from_model(self):
+    def _spaceshipresearch_child_rederives_api_mode_from_model(self):
         parent = _make_mock_parent(depth=0)
-        parent.base_url = "https://inference-api.nousresearch.com/v1"
+        parent.base_url = "https://inference-api.spaceshipresearch.com/v1"
         parent.api_key = "portal-jwt"
-        parent.provider = "nous"
+        parent.provider = "spaceshipresearch"
         parent.api_mode = "anthropic_messages"
         parent.model = "anthropic/claude-opus-4.8"
 
@@ -353,22 +353,22 @@ class TestDelegateTask(unittest.TestCase):
                 goal="Stay on chat completions",
                 context=None,
                 toolsets=None,
-                model="hermes-4-405b",
+                model="scout-4-405b",
                 max_iterations=10,
                 parent_agent=parent,
                 task_count=1,
             )
 
             _, kwargs = MockAgent.call_args
-            self.assertEqual(kwargs["provider"], "nous")
-            self.assertEqual(kwargs["model"], "hermes-4-405b")
+            self.assertEqual(kwargs["provider"], "spaceshipresearch")
+            self.assertEqual(kwargs["model"], "scout-4-405b")
             self.assertEqual(kwargs["api_mode"], "chat_completions")
 
         with patch("run_agent.AIAgent") as MockAgent:
             mock_child = MagicMock()
             MockAgent.return_value = mock_child
             parent.api_mode = "chat_completions"
-            parent.model = "hermes-4-405b"
+            parent.model = "scout-4-405b"
 
             _build_child_agent(
                 task_index=0,
@@ -884,7 +884,7 @@ class TestDelegationCredentialResolution(unittest.TestCase):
         self.assertEqual(creds["api_mode"], "anthropic_messages")
 
 
-    @patch("hermes_cli.runtime_provider.resolve_runtime_provider")
+    @patch("scout_cli.runtime_provider.resolve_runtime_provider")
     def test_base_url_with_provider_carries_runtime_request_overrides(self, mock_resolve):
         """#65035: the base_url short-circuit must not drop the configured
         provider's generic request_overrides; dedicated output caps are ignored."""
@@ -915,7 +915,7 @@ class TestDelegationCredentialResolution(unittest.TestCase):
         self.assertNotIn("max_output_tokens", creds)
 
 
-    @patch("hermes_cli.runtime_provider.resolve_runtime_provider")
+    @patch("scout_cli.runtime_provider.resolve_runtime_provider")
     def test_base_url_survives_runtime_resolution_failure(self, mock_resolve):
         """Best-effort: the explicit endpoint worked before this change even
         when the provider can't resolve — a resolution failure must not
@@ -928,7 +928,7 @@ class TestDelegationCredentialResolution(unittest.TestCase):
         self.assertIsNone(creds["request_overrides"])
         self.assertNotIn("max_output_tokens", creds)
 
-    @patch("hermes_cli.runtime_provider.resolve_runtime_provider")
+    @patch("scout_cli.runtime_provider.resolve_runtime_provider")
     def test_provider_resolution_failure_raises_valueerror(self, mock_resolve):
         """When provider resolution fails, ValueError is raised with helpful message."""
         mock_resolve.side_effect = RuntimeError("OPENROUTER_API_KEY not set")
@@ -938,7 +938,7 @@ class TestDelegationCredentialResolution(unittest.TestCase):
             _resolve_delegation_credentials(cfg, parent)
         self.assertIn("openrouter", str(ctx.exception).lower())
 
-    @patch("hermes_cli.runtime_provider.resolve_runtime_provider")
+    @patch("scout_cli.runtime_provider.resolve_runtime_provider")
     def test_provider_resolves_but_no_api_key_raises(self, mock_resolve):
         """When provider resolves but has no API key, ValueError is raised."""
         mock_resolve.return_value = {
@@ -952,7 +952,7 @@ class TestDelegationCredentialResolution(unittest.TestCase):
         with self.assertRaises(ValueError):
             _resolve_delegation_credentials(cfg, parent)
 
-    @patch("hermes_cli.runtime_provider.resolve_runtime_provider")
+    @patch("scout_cli.runtime_provider.resolve_runtime_provider")
     def test_named_custom_provider_preserves_provider_name(self, mock_resolve):
         """Named custom provider (e.g. crof.ai) resolves to 'custom' at runtime level
         but the subagent must retain the original provider identity so that
@@ -986,7 +986,7 @@ class TestDelegationProviderIntegration(unittest.TestCase):
     @patch("tools.delegate_tool._load_config")
     @patch("tools.delegate_tool._resolve_delegation_credentials")
     def test_cross_provider_delegation(self, mock_creds, mock_cfg):
-        """Parent on Nous, subagent on OpenRouter — full credential switch."""
+        """Parent on SpaceshipResearch, subagent on OpenRouter — full credential switch."""
         mock_cfg.return_value = {
             "max_iterations": 45,
             "model": "google/gemini-3-flash-preview",
@@ -1000,9 +1000,9 @@ class TestDelegationProviderIntegration(unittest.TestCase):
             "api_mode": "chat_completions",
         }
         parent = _make_mock_parent(depth=0)
-        parent.provider = "nous"
-        parent.base_url = "https://inference-api.nousresearch.com/v1"
-        parent.api_key = "nous-key-abc"
+        parent.provider = "spaceshipresearch"
+        parent.base_url = "https://inference-api.spaceshipresearch.com/v1"
+        parent.api_key = "spaceshipresearch-key-abc"
 
         with patch("run_agent.AIAgent") as MockAgent:
             mock_child = MagicMock()
@@ -1014,7 +1014,7 @@ class TestDelegationProviderIntegration(unittest.TestCase):
             delegate_task(goal="Cross-provider test", parent_agent=parent)
 
             _, kwargs = MockAgent.call_args
-            # Child should use OpenRouter, NOT Nous
+            # Child should use OpenRouter, NOT SpaceshipResearch
             self.assertEqual(kwargs["provider"], "openrouter")
             self.assertEqual(kwargs["base_url"], "https://openrouter.ai/api/v1")
             self.assertEqual(kwargs["api_key"], "sk-or-key")
@@ -1070,10 +1070,10 @@ class TestChildCredentialPoolResolution(unittest.TestCase):
     def test_named_custom_child_pool_follows_requested_provider_not_endpoint_order(self):
         """#45763 (salvage #89021): two named custom providers on one gateway URL keep separate pools; the child
         leases the pool of the identity it inherited, not the first entry registered for that URL."""
-        from hermes_constants import get_hermes_home
+        from scout_constants import get_scout_home
 
         url = "https://gateway.invalid/v1"
-        get_hermes_home().joinpath("config.yaml").write_text(
+        get_scout_home().joinpath("config.yaml").write_text(
             f"providers:\n  claude-ai:\n    api: {url}\n  open-ai:\n    api: {url}\n", encoding="utf-8",
         )
         parent = _make_mock_parent()
@@ -1509,7 +1509,7 @@ class TestConcurrencyDefaults(unittest.TestCase):
 
         with patch.dict("sys.modules", {"cli": stale_cli}):
             with patch(
-                "hermes_cli.config.load_config_readonly", return_value=active_config
+                "scout_cli.config.load_config_readonly", return_value=active_config
             ):
                 self.assertEqual(_load_config()["max_concurrent_children"], 50)
                 self.assertEqual(_get_max_concurrent_children(), 50)
@@ -1974,7 +1974,7 @@ class TestFallbackModelInheritance(unittest.TestCase):
             "args": [],
         }
         with patch(
-            "hermes_cli.runtime_provider.resolve_runtime_provider",
+            "scout_cli.runtime_provider.resolve_runtime_provider",
             return_value=runtime,
         ):
             with patch("shutil.which", return_value=None):
@@ -2017,7 +2017,7 @@ class TestAtomicChildCredentialBundle(unittest.TestCase):
         self.assertEqual(kwargs["base_url"], "https://fallback.example/v1")
         self.assertEqual(kwargs["api_key"], "FAKE-KEY-FALLBACK")
 
-    @patch("hermes_cli.runtime_provider.resolve_runtime_provider")
+    @patch("scout_cli.runtime_provider.resolve_runtime_provider")
     def test_provider_without_base_url_is_refused(self, mock_resolve):
         mock_resolve.return_value = {"provider": "copilot", "base_url": "", "api_key": "gh-x", "api_mode": None}
         parent = _make_mock_parent(depth=0)

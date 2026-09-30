@@ -48,7 +48,7 @@ def validate_action(action: str, managed: List[str], mcp: List[str]) -> Optional
             f"action must be one of {', '.join(ALL_ACTIONS)}. "
             f"{', '.join(MCP_ACTIONS)} apply to local MCP servers "
             "(targets {\"name\": ..., \"mcp\": true}); the rest apply to managed connectors. "
-            "Disconnecting an account is done by the user in the Nous Portal dashboard, not "
+            "Disconnecting an account is done by the user in the Scout Portal dashboard, not "
             "through this tool."
         )
     if action in MCP_ACTIONS:
@@ -73,7 +73,7 @@ def validate_action(action: str, managed: List[str], mcp: List[str]) -> Optional
 
 def catalog_names() -> Set[str]:
     try:
-        from hermes_cli.mcp_catalog import list_catalog
+        from scout_cli.mcp_catalog import list_catalog
 
         return {e.name for e in list_catalog()}
     except Exception as exc:

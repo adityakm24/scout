@@ -1,12 +1,12 @@
 /**
- * @hermes/plugin-sdk — THE plugin language. The vscode-module model: plugin
+ * @scout/plugin-sdk — THE plugin language. The vscode-module model: plugin
  * authors import exactly one module and get everything — they never touch
  * `@/…` internals (lint-fenced) and never need codebase access.
  *
  * Two delivery modes, one surface:
  *  - bundled (`src/plugins/<name>/`): the import resolves here via alias;
  *  - runtime-fetched (plugin host, next phase): the loader injects this same
- *    object as `window.__HERMES_PLUGIN_SDK__` and maps the import to it, so a
+ *    object as `window.__SCOUT_PLUGIN_SDK__` and maps the import to it, so a
  *    published plugin builds against the types with the SDK marked external.
  *
  * Capability tiers (WoW-style):
@@ -46,8 +46,8 @@ import {
 import { onGatewayEvent } from '@/contrib/events'
 import { registry } from '@/contrib/registry'
 import type { WorkspaceMode } from '@/contrib/types'
-import { deleteProfile, getLogs, getStatus, hermesApi, type HermesGateway } from '@/hermes'
 import { completeMcpDesktopOAuth } from '@/lib/mcp-dashboard-oauth'
+import { deleteProfile, getLogs, getStatus, scoutApi, type ScoutGateway } from '@/scout'
 import {
   $gateway,
   activeGatewayConnectionId,
@@ -104,7 +104,7 @@ import {
   sessionTileDelegate
 } from '@/store/session-states'
 import { runGatewayRestart } from '@/store/system-actions'
-import type { PaginatedSessions, UsageStats } from '@/types/hermes'
+import type { PaginatedSessions, UsageStats } from '@/types/scout'
 
 import { pluginDecisions, profiles, skills, toolsets } from './bridge'
 import { composerHost } from './composer'
@@ -212,7 +212,7 @@ export interface PluginProfileRoute {
   mode: 'local' | 'remote'
   /** Desktop profile used to select the connection route. */
   profile: string
-  /** Backend Hermes profile served by that route. */
+  /** Backend Scout profile served by that route. */
   targetProfile: string
 }
 
@@ -286,7 +286,7 @@ async function requestPluginProfile<T>(
       : requestGatewayForAgent<T>(route.connectionId, route.profile, method, params, timeoutMs)
   }
 
-  const getAgentRoster = window.hermesDesktop?.getAgentRoster
+  const getAgentRoster = window.scoutDesktop?.getAgentRoster
 
   if (!getAgentRoster) {
     return dialProfile(route)
@@ -314,7 +314,7 @@ async function requestPluginProfile<T>(
  *  no longer authority to touch that backend, even when its labels still look
  *  identical. */
 async function pluginRouteStillRegistered(route: PluginProfileRoute): Promise<boolean> {
-  const getProfileRoutes = window.hermesDesktop?.getProfileRoutes
+  const getProfileRoutes = window.scoutDesktop?.getProfileRoutes
 
   if (!getProfileRoutes) {
     return false
@@ -607,7 +607,7 @@ function waitForFocusedSessionHydration({
 
 // Wait for a profile switch, but never longer than the wake budget.
 //
-// ensureGatewayProfile awaits the store's dial, and HermesGateway.connect() has
+// ensureGatewayProfile awaits the store's dial, and ScoutGateway.connect() has
 // no dial timeout of its own: a backend that accepts the socket and then never
 // completes the handshake leaves this promise pending for the life of the
 // window. That is not merely a slow open. waitForFocusedSessionHydration arms
@@ -855,7 +855,7 @@ export const host = {
     )
 
     // The profile is gone. Drop its persisted tiles now — a leftover tile
-    // restores on relaunch and re-creates the deleted profile (hermes-agent#94235).
+    // restores on relaunch and re-creates the deleted profile (scout-agent#94235).
     dropTilesForProfile(
       route ? route.profile : name,
       route
@@ -889,10 +889,10 @@ export const host = {
   /** The registered connection list (labels, kinds, primary) — token bytes
    *  never included. Rejects on Desktop builds without the registry. */
   connections: async () => {
-    const bridge = window.hermesDesktop?.connections
+    const bridge = window.scoutDesktop?.connections
 
     if (!bridge) {
-      throw new Error('This Desktop build has no connection registry. Update Hermes Desktop.')
+      throw new Error('This Desktop build has no connection registry. Update Scout Desktop.')
     }
 
     const registryPayload = await bridge.list()
@@ -906,10 +906,10 @@ export const host = {
    *  duplicates. Sources that are unreachable (or ssh connect-on-demand)
    *  appear in `sources` with an error instead of failing the call. */
   agents: async () => {
-    const roster = window.hermesDesktop?.getAgentRoster
+    const roster = window.scoutDesktop?.getAgentRoster
 
     if (!roster) {
-      throw new Error('This Desktop build cannot enumerate multi-source agents. Update Hermes Desktop.')
+      throw new Error('This Desktop build cannot enumerate multi-source agents. Update Scout Desktop.')
     }
 
     return roster()
@@ -1379,7 +1379,7 @@ export const host = {
       const openTab = $newSessionTabAction.get()
 
       if (!openTab) {
-        notify({ kind: 'error', message: 'Update Hermes Desktop to open another Bot chat.' })
+        notify({ kind: 'error', message: 'Update Scout Desktop to open another Bot chat.' })
 
         return
       }
@@ -1405,7 +1405,7 @@ export const host = {
    *  they closed) are respected. Presentation only: no gateway activation,
    *  no session create. Feature-detect on older desktops.
    *
-   *  `isStaleTile` (hermes-agent#90102): the caller's reconciliation probe
+   *  `isStaleTile` (scout-agent#90102): the caller's reconciliation probe
    *  against backend truth. The tile bucket is a Local Storage cache — a
    *  persisted bot tile can name a session the backend has since superseded,
    *  and fronting it pinned the roster click to a stale finished session
@@ -1472,11 +1472,11 @@ export const host = {
   /** Credential-free routes across every current registry source. Identity is
    *  the (connectionId, profile) pair; endpoint/auth details stay in Electron. */
   profileRoutes: async () => {
-    const desktop = window.hermesDesktop
+    const desktop = window.scoutDesktop
     const getProfileRoutes = desktop?.getProfileRoutes
 
     if (!getProfileRoutes) {
-      throw new Error('Hermes Desktop connection routing unavailable')
+      throw new Error('Scout Desktop connection routing unavailable')
     }
 
     let profiles = $profiles.get()
@@ -1580,7 +1580,7 @@ export const host = {
       profile
     })
 
-    return hermesApi<PaginatedSessions>({
+    return scoutApi<PaginatedSessions>({
       ...(route ? { connectionId: route.connectionId } : {}),
       path: `/api/profiles/sessions?${query.toString()}`,
       timeoutMs: 60_000
@@ -1604,7 +1604,7 @@ export const host = {
       throw new Error('Persisted session updates require a profile and session id')
     }
 
-    return hermesApi<{ ok: boolean; hidden: boolean }>({
+    return scoutApi<{ ok: boolean; hidden: boolean }>({
       ...(route ? { connectionId: route.connectionId } : {}),
       path: `/api/sessions/${encodeURIComponent(options.sessionId)}`,
       method: 'PATCH',
@@ -1620,7 +1620,7 @@ export const host = {
     const gateway = $gateway.get()
 
     if (!gateway) {
-      throw new Error('Hermes gateway unavailable')
+      throw new Error('Scout gateway unavailable')
     }
 
     return timeoutMs === undefined ? gateway.request<T>(method, params) : gateway.request<T>(method, params, timeoutMs)
@@ -1628,10 +1628,10 @@ export const host = {
 
   /** The LIVE gateway instance for the active profile (null before the first
    *  socket opens). Most plugins want `host.request`; this exists for SDK
-   *  components that take a `HermesGateway` prop directly (e.g. `ConnectorsTab`),
+   *  components that take a `ScoutGateway` prop directly (e.g. `ConnectorsTab`),
    *  which need the instance, not just a JSON-RPC door. Re-read per use — the
    *  active instance changes on a profile swap. */
-  getGateway: (): HermesGateway | null => $gateway.get(),
+  getGateway: (): ScoutGateway | null => $gateway.get(),
 
   composer: composerHost,
 
@@ -1775,8 +1775,8 @@ export type { TitlebarTool } from '@/app/shell/titlebar-controls'
  * `MEDIA:` delivery directives) and the same rich Markdown/media components as
  * core chat. Prefer this over raw Streamdown for transcript-style messages. */
 export { MessageTextContent } from '@/components/assistant-ui/markdown-text'
-/** The oversized Collapse lettering an empty chat is titled with — core writes
- *  "HERMES AGENT" with it, a `chat.empty` contribution writes its own name. */
+/** The oversized serif display lettering a `chat.empty` contribution titles
+ *  its empty chat with (a bot writes its own name). */
 export { Wordmark } from '@/components/chat/wordmark'
 /** Pane placement roles. `'floating'` is the one NON-tiling value: the pane is
  *  excluded from the layout tree and rendered as a fixed, draggable card above
@@ -1861,14 +1861,14 @@ export { Textarea } from '@/components/ui/textarea'
 export { Tip, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 export type { GatewayEventListener } from '@/contrib/events'
 export type {
-  HermesPlugin,
   PluginContext,
   PluginContribution,
   PluginNativeNotificationInput,
   PluginNotificationAction,
   PluginOs,
   PluginRestOptions,
-  PluginStorage
+  PluginStorage,
+  ScoutPlugin
 } from '@/contrib/plugin'
 /** Mount-scoped contribution: while the rendering component is mounted, its
  *  children render in the target area's slot; unmount disposes it. Use for
@@ -1880,9 +1880,6 @@ export { Contribute, type ContributeProps } from '@/contrib/react/contribute'
 // -- contracts ----------------------------------------------------------------
 
 export type { Contribution } from '@/contrib/types'
-/** The live gateway instance type — for typing the `gateway` prop `ConnectorsTab`
- *  takes; obtain the instance from `host.getGateway()`. */
-export type { HermesGateway } from '@/hermes'
 /** Grab-to-pan for overflow containers (boards, timelines, wide tables) —
  *  the shared scrub primitive; don't hand-roll drag-to-scroll. */
 export { type GrabScroll, useGrabScroll } from '@/hooks/use-grab-scroll'
@@ -1930,7 +1927,6 @@ export {
   type SurfaceModelSwitchConfirmOptions
 } from '@/lib/guarded-model-switch'
 export { triggerHaptic as haptic } from '@/lib/haptics'
-export type { HermesOpenTarget } from '@/lib/hermes-open-target'
 /** The app's lucide icon set (RefreshCw, LayoutDashboard, Activity, …). */
 export * as icons from '@/lib/icons'
 /** IME-aware Enter: true only for a real submit Enter, never a CJK composition
@@ -1959,9 +1955,14 @@ export { PROFILE_SWATCHES, profileColor, profileColorSoft } from '@/lib/profile-
  *  `ctx.socket` frame invalidating a query). Inside components keep using
  *  `useQueryClient`. */
 export { queryClient } from '@/lib/query-client'
-/** Compact labels for the reasoning levels exported from @hermes/shared, so a
+/** Compact labels for the reasoning levels exported from @scout/shared, so a
  *  plugin surfacing a thinking depth uses the same spelling as the app. */
 export { reasoningEffortLabel } from '@/lib/reasoning-effort'
+/** The app's own gateway-readiness evaluation (setup.status +
+ *  setup.runtime_check, reconciled) — pass `host.request`. Don't hand-roll
+ *  readiness from raw RPC shapes. */
+export { evaluateRuntimeReadiness, type RuntimeReadinessResult } from '@/lib/runtime-readiness'
+export type { ScoutOpenTarget } from '@/lib/scout-open-target'
 
 export const PANES_AREA = 'panes'
 export const STATUSBAR_AREAS = { left: 'statusBar.left', right: 'statusBar.right' } as const
@@ -1971,10 +1972,6 @@ export const STATUSBAR_AREAS = { left: 'statusBar.left', right: 'statusBar.right
  *  should exist only while a page is up go to `WORKSPACE_PAGE_HEADER_AREA`. */
 export const TITLEBAR_AREAS = { center: 'titleBar.center', left: 'titleBar.left', right: 'titleBar.right' } as const
 
-/** The app's own gateway-readiness evaluation (setup.status +
- *  setup.runtime_check, reconciled) — pass `host.request`. Don't hand-roll
- *  readiness from raw RPC shapes. */
-export { evaluateRuntimeReadiness, type RuntimeReadinessResult } from '@/lib/runtime-readiness'
 /** Row-decoration slots: register a `data` contribution with a `render` for
  *  `SESSION_ROW_AREAS.leading` / `.trailing` to decorate sidebar session rows
  *  (the props carry the row's stored session id). */
@@ -1997,6 +1994,9 @@ export {
   type TranscriptDirectiveProps
 } from '@/lib/transcript-directives'
 export { cn } from '@/lib/utils'
+/** The live gateway instance type — for typing the `gateway` prop `ConnectorsTab`
+ *  takes; obtain the instance from `host.getGateway()`. */
+export type { ScoutGateway } from '@/scout'
 /** THE unread store behind `SessionStatusDot`'s emerald dot. A plugin that
  *  learns out-of-band that a session produced something the user hasn't seen
  *  (a roster poll's activity watermark, say) writes HERE rather than keeping
@@ -2047,31 +2047,31 @@ export { requestTheme } from '@/themes/request'
 export { retintTheme, themeHue } from '@/themes/retint'
 export type { DesktopTheme, DesktopThemeColors } from '@/themes/types'
 export { THEMES_AREA } from '@/themes/user-themes'
-export type { StatusResponse } from '@/types/hermes'
+export type { StatusResponse } from '@/types/scout'
+/** Subscribe a component to a `host.state` atom. */
+export { useStore as useValue } from '@nanostores/react'
 /** Public SDK name for the shared gateway wire event; kept stable for plugins. */
-export type { GatewayEvent as RpcEvent } from '@hermes/shared'
+export type { GatewayEvent as RpcEvent } from '@scout/shared'
 /** Bot Screen wire shapes, generated from `tui_gateway/contracts/display.py`. */
-export type { DisplayLease, DisplayObserveResult, DisplayStatus, DisplayThumbnailResult } from '@hermes/shared'
+export type { DisplayLease, DisplayObserveResult, DisplayStatus, DisplayThumbnailResult } from '@scout/shared'
 /** THE compact-number formatter — every user-facing count/token figure goes
  *  through here (1230 → "1.2k", 1_500_000 → "1.5M"). Don't hand-roll `/1000`. */
-export { compactNumber } from '@hermes/shared'
+export { compactNumber } from '@scout/shared'
 /** Client deadline for `approval.respond`: matches the backend's
  *  `approvals.timeout` (300s) so a plugin answering an approval never rejects
  *  its own RPC while the backend still applies the decision (#60654). */
-export { APPROVAL_RESPOND_TIMEOUT_MS } from '@hermes/shared'
-/** Hermes' reasoning levels, so a plugin surfacing a thinking depth uses the
+export { APPROVAL_RESPOND_TIMEOUT_MS } from '@scout/shared'
+/** Scout's reasoning levels, so a plugin surfacing a thinking depth uses the
  *  same scale as the rest of the app (labels: `reasoningEffortLabel`). */
 export {
   DEFAULT_REASONING_EFFORT,
   REASONING_EFFORT_VALUES,
   REASONING_EFFORTS,
   type ReasoningEffort
-} from '@hermes/shared'
+} from '@scout/shared'
 /** WCAG contrast, from the sRGB primitives shared with the TUI (`null` for
  *  an unparseable colour, never a fake 0). */
-export { contrastRatio } from '@hermes/shared/color'
-/** Subscribe a component to a `host.state` atom. */
-export { useStore as useValue } from '@nanostores/react'
+export { contrastRatio } from '@scout/shared/color'
 /** The app's data-fetching layer. Plugins share the ONE QueryClient mounted at
  *  the app root, so their queries cache, dedupe, poll (`refetchInterval`), and
  *  invalidate exactly like core screens — no hand-rolled atoms or polls. */

@@ -16,7 +16,7 @@ from types import SimpleNamespace
 from typing import Any, Callable, Dict, List
 
 from agent.stream_single_writer import claim_stream_writer, stream_writer_is_current
-from agent.transports.hermes_tools_mcp_server import HERMES_TOOLS_MCP_SERVER_NAME
+from agent.transports.scout_tools_mcp_server import SCOUT_TOOLS_MCP_SERVER_NAME
 from agent.sdk_transform_bypass import bypass_sdk_request_transform
 from agent.stream_diag import buffer_connect_exhausted_notice
 from agent.usage_anchor import set_usage_anchor
@@ -38,7 +38,7 @@ def _stream_drain_timeout() -> float:
     ``0`` skips the drain entirely.
     """
     try:
-        from hermes_cli.config import load_config_readonly
+        from scout_cli.config import load_config_readonly
         agent_cfg = load_config_readonly().get("agent")
         value = agent_cfg.get("stream_drain_timeout") if isinstance(agent_cfg, dict) else None
         if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -147,11 +147,11 @@ def _queue_token_counts(agent, fail_msg: str, *fail_extra: Any, counts: Callable
 
 
 def _record_codex_app_server_usage(agent, turn, messages=None) -> dict[str, Any]:
-    """Translate Codex app-server token usage into Hermes accounting. Prompt bucket = uncached + cached
+    """Translate Codex app-server token usage into Scout accounting. Prompt bucket = uncached + cached
     input (the protocol exposes no cache-write tokens); a turn with no usage still counts as one API call.
     ``messages`` (the transcript mirror) lets real usage anchor the next preflight: this runtime bypasses
     the main loop's capture, and the mirror is never compacted natively, so without an anchor the rough
-    estimate grows monotonically and hermes-mode fires thread compaction on tiny threads (#100381)."""
+    estimate grows monotonically and scout-mode fires thread compaction on tiny threads (#100381)."""
     agent.session_api_calls += 1
     usage = getattr(turn, "token_usage_last", None)
     compressor = getattr(agent, "context_compressor", None)
@@ -232,7 +232,7 @@ def _record_codex_app_server_compaction(agent, turn, *, approx_tokens: int | Non
     if compressor is not None:
         compressor.compression_count = getattr(compressor, "compression_count", 0) + 1
         compressor.last_compression_rough_tokens = approx_tokens or 0
-        # Codex owns this summary: a prior Hermes deterministic-fallback flag must not leak into it.
+        # Codex owns this summary: a prior Scout deterministic-fallback flag must not leak into it.
         record_boundary = getattr(type(compressor), "record_completed_compaction", None)
         if callable(record_boundary):
             record_boundary(compressor, used_fallback=False)
@@ -254,11 +254,11 @@ def _record_codex_app_server_compaction(agent, turn, *, approx_tokens: int | Non
     return True
 
 
-# --- Codex app-server → Hermes UI bridge -------------------------------------
-# The app-server bypasses the Hermes tool loop, so the bridge translates JSON-RPC notifications
+# --- Codex app-server → Scout UI bridge -------------------------------------
+# The app-server bypasses the Scout tool loop, so the bridge translates JSON-RPC notifications
 # into the callbacks the standard runtime fires (tool_progress_callback, _fire_stream_delta, ...).
 
-# Item types that project to a Hermes tool_call (keep in sync with agent/transports/codex_event_projector.py
+# Item types that project to a Scout tool_call (keep in sync with agent/transports/codex_event_projector.py
 # so UI names match recorded names). webSearch is codex's built-in tool; the projector records it under the same id.
 _CODEX_TOOL_ITEM_TYPES = frozenset({"commandExecution", "fileChange", "mcpToolCall", "dynamicToolCall", "webSearch"})
 # Text-delta notifications → the agent stream hook each one feeds. Single source for both the display
@@ -275,8 +275,8 @@ _CODEX_PROGRESS_DELTA_METHODS = frozenset(m for m, _ in _CODEX_TEXT_DELTA_METHOD
     "item/commandExecution/outputDelta", "item/fileChange/outputDelta",
 }
 _CODEX_PROGRESS_ITEM_TYPES = _CODEX_TOOL_ITEM_TYPES | {"agentMessage", "reasoning"}
-# Internal MCP server wrapping Hermes' native tools: its inner dispatch has no tool_progress_callback, so the
-# codex-level mcpToolCall IS the display event and the mcp.hermes-tools.* prefix is stripped (users see Hermes tools).
+# Internal MCP server wrapping Scout's native tools: its inner dispatch has no tool_progress_callback, so the
+# codex-level mcpToolCall IS the display event and the mcp.scout-tools.* prefix is stripped (users see Scout tools).
 _STATIC_TOOL_NAMES = {"commandExecution": "exec_command", "fileChange": "apply_patch", "webSearch": "web_search"}
 _STABLE_ID_PREFIXES = {"commandExecution": "exec", "fileChange": "apply_patch"}
 _MCP_LIKE_ITEM_TYPES = {"mcpToolCall", "dynamicToolCall"}
@@ -295,11 +295,11 @@ def _item_changes(item: dict) -> list[dict]:
 
 
 def _codex_item_to_tool_name(item: dict) -> str:
-    """Synthetic Hermes tool name for a codex item (mirrors CodexEventProjector)."""
+    """Synthetic Scout tool name for a codex item (mirrors CodexEventProjector)."""
     item_type = item.get("type") or ""
     if item_type == "mcpToolCall":
         server, tool = item.get("server") or "mcp", item.get("tool") or "unknown"
-        return tool if server == HERMES_TOOLS_MCP_SERVER_NAME else f"mcp.{server}.{tool}"
+        return tool if server == SCOUT_TOOLS_MCP_SERVER_NAME else f"mcp.{server}.{tool}"
     if item_type == "dynamicToolCall":
         return item.get("tool") or "dynamic"
     return _STATIC_TOOL_NAMES.get(item_type) or item_type or "unknown"
@@ -495,10 +495,10 @@ def _codex_developer_instructions(agent) -> str:
     return developer_instructions
 
 
-# Durable codex thread binding: ``sessions.model_config.codex_thread_id`` (hermes_state), written after the
-# turn's projected rows were committed, read by the next AIAgent built for the same Hermes session so an
+# Durable codex thread binding: ``sessions.model_config.codex_thread_id`` (scout_state), written after the
+# turn's projected rows were committed, read by the next AIAgent built for the same Scout session so an
 # API-server restart (or the per-request agents of /api/sessions/{id}/chat) resumes the model-side thread
-# instead of starting an empty one while Hermes' own transcript continues (#100531).
+# instead of starting an empty one while Scout's own transcript continues (#100531).
 _CODEX_THREAD_ID_KEY = "codex_thread_id"
 _CODEX_THREAD_RESUME_NOTICE = "Codex thread could not be resumed; starting a new one."
 
@@ -551,15 +551,15 @@ def _ensure_codex_session(agent, messages: List[Dict[str, Any]] | None = None) -
     resume_thread_id = None if getattr(agent, "_codex_session_prompt", None) is not None else _stored_codex_thread_id(agent)
     from agent.runtime_cwd import resolve_agent_cwd
     from agent.transports.codex_app_server_session import CodexAppServerSession, _ServerRequestRouting
-    from hermes_cli.codex_runtime_switch import get_configured_codex_binary
-    from hermes_cli.config import load_config
-    # Approval callback: Hermes' standard prompt flow when a CLI thread installed one.
+    from scout_cli.codex_runtime_switch import get_configured_codex_binary
+    from scout_cli.config import load_config
+    # Approval callback: Scout's standard prompt flow when a CLI thread installed one.
     approval_callback = None
     with suppress(Exception):
         from tools.terminal_tool import _get_approval_callback
         approval_callback = _get_approval_callback()
     # Gateway/cron have no UI for codex approval requests, so exec/apply_patch fail closed by default. Only an
-    # explicit approval bypass (approvals.mode: off, /yolo, --yolo, HERMES_YOLO_MODE) hands policy to codex's sandbox.
+    # explicit approval bypass (approvals.mode: off, /yolo, --yolo, SCOUT_YOLO_MODE) hands policy to codex's sandbox.
     auto_approve_requests = False
     try:
         from tools.approval import is_approval_bypass_active
@@ -567,11 +567,11 @@ def _ensure_codex_session(agent, messages: List[Dict[str, Any]] | None = None) -
     except Exception:
         logger.debug("codex app-server: approval-bypass lookup failed; keeping fail-closed default", exc_info=True)
     # Bridge codex JSON-RPC notifications (item/started, item/completed, item/agentMessage/delta, ...) into
-    # Hermes' gateway UI callbacks (tool_progress_callback, _fire_stream_delta,
+    # Scout's gateway UI callbacks (tool_progress_callback, _fire_stream_delta,
     # _emit_interim_assistant_message). Without this, Discord/Telegram users see no live tool-progress or
     # interim commentary while codex_app_server is running — only the final answer (#33200). Supersedes the
     # narrower item/started-only bridge from #38835.
-    # Hermes owns the prompt: the same composition the standard loop sends as its system message
+    # Scout owns the prompt: the same composition the standard loop sends as its system message
     # (cached per-session prompt + ephemeral additions such as channel overrides) rides along ONCE per
     # thread as developerInstructions. A retired/recreated session re-sends the current composition.
     # A thread started from scratch (no resumable codex thread) also receives the session's prior turns
@@ -582,10 +582,10 @@ def _ensure_codex_session(agent, messages: List[Dict[str, Any]] | None = None) -
     history_seed = render_history_seed(messages) or None
     # A named custom provider (``providers.<name>``) maps onto codex's own ``[model_providers.<name>]``
     # table: send the stable id plus the active model and let codex resolve base_url/env_key itself, so
-    # Hermes' credential never enters the JSON-RPC payload (#75186). openai/openai-codex keep codex's defaults.
+    # Scout's credential never enters the JSON-RPC payload (#75186). openai/openai-codex keep codex's defaults.
     model_provider = None
     if str(getattr(agent, "provider", "") or "").strip().lower() == "custom":
-        from hermes_cli.runtime_provider_custom import codex_model_provider_id
+        from scout_cli.runtime_provider_custom import codex_model_provider_id
         model_provider = codex_model_provider_id(str(getattr(agent, "requested_provider", "") or ""))
     agent._codex_session = CodexAppServerSession(
         cwd=getattr(agent, "session_cwd", None) or str(resolve_agent_cwd()), approval_callback=approval_callback,
@@ -1119,7 +1119,7 @@ def run_codex_stream(agent, api_kwargs: dict, client: Any = None, on_first_delta
         return bool(agent._interrupt_requested)
 
     def _open_codex_stream(next_api_kwargs: dict[str, Any]):
-        from hermes_cli.providers import is_actual_route
+        from scout_cli.providers import is_actual_route
 
         if is_actual_route(
             getattr(agent, "provider", ""),

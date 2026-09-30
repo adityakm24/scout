@@ -20,7 +20,7 @@ import {
 } from './composer-queue'
 
 const SESSION_KEY = 'session-abc'
-const QUEUE_STORAGE_KEY = 'hermes.desktop.composerQueue.v1'
+const QUEUE_STORAGE_KEY = 'scout.desktop.composerQueue.v1'
 
 function attachment(id: string, kind: ComposerAttachment['kind'] = 'file'): ComposerAttachment {
   return {
@@ -50,7 +50,7 @@ describe('composer queue store', () => {
   it('queued-prompt handoff keeps blob previews across composer clear, then revokes when the entry is discarded', () => {
     // Mirrors use-composer-queue: enqueue → clear({ retainPreviewUrls }).
     const revokeObjectURL = stubRevokeObjectURL()
-    const blobUrl = 'blob:hermes-queued-1'
+    const blobUrl = 'blob:scout-queued-1'
 
     const image = {
       id: 'image:drop',
@@ -79,7 +79,7 @@ describe('composer queue store', () => {
 
   it('drain handoff retains blob previews when the queued entry is removed after submit owns them', () => {
     const revokeObjectURL = stubRevokeObjectURL()
-    const blobUrl = 'blob:hermes-drain-1'
+    const blobUrl = 'blob:scout-drain-1'
 
     const queued = enqueueQueuedPrompt(SESSION_KEY, {
       text: 'drain me',
@@ -93,8 +93,8 @@ describe('composer queue store', () => {
 
   it('revokes replaced blob previews when a queued entry attachment snapshot changes', () => {
     const revokeObjectURL = stubRevokeObjectURL()
-    const oldUrl = 'blob:hermes-old'
-    const newUrl = 'blob:hermes-new'
+    const oldUrl = 'blob:scout-old'
+    const newUrl = 'blob:scout-new'
 
     const queued = enqueueQueuedPrompt(SESSION_KEY, {
       text: 'edit me',

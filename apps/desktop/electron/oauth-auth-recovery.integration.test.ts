@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { expect, test } from 'vitest'
 
 import { httpStatusError, readStatusCode } from './api-transport'
-import { isReauthRequiredError, waitForHermesReady } from './backend-health'
+import { isReauthRequiredError, waitForScoutReady } from './backend-health'
 import { isGatewayAuthRejection, normalizeRemoteBaseUrl, withTransientRetries } from './connection-config'
 import { createMediaProtocolHandler } from './media-protocol'
 import { createNativeAccessTokenCoordinator } from './native-access-token'
@@ -18,7 +18,7 @@ import { mintGatewayWsTicket, requestWithOauthFallback } from './oauth-rest-requ
 // Real HTTP and encrypted temp-file persistence; no Electron, OS keychain,
 // application state, external gateways or real credentials are touched.
 async function fixture(beforeRefreshResponse?: () => Promise<void>) {
-  const home = mkdtempSync(join(tmpdir(), 'hermes-auth-recovery-'))
+  const home = mkdtempSync(join(tmpdir(), 'scout-auth-recovery-'))
   const storeFile = join(home, 'native-tokens.json')
   const key = randomBytes(32)
 
@@ -54,7 +54,7 @@ async function fixture(beforeRefreshResponse?: () => Promise<void>) {
 
     if (req.url === '/auth/native/refresh') {
       state.refreshes++
-      expect(JSON.parse(body)).toMatchObject({ refresh_token: 'old-rt', provider: 'nous' })
+      expect(JSON.parse(body)).toMatchObject({ refresh_token: 'old-rt', provider: 'spaceshipresearch' })
       await beforeRefreshResponse?.()
       res.statusCode = state.refreshStatus
       res.end(
@@ -65,7 +65,7 @@ async function fixture(beforeRefreshResponse?: () => Promise<void>) {
                 access_token: 'fresh',
                 refresh_token: 'fresh-rt',
                 expires_at: 9_000,
-                provider: 'nous',
+                provider: 'spaceshipresearch',
                 user_id: 'test'
               }
         )
@@ -143,7 +143,7 @@ async function fixture(beforeRefreshResponse?: () => Promise<void>) {
       accessToken: 'old',
       refreshToken: 'old-rt',
       expiresAt,
-      provider: 'nous',
+      provider: 'spaceshipresearch',
       userId: 'test'
     })
 
@@ -227,7 +227,7 @@ test('HTTP outage, dead-refresh and cookie coexistence reach the correct ticket/
     let clock = 0
 
     try {
-      await waitForHermesReady(f.baseUrl, {
+      await waitForScoutReady(f.baseUrl, {
         fetchPublicJson: async () => {
           throw new Error('must not anonymously downgrade')
         },
@@ -261,7 +261,7 @@ test('HTTP outage, dead-refresh and cookie coexistence reach the correct ticket/
         })
     })
 
-    const mediaRequest = { url: 'hermes-media://remote/%2Ftmp%2Fclip.mp4', headers: new Headers(), method: 'GET' }
+    const mediaRequest = { url: 'scout-media://remote/%2Ftmp%2Fclip.mp4', headers: new Headers(), method: 'GET' }
     expect((await media(mediaRequest)).status).toBe(502)
     f.state.cookie = true
     expect(await f.mint()).toMatch(/^one-use-/)

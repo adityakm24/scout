@@ -12,12 +12,12 @@ export const HUD_POSITION =
   'fixed left-1/2 top-3 -translate-x-1/2 max-[44rem]:top-[calc(var(--titlebar-height,34px)+0.375rem)]'
 
 // Matches the app's borderless-overlay surface (dialog, keybind panel, …):
-// hairline `--stroke-nous` paired with the soft `--shadow-nous` float.
+// hairline `--stroke-spaceshipresearch` paired with the soft `--shadow-spaceshipresearch` float.
 // `no-drag`: these HUDs overlap the titlebar's `[-webkit-app-region:drag]` band
 // (app-shell.tsx), which wins hit-testing over DOM regardless of z-index — so
 // without it the top of the surface (the search input) swallows clicks.
 export const HUD_SURFACE =
-  'rounded-xl border border-(--stroke-nous) bg-(--ui-chat-bubble-background) shadow-nous [-webkit-app-region:no-drag]'
+  'rounded-xl border border-(--stroke-spaceshipresearch) bg-(--ui-chat-bubble-background) shadow-spaceshipresearch [-webkit-app-region:no-drag]'
 
 // One row/text size for both HUDs (compact — two notches under `text-sm`).
 export const HUD_TEXT = 'text-xs'
@@ -30,7 +30,7 @@ export const HUD_ITEM = 'gap-2 px-2 py-1'
 // tightly tracked — plain text, no sticky chrome bar. Targets the cmdk group
 // heading via the universal-descendant variant.
 export const HUD_HEADING =
-  '**:[[cmdk-group-heading]]:static **:[[cmdk-group-heading]]:bg-transparent **:[[cmdk-group-heading]]:px-2.5 **:[[cmdk-group-heading]]:pb-1 **:[[cmdk-group-heading]]:pt-2.5 **:[[cmdk-group-heading]]:text-[0.64rem] **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-[0.16em] **:[[cmdk-group-heading]]:text-(--theme-primary)'
+  '**:[[cmdk-group-heading]]:static **:[[cmdk-group-heading]]:bg-transparent **:[[cmdk-group-heading]]:px-2.5 **:[[cmdk-group-heading]]:pb-1 **:[[cmdk-group-heading]]:pt-2.5 **:[[cmdk-group-heading]]:text-[0.6875rem] **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]: **:[[cmdk-group-heading]]: **:[[cmdk-group-heading]]:text-(--theme-primary)'
 
 // A short note trailing a row's label — a version, a count, a live state. Sits
 // closer than the row's icon-to-label `gap-2` because it reads as a suffix of

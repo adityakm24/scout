@@ -59,7 +59,7 @@ def test_pre_build_setup_prints_the_dispatch_before_any_other_work():
 @pytest.mark.parametrize("kind,extra", [
     ("commit", {}),
     ("channel", {"CHANNEL": "magic-test"}),
-    ("commit", {"BUNDLE_ENV_JSON": json.dumps({"HERMES_SKIP_INTRO": "1", "HERMES_HOME": None})}),
+    ("commit", {"BUNDLE_ENV_JSON": json.dumps({"SCOUT_SKIP_INTRO": "1", "SCOUT_HOME": None})}),
 ])
 def test_printed_command_is_the_dispatcher_command(kind, extra):
     values = env(BUILD_COMMIT=SHA, **extra)
@@ -123,7 +123,7 @@ def test_module_prints_the_report_from_the_process_environment(monkeypatch, caps
 
 
 def test_bundle_env_round_trips_the_cli_flags():
-    baked = parse_assignments(["HERMES_SKIP_INTRO=1"], ["HERMES_HOME"])
+    baked = parse_assignments(["SCOUT_SKIP_INTRO=1"], ["SCOUT_HOME"])
     facts = dispatch_log.describe(env(BUILD_COMMIT=SHA, BUNDLE_ENV_JSON=json.dumps(baked)))
     flags = dispatch_log.command_flags(facts)
-    assert flags == ["--build-commit", SHA, "--bundle-unset", "HERMES_HOME", "--bundle-env", "HERMES_SKIP_INTRO=1"]
+    assert flags == ["--build-commit", SHA, "--bundle-unset", "SCOUT_HOME", "--bundle-env", "SCOUT_SKIP_INTRO=1"]

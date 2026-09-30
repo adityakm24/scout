@@ -533,7 +533,7 @@ class ForeignSource(WireEnum):
 
 
 class ForeignSessionRow(Result):
-    """``hermes_cli/foreign_sessions_browser.py::list_foreign_sessions`` — ``id`` is an opaque
+    """``scout_cli/foreign_sessions_browser.py::list_foreign_sessions`` — ``id`` is an opaque
     handle, never a path."""
 
     id: str

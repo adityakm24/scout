@@ -1,4 +1,4 @@
-import { pluginCatalogInstallUrl, skillCatalogInstallIdentifier, skillCatalogInstallUrl } from '@hermes/shared'
+import { pluginCatalogInstallUrl, skillCatalogInstallIdentifier, skillCatalogInstallUrl } from '@scout/shared'
 import { describe, expect, it } from 'vitest'
 
 import { resolveDeepLinkAction } from './deeplink-routes'
@@ -20,8 +20,8 @@ describe('public catalog install links', () => {
     [{ name: 'pdf', source: 'Anthropic', identifier: 'anthropics/skills/skills/pdf' }, 'anthropics/skills/skills/pdf'],
     [{ name: 'pdf', source: 'optional' }, 'official/pdf'],
     [
-      { name: 'pdf', source: 'built-in', installIdentifier: 'NousResearch/hermes-agent/skills/productivity/pdf' },
-      'NousResearch/hermes-agent/skills/productivity/pdf'
+      { name: 'pdf', source: 'built-in', installIdentifier: 'SpaceshipResearch/scout-agent/skills/productivity/pdf' },
+      'SpaceshipResearch/scout-agent/skills/productivity/pdf'
     ],
     [
       { name: 'A name', source: 'future-source', identifier: 'provider/path?mode=one&two#readme' },

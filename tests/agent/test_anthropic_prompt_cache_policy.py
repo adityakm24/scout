@@ -264,9 +264,9 @@ class TestThirdPartyAnthropicGateway:
         agent and the policy loads config itself."""
         import textwrap
 
-        hermes_home = tmp_path / ".hermes"
-        hermes_home.mkdir()
-        (hermes_home / "config.yaml").write_text(
+        scout_home = tmp_path / ".scout"
+        scout_home.mkdir()
+        (scout_home / "config.yaml").write_text(
             textwrap.dedent(
                 """
                 providers:
@@ -282,9 +282,9 @@ class TestThirdPartyAnthropicGateway:
                 """
             )
         )
-        monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
         # load_config's cache is keyed by resolved config path, so pointing
-        # HERMES_HOME at a fresh tempdir needs no cache invalidation.
+        # SCOUT_HOME at a fresh tempdir needs no cache invalidation.
         agent = _make_agent(
             provider="custom:anthropic-proxy",
             base_url="https://gateway.example.com/anthropic",
@@ -357,7 +357,7 @@ class TestCustomProviderOpenAIWireCapability:
             pytest.fail("unrelated built-in route performed custom capability lookup")
 
         monkeypatch.setattr(
-            "hermes_cli.config.get_custom_provider_model_capability",
+            "scout_cli.config.get_custom_provider_model_capability",
             unexpected_lookup,
         )
 
@@ -410,7 +410,7 @@ class TestCustomProviderOpenAIWireCapability:
         must stay off the network: get_provider must be called with
         allow_network=False so a cold models.dev cache cannot trigger a
         foreground registry download from the send path."""
-        import hermes_cli.providers as _providers
+        import scout_cli.providers as _providers
 
         seen: list = []
         real_get_provider = _providers.get_provider
@@ -437,9 +437,9 @@ class TestCustomProviderOpenAIWireCapability:
     ):
         import textwrap
 
-        hermes_home = tmp_path / ".hermes"
-        hermes_home.mkdir()
-        (hermes_home / "config.yaml").write_text(
+        scout_home = tmp_path / ".scout"
+        scout_home.mkdir()
+        (scout_home / "config.yaml").write_text(
             textwrap.dedent(
                 """
                 providers:
@@ -452,7 +452,7 @@ class TestCustomProviderOpenAIWireCapability:
                 """
             )
         )
-        monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
         agent = _make_agent(
             provider="edge-router",
             base_url="https://models.example.net/v1",
@@ -639,26 +639,26 @@ class TestQwenAlibabaFamily:
 
 
 
-    def test_qwen_on_nous_portal_caches_with_envelope_layout(self):
-        # Nous Portal Qwen takes the same envelope-layout cache_control
+    def test_qwen_on_scout_portal_caches_with_envelope_layout(self):
+        # Scout Portal Qwen takes the same envelope-layout cache_control
         # path as Portal Claude. Without this, Portal-routed qwen3.6-plus
         # falls through to the alibaba-family check (which only matches
         # provider=opencode/alibaba) and serves 0% cache hits.
         agent = _make_agent(
-            provider="nous",
-            base_url="https://inference-api.nousresearch.com/v1",
+            provider="spaceshipresearch",
+            base_url="https://inference-api.spaceshipresearch.com/v1",
             api_mode="chat_completions",
             model="qwen3.6-plus",
         )
         assert agent._anthropic_prompt_cache_policy() == (True, False)
 
 
-    def test_non_qwen_non_claude_on_nous_portal_does_not_cache(self):
+    def test_non_qwen_non_claude_on_scout_portal_does_not_cache(self):
         # Portal scope is narrow: Claude OR Qwen only. Other models
         # routed through Portal keep their existing fall-through behavior.
         agent = _make_agent(
-            provider="nous",
-            base_url="https://inference-api.nousresearch.com/v1",
+            provider="spaceshipresearch",
+            base_url="https://inference-api.spaceshipresearch.com/v1",
             api_mode="chat_completions",
             model="openai/gpt-5.4",
         )
@@ -974,11 +974,11 @@ class TestLiteLLMOpenAIWire:
         assert inner, "the OpenAI-wire grant must still place real breakpoints"
 
 
-class TestNousPortalAnthropicWire:
+class TestScoutPortalAnthropicWire:
     def test_portal_claude_on_the_messages_wire_uses_the_native_layout(self):
         agent = _make_agent(
-            provider="nous",
-            base_url="https://inference-api.nousresearch.com/v1",
+            provider="spaceshipresearch",
+            base_url="https://inference-api.spaceshipresearch.com/v1",
             api_mode="anthropic_messages",
             model="anthropic/claude-opus-4.8",
         )
@@ -988,8 +988,8 @@ class TestNousPortalAnthropicWire:
         """The wire, not the provider, picks the layout — Portal models still on
         /chat/completions must not be flipped to inner-block markers."""
         agent = _make_agent(
-            provider="nous",
-            base_url="https://inference-api.nousresearch.com/v1",
+            provider="spaceshipresearch",
+            base_url="https://inference-api.spaceshipresearch.com/v1",
             api_mode="chat_completions",
             model="anthropic/claude-opus-4.8",
         )

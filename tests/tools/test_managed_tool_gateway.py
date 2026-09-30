@@ -23,18 +23,18 @@ def test_resolve_managed_tool_gateway_derives_vendor_origin_from_shared_domain()
     with patch.dict(
         os.environ,
         {
-            "TOOL_GATEWAY_DOMAIN": "nousresearch.com",
+            "TOOL_GATEWAY_DOMAIN": "spaceshipresearch.com",
         },
         clear=False,
-    ), patch.object(managed_tool_gateway, "managed_nous_tools_enabled", return_value=True):
+    ), patch.object(managed_tool_gateway, "managed_spaceshipresearch_tools_enabled", return_value=True):
         result = resolve_managed_tool_gateway(
             "firecrawl",
-            token_reader=lambda: "nous-token",
+            token_reader=lambda: "spaceshipresearch-token",
         )
 
     assert result is not None
-    assert result.gateway_origin == "https://firecrawl-gateway.nousresearch.com"
-    assert result.nous_user_token == "nous-token"
+    assert result.gateway_origin == "https://firecrawl-gateway.spaceshipresearch.com"
+    assert result.spaceshipresearch_user_token == "spaceshipresearch-token"
     assert result.managed_mode is True
 
 
@@ -45,24 +45,24 @@ def test_resolve_managed_tool_gateway_uses_vendor_specific_override():
             "BROWSER_USE_GATEWAY_URL": "http://browser-use-gateway.localhost:3009/",
         },
         clear=False,
-    ), patch.object(managed_tool_gateway, "managed_nous_tools_enabled", return_value=True):
+    ), patch.object(managed_tool_gateway, "managed_spaceshipresearch_tools_enabled", return_value=True):
         result = resolve_managed_tool_gateway(
             "browser-use",
-            token_reader=lambda: "nous-token",
+            token_reader=lambda: "spaceshipresearch-token",
         )
 
     assert result is not None
     assert result.gateway_origin == "http://browser-use-gateway.localhost:3009"
 
 
-def test_resolve_managed_tool_gateway_is_inactive_without_nous_token():
+def test_resolve_managed_tool_gateway_is_inactive_without_spaceshipresearch_token():
     with patch.dict(
         os.environ,
         {
-            "TOOL_GATEWAY_DOMAIN": "nousresearch.com",
+            "TOOL_GATEWAY_DOMAIN": "spaceshipresearch.com",
         },
         clear=False,
-    ), patch.object(managed_tool_gateway, "managed_nous_tools_enabled", return_value=True):
+    ), patch.object(managed_tool_gateway, "managed_spaceshipresearch_tools_enabled", return_value=True):
         result = resolve_managed_tool_gateway(
             "firecrawl",
             token_reader=lambda: None,
@@ -72,23 +72,23 @@ def test_resolve_managed_tool_gateway_is_inactive_without_nous_token():
 
 
 def test_resolve_managed_tool_gateway_is_disabled_without_subscription():
-    with patch.dict(os.environ, {"TOOL_GATEWAY_DOMAIN": "nousresearch.com"}, clear=False), \
-         patch.object(managed_tool_gateway, "managed_nous_tools_enabled", return_value=False):
+    with patch.dict(os.environ, {"TOOL_GATEWAY_DOMAIN": "spaceshipresearch.com"}, clear=False), \
+         patch.object(managed_tool_gateway, "managed_spaceshipresearch_tools_enabled", return_value=False):
         result = resolve_managed_tool_gateway(
             "firecrawl",
-            token_reader=lambda: "nous-token",
+            token_reader=lambda: "spaceshipresearch-token",
         )
 
     assert result is None
 
 
-def test_read_nous_access_token_refreshes_expiring_cached_token(tmp_path, monkeypatch):
+def test_read_spaceshipresearch_access_token_refreshes_expiring_cached_token(tmp_path, monkeypatch):
     monkeypatch.delenv("TOOL_GATEWAY_USER_TOKEN", raising=False)
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     expires_at = (datetime.now(timezone.utc) + timedelta(seconds=30)).isoformat()
     (tmp_path / "auth.json").write_text(json.dumps({
         "providers": {
-            "nous": {
+            "spaceshipresearch": {
                 "access_token": "stale-token",
                 "refresh_token": "refresh-token",
                 "expires_at": expires_at,
@@ -96,20 +96,20 @@ def test_read_nous_access_token_refreshes_expiring_cached_token(tmp_path, monkey
         }
     }))
     monkeypatch.setattr(
-        "hermes_cli.auth.resolve_nous_access_token",
+        "scout_cli.auth.resolve_spaceshipresearch_access_token",
         lambda refresh_skew_seconds=120: "fresh-token",
     )
 
-    assert managed_tool_gateway.read_nous_access_token() == "fresh-token"
+    assert managed_tool_gateway.read_spaceshipresearch_access_token() == "fresh-token"
 
 
 def test_is_managed_tool_gateway_ready_skips_refresh_for_expired_cached_token(tmp_path, monkeypatch):
     monkeypatch.delenv("TOOL_GATEWAY_USER_TOKEN", raising=False)
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     expired_at = (datetime.now(timezone.utc) - timedelta(seconds=30)).isoformat()
     (tmp_path / "auth.json").write_text(json.dumps({
         "providers": {
-            "nous": {
+            "spaceshipresearch": {
                 "access_token": "expired-token",
                 "refresh_token": "refresh-token",
                 "expires_at": expired_at,
@@ -123,15 +123,15 @@ def test_is_managed_tool_gateway_ready_skips_refresh_for_expired_cached_token(tm
         return "fresh-token"
 
     monkeypatch.setattr(
-        "hermes_cli.auth.resolve_nous_access_token",
+        "scout_cli.auth.resolve_spaceshipresearch_access_token",
         _record_refresh,
     )
 
     with patch.dict(
         os.environ,
-        {"TOOL_GATEWAY_DOMAIN": "nousresearch.com"},
+        {"TOOL_GATEWAY_DOMAIN": "spaceshipresearch.com"},
         clear=False,
-    ), patch.object(managed_tool_gateway, "managed_nous_tools_enabled", return_value=True):
+    ), patch.object(managed_tool_gateway, "managed_spaceshipresearch_tools_enabled", return_value=True):
         assert is_managed_tool_gateway_ready("modal") is True
 
     assert refresh_calls == []
@@ -142,12 +142,12 @@ def test_connector_gateway_origin_pins_the_deployed_connectors_host():
     # the default resolution must not land on the media/vendor origin.
     with patch.dict(
         os.environ,
-        {"TOOL_GATEWAY_DOMAIN": "nousresearch.com", "TOOL_GATEWAY_SCHEME": "https"},
+        {"TOOL_GATEWAY_DOMAIN": "spaceshipresearch.com", "TOOL_GATEWAY_SCHEME": "https"},
         clear=False,
     ):
         os.environ.pop("CONNECTOR_GATEWAY_URL", None)
         assert managed_gateway_auth.connector_gateway_origin() == (
-            "https://connector-gateway.nousresearch.com"
+            "https://connector-gateway.spaceshipresearch.com"
         )
 
 def test_managed_gateway_origin_honors_the_harness_override():
@@ -156,11 +156,11 @@ def test_managed_gateway_origin_honors_the_harness_override():
     with patch.dict(os.environ, {"TOOL_GATEWAY_URL": "http://127.0.0.1:3009/"}, clear=False):
         os.environ.pop("CONNECTOR_GATEWAY_URL", None)
         assert managed_gateway_auth.managed_gateway_origin() == "http://127.0.0.1:3009"
-        assert managed_gateway_auth.is_managed_nous_gateway_url(
+        assert managed_gateway_auth.is_managed_spaceshipresearch_gateway_url(
             "http://127.0.0.1:3009/api/vendorx/generations"
         )
-        assert not managed_gateway_auth.is_managed_nous_gateway_url(
-            "https://tools.nousresearch.com/api/vendorx/generations"
+        assert not managed_gateway_auth.is_managed_spaceshipresearch_gateway_url(
+            "https://tools.spaceshipresearch.com/api/vendorx/generations"
         )
 
 def test_connector_gateway_origin_honors_its_own_override():
@@ -171,16 +171,16 @@ def test_connector_gateway_origin_honors_its_own_override():
         os.environ,
         {
             "CONNECTOR_GATEWAY_URL": "http://127.0.0.1:3009/",
-            "TOOL_GATEWAY_DOMAIN": "nousresearch.com",
+            "TOOL_GATEWAY_DOMAIN": "spaceshipresearch.com",
         },
         clear=False,
     ):
         os.environ.pop("TOOL_GATEWAY_URL", None)
         assert managed_gateway_auth.connector_gateway_origin() == "http://127.0.0.1:3009"
         assert managed_gateway_auth.managed_gateway_origin() == (
-            "https://tool-gateway.nousresearch.com"
+            "https://tool-gateway.spaceshipresearch.com"
         )
-        assert managed_gateway_auth.is_managed_nous_gateway_url(
+        assert managed_gateway_auth.is_managed_spaceshipresearch_gateway_url(
             "http://127.0.0.1:3009/v1/connectors/search"
         )
 
@@ -190,50 +190,50 @@ def test_default_bearer_gate_accepts_both_deployed_hosts_only():
     # and scheme downgrades are all out.
     with patch.dict(
         os.environ,
-        {"TOOL_GATEWAY_DOMAIN": "nousresearch.com", "TOOL_GATEWAY_SCHEME": "https"},
+        {"TOOL_GATEWAY_DOMAIN": "spaceshipresearch.com", "TOOL_GATEWAY_SCHEME": "https"},
         clear=False,
     ):
         os.environ.pop("TOOL_GATEWAY_URL", None)
         os.environ.pop("CONNECTOR_GATEWAY_URL", None)
         for trusted in (
-            "https://connector-gateway.nousresearch.com/v1/connectors/execute",
-            "https://tool-gateway.nousresearch.com/api/vendorx/generations",
+            "https://connector-gateway.spaceshipresearch.com/v1/connectors/execute",
+            "https://tool-gateway.spaceshipresearch.com/api/vendorx/generations",
         ):
-            assert managed_gateway_auth.is_managed_nous_gateway_url(trusted)
+            assert managed_gateway_auth.is_managed_spaceshipresearch_gateway_url(trusted)
         for untrusted in (
-            "https://tools.nousresearch.com/v1/connectors/execute",
-            "https://evil-connector-gateway.nousresearch.com.attacker.dev/v1/connectors",
-            "https://connector-gateway.nousresearch.com.attacker.dev/v1/connectors",
-            "http://connector-gateway.nousresearch.com/v1/connectors",
-            "http://tool-gateway.nousresearch.com/api/vendorx/generations",
+            "https://tools.spaceshipresearch.com/v1/connectors/execute",
+            "https://evil-connector-gateway.spaceshipresearch.com.attacker.dev/v1/connectors",
+            "https://connector-gateway.spaceshipresearch.com.attacker.dev/v1/connectors",
+            "http://connector-gateway.spaceshipresearch.com/v1/connectors",
+            "http://tool-gateway.spaceshipresearch.com/api/vendorx/generations",
         ):
-            assert not managed_gateway_auth.is_managed_nous_gateway_url(untrusted)
+            assert not managed_gateway_auth.is_managed_spaceshipresearch_gateway_url(untrusted)
 
 
-def test_read_nous_provider_state_falls_back_to_global_root_for_share_auth_profiles(tmp_path, monkeypatch):
+def test_read_spaceshipresearch_provider_state_falls_back_to_global_root_for_share_auth_profiles(tmp_path, monkeypatch):
     # A profile created with ``share_auth`` has no auth.json of its own; it signs in with the
     # root identity. The connector gate must see that identity, or manage_connections vanishes
     # from the profile's tool list while every other credential reader still works.
-    root = tmp_path / ".hermes"
-    profile = root / "profiles" / "hermes-setup"
+    root = tmp_path / ".scout"
+    profile = root / "profiles" / "scout-setup"
     profile.mkdir(parents=True)
     (root / "auth.json").write_text(json.dumps({
         "version": 1,
-        "providers": {"nous": {"auth_method": "anonymous", "access_token": "tok"}},
+        "providers": {"spaceshipresearch": {"auth_method": "anonymous", "access_token": "tok"}},
     }))
-    monkeypatch.setenv("HERMES_HOME", str(profile))
-    monkeypatch.setenv("HERMES_GUEST_ONBOARDING", "1")
+    monkeypatch.setenv("SCOUT_HOME", str(profile))
+    monkeypatch.setenv("SCOUT_GUEST_ONBOARDING", "1")
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
 
-    import hermes_constants
-    from hermes_cli import auth as auth_mod
+    import scout_constants
+    from scout_cli import auth as auth_mod
 
-    monkeypatch.setattr(hermes_constants, "get_default_hermes_root", lambda: root)
-    monkeypatch.setattr(auth_mod, "get_hermes_home", lambda: profile)
+    monkeypatch.setattr(scout_constants, "get_default_scout_root", lambda: root)
+    monkeypatch.setattr(auth_mod, "get_scout_home", lambda: profile)
     monkeypatch.setattr(auth_mod, "_global_auth_store_cache", None)
     monkeypatch.setattr(auth_mod, "_auth_file_path", lambda: profile / "auth.json")
 
-    state = managed_tool_gateway._read_nous_provider_state()
+    state = managed_tool_gateway._read_spaceshipresearch_provider_state()
 
     assert state is not None
     assert state["auth_method"] == "anonymous"

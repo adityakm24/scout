@@ -10,19 +10,19 @@ import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import hermes_yaml as yaml
+import scout_yaml as yaml
 
-from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+from scout_cli.plugins import PluginContext, PluginManager, PluginManifest
 from tui_gateway import server
 
 
 def _write_plugin_config(tmp_path, monkeypatch, entry: dict) -> None:
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir()
-    (hermes_home / "config.yaml").write_text(
+    scout_home = tmp_path / "scout"
+    scout_home.mkdir()
+    (scout_home / "config.yaml").write_text(
         yaml.safe_dump({"plugins": {"entries": {"notify-plugin": entry}}})
     )
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("SCOUT_HOME", str(scout_home))
 
 
 def _context() -> tuple[PluginContext, PluginManager]:

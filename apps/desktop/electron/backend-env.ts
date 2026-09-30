@@ -2,11 +2,11 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { resolveDesktopHermesHome } from './data-paths'
+import { resolveDesktopScoutHome } from './data-paths'
 
 // macOS apps launched from Finder/Dock inherit only /usr/bin:/bin:/usr/sbin:/sbin,
 // which misses Homebrew and user-installed CLI tools (codex, git credential
-// helpers). Hermes' own managed tools need no PATH help — the backend composes
+// helpers). Scout's own managed tools need no PATH help — the backend composes
 // their environment in-process via pm — but user tools on PATH do.
 const POSIX_SANE_PATH_ENTRIES = Object.freeze([
   '/opt/homebrew/bin',
@@ -59,10 +59,10 @@ function appendUniquePathEntries(entries, { delimiter = path.delimiter } = {}) {
   return ordered.join(delimiter)
 }
 
-function resolveHermesHomePath(hermesHome, { pathModule, homedir = os.homedir() }: any) {
+function resolveScoutHomePath(scoutHome, { pathModule, homedir = os.homedir() }: any) {
   // fish (and any shell when the value is quoted) hands a literal `~` through; path.resolve()
-  // would pin it under cwd and the Python backend inherits that absolute path via HERMES_HOME.
-  let raw = String(hermesHome)
+  // would pin it under cwd and the Python backend inherits that absolute path via SCOUT_HOME.
+  let raw = String(scoutHome)
 
   if (raw === '~' || raw.startsWith('~/') || (pathModule === path.win32 && raw.startsWith('~\\'))) {
     raw = pathModule.join(homedir, raw.slice(1))
@@ -75,15 +75,15 @@ function isProfileHome(resolved, pathModule) {
   return pathModule.basename(pathModule.dirname(resolved)).toLowerCase() === 'profiles'
 }
 
-function normalizeHermesHomeRoot(
-  hermesHome,
+function normalizeScoutHomeRoot(
+  scoutHome,
   { pathModule = pathModuleForPlatform(process.platform), homedir = os.homedir() }: any = {}
 ) {
-  if (!hermesHome) {
-    return hermesHome
+  if (!scoutHome) {
+    return scoutHome
   }
 
-  const resolved = resolveHermesHomePath(hermesHome, { pathModule, homedir })
+  const resolved = resolveScoutHomePath(scoutHome, { pathModule, homedir })
 
   return isProfileHome(resolved, pathModule) ? pathModule.dirname(pathModule.dirname(resolved)) : resolved
 }
@@ -92,7 +92,7 @@ function normalizeHermesHomeRoot(
 const PROCESS_ENV_NAMES = new Set([
   'APPDATA',
   'COMSPEC',
-  'HERMES_HOME',
+  'SCOUT_HOME',
   'HOME',
   'LANG',
   'LC_ALL',
@@ -128,9 +128,9 @@ function readTextOrEmpty(fsModule, file) {
 }
 
 /**
- * Parent env for a local `hermes serve` child of `profile` (#68367).
+ * Parent env for a local `scout serve` child of `profile` (#68367).
  *
- * `hermes desktop` loads its launch profile's `.env`/`.op.env` into os.environ
+ * `scout desktop` loads its launch profile's `.env`/`.op.env` into os.environ
  * before exec'ing Electron, so `process.env` carries that profile's platform
  * credentials. A child for ANOTHER profile would inherit them ahead of its own
  * dotenv (`.op.env` is even skipped once OP_SERVICE_ACCOUNT_TOKEN is set) and,
@@ -141,10 +141,10 @@ function readTextOrEmpty(fsModule, file) {
  * declared pass through everywhere.
  *
  * `profile` null/empty means no `--profile` flag: the child follows the sticky
- * `active_profile` like a bare `hermes serve` (`_apply_profile_override`).
+ * `active_profile` like a bare `scout serve` (`_apply_profile_override`).
  */
 function profileBackendParentEnv({
-  hermesHome,
+  scoutHome,
   profile,
   currentEnv = process.env,
   platform = process.platform,
@@ -153,15 +153,15 @@ function profileBackendParentEnv({
 }: any = {}) {
   const env = { ...(currentEnv || {}) }
 
-  if (!hermesHome) {
+  if (!scoutHome) {
     return env
   }
 
   const fold = platform === 'win32' ? (value: string) => value.toUpperCase() : (value: string) => value
-  const inheritedHome = currentEnv?.HERMES_HOME ? resolveHermesHomePath(currentEnv.HERMES_HOME, { pathModule }) : null
-  const launchHome = inheritedHome && isProfileHome(inheritedHome, pathModule) ? inheritedHome : hermesHome
-  const name = profile || readTextOrEmpty(fsModule, pathModule.join(hermesHome, 'active_profile')).trim()
-  const targetHome = !name || name === 'default' ? hermesHome : pathModule.join(hermesHome, 'profiles', name)
+  const inheritedHome = currentEnv?.SCOUT_HOME ? resolveScoutHomePath(currentEnv.SCOUT_HOME, { pathModule }) : null
+  const launchHome = inheritedHome && isProfileHome(inheritedHome, pathModule) ? inheritedHome : scoutHome
+  const name = profile || readTextOrEmpty(fsModule, pathModule.join(scoutHome, 'active_profile')).trim()
+  const targetHome = !name || name === 'default' ? scoutHome : pathModule.join(scoutHome, 'profiles', name)
 
   if (fold(pathModule.resolve(launchHome)) === fold(pathModule.resolve(targetHome))) {
     return env
@@ -184,12 +184,12 @@ function profileBackendParentEnv({
 }
 
 /**
- * PATH with the entries under the PM store (HERMES_RUNTIME_DIR, else
- * <hermes home>/tools, as pm.environments.store_root resolves it) moved to the
- * front, every other entry kept in order. Hermes's own children must run the
+ * PATH with the entries under the PM store (SCOUT_RUNTIME_DIR, else
+ * <scout home>/tools, as pm.environments.store_root resolves it) moved to the
+ * front, every other entry kept in order. Scout's own children must run the
  * store's uv/node/npm, but shell-path.ts puts the user's login-shell entries
  * (nvm, Homebrew, ~/.local/bin) ahead of the inherited PATH, which is where
- * `hermes desktop` put the store dirs.
+ * `scout desktop` put the store dirs.
  */
 function storeFirstPath(
   pathValue: string,
@@ -197,8 +197,8 @@ function storeFirstPath(
 ) {
   const pathModule = pathModuleForPlatform(platform)
   const delimiter = delimiterForPlatform(platform)
-  const hermesHome = resolveDesktopHermesHome({ home: homedir, env: currentEnv, platform })
-  const roots = [currentEnv?.HERMES_RUNTIME_DIR, pathModule.join(hermesHome, 'tools')].filter(Boolean)
+  const scoutHome = resolveDesktopScoutHome({ home: homedir, env: currentEnv, platform })
+  const roots = [currentEnv?.SCOUT_RUNTIME_DIR, pathModule.join(scoutHome, 'tools')].filter(Boolean)
 
   const owned = (entry: string) =>
     roots.some(root => {
@@ -235,7 +235,7 @@ function buildDesktopBackendEnv({
     PYTHONHOME: '',
     // Force PEP 540 UTF-8 mode in the spawned Python backend so its stdio and
     // subprocess defaults are UTF-8 even on non-UTF-8 Windows locales (GBK,
-    // cp1252, ...). hermes_bootstrap sets this inside the child too, but only
+    // cp1252, ...). scout_bootstrap sets this inside the child too, but only
     // after import — anything emitted earlier (interpreter startup errors,
     // pre-bootstrap tracebacks) still decodes with the locale default without
     // this. User's explicit setting wins. Re-port of PR #56499 (echoriver89).
@@ -248,7 +248,7 @@ export {
   appendUniquePathEntries,
   buildDesktopBackendEnv,
   delimiterForPlatform,
-  normalizeHermesHomeRoot,
+  normalizeScoutHomeRoot,
   pathEnvKey,
   POSIX_SANE_PATH_ENTRIES,
   profileBackendParentEnv,

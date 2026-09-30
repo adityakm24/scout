@@ -2,23 +2,24 @@
  * Built-in desktop themes. Names match the CLI skins / dashboard presets.
  * Add new themes here — no code changes needed elsewhere.
  *
- * The palette-bearing skins (nous, catppuccin, everforest, solarized) are forks
+ * The palette-bearing skins (github, catppuccin, everforest, solarized) are forks
  * of their VS Code originals, converted by `buildThemeFromMarketplace` (see
  * ./install.ts) from the extensions below — the same path a Marketplace import
  * takes, so each is identical to installing the extension by hand and costs the
  * user neither the download nor the install step.
  *
- *   nous       ← github.github-vscode-theme   (Light Default / Dark Default)
+ *   github     ← github.github-vscode-theme   (Light Default / Dark Default)
  *   catppuccin ← Catppuccin.catppuccin-vsc    (Latte / Mocha)
  *   everforest ← sainnhe.everforest
  *   solarized  ← ryanolsonx.solarized
  *
  * Re-convert marketplace forks from the upstream extension rather than
  * hand-editing hexes; hand edits drift from upstream silently and can't be
- * re-derived. `nous-alt` is first-party — do not re-derive it from GitHub.
+ * re-derived. `spaceshipresearch` (the Scout identity) and `scout-alt` are
+ * first-party — do not re-derive them from a VS Code theme.
  */
 
-import { THEME_PRESET_PALETTES } from '@hermes/shared'
+import { THEME_PRESET_PALETTES } from '@scout/shared'
 
 import type { DesktopTheme, DesktopThemeTypography } from './types'
 
@@ -45,23 +46,15 @@ const SYSTEM_MONO =
 export const DEFAULT_TYPOGRAPHY: DesktopThemeTypography = { fontSans: SYSTEM_SANS, fontMono: SYSTEM_MONO }
 
 /**
- * Nous — the canonical Hermes desktop identity, forked from the GitHub VS Code
- * theme (github.github-vscode-theme). Light is GitHub Light Default, dark is
- * GitHub Dark Default, both converted through the same path a Marketplace
- * install takes, so the palette here is byte-identical to importing the
- * extension yourself.
- *
- * Typography stays Hermes's own: a VS Code theme carries no font opinion, and
- * these are the stacks every skin has been rendering with.
+ * Display serif for hero lettering (the empty-chat wordmark). Instrument Serif
+ * loads through the theme's `fontUrl`; offline it falls to `ui-serif`, which is
+ * New York on macOS, so the lettering stays a serif either way.
  */
+export const SCOUT_DISPLAY_FONT_URL =
+  'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap'
+
 /**
- * GitHub — the upstream palette, unmodified.
- *
- * `nous` is a fork of this with its own accent, so shipping both keeps the
- * original available on its own terms instead of only existing as the thing
- * nous diverged from. Everything but the accent family is identical between
- * them; separate presets are what let nous's accent move without silently
- * redefining what "GitHub" means.
+ * GitHub — the upstream palette, unmodified (GitHub Light / Dark Default).
  */
 export const githubTheme: DesktopTheme = {
   name: 'github',
@@ -116,25 +109,23 @@ export const githubTheme: DesktopTheme = {
 /** Catppuccin — Latte in light, Mocha in dark (Catppuccin.catppuccin-vsc). */
 
 /**
- * Nous — the canonical Hermes desktop identity: GitHub's chrome carrying Nous
- * blue. Forked from github.github-vscode-theme (Light Default / Dark Default),
- * with only the accent family re-seeded; every neutral is upstream's.
+ * Scout — the canonical desktop identity of Spaceship Research.
  *
- * Two seeds, one blue. `#0053FD` is the brand color and reads at 5.4:1 on the
- * light sidebar, but only 3.6:1 on the near-black dark one — so dark carries
- * `#4a84fe`, the same hue (263°) lifted to clear AA at 5.9:1. The soft
- * surfaces below are mixed from those seeds in OKLab, which is what keeps a
- * saturated blue from drifting violet on its way to white.
+ * "Paper" by day: warm off-white surfaces and near-black ink, in the manner of
+ * Dia and Arc. "Deep Orbit" by night: a blue-black navy with the same ink
+ * inverted. One accent, Ignition — a launch-plume orange, `#ae380a` in light
+ * (5.5:1 on the paper sidebar) and `#f06a32` in dark (6.5:1 on the orbit
+ * sidebar). The palette itself lives in `@scout/shared`'s THEME_PRESET_PALETTES.
  */
-export const nousTheme: DesktopTheme = {
-  name: 'nous',
-  label: 'Nous',
-  description: 'GitHub chrome, Nous blue accent',
-  ...THEME_PRESET_PALETTES.nous,
+export const scoutTheme: DesktopTheme = {
+  name: 'spaceshipresearch',
+  label: 'Scout',
+  description: 'Paper by day, Deep Orbit by night, Ignition accent',
+  ...THEME_PRESET_PALETTES.spaceshipresearch,
   typography: {
     fontSans: SYSTEM_SANS,
     fontMono: SYSTEM_MONO,
-    fontUrl: 'https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap'
+    fontUrl: SCOUT_DISPLAY_FONT_URL
   },
   terminal: {
     foreground: '#1f2328',
@@ -323,14 +314,14 @@ export const solarizedTheme: DesktopTheme = {
 }
 
 /**
- * Nous Alt — the hand-authored Nous from before the GitHub fork. Light is
+ * SpaceshipResearch Alt — the hand-authored SpaceshipResearch from before the GitHub fork. Light is
  * glass neutrals with brand blue; dark is cream on mission-blue.
  */
-export const nousAltTheme: DesktopTheme = {
-  name: 'nous-alt',
-  label: 'Nous Alt',
+export const spaceshipResearchAltTheme: DesktopTheme = {
+  name: 'scout-alt',
+  label: 'SpaceshipResearch Alt',
   description: 'Glass neutrals, cream on mission-blue',
-  ...THEME_PRESET_PALETTES['nous-alt'],
+  ...THEME_PRESET_PALETTES['scout-alt'],
   typography: {
     fontSans: SYSTEM_SANS,
     fontMono: SYSTEM_MONO,
@@ -396,12 +387,12 @@ export const slateTheme: DesktopTheme = {
 }
 
 export const BUILTIN_THEMES: Record<string, DesktopTheme> = {
-  nous: nousTheme,
+  spaceshipresearch: scoutTheme,
   github: githubTheme,
   catppuccin: catppuccinTheme,
   everforest: everforestTheme,
   solarized: solarizedTheme,
-  'nous-alt': nousAltTheme,
+  'scout-alt': spaceshipResearchAltTheme,
   midnight: midnightTheme,
   ember: emberTheme,
   mono: monoTheme,
@@ -412,4 +403,4 @@ export const BUILTIN_THEMES: Record<string, DesktopTheme> = {
 export const BUILTIN_THEME_LIST = Object.values(BUILTIN_THEMES)
 
 /** Skin used when nothing is persisted or the persisted name is retired. */
-export const DEFAULT_SKIN_NAME = 'nous'
+export const DEFAULT_SKIN_NAME = 'spaceshipresearch'

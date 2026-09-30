@@ -1,6 +1,6 @@
-import type { ModelOptionProvider, ModelOptionsResult, ModelPricing } from '@hermes/shared'
-import { DEFAULT_REASONING_EFFORT } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
+import type { ModelOptionProvider, ModelOptionsResult, ModelPricing } from '@scout/shared'
+import { DEFAULT_REASONING_EFFORT } from '@scout/shared'
 import { useQuery } from '@tanstack/react-query'
 import {
   createContext,
@@ -29,7 +29,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { HighlightMatches } from '@/components/ui/highlight-matches'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { HermesGateway } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { isSubmitEnter } from '@/lib/ime'
 import { catalogProviderMatches, modelOptionsQueryKey, requestModelOptions } from '@/lib/model-options'
@@ -37,6 +36,7 @@ import { displayModelName, modelDisplayParts } from '@/lib/model-status-label'
 import { reasoningEffortLabel } from '@/lib/reasoning-effort'
 import { foldIncludes, normalize } from '@/lib/text'
 import { cn } from '@/lib/utils'
+import type { ScoutGateway } from '@/scout'
 import { $customModels, addCustomModel, customModelCandidate, withCustomModels } from '@/store/custom-models'
 import { $localModelsEnabled } from '@/store/local-models-flag'
 import {
@@ -59,7 +59,7 @@ import {
 } from '@/store/model-visibility'
 import { $collapsedProviders, toggleCollapsedProvider } from '@/store/provider-collapse'
 import { $defaultReasoningEffort } from '@/store/session'
-import type { LocalModelLoadProgress, LocalRuntimeJob } from '@/types/hermes'
+import type { LocalModelLoadProgress, LocalRuntimeJob } from '@/types/scout'
 
 import { type FastControl, ModelEditSubmenu, resolveFastControl } from './model-edit-submenu'
 
@@ -72,7 +72,7 @@ export const ModelMenuCloseContext = createContext<() => void>(() => {})
 /** Compact per-row price: `$in/$out` per Mtok (cached read appended when the
  *  provider ships it), "free", and a sale tag when the portal reports a
  *  discounted list price. Rendered only when the provider's payload carries
- *  pricing (Nous Portal and others that ship it). */
+ *  pricing (Scout Portal and others that ship it). */
 function ModelPrice({ pricing }: { pricing: ModelPricing }) {
   const { t } = useI18n()
   const copy = t.shell.modelMenu
@@ -135,7 +135,7 @@ export interface ModelChoice {
  * the kanban override just holds a value in dialog state.
  *
  * `presetFor` supplies the remembered settings shown on a non-active row.
- * Returning `{}` is fine — the row then shows Hermes' defaults.
+ * Returning `{}` is fine — the row then shows Scout's defaults.
  */
 export interface ModelMenuController {
   /** Restore a model's remembered settings after it is selected. Separate from
@@ -158,7 +158,7 @@ interface ModelCatalogMenuProps {
   controller: ModelMenuController
   /** Rows appended under the catalog (Refresh Models, Edit Models, …). */
   footer?: ReactNode
-  gateway?: HermesGateway
+  gateway?: ScoutGateway
   /** Owner-routed RPC for catalog reads. Preferred over `gateway.request` so
    *  a tile's menu queries the session owner's backend, not chrome's. */
   request?: <T>(method: string, params?: Record<string, unknown>) => Promise<T>
@@ -657,7 +657,7 @@ export function ModelCatalogMenu({
             return (
               <DropdownMenuGroup className="py-0.5" key={slug}>
                 <DropdownMenuItem
-                  className="group/label flex w-full items-center gap-1 px-2 pb-0.5 pt-0.5 text-[0.625rem] font-semibold uppercase tracking-wider text-(--ui-text-tertiary) cursor-pointer !bg-transparent focus:!bg-transparent"
+                  className="group/label flex w-full items-center gap-1 px-2 pb-0.5 pt-0.5 text-[0.6875rem] font-semiboldr text-(--ui-text-tertiary) cursor-pointer !bg-transparent focus:!bg-transparent"
                   onSelect={event => {
                     event.preventDefault()
                     toggleCollapsedProvider(slug)
@@ -687,7 +687,7 @@ export function ModelCatalogMenu({
                     const { name, tag } = modelDisplayParts(family.id)
                     const caps = group.provider.capabilities?.[family.id]
 
-                    // Live per-model $/Mtok pricing (Nous Portal and other
+                    // Live per-model $/Mtok pricing (Scout Portal and other
                     // providers that ship it). A `-fast` sibling shares the
                     // base id's price: the collapsed row fronts the base, so
                     // fall back to it when only the fast variant is unpriced.
@@ -760,7 +760,7 @@ export function ModelCatalogMenu({
                               <HighlightMatches foldSeparators query={search} text={name} />
                             </span>
                             {metaTags.map(chip => (
-                              <Badge className="shrink-0 uppercase tracking-wide" key={chip} size="xs" variant="muted">
+                              <Badge className="shrink-0" key={chip} size="xs" variant="muted">
                                 {chip}
                               </Badge>
                             ))}
@@ -822,7 +822,7 @@ export function ModelCatalogMenu({
           })}
           {!hasLocalGroup && shownDownloads.length > 0 && (
             <DropdownMenuGroup className="py-0.5" key="local-downloads">
-              <DropdownMenuLabel className="px-2 pb-0.5 pt-0.5 text-[0.625rem] font-semibold uppercase tracking-wider text-(--ui-text-tertiary)">
+              <DropdownMenuLabel className="px-2 pb-0.5 pt-0.5 text-[0.6875rem] font-semiboldr text-(--ui-text-tertiary)">
                 {copyPicker.localDownloadsHeading}
               </DropdownMenuLabel>
               {shownDownloads.map(job => (

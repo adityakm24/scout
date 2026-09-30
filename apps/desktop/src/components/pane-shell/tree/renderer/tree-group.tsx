@@ -653,7 +653,7 @@ export function TreeGroup({
                             restoreTreePane(paneId)
                           }
 
-                          activateTreePane(node.id, paneId)
+                          activateTreePane(node.id, paneId, { byUser: true })
                         }
 
                         // Claim the press so the STRIP's own pane-drag handler
@@ -809,7 +809,7 @@ export function TreeGroup({
           {isEmpty ? (
             <div className="grid h-full place-items-center">
               {/* Same decode primitive as the CONNECTING boot overlay. */}
-              <DecodeText className="text-(--ui-text-quaternary)" cursor prefix={1} text="HERMES" />
+              <DecodeText className="text-(--ui-text-quaternary)" cursor prefix={1} text="SCOUT" />
             </div>
           ) : (
             inlinePanes.map(paneId => {
@@ -878,7 +878,7 @@ export function TreeGroup({
               outlineColor: 'color-mix(in srgb, var(--ui-accent) 55%, transparent)'
             }}
           >
-            <span className="flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-md border border-(--ui-stroke-secondary) bg-popover px-2 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-(--ui-text-secondary)">
+            <span className="flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-md border border-(--ui-stroke-secondary) bg-popover px-2 py-1 text-[0.6875rem] font-semibold text-(--ui-text-secondary)">
               <Codicon className="shrink-0" name="gripper" size="0.8125rem" />
               <span className="min-w-0 truncate">{tabText(activeId)}</span>
             </span>
@@ -1028,7 +1028,7 @@ function ZoneDropOverlay({ node }: { node: GroupNode }) {
   return (
     <div
       className="pointer-events-none absolute inset-0 z-40"
-      style={{ animation: `hermes-zone-fade ${OVERLAY_FADE_MS}ms linear both` }}
+      style={{ animation: `scout-zone-fade ${OVERLAY_FADE_MS}ms linear both` }}
     >
       <div
         className={cn(

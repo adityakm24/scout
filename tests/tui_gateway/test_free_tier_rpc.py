@@ -10,8 +10,8 @@ import time
 import pytest
 
 import tui_gateway.server as srv
-from hermes_cli import anon_auth
-from hermes_cli.auth import _auth_store_lock, _load_auth_store, _save_auth_store
+from scout_cli import anon_auth
+from scout_cli.auth import _auth_store_lock, _load_auth_store, _save_auth_store
 
 
 def _jwt(**claims) -> str:
@@ -31,7 +31,7 @@ def _fresh_process_memos():
     """``free_tier.provision`` routes through the boot record when one exists; a record another
     test file left behind (has_identity) would make it skip the mint. Per-process state, per test,
     both ways so this file leaves nothing behind either."""
-    from hermes_cli import free_tier_bootstrap
+    from scout_cli import free_tier_bootstrap
 
     def _reset():
         free_tier_bootstrap.reset_for_tests()
@@ -43,20 +43,20 @@ def _fresh_process_memos():
 
 @pytest.fixture
 def guest(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_SHARED_AUTH_DIR", str(tmp_path / "shared-store"))
-    monkeypatch.setenv("HERMES_GUEST_ONBOARDING", "1")
+    monkeypatch.setenv("SCOUT_SHARED_AUTH_DIR", str(tmp_path / "shared-store"))
+    monkeypatch.setenv("SCOUT_GUEST_ONBOARDING", "1")
     with _auth_store_lock():
         store = _load_auth_store()
-        store.setdefault("providers", {})["nous"] = {
+        store.setdefault("providers", {})["spaceshipresearch"] = {
             "auth_method": anon_auth.ANON_AUTH_METHOD, "account_tier": "anonymous", "anon_token": "anon_0001",
             "client_id": "nas-anonymous", "access_token": _jwt(), "expires_at": "2999-01-01T00:00:00+00:00",
-            "inference_base_url": "https://welcome-api.nousresearch.com/v1"}
-        store["active_provider"] = "nous"
+            "inference_base_url": "https://welcome-api.spaceshipresearch.com/v1"}
+        store["active_provider"] = "spaceshipresearch"
         _save_auth_store(store)
 
 
 def _set_guest_off(monkeypatch):
-    from hermes_cli import config as cfg_mod
+    from scout_cli import config as cfg_mod
     monkeypatch.setattr(anon_auth, "guest_enabled", lambda: False)
     return cfg_mod
 
@@ -64,13 +64,13 @@ def _set_guest_off(monkeypatch):
 def test_status_is_pull_from_local_state_and_ack_persists_on_the_identity(guest, monkeypatch):
     status = _call("free_tier.status")
     assert status == {"has_guest": True, "enabled": True, "available": True, "notice_pending": True,
-                      "model": "nous/welcome", "label": anon_auth.FREE_TIER_LABEL}
+                      "model": "spaceshipresearch/welcome", "label": anon_auth.FREE_TIER_LABEL}
 
     assert _call("free_tier.ack_notice") == {"acked": True}
     assert _call("free_tier.status")["notice_pending"] is False
-    assert _load_auth_store()["providers"]["nous"][anon_auth.GUEST_NOTICE_FLAG] is True
+    assert _load_auth_store()["providers"]["spaceshipresearch"][anon_auth.GUEST_NOTICE_FLAG] is True
 
-    # nous.guest: false -> the identity exists but carries nothing; no notice either.
+    # spaceshipresearch.guest: false -> the identity exists but carries nothing; no notice either.
     _set_guest_off(monkeypatch)
     status = _call("free_tier.status")
     assert status["has_guest"] is True and status["enabled"] is False
@@ -82,7 +82,7 @@ def test_billing_state_answers_the_free_tier_locally(guest, monkeypatch):
     monkeypatch.setattr(bv, "build_billing_state", lambda *a, **kw: pytest.fail("free tier must not call the portal"))
     res = _call("billing.state")
     assert res["ok"] is True and res["logged_in"] is False
-    assert res["free_tier_account"] is True and res["free_tier_model"] == "nous/welcome"
+    assert res["free_tier_account"] is True and res["free_tier_model"] == "spaceshipresearch/welcome"
     assert res["usage"] == {"available": False}
 
     _set_guest_off(monkeypatch)
@@ -94,8 +94,8 @@ def test_billing_state_answers_the_free_tier_locally(guest, monkeypatch):
 def test_status_without_an_identity_is_a_pure_read(tmp_path, monkeypatch):
     """The desktop polls ``free_tier.status`` every status round; a poll must never create the identity
     (that is the boot bootstrap's job)."""
-    monkeypatch.setenv("HERMES_SHARED_AUTH_DIR", str(tmp_path / "shared-store"))
-    monkeypatch.setenv("HERMES_GUEST_ONBOARDING", "1")
+    monkeypatch.setenv("SCOUT_SHARED_AUTH_DIR", str(tmp_path / "shared-store"))
+    monkeypatch.setenv("SCOUT_GUEST_ONBOARDING", "1")
     monkeypatch.setattr(anon_auth, "ensure_portal_identity",
                         lambda **kw: (_ for _ in ()).throw(AssertionError("free_tier.status must not mint")))
     status = _call("free_tier.status")
@@ -105,8 +105,8 @@ def test_status_without_an_identity_is_a_pure_read(tmp_path, monkeypatch):
 def test_provision_sets_the_free_tier_up_through_the_lifecycle_primitive(tmp_path, monkeypatch):
     """``free_tier.provision`` is the desktop's explicit retry: it calls the one creator
     (``ensure_portal_identity(explicit=True)``) only when no identity exists, and reports the outcome."""
-    monkeypatch.setenv("HERMES_SHARED_AUTH_DIR", str(tmp_path / "shared-store"))
-    monkeypatch.setenv("HERMES_GUEST_ONBOARDING", "1")
+    monkeypatch.setenv("SCOUT_SHARED_AUTH_DIR", str(tmp_path / "shared-store"))
+    monkeypatch.setenv("SCOUT_GUEST_ONBOARDING", "1")
     calls = []
     real_ensure = anon_auth.ensure_portal_identity
 
@@ -114,10 +114,10 @@ def test_provision_sets_the_free_tier_up_through_the_lifecycle_primitive(tmp_pat
         calls.append(kw)
         with _auth_store_lock():
             store = _load_auth_store()
-            store.setdefault("providers", {})["nous"] = {
+            store.setdefault("providers", {})["spaceshipresearch"] = {
                 "auth_method": anon_auth.ANON_AUTH_METHOD, "account_tier": "anonymous", "anon_token": "anon_0002"}
             _save_auth_store(store)
-        return store["providers"]["nous"]
+        return store["providers"]["spaceshipresearch"]
 
     monkeypatch.setattr(anon_auth, "ensure_portal_identity", fake_provision)
     assert _call("free_tier.provision") == {"has_guest": True, "enabled": True}
@@ -126,10 +126,10 @@ def test_provision_sets_the_free_tier_up_through_the_lifecycle_primitive(tmp_pat
     assert len(calls) == 1                       # idempotent: an identity exists, nothing is minted
 
     def refused(**kw):
-        raise anon_auth.AuthError("Nous free tier is not open on this portal.", code="anon_gate_closed")
+        raise anon_auth.AuthError("SpaceshipResearch free tier is not open on this portal.", code="anon_gate_closed")
 
     with _auth_store_lock():
-        store = _load_auth_store(); store["providers"].pop("nous"); _save_auth_store(store)
+        store = _load_auth_store(); store["providers"].pop("spaceshipresearch"); _save_auth_store(store)
     # The real primitive memoises the refusal; the RPC reports that memo.
     monkeypatch.setattr(anon_auth, "ensure_portal_identity", real_ensure)
     monkeypatch.setattr(anon_auth, "_reconcile_and_provision", refused)

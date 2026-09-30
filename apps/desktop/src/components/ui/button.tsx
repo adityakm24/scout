@@ -16,7 +16,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        // Disabled reads as neutral, not as a faded accent (a 50% orange is muddy).
+        default:
+          'bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-(--ui-bg-tertiary) disabled:text-(--ui-text-tertiary) disabled:opacity-100',
         destructive:
           'bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40',
         // Quiet action — transparent fill with a 1.5px inset ring (no layout-shifting border).
@@ -55,13 +57,15 @@ const buttonVariants = cva(
         // Status-stack headers, table footers — 12px text actions beside a label.
         micro:
           "h-auto gap-0.5 px-1 py-0 text-xs leading-4 font-normal has-[>svg]:px-0.5 [&_svg:not([class*='size-'])]:size-3",
-        icon: 'size-9 rounded-[4px]',
-        'icon-xs': "size-6 rounded-[4px] [&_svg:not([class*='size-'])]:size-3",
-        'icon-sm': 'size-8 rounded-[4px]',
-        'icon-lg': 'size-10 rounded-[4px]',
+        // Icon buttons follow the app radius scale (Apple-soft squircles), so
+        // they stay concentric with the capsules and plates around them.
+        icon: 'size-9 rounded-lg',
+        'icon-xs': "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
+        'icon-sm': 'size-8 rounded-lg',
+        'icon-lg': 'size-10 rounded-xl',
         grip: 'h-4 w-12 rounded-full p-0',
         'icon-titlebar':
-          'titlebar-icon-button h-(--titlebar-control-height) w-(--titlebar-control-size) rounded-[4px] [&_svg:not([class*="size-"])]:size-(--titlebar-icon-size)'
+          'titlebar-icon-button h-(--titlebar-control-height) w-(--titlebar-control-size) rounded-md [&_svg:not([class*="size-"])]:size-(--titlebar-icon-size)'
       }
     },
     compoundVariants: [

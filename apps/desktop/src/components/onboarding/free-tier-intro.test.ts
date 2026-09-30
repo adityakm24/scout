@@ -2,14 +2,14 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { $freeTierRoute, $freeTierStatus, freeTierStripPending } from '@/store/free-tier'
 import { $desktopOnboarding, refreshOnboarding } from '@/store/onboarding'
-import type { FreeTierStatus } from '@/types/hermes'
+import type { FreeTierStatus } from '@/types/scout'
 
 const READY: FreeTierStatus = {
   available: true,
   enabled: true,
   has_guest: true,
-  label: 'Nous · free tier',
-  model: 'nous/welcome',
+  label: 'SpaceshipResearch · free tier',
+  model: 'spaceshipresearch/welcome',
   notice_pending: true
 }
 

@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button'
 import { ErrorIcon } from '@/components/ui/error-state'
 import { Input } from '@/components/ui/input'
 import { Loader } from '@/components/ui/loader'
-import { getGlobalModelOptions, profileScopeKey } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { ExternalLink, Loader2 } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { getGlobalModelOptions, profileScopeKey } from '@/scout'
 import {
   cancelOnboardingFlow,
   copyDeviceCode,
@@ -186,7 +186,7 @@ export function DeviceCode({ code, copied, onCopy }: { code: string; copied: boo
               'flex size-10 items-center justify-center rounded-md border font-mono text-xl font-semibold uppercase transition-colors',
               copied
                 ? 'border-primary/50 text-primary'
-                : 'border-(--stroke-nous) text-foreground group-hover:border-(--ui-stroke-secondary)'
+                : 'border-(--stroke-spaceshipresearch) text-foreground group-hover:border-(--ui-stroke-secondary)'
             )}
             key={i}
           >
@@ -202,7 +202,7 @@ function CodeBlock({ copied, onCopy, text }: { copied: boolean; onCopy: () => vo
   const { t } = useI18n()
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-(--stroke-nous) px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-md border border-(--stroke-spaceshipresearch) px-3 py-2">
       <code className="min-w-0 flex-1 truncate font-mono text-sm">
         <span className="mr-2 select-none text-muted-foreground">$</span>
         {text}
@@ -279,16 +279,16 @@ function ConfirmingModelPanel({
         )}
       >
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
+          <span className="font-mono text-[0.6875rem] text-muted-foreground">
             {t.onboarding.defaultModel}
           </span>
           {freeTier === true && (
-            <span className="rounded-sm bg-emerald-500/15 px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+            <span className="rounded-sm bg-emerald-500/15 px-1 py-0.5 text-[0.6rem] font-semibold text-emerald-600 dark:text-emerald-400">
               {t.onboarding.freeTier}
             </span>
           )}
           {freeTier === false && (
-            <span className="rounded-sm bg-primary/15 px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-primary">
+            <span className="rounded-sm bg-primary/15 px-1 py-0.5 text-[0.6rem] font-semibold text-primary">
               {t.onboarding.pro}
             </span>
           )}

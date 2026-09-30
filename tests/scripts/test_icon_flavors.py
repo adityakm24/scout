@@ -38,11 +38,11 @@ def generate(tmp_path_factory):
             out = root / str(next(sequence))
             # The runtime interpreter renders with its own packages: foreign
             # interpreter paths must not leak in, and nothing may be installed.
-            env = {**os.environ, "HERMES_HOME": str(root / "home"),
-                   "HERMES_RUNTIME_DIR": str(root / "tools"),
-                   "HERMES_PAYLOAD_TAG": tag, "HERMES_BUILD_COMMIT": commit,
-                   "HERMES_PYTHON": str(python), "PYTHONPATH": str(root / "foreign-site"),
-                   "PYTHONHOME": str(root / "foreign-python"), "HERMES_DISABLE_LAZY_INSTALLS": "1"}
+            env = {**os.environ, "SCOUT_HOME": str(root / "home"),
+                   "SCOUT_RUNTIME_DIR": str(root / "tools"),
+                   "SCOUT_PAYLOAD_TAG": tag, "SCOUT_BUILD_COMMIT": commit,
+                   "SCOUT_PYTHON": str(python), "PYTHONPATH": str(root / "foreign-site"),
+                   "PYTHONHOME": str(root / "foreign-python"), "SCOUT_DISABLE_LAZY_INSTALLS": "1"}
             command = [node, str(ROOT / "scripts/generate-icons.mjs"),
                        "--source", str(source), "--out", str(out)]
             result = subprocess.run(command, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
@@ -124,7 +124,7 @@ def test_renderer_canary_rule_is_the_canonical_one(monkeypatch):
     its own copy of the canary rule; both rules must agree on every tag shape."""
     import importlib.util
     import types
-    from hermes_cli.update_channel import is_canary_tag
+    from scout_cli.update_channel import is_canary_tag
 
     monkeypatch.setitem(sys.modules, "resvg_py", types.ModuleType("resvg_py"))
     spec = importlib.util.spec_from_file_location("generate_icons", ROOT / "scripts/generate_icons.py")

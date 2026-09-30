@@ -8,20 +8,20 @@ definition is already in the profile — writing it after the pin never ran (#10
 
 from __future__ import annotations
 
-import hermes_yaml as yaml
+import scout_yaml as yaml
 
 import tui_gateway.server as srv
 
 
 def test_inherit_launch_model_carries_a_custom_provider_gateway(monkeypatch, tmp_path):
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".scout"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("SCOUT_HOME", str(home))
     (home / "config.yaml").write_text(
         "model:\n  provider: my-gateway\n  default: my-finetune\n"
         "providers:\n  my-gateway:\n    api: https://llm.internal.example.com/v1\n    key_env: GW_KEY\n"
         "  unrelated:\n    api: https://other.example.com/v1\n")
-    profile = home / "profiles" / "scout"
+    profile = home / "profiles" / "ranger"
     profile.mkdir(parents=True)
 
     assert srv._inherit_launch_model(profile) is True

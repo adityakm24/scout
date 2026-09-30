@@ -6,8 +6,8 @@
 { inputs, ... }: {
   perSystem = { pkgs, lib, self', ... }:
     let
-      hermes-agent = self'.packages.default;
-      hermesVenv = hermes-agent.hermesVenv;
+      scout-agent = self'.packages.default;
+      scoutVenv = scout-agent.scoutVenv;
 
       configMergeScript = pkgs.callPackage ./configMergeScript.nix { };
 
@@ -37,7 +37,7 @@
                 fsType = "ext4";
               };
             }
-            { services.hermes-agent = settings; }
+            { services.scout-agent = settings; }
           ];
         };
 
@@ -49,12 +49,12 @@
             inputs.self.homeManagerModules.default
             {
               home = {
-                username = "hermes-check";
-                homeDirectory = "/home/hermes-check";
+                username = "scout-check";
+                homeDirectory = "/home/scout-check";
                 stateVersion = "24.11";
               };
             }
-            { services.hermes-agent = settings; }
+            { services.scout-agent = settings; }
           ];
         };
 
@@ -71,23 +71,23 @@
             inputs.self.homeManagerModules.default
             {
               home = {
-                username = "hermes-check";
-                homeDirectory = "/home/hermes-check";
+                username = "scout-check";
+                homeDirectory = "/home/scout-check";
                 stateVersion = "24.11";
               };
             }
             {
-              programs.hermes-agent = programs;
-              services.hermes-agent = services;
+              programs.scout-agent = programs;
+              services.scout-agent = services;
             }
           ];
         };
 
       # The option names that each module defines under
-      # services.hermes-agent. The internal names that the module system adds
+      # services.scout-agent. The internal names that the module system adds
       # are not in the list.
       moduleOptionNames =
-        eval: lib.attrNames (lib.filterAttrs (n: _: !lib.hasPrefix "_" n) eval.options.services.hermes-agent);
+        eval: lib.attrNames (lib.filterAttrs (n: _: !lib.hasPrefix "_" n) eval.options.services.scout-agent);
 
       # These options belong to one module by design. The check does not
       # compare the two lists against each other, because that test only
@@ -103,17 +103,17 @@
       ];
       homeOnlyOptions = [
         "gateway"
-        "hermesHome"
+        "scoutHome"
         "installPackage"
       ];
 
       # Auto-generated config key reference — always in sync with Python
-      configKeys = pkgs.runCommand "hermes-config-keys" {} ''
+      configKeys = pkgs.runCommand "scout-config-keys" {} ''
         set -euo pipefail
         export HOME=$TMPDIR
-        ${hermesVenv}/bin/python3 -c '
+        ${scoutVenv}/bin/python3 -c '
 import json, sys
-from hermes_cli.config import DEFAULT_CONFIG
+from scout_cli.config import DEFAULT_CONFIG
 
 def leaf_paths(d, prefix=""):
     paths = []
@@ -145,7 +145,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
           results = map (sys: { inherit sys; result = tryEvalPkg sys; }) targetSystems;
           failures = builtins.filter (r: !r.result.success) results;
           failMsg = lib.concatMapStringsSep "\n" (r: "  - ${r.sys}") failures;
-        in pkgs.runCommand "hermes-cross-eval" { } (
+        in pkgs.runCommand "scout-cross-eval" { } (
           if failures != [] then
             throw "Package fails to evaluate on:\n${failMsg}"
           else ''
@@ -159,7 +159,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         # next to these archives. `nix flake check` otherwise only evaluates
         # the pm derivations, so a sidecar leaking into srcs ("do not know
         # how to unpack") stayed green; build the two sidecar-bearing pins.
-        pm-packages-unpack = pkgs.runCommand "hermes-pm-packages-unpack" { } ''
+        pm-packages-unpack = pkgs.runCommand "scout-pm-packages-unpack" { } ''
           test -x ${self'.packages.pm-tirith}/tirith
           test -x ${self'.packages.pm-iron-proxy}/iron-proxy
           mkdir -p $out
@@ -169,15 +169,15 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         # Verify the default package builds successfully (cross-platform).
         # On Linux the runtime checks below already depend on the package,
         # but this ensures darwin builders also build it during flake check.
-        build-package = pkgs.runCommand "hermes-build-package" { } ''
-          echo "PASS: package built at ${hermes-agent}"
+        build-package = pkgs.runCommand "scout-build-package" { } ''
+          echo "PASS: package built at ${scout-agent}"
           mkdir -p $out
           echo "ok" > $out/result
         '';
 
         # Inspect the shipped assets: successful JS compilation alone does
         # not prove Vite copied the generated public files into the package.
-        frontend-icons = pkgs.runCommand "hermes-frontend-icons" {
+        frontend-icons = pkgs.runCommand "scout-frontend-icons" {
           nativeBuildInputs = [ (pkgs.python3.withPackages (ps: [ ps.pillow ])) ];
         } ''
           python3 - <<'PY'
@@ -185,10 +185,10 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
           from PIL import Image
 
           desktop = Path('${self'.packages.desktop}/share')
-          dist = desktop / 'hermes-desktop/dist'
-          launcher = desktop / 'icons/hicolor/1024x1024/apps/hermes.png'
+          dist = desktop / 'scout-desktop/dist'
+          launcher = desktop / 'icons/hicolor/1024x1024/apps/scout.png'
           for path in [launcher, dist / 'apple-touch-icon.png',
-                       dist / 'nous-girl.png', dist / 'nous-girl-dark.png',
+                       dist / 'scout-girl.png', dist / 'scout-girl-dark.png',
                        Path('${self'.packages.web}/favicon.ico')]:
               with Image.open(path) as image:
                   image.load()
@@ -202,7 +202,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         '';
 
         # Verify the devShell builds successfully (cross-platform).
-        build-devshell = pkgs.runCommand "hermes-build-devshell" { } ''
+        build-devshell = pkgs.runCommand "scout-build-devshell" { } ''
           echo "PASS: devShell built at ${self'.devShells.default}"
           mkdir -p $out
           echo "ok" > $out/result
@@ -222,9 +222,9 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 gateway.enable = true;
                 backend.mode = "serve";
                 settings.model.default = "test/model";
-                environment.HERMES_TEST = "1";
-                environmentFiles = [ "/run/secrets/hermes-env" ];
-                hermesHomeFiles."SOUL.md" = "test soul";
+                environment.SCOUT_TEST = "1";
+                environmentFiles = [ "/run/secrets/scout-env" ];
+                scoutHomeFiles."SOUL.md" = "test soul";
                 # documents needs an explicit workingDirectory. The check
                 # workspace-files-need-a-directory below asserts that rule.
                 workingDirectory = "/home/test-user/workspace";
@@ -238,18 +238,18 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             cfg = enabled.config;
 
             # The gateway and the backend are two processes with one
-            # HERMES_HOME.
+            # SCOUT_HOME.
             processes =
               if pkgs.stdenv.hostPlatform.isDarwin then
                 lib.mapAttrs (_: agent: {
                   argv = agent.config.ProgramArguments;
                   env = agent.config.EnvironmentVariables;
-                }) (lib.filterAttrs (n: _: lib.hasPrefix "hermes" n) cfg.launchd.agents)
+                }) (lib.filterAttrs (n: _: lib.hasPrefix "scout" n) cfg.launchd.agents)
               else
                 lib.mapAttrs (_: unit: {
                   argv = [ unit.Service.ExecStart ];
                   env = unit.Service.Environment;
-                }) (lib.filterAttrs (n: _: lib.hasPrefix "hermes" n) cfg.systemd.user.services);
+                }) (lib.filterAttrs (n: _: lib.hasPrefix "scout" n) cfg.systemd.user.services);
 
             names = lib.attrNames processes;
             argvOf = name: lib.concatStringsSep " " (lib.flatten (processes.${name}.argv));
@@ -265,48 +265,48 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 if lib.isAttrs env then lib.mapAttrsToList (k: v: "${k}=${toString v}") env else env
               );
 
-            activation = cfg.home.activation.hermesAgentSetup.data;
+            activation = cfg.home.activation.scoutAgentSetup.data;
 
             failures =
               lib.optional (names != [
-                "hermes-agent"
-                "hermes-backend"
-              ]) "expected hermes-agent + hermes-backend processes, got: ${toString names}"
+                "scout-agent"
+                "scout-backend"
+              ]) "expected scout-agent + scout-backend processes, got: ${toString names}"
               ++ lib.optional (
-                !lib.hasInfix "bin/hermes gateway" (argvOf "hermes-agent")
-              ) "gateway process does not run `hermes gateway`: ${argvOf "hermes-agent"}"
+                !lib.hasInfix "bin/scout gateway" (argvOf "scout-agent")
+              ) "gateway process does not run `scout gateway`: ${argvOf "scout-agent"}"
               ++ lib.optional (
-                !lib.hasInfix "bin/hermes serve" (argvOf "hermes-backend")
-              ) "backend process does not run `hermes serve`: ${argvOf "hermes-backend"}"
+                !lib.hasInfix "bin/scout serve" (argvOf "scout-backend")
+              ) "backend process does not run `scout serve`: ${argvOf "scout-backend"}"
               ++ lib.optional (
-                !lib.hasInfix "--no-open" (argvOf "hermes-backend")
+                !lib.hasInfix "--no-open" (argvOf "scout-backend")
               ) "backend must pass --no-open so a service never opens a browser"
               ++ lib.optional (
-                lib.any (n: !lib.hasInfix "/home/hermes-check/.hermes" (envOf n)) names
-              ) "gateway and backend must share one HERMES_HOME"
+                lib.any (n: !lib.hasInfix "/home/scout-check/.scout" (envOf n)) names
+              ) "gateway and backend must share one SCOUT_HOME"
               ++ lib.optional (
-                cfg.home.sessionVariables.HERMES_HOME or null != "/home/hermes-check/.hermes"
-              ) "programs.hermes-agent.enable must export HERMES_HOME for interactive shells"
+                cfg.home.sessionVariables.SCOUT_HOME or null != "/home/scout-check/.scout"
+              ) "programs.scout-agent.enable must export SCOUT_HOME for interactive shells"
               ++ lib.optional (
-                !lib.hasInfix "hermes-config-merge" activation
+                !lib.hasInfix "scout-config-merge" activation
               ) "activation must deep-merge config.yaml, not overwrite it"
               ++ lib.optional (
-                !lib.hasInfix "/home/hermes-check/.hermes/SOUL.md" activation
-              ) "hermesHomeFiles must install into HERMES_HOME"
+                !lib.hasInfix "/home/scout-check/.scout/SOUL.md" activation
+              ) "scoutHomeFiles must install into SCOUT_HOME"
               ++ lib.optional (
                 !lib.hasInfix "/home/test-user/workspace/AGENTS.md" activation
               ) "documents must install into workingDirectory"
-              # The CLI reads HERMES_MANAGED to name the rebuild command when
+              # The CLI reads SCOUT_MANAGED to name the rebuild command when
               # it refuses to write the configuration. A Home Manager install
               # has no nixos-rebuild command. Thus it must not report NixOS.
               ++ lib.optional (
-                !lib.any (n: lib.hasInfix "HERMES_MANAGED=home-manager" (envOf n)) names
-              ) "processes must report HERMES_MANAGED=home-manager"
+                !lib.any (n: lib.hasInfix "SCOUT_MANAGED=home-manager" (envOf n)) names
+              ) "processes must report SCOUT_MANAGED=home-manager"
               ++ lib.optional (
-                !lib.hasInfix "hermes-managed" activation
+                !lib.hasInfix "scout-managed" activation
               ) "activation must write a .managed marker naming the managing system";
           in
-          pkgs.runCommand "hermes-home-manager-module" { } (
+          pkgs.runCommand "scout-home-manager-module" { } (
             if failures != [ ] then
               throw "Home Manager module check failed:\n${lib.concatMapStringsSep "\n" (f: "  - ${f}") failures}"
             else
@@ -341,7 +341,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             # of values reads it as untouched, but a comparison of priorities
             # sees the definition. This row is the reason that the code tests
             # the priority.
-            sameAsDefault = "/home/hermes-check";
+            sameAsDefault = "/home/scout-check";
 
             cases = [
               {
@@ -370,8 +370,8 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 };
               }
               {
-                name = "hermesHomeFiles needs no directory";
-                ok = accepts { hermesHomeFiles."SOUL.md" = "x"; };
+                name = "scoutHomeFiles needs no directory";
+                ok = accepts { scoutHomeFiles."SOUL.md" = "x"; };
               }
               {
                 name = "no files at all is accepted";
@@ -381,7 +381,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
 
             failed = lib.filter (c: !c.ok) cases;
           in
-          pkgs.runCommand "hermes-workspace-files-need-a-directory" { } (
+          pkgs.runCommand "scout-workspace-files-need-a-directory" { } (
             if failed != [ ] then
               throw "workspace-files rule failed:\n${
                 lib.concatMapStringsSep "\n" (c: "  - ${c.name}") failed
@@ -394,12 +394,12 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
               ''
           );
 
-        # ── The desktop application shares one HERMES_HOME ───────────────
-        # `programs.enable` exports HERMES_HOME with home.sessionVariables,
+        # ── The desktop application shares one SCOUT_HOME ───────────────
+        # `programs.enable` exports SCOUT_HOME with home.sessionVariables,
         # which reaches an interactive shell only. Home Manager writes that
         # file to etc/profile.d, and a launcher from the desktop menu reads
-        # no shell profile. Thus the desktop application would open ~/.hermes
-        # while the services use the HERMES_HOME of the module, and the user
+        # no shell profile. Thus the desktop application would open ~/.scout
+        # while the services use the SCOUT_HOME of the module, and the user
         # would see an empty application with no sessions and no keys.
         #
         # The launcher must therefore carry the value itself. This check
@@ -407,7 +407,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         # installs, and not an option value.
         home-manager-desktop =
           let
-            tokenFile = "/run/secrets/hermes-desktop-token";
+            tokenFile = "/run/secrets/scout-desktop-token";
 
             enabled = evalHomeSplit {
               programs = {
@@ -416,7 +416,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
               };
               services = {
                 enable = true;
-                hermesHome = "/home/hermes-check/.hermes-work";
+                scoutHome = "/home/scout-check/.scout-work";
                 # An override on purpose. Without one the effective package
                 # IS the default package, so a launcher that pinned the plain
                 # default would look correct while it shipped a second
@@ -431,7 +431,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             };
             cfg = enabled.config;
 
-            desktopPackages = builtins.filter (p: (p.pname or "") == "hermes-desktop") cfg.home.packages;
+            desktopPackages = builtins.filter (p: (p.pname or "") == "scout-desktop") cfg.home.packages;
             desktop = lib.head desktopPackages;
             wrapper = desktop.installPhase;
 
@@ -448,18 +448,18 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
 
             # The agent package that the module installs, and the runtime
             # that the launcher pins. These must be the same store path: a
-            # second Hermes runtime beside the services is the fault that
+            # second Scout runtime beside the services is the fault that
             # `programs.enable` plus a plain desktop package would give.
-            agentPackages = builtins.filter (p: (p.pname or "") == "hermes-agent") cfg.home.packages;
+            agentPackages = builtins.filter (p: (p.pname or "") == "scout-agent") cfg.home.packages;
 
             # The backend of the service, as the unit or the agent runs it.
             backendScript =
               let
                 argv =
                   if pkgs.stdenv.hostPlatform.isDarwin then
-                    cfg.launchd.agents.hermes-backend.config.ProgramArguments
+                    cfg.launchd.agents.scout-backend.config.ProgramArguments
                   else
-                    [ cfg.systemd.user.services.hermes-backend.Service.ExecStart ];
+                    [ cfg.systemd.user.services.scout-backend.Service.ExecStart ];
                 first = lib.head (lib.flatten argv);
                 # writeShellScript gives a store path. Read the real text, so
                 # the check tests the script and not the option that made it.
@@ -470,27 +470,27 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             failures =
               lib.optional (
                 lib.length desktopPackages != 1
-              ) "programs.desktop.enable must install exactly one hermes-desktop package, got ${toString (lib.length desktopPackages)}"
+              ) "programs.desktop.enable must install exactly one scout-desktop package, got ${toString (lib.length desktopPackages)}"
               ++ lib.optional (
-                setValue "HERMES_HOME" != "/home/hermes-check/.hermes-work"
-              ) "the launcher must carry HERMES_HOME: a GUI launcher reads no shell profile, so home.sessionVariables never reaches it (got: ${toString (setValue "HERMES_HOME")})"
+                setValue "SCOUT_HOME" != "/home/scout-check/.scout-work"
+              ) "the launcher must carry SCOUT_HOME: a GUI launcher reads no shell profile, so home.sessionVariables never reaches it (got: ${toString (setValue "SCOUT_HOME")})"
               ++ lib.optional (
-                setValue "HERMES_MANAGED" != "home-manager"
-              ) "the launcher must report HERMES_MANAGED=home-manager while the services own the configuration (got: ${toString (setValue "HERMES_MANAGED")})"
+                setValue "SCOUT_MANAGED" != "home-manager"
+              ) "the launcher must report SCOUT_MANAGED=home-manager while the services own the configuration (got: ${toString (setValue "SCOUT_MANAGED")})"
               ++ lib.optional (
                 lib.length agentPackages == 1
-                && setValue "HERMES_DESKTOP_HERMES" != "${lib.head agentPackages}/bin/hermes"
-              ) "the launcher must pin the agent package that programs.enable installs, and not a second runtime: ${toString (setValue "HERMES_DESKTOP_HERMES")}"
+                && setValue "SCOUT_DESKTOP_SCOUT" != "${lib.head agentPackages}/bin/scout"
+              ) "the launcher must pin the agent package that programs.enable installs, and not a second runtime: ${toString (setValue "SCOUT_DESKTOP_SCOUT")}"
 
               # ── The application reaches the backend of the service ──────
               ++ lib.optional (
-                setValue "HERMES_DESKTOP_REMOTE_URL" != "http://127.0.0.1:9231"
-              ) "the launcher must name the backend of the service, or the application starts a second one (got: ${toString (setValue "HERMES_DESKTOP_REMOTE_URL")})"
+                setValue "SCOUT_DESKTOP_REMOTE_URL" != "http://127.0.0.1:9231"
+              ) "the launcher must name the backend of the service, or the application starts a second one (got: ${toString (setValue "SCOUT_DESKTOP_REMOTE_URL")})"
               ++ lib.optional (
-                !lib.hasInfix "HERMES_DESKTOP_REMOTE_TOKEN" wrapper
+                !lib.hasInfix "SCOUT_DESKTOP_REMOTE_TOKEN" wrapper
               ) "the launcher must give a token with the URL: the desktop resolver throws when the URL is set alone"
               ++ lib.optional (
-                !lib.hasInfix "HERMES_DASHBOARD_SESSION_TOKEN" backendScript
+                !lib.hasInfix "SCOUT_DASHBOARD_SESSION_TOKEN" backendScript
               ) "the backend must read the session token, or it makes a new one that the application cannot know"
 
               # ── The token never enters the Nix store ────────────────────
@@ -504,15 +504,15 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 !lib.hasInfix tokenFile backendScript
               ) "the backend must read the token from ${tokenFile} at start time"
               ++ lib.optional (
-                setValue "HERMES_DESKTOP_REMOTE_TOKEN" != null
+                setValue "SCOUT_DESKTOP_REMOTE_TOKEN" != null
               ) "the token must never be a --set value: makeWrapper writes it into the world-readable Nix store";
           in
-          pkgs.runCommand "hermes-home-manager-desktop" { } (
+          pkgs.runCommand "scout-home-manager-desktop" { } (
             if failures != [ ] then
               throw "Home Manager desktop check failed:\n${lib.concatMapStringsSep "\n" (f: "  - ${f}") failures}"
             else
               ''
-                echo "PASS: the desktop launcher shares HERMES_HOME, the runtime and the backend of the service"
+                echo "PASS: the desktop launcher shares SCOUT_HOME, the runtime and the backend of the service"
                 mkdir -p $out
                 echo "ok" > $out/result
               ''
@@ -534,7 +534,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             };
             cfg = enabled.config;
 
-            desktopPackages = builtins.filter (p: (p.pname or "") == "hermes-desktop") cfg.home.packages;
+            desktopPackages = builtins.filter (p: (p.pname or "") == "scout-desktop") cfg.home.packages;
             wrapper = (lib.head desktopPackages).installPhase;
 
             failures =
@@ -542,19 +542,19 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 lib.length desktopPackages != 1
               ) "programs.desktop.enable must install the application with no services enabled"
               ++ lib.optional (
-                !lib.hasInfix "--set HERMES_HOME" wrapper
-              ) "the launcher must carry HERMES_HOME even with no services"
+                !lib.hasInfix "--set SCOUT_HOME" wrapper
+              ) "the launcher must carry SCOUT_HOME even with no services"
               ++ lib.optional (
-                lib.hasInfix "HERMES_MANAGED" wrapper
+                lib.hasInfix "SCOUT_MANAGED" wrapper
               ) "the launcher must not claim a managed install when no activation writes one"
               ++ lib.optional (
-                lib.hasInfix "HERMES_DESKTOP_REMOTE_URL" wrapper
+                lib.hasInfix "SCOUT_DESKTOP_REMOTE_URL" wrapper
               ) "the launcher must not name a backend when the services run none"
               ++ lib.optional (
-                cfg.systemd.user.services ? hermes-backend || cfg.launchd.agents ? hermes-backend
+                cfg.systemd.user.services ? scout-backend || cfg.launchd.agents ? scout-backend
               ) "programs.enable alone must start no service";
           in
-          pkgs.runCommand "hermes-home-manager-desktop-standalone" { } (
+          pkgs.runCommand "scout-home-manager-desktop-standalone" { } (
             if failures != [ ] then
               throw "Home Manager standalone desktop check failed:\n${lib.concatMapStringsSep "\n" (f: "  - ${f}") failures}"
             else
@@ -568,7 +568,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         # ── installPackage names its replacement ─────────────────────────
         # The option was removed by the programs./services. split. It
         # defaulted to true, so a person who never named it still got the
-        # command line. A silent removal thus leaves them with no `hermes`
+        # command line. A silent removal thus leaves them with no `scout`
         # and no message. The module must refuse the configuration and name
         # the replacement.
         home-manager-install-package-removed =
@@ -599,11 +599,11 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             cases = [
               {
                 value = true;
-                expect = "programs.hermes-agent.enable = true;";
+                expect = "programs.scout-agent.enable = true;";
               }
               {
                 value = false;
-                expect = "programs.hermes-agent.enable = false;";
+                expect = "programs.scout-agent.enable = false;";
               }
             ];
 
@@ -627,7 +627,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 refuses null
               ) "a configuration that never names installPackage must evaluate";
           in
-          pkgs.runCommand "hermes-home-manager-install-package-removed" { } (
+          pkgs.runCommand "scout-home-manager-install-package-removed" { } (
             if failures != [ ] then
               throw "installPackage removal check failed:\n${lib.concatMapStringsSep "\n" (f: "  - ${f}") failures}"
             else
@@ -675,7 +675,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 staleHomeOnly != [ ]
               ) "homeOnlyOptions names options the Home Manager module no longer defines: ${toString staleHomeOnly}";
           in
-          pkgs.runCommand "hermes-module-option-parity" { } (
+          pkgs.runCommand "scout-module-option-parity" { } (
             if failures != [ ] then
               throw "Module option parity failed:\n${lib.concatMapStringsSep "\n" (f: "  - ${f}") failures}"
             else
@@ -695,32 +695,32 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
               enable = true;
               backend.mode = "dashboard";
               settings.model.default = "test/model";
-              environmentFiles = [ "/run/secrets/hermes-env" ];
-              hermesHomeFiles."SOUL.md" = "test soul";
+              environmentFiles = [ "/run/secrets/scout-env" ];
+              scoutHomeFiles."SOUL.md" = "test soul";
             }).config;
 
-            units = lib.filterAttrs (n: _: lib.hasPrefix "hermes" n) cfg.systemd.services;
+            units = lib.filterAttrs (n: _: lib.hasPrefix "scout" n) cfg.systemd.services;
             names = lib.attrNames units;
             execOf = name: units.${name}.serviceConfig.ExecStart;
-            activation = cfg.system.activationScripts."hermes-agent-setup".text;
+            activation = cfg.system.activationScripts."scout-agent-setup".text;
 
             failures =
               lib.optional (names != [
-                "hermes-agent"
-                "hermes-backend"
-              ]) "expected hermes-agent + hermes-backend units, got: ${toString names}"
+                "scout-agent"
+                "scout-backend"
+              ]) "expected scout-agent + scout-backend units, got: ${toString names}"
               ++ lib.optional (
-                !lib.hasInfix "bin/hermes gateway" (execOf "hermes-agent")
-              ) "gateway unit does not run `hermes gateway`: ${execOf "hermes-agent"}"
+                !lib.hasInfix "bin/scout gateway" (execOf "scout-agent")
+              ) "gateway unit does not run `scout gateway`: ${execOf "scout-agent"}"
               ++ lib.optional (
-                !lib.hasInfix "bin/hermes dashboard" (execOf "hermes-backend")
-              ) "backend unit does not run `hermes dashboard`: ${execOf "hermes-backend"}"
+                !lib.hasInfix "bin/scout dashboard" (execOf "scout-backend")
+              ) "backend unit does not run `scout dashboard`: ${execOf "scout-backend"}"
               ++ lib.optional (
-                units.hermes-agent.environment.HERMES_HOME != units.hermes-backend.environment.HERMES_HOME
-              ) "gateway and backend must share one HERMES_HOME"
+                units.scout-agent.environment.SCOUT_HOME != units.scout-backend.environment.SCOUT_HOME
+              ) "gateway and backend must share one SCOUT_HOME"
               ++ lib.optional (
-                !lib.hasInfix "/var/lib/hermes/.hermes/SOUL.md" activation
-              ) "hermesHomeFiles must install into HERMES_HOME";
+                !lib.hasInfix "/var/lib/scout/.scout/SOUL.md" activation
+              ) "scoutHomeFiles must install into SCOUT_HOME";
 
             # You cannot use container mode and the backend together. The
             # module says so with an assertion. Without the assertion it
@@ -735,7 +735,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 true
             );
           in
-          pkgs.runCommand "hermes-nixos-module" { } (
+          pkgs.runCommand "scout-nixos-module" { } (
             if failures != [ ] then
               throw "NixOS module check failed:\n${lib.concatMapStringsSep "\n" (f: "  - ${f}") failures}"
             else if containerConflict.success then
@@ -754,13 +754,13 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         # the address, such as tailscaled. `backend.waitFor` puts a poll in
         # front of the bind. This check proves three properties: the default
         # keeps the direct command line, each wait mode makes a launcher that
-        # polls and then execs hermes, and the assertions reject a
+        # polls and then execs scout, and the assertions reject a
         # configuration that cannot work.
         backend-bind-wait =
           let
             execOf =
               settings:
-              (evalNixosModule ({ enable = true; } // settings)).config.systemd.services.hermes-backend.serviceConfig.ExecStart;
+              (evalNixosModule ({ enable = true; } // settings)).config.systemd.services.scout-backend.serviceConfig.ExecStart;
 
             direct = execOf { backend.mode = "serve"; };
 
@@ -795,20 +795,20 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
 
             failures =
               # The default must not change.
-              lib.optional (!lib.hasInfix "bin/hermes serve --host 127.0.0.1" direct)
-                "without waitFor the backend must exec hermes directly, got: ${direct}"
-              ++ lib.optional (lib.hasInfix "hermes-backend-launch" direct)
+              lib.optional (!lib.hasInfix "bin/scout serve --host 127.0.0.1" direct)
+                "without waitFor the backend must exec scout directly, got: ${direct}"
+              ++ lib.optional (lib.hasInfix "scout-backend-launch" direct)
                 "without waitFor the backend must not use the launcher"
 
               # The hostname mode polls the resolver, then binds the name.
-              ++ lib.optional (!lib.hasInfix "hermes-backend-launch" hostnameWait)
+              ++ lib.optional (!lib.hasInfix "scout-backend-launch" hostnameWait)
                 "waitFor = hostname must run the launcher, got: ${hostnameWait}"
               ++ lib.optional (!lib.hasInfix "getent hosts" hostnameScript)
                 "the hostname launcher must poll with getent"
               ++ lib.optional (!lib.hasInfix "host.example.ts.net" hostnameScript)
                 "the hostname launcher must poll for backend.host"
               ++ lib.optional (!lib.hasInfix "exec " hostnameScript)
-                "the launcher must exec hermes, so that it keeps the MainPID"
+                "the launcher must exec scout, so that it keeps the MainPID"
               ++ lib.optional (!lib.hasInfix ''--host "$_target"'' hostnameScript)
                 "the launcher must bind the address that the poll resolved"
 
@@ -817,7 +817,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 "the interface launcher must poll backend.interfaceName"
               ++ lib.optional (!lib.hasInfix "_timeout=30" interfaceScript)
                 "the launcher must use backend.waitTimeout"
-              ++ lib.optional (!lib.hasInfix "bin/hermes dashboard" interfaceScript)
+              ++ lib.optional (!lib.hasInfix "bin/scout dashboard" interfaceScript)
                 "the launcher must keep backend.mode"
 
               # The assertions reject what cannot work.
@@ -840,7 +840,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                   })
                   "an assertion must reject interfaceName without waitFor = interface";
           in
-          pkgs.runCommand "hermes-backend-bind-wait" { } (
+          pkgs.runCommand "scout-backend-bind-wait" { } (
             if failures != [ ] then
               throw "backend bind wait check failed:\n${lib.concatMapStringsSep "\n" (f: "  - ${f}") failures}"
             else
@@ -866,12 +866,12 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             configOf = settings: (evalNixosModule ({ enable = true; } // settings)).config;
 
             managed = configOf { };
-            gateway = managed.systemd.services.hermes-agent;
+            gateway = managed.systemd.services.scout-agent;
             gatewayUser = gateway.serviceConfig.User;
 
             # The operator declares the user themselves. Nothing here knows
             # whether they lingered it, so nothing may assume a bus.
-            unmanaged = (configOf { createUser = false; }).systemd.services.hermes-agent;
+            unmanaged = (configOf { createUser = false; }).systemd.services.scout-agent;
 
             failures =
               lib.optional (!((managed.users.users.${gatewayUser}.linger or false) == true))
@@ -883,7 +883,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
               ++ lib.optional (lib.hasInfix "/run/user" unmanaged.preStart)
                 "a gateway whose uid is not known to linger must not block on a user bus that may never arrive";
           in
-          pkgs.runCommand "hermes-cron-worker-user-scope" { } (
+          pkgs.runCommand "scout-cron-worker-user-scope" { } (
             if failures != [ ] then
               throw "cron worker user scope check failed:\n${lib.concatMapStringsSep "\n" (f: "  - ${f}") failures}"
             else
@@ -896,7 +896,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
 
         # ── How .env is built ────────────────────────────────────────────
         # This check runs the real script that both modules use to build
-        # $HERMES_HOME/.env. The important property is that a second run
+        # $SCOUT_HOME/.env. The important property is that a second run
         # gives the same result. Activation runs at each rebuild. If the
         # script added the secrets to the file that exists, the file would
         # grow at each rebuild. The script writes the file again from the
@@ -907,11 +907,11 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             envScript = (import ./moduleCommon.nix { inherit lib; }).mkEnvScript {
               inherit pkgs;
               environment = {
-                HERMES_PUBLIC = "visible";
+                SCOUT_PUBLIC = "visible";
               };
             };
           in
-          pkgs.runCommand "hermes-env-file-assembly" { } ''
+          pkgs.runCommand "scout-env-file-assembly" { } ''
             set -e
             workdir=$(mktemp -d)
             printf 'SECRET_TOKEN=s3cret\n' > "$workdir/secret-a"
@@ -921,7 +921,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             ${envScript} "$workdir/.env" 0600 "$workdir/secret-a" "$workdir/secret-b"
             first=$(cat "$workdir/.env")
 
-            grep -qx 'HERMES_PUBLIC=visible' "$workdir/.env" || \
+            grep -qx 'SCOUT_PUBLIC=visible' "$workdir/.env" || \
               (echo "FAIL: non-secret environment missing"; cat "$workdir/.env"; exit 1)
             grep -qx 'SECRET_TOKEN=s3cret' "$workdir/.env" || \
               (echo "FAIL: secret from environmentFile missing"; cat "$workdir/.env"; exit 1)
@@ -973,7 +973,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
           let
             common = import ./moduleCommon.nix { inherit lib; };
             cfgFor = mode: {
-              package = hermes-agent;
+              package = scout-agent;
               extraPythonPackages = [ ];
               extraDependencyGroups = [ ];
               extraArgs = [ ];
@@ -991,10 +991,10 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 sessionTokenFile = null;
               };
             };
-            sentinel = "--hermes-nix-argv-probe";
+            sentinel = "--scout-nix-argv-probe";
             probe = argv: lib.escapeShellArgs (argv ++ [ sentinel ]);
           in
-          pkgs.runCommand "hermes-service-argv" { } ''
+          pkgs.runCommand "scout-service-argv" { } ''
             set -e
             export HOME=$(mktemp -d)
 
@@ -1029,15 +1029,15 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
           '';
 
         # Verify binaries exist and are executable
-        package-contents = pkgs.runCommand "hermes-package-contents" { } ''
+        package-contents = pkgs.runCommand "scout-package-contents" { } ''
           set -e
           echo "=== Checking binaries ==="
-          test -x ${hermes-agent}/bin/hermes || (echo "FAIL: hermes binary missing"; exit 1)
-          test -x ${hermes-agent}/bin/hermes-agent || (echo "FAIL: hermes-agent binary missing"; exit 1)
+          test -x ${scout-agent}/bin/scout || (echo "FAIL: scout binary missing"; exit 1)
+          test -x ${scout-agent}/bin/scout-agent || (echo "FAIL: scout-agent binary missing"; exit 1)
           echo "PASS: All binaries present"
 
           echo "=== Checking version ==="
-          ${hermes-agent}/bin/hermes --version 2>&1 | grep -qi "hermes" || (echo "FAIL: version check"; exit 1)
+          ${scout-agent}/bin/scout --version 2>&1 | grep -qi "scout" || (echo "FAIL: version check"; exit 1)
           echo "PASS: Version check"
 
           echo "=== All checks passed ==="
@@ -1047,29 +1047,29 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
 
         # Exercise every declared command and the environment delivered by
         # makeWrapper, plus the shared assembler's store-reference contract.
-        entry-points-sync = pkgs.runCommand "hermes-entry-points-sync" { } ''
-          ${hermes-agent.python}/bin/python3 ${./tests/agent-references.py} \
-            ${hermes-agent} ${../pyproject.toml} ${hermes-agent.agentInputsFile}
+        entry-points-sync = pkgs.runCommand "scout-entry-points-sync" { } ''
+          ${scout-agent.python}/bin/python3 ${./tests/agent-references.py} \
+            ${scout-agent} ${../pyproject.toml} ${scout-agent.agentInputsFile}
           mkdir -p $out
         '';
 
         # A pre-existing CLI install must not override the package's backend.
-        desktop-backend = pkgs.runCommand "hermes-desktop-backend" {
-          nativeBuildInputs = [ hermes-agent.python pkgs.cage ];
+        desktop-backend = pkgs.runCommand "scout-desktop-backend" {
+          nativeBuildInputs = [ scout-agent.python pkgs.cage ];
         } ''
           python3 ${./tests/desktop-backend.py} \
-            ${self'.packages.desktop}/bin/hermes-desktop ${hermes-agent}/bin/hermes
+            ${self'.packages.desktop}/bin/scout-desktop ${scout-agent}/bin/scout
           mkdir -p $out
         '';
 
         # Verify CLI subcommands are accessible
-        cli-commands = pkgs.runCommand "hermes-cli-commands" { } ''
+        cli-commands = pkgs.runCommand "scout-cli-commands" { } ''
           set -e
           export HOME=$(mktemp -d)
 
-          echo "=== Checking hermes --help ==="
-          ${hermes-agent}/bin/hermes --help 2>&1 | grep -q "gateway" || (echo "FAIL: gateway subcommand missing"; exit 1)
-          ${hermes-agent}/bin/hermes --help 2>&1 | grep -q "config" || (echo "FAIL: config subcommand missing"; exit 1)
+          echo "=== Checking scout --help ==="
+          ${scout-agent}/bin/scout --help 2>&1 | grep -q "gateway" || (echo "FAIL: gateway subcommand missing"; exit 1)
+          ${scout-agent}/bin/scout --help 2>&1 | grep -q "config" || (echo "FAIL: config subcommand missing"; exit 1)
           echo "PASS: All subcommands accessible"
 
           echo "=== All CLI checks passed ==="
@@ -1078,30 +1078,30 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         '';
 
         # Verify bundled skills are present in the package
-        bundled-skills = pkgs.runCommand "hermes-bundled-skills" { } ''
+        bundled-skills = pkgs.runCommand "scout-bundled-skills" { } ''
           set -e
           echo "=== Checking bundled skills ==="
-          test -d ${hermes-agent}/share/hermes-agent/skills || (echo "FAIL: skills directory missing"; exit 1)
+          test -d ${scout-agent}/share/scout-agent/skills || (echo "FAIL: skills directory missing"; exit 1)
           echo "PASS: skills directory exists"
 
           # -L: skills/ is a symlink to the filtered source store path
-          SKILL_COUNT=$(find -L ${hermes-agent}/share/hermes-agent/skills -name "SKILL.md" | wc -l)
+          SKILL_COUNT=$(find -L ${scout-agent}/share/scout-agent/skills -name "SKILL.md" | wc -l)
           test "$SKILL_COUNT" -gt 0 || (echo "FAIL: no SKILL.md files found in skills directory"; exit 1)
           echo "PASS: $SKILL_COUNT bundled skills found"
 
-          grep -q "HERMES_BUNDLED_SKILLS" ${hermes-agent}/bin/hermes || \
-            (echo "FAIL: HERMES_BUNDLED_SKILLS not in wrapper"; exit 1)
-          echo "PASS: HERMES_BUNDLED_SKILLS set in wrapper"
+          grep -q "SCOUT_BUNDLED_SKILLS" ${scout-agent}/bin/scout || \
+            (echo "FAIL: SCOUT_BUNDLED_SKILLS not in wrapper"; exit 1)
+          echo "PASS: SCOUT_BUNDLED_SKILLS set in wrapper"
 
           # Optional skills ship via the wrapper too (pythonSrc excludes
           # them from the wheel, so the env var is the only path in nix).
-          test -d ${hermes-agent}/share/hermes-agent/optional-skills || \
+          test -d ${scout-agent}/share/scout-agent/optional-skills || \
             (echo "FAIL: optional-skills directory missing"; exit 1)
-          OPT_COUNT=$(find -L ${hermes-agent}/share/hermes-agent/optional-skills -name "SKILL.md" | wc -l)
+          OPT_COUNT=$(find -L ${scout-agent}/share/scout-agent/optional-skills -name "SKILL.md" | wc -l)
           test "$OPT_COUNT" -gt 0 || (echo "FAIL: no SKILL.md files in optional-skills"; exit 1)
-          grep -q "HERMES_OPTIONAL_SKILLS" ${hermes-agent}/bin/hermes || \
-            (echo "FAIL: HERMES_OPTIONAL_SKILLS not in wrapper"; exit 1)
-          echo "PASS: $OPT_COUNT optional skills found, HERMES_OPTIONAL_SKILLS set in wrapper"
+          grep -q "SCOUT_OPTIONAL_SKILLS" ${scout-agent}/bin/scout || \
+            (echo "FAIL: SCOUT_OPTIONAL_SKILLS not in wrapper"; exit 1)
+          echo "PASS: $OPT_COUNT optional skills found, SCOUT_OPTIONAL_SKILLS set in wrapper"
 
           echo "=== All bundled skills checks passed ==="
           mkdir -p $out
@@ -1109,19 +1109,19 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         '';
 
         # Verify bundled plugins (platforms, memory, context_engine) are present
-        bundled-plugins = pkgs.runCommand "hermes-bundled-plugins" { } ''
+        bundled-plugins = pkgs.runCommand "scout-bundled-plugins" { } ''
           set -e
           echo "=== Checking bundled plugins ==="
-          test -d ${hermes-agent}/share/hermes-agent/plugins || (echo "FAIL: plugins directory missing"; exit 1)
+          test -d ${scout-agent}/share/scout-agent/plugins || (echo "FAIL: plugins directory missing"; exit 1)
           echo "PASS: plugins directory exists"
 
-          test -f ${hermes-agent}/share/hermes-agent/plugins/platforms/irc/plugin.yaml || \
+          test -f ${scout-agent}/share/scout-agent/plugins/platforms/irc/plugin.yaml || \
             (echo "FAIL: irc plugin manifest missing"; exit 1)
           echo "PASS: irc plugin manifest present"
 
-          grep -q "HERMES_BUNDLED_PLUGINS" ${hermes-agent}/bin/hermes || \
-            (echo "FAIL: HERMES_BUNDLED_PLUGINS not in wrapper"; exit 1)
-          echo "PASS: HERMES_BUNDLED_PLUGINS set in wrapper"
+          grep -q "SCOUT_BUNDLED_PLUGINS" ${scout-agent}/bin/scout || \
+            (echo "FAIL: SCOUT_BUNDLED_PLUGINS not in wrapper"; exit 1)
+          echo "PASS: SCOUT_BUNDLED_PLUGINS set in wrapper"
 
           echo "=== All bundled plugins checks passed ==="
           mkdir -p $out
@@ -1131,32 +1131,32 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         # Verify bundled i18n locale catalogs are present and resolvable.
         # Regression for #23943 / #27632 / #35374 — sealed Nix venvs dropped
         # locales/, surfacing raw i18n keys like gateway.reset.header_default.
-        bundled-locales = pkgs.runCommand "hermes-bundled-locales" { } ''
+        bundled-locales = pkgs.runCommand "scout-bundled-locales" { } ''
           set -e
           echo "=== Checking bundled locales ==="
-          test -d ${hermes-agent}/share/hermes-agent/locales || (echo "FAIL: locales directory missing"; exit 1)
+          test -d ${scout-agent}/share/scout-agent/locales || (echo "FAIL: locales directory missing"; exit 1)
           echo "PASS: locales directory exists"
 
           # -L: locales/ is a symlink to the source store path
-          LOC_COUNT=$(find -L ${hermes-agent}/share/hermes-agent/locales -name "*.yaml" | wc -l)
+          LOC_COUNT=$(find -L ${scout-agent}/share/scout-agent/locales -name "*.yaml" | wc -l)
           test "$LOC_COUNT" -ge 16 || (echo "FAIL: expected >=16 catalogs, found $LOC_COUNT"; exit 1)
           echo "PASS: $LOC_COUNT locale catalogs found"
 
-          test -f ${hermes-agent}/share/hermes-agent/locales/en.yaml || (echo "FAIL: en.yaml missing"; exit 1)
+          test -f ${scout-agent}/share/scout-agent/locales/en.yaml || (echo "FAIL: en.yaml missing"; exit 1)
           echo "PASS: en.yaml present"
 
-          grep -q "HERMES_BUNDLED_LOCALES" ${hermes-agent}/bin/hermes || \
-            (echo "FAIL: HERMES_BUNDLED_LOCALES not in wrapper"; exit 1)
-          echo "PASS: HERMES_BUNDLED_LOCALES set in wrapper"
+          grep -q "SCOUT_BUNDLED_LOCALES" ${scout-agent}/bin/scout || \
+            (echo "FAIL: SCOUT_BUNDLED_LOCALES not in wrapper"; exit 1)
+          echo "PASS: SCOUT_BUNDLED_LOCALES set in wrapper"
 
           # locales/ is a bare data dir (no __init__.py), shipped via a
-          # symlink + HERMES_BUNDLED_LOCALES (not via wheel data-files).
+          # symlink + SCOUT_BUNDLED_LOCALES (not via wheel data-files).
           # Verify the wrapper override resolves real strings.
           export HOME=$(mktemp -d)
-          RENDERED=$(cd "$HOME" && HERMES_BUNDLED_LOCALES=${hermes-agent}/share/hermes-agent/locales \
-            ${hermesVenv}/bin/python3 -c "from agent import i18n; print(i18n.t('gateway.reset.header_default', lang='en'))")
+          RENDERED=$(cd "$HOME" && SCOUT_BUNDLED_LOCALES=${scout-agent}/share/scout-agent/locales \
+            ${scoutVenv}/bin/python3 -c "from agent import i18n; print(i18n.t('gateway.reset.header_default', lang='en'))")
           echo "rendered: $RENDERED"
-          test "$RENDERED" != "gateway.reset.header_default" || (echo "FAIL: i18n returned the raw key with HERMES_BUNDLED_LOCALES set"; exit 1)
+          test "$RENDERED" != "gateway.reset.header_default" || (echo "FAIL: i18n returned the raw key with SCOUT_BUNDLED_LOCALES set"; exit 1)
           echo "PASS: i18n renders a human string via the wrapper override"
 
           echo "=== All bundled locales checks passed ==="
@@ -1166,25 +1166,25 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
 
         # Verify bundled optional-mcps catalog is present and resolvable.
         # optional-mcps/ is a bare data dir shipped via symlink +
-        # HERMES_OPTIONAL_MCPS (not via wheel data-files).
-        bundled-mcps = pkgs.runCommand "hermes-bundled-mcps" { } ''
+        # SCOUT_OPTIONAL_MCPS (not via wheel data-files).
+        bundled-mcps = pkgs.runCommand "scout-bundled-mcps" { } ''
           set -e
           echo "=== Checking bundled optional-mcps ==="
-          test -d ${hermes-agent}/share/hermes-agent/optional-mcps || (echo "FAIL: optional-mcps directory missing"; exit 1)
+          test -d ${scout-agent}/share/scout-agent/optional-mcps || (echo "FAIL: optional-mcps directory missing"; exit 1)
           echo "PASS: optional-mcps directory exists"
 
-          MANIFEST_COUNT=$(find -L ${hermes-agent}/share/hermes-agent/optional-mcps -name "manifest.yaml" | wc -l)
+          MANIFEST_COUNT=$(find -L ${scout-agent}/share/scout-agent/optional-mcps -name "manifest.yaml" | wc -l)
           test "$MANIFEST_COUNT" -gt 0 || (echo "FAIL: no manifest.yaml files found"; exit 1)
           echo "PASS: $MANIFEST_COUNT catalog manifests found"
 
-          grep -q "HERMES_OPTIONAL_MCPS" ${hermes-agent}/bin/hermes || \
-            (echo "FAIL: HERMES_OPTIONAL_MCPS not in wrapper"; exit 1)
-          echo "PASS: HERMES_OPTIONAL_MCPS set in wrapper"
+          grep -q "SCOUT_OPTIONAL_MCPS" ${scout-agent}/bin/scout || \
+            (echo "FAIL: SCOUT_OPTIONAL_MCPS not in wrapper"; exit 1)
+          echo "PASS: SCOUT_OPTIONAL_MCPS set in wrapper"
 
           export HOME=$(mktemp -d)
-          CATALOG=$(cd "$HOME" && ${hermes-agent}/bin/hermes mcp catalog 2>/dev/null || true)
+          CATALOG=$(cd "$HOME" && ${scout-agent}/bin/scout mcp catalog 2>/dev/null || true)
           echo "catalog output: $CATALOG"
-          test -n "$CATALOG" || (echo "FAIL: hermes mcp catalog returned empty"; exit 1)
+          test -n "$CATALOG" || (echo "FAIL: scout mcp catalog returned empty"; exit 1)
           echo "PASS: mcp catalog resolves entries"
 
           echo "=== All bundled optional-mcps checks passed ==="
@@ -1193,58 +1193,58 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         '';
 
         # Verify bundled TUI is present and compiled
-        bundled-tui = pkgs.runCommand "hermes-bundled-tui" { } ''
+        bundled-tui = pkgs.runCommand "scout-bundled-tui" { } ''
           set -e
           echo "=== Checking bundled TUI ==="
-          test -d ${hermes-agent}/ui-tui || (echo "FAIL: ui-tui directory missing"; exit 1)
+          test -d ${scout-agent}/ui-tui || (echo "FAIL: ui-tui directory missing"; exit 1)
           echo "PASS: ui-tui directory exists"
 
-          test -f ${hermes-agent}/ui-tui/dist/entry.js || (echo "FAIL: compiled entry.js missing"; exit 1)
+          test -f ${scout-agent}/ui-tui/dist/entry.js || (echo "FAIL: compiled entry.js missing"; exit 1)
           echo "PASS: compiled entry.js present"
 
           # self-contained bundle; no runtime node_modules expected
 
-          grep -q "HERMES_TUI_DIR" ${hermes-agent}/bin/hermes || \
-            (echo "FAIL: HERMES_TUI_DIR not in wrapper"; exit 1)
-          echo "PASS: HERMES_TUI_DIR set in wrapper"
+          grep -q "SCOUT_TUI_DIR" ${scout-agent}/bin/scout || \
+            (echo "FAIL: SCOUT_TUI_DIR not in wrapper"; exit 1)
+          echo "PASS: SCOUT_TUI_DIR set in wrapper"
 
           echo "=== All bundled TUI checks passed ==="
           mkdir -p $out
           echo "ok" > $out/result
         '';
 
-        # Verify HERMES_NODE is set in wrapper and points to Node 26+
-        # (Hermes pins its toolchain to Node 26 everywhere)
-        hermes-node = pkgs.runCommand "hermes-node-version" { } ''
+        # Verify SCOUT_NODE is set in wrapper and points to Node 26+
+        # (Scout pins its toolchain to Node 26 everywhere)
+        scout-node = pkgs.runCommand "scout-node-version" { } ''
           set -e
-          echo "=== Checking HERMES_NODE in wrapper ==="
-          grep -q "HERMES_NODE" ${hermes-agent}/bin/hermes || \
-            (echo "FAIL: HERMES_NODE not set in wrapper"; exit 1)
-          echo "PASS: HERMES_NODE present in wrapper"
+          echo "=== Checking SCOUT_NODE in wrapper ==="
+          grep -q "SCOUT_NODE" ${scout-agent}/bin/scout || \
+            (echo "FAIL: SCOUT_NODE not set in wrapper"; exit 1)
+          echo "PASS: SCOUT_NODE present in wrapper"
 
-          HERMES_NODE=$(sed -n "s/^export HERMES_NODE='\(.*\)'/\1/p" ${hermes-agent}/bin/hermes)
-          test -x "$HERMES_NODE" || (echo "FAIL: HERMES_NODE=$HERMES_NODE not executable"; exit 1)
-          echo "PASS: HERMES_NODE executable at $HERMES_NODE"
+          SCOUT_NODE=$(sed -n "s/^export SCOUT_NODE='\(.*\)'/\1/p" ${scout-agent}/bin/scout)
+          test -x "$SCOUT_NODE" || (echo "FAIL: SCOUT_NODE=$SCOUT_NODE not executable"; exit 1)
+          echo "PASS: SCOUT_NODE executable at $SCOUT_NODE"
 
-          NODE_MAJOR=$("$HERMES_NODE" --version | sed 's/^v//' | cut -d. -f1)
+          NODE_MAJOR=$("$SCOUT_NODE" --version | sed 's/^v//' | cut -d. -f1)
           test "$NODE_MAJOR" -ge 26 || \
-            (echo "FAIL: Node v$NODE_MAJOR < 26, Hermes requires Node 26"; exit 1)
+            (echo "FAIL: Node v$NODE_MAJOR < 26, Scout requires Node 26"; exit 1)
           echo "PASS: Node v$NODE_MAJOR >= 26"
 
-          echo "=== All HERMES_NODE checks passed ==="
+          echo "=== All SCOUT_NODE checks passed ==="
           mkdir -p $out
           echo "ok" > $out/result
         '';
 
-        # Verify HERMES_MANAGED guard works on all mutation commands
-        managed-guard = pkgs.runCommand "hermes-managed-guard" { } ''
+        # Verify SCOUT_MANAGED guard works on all mutation commands
+        managed-guard = pkgs.runCommand "scout-managed-guard" { } ''
           set -e
           export HOME=$(mktemp -d)
 
           check_blocked() {
             local label="$1"
             shift
-            OUTPUT=$(HERMES_MANAGED=true "$@" 2>&1 || true)
+            OUTPUT=$(SCOUT_MANAGED=true "$@" 2>&1 || true)
             # Case-insensitive: the message names the managing system as the
             # identifier it is keyed by, and the display form is not the
             # property under test here.
@@ -1252,9 +1252,9 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             echo "PASS: $label blocked in managed mode"
           }
 
-          echo "=== Checking HERMES_MANAGED guards ==="
-          check_blocked "config set" ${hermes-agent}/bin/hermes config set model foo
-          check_blocked "config edit" ${hermes-agent}/bin/hermes config edit
+          echo "=== Checking SCOUT_MANAGED guards ==="
+          check_blocked "config set" ${scout-agent}/bin/scout config set model foo
+          check_blocked "config edit" ${scout-agent}/bin/scout config edit
 
           echo "=== All guard checks passed ==="
           mkdir -p $out
@@ -1266,23 +1266,23 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
           # Built with the lock-derived interpreter, so this check fails
           # loudly if the package set and the lock drift apart.
           testPkg = pythonLock.interpreter.pkgs.pyfiglet;
-          hermesWithExtra = hermes-agent.override {
+          scoutWithExtra = scout-agent.override {
             extraPythonPackages = [ testPkg ];
           };
-        in pkgs.runCommand "hermes-extra-python-packages" { } ''
+        in pkgs.runCommand "scout-extra-python-packages" { } ''
           set -e
           echo "=== Checking extraPythonPackages PYTHONPATH injection ==="
 
-          grep -q "PYTHONPATH" ${hermesWithExtra}/bin/hermes || \
+          grep -q "PYTHONPATH" ${scoutWithExtra}/bin/scout || \
             (echo "FAIL: PYTHONPATH not in wrapper"; exit 1)
           echo "PASS: PYTHONPATH present in wrapper"
 
-          grep -q "${testPkg}" ${hermesWithExtra}/bin/hermes || \
+          grep -q "${testPkg}" ${scoutWithExtra}/bin/scout || \
             (echo "FAIL: test package path not in PYTHONPATH"; exit 1)
           echo "PASS: test package path found in wrapper"
 
           echo "=== Checking base package has no PYTHONPATH ==="
-          if grep -q "PYTHONPATH" ${hermes-agent}/bin/hermes; then
+          if grep -q "PYTHONPATH" ${scout-agent}/bin/scout; then
             echo "FAIL: base package should not have PYTHONPATH"; exit 1
           fi
           echo "PASS: base package clean"
@@ -1293,12 +1293,12 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         '';
 
         # Exercise the actual uv2nix environment, not only the selector.
-        python-lock-derived = pkgs.runCommand "hermes-python-lock-derived" { } ''
+        python-lock-derived = pkgs.runCommand "scout-python-lock-derived" { } ''
           set -e
           echo "=== Checking Nix Python derives from pm/lock.json ==="
           family=${pythonLock.family}
           echo "locked family: $family"
-          if [ "$family" != "$(${hermesVenv}/bin/python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" ]; then
+          if [ "$family" != "$(${scoutVenv}/bin/python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" ]; then
             echo "FAIL: selected interpreter major.minor does not match pm/lock.json"; exit 1
           fi
           echo "PASS: interpreter matches lock"
@@ -1316,7 +1316,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
           missing = { };
           selected = selectPython lockedFamily matching;
           threw = !(builtins.tryEval (selectPython lockedFamily missing)).success;
-        in pkgs.runCommand "hermes-python-lock-no-fallback" { } ''
+        in pkgs.runCommand "scout-python-lock-no-fallback" { } ''
           set -e
           echo "=== Checking python selector has no silent fallback ==="
           if [ "${toString (selected == "fake-python-matching")}" != "1" ] || [ "${toString threw}" != "1" ]; then
@@ -1329,18 +1329,18 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
 
         # Verify extraDependencyGroups passes through to python.nix
         extra-dependency-groups = let
-          hermesWithGroups = hermes-agent.override {
+          scoutWithGroups = scout-agent.override {
             extraDependencyGroups = [ "honcho" ];
           };
-        in pkgs.runCommand "hermes-extra-dependency-groups" { } ''
+        in pkgs.runCommand "scout-extra-dependency-groups" { } ''
           set -e
           echo "=== Checking extraDependencyGroups override evaluates ==="
 
           # Eval-only: verify the override produces valid derivation paths
           # without building the full venv (which is expensive and redundant
           # since the mechanism is just list concatenation into python.nix).
-          echo "derivation: ${hermesWithGroups}"
-          echo "venv: ${hermesWithGroups.hermesVenv}"
+          echo "derivation: ${scoutWithGroups}"
+          echo "venv: ${scoutWithGroups.scoutVenv}"
           echo "PASS: extraDependencyGroups override evaluates cleanly"
 
           echo "=== All extraDependencyGroups checks passed ==="
@@ -1351,18 +1351,18 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         # Regression guard: messaging deps live outside [all], so the
         # #messaging variant must actually ship discord.py — otherwise
         # `nix profile install .#messaging` regresses to the broken default.
-        messaging-variant = pkgs.runCommand "hermes-messaging-variant" { } ''
+        messaging-variant = pkgs.runCommand "scout-messaging-variant" { } ''
           set -e
           echo "=== Checking discord.py importable from messaging variant ==="
-          ${self'.packages.messaging.hermesVenv}/bin/python3 -c \
+          ${self'.packages.messaging.scoutVenv}/bin/python3 -c \
             "import discord; print(discord.__version__)"
           echo "PASS: discord.py importable from messaging variant venv"
           mkdir -p $out
           echo "ok" > $out/result
         '';
 
-        # A fresh declarative install must be current to the Hermes it ships
-        # with. Hermes cannot stamp config.yaml in managed mode, so an
+        # A fresh declarative install must be current to the Scout it ships
+        # with. Scout cannot stamp config.yaml in managed mode, so an
         # unstamped file reads as version 0 and trips the support-floor
         # warning at every boot.
         generated-config-version =
@@ -1371,21 +1371,21 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             configFiles = common.mkConfigFiles {
               inherit pkgs;
               cfg = {
-                package = hermes-agent;
+                package = scout-agent;
                 extraPythonPackages = [ ];
                 extraDependencyGroups = [ ];
                 configFile = null;
                 settings.model.default = "test/nix-model";
               };
-              workingDirectory = "/var/lib/hermes/workspace";
+              workingDirectory = "/var/lib/scout/workspace";
             };
           in
-          pkgs.runCommand "hermes-generated-config-version" { } ''
+          pkgs.runCommand "scout-generated-config-version" { } ''
             set -e
-            export HOME=$(mktemp -d) HERMES_HOME=$(mktemp -d)
-            ${configMergeScript} ${configFiles.generated} "$HERMES_HOME/config.yaml"
-            ${hermesVenv}/bin/python3 -c '
-            from hermes_cli.config import check_config_version
+            export HOME=$(mktemp -d) SCOUT_HOME=$(mktemp -d)
+            ${configMergeScript} ${configFiles.generated} "$SCOUT_HOME/config.yaml"
+            ${scoutVenv}/bin/python3 -c '
+            from scout_cli.config import check_config_version
             current, latest = check_config_version(raise_on_parse_error=True)
             assert current == latest, f"generated config.yaml reads as v{current}, package is v{latest}"
             print(f"PASS: generated config.yaml is at v{current}")
@@ -1454,7 +1454,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 - USER_VAR
           '';
 
-        in pkgs.runCommand "hermes-config-roundtrip" {
+        in pkgs.runCommand "scout-config-roundtrip" {
           nativeBuildInputs = [ pkgs.jq ];
         } ''
           set -e
@@ -1465,12 +1465,12 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
 
           # Helper: run merge then load with Python, output merged JSON
           merge_and_load() {
-            local hermes_home="$1"
-            export HERMES_HOME="$hermes_home"
-            ${configMergeScript} ${nixSettings} "$hermes_home/config.yaml"
-            ${hermesVenv}/bin/python3 -c '
+            local scout_home="$1"
+            export SCOUT_HOME="$scout_home"
+            ${configMergeScript} ${nixSettings} "$scout_home/config.yaml"
+            ${scoutVenv}/bin/python3 -c '
 import json, sys
-from hermes_cli.config import load_config
+from scout_cli.config import load_config
 json.dump(load_config(), sys.stdout, default=str)
 '
           }

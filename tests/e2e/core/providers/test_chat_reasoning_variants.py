@@ -1,4 +1,4 @@
-"""Chat-completions reasoning dialects through REAL Hermes processes.
+"""Chat-completions reasoning dialects through REAL Scout processes.
 
 * OpenRouter-style ``reasoning_details`` (signed reasoning blocks) must be replayed
   verbatim on the next call of the turn and on the next turn after a restart — to the
@@ -132,7 +132,7 @@ def test_long_session_does_not_wedge_on_replayed_reasoning_budget(tmp_path) -> N
     h = Home(tmp_path)
     answers: list[str] = []
     with FakeChatVariantServer(script, reasoning_budget_chars=4000) as srv:
-        h.write(_impersonated_config("inference-api.nousresearch.com"), dotenv={"OPENAI_API_KEY": "sk-fake"})
+        h.write(_impersonated_config("inference-api.spaceshipresearch.com"), dotenv={"OPENAI_API_KEY": "sk-fake"})
         gw = TuiGateway(h, _proxy_env(srv))
         try:
             sid = gw.call("session.create", {"cols": 120})["session_id"]
@@ -141,7 +141,7 @@ def test_long_session_does_not_wedge_on_replayed_reasoning_budget(tmp_path) -> N
         finally:
             gw.close()
         records = srv.main_records()
-    assert records and {r["host"] for r in records} == {"inference-api.nousresearch.com"}, "precondition: impersonated"
+    assert records and {r["host"] for r in records} == {"inference-api.spaceshipresearch.com"}, "precondition: impersonated"
     rejected = [i for i, r in enumerate(records) if r.get("response") == "route_rejection"]
     assert rejected, "precondition: the replayed total crossed the route budget at least once"
     missing = [i for i in range(turns) if f"ANSWER-{i}" not in answers[i]]

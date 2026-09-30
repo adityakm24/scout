@@ -16,19 +16,19 @@ import { useEffect, useMemo } from 'react'
 
 import { $apiRequestScope, getApiRequestConnection, getApiRequestProfile } from '@/api/client'
 import type { LocalModelsScope } from '@/api/local-models'
+import { translateNow } from '@/i18n'
+import { queryClient } from '@/lib/query-client'
+import { useStoresSelector } from '@/lib/use-session-slice'
 import {
   getLocalCatalog,
   getLocalHardware,
   getLocalModelsJobs,
   getLocalModelsStatus,
   installLocalRuntime
-} from '@/hermes'
-import { translateNow } from '@/i18n'
-import { queryClient } from '@/lib/query-client'
-import { useStoresSelector } from '@/lib/use-session-slice'
+} from '@/scout'
 import { notify, notifyError } from '@/store/notifications'
 import { $connection } from '@/store/session'
-import type { LocalCatalogModel, LocalHardware, LocalModelsStatus, LocalRuntimeJob } from '@/types/hermes'
+import type { LocalCatalogModel, LocalHardware, LocalModelsStatus, LocalRuntimeJob } from '@/types/scout'
 
 export interface LocalModelsOwner extends LocalModelsScope {
   // Legacy primary routes have no registry pin. Fence them by endpoint instead.

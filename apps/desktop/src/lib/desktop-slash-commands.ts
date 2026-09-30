@@ -78,7 +78,7 @@ export type DesktopActionId =
 /** A command fulfilled by opening a desktop overlay picker. */
 export type DesktopPickerId = 'model' | 'session'
 
-/** Why a known Hermes command has no desktop UI surface. */
+/** Why a known Scout command has no desktop UI surface. */
 export type DesktopUnavailableReason = 'advanced' | 'composer-voice' | 'messaging' | 'settings' | 'terminal'
 
 /**
@@ -209,7 +209,7 @@ const DESKTOP_COMMAND_SPECS: readonly DesktopCommandSpec[] = [
     surface: action('handoff'),
     argumentMode: 'options'
   },
-  { name: '/profile', description: 'Switch the active Hermes profile', surface: action('profile') },
+  { name: '/profile', description: 'Switch the active Scout profile', surface: action('profile') },
   {
     name: '/skin',
     description: 'Switch desktop theme or cycle to the next one',
@@ -268,7 +268,7 @@ const DESKTOP_COMMAND_SPECS: readonly DesktopCommandSpec[] = [
     argumentMode: 'text'
   },
   // /bg (alias /background) must be an action (prompt.background RPC — the
-  // TUI's path), not exec: the slash worker's HermesCLI prints the completion
+  // TUI's path), not exec: the slash worker's ScoutCLI prints the completion
   // from a fire-and-forget thread after process_command already returned,
   // past the worker's stdout capture window, so the result never reached the
   // desktop conversation that started the task (#97635, #57444).
@@ -305,7 +305,7 @@ const DESKTOP_COMMAND_SPECS: readonly DesktopCommandSpec[] = [
 
 /**
  * Offline fallback for the registry's `desktop=` metadata, dumped from
- * `hermes_cli/commands.py::desktop_surface_registry` by
+ * `scout_cli/commands.py::desktop_surface_registry` by
  * `scripts/dump_desktop_slash_registry.py`. The live `commands.catalog` answers
  * first (`specFromCatalog`); this copy only covers the gap before the backend
  * replies. A Python test and `desktop-slash-commands.test.ts` both fail when
@@ -530,7 +530,7 @@ export function isSideTaskSlashCommand(text: string): boolean {
   return surface?.kind === 'action' && SIDE_TASK_ACTIONS.has(surface.action)
 }
 
-function isKnownHermesSlashCommand(command: string): boolean {
+function isKnownScoutSlashCommand(command: string): boolean {
   const normalized = normalizeCommand(command)
 
   if (SPEC_BY_NAME.has(normalized) || ALIAS_TO_CANONICAL.has(normalized)) {
@@ -542,7 +542,7 @@ function isKnownHermesSlashCommand(command: string): boolean {
 
 /**
  * An "extension" command is anything the backend surfaces that is NOT one of
- * Hermes' built-in slash commands — i.e. skill commands (`/gif-search`,
+ * Scout's built-in slash commands — i.e. skill commands (`/gif-search`,
  * `/codex`, …) and user-defined quick commands. These are user-activated, so
  * they appear in the desktop slash palette and execute when typed.
  */
@@ -553,7 +553,7 @@ export function isDesktopSlashExtensionCommand(command: string): boolean {
     return false
   }
 
-  return !isKnownHermesSlashCommand(normalized)
+  return !isKnownScoutSlashCommand(normalized)
 }
 
 /**
@@ -715,7 +715,7 @@ export function desktopSkinSlashCompletions(
  * skills someone reaches for daily under a hundred they have never opened.
  *
  * `pruneUnusedBuiltins` additionally drops bundled skills with no recorded
- * activity — the ones that ship with Hermes and were never asked for. It is
+ * activity — the ones that ship with Scout and were never asked for. It is
  * for BROWSING (a bare `/`) only: typing a query is a search, and a search
  * must never hide a match.
  *

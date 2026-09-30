@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# venv-style activation for the Hermes dev environment (pm-managed tools).
+# venv-style activation for the Scout dev environment (pm-managed tools).
 #
 #   source ./activate      (bash / zsh, repo root)
 #   .\activate.ps1         (PowerShell)
@@ -8,107 +8,107 @@
 # Emits the composed pm env (PATH + tool vars) into the CURRENT shell, with
 # save/restore: `deactivate` undoes exactly what activation changed.
 #
-# `hermes` becomes a shell function for this checkout. It runs only while the
+# `scout` becomes a shell function for this checkout. It runs only while the
 # shell is inside this worktree and refuses outside it, so a sibling worktree
 # keeps its own command. A prompt prefix names the worktree.
 #
 # Sync through setup before selecting the environment. PM owns freshness;
 # activation does not maintain a second dependency stamp. It trusts the
-# recorded tool digest instead of re-hashing every entry. `hermes pm
-# install` and `hermes update` keep that check.
+# recorded tool digest instead of re-hashing every entry. `scout pm
+# install` and `scout update` keep that check.
 # ============================================================================
-_HERMES_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_SCOUT_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Options: `--test-extras a,b` selects the test environment's runtime extras
 # (default: [all]); `--` ends options.
 # A bare `source ./activate` inherits the caller's positional parameters.
 # Ignore unrelated words so scripts with their own arguments can source it.
-_hermes_test_env="--test-environment"
-_hermes_expect_extras=""
-for _hermes_arg in "$@"; do
-    if [ -n "$_hermes_expect_extras" ]; then
-        _hermes_test_env="--test-environment=$_hermes_arg"
-        _hermes_expect_extras=""
+_scout_test_env="--test-environment"
+_scout_expect_extras=""
+for _scout_arg in "$@"; do
+    if [ -n "$_scout_expect_extras" ]; then
+        _scout_test_env="--test-environment=$_scout_arg"
+        _scout_expect_extras=""
         continue
     fi
-    case "$_hermes_arg" in
+    case "$_scout_arg" in
         --) break ;;
-        --test-extras) _hermes_expect_extras=1 ;;
-        --test-extras=*) _hermes_test_env="--test-environment=${_hermes_arg#--test-extras=}" ;;
+        --test-extras) _scout_expect_extras=1 ;;
+        --test-extras=*) _scout_test_env="--test-environment=${_scout_arg#--test-extras=}" ;;
         *) : ;;
     esac
 done
-if [ -n "$_hermes_expect_extras" ]; then
+if [ -n "$_scout_expect_extras" ]; then
     printf '%s\n' 'activate: --test-extras needs a comma-separated list' >&2
-    unset _hermes_arg _hermes_test_env _hermes_expect_extras
+    unset _scout_arg _scout_test_env _scout_expect_extras
     return 2 2>/dev/null || exit 2
 fi
 # Setup runs in a child: failures must not exit or partially activate the
 # caller's shell, and activation must not republish launchers or shell config.
 if ! (
     unset PYTHONHOME PYTHONPATH VIRTUAL_ENV
-    bash "$_HERMES_REPO/setup-hermes.sh" --runtime-only "$_hermes_test_env"
+    bash "$_SCOUT_REPO/setup-scout.sh" --runtime-only "$_scout_test_env"
 ) >&2; then
     printf '%s\n' 'activate: setup failed; shell environment unchanged' >&2
-    unset _hermes_arg _hermes_test_env _hermes_expect_extras
+    unset _scout_arg _scout_test_env _scout_expect_extras
     return 1 2>/dev/null || exit 1
 fi
-unset _hermes_arg _hermes_test_env _hermes_expect_extras
+unset _scout_arg _scout_test_env _scout_expect_extras
 
 # Guard against double-sourcing: venv activate precedent (re-activating is a
 # no-op re-save; we keep it idempotent by deactivating first). Key on the
-# function, not the sentinel: child shells inherit __HERMES_ACTIVATED from an
+# function, not the sentinel: child shells inherit __SCOUT_ACTIVATED from an
 # activated parent but never the function, and there is nothing to undo there.
 if [ "$(type -t deactivate 2>/dev/null)" = "function" ]; then
     deactivate
 fi
 
 # Bootstrap Python only emits the environment; it does not install anything.
-_hermes_repo="$_HERMES_REPO"
-_hermes_py=""
-for _hermes_candidate in "$_hermes_repo/.venv/bin/python" "$_hermes_repo/.venv/Scripts/python.exe" \
-                         "$_hermes_repo/venv/bin/python" "$_hermes_repo/venv/Scripts/python.exe"; do
-    [ -x "$_hermes_candidate" ] && { _hermes_py="$_hermes_candidate"; break; }
+_scout_repo="$_SCOUT_REPO"
+_scout_py=""
+for _scout_candidate in "$_scout_repo/.venv/bin/python" "$_scout_repo/.venv/Scripts/python.exe" \
+                         "$_scout_repo/venv/bin/python" "$_scout_repo/venv/Scripts/python.exe"; do
+    [ -x "$_scout_candidate" ] && { _scout_py="$_scout_candidate"; break; }
 done
-if [ -z "$_hermes_py" ]; then
-    for _hermes_store in "${HERMES_RUNTIME_DIR:-}" "$_hermes_repo/../tools" "${HERMES_HOME:-$HOME/.hermes}/tools"; do
-        [ -n "$_hermes_store" ] || continue
-        for _hermes_candidate in "$_hermes_store"/python-*/bin/python3 "$_hermes_store"/python-*/python.exe "$_hermes_store"/python-*/bin/python "$_hermes_store"/python-*/bin/python.exe; do
-            [ -x "$_hermes_candidate" ] && { _hermes_py="$_hermes_candidate"; break; }
+if [ -z "$_scout_py" ]; then
+    for _scout_store in "${SCOUT_RUNTIME_DIR:-}" "$_scout_repo/../tools" "${SCOUT_HOME:-$HOME/.scout}/tools"; do
+        [ -n "$_scout_store" ] || continue
+        for _scout_candidate in "$_scout_store"/python-*/bin/python3 "$_scout_store"/python-*/python.exe "$_scout_store"/python-*/bin/python "$_scout_store"/python-*/bin/python.exe; do
+            [ -x "$_scout_candidate" ] && { _scout_py="$_scout_candidate"; break; }
         done
-        [ -n "$_hermes_py" ] && break
+        [ -n "$_scout_py" ] && break
     done
 fi
-if [ -z "$_hermes_py" ]; then
-    echo "activate: no bootstrap Python found; run setup-hermes.sh" >&2
+if [ -z "$_scout_py" ]; then
+    echo "activate: no bootstrap Python found; run setup-scout.sh" >&2
     return 1 2>/dev/null || exit 1
 fi
 
 # --- emit export lines from `pm env` ---
-_hermes_json="$(PYTHONHOME= PYTHONPATH="$_hermes_repo" "$_hermes_py" -m pm.environments)"
-if [ -z "$_hermes_json" ] || [ "${_hermes_json#*{}" = "$_hermes_json" ]; then
-    echo "activate: could not read pm env (run ./setup-hermes.sh first)" >&2
-    unset _hermes_repo _hermes_os _hermes_arch _hermes_target _hermes_store _hermes_py _hermes_json
+_scout_json="$(PYTHONHOME= PYTHONPATH="$_scout_repo" "$_scout_py" -m pm.environments)"
+if [ -z "$_scout_json" ] || [ "${_scout_json#*{}" = "$_scout_json" ]; then
+    echo "activate: could not read pm env (run ./setup-scout.sh first)" >&2
+    unset _scout_repo _scout_os _scout_arch _scout_target _scout_store _scout_py _scout_json
     return 1 2>/dev/null || exit 1
 fi
 
-_hermes_keys="$(printf '%s' "$_hermes_json" | "$_hermes_py" -c 'import json,sys; print(" ".join(json.load(sys.stdin)))' \
+_scout_keys="$(printf '%s' "$_scout_json" | "$_scout_py" -c 'import json,sys; print(" ".join(json.load(sys.stdin)))' \
     | tr ' ' '\n' | grep -E '^[A-Za-z_][A-Za-z0-9_]*$' | tr '\n' ' ')"
-[ -n "$_hermes_keys" ] || _hermes_keys="PATH"
+[ -n "$_scout_keys" ] || _scout_keys="PATH"
 
 # --- snapshot what we are about to change (deactivate restores this) ---
-# __HERMES_ACTIVATED is part of the composed env below (it carries the
+# __SCOUT_ACTIVATED is part of the composed env below (it carries the
 # installed-state path this environment was built from), so it is snapshotted
 # and exported with every other key — no separate assignment here.
-__HERMES_SAVED_PATH="$PATH"
-for _hermes_k in $_hermes_keys; do
-    eval "__HERMES_SAVED_$_hermes_k=\"\${$_hermes_k+set}\""
-    eval "__HERMES_PRIOR_$_hermes_k=\${$_hermes_k-__HERMES_UNSET__}"
+__SCOUT_SAVED_PATH="$PATH"
+for _scout_k in $_scout_keys; do
+    eval "__SCOUT_SAVED_$_scout_k=\"\${$_scout_k+set}\""
+    eval "__SCOUT_PRIOR_$_scout_k=\${$_scout_k-__SCOUT_UNSET__}"
 done
 
 # Resolved before the export below replaces PATH.
-_hermes_cygpath="$(command -v cygpath 2>/dev/null || :)"
+_scout_cygpath="$(command -v cygpath 2>/dev/null || :)"
 
-eval "$(printf '%s' "$_hermes_json" | "$_hermes_py" -c '
+eval "$(printf '%s' "$_scout_json" | "$_scout_py" -c '
 import json, sys, shlex, re
 for k, v in json.load(sys.stdin).items():
     # Windows carries names like ProgramFiles(ARM) that are not valid
@@ -120,106 +120,106 @@ for k, v in json.load(sys.stdin).items():
 # The MSYS/Cygwin runtime hands a native Windows Python these variables in
 # Windows form (`C:\a;C:\b`) and converts them back only for its own children.
 # Exported verbatim, bash splits PATH on ':' and finds no commands.
-if [ -n "$_hermes_cygpath" ]; then
-    PATH="$("$_hermes_cygpath" -u -p "$PATH")"
-    for _hermes_k in HOME TMPDIR TMP TEMP; do
-        if [ -n "${!_hermes_k-}" ]; then
-            printf -v "$_hermes_k" '%s' "$("$_hermes_cygpath" -u "${!_hermes_k}")"
+if [ -n "$_scout_cygpath" ]; then
+    PATH="$("$_scout_cygpath" -u -p "$PATH")"
+    for _scout_k in HOME TMPDIR TMP TEMP; do
+        if [ -n "${!_scout_k-}" ]; then
+            printf -v "$_scout_k" '%s' "$("$_scout_cygpath" -u "${!_scout_k}")"
         fi
     done
 fi
 
-# This checkout, not whichever `hermes` PATH finds. A function beats PATH, an
+# This checkout, not whichever `scout` PATH finds. A function beats PATH, an
 # alias, and a hashed command, including the MSIX execution alias.
-__HERMES_WORKTREE="$_hermes_repo"
+__SCOUT_WORKTREE="$_scout_repo"
 # The branch names the worktree. A checkout cannot share a branch with another.
-__HERMES_WORKTREE_NAME="$(git -C "$_hermes_repo" rev-parse --abbrev-ref HEAD 2>/dev/null || :)"
-if [ -z "$__HERMES_WORKTREE_NAME" ] || [ "$__HERMES_WORKTREE_NAME" = HEAD ]; then
-    __HERMES_WORKTREE_NAME="$(basename "$_hermes_repo")"
+__SCOUT_WORKTREE_NAME="$(git -C "$_scout_repo" rev-parse --abbrev-ref HEAD 2>/dev/null || :)"
+if [ -z "$__SCOUT_WORKTREE_NAME" ] || [ "$__SCOUT_WORKTREE_NAME" = HEAD ]; then
+    __SCOUT_WORKTREE_NAME="$(basename "$_scout_repo")"
 fi
-__HERMES_SAVED_PS1="${PS1-__HERMES_UNSET__}"
-__HERMES_SAVED_PROMPT_COMMAND="${PROMPT_COMMAND-__HERMES_UNSET__}"
+__SCOUT_SAVED_PS1="${PS1-__SCOUT_UNSET__}"
+__SCOUT_SAVED_PROMPT_COMMAND="${PROMPT_COMMAND-__SCOUT_UNSET__}"
 
-_hermes_worktree_here() {
-    _hermes_top="$(git rev-parse --show-toplevel 2>/dev/null)" || return 1
-    [ "$(cd "$_hermes_top" && pwd -P)" = "$(cd "$__HERMES_WORKTREE" && pwd -P)" ]
+_scout_worktree_here() {
+    _scout_top="$(git rev-parse --show-toplevel 2>/dev/null)" || return 1
+    [ "$(cd "$_scout_top" && pwd -P)" = "$(cd "$__SCOUT_WORKTREE" && pwd -P)" ]
 }
 
-hermes() {
-    _hermes_worktree_here || {
-        printf '%s\n' "hermes: $(pwd) is outside $__HERMES_WORKTREE; refusing (the installed command is hidden while this checkout is active)" >&2
+scout() {
+    _scout_worktree_here || {
+        printf '%s\n' "scout: $(pwd) is outside $__SCOUT_WORKTREE; refusing (the installed command is hidden while this checkout is active)" >&2
         return 1
     }
     (
-        cd "$__HERMES_WORKTREE" || exit 1
+        cd "$__SCOUT_WORKTREE" || exit 1
         if [ -n "${PYTHON-}" ]; then
-            exec "$PYTHON" hermes "$@"
+            exec "$PYTHON" scout "$@"
         elif [ -x .venv/Scripts/python.exe ]; then
-            exec .venv/Scripts/python.exe hermes "$@"
+            exec .venv/Scripts/python.exe scout "$@"
         elif [ -x .venv/bin/python ]; then
-            exec .venv/bin/python hermes "$@"
+            exec .venv/bin/python scout "$@"
         elif [ -x venv/Scripts/python.exe ]; then
-            exec venv/Scripts/python.exe hermes "$@"
+            exec venv/Scripts/python.exe scout "$@"
         elif [ -x venv/bin/python ]; then
-            exec venv/bin/python hermes "$@"
+            exec venv/bin/python scout "$@"
         else
-            exec python hermes "$@"
+            exec python scout "$@"
         fi
     )
 }
 
-_hermes_prompt() {
-    if [ "$__HERMES_SAVED_PS1" = "__HERMES_UNSET__" ]; then
-        _hermes_base_ps1=""
+_scout_prompt() {
+    if [ "$__SCOUT_SAVED_PS1" = "__SCOUT_UNSET__" ]; then
+        _scout_base_ps1=""
     else
-        _hermes_base_ps1="$__HERMES_SAVED_PS1"
+        _scout_base_ps1="$__SCOUT_SAVED_PS1"
     fi
-    if _hermes_worktree_here; then
-        PS1="($__HERMES_WORKTREE_NAME) $_hermes_base_ps1"
+    if _scout_worktree_here; then
+        PS1="($__SCOUT_WORKTREE_NAME) $_scout_base_ps1"
     else
-        PS1="$_hermes_base_ps1"
+        PS1="$_scout_base_ps1"
     fi
 }
 
 if [ -n "${PROMPT_COMMAND-}" ]; then
-    PROMPT_COMMAND="_hermes_prompt; ${PROMPT_COMMAND}"
+    PROMPT_COMMAND="_scout_prompt; ${PROMPT_COMMAND}"
 else
-    PROMPT_COMMAND=_hermes_prompt
+    PROMPT_COMMAND=_scout_prompt
 fi
-_hermes_prompt
+_scout_prompt
 
 deactivate() {
-    export PATH="$__HERMES_SAVED_PATH"
-    for _hermes_k in $__HERMES_KEY_LIST; do
-        eval "_hermes_was=\"\$__HERMES_SAVED_$_hermes_k\""
-        eval "_hermes_old=\"\$__HERMES_PRIOR_$_hermes_k\""
-        if [ "$_hermes_was" != "set" ]; then
-            unset "$_hermes_k"
+    export PATH="$__SCOUT_SAVED_PATH"
+    for _scout_k in $__SCOUT_KEY_LIST; do
+        eval "_scout_was=\"\$__SCOUT_SAVED_$_scout_k\""
+        eval "_scout_old=\"\$__SCOUT_PRIOR_$_scout_k\""
+        if [ "$_scout_was" != "set" ]; then
+            unset "$_scout_k"
         else
-            export "$_hermes_k=$_hermes_old"
+            export "$_scout_k=$_scout_old"
         fi
-        unset "__HERMES_SAVED_$_hermes_k" "__HERMES_PRIOR_$_hermes_k"
+        unset "__SCOUT_SAVED_$_scout_k" "__SCOUT_PRIOR_$_scout_k"
     done
-    if [ "$__HERMES_SAVED_PS1" = "__HERMES_UNSET__" ]; then
+    if [ "$__SCOUT_SAVED_PS1" = "__SCOUT_UNSET__" ]; then
         unset PS1
     else
-        PS1="$__HERMES_SAVED_PS1"
+        PS1="$__SCOUT_SAVED_PS1"
     fi
-    if [ "$__HERMES_SAVED_PROMPT_COMMAND" = "__HERMES_UNSET__" ]; then
+    if [ "$__SCOUT_SAVED_PROMPT_COMMAND" = "__SCOUT_UNSET__" ]; then
         unset PROMPT_COMMAND
     else
-        PROMPT_COMMAND="$__HERMES_SAVED_PROMPT_COMMAND"
+        PROMPT_COMMAND="$__SCOUT_SAVED_PROMPT_COMMAND"
     fi
-    unset __HERMES_SAVED_PATH __HERMES_KEY_LIST __HERMES_ACTIVATED \
-          __HERMES_WORKTREE __HERMES_WORKTREE_NAME \
-          __HERMES_SAVED_PS1 __HERMES_SAVED_PROMPT_COMMAND
-    unset -f deactivate hermes _hermes_worktree_here _hermes_prompt
-    unset _hermes_k _hermes_was _hermes_old _hermes_top
+    unset __SCOUT_SAVED_PATH __SCOUT_KEY_LIST __SCOUT_ACTIVATED \
+          __SCOUT_WORKTREE __SCOUT_WORKTREE_NAME \
+          __SCOUT_SAVED_PS1 __SCOUT_SAVED_PROMPT_COMMAND
+    unset -f deactivate scout _scout_worktree_here _scout_prompt
+    unset _scout_k _scout_was _scout_old _scout_top
 }
 
 # remember the key list for deactivate (kept out of the loop vars above)
-__HERMES_KEY_LIST="$_hermes_keys"
+__SCOUT_KEY_LIST="$_scout_keys"
 
-unset _hermes_repo _hermes_os _hermes_arch _hermes_target _hermes_store \
-      _hermes_py _hermes_json _hermes_keys _hermes_k _hermes_entry _hermes_venvpy \
-      _hermes_winarch _hermes_top _hermes_cygpath
+unset _scout_repo _scout_os _scout_arch _scout_target _scout_store \
+      _scout_py _scout_json _scout_keys _scout_k _scout_entry _scout_venvpy \
+      _scout_winarch _scout_top _scout_cygpath

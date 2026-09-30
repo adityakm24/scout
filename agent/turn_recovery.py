@@ -35,7 +35,7 @@ from agent.turn_failure_copy import (
     provider_label_for, site_copy, stamp_failure,
 )
 from agent.turn_retry_state import TurnRetryState
-from hermes_constants import display_hermes_home
+from scout_constants import display_scout_home
 from utils import base_url_host_matches
 
 logger = logging.getLogger("agent.conversation_loop")
@@ -101,14 +101,14 @@ def _image_error_max_dimension(error: Exception) -> Optional[int]:
     return max_dimension if 512 <= max_dimension <= 8000 else None
 
 
-def _try_refresh_nous_paid_entitlement_credentials(agent) -> bool:
-    """Refresh Nous runtime credentials after a fresh paid-entitlement check."""
+def _try_refresh_spaceshipresearch_paid_entitlement_credentials(agent) -> bool:
+    """Refresh SpaceshipResearch runtime credentials after a fresh paid-entitlement check."""
     try:
-        from hermes_cli.nous_account import get_nous_portal_account_info
+        from scout_cli.spaceshipresearch_account import get_scout_portal_account_info
 
-        if get_nous_portal_account_info(force_fresh=True).paid_service_access is not True:
+        if get_scout_portal_account_info(force_fresh=True).paid_service_access is not True:
             return False
-        return agent._try_refresh_nous_client_credentials(force=True)
+        return agent._try_refresh_spaceshipresearch_client_credentials(force=True)
     except Exception:
         return False
 
@@ -315,11 +315,11 @@ def recover_before_classification(
     return False, active_system_prompt
 
 
-def _print_nous_401_diagnostics(agent: Any, api_error: Exception) -> None:
-    """Nous 401 that survived a credential refresh: likely Portal OAuth expired/revoked,
+def _print_spaceshipresearch_401_diagnostics(agent: Any, api_error: Exception) -> None:
+    """SpaceshipResearch 401 that survived a credential refresh: likely Portal OAuth expired/revoked,
     no credits, or agent key blocked."""
-    from agent.conversation_loop import _print_nous_entitlement_guidance
-    from hermes_constants import display_hermes_home
+    from agent.conversation_loop import _print_spaceshipresearch_entitlement_guidance
+    from scout_constants import display_scout_home
     _body_text = ""
     try:
         _body = getattr(api_error, "body", None) or getattr(api_error, "response", None)
@@ -327,27 +327,27 @@ def _print_nous_401_diagnostics(agent: Any, api_error: Exception) -> None:
             _body_text = str(_body)[:200]
     except Exception:
         pass
-    _plines(agent, "🔐 Nous 401 — Portal authentication failed.")
+    _plines(agent, "🔐 SpaceshipResearch 401 — Portal authentication failed.")
     if _body_text:
         _plines(agent, f"   Response: {_body_text}")
     try:
-        from hermes_cli.anon_auth import is_anonymous_agent
+        from scout_cli.anon_auth import is_anonymous_agent
         if is_anonymous_agent(agent):
             # The free tier has no credits, no agent key and no auth.json to inspect: its session
             # ended and could not be replaced. The two doors are a sign-in or another provider.
-            _plines(agent, "   Your session ended and Hermes couldn't start a new one.",
-                    "   Sign in with a Nous account (it's free), or switch providers with /model.")
+            _plines(agent, "   Your session ended and Scout couldn't start a new one.",
+                    "   Sign in with a SpaceshipResearch account (it's free), or switch providers with /model.")
             return
     except Exception:
         pass
-    if not _print_nous_entitlement_guidance(agent, "Nous model access"):
+    if not _print_spaceshipresearch_entitlement_guidance(agent, "SpaceshipResearch model access"):
         _plines(agent, "   Most likely: Portal OAuth expired, account out of credits, or agent key revoked.")
     _plines(
         agent,
         "   Troubleshooting:",
-        "     • Re-authenticate: hermes auth add nous",
-        "     • Check credits / billing: https://portal.nousresearch.com",
-        f"     • Verify stored credentials: {display_hermes_home()}/auth.json",
+        "     • Re-authenticate: scout auth add spaceshipresearch",
+        "     • Check credits / billing: https://portal.spaceshipresearch.com",
+        f"     • Verify stored credentials: {display_scout_home()}/auth.json",
         "     • Switch providers temporarily: /model <model> --provider openrouter",
     )
 
@@ -356,7 +356,7 @@ def _print_anthropic_401_diagnostics(agent: Any, key: Any) -> None:
     """Anthropic 401 that survived a credential refresh: show auth method + fixes."""
     from agent.anthropic_credentials import _is_oauth_token
     from agent.azure_identity_adapter import is_token_provider
-    from hermes_constants import display_hermes_home
+    from scout_constants import display_scout_home
     _plines(agent, "🔐 Anthropic 401 — authentication failed.")
     if is_token_provider(key):
         # Azure Foundry Entra ID: JWT minted per-request by an httpx hook; 401 = Azure
@@ -364,7 +364,7 @@ def _print_anthropic_401_diagnostics(agent: Any, key: Any) -> None:
         _plines(
             agent,
             "   Auth method: Microsoft Entra ID (httpx event hook)",
-            "   Run `hermes doctor` for credential-chain diagnostics, or",
+            "   Run `scout doctor` for credential-chain diagnostics, or",
             "   `az login` if your developer session expired.",
         )
     else:
@@ -374,25 +374,25 @@ def _print_anthropic_401_diagnostics(agent: Any, key: Any) -> None:
             f"   Auth method: {auth_method}",
             f"   Token prefix: {key[:12]}..." if isinstance(key, str) and len(key) > 12 else "   Token: (empty or short)",
         )
-    _dhh = display_hermes_home()
+    _dhh = display_scout_home()
     _plines(
         agent,
         "   Troubleshooting:",
-        f"     • Check ANTHROPIC_TOKEN in {_dhh}/.env for Hermes-managed OAuth/setup tokens",
+        f"     • Check ANTHROPIC_TOKEN in {_dhh}/.env for Scout-managed OAuth/setup tokens",
         f"     • Check ANTHROPIC_API_KEY in {_dhh}/.env for API keys or legacy token values",
         "     • For API keys: verify at https://platform.claude.com/settings/keys",
-        "     • Hermes login (OAuth): run 'hermes auth add anthropic' to sign in again, then retry",
-        "     • Inspect what Hermes holds: hermes auth list anthropic",
-        "     • Legacy cleanup: hermes config set ANTHROPIC_TOKEN \"\"",
-        "     • Clear stale keys: hermes config set ANTHROPIC_API_KEY \"\"",
+        "     • Scout login (OAuth): run 'scout auth add anthropic' to sign in again, then retry",
+        "     • Inspect what Scout holds: scout auth list anthropic",
+        "     • Legacy cleanup: scout config set ANTHROPIC_TOKEN \"\"",
+        "     • Clear stale keys: scout config set ANTHROPIC_API_KEY \"\"",
     )
 
 
 def _refresh_credentials_after_401(
     agent: Any, api_error: Exception, _retry: TurnRetryState, status_code: Optional[int]
 ) -> bool:
-    """Per-provider one-shot credential refresh on 401 (codex/xai, vertex, nous, copilot,
-    anthropic), printing user-facing diagnostics when the nous/anthropic refresh fails.
+    """Per-provider one-shot credential refresh on 401 (codex/xai, vertex, spaceshipresearch, copilot,
+    anthropic), printing user-facing diagnostics when the spaceshipresearch/anthropic refresh fails.
     Returns True when a refresh succeeded and the call should be retried."""
     from agent.conversation_loop import _is_copilot_provider
 
@@ -415,14 +415,14 @@ def _refresh_credentials_after_401(
             return True
     if (
         agent.api_mode in ("chat_completions", "anthropic_messages")
-        and agent.provider == "nous"
-        and not _retry.nous_auth_retry_attempted
+        and agent.provider == "spaceshipresearch"
+        and not _retry.spaceshipresearch_auth_retry_attempted
     ):
-        _retry.nous_auth_retry_attempted = True
-        if agent._try_refresh_nous_client_credentials(force=True):
-            agent._buffer_vprint("🔐 Nous agent key refreshed after 401. Retrying request...")
+        _retry.spaceshipresearch_auth_retry_attempted = True
+        if agent._try_refresh_spaceshipresearch_client_credentials(force=True):
+            agent._buffer_vprint("🔐 SpaceshipResearch agent key refreshed after 401. Retrying request...")
             return True
-        _print_nous_401_diagnostics(agent, api_error)
+        _print_spaceshipresearch_401_diagnostics(agent, api_error)
     if _is_copilot_provider(agent) and not _retry.copilot_auth_retry_attempted:
         _retry.copilot_auth_retry_attempted = True
         if agent._try_refresh_copilot_client_credentials():
@@ -567,22 +567,22 @@ def _recover_format_errors(
 
 _WELCOME_ROUTE_HEAL_COPY = {
     "anon_on_paid_host": "Reconnected to the free model's own route.",
-    "named_on_welcome_host": "Reconnected to your Nous account's own route.",
+    "named_on_welcome_host": "Reconnected to your SpaceshipResearch account's own route.",
 }
 
 
 def _recover_welcome_tier(agent: Any, classified: Any, _retry: TurnRetryState) -> bool:
-    """Two one-shot repairs for the Nous free tier, both silent on the wire and named once in chat.
+    """Two one-shot repairs for the SpaceshipResearch free tier, both silent on the wire and named once in chat.
 
     ``model_not_free``: the session asked the welcome host for a model it does not serve; move
     to the first alternate the gateway named (its own model) and retry, instead of failing the
     turn. ``anon_on_paid_host`` / ``named_on_welcome_host``: this process is pointed at the other
     identity's host (a stale route); re-read the credentials, which heals the URL, and retry. The
     refresh reports False when the store yields the same route, so a user-set
-    ``NOUS_INFERENCE_BASE_URL`` falls straight through to the terminal copy.
+    ``SPACESHIPRESEARCH_INFERENCE_BASE_URL`` falls straight through to the terminal copy.
 
     Reads the CLASSIFIER's context (``classified.error_context``): that is where
-    ``_nous_welcome_tier`` parks ``welcome_refusal`` / ``welcome_route``. The turn's other context
+    ``_spaceshipresearch_welcome_tier`` parks ``welcome_refusal`` / ``welcome_route``. The turn's other context
     (``extract_api_error_context``) never carries them."""
     ctx = getattr(classified, "error_context", None) or {}
     refusal = ctx.get("welcome_refusal") if isinstance(ctx, dict) else None
@@ -594,17 +594,17 @@ def _recover_welcome_tier(agent: Any, classified: Any, _retry: TurnRetryState) -
         if target and target != requested:
             try:
                 agent.model = target
-                agent._nous_model_switch = (requested, target)
+                agent._spaceshipresearch_model_switch = (requested, target)
             except Exception:
                 return False
             _vlines(agent, f"↪️  {requested} isn't available without signing in; using {target} for now. Retrying...")
-            logger.info("%sNous free tier: moved %s -> %s after model_not_free", agent.log_prefix, requested, target)
+            logger.info("%sSpaceshipResearch free tier: moved %s -> %s after model_not_free", agent.log_prefix, requested, target)
             return True
     route = ctx.get("welcome_route") if isinstance(ctx, dict) else None
     if route in _WELCOME_ROUTE_HEAL_COPY and not _retry.welcome_route_heal_attempted:
         _retry.welcome_route_heal_attempted = True
         try:
-            healed = bool(agent._try_refresh_nous_client_credentials(force=True))
+            healed = bool(agent._try_refresh_spaceshipresearch_client_credentials(force=True))
         except Exception:
             healed = False
         if healed:
@@ -620,12 +620,12 @@ def recover_after_classification(
 ) -> Tuple[bool, bool]:
     """One-shot recovery chain that runs AFTER ``classify_api_error`` and before the
     generic retry path. Order is load-bearing (each branch may ``return`` early):
-    Nous paid-entitlement refresh → Codex stale-reasoning strip on 401 ``token_expired`` →
+    SpaceshipResearch paid-entitlement refresh → Codex stale-reasoning strip on 401 ``token_expired`` →
     credential-pool rotation → image shrink → multimodal-tool-content strip → corrupt-image
     strip → Anthropic OAuth 1M-beta disable → per-provider 401 credential refresh →
     format-recovery strips.
-    Returns ``(retry_now, recovered_with_pool)``; the latter feeds the Nous rate-limit guard."""
-    from agent.conversation_loop import _is_nous_inference_route
+    Returns ``(retry_now, recovered_with_pool)``; the latter feeds the SpaceshipResearch rate-limit guard."""
+    from agent.conversation_loop import _is_spaceshipresearch_inference_route
 
     if _recover_welcome_tier(agent, classified, _retry):
         return True, False
@@ -639,14 +639,14 @@ def recover_after_classification(
 
     if (
         classified.reason == FailoverReason.billing
-        and _is_nous_inference_route(
+        and _is_spaceshipresearch_inference_route(
             getattr(agent, "provider", "") or "", getattr(agent, "base_url", "") or ""
         )
-        and not _retry.nous_paid_entitlement_refresh_attempted
+        and not _retry.spaceshipresearch_paid_entitlement_refresh_attempted
     ):
-        _retry.nous_paid_entitlement_refresh_attempted = True
-        if _try_refresh_nous_paid_entitlement_credentials(agent):
-            _vlines(agent, "🔐 Nous paid access verified — refreshed runtime credentials and retrying request...")
+        _retry.spaceshipresearch_paid_entitlement_refresh_attempted = True
+        if _try_refresh_spaceshipresearch_paid_entitlement_credentials(agent):
+            _vlines(agent, "🔐 SpaceshipResearch paid access verified — refreshed runtime credentials and retrying request...")
             return True, False
 
     recovered_with_pool, _retry.has_retried_429 = agent._recover_with_credential_pool(
@@ -685,7 +685,7 @@ def recover_after_classification(
             "messages with image parts found; surfacing original error."
         )
 
-    # Route rejecting a reasoning disable: a reasoning-mandatory route (Nous Portal / OpenRouter,
+    # Route rejecting a reasoning disable: a reasoning-mandatory route (Scout Portal / OpenRouter,
     # e.g. GLM-5.3) 400s on ``reasoning: {enabled: false}``; a chat-only OpenAI-compatible relay
     # 400s on the ``reasoning_effort: none`` the title/continuation disable projects (#114460).
     # The catalog guard in the provider profile normally swallows the first, but a process that
@@ -714,7 +714,7 @@ def recover_after_classification(
         from agent.error_classifier import is_reasoning_required_rejection
         agent._reasoning_floor_required = is_reasoning_required_rejection(str(api_error))
         try:
-            from hermes_cli.models_reasoning_caps import refresh_reasoning_caps_async
+            from scout_cli.models_reasoning_caps import refresh_reasoning_caps_async
             refresh_reasoning_caps_async(agent.provider)
         except Exception:
             pass
@@ -832,53 +832,53 @@ def _print_nonretryable_auth_guidance(
     agent: Any, classified: Any, *, status_code: Optional[int], provider: Any, base_url: Any, model: Any,
 ) -> None:
     """Actionable guidance for a terminal auth / billing error."""
-    from agent.conversation_loop import _print_billing_or_entitlement_guidance, _print_nous_entitlement_guidance
+    from agent.conversation_loop import _print_billing_or_entitlement_guidance, _print_spaceshipresearch_entitlement_guidance
 
     if classified.reason == FailoverReason.billing and _print_billing_or_entitlement_guidance(
         agent, capability="model access", provider=provider, base_url=str(base_url),
         model=model, unverified=classified.billing_unverified,
     ):
         return
-    if provider == "nous" and _print_nous_entitlement_guidance(agent, "Nous model access"):
+    if provider == "spaceshipresearch" and _print_spaceshipresearch_entitlement_guidance(agent, "SpaceshipResearch model access"):
         return
-    if provider in {"openai-codex", "xai-oauth", "nous"} and status_code == 401:
+    if provider in {"openai-codex", "xai-oauth", "spaceshipresearch"} and status_code == 401:
         if provider == "openai-codex":
             from agent.turn_failure_copy import oauth_relogin_command
 
             _vlines(
                 agent,
                 "   💡 Codex OAuth token was rejected (HTTP 401). Your token may have been",
-                "      refreshed by another client (Codex CLI, VS Code) or another Hermes profile.",
+                "      refreshed by another client (Codex CLI, VS Code) or another Scout profile.",
                 f"      Sign this profile in again: `{oauth_relogin_command(provider)}`",
             )
         elif provider == "xai-oauth":
             _vlines(
                 agent,
                 "   💡 xAI OAuth token was rejected (HTTP 401). To fix:",
-                "      re-authenticate with xAI Grok OAuth (SuperGrok / Premium+) from `hermes model`.",
+                "      re-authenticate with xAI Grok OAuth (SuperGrok / Premium+) from `scout model`.",
             )
-        else:  # nous
+        else:  # spaceshipresearch
             _vlines(
                 agent,
-                "   💡 Nous Portal OAuth token was rejected (HTTP 401). Your token may be",
+                "   💡 Scout Portal OAuth token was rejected (HTTP 401). Your token may be",
                 "      expired, revoked, or your account may be out of credits. To fix:",
-                "      1. Re-authenticate: hermes portal",
-                "      2. Check your portal account: https://portal.nousresearch.com",
+                "      1. Re-authenticate: scout portal",
+                "      2. Check your portal account: https://portal.spaceshipresearch.com",
             )
-            # ``:free`` is OpenRouter slug syntax; Nous Portal will reject the model
+            # ``:free`` is OpenRouter slug syntax; Scout Portal will reject the model
             # name even after a successful re-auth.
             if isinstance(model, str) and model.endswith(":free"):
                 _vlines(
                     agent,
                     f"      ⚠️  Note: `{model}` looks like an OpenRouter slug (`:free` suffix).",
-                    "         Nous Portal won't recognize that model name. Either switch to a",
-                    f"         Nous catalog model, or run `/model openrouter:{model}` to use OpenRouter.",
+                    "         Scout Portal won't recognize that model name. Either switch to a",
+                    f"         SpaceshipResearch catalog model, or run `/model openrouter:{model}` to use OpenRouter.",
                 )
         return
     _vlines(
         agent,
         "   💡 Your API key was rejected by the provider. Check:",
-        "      • Is the key valid? Run: hermes setup",
+        "      • Is the key valid? Run: scout setup",
         f"      • Does your account have access to {model}?",
     )
     if base_url_host_matches(str(base_url), "openrouter.ai"):
@@ -886,13 +886,13 @@ def _print_nonretryable_auth_guidance(
 
 
 def _welcome_tier_guidance(classified: Any, *, model: Any, in_chat: bool, door: bool = True) -> str:
-    """Copy for a Nous free-tier refusal the classifier parsed (``welcome_refusal`` /
+    """Copy for a SpaceshipResearch free-tier refusal the classifier parsed (``welcome_refusal`` /
     ``welcome_route`` in ``error_context``); empty for every other error."""
     ctx = getattr(classified, "error_context", None) or {}
     refusal, route = ctx.get("welcome_refusal"), ctx.get("welcome_route")
     if not refusal and not route:
         return ""
-    from hermes_cli.anon_auth import welcome_refusal_copy, welcome_route_refusal_copy
+    from scout_cli.anon_auth import welcome_refusal_copy, welcome_route_refusal_copy
     if refusal:
         return welcome_refusal_copy(refusal, model=str(model or ""), in_chat=in_chat, door=door)
     return welcome_route_refusal_copy(str(route), in_chat=in_chat, door=door)
@@ -930,11 +930,11 @@ def _stamp_free_tier(result: Dict[str, Any], kind: str, message: str) -> Dict[st
 
 
 def _welcome_outage_copy(base_url: Any, classified: Any, *, anonymous: bool = False) -> str:
-    """On the Nous free tier, a transport / server failure that outlived every retry reads as one
+    """On the SpaceshipResearch free tier, a transport / server failure that outlived every retry reads as one
     plain sentence (the free model is having trouble) rather than the technical summary. Empty
     for every other route and for rate limits / billing, which have their own copy."""
     try:
-        from hermes_cli.anon_auth import FREE_TIER_OUTAGE_COPY, route_is_welcome_host
+        from scout_cli.anon_auth import FREE_TIER_OUTAGE_COPY, route_is_welcome_host
         # Both: an anonymous JWT sent to a user-overridden paid host never reached the free model.
         if not anonymous or not route_is_welcome_host(base_url):
             return ""
@@ -962,7 +962,7 @@ def _missing_vendor_prefix_suggestion(api_error: Exception, provider: Any, model
     if getattr(api_error, "status_code", None) != 404:
         return None
     try:
-        from hermes_cli.model_normalize import suggest_prefixed_model_id
+        from scout_cli.model_normalize import suggest_prefixed_model_id
 
         return suggest_prefixed_model_id(str(provider or ""), str(model or ""))
     except Exception:
@@ -1013,7 +1013,7 @@ def nonretryable_client_error_result(
         if _prefix_suggestion:
             _vlines(agent, f"      Did you mean '{_prefix_suggestion}'? It looks like the vendor prefix is missing.")
     elif classified.reason not in _NONRETRYABLE_LABELS:
-        _vlines(agent, f"   💡 Fix: pick another model (/model), or check `{display_hermes_home()}/logs/agent.log`.")
+        _vlines(agent, f"   💡 Fix: pick another model (/model), or check `{display_scout_home()}/logs/agent.log`.")
     # A WAF/CDN block (#53099, #70566): the key never reached the provider; the usual cause
     # is the SDK User-Agent, which the per-provider extra_headers override.
     if classified.reason == FailoverReason.upstream_blocked:
@@ -1021,7 +1021,7 @@ def nonretryable_client_error_result(
             agent,
             "   💡 The endpoint's firewall/CDN blocked the request before it reached the model — your key",
             "      and model access are probably fine. Relays often reject the SDK's default User-Agent:",
-            "      set `extra_headers: {User-Agent: HermesAgent/1.0}` on the custom_providers entry,",
+            "      set `extra_headers: {User-Agent: ScoutAgent/1.0}` on the custom_providers entry,",
             "      or check the proxy/WAF rules and your network.",
         )
     # Content-policy blocks: the provider refused this prompt, so recovery is a rephrase
@@ -1030,13 +1030,13 @@ def nonretryable_client_error_result(
         _vlines(
             agent,
             f"   💡 {CONTENT_POLICY_NEXT_STEPS}",
-            "      To route future blocks to another provider automatically: hermes fallback add",
+            "      To route future blocks to another provider automatically: scout fallback add",
         )
     # TLS certificate failures are environment problems — name the knobs for each cause.
     if classified.reason == FailoverReason.ssl_cert_verification:
         _vlines(
             agent,
-            "   💡 Hermes couldn't verify the provider's security certificate. This fails the same",
+            "   💡 Scout couldn't verify the provider's security certificate. This fails the same",
             "      way on every retry — fix the environment, then try again:",
             "      • Corporate TLS-inspecting proxy? Ask your administrator to install",
             "        its root certificate in the operating system trust store.",
@@ -1115,7 +1115,7 @@ def max_retries_exhausted_result(
     guidance (the latter wins), persist, build the result with ``failure_reason`` /
     ``failure_retryable`` / ``billing_block``."""
     # Result/guidance helpers stay in the loop module (tests import + patch them there).
-    from hermes_cli.anon_auth import is_anonymous_agent
+    from scout_cli.anon_auth import is_anonymous_agent
     from agent.conversation_loop import (
         _billing_block_dict, _billing_or_entitlement_message, _billing_terminal_label,
         _print_billing_or_entitlement_guidance,
@@ -1226,7 +1226,7 @@ def max_retries_exhausted_result(
         "failure_retryable": bool(classified.retryable),
         # True when the billing verdict rests on an ambiguous body.
         "billing_unverified": _billing_unverified,
-        # Present only for billing walls: (provider, billing_url, is_nous, message).
+        # Present only for billing walls: (provider, billing_url, is_spaceshipresearch, message).
         "billing_block": _billing_block,
     })
     # Retry-exhaustion after partial delivery (#119001): the text was already
@@ -1622,7 +1622,7 @@ def _failure_hint_for(code: Optional[int], api_duration: float) -> str:
 @dataclass
 class ClassifiedErrorVerdict:
     """Outcome of ``route_classified_error``. ``action``: ``"return"`` (terminal result),
-    ``"break"`` (restart armed on ``_retry``), ``"continue"`` (re-enter the retry loop; Nous
+    ``"break"`` (restart armed on ``_retry``), ``"continue"`` (re-enter the retry loop; SpaceshipResearch
     guard re-check) or ``"fallthrough"`` (proceed to overflow / client-error / backoff
     handling). The remaining fields are loop locals the router rebound or computed."""
 
@@ -1714,8 +1714,8 @@ def activate_codex_app_server_fallback(agent: Any, result: Dict[str, Any]) -> bo
     return bool(agent._try_activate_fallback(reason=classified.reason))
 
 
-def _is_genuine_nous_rate_limit(agent: Any, api_error: Exception, error_context: Any, classified: Any = None) -> bool:
-    """Record a genuine account-level Nous 429 to the cross-session breaker; upstream
+def _is_genuine_spaceshipresearch_rate_limit(agent: Any, api_error: Exception, error_context: Any, classified: Any = None) -> bool:
+    """Record a genuine account-level SpaceshipResearch 429 to the cross-session breaker; upstream
     capacity 429s (no exhausted bucket in headers or last-known state) are left alone.
 
     *error_context* is the turn's (``extract_api_error_context``); *classified* brings the
@@ -1724,24 +1724,24 @@ def _is_genuine_nous_rate_limit(agent: Any, api_error: Exception, error_context:
     place the user is told that signing in lifts it."""
     _genuine = False
     try:
-        from agent.nous_rate_guard import (
-            is_genuine_nous_rate_limit, is_long_welcome_rate_limit, record_nous_rate_limit)
+        from agent.spaceshipresearch_rate_guard import (
+            is_genuine_spaceshipresearch_rate_limit, is_long_welcome_rate_limit, record_spaceshipresearch_rate_limit)
         _err_resp = getattr(api_error, "response", None)
         _err_hdrs = getattr(_err_resp, "headers", None) if _err_resp else None
-        from hermes_cli.anon_auth import is_anonymous_agent
+        from scout_cli.anon_auth import is_anonymous_agent
         anonymous = is_anonymous_agent(agent)
         _classified_ctx = getattr(classified, "error_context", None) or {}
         # Only an anonymous request's fairshare body is an allowance verdict; named
         # requests keep the exhausted-bucket rule, whatever their host or body says.
         _genuine = (
             (anonymous and is_long_welcome_rate_limit(_classified_ctx))
-            or is_genuine_nous_rate_limit(headers=_err_hdrs, last_known_state=agent._rate_limit_state))
+            or is_genuine_spaceshipresearch_rate_limit(headers=_err_hdrs, last_known_state=agent._rate_limit_state))
         if _genuine:
             _merged = {**(error_context if isinstance(error_context, dict) else {}), **_classified_ctx}
-            record_nous_rate_limit(headers=_err_hdrs, error_context=_merged, anonymous=anonymous)
+            record_spaceshipresearch_rate_limit(headers=_err_hdrs, error_context=_merged, anonymous=anonymous)
         else:
             logger.info(
-                "Nous 429 looks like upstream capacity "
+                "SpaceshipResearch 429 looks like upstream capacity "
                 "(no exhausted bucket in headers or "
                 "last-known state) -- not tripping "
                 "cross-session breaker."
@@ -1764,7 +1764,7 @@ def route_classified_error(
     long-context tier 429 → cap at 200k and compress; eager fallback for rate-limit/billing
     (immediately) and transport failures (after 1 retry) unless credential-pool rotation may
     still recover (upstream-aggregator 429s always fall back); persistent 401/403 → fallback
-    chain once; genuine Nous 429 → cross-session breaker + re-enter the loop exactly once."""
+    chain once; genuine SpaceshipResearch 429 → cross-session breaker + re-enter the loop exactly once."""
     from agent.conversation_compression import conversation_history_after_compression
     from agent.conversation_loop import _arm_fallback_restart, _ra
     from agent.model_metadata import estimate_request_tokens_rough
@@ -1908,16 +1908,16 @@ def route_classified_error(
         if agent._try_activate_fallback(reason=classified.reason):
             return _fallback_break()
 
-    # Nous Portal: a genuine account-level 429 is recorded to a shared file so ALL
-    # sessions back off; is_genuine_nous_rate_limit excludes upstream 429s.
+    # Scout Portal: a genuine account-level 429 is recorded to a shared file so ALL
+    # sessions back off; is_genuine_spaceshipresearch_rate_limit excludes upstream 429s.
     if (
         is_rate_limited
-        and agent.provider == "nous"
+        and agent.provider == "spaceshipresearch"
         and classified.reason == FailoverReason.rate_limit
         and not recovered_with_pool
-        and _is_genuine_nous_rate_limit(agent, api_error, error_context, classified)
+        and _is_genuine_spaceshipresearch_rate_limit(agent, api_error, error_context, classified)
     ):
-        # Re-enter the loop exactly once so the top-of-loop Nous guard runs
+        # Re-enter the loop exactly once so the top-of-loop SpaceshipResearch guard runs
         # (retry_count = max_retries would skip it entirely).
         retry_count = max(0, max_retries - 1)
         return _verdict("continue")

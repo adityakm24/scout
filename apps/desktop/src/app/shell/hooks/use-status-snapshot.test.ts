@@ -4,8 +4,8 @@ import { createElement, type ReactElement, type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { NotificationStack } from '@/components/notifications'
-import { getStatus } from '@/hermes'
 import { I18nProvider, type Locale, TRANSLATIONS, type Translations } from '@/i18n'
+import { getStatus } from '@/scout'
 import { $setupReadyTick, notifySetupReady } from '@/store/live-sync'
 import { clearNotifications } from '@/store/notifications'
 
@@ -13,7 +13,7 @@ import { deferred } from '../../../test/deferred'
 
 import { useStatusSnapshot } from './use-status-snapshot'
 
-vi.mock('@/hermes', () => ({
+vi.mock('@/scout', () => ({
   getStatus: vi.fn()
 }))
 
@@ -180,7 +180,7 @@ describe('useStatusSnapshot', () => {
     const requestGatewayMock = vi.fn(
       async (method: string) =>
         (method === 'setup.runtime_check'
-          ? { error: 'No usable credentials found for nous.', ok: false }
+          ? { error: 'No usable credentials found for spaceshipresearch.', ok: false }
           : { provider_configured: true }) as never
     )
 
@@ -192,7 +192,7 @@ describe('useStatusSnapshot', () => {
 
     expect(result.current.inferenceStatus).toMatchObject({
       ready: false,
-      reason: expect.stringContaining('No usable credentials found for nous.'),
+      reason: expect.stringContaining('No usable credentials found for spaceshipresearch.'),
       source: 'runtime_check'
     })
   })

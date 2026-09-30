@@ -365,7 +365,7 @@ export interface MessageReactResult {
   row_id: number
   reactions: MessageReaction[]
 }
-/** One persisted reaction row (``hermes_state_messages.set_message_reaction``); ``seen`` is stamped once announced. */
+/** One persisted reaction row (``scout_state_messages.set_message_reaction``); ``seen`` is stamped once announced. */
 export interface MessageReaction {
   emoji: string
   author: string
@@ -481,7 +481,7 @@ export interface ConfigGetResult {
   mtime?: number | null
   mcp_rev?: string | null
 }
-/** ``hermes_cli/models.py::list_available_providers`` row. */
+/** ``scout_cli/models.py::list_available_providers`` row. */
 export interface ConfigProviderRef {
   id: string
   label: string
@@ -617,13 +617,13 @@ export interface SetupRuntimeCheckResult {
   free_tier_route?: boolean | null
   profile?: string | null
 }
-export interface DiagnosticsShareNousParams {
+export interface DiagnosticsShareSpaceshipResearchParams {
   error_context?: string | null
   extra_files?: Record<string, string> | null
   log_lines?: number | null
 }
 /** Structured envelope: ``ok=False`` + ``error`` renders inline instead of failing the RPC. */
-export interface DiagnosticsShareNousResult {
+export interface DiagnosticsShareSpaceshipResearchResult {
   ok: boolean
   view_url?: string | null
   upload_id?: string | null
@@ -676,7 +676,7 @@ export interface SharedMetricsSlashCommandParams {
 export interface SharedMetricsSlashCommandResult {
   ok: boolean
 }
-/** ``elapsed_ms`` = the client's own launch (TUI process start / Desktop app start) to ready (TUI gateway ready / Desktop backend attached), measured once per launch by the client. The client names its surface because a Desktop may attach to a URL/cloud backend where ``HERMES_DESKTOP`` is unset; without it the backend falls back to its own client detection. ``launch_id`` is an opaque per-launch token the backend latches on (never recorded), so a reconnect re-sending the same launch counts once while a new launch counts again. */
+/** ``elapsed_ms`` = the client's own launch (TUI process start / Desktop app start) to ready (TUI gateway ready / Desktop backend attached), measured once per launch by the client. The client names its surface because a Desktop may attach to a URL/cloud backend where ``SCOUT_DESKTOP`` is unset; without it the backend falls back to its own client detection. ``launch_id`` is an opaque per-launch token the backend latches on (never recorded), so a reconnect re-sending the same launch counts once while a new launch counts again. */
 export interface SharedMetricsStartupLatencyParams {
   profile?: string | null
   elapsed_ms: number
@@ -686,7 +686,7 @@ export interface SharedMetricsStartupLatencyParams {
 export interface SharedMetricsStartupLatencyResult {
   ok: boolean
 }
-/** One Desktop PACKAGED self-update (electron-updater / App Installer / Store). Source-checkout hand-offs run ``hermes update`` and are counted from its receipt, never here. Raw words; the backend buckets them: ``outcome`` success|failed|noop|refused, ``failed_stage`` download|verify|apply|restart, ``mechanism`` the updater strategy kind, ``duration_ms`` wall time, ``from_commit_date`` the updated-from build's commit time (epoch seconds) when known. */
+/** One Desktop PACKAGED self-update (electron-updater / App Installer / Store). Source-checkout hand-offs run ``scout update`` and are counted from its receipt, never here. Raw words; the backend buckets them: ``outcome`` success|failed|noop|refused, ``failed_stage`` download|verify|apply|restart, ``mechanism`` the updater strategy kind, ``duration_ms`` wall time, ``from_commit_date`` the updated-from build's commit time (epoch seconds) when known. */
 export interface SharedMetricsUpdateRunParams {
   profile?: string | null
   outcome: string
@@ -758,7 +758,7 @@ export interface ModelOptionsResult {
   model?: string
   provider?: string
 }
-/** One ``hermes_cli/inventory.py::build_models_payload`` provider row (the union of every field the builder sets; ``pricing_pending`` / ``free_tier_pending`` mark the cached-only path). */
+/** One ``scout_cli/inventory.py::build_models_payload`` provider row (the union of every field the builder sets; ``pricing_pending`` / ``free_tier_pending`` mark the cached-only path). */
 export interface ModelOptionProvider {
   slug: string
   name: string
@@ -783,13 +783,13 @@ export interface ModelOptionProvider {
   unavailable_models?: string[] | null
   [key: string]: unknown
 }
-/** ``hermes_cli/inventory.py::_apply_capabilities``. */
+/** ``scout_cli/inventory.py::_apply_capabilities``. */
 export interface ModelCapabilities {
   fast: boolean
   reasoning: boolean
   can_disable_reasoning?: boolean | null
 }
-/** ``hermes_cli/inventory.py::_apply_pricing`` — formatted $/Mtok strings (``""`` unknown, ``"free"``); the sale fields are Nous Portal-only. */
+/** ``scout_cli/inventory.py::_apply_pricing`` — formatted $/Mtok strings (``""`` unknown, ``"free"``); the sale fields are Scout Portal-only. */
 export interface ModelPricing {
   input: string
   output: string
@@ -844,7 +844,7 @@ export interface GoalSnapshot {
   last_reason?: string | null
   wait_barrier?: WaitBarrierUntil | WaitBarrierTarget | null
 }
-/** ``hermes_cli/goals.py::GoalContract.to_dict``. */
+/** ``scout_cli/goals.py::GoalContract.to_dict``. */
 export interface GoalContractSnapshot {
   outcome?: string
   verification?: string
@@ -1025,7 +1025,7 @@ export interface CatalogScan {
   summary: string
 }
 export type CatalogScanStatus = 'passed' | 'warnings' | 'failed'
-/** The desktop app a catalog plugin drives, from its ``hermes_platform`` declaration. */
+/** The desktop app a catalog plugin drives, from its ``scout_platform`` declaration. */
 export type CatalogAppState = 'present' | 'missing_app' | 'app_not_running' | 'unknown'
 export interface ConnectionWakeResult {
   status: 'ok'
@@ -1834,6 +1834,73 @@ export interface ClientCapabilitiesResult {
   server_requests: string[]
   declines_not_shown?: boolean
 }
+export interface PlannerTodosParams {
+  profile?: string | null
+  action?: PlannerTodoAction
+  id?: string | null
+  title?: string | null
+  notes?: string | null
+  due?: string | null
+  priority?: string | null
+  status?: string | null
+  include_done?: boolean | null
+  ids?: string[] | null
+}
+export type PlannerTodoAction = 'list' | 'add' | 'update' | 'delete' | 'clear_completed' | 'reorder'
+export interface PlannerTodosResult {
+  success: boolean
+  error?: string | null
+  revision?: number | null
+  items?: PlannerTodo[]
+  item?: PlannerTodo | null
+  [key: string]: unknown
+}
+/** ``planner/todos.py`` item. */
+export interface PlannerTodo {
+  id: string
+  title: string
+  notes?: string
+  status?: string
+  priority?: string
+  due?: string | null
+  created_by?: string
+  updated_by?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+  completed_at?: string | null
+  [key: string]: unknown
+}
+export interface PlannerRemindersParams {
+  profile?: string | null
+  action?: PlannerReminderAction
+  id?: string | null
+  text?: string | null
+  when?: string | null
+  include_fired?: boolean | null
+}
+export type PlannerReminderAction = 'list' | 'add' | 'update' | 'delete' | 'clear_fired'
+export interface PlannerRemindersResult {
+  success: boolean
+  error?: string | null
+  reminders?: PlannerReminder[]
+  reminder?: PlannerReminder | null
+  removed?: string | string[] | null
+  [key: string]: unknown
+}
+/** ``planner/reminders.py::_view`` — a reminder-kind cron job. */
+export interface PlannerReminder {
+  id: string
+  text: string
+  when?: string
+  recurring?: boolean
+  next_at?: string | null
+  last_fired_at?: string | null
+  status?: string
+  created_at?: string | null
+  created_by?: string
+  deliver?: string
+  [key: string]: unknown
+}
 /** ``word`` is the token under the cursor (``@`` prefix = context reference); ``cwd`` / ``session_id`` pick the directory the listing resolves against. */
 export interface CompletePathParams {
   profile?: string | null
@@ -2192,7 +2259,7 @@ export interface SessionForeignListResult {
   host: string
   unreadable?: number
 }
-/** ``hermes_cli/foreign_sessions_browser.py::list_foreign_sessions`` — ``id`` is an opaque handle, never a path. */
+/** ``scout_cli/foreign_sessions_browser.py::list_foreign_sessions`` — ``id`` is an opaque handle, never a path. */
 export interface ForeignSessionRow {
   id: string
   source: ForeignSource
@@ -2275,7 +2342,7 @@ export interface ProjectsPayload {
   projects: ProjectInfo[]
   active_id?: string | null
 }
-/** ``hermes_cli/projects_db.py::Project.to_dict`` — one stored project with its folders. */
+/** ``scout_cli/projects_db.py::Project.to_dict`` — one stored project with its folders. */
 export interface ProjectInfo {
   id: string
   slug: string
@@ -2289,7 +2356,7 @@ export interface ProjectInfo {
   created_at: number
   folders?: ProjectFolder[]
 }
-/** ``hermes_cli/projects_db.py::ProjectFolder.to_dict``. */
+/** ``scout_cli/projects_db.py::ProjectFolder.to_dict``. */
 export interface ProjectFolder {
   path: string
   label?: string | null
@@ -3937,7 +4004,7 @@ export interface SkillHubHit {
   name: string
   description: string
 }
-/** ``hermes_cli.skills_hub.browse_skills`` row. */
+/** ``scout_cli.skills_hub.browse_skills`` row. */
 export interface SkillBrowseItem {
   name?: string
   description?: string
@@ -3946,7 +4013,7 @@ export interface SkillBrowseItem {
   identifier?: string | null
   [key: string]: unknown
 }
-/** ``hermes_cli.skills_hub.inspect_skill``; ``{}`` when the identifier resolves nowhere. */
+/** ``scout_cli.skills_hub.inspect_skill``; ``{}`` when the identifier resolves nowhere. */
 export interface SkillInspectInfo {
   name?: string | null
   description?: string | null
@@ -4217,7 +4284,7 @@ export interface PluginsManageParams {
   values?: Record<string, unknown> | null
 }
 export type PluginsAction = 'list' | 'toggle' | 'install' | 'update' | 'remove' | 'settings' | 'onboarding'
-/** ``list`` → ``plugins`` + counts; ``toggle`` → ``ok``/``unchanged``/``restart_required``/``name`` (the canonical key written)/``plugin``; ``install`` → ``hermes_cli.plugins_cmd.dashboard_install_plugin``'s ok payload; ``toggle``/``install``/``update`` that loaded a plugin also carry ``gateway_reloaded`` (the running gateway picked it up and re-wired its handlers) and ``activation`` — the honest split of what is live now vs deferred, so ``restart_required`` is True only when no gateway answered; ``update`` → ``ok``/``unchanged``/``sha``, or ``ok=false`` + ``consent_required`` with the ``delta`` (``{surface: [added...]}``) / ``delta_lines`` a widened pin adds — nothing changed until the client retries with ``accept_capabilities``; ``remove`` → ``ok``/``name`` plus ``cleared_memory_provider`` when the removed plugin was the live ``memory.provider``. */
+/** ``list`` → ``plugins`` + counts; ``toggle`` → ``ok``/``unchanged``/``restart_required``/``name`` (the canonical key written)/``plugin``; ``install`` → ``scout_cli.plugins_cmd.dashboard_install_plugin``'s ok payload; ``toggle``/``install``/``update`` that loaded a plugin also carry ``gateway_reloaded`` (the running gateway picked it up and re-wired its handlers) and ``activation`` — the honest split of what is live now vs deferred, so ``restart_required`` is True only when no gateway answered; ``update`` → ``ok``/``unchanged``/``sha``, or ``ok=false`` + ``consent_required`` with the ``delta`` (``{surface: [added...]}``) / ``delta_lines`` a widened pin adds — nothing changed until the client retries with ``accept_capabilities``; ``remove`` → ``ok``/``name`` plus ``cleared_memory_provider`` when the removed plugin was the live ``memory.provider``. */
 export interface PluginsManageResult {
   plugins?: AgentPluginRow[] | null
   user_count?: number | null
@@ -4271,8 +4338,8 @@ export interface PluginServerRow {
   state: PluginServerState
   sentence: string
 }
-export type PluginServerState = 'connected' | 'app_not_running' | 'hermes_not_connected' | 'endpoint_unavailable' | 'no_interactive_session' | 'version_too_old' | 'missing_app' | 'unknown'
-/** One ``config_schema`` key of a plugin manifest, rendered by the Plugins hub (``hermes_cli.plugins_settings.plugin_settings_fields``). ``secret`` fields carry no value: ``env`` names the ``.env`` variable and ``has_value`` whether it is set. */
+export type PluginServerState = 'connected' | 'app_not_running' | 'scout_not_connected' | 'endpoint_unavailable' | 'no_interactive_session' | 'version_too_old' | 'missing_app' | 'unknown'
+/** One ``config_schema`` key of a plugin manifest, rendered by the Plugins hub (``scout_cli.plugins_settings.plugin_settings_fields``). ``secret`` fields carry no value: ``env`` names the ``.env`` variable and ``has_value`` whether it is set. */
 export interface PluginSettingField {
   key: string
   type: PluginSettingFieldType
@@ -4286,7 +4353,7 @@ export interface PluginSettingField {
   has_value?: boolean | null
 }
 export type PluginSettingFieldType = 'string' | 'number' | 'boolean' | 'enum' | 'secret' | 'json'
-/** What a plugin loaded mid-run does NOW vs later (``hermes_cli.plugins_activation``). ``activated_now`` kinds (``{kind: [names]}``): ``gateway_commands`` (slash names), ``locales`` (``<lang>.<surface>`` language-pack layers), ``gateway_transforms`` / ``hooks`` (hook names), ``callbacks`` (platforms / ``slack:<action_id>``) — live in the running gateway once it reloaded (``gateway_reloaded``). ``live_now``: the plugin's MCP servers (connected, with their tools, or the error) and skills, usable in every open chat of the profile from its next turn — the chats also get a note listing them. ``deferred`` kinds: ``tools`` (Python tool names) and ``prompt`` (section ids) apply from the next session. */
+/** What a plugin loaded mid-run does NOW vs later (``scout_cli.plugins_activation``). ``activated_now`` kinds (``{kind: [names]}``): ``gateway_commands`` (slash names), ``locales`` (``<lang>.<surface>`` language-pack layers), ``gateway_transforms`` / ``hooks`` (hook names), ``callbacks`` (platforms / ``slack:<action_id>``) — live in the running gateway once it reloaded (``gateway_reloaded``). ``live_now``: the plugin's MCP servers (connected, with their tools, or the error) and skills, usable in every open chat of the profile from its next turn — the chats also get a note listing them. ``deferred`` kinds: ``tools`` (Python tool names) and ``prompt`` (section ids) apply from the next session. */
 export interface PluginActivation {
   name: string
   key: string
@@ -4497,7 +4564,7 @@ export interface GatewayReadyPayload {
   replay_epoch: string
   heartbeat?: boolean | null
 }
-/** ``tui_gateway/change_watcher.py::resolve_skin`` — the resolved active skin (``HermesSkin``). ``{}`` when the skin engine failed to load. Colour maps are token → colour string. */
+/** ``tui_gateway/change_watcher.py::resolve_skin`` — the resolved active skin (``ScoutSkin``). ``{}`` when the skin engine failed to load. Colour maps are token → colour string. */
 export interface SkinPayload {
   name?: string
   description?: string
@@ -4511,7 +4578,7 @@ export interface SkinPayload {
   help_header?: string
   [key: string]: unknown
 }
-/** ``hermes_cli/free_tier_bootstrap.py::SetupRecord.as_payload``. */
+/** ``scout_cli/free_tier_bootstrap.py::SetupRecord.as_payload``. */
 export interface SetupReadyPayload {
   provider_configured: boolean
   inference_provider: string
@@ -4571,7 +4638,7 @@ export interface BillingBlock {
   provider_label: string
   model: string
   billing_url: string | null
-  is_nous: boolean
+  is_spaceshipresearch: boolean
   message: string
   unverified?: boolean | null
 }
@@ -4859,7 +4926,7 @@ export interface PetHatchProgressPayload {
 }
 /** ``change_watcher._CHANGE_WATCHES`` payload fn — ``{}`` for every watch except pet.changed. */
 export type ChangeSignalPayload = Record<string, unknown>
-export type ConnectorErrorReason = 'INVALID_PARAMS' | 'NOT_OWNER' | 'UNSUPPORTED_RUNTIME' | 'CONNECTOR_REQUEST_FAILED' | 'INVALID_CONNECTOR_RESPONSE' | 'UNKNOWN_TARGET' | 'LINK_STILL_VALID' | 'REISSUE_REFUSED' | 'UNKNOWN_OPERATION' | 'INVALID_ANSWER' | 'NEEDS_NOUS_AUTH' | 'CONNECTOR_NOT_FOUND' | 'TOOLS_UNAVAILABLE' | 'CONNECTORS_UNAVAILABLE' | 'CATALOG_UNAVAILABLE' | 'ACCOUNTS_UNAVAILABLE' | 'CONNECTION_NOT_FOUND' | 'POLICY_UNAVAILABLE' | 'POLICY_CONFLICT' | 'FORBIDDEN_SCOPE' | 'ORG_REQUIRED' | 'ORG_ACCESS_DENIED' | 'INVALID_POLICY'
+export type ConnectorErrorReason = 'INVALID_PARAMS' | 'NOT_OWNER' | 'UNSUPPORTED_RUNTIME' | 'CONNECTOR_REQUEST_FAILED' | 'INVALID_CONNECTOR_RESPONSE' | 'UNKNOWN_TARGET' | 'LINK_STILL_VALID' | 'REISSUE_REFUSED' | 'UNKNOWN_OPERATION' | 'INVALID_ANSWER' | 'NEEDS_SPACESHIPRESEARCH_AUTH' | 'CONNECTOR_NOT_FOUND' | 'TOOLS_UNAVAILABLE' | 'CONNECTORS_UNAVAILABLE' | 'CATALOG_UNAVAILABLE' | 'ACCOUNTS_UNAVAILABLE' | 'CONNECTION_NOT_FOUND' | 'POLICY_UNAVAILABLE' | 'POLICY_CONFLICT' | 'FORBIDDEN_SCOPE' | 'ORG_REQUIRED' | 'ORG_ACCESS_DENIED' | 'INVALID_POLICY'
 
 // ── Client→server methods ──
 export interface RpcMethods {
@@ -4877,7 +4944,7 @@ export interface RpcMethods {
   'billing.charge': { params: BillingChargeParams; result: BillingChargeResult }
   /** Poll one charge by id. */
   'billing.charge_status': { params: BillingChargeStatusParams; result: BillingChargeStatusResult }
-  /** Read-only billing view (no scope); the Nous free tier is answered locally without a portal call. */
+  /** Read-only billing view (no scope); the SpaceshipResearch free tier is answered locally without a portal call. */
   'billing.state': { params: ProfileParams; result: BillingStateResult }
   /** Run the billing:manage device flow; the URL/code arrive via billing.step_up.verification. */
   'billing.step_up': { params: BillingStepUpParams; result: BillingStepUpResult }
@@ -4901,7 +4968,7 @@ export interface RpcMethods {
   'browser.manage': { params: BrowserManageParams; result: BrowserManageResult }
   /** Lock one answer of a batch clarify request (editable until every question is locked). */
   'clarify.lock': { params: ClarifyLockParams; result: ClarifyLockResult }
-  /** Run ``hermes <argv>`` non-interactively and capture its output; ``blocked`` explains a refusal. */
+  /** Run ``scout <argv>`` non-interactively and capture its output; ``blocked`` explains a refusal. */
   'cli.exec': { params: CliExecParams; result: CliExecResult }
   /** What the calling client handles, sent once per connection (after gateway.ready); returns the server→client request methods this backend may send. */
   'client.capabilities': { params: ClientCapabilitiesParams; result: ClientCapabilitiesResult }
@@ -4937,7 +5004,7 @@ export interface RpcMethods {
   'connectors.list': { params: ConnectorsListParams; result: ConnectorsListResult }
   /** The current snapshot of one open session or account operation. */
   'connectors.operation.status': { params: ConnectionOperationParams; result: ConnectionOperationStatus }
-  /** The browser leg came back (hermes://connections/done): read the accounts now, not at the next tick. */
+  /** The browser leg came back (scout://connections/done): read the accounts now, not at the next tick. */
   'connectors.operation.wake': { params: ConnectionOperationParams; result: ConnectionWakeResult }
   /** Policy layers for the scoped member, from organization to member scope. */
   'connectors.policy.get': { params: ProfileParams; result: ConnectorPolicyGetResult }
@@ -4951,8 +5018,8 @@ export interface RpcMethods {
   'delegation.pause': { params: DelegationPauseParams; result: DelegationPauseResult }
   /** Running subagent tree plus the spawn pause flag and limits. */
   'delegation.status': { params: ProfileParams; result: DelegationStatusResult }
-  /** Upload a force-redacted debug bundle to Nous-internal diagnostics storage. */
-  'diagnostics.share_nous': { params: DiagnosticsShareNousParams; result: DiagnosticsShareNousResult }
+  /** Upload a force-redacted debug bundle to SpaceshipResearch-internal diagnostics storage. */
+  'diagnostics.share_spaceshipresearch': { params: DiagnosticsShareSpaceshipResearchParams; result: DiagnosticsShareSpaceshipResearchResult }
   /** Run the distro package install on the gateway host; progress streams as display.install.log/.done. */
   'display.install': { params: ProfileParams; result: DisplayInstallResult }
   /** Take over: the human named by a viewer id this connection minted controls the screen. */
@@ -5119,6 +5186,10 @@ export interface RpcMethods {
   'pet.thumb': { params: PetThumbParams; result: PetThumbResult }
   /** Cheapest liveness probe; answered on the WS reader thread even while every agent is mid-turn. */
   ping: { params: PingParams; result: PingResult }
+  /** List/add/update/delete the user's reminders (reminder-kind cron jobs). */
+  'planner.reminders': { params: PlannerRemindersParams; result: PlannerRemindersResult }
+  /** List/add/update/delete/reorder the user's to-dos (shared with the agent's planner tool). */
+  'planner.todos': { params: PlannerTodosParams; result: PlannerTodosResult }
   /** Loaded plugin manager entries (legacy flat view); the Plugins Hub uses plugins.manage list. */
   'plugins.list': { params: PluginsListParams; result: PluginsListResult }
   /** Plugins Hub backend: list installed plugins, toggle, git-install, re-pin a catalog install, or remove a user install. */
@@ -5183,7 +5254,7 @@ export interface RpcMethods {
   'prompt.btw': { params: SideAgentParams; result: TaskIdResult }
   /** Send a user turn to a live session; busy sessions queue / steer / redirect instead of refusing. */
   'prompt.submit': { params: PromptSubmitParams; result: PromptSubmitResult }
-  /** Re-read ~/.hermes/.env (CLI /reload parity); built agents keep their pool until /new. */
+  /** Re-read ~/.scout/.env (CLI /reload parity); built agents keep their pool until /new. */
   'reload.env': { params: ReloadEnvParams; result: ReloadEnvResult }
   /** Tear down and rediscover MCP servers for every live session (prompt cache is invalidated). */
   'reload.mcp': { params: ReloadMcpParams; result: ReloadMcpResult }
@@ -5245,7 +5316,7 @@ export interface RpcMethods {
   'session.redirect': { params: SessionCorrectionParams; result: SessionCorrectionResult }
   /** Attach to a stored session: reuse it if live here, else lazy / deferred / cold / eager rebuild. */
   'session.resume': { params: SessionResumeParams; result: SessionResumeResult }
-  /** Export the transcript to ~/.hermes/sessions/saved (classic /save). */
+  /** Export the transcript to ~/.scout/sessions/saved (classic /save). */
   'session.save': { params: SessionSaveParams; result: SessionSaveResult }
   /** Set/clear hidden (out of the default list, still resumable by its owner) on a session + lineage. */
   'session.set_hidden': { params: SessionSetHiddenParams; result: SessionSetHiddenResult }
@@ -5257,7 +5328,7 @@ export interface RpcMethods {
   'session.title': { params: SessionTitleParams; result: SessionTitleResult }
   /** Drop the last user turn (and everything after it) from an idle session. */
   'session.undo': { params: SessionUndoParams; result: SessionUndoResult }
-  /** Token / context / cost counters for the session (+ Nous credit lines when available). */
+  /** Token / context / cost counters for the session (+ SpaceshipResearch credit lines when available). */
   'session.usage': { params: SessionUsageParams; result: SessionUsageResult }
   /** Re-home a stored session's workspace; git identity is replaced and a live agent follows. */
   'session.workspace.move': { params: SessionWorkspaceMoveParams; result: SessionWorkspaceMoveResult }
@@ -5412,7 +5483,7 @@ export const RPC_METHODS = [
   'cron.manage',
   'delegation.pause',
   'delegation.status',
-  'diagnostics.share_nous',
+  'diagnostics.share_spaceshipresearch',
   'display.install',
   'display.lease.acquire',
   'display.lease.release',
@@ -5496,6 +5567,8 @@ export const RPC_METHODS = [
   'pet.select',
   'pet.thumb',
   'ping',
+  'planner.reminders',
+  'planner.todos',
   'plugins.list',
   'plugins.manage',
   'preview.restart',
@@ -5697,7 +5770,7 @@ export interface BackendGatewayEventMap {
   'display.install.log': DisplayInstallLogPayload
   /** The takeover lease changed hands; every client repaints. */
   'display.lease': DisplayLeasePayload
-  /** This profile's screen started or stopped (also for transitions made outside hermes serve). */
+  /** This profile's screen started or stopped (also for transitions made outside scout serve). */
   'display.status': DisplayStatusPayload
   /** A session-level failure outside a turn (agent init, model switch, compression, resume). */
   error: ErrorPayload
@@ -5739,6 +5812,8 @@ export interface BackendGatewayEventMap {
   'pet.generate.progress': PetGenerateProgressPayload
   /** Pet hatch (row drawing) progress. */
   'pet.hatch.progress': PetHatchProgressPayload
+  /** planner/todos.json moved; refetch the to-do list. */
+  'planner.changed': ChangeSignalPayload
   /** gateway_state.json moved; refetch platform status. */
   'platforms.changed': ChangeSignalPayload
   /** Close the preview pane or one tab. */
@@ -5855,6 +5930,7 @@ export const GATEWAY_EVENT_TYPES = [
   'pet.changed',
   'pet.generate.progress',
   'pet.hatch.progress',
+  'planner.changed',
   'platforms.changed',
   'preview.close',
   'preview.open',

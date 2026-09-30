@@ -207,10 +207,10 @@ def record_response_usage(
         prompt_tokens, completion_tokens, total_tokens,
         api_duration, _cache_pct, _ident,
     )
-    # nous.anthropic_wire=auto: the session's wire is decided once, from this first response.
-    if agent.session_api_calls == 1 and (agent.provider or "") == "nous":
+    # spaceshipresearch.anthropic_wire=auto: the session's wire is decided once, from this first response.
+    if agent.session_api_calls == 1 and (agent.provider or "") == "spaceshipresearch":
         with suppress(Exception):
-            from agent.nous_wire import maybe_switch_wire_after_first_response
+            from agent.spaceshipresearch_wire import maybe_switch_wire_after_first_response
             maybe_switch_wire_after_first_response(agent, response, agent.session_api_calls)
 
     # MoA: agent.model/provider are the virtual preset/"moa" with no pricing entry, silently

@@ -37,7 +37,7 @@ import {
   useBackgroundSync
 } from './use-background-sync'
 
-vi.mock('@/hermes', async importOriginal => ({
+vi.mock('@/scout', async importOriginal => ({
   ...(await importOriginal()),
   getLatestSessionMessages: vi.fn(),
   getOlderSessionMessages: vi.fn()
@@ -49,7 +49,7 @@ vi.mock('@/store/projects', async importOriginal => ({
   refreshProjects: vi.fn(async () => undefined)
 }))
 
-const { getLatestSessionMessages, getOlderSessionMessages } = await import('@/hermes')
+const { getLatestSessionMessages, getOlderSessionMessages } = await import('@/scout')
 const { refreshProjectTree, refreshProjects } = await import('@/store/projects')
 
 const ACTIVE_RUNTIME_ID = 'runtime-active'
@@ -134,7 +134,7 @@ function useSyncHarness({
     refreshActiveTranscript,
     refreshCronJobs: vi.fn(),
     refreshCurrentModel: vi.fn(),
-    refreshHermesConfig: vi.fn(),
+    refreshScoutConfig: vi.fn(),
     refreshMessagingSessions: vi.fn(),
     refreshSessions: vi.fn(),
     updateSessionState,
@@ -1013,7 +1013,7 @@ describe('typing-aware sessions.changed deferral', () => {
       refreshActiveTranscript: async () => undefined,
       refreshCronJobs: vi.fn(),
       refreshCurrentModel: vi.fn(),
-      refreshHermesConfig: vi.fn(),
+      refreshScoutConfig: vi.fn(),
       refreshMessagingSessions: vi.fn(),
       requestGateway: vi.fn(async () => ({ sessions: [] })) as never,
       // Required by the hook's params. This harness never drives the

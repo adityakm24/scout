@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock
 import gateway.run as gateway_run
 from gateway.config import HomeChannel, Platform
 from gateway.platforms.base import SendResult
-from hermes_cli import anon_auth
-from hermes_cli.auth import _auth_store_lock, _load_auth_store, _save_auth_store
+from scout_cli import anon_auth
+from scout_cli.auth import _auth_store_lock, _load_auth_store, _save_auth_store
 from tests.gateway.restart_test_helpers import make_restart_runner
 
 
@@ -24,32 +24,32 @@ def _jwt(**claims) -> str:
     return f"{seg({'alg': 'RS256'})}.{seg(payload)}.sig"
 
 
-def _seed_nous(state: dict) -> None:
+def _seed_spaceshipresearch(state: dict) -> None:
     with _auth_store_lock():
         store = _load_auth_store()
-        store.setdefault("providers", {})["nous"] = state
-        store["active_provider"] = "nous"
+        store.setdefault("providers", {})["spaceshipresearch"] = state
+        store["active_provider"] = "spaceshipresearch"
         _save_auth_store(store)
 
 
 def _guest_state() -> dict:
     return {"auth_method": anon_auth.ANON_AUTH_METHOD, "account_tier": "anonymous", "anon_token": "anon_0001",
             "client_id": "nas-anonymous", "access_token": _jwt(), "expires_at": "2999-01-01T00:00:00+00:00",
-            "inference_base_url": "https://welcome-api.nousresearch.com/v1"}
+            "inference_base_url": "https://welcome-api.spaceshipresearch.com/v1"}
 
 
 def _account_state() -> dict:
-    return {"auth_method": "oauth", "access_token": _jwt(client_id="hermes-cli", account_tier="pro"),
+    return {"auth_method": "oauth", "access_token": _jwt(client_id="scout-cli", account_tier="pro"),
             "refresh_token": "rt", "expires_at": "2999-01-01T00:00:00+00:00"}
 
 
 @pytest.fixture
-def nous_runner(tmp_path, monkeypatch):
-    monkeypatch.setattr(gateway_run, "_hermes_home", tmp_path)
-    monkeypatch.setenv("HERMES_SHARED_AUTH_DIR", str(tmp_path / "shared-store"))
-    monkeypatch.setenv("HERMES_GUEST_ONBOARDING", "1")
+def spaceshipresearch_runner(tmp_path, monkeypatch):
+    monkeypatch.setattr(gateway_run, "_scout_home", tmp_path)
+    monkeypatch.setenv("SCOUT_SHARED_AUTH_DIR", str(tmp_path / "shared-store"))
+    monkeypatch.setenv("SCOUT_GUEST_ONBOARDING", "1")
     # Provider precedence gates the line and is answered from persisted state only (no network at boot).
-    for var in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "NOUS_API_KEY"):
+    for var in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "SPACESHIPRESEARCH_API_KEY"):
         monkeypatch.delenv(var, raising=False)
     runner, adapter = make_restart_runner()
     runner.config.platforms[Platform.TELEGRAM].home_channel = HomeChannel(
@@ -66,9 +66,9 @@ async def _startup_message(runner, adapter) -> str:
 
 
 @pytest.mark.asyncio
-async def test_guest_inference_adds_exactly_one_free_tier_line(nous_runner):
-    runner, adapter = nous_runner
-    _seed_nous(_guest_state())
+async def test_guest_inference_adds_exactly_one_free_tier_line(spaceshipresearch_runner):
+    runner, adapter = spaceshipresearch_runner
+    _seed_spaceshipresearch(_guest_state())
     assert anon_auth.has_free_tier_account()
 
     message = await _startup_message(runner, adapter)
@@ -79,9 +79,9 @@ async def test_guest_inference_adds_exactly_one_free_tier_line(nous_runner):
 
 
 @pytest.mark.asyncio
-async def test_signed_in_account_keeps_the_plain_online_notice(nous_runner):
-    runner, adapter = nous_runner
-    _seed_nous(_account_state())
+async def test_signed_in_account_keeps_the_plain_online_notice(spaceshipresearch_runner):
+    runner, adapter = spaceshipresearch_runner
+    _seed_spaceshipresearch(_account_state())
     assert not anon_auth.has_free_tier_account()
 
     message = await _startup_message(runner, adapter)
@@ -90,9 +90,9 @@ async def test_signed_in_account_keeps_the_plain_online_notice(nous_runner):
 
 
 @pytest.mark.asyncio
-async def test_non_nous_provider_never_mentions_the_free_tier(nous_runner, monkeypatch):
-    runner, adapter = nous_runner
-    _seed_nous(_guest_state())  # identity exists for connectors, but inference is elsewhere
+async def test_non_spaceshipresearch_provider_never_mentions_the_free_tier(spaceshipresearch_runner, monkeypatch):
+    runner, adapter = spaceshipresearch_runner
+    _seed_spaceshipresearch(_guest_state())  # identity exists for connectors, but inference is elsewhere
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")  # an explicit key wins provider precedence
 
     message = await _startup_message(runner, adapter)

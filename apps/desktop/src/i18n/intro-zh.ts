@@ -2,6 +2,7 @@ import type { Translations } from './types'
 
 /** Display-only translations, in the stock JSONL's per-personality rotation order. */
 export const introZh: Translations['intro'] = {
+  greeting: { morning: '早上好', afternoon: '下午好', evening: '晚上好', night: '还没睡？' },
   stock: {
     helpful: [
       '让我打开仓库、运行测试、修复错误或起草 PR。我会陪你逐步完成。',

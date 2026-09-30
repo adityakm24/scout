@@ -1,10 +1,10 @@
-import { skillInvocationText } from '@hermes/shared'
+import { skillInvocationText } from '@scout/shared'
 
 import { splitLeadingAttachmentRefs } from '@/components/assistant-ui/reference-kinds'
 import { extractImageRefs } from '@/lib/embedded-images'
 import { dedupeGeneratedImageEchoesInParts } from '@/lib/generated-images'
 import { isTodoToolName } from '@/lib/todos'
-import type { MessageReaction, SessionMessage } from '@/types/hermes'
+import type { MessageReaction, SessionMessage } from '@/types/scout'
 
 import {
   assistantTextPart,
@@ -165,7 +165,7 @@ const NOTICE_DISPLAY_KINDS = [
   'process_complete',
   'auto_continue',
   'personality_switch',
-  // Hermes closing a failed turn, not the model speaking.
+  // Scout closing a failed turn, not the model speaking.
   'failed_turn'
 ] as const
 

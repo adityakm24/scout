@@ -1,1 +1,1 @@
-# Hermes plugins package
+# Scout plugins package

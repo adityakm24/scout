@@ -1,9 +1,8 @@
-import { skillInvocationText } from '@hermes/shared'
-import { parseCommandDispatch, parseSlashCommand } from '@hermes/shared'
+import { skillInvocationText } from '@scout/shared'
+import { parseCommandDispatch, parseSlashCommand } from '@scout/shared'
 import { type MutableRefObject, useCallback, useRef } from 'react'
 
 import { prepareDefaultNewSession } from '@/app/session/new-session-route'
-import { getProfiles } from '@/hermes'
 import type { Translations } from '@/i18n'
 import { type ChatMessage, toChatMessages } from '@/lib/chat-messages'
 import { sessionTitle } from '@/lib/chat-runtime'
@@ -19,6 +18,7 @@ import {
 import { isMissingRpcMethod } from '@/lib/gateway-rpc'
 import { applyReasoningSlashResult, reasoningSlashParams } from '@/lib/reasoning-slash'
 import { setSessionYolo } from '@/lib/yolo-session'
+import { getProfiles } from '@/scout'
 import { openCommandPalettePage } from '@/store/command-palette'
 import { markCompressDeferred } from '@/store/compaction'
 import { setComposerDraft } from '@/store/composer'
@@ -101,7 +101,7 @@ const renderWakeStatus = (status: WakeStatusResponse): string => {
   const lines = [
     'Wake Word Status',
     `State: ${status.listening ? 'LISTENING' : 'OFF'}`,
-    `Phrase: "${status.phrase?.trim() || 'hey hermes'}"`,
+    `Phrase: "${status.phrase?.trim() || 'hey scout'}"`,
     `Provider: ${status.provider?.trim() || 'unknown'}`,
     `Surface: ${status.owner_surface?.trim() || status.configured_surface?.trim() || 'auto'}`,
     `Input: ${wakeDeviceLabel(status.input_device)}`
@@ -601,7 +601,7 @@ export function useSlashCommand(deps: SlashCommandDeps) {
         // /background (alias /bg) starts a detached background turn via the
         // gateway's prompt.background RPC — the TUI's path
         // (ui-tui/src/app/slash/commands/session.ts). It must NOT go through
-        // runExec: the slash worker's HermesCLI prints the completion from a
+        // runExec: the slash worker's ScoutCLI prints the completion from a
         // fire-and-forget thread after process_command already returned, past
         // the worker's stdout capture window, so the result never reached the
         // conversation that started the task (#97635, #57444). The RPC replies
@@ -893,7 +893,7 @@ export function useSlashCommand(deps: SlashCommandDeps) {
           }
         },
         // /wake must stay in the gateway process that owns the Desktop wake
-        // lease. Sending it through slash.exec creates a separate HermesCLI in
+        // lease. Sending it through slash.exec creates a separate ScoutCLI in
         // the slash worker, which can claim the machine-wide microphone lock
         // while the Desktop UI still reports the GUI listener as off.
         wake: async ctx => {

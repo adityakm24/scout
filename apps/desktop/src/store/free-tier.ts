@@ -1,14 +1,14 @@
 import { atom } from 'nanostores'
 
 import { onboardingSurfaceActive } from '@/store/onboarding-presence'
-import type { FreeTierStatus } from '@/types/hermes'
+import type { FreeTierStatus } from '@/types/scout'
 
 /** The model the free-tier route runs on. Used to recognise a session that is
  *  still homed on the free tier after a sign-in. */
-export const FREE_TIER_MODEL = 'nous/welcome'
+export const FREE_TIER_MODEL = 'spaceshipresearch/welcome'
 
-/** The provider slug the free-tier route and a signed-in Nous account share. */
-export const NOUS_PROVIDER_ID = 'nous'
+/** The provider slug the free-tier route and a signed-in SpaceshipResearch account share. */
+export const SPACESHIPRESEARCH_PROVIDER_ID = 'spaceshipresearch'
 
 export type FreeTierRequester = <T = unknown>(method: string, params?: Record<string, unknown>) => Promise<T>
 
@@ -62,7 +62,7 @@ export async function refreshFreeTierStatus(requestGateway: FreeTierRequester): 
  * codes get "try again / another provider" only.
  */
 export interface FreeTierSetupFailure {
-  /** One of the backend's `anon_*` codes (`hermes_cli/anon_auth.py`), or a newer one this build does not know. */
+  /** One of the backend's `anon_*` codes (`scout_cli/anon_auth.py`), or a newer one this build does not know. */
   code: string
   door: 'retry' | 'sign_in'
   message: string

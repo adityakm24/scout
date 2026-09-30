@@ -1,11 +1,12 @@
-import type { GatewayEvent } from '@hermes/shared'
-import type { HermesSkin } from '@hermes/shared/skin'
+import type { GatewayEvent } from '@scout/shared'
+import type { ScoutSkin } from '@scout/shared/skin'
 
 import { clearClarifyRequest } from '@/store/clarify'
 import {
   notifyCronChanged,
   notifyPairingChanged,
   notifyPetChanged,
+  notifyPlannerChanged,
   notifyPlatformsChanged,
   notifyProjectsChanged,
   notifySessionsChanged,
@@ -21,6 +22,18 @@ import { dropSessionState, unbindTileRuntime } from '@/store/session-states'
 import { ingestBackendSkin } from '@/themes/backend-sync'
 
 import type { GatewayEventContext } from './types'
+
+// Change-watcher broadcasts (tui_gateway change_watcher._CHANGE_WATCHES): the backend's on-disk
+// signature for that store moved, so the live-sync tick its surfaces subscribe to advances.
+const CHANGE_NOTIFIERS = new Map<string, (payload: unknown) => void>([
+  ['pet.changed', payload => notifyPetChanged(payload as PetChangeMeta | undefined)],
+  ['cron.changed', () => notifyCronChanged()],
+  ['sessions.changed', () => notifySessionsChanged()],
+  ['projects.changed', () => notifyProjectsChanged()],
+  ['platforms.changed', () => notifyPlatformsChanged()],
+  ['pairing.changed', () => notifyPairingChanged()],
+  ['planner.changed', () => notifyPlannerChanged()]
+])
 
 /** gateway.ready / setup.ready / skin.changed / change-watcher broadcasts / session.reclaimed. */
 export function handleLifecycleEvent(ctx: GatewayEventContext): boolean {
@@ -39,7 +52,7 @@ export function handleLifecycleEvent(ctx: GatewayEventContext): boolean {
   }
 
   if (event.type === 'setup.ready') {
-    // The boot bootstrap (hermes_cli/free_tier_bootstrap.py) resolved the
+    // The boot bootstrap (scout_cli/free_tier_bootstrap.py) resolved the
     // free-tier identity and the inference route, and broadcast once. The
     // payload is only a hint — the status snapshot re-reads `setup.status` /
     // `setup.runtime_check` / `free_tier.status` through its own scoped
@@ -53,42 +66,25 @@ export function handleLifecycleEvent(ctx: GatewayEventContext): boolean {
   }
 
   if (event.type === 'skin.changed') {
-    // A runtime skin switch (Hermes activating an authored skin, or `/skin`
+    // A runtime skin switch (Scout activating an authored skin, or `/skin`
     // on another surface). Only the active source+profile's change repaints.
     if (fromActiveSource()) {
-      ingestBackendSkin(payload as HermesSkin | undefined, { apply: true })
+      ingestBackendSkin(payload as ScoutSkin | undefined, { apply: true })
     }
 
     return true
   }
 
-  if (
-    event.type === 'pet.changed' ||
-    event.type === 'cron.changed' ||
-    event.type === 'sessions.changed' ||
-    event.type === 'projects.changed' ||
-    event.type === 'platforms.changed' ||
-    event.type === 'pairing.changed'
-  ) {
+  const notifyChange = CHANGE_NOTIFIERS.get(event.type)
+
+  if (notifyChange) {
     // Change-watcher broadcasts (server._broadcast_watched_changes): the
     // backend's on-disk signature moved. Route to the live-sync ticks the
     // former pollers now subscribe to. Only the active source+profile's
     // changes apply — background profile sockets (and other connections'
     // gateways) watch their own homes.
     if (fromActiveSource()) {
-      if (event.type === 'pet.changed') {
-        notifyPetChanged(payload as PetChangeMeta | undefined)
-      } else if (event.type === 'cron.changed') {
-        notifyCronChanged()
-      } else if (event.type === 'projects.changed') {
-        notifyProjectsChanged()
-      } else if (event.type === 'platforms.changed') {
-        notifyPlatformsChanged()
-      } else if (event.type === 'pairing.changed') {
-        notifyPairingChanged()
-      } else {
-        notifySessionsChanged()
-      }
+      notifyChange(payload)
     }
 
     return true

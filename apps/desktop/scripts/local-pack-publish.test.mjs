@@ -21,7 +21,7 @@ test.each([['repository', true, true], ['missing repository', false, true], ['no
     try {
       /** @type {import('app-builder-lib').Metadata} */
       const metadata = { name: 'fixture', version: '1.0.0', description: 'fixture', author: 'Fixture' }
-      if (repository) metadata.repository = 'https://github.com/NousResearch/hermes-agent'
+      if (repository) metadata.repository = 'https://github.com/SpaceshipResearch/scout-agent'
       fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify(metadata))
       const info = new Packager({ projectDir: root, config: {} })
       await info.validateConfig()
@@ -32,9 +32,9 @@ test.each([['repository', true, true], ['missing repository', false, true], ['no
         await assert.rejects(getPublishConfigs(packager, null, null, true), /Cannot detect repository/)
       } else {
         const repositoryInfo = await packager.repositoryInfo
-        assert.equal(repositoryInfo.user, 'NousResearch')
-        assert.equal(repositoryInfo.project, 'hermes-agent')
-        assert.deepEqual(await getPublishConfigs(packager, null, null, true), [{ owner: 'NousResearch', repo: 'hermes-agent', provider: 'github' }])
+        assert.equal(repositoryInfo.user, 'SpaceshipResearch')
+        assert.equal(repositoryInfo.project, 'scout-agent')
+        assert.deepEqual(await getPublishConfigs(packager, null, null, true), [{ owner: 'SpaceshipResearch', repo: 'scout-agent', provider: 'github' }])
       }
     } finally { fs.rmSync(root, { recursive: true, force: true }) }
   }

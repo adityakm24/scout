@@ -2,11 +2,11 @@
 name: pdf
 description: "PDF files: create, read, merge, fill, OCR, edit text."
 version: 1.1.0
-author: Nous Research
+author: SpaceshipResearch
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
-  hermes:
+  scout:
     tags: [pdf, documents, forms, ocr, text-extraction, reportlab, pypdf, pdfplumber, pymupdf, marker]
     category: productivity
     related_skills: [docx, xlsx, powerpoint]

@@ -3,10 +3,10 @@ import { useMemo } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { CountSkeleton } from '@/components/ui/skeleton'
-import { previewSkillHub, type ProfileScope, profileScopeKey } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { Loader2 } from '@/lib/icons'
-import type { OfficialSkillInfo } from '@/types/hermes'
+import { previewSkillHub, type ProfileScope, profileScopeKey } from '@/scout'
+import type { OfficialSkillInfo } from '@/types/scout'
 
 import { PanelPill } from '../../overlays/panel'
 import { asText, prettyName } from '../../settings/helpers'

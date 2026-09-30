@@ -256,7 +256,7 @@ def fetch_portal_state(
     ``portal_fallback(portal_base_url)``.
     """
     try:
-        import hermes_cli.nous_billing as nb
+        import scout_cli.spaceshipresearch_billing as nb
     except Exception:
         return failed(error="billing client unavailable")
     try:
@@ -280,7 +280,7 @@ def fetch_portal_state(
 
 
 def build_billing_state(*, timeout: float = 15.0) -> BillingState:
-    """Fetch + parse ``/api/billing/state``; fail-open. ``HERMES_DEV_BILLING_FIXTURE`` short-circuits to a fixture."""
+    """Fetch + parse ``/api/billing/state``; fail-open. ``SCOUT_DEV_BILLING_FIXTURE`` short-circuits to a fixture."""
     fixture = _dev_fixture_billing_state()
     if fixture is not None:
         return fixture
@@ -301,12 +301,12 @@ _FIXTURE_ALIASES = {
 
 
 def _dev_fixture_billing_state() -> Optional[BillingState]:
-    """``HERMES_DEV_BILLING_FIXTURE`` -> :class:`BillingState` for offline UX; None when unset.
+    """``SCOUT_DEV_BILLING_FIXTURE`` -> :class:`BillingState` for offline UX; None when unset.
 
     Names: nocard · card · card-sub · card-autoreload · notadmin · billing-off · logged-out; an
     unknown name yields logged-out with ``error`` so the misconfiguration is visible.
     """
-    name = (os.getenv("HERMES_DEV_BILLING_FIXTURE") or "").strip().lower()
+    name = (os.getenv("SCOUT_DEV_BILLING_FIXTURE") or "").strip().lower()
     if not name:
         return None
     name = _FIXTURE_ALIASES.get(name, name)
@@ -317,7 +317,7 @@ def _dev_fixture_billing_state() -> Optional[BillingState]:
     common: dict[str, Any] = dict(
         logged_in=True, org_id="org_acme", org_slug="acme", org_name="Acme Inc", role="OWNER",
         balance_usd=Decimal("3.40"), cli_billing_enabled=True, min_usd=Decimal("5"), max_usd=Decimal("500"),
-        charge_presets=(Decimal("10"), Decimal("25"), Decimal("50")), portal_url="https://portal.nousresearch.com/billing?topup=open",
+        charge_presets=(Decimal("10"), Decimal("25"), Decimal("50")), portal_url="https://portal.spaceshipresearch.com/billing?topup=open",
     )
     card = CardInfo(brand="Visa", last4="4242")
     overrides: dict[str, dict[str, Any]] = {
@@ -329,7 +329,7 @@ def _dev_fixture_billing_state() -> Optional[BillingState]:
         "billing-off": dict(card=None, cli_billing_enabled=False),
     }
     if name not in overrides:
-        return BillingState(logged_in=False, error=f"unknown HERMES_DEV_BILLING_FIXTURE: {name}")
+        return BillingState(logged_in=False, error=f"unknown SCOUT_DEV_BILLING_FIXTURE: {name}")
     return BillingState(**{**common, **overrides[name]})
 
 

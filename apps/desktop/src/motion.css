@@ -1,0 +1,299 @@
+/* Scout motion system.
+ *
+ * One easing vocabulary for the whole app, and the enter/exit engine behind the
+ * `animate-in` / `animate-out` / `fade-*` / `zoom-*` / `slide-*` classes the
+ * primitives (Dialog, Popover, DropdownMenu, ContextMenu, Select, Sheet, Tooltip)
+ * already carry. Those classes are the tw-animate-css vocabulary, but nothing
+ * ever imported it, so every overlay used to snap open and shut. This is a
+ * first-party implementation of the same class API: call sites stay as they are
+ * and gain real motion, tuned here in one place.
+ *
+ * Feel: surfaces arrive on a long, decelerating curve (ease-out-expo — the
+ * "settle" Dia, Arc and iOS sheets share) with a whisper of scale and focus
+ * pull, and leave quickly on an accelerating curve. Exits are always shorter
+ * than entrances: the user asked for the thing to go away.
+ *
+ * Reduced motion is handled by the blanket rule in styles.css.
+ */
+
+@theme {
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-quart: cubic-bezier(0.5, 0, 0.75, 0);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+  /* A soft overshoot for things that are placed (pressed buttons, toggles). */
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+:root {
+  --motion-fast: 140ms;
+  --motion-base: 240ms;
+  --motion-slow: 420ms;
+  --motion-enter: 300ms;
+  --motion-exit: 170ms;
+}
+
+@keyframes scout-enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+      scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), 1);
+    filter: blur(var(--tw-enter-blur, 0));
+  }
+}
+
+@keyframes scout-exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+      scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), 1);
+    filter: blur(var(--tw-exit-blur, 0));
+  }
+}
+
+@utility animate-in {
+  animation: scout-enter var(--tw-animation-duration, var(--tw-duration, var(--motion-enter)))
+    var(--tw-ease, var(--ease-out-expo)) var(--tw-animation-delay, 0s) both;
+}
+
+@utility animate-out {
+  animation: scout-exit var(--tw-animation-duration, var(--motion-exit)) var(--ease-in-quart)
+    var(--tw-animation-delay, 0s) both;
+}
+
+@utility fade-in {
+  --tw-enter-opacity: 0;
+}
+@utility fade-in-* {
+  --tw-enter-opacity: calc(--value(number) / 100);
+}
+@utility fade-out {
+  --tw-exit-opacity: 0;
+}
+@utility fade-out-* {
+  --tw-exit-opacity: calc(--value(number) / 100);
+}
+@utility zoom-in {
+  --tw-enter-scale: 0;
+}
+@utility zoom-in-* {
+  --tw-enter-scale: calc(--value(number) / 100);
+}
+@utility zoom-out {
+  --tw-exit-scale: 0;
+}
+@utility zoom-out-* {
+  --tw-exit-scale: calc(--value(number) / 100);
+}
+@utility slide-in-from-top {
+  --tw-enter-translate-y: -100%;
+}
+@utility slide-in-from-top-* {
+  --tw-enter-translate-y: calc(--value(number) * var(--spacing) * -1);
+}
+@utility slide-in-from-bottom {
+  --tw-enter-translate-y: 100%;
+}
+@utility slide-in-from-bottom-* {
+  --tw-enter-translate-y: calc(--value(number) * var(--spacing));
+}
+@utility slide-in-from-left {
+  --tw-enter-translate-x: -100%;
+}
+@utility slide-in-from-left-* {
+  --tw-enter-translate-x: calc(--value(number) * var(--spacing) * -1);
+}
+@utility slide-in-from-right {
+  --tw-enter-translate-x: 100%;
+}
+@utility slide-in-from-right-* {
+  --tw-enter-translate-x: calc(--value(number) * var(--spacing));
+}
+@utility slide-out-to-top {
+  --tw-exit-translate-y: -100%;
+}
+@utility slide-out-to-top-* {
+  --tw-exit-translate-y: calc(--value(number) * var(--spacing) * -1);
+}
+@utility slide-out-to-bottom {
+  --tw-exit-translate-y: 100%;
+}
+@utility slide-out-to-bottom-* {
+  --tw-exit-translate-y: calc(--value(number) * var(--spacing));
+}
+@utility slide-out-to-left {
+  --tw-exit-translate-x: -100%;
+}
+@utility slide-out-to-left-* {
+  --tw-exit-translate-x: calc(--value(number) * var(--spacing) * -1);
+}
+@utility slide-out-to-right {
+  --tw-exit-translate-x: 100%;
+}
+@utility slide-out-to-right-* {
+  --tw-exit-translate-x: calc(--value(number) * var(--spacing));
+}
+
+/* ── Surface choreography ───────────────────────────────────────────────────
+   The primitives say WHAT moves (fade + zoom + slide); these say how it feels
+   per surface class. Keyed on data-slot so every call site inherits it. */
+
+/* Modals arrive from slightly below and out of focus, like a sheet settling
+   onto glass; the scrim fades a touch slower so the card lands first. */
+[data-slot='dialog-content'][data-state='open'] {
+  --tw-enter-translate-y: 0.5rem;
+  --tw-enter-scale: 0.965;
+  --tw-enter-blur: 6px;
+  --tw-duration: 380ms;
+}
+[data-slot='dialog-content'][data-state='closed'] {
+  --tw-exit-scale: 0.98;
+  --tw-exit-blur: 2px;
+}
+[data-slot='dialog-overlay'][data-state='open'] {
+  --tw-duration: 320ms;
+  --tw-ease: var(--ease-out-quint);
+}
+
+/* Route overlays (Settings, Command Center, Cron, …) rise like a sheet. */
+[data-slot='overlay-card'] {
+  --tw-enter-blur: 8px;
+  --tw-duration: 460ms;
+}
+
+/* Menus and popovers bloom from their trigger (transform-origin comes from
+   Radix) — quick, crisp, no blur: they are tools, not moments. */
+:is(
+    [data-slot='dropdown-menu-content'],
+    [data-slot='dropdown-menu-sub-content'],
+    [data-slot='context-menu-content'],
+    [data-slot='context-menu-sub-content'],
+    [data-slot='popover-content'],
+    [data-slot='select-content']
+  )[data-state='open'] {
+  --tw-duration: 220ms;
+  --tw-ease: var(--ease-out-quint);
+  --tw-enter-scale: 0.96;
+}
+
+[data-slot='tooltip-content'] {
+  --tw-duration: 160ms;
+}
+
+/* ── Tactile controls ───────────────────────────────────────────────────────
+   Buttons give under the finger and spring back. The press paints in the same
+   frame (no transition on the way in); only the release is animated. */
+[data-slot='button'] {
+  transition:
+    scale var(--motion-base) var(--ease-spring),
+    background-color var(--motion-fast) var(--ease-out-quint),
+    color var(--motion-fast) var(--ease-out-quint),
+    box-shadow var(--motion-base) var(--ease-out-quint),
+    opacity var(--motion-fast) var(--ease-out-quint);
+}
+[data-slot='button']:not(:disabled):active {
+  scale: 0.965;
+  transition-duration: 0ms;
+}
+
+/* ── Transcript ─────────────────────────────────────────────────────────────
+   A new turn rises into place. Only the newest message animates, so opening a
+   long session (or virtualised re-mounts while scrolling) never replays it. */
+@keyframes scout-message-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.625rem, 0);
+    filter: blur(3px);
+  }
+}
+:is([data-slot='aui_user-message-root'], [data-slot='aui_assistant-message-root']):last-child {
+  animation: scout-message-in var(--motion-slow) var(--ease-out-expo) both;
+}
+
+/* ── Ambient: the horizon ───────────────────────────────────────────────────
+   The empty chat sits over a dawn line — Dia's warm haze by day, a launch
+   plume over the curve of the Earth by night. Pure gradients on one
+   compositor layer; the drift is a slow transform, never a repaint. */
+@keyframes scout-horizon-drift {
+  0% {
+    transform: translate3d(-3%, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, -2%, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(-3%, 0, 0) scale(1);
+  }
+}
+
+@keyframes scout-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.9rem, 0);
+    filter: blur(10px);
+  }
+}
+
+/* `position: fixed` resolves against the chat surface (its paint-contained
+   ancestor), so the horizon fills the pane without adding scrollable overflow
+   to the transcript — an absolute layer this size made an empty chat scroll. */
+.scout-horizon {
+  position: fixed;
+  inset: -12% -8% -6%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.9;
+  background:
+    radial-gradient(60% 45% at 50% 108%, color-mix(in oklab, var(--dt-primary) 26%, transparent), transparent 70%),
+    radial-gradient(40% 35% at 30% 75%, color-mix(in oklab, #f5b041 22%, transparent), transparent 70%),
+    radial-gradient(45% 40% at 72% 70%, color-mix(in oklab, #7fa7ff 16%, transparent), transparent 72%);
+  filter: blur(28px) saturate(1.1);
+  animation:
+    scout-rise 1.4s var(--ease-out-expo) both,
+    scout-horizon-drift 26s var(--ease-in-out-quint) 1.4s infinite;
+  will-change: transform;
+}
+
+:root.dark .scout-horizon {
+  opacity: 1;
+  background:
+    radial-gradient(70% 38% at 50% 112%, color-mix(in oklab, #3a6dff 30%, transparent), transparent 72%),
+    radial-gradient(34% 30% at 50% 92%, color-mix(in oklab, var(--dt-primary) 34%, transparent), transparent 70%),
+    radial-gradient(50% 40% at 18% 20%, color-mix(in oklab, #6c5cff 10%, transparent), transparent 70%);
+}
+
+/* Beats the intro's `> div { width: var(--composer-width) }` rule. */
+[data-slot='aui_intro'] > .scout-horizon {
+  width: auto;
+  max-width: none;
+}
+
+/* A faint starfield for Deep Orbit only: two tiled dot layers, no images. */
+:root.dark .scout-horizon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, color-mix(in srgb, #fff 55%, transparent), transparent),
+    radial-gradient(1px 1px at 140px 90px, color-mix(in srgb, #fff 35%, transparent), transparent),
+    radial-gradient(1.5px 1.5px at 90px 160px, color-mix(in srgb, #fff 45%, transparent), transparent);
+  background-size: 200px 200px;
+  mask-image: radial-gradient(70% 60% at 50% 30%, #000, transparent);
+  filter: none;
+  opacity: 0.5;
+}
+
+/* Pause only the endless loops while the window is hidden; the one-shot rise
+   still completes, or a welcome mounted in a hidden window would stay blank. */
+:root[data-renderer-animations-paused] .scout-horizon {
+  animation-play-state: running, paused;
+}
+:root[data-renderer-animations-paused] :is(.scout-orb__glow, .scout-orb__core) {
+  animation-play-state: paused;
+}
+
+/* Staggered entrance for the empty-state hero: eyebrow, wordmark, body. */
+.scout-rise {
+  animation: scout-rise 900ms var(--ease-out-expo) both;
+  animation-delay: calc(var(--rise-index, 0) * 90ms + 60ms);
+}

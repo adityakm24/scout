@@ -2,7 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "paths": {
-      "@hermes/ink": ["src/types/hermes-ink.d.ts"]
+      "@scout/ink": ["src/types/scout-ink.d.ts"]
     }
   }
 }

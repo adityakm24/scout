@@ -2,11 +2,11 @@
 name: publish-site
 description: Versioned site deploys to GitHub/Cloudflare/Netlify Pages.
 version: 1.0.0
-author: Hermes Agent (Nous Research)
+author: Scout Agent (SpaceshipResearch)
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
-  hermes:
+  scout:
     tags: [publish, deploy, hosting, github-pages, cloudflare-pages, netlify, static-site, versioning, rollback, web-development]
     category: web-development
 ---

@@ -5,7 +5,7 @@
 // how the two halves drift.
 //
 // A .cjs module (not JSON) so the variant is decided at require time:
-// HERMES_DESKTOP_VARIANT=light builds "Hermes Light". The whole config
+// SCOUT_DESKTOP_VARIANT=light builds "Scout Light". The whole config
 // derives from that one flag.
 // @ts-check
 'use strict'
@@ -35,7 +35,7 @@ const {
 // invariant lives in product-identity.cjs:33-34/58-68.
 /** @type {NonNullable<typeof storeMsix> | undefined} */
 const storeMsixWhenStore = storeMsix
-const releaseBuild = Boolean(process.env.HERMES_PAYLOAD_TAG)
+const releaseBuild = Boolean(process.env.SCOUT_PAYLOAD_TAG)
 
 /**
  * The store MSIX packaging identity. Callers must only invoke this when
@@ -55,7 +55,7 @@ const channelRequest = channelBuildRequest()
 
 /** @typedef {import("app-builder-lib").Configuration} Configuration */
 
-const [owner, repo] = (process.env.GITHUB_REPOSITORY || 'NousResearch/hermes-agent').split('/')
+const [owner, repo] = (process.env.GITHUB_REPOSITORY || 'SpaceshipResearch/scout-agent').split('/')
 if (!owner || !repo) {
   throw new Error(`invalid GITHUB_REPOSITORY ${process.env.GITHUB_REPOSITORY}`)
 }
@@ -76,7 +76,7 @@ module.exports = {
   protocols: [
     {
       name: `${displayName} Protocol`,
-      schemes: ['hermes']
+      schemes: ['scout']
     }
   ],
   // A store build is archived, never served to a feed — prefix its artifact
@@ -126,7 +126,7 @@ module.exports = {
       from: 'build/install-stamp.json',
       to: 'install-stamp.json'
     },
-    ...(['bundled', 'store'].includes(process.env.HERMES_DESKTOP_VARIANT || '')
+    ...(['bundled', 'store'].includes(process.env.SCOUT_DESKTOP_VARIANT || '')
       ? [{ from: 'build/agent-payload', to: 'agent-payload' }]
       : []),
     {
@@ -187,13 +187,13 @@ module.exports = {
   dmg: {
     // Avoid the failing optional APFS shrink pass; keep compressed conversion.
     shrink: false,
-    title: 'Hermes Agent Installer',
+    title: 'Scout Agent Installer',
     // A prebuilt .tiff on purpose, not a PNG plus a @2x sibling: dmg-builder's
     // PNG path runs `tiffutil -cathidpicheck`, which on macOS 26 rewrites both
     // frames to 72 dpi and silently drops the 2x representation. A .tiff is
     // handed to dmgbuild untouched (dmg-builder/dist/dmgUtil.js), and living
     // outside assets/ keeps it out of the app bundle via the `files` whitelist.
-    background: 'packaging/nous-dmg-2b.tiff',
+    background: 'packaging/spaceshipresearch-dmg-2b.tiff',
     iconSize: 96,
     iconTextSize: 11,
     window: {
@@ -228,7 +228,7 @@ module.exports = {
     applicationId: appNamePascal,
     displayName,
     publisher: store ? mustStoreMsix(storeMsixWhenStore).publisher : OUT_OF_STORE_PUBLISHER,
-    publisherDisplayName: store ? mustStoreMsix(storeMsixWhenStore).publisherDisplayName : 'Nous Research',
+    publisherDisplayName: store ? mustStoreMsix(storeMsixWhenStore).publisherDisplayName : 'SpaceshipResearch',
     // The native quad is the build time (scripts/msix-shared.mjs::nativeQuad),
     // baked into the manifest template, so the builder's own build-number
     // override would stamp a second, conflicting version.
@@ -250,7 +250,7 @@ module.exports = {
     customManifestPath: store ? 'build/store-msix-manifest.xml'
       : releaseBuild || channelRequest || appNamePascal !== artifactNamePascal
         ? 'build/msix-manifest.xml' : 'assets/msix-manifest.xml',
-    // Hermes state is deliberately shared with unpackaged CLI/gateway
+    // Scout state is deliberately shared with unpackaged CLI/gateway
     // processes. Pair the manifest's disabled virtualization properties with
     // the restricted capability that permits unvirtualized AppData/HKCU writes.
     capabilities: ['unvirtualizedResources'],
@@ -258,10 +258,10 @@ module.exports = {
   },
   linux: {
     category: 'Development',
-    maintainer: 'Nous Research <support@nousresearch.com>',
+    maintainer: 'SpaceshipResearch <support@spaceshipresearch.com>',
     synopsis: light
-      ? 'Remote-only desktop client for Hermes Agent.'
-      : 'Native desktop shell for Hermes Agent.',
+      ? 'Remote-only desktop client for Scout Agent.'
+      : 'Native desktop shell for Scout Agent.',
     target: ['AppImage']
   }
 }

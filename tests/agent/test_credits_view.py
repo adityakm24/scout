@@ -12,26 +12,26 @@ from __future__ import annotations
 import pytest
 
 from agent.account_usage import build_credits_view
-from hermes_cli.nous_account import NousPortalAccountInfo, NousPaidServiceAccessInfo
+from scout_cli.spaceshipresearch_account import ScoutPortalAccountInfo, SpaceshipResearchPaidServiceAccessInfo
 
-def _account(**kwargs) -> NousPortalAccountInfo:
+def _account(**kwargs) -> ScoutPortalAccountInfo:
     kwargs.setdefault("logged_in", True)
     kwargs.setdefault("source", "account_api")
     kwargs.setdefault("fresh", True)
     kwargs.setdefault("portal_base_url", "https://portal.example.test")
-    return NousPortalAccountInfo(**kwargs)
+    return ScoutPortalAccountInfo(**kwargs)
 
 @pytest.fixture
 def _logged_in_account(monkeypatch):
     """Stub the auth token + account fetch so build_credits_view runs offline."""
     monkeypatch.setattr(
-        "hermes_cli.auth.get_provider_auth_state",
+        "scout_cli.auth.get_provider_auth_state",
         lambda provider: {"access_token": "tok", "portal_base_url": "https://portal.example.test"},
     )
 
     def _install(account):
         monkeypatch.setattr(
-            "hermes_cli.nous_account.get_nous_portal_account_info",
+            "scout_cli.spaceshipresearch_account.get_scout_portal_account_info",
             lambda *a, **kw: account,
         )
 
@@ -46,7 +46,7 @@ def test_view_built_with_org_pinned_url_and_identity(_logged_in_account):
             org_name="Acme Inc",
             email="alice@example.test",
             paid_service_access=True,
-            paid_service_access_info=NousPaidServiceAccessInfo(
+            paid_service_access_info=SpaceshipResearchPaidServiceAccessInfo(
                 purchased_credits_remaining=30.0,
                 total_usable_credits=30.0,
             ),

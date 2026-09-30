@@ -21,6 +21,8 @@ export const $sessionsChangeTick = atom(0)
 export const $platformsChangeTick = atom(0)
 export const $projectsChangeTick = atom(0)
 export const $pairingChangeTick = atom(0)
+/** `planner.changed` — the user's to-do list moved on disk (agent tool, CLI, another window). */
+export const $plannerChangeTick = atom(0)
 
 /** `pet.info.meta`-shaped payload carried on `pet.changed` — lets the pet skip
  *  the heavy sprite refetch when the broadcast already says enabled=false. */
@@ -66,6 +68,10 @@ export function notifyProjectsChanged(): void {
 
 export function notifyPairingChanged(): void {
   $pairingChangeTick.set($pairingChangeTick.get() + 1)
+}
+
+export function notifyPlannerChanged(): void {
+  $plannerChangeTick.set($plannerChangeTick.get() + 1)
 }
 
 export function notifySetupReady(): void {

@@ -2,13 +2,13 @@
 //
 // Flow: an error card (or any surface) calls requestSendDiagnostics() with
 // optional error context → the modal host renders the privacy notice → the
-// user explicitly clicks Upload → diagnostics.share_nous runs backend-side
-// (collect + force-redact + Nous-S3 upload) → the modal shows the private
-// view link plus the support handoff (GitHub Issues · Nous Portal Support ·
+// user explicitly clicks Upload → diagnostics.share_spaceshipresearch runs backend-side
+// (collect + force-redact + SpaceshipResearch-S3 upload) → the modal shows the private
+// view link plus the support handoff (GitHub Issues · Scout Portal Support ·
 // Discord).
 //
 // Consent is per-upload and explicit — no "always allow", mirroring the CLI's
-// `hermes debug share --nous` confirmation contract. On a remote connection
+// `scout debug share --spaceshipresearch` confirmation contract. On a remote connection
 // the backend bundles ITS OWN logs (the runtime that owns the failure); the
 // local desktop.log is attached as a client-side extra so support sees both
 // halves in one bundle.
@@ -52,7 +52,7 @@ export function dismissSendDiagnostics(): void {
   $sendDiagnostics.set(null)
 }
 
-interface ShareNousResponse {
+interface ShareSpaceshipResearchResponse {
   error?: string
   expires_at?: string
   ok: boolean
@@ -65,7 +65,7 @@ interface ShareNousResponse {
  *  IPC (browser dashboard, older shells) just omits the file. */
 async function collectLocalExtras(): Promise<Record<string, string>> {
   try {
-    const logs = await window.hermesDesktop?.getRecentLogs?.()
+    const logs = await window.scoutDesktop?.getRecentLogs?.()
     const lines = Array.isArray(logs?.lines) ? logs.lines : []
 
     return lines.length ? { 'desktop.log': lines.join('\n') } : {}
@@ -97,7 +97,7 @@ export async function confirmSendDiagnostics(): Promise<void> {
     const gateway = $gateway.get()
 
     if (!gateway) {
-      throw new Error('Hermes gateway unavailable')
+      throw new Error('Scout gateway unavailable')
     }
 
     const extraFiles = await collectLocalExtras()
@@ -106,8 +106,8 @@ export async function confirmSendDiagnostics(): Promise<void> {
       return
     }
 
-    const response = await gateway.request<ShareNousResponse>(
-      'diagnostics.share_nous',
+    const response = await gateway.request<ShareSpaceshipResearchResponse>(
+      'diagnostics.share_spaceshipresearch',
       {
         ...(current.errorContext ? { error_context: current.errorContext } : {}),
         ...(Object.keys(extraFiles).length ? { extra_files: extraFiles } : {})

@@ -3,7 +3,7 @@
 Instead of a 60s ticker, asks NAS to arm one external one-shot per job at its next-fire time;
 NAS calls back ``/api/cron/fire`` and the job re-arms after running. start() never blocks or
 spawns a periodic wake; reconcile runs only on a warm process (start / on_jobs_changed / fire).
-Holds no scheduler credentials — speaks only to NAS ``agent-cron`` endpoints with the Nous token.
+Holds no scheduler credentials — speaks only to NAS ``agent-cron`` endpoints with the SpaceshipResearch token.
 Inert unless ``cron.provider: chronos``. Wire contract: ``website/docs/developer-guide/chronos-managed-cron-contract.md``.
 """
 
@@ -23,7 +23,7 @@ logger = logging.getLogger("cron.chronos")
 def _cfg(*keys: str, default: Any = "") -> Any:
     """Read a cron.chronos.* config value (no network)."""
     try:
-        from hermes_cli.config import cfg_get, load_config
+        from scout_cli.config import cfg_get, load_config
         return cfg_get(load_config(), *keys, default=default)
     except Exception:
         return default
@@ -37,7 +37,7 @@ class ChronosCronScheduler(CronScheduler):
         self._armed: Dict[str, str] = {}
         self._lock = threading.Lock()
         self._client = None  # lazily constructed (no network in is_available)
-        # Set when NAS answered 403 invalid_client: the Nous token in auth.json is not this
+        # Set when NAS answered 403 invalid_client: the SpaceshipResearch token in auth.json is not this
         # instance's provisioned identity, so every arm would fail the same way for the life of
         # the process. Once set, NAS is left alone and the built-in ticker fires jobs (#97494).
         self._identity_rejected = False
@@ -50,13 +50,13 @@ class ChronosCronScheduler(CronScheduler):
 
     def is_available(self) -> bool:
         """Config presence only — NO network: portal URL, publicly reachable callback URL and a
-        Nous login; otherwise the resolver falls back to the built-in ticker."""
+        SpaceshipResearch login; otherwise the resolver falls back to the built-in ticker."""
         if not (_cfg("cron", "chronos", "portal_url") and _cfg("cron", "chronos", "callback_url")):
             return False
         # Stored-token presence only (no refresh); refresh-aware token resolved at provision time.
         try:
-            from hermes_cli.auth import get_provider_auth_state
-            return bool((get_provider_auth_state("nous") or {}).get("access_token"))
+            from scout_cli.auth import get_provider_auth_state
+            return bool((get_provider_auth_state("spaceshipresearch") or {}).get("access_token"))
         except Exception:
             return False
 
@@ -115,7 +115,7 @@ class ChronosCronScheduler(CronScheduler):
 
     def _note_identity_rejected(self) -> None:
         """403 invalid_client is deterministic: NAS maps the bearer to a provisioned instance via an
-        ``agent:*`` client or the hosted bootstrap session, and a plain ``hermes auth`` login is
+        ``agent:*`` client or the hosted bootstrap session, and a plain ``scout auth`` login is
         neither — re-logging in cannot fix it, which is what users try first (#97494). Without
         NAS the jobs have no trigger at all (the misfire sweep runs them ``misfire_grace_minutes``
         late), so the built-in ticker takes over this process's fires."""
@@ -124,13 +124,13 @@ class ChronosCronScheduler(CronScheduler):
                 return
             self._identity_rejected = True
         logger.warning(
-            "Chronos: NAS rejected this agent's Nous credential for agent-cron (403 invalid_client). "
-            "The Nous token in auth.json is not this instance's provisioned identity (an agent:* client "
-            "or the hosted bootstrap session), so no job can be armed. A normal `hermes auth` re-login "
-            "cannot fix this; the hosted credential has to be restored from the Nous Portal. Falling back "
+            "Chronos: NAS rejected this agent's SpaceshipResearch credential for agent-cron (403 invalid_client). "
+            "The SpaceshipResearch token in auth.json is not this instance's provisioned identity (an agent:* client "
+            "or the hosted bootstrap session), so no job can be armed. A normal `scout auth` re-login "
+            "cannot fix this; the hosted credential has to be restored from the Scout Portal. Falling back "
             "to the built-in cron ticker for this process so scheduled jobs keep firing on time.")
         if self._stop_event is None:
-            return  # start() never ran (e.g. a CLI `hermes cron add`); nothing to tick here
+            return  # start() never ran (e.g. a CLI `scout cron add`); nothing to tick here
         from agent.memory_provider import spawn_context_thread
         from cron.scheduler_provider import InProcessCronScheduler
         spawn_context_thread(

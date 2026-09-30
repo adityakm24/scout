@@ -1,5 +1,5 @@
-import type { ModelOptionProvider } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
+import type { ModelOptionProvider } from '@scout/shared'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
-import { getGlobalModelOptions } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { Check, ChevronDown, ChevronLeft, KeyRound, Loader2 } from '@/lib/icons'
 import { isSubmitEnter } from '@/lib/ime'
 import { isProviderSetupErrorMessage } from '@/lib/provider-setup-errors'
 import { cn } from '@/lib/utils'
+import { getGlobalModelOptions } from '@/scout'
 import { $desktopBoot, type DesktopBootState } from '@/store/boot'
 import { $freeTierStatus, FREE_TIER_MODEL, freeTierSetupFailure } from '@/store/free-tier'
 import { openFreeTierSignIn } from '@/store/free-tier-sign-in'
@@ -37,7 +37,7 @@ import {
   startProviderOAuth
 } from '@/store/onboarding'
 import { $onboardingSurfaces, onboardingSurfaceActive } from '@/store/onboarding-presence'
-import type { OAuthProvider } from '@/types/hermes'
+import type { OAuthProvider } from '@/types/scout'
 
 import { DocsLink, FlowPanel, Status } from './flow'
 import { FreeTierSetupNotice } from './free-tier-setup-notice'
@@ -83,7 +83,7 @@ export interface ApiKeyOption {
 }
 
 // Curated order mirrors CANONICAL_PROVIDERS: Fireworks sits #2 overall (after
-// Nous Portal OAuth), ahead of OpenRouter and the rest of the key catalog.
+// Scout Portal OAuth), ahead of OpenRouter and the rest of the key catalog.
 const API_KEY_OPTIONS: ApiKeyOption[] = [
   {
     id: 'fireworks',
@@ -119,13 +119,13 @@ const API_KEY_OPTIONS: ApiKeyOption[] = [
     id: 'local',
     name: 'Local / custom endpoint',
     envKey: 'OPENAI_BASE_URL',
-    docsUrl: 'https://github.com/NousResearch/hermes-agent#bring-your-own-endpoint',
+    docsUrl: 'https://github.com/SpaceshipResearch/scout-agent#bring-your-own-endpoint',
     placeholder: 'http://127.0.0.1:8000/v1'
   }
 ]
 
 // Build the FULL API-key provider catalog from the backend model options so the
-// onboarding / Providers key form lists every `api_key` provider `hermes model`
+// onboarding / Providers key form lists every `api_key` provider `scout model`
 // knows about — not just the hand-curated five. Curated entries keep their
 // richer copy + placeholders and float to the top (recommended defaults); every
 // other api_key provider is appended with a generic "paste {KEY}" affordance.
@@ -380,7 +380,7 @@ export function DesktopOnboardingOverlay({
 
   // When the free tier itself failed to set up, its own notice explains the
   // picker; the runtime check's technical reason ("No usable credentials
-  // found for nous.") would only restate it in the wrong words.
+  // found for spaceshipresearch.") would only restate it in the wrong words.
   const reason =
     rawReason &&
     !setupFailure &&
@@ -422,7 +422,7 @@ export function DesktopOnboardingOverlay({
           'relative w-full max-w-[45rem] transition-all duration-500 ease-out',
           bare
             ? ''
-            : 'overflow-hidden rounded-xl border border-(--stroke-nous) bg-(--ui-chat-bubble-background) shadow-nous',
+            : 'overflow-hidden rounded-xl border border-(--stroke-spaceshipresearch) bg-(--ui-chat-bubble-background) shadow-spaceshipresearch',
           // Bare confirm screen orchestrates its own per-element exit; the
           // carded states use the simple lift/blur dissolve.
           leaving && !bare
@@ -490,7 +490,7 @@ function FreeTierReadyPanel({
         )}
       >
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
+          <span className="font-mono text-[0.6875rem] text-muted-foreground">
             {t.onboarding.defaultModel}
           </span>
           <Badge size="xs" variant="success">
@@ -574,8 +574,8 @@ function Header() {
   )
 }
 
-export const FEATURED_ID = 'nous'
-const SHOW_ALL_KEY = 'hermes-onboarding-show-all-v1'
+export const FEATURED_ID = 'spaceshipresearch'
+const SHOW_ALL_KEY = 'scout-onboarding-show-all-v1'
 
 const readShowAll = () => {
   try {
@@ -644,7 +644,7 @@ export function Picker({ ctx }: { ctx: OnboardingContext }) {
   const select = (p: OAuthProvider) => void startProviderOAuth(p, ctx)
   const featured = ordered.find(p => p.id === FEATURED_ID) ?? null
   const rest = featured ? ordered.filter(p => p.id !== FEATURED_ID) : ordered
-  // Collapse the secondary providers behind a disclosure whenever Nous Portal
+  // Collapse the secondary providers behind a disclosure whenever Scout Portal
   // is present to anchor the choice — otherwise show the full list. The
   // Fireworks/OpenRouter key rows always live behind the disclosure, so the
   // toggle is warranted even when there are no other OAuth providers.
@@ -677,7 +677,7 @@ export function Picker({ ctx }: { ctx: OnboardingContext }) {
         {showRest ? (
           <>
             {/* Fireworks leads the expanded list, matching CANONICAL_PROVIDERS
-                (Nous → Fireworks), but stays hidden until the user opens it. */}
+                (SpaceshipResearch → Fireworks), but stays hidden until the user opens it. */}
             <FireworksProviderRow onClick={() => openKeyForm('FIREWORKS_API_KEY')} />
             {rest.map(p => (
               <ProviderRow key={p.id} onSelect={select} provider={p} />

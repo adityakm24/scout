@@ -22,13 +22,13 @@ from typing import Any, Callable, NamedTuple, Optional  # noqa: F401  (Callable:
 # Several of these look unused here but are resolved BARE by split-module bodies rebound onto this
 # namespace (method_ctx.bind_module) — deleting one breaks a handler at call time, not import time.
 from agent.secret_scope import build_profile_secret_scope, reset_secret_scope, set_secret_scope  # noqa: F401
-from hermes_constants import (
-    get_hermes_home, get_hermes_home_override, get_process_hermes_home, profile_name_for_home,
-    reset_hermes_home_override, set_hermes_home_override)
-from hermes_cli.env_loader import load_hermes_dotenv
+from scout_constants import (
+    get_scout_home, get_scout_home_override, get_process_scout_home, profile_name_for_home,
+    reset_scout_home_override, set_scout_home_override)
+from scout_cli.env_loader import load_scout_dotenv
 from utils import file_signature, is_truthy_value
-from hermes_state_ids import new_session_id
-from tools.environments.local import hermes_subprocess_env
+from scout_state_ids import new_session_id
+from tools.environments.local import scout_subprocess_env
 from agent.replay_cleanup import canonicalize_replay_history
 from agent.reasoning_effort import clamp_effort, route_supported_efforts
 from agent.compaction_display import project_compaction_message_for_display  # noqa: F401
@@ -47,13 +47,13 @@ from tui_gateway.transport import (FanoutTransport, StdioTransport, Transport, b
 
 logger = logging.getLogger(__name__)
 
-_hermes_home = _HERMES_HOME_AT_IMPORT = get_hermes_home()
-load_hermes_dotenv(hermes_home=_hermes_home, project_env=Path(__file__).parent.parent / ".env")
+_scout_home = _SCOUT_HOME_AT_IMPORT = get_scout_home()
+load_scout_dotenv(scout_home=_scout_home, project_env=Path(__file__).parent.parent / ".env")
 
 
 # ── Panic logger: crashes otherwise leave no forensics (stdout is the JSON-RPC pipe, stderr doesn't
 # flush before exit) → append every unhandled exception to the crash log + one-line stderr summary.
-_CRASH_LOG = os.path.join(_hermes_home, "logs", "tui_gateway_crash.log")
+_CRASH_LOG = os.path.join(_scout_home, "logs", "tui_gateway_crash.log")
 
 
 def _record_crash(kind: str, exc_type, exc_value, exc_tb, *, thread_name: str | None = None) -> None:
@@ -81,7 +81,7 @@ threading.excepthook = lambda args: _record_crash(
     "thread exception", args.exc_type, args.exc_value, args.exc_traceback, thread_name=args.thread.name)
 
 with contextlib.suppress(Exception):
-    from hermes_cli.banner import prefetch_update_check
+    from scout_cli.banner import prefetch_update_check
 
     prefetch_update_check()
 
@@ -101,7 +101,7 @@ _cfg_cache: dict | None = None
 _cfg_sig: tuple | None = None
 _cfg_path = None
 _session_resume_lock = threading.Lock()
-_SLASH_WORKER_TIMEOUT_S = max(5.0, env_float("HERMES_TUI_SLASH_TIMEOUT_S", 45.0))
+_SLASH_WORKER_TIMEOUT_S = max(5.0, env_float("SCOUT_TUI_SLASH_TIMEOUT_S", 45.0))
 
 def _ws_orphan_setting(env_var: str, cfg_key: str, default: float) -> float:
     """``dashboard.<cfg_key>`` seconds; the env var is an internal override that wins when set."""
@@ -109,7 +109,7 @@ def _ws_orphan_setting(env_var: str, cfg_key: str, default: float) -> float:
     if raw is None or not str(raw).strip():
         raw = None
         with contextlib.suppress(Exception):
-            from hermes_cli.config import load_config
+            from scout_cli.config import load_config
             raw = (load_config().get("dashboard") or {}).get(cfg_key)
     with contextlib.suppress(ValueError, TypeError):
         return max(0.0, float(raw) if raw is not None else default)
@@ -128,7 +128,7 @@ def _resolve_ws_orphan_reap_grace() -> float:
     """Grace before an orphaned WS session is interrupted/reaped (0 = park forever): ws.py parks a
     disconnected session for a quick reattach, but a browser refresh mints a NEW sid and never
     reattaches the old one (leaking its slash worker)."""
-    return _ws_orphan_setting("HERMES_TUI_WS_ORPHAN_REAP_GRACE_S", "ws_orphan_reap_grace_s", 20.0)
+    return _ws_orphan_setting("SCOUT_TUI_WS_ORPHAN_REAP_GRACE_S", "ws_orphan_reap_grace_s", 20.0)
 
 
 _WS_ORPHAN_REAP_GRACE_S = _resolve_ws_orphan_reap_grace()
@@ -139,7 +139,7 @@ _WS_ORPHAN_REAP_GRACE_S = _resolve_ws_orphan_reap_grace()
 _WS_ORPHAN_REAP_SLEEP_SLACK_S = 0.5
 # A detached RUNNING turn is interrupted only once its activity clock (API waits, stream tokens, tool
 # heartbeats) idled this long; 600s = the turn-liveness watchdog so "wedged" means the same. 0 disables.
-_WS_ORPHAN_ACTIVITY_STALE_S = _ws_orphan_setting("HERMES_TUI_WS_ORPHAN_ACTIVITY_STALE_S", "ws_orphan_activity_stale_s", 600.0)
+_WS_ORPHAN_ACTIVITY_STALE_S = _ws_orphan_setting("SCOUT_TUI_WS_ORPHAN_ACTIVITY_STALE_S", "ws_orphan_activity_stale_s", 600.0)
 _WS_ORPHAN_INTERRUPT_REAP_POLL_S = 1.0
 # Interrupt-then-reap poll budget: a turn that never settles (thread hung in a syscall) would
 # reschedule the 1s poll forever; after this many polls, log loudly and force-reap.
@@ -161,7 +161,7 @@ _DETAIL_MODES = frozenset({"hidden", "collapsed", "expanded"})
 # mcp.servers.* = rediscovery, cold npx spawn, ~30s OAuth wait; profiles.* = skill-tree walk + state.db
 # open; bot_relay.* = a FULL one-turn agent conversation (600s); setup.* / session.active_list =
 # Desktop-polled and under GIL pressure block the WS read loop (false "needs setup", stalled
-# interrupts); voice.*/wake.* = SYNCHRONOUS faster-whisper install (300s); session.workspace.move =
+# interrupts); voice.*/wake.* = SYNCHROSPACESHIPRESEARCH faster-whisper install (300s); session.workspace.move =
 # git subprocess probes on an arbitrary (maybe slow) mount.
 _LONG_HANDLERS = frozenset({
     "session.foreign.list", "session.foreign.preview", "session.foreign.import",
@@ -181,17 +181,17 @@ _LONG_HANDLERS = frozenset({
     "shared_metrics.set",  # consent reconcile waits on the metrics store's write lock
 })
 
-_rpc_pool_workers = max(2, env_int("HERMES_TUI_RPC_POOL_WORKERS", 8))
+_rpc_pool_workers = max(2, env_int("SCOUT_TUI_RPC_POOL_WORKERS", 8))
 _pool = concurrent.futures.ThreadPoolExecutor(max_workers=_rpc_pool_workers, thread_name_prefix="tui-rpc")
 atexit.register(lambda: _pool.shutdown(wait=False, cancel_futures=True))
 
 # Exact in-memory session record executing on the current turn thread — unlike a public session id,
 # this object identity cannot be supplied by RPC.
 _current_runtime_session_record: contextvars.ContextVar[dict | None] = contextvars.ContextVar(
-    "hermes_gateway_runtime_session_record", default=None)
+    "scout_gateway_runtime_session_record", default=None)
 # JSON-RPC method being dispatched on this thread/task. Diagnostic only (names WHICH client
 # poll is looping in the 4001 warning); never authorization — the method string is client-supplied.
-_current_rpc_method: contextvars.ContextVar[str] = contextvars.ContextVar("hermes_gateway_rpc_method", default="")
+_current_rpc_method: contextvars.ContextVar[str] = contextvars.ContextVar("scout_gateway_rpc_method", default="")
 
 # Reserve real stdout for JSON-RPC only; redirect Python's stdout to stderr so stray print() from
 # libraries/tools becomes harmless gateway.stderr instead of corrupting the JSON protocol.
@@ -220,11 +220,11 @@ _detached_ws_transport = _DropTransport()
 
 def _prepend_tool_paths(env: dict[str, str]) -> dict[str, str]:
     """Prepend managed bin (managed-first policy for the Browser Use CLI), venv bin and
-    ~/.local/bin to PATH so slash_worker children resolve Hermes-managed CLIs under the Desktop's minimal PATH.
+    ~/.local/bin to PATH so slash_worker children resolve Scout-managed CLIs under the Desktop's minimal PATH.
     The PM store dirs go in front of all of them: a user's node/uv in ~/.local/bin never wins."""
     managed_bin = ""
     with contextlib.suppress(Exception):
-        managed_bin = str(Path(get_hermes_home()) / "bin")
+        managed_bin = str(Path(get_scout_home()) / "bin")
     venv_bin = str(Path(sys.executable).parent)  # <venv>/bin (POSIX) or <venv>/Scripts (Windows)
     parts = [p for p in (managed_bin, venv_bin, str(Path.home() / ".local" / "bin"), env.get("PATH") or "") if p]
     env["PATH"] = os.pathsep.join(parts)
@@ -236,7 +236,7 @@ def _prepend_tool_paths(env: dict[str, str]) -> dict[str, str]:
 
 
 class _SlashWorker:
-    """Persistent HermesCLI subprocess for slash commands."""
+    """Persistent ScoutCLI subprocess for slash commands."""
 
     def __init__(self, session_key: str, model: str, profile_home: str | None = None,
                  provider: str | None = None):
@@ -251,22 +251,22 @@ class _SlashWorker:
             + (["--model", model] if model else []) \
             + (["--provider", provider] if provider else [])
         self._closed = False
-        from hermes_cli._subprocess_compat import windows_hide_flags
-        # slash_worker runs the Hermes agent → needs provider credentials. Tier-1 secrets
+        from scout_cli._subprocess_compat import windows_hide_flags
+        # slash_worker runs the Scout agent → needs provider credentials. Tier-1 secrets
         # (gateway/GitHub/infra) are still stripped (#29157). Global-remote / multi-profile sessions: the
         # worker must resolve config/skills/state against the session's profile home, not the gateway's
-        # launch HERMES_HOME (#40677).
+        # launch SCOUT_HOME (#40677).
         from tools.environments.local import served_profile_child_env
         from agent.secret_scope import is_multiplex_active
 
         # The worker runs the agent → needs provider credentials; tier-1 secrets (gateway/GitHub/
         # infra) are still stripped. A served profile's worker gets THAT profile's home + secrets and
         # none of the launch profile's .env / TERMINAL_* residue, exactly what a standalone
-        # `hermes -p X` would load itself. The launch profile is a profile too: once the process hosts
+        # `scout -p X` would load itself. The launch profile is a profile too: once the process hosts
         # a second home (multiplex flipped), its worker must name its own home or the fail-closed
         # no-target/no-scope path raises UnscopedSecretError (#115427).
         env = _prepend_tool_paths(served_profile_child_env(
-            target_home=profile_home or (_hermes_home if is_multiplex_active() else None),
+            target_home=profile_home or (_scout_home if is_multiplex_active() else None),
             inherit_credentials=True))
         # Internal slash workers must import the same checkout as their parent.
         module_root = str(Path(__file__).resolve().parent.parent)
@@ -276,8 +276,8 @@ class _SlashWorker:
         # start_new_session: otherwise the worker inherits the gateway's pgid and mcp_tool's orphan
         # sweep, racing the spawn, killpg()s the TUI parent itself. errors="replace": bytes invalid
         # in the system locale (GBK Windows) must not raise UnicodeDecodeError in the drain threads.
-        # Prepend the Hermes venv bin dir and the user-local bin dir to PATH so slash_worker child processes
-        # can resolve Hermes-managed CLIs (browser-use, uvx) even when the parent gateway was launched with
+        # Prepend the Scout venv bin dir and the user-local bin dir to PATH so slash_worker child processes
+        # can resolve Scout-managed CLIs (browser-use, uvx) even when the parent gateway was launched with
         # a minimal PATH (e.g. by the Desktop/Dashboard app). See #83845.
         self.proc = subprocess.Popen(
             argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
@@ -375,12 +375,12 @@ def _shutdown_sessions() -> None:
 # Session reaping / flushing knobs (session_reaper.py). TTL is the last-resort net for disconnect paths that
 # slip past the WS finally; hours-scale because last_active freezes during a long turn and on passive
 # viewing — running/pending/starting/live-transport are hard exemptions.
-_SESSION_TTL_S = max(0.0, env_float("HERMES_TUI_SESSION_TTL_S", float(6 * 3600)))
+_SESSION_TTL_S = max(0.0, env_float("SCOUT_TUI_SESSION_TTL_S", float(6 * 3600)))
 _REAPER_SCAN_S = 300.0
 # Flush-on-kill budget + periodic incremental flush (piggybacks the reaper scan): a SIGTERM/SIGKILL
 # mid-update loses at most one flush interval of session state.
-_EXIT_FLUSH_BUDGET_S = max(0.0, env_float("HERMES_TUI_EXIT_FLUSH_BUDGET_S", 5.0))
-_INCREMENTAL_FLUSH_INTERVAL_S = max(0.0, env_float("HERMES_TUI_SESSION_FLUSH_INTERVAL_S", _REAPER_SCAN_S))
+_EXIT_FLUSH_BUDGET_S = max(0.0, env_float("SCOUT_TUI_EXIT_FLUSH_BUDGET_S", 5.0))
+_INCREMENTAL_FLUSH_INTERVAL_S = max(0.0, env_float("SCOUT_TUI_SESSION_FLUSH_INTERVAL_S", _REAPER_SCAN_S))
 
 
 def _start_idle_reaper() -> None:
@@ -400,14 +400,14 @@ _start_idle_reaper()
 
 
 def _launch_home() -> Path:
-    """The launch profile's home at call time: the patched ``_hermes_home`` when a test changed
-    it, else the live process home — resolved through :func:`get_process_hermes_home`, which honours
-    ``HERMES_HOME`` but ignores the context-local override. The desktop multiplex cron ticker sets
+    """The launch profile's home at call time: the patched ``_scout_home`` when a test changed
+    it, else the live process home — resolved through :func:`get_process_scout_home`, which honours
+    ``SCOUT_HOME`` but ignores the context-local override. The desktop multiplex cron ticker sets
     that override per profile at startup, and a first touch inside a foreign window would bind
     process-wide launch state (the shared ``state.db`` handle, the launch ``.env`` secrets) to
     another profile (#102526). Resolving here rather than at import time lets a harness that
-    redirects ``HERMES_HOME`` after import be honoured (#112692)."""
-    home = _hermes_home if _hermes_home != _HERMES_HOME_AT_IMPORT else get_process_hermes_home()
+    redirects ``SCOUT_HOME`` after import be honoured (#112692)."""
+    home = _scout_home if _scout_home != _SCOUT_HOME_AT_IMPORT else get_process_scout_home()
     return Path(home)
 
 
@@ -419,7 +419,7 @@ def _launch_state_db_path() -> Path:
 def _get_db():
     global _db, _db_error
     if _db is None:
-        from hermes_state_registry import acquire
+        from scout_state_registry import acquire
         try:
             # Launch home, never the context-local override (#102526); resolved at first
             # use, not import time (#112692). See _launch_state_db_path.
@@ -456,7 +456,7 @@ def _open_profile_session_db(profile_home):
     """Open a DEDICATED handle on ``profile_home``'s ``state.db`` — FAIL CLOSED: a silent fallback to the
     launch ``state.db`` would bleed rows into the wrong profile's store exactly when the profile store is
     briefly unopenable (locked, mid-restore); callers let the error abort the build (→ ``agent_error``)."""
-    from hermes_state_registry import acquire
+    from scout_state_registry import acquire
     db_path = Path(profile_home) / "state.db"
     try:
         return acquire(db_path)
@@ -471,7 +471,7 @@ def _profile_db(params: dict | None = None, *, writer: bool = False):
 
     Foreign-profile handles are read-only unless ``writer=True``: that store belongs to ITS
     gateway/dashboard, and a writer here would take its write lock per RPC. Mirrors
-    hermes_cli.web_routers.profiles._read_profile_db."""
+    scout_cli.web_routers.profiles._read_profile_db."""
     profile = (params.get("profile") or "").strip() or None if isinstance(params, dict) else None
     # Launch/own profile → the shared _get_db() handle (left open); another profile → a dedicated
     # handle closed below (app-global remote mode). db is None when unavailable.
@@ -480,10 +480,10 @@ def _profile_db(params: dict | None = None, *, writer: bool = False):
     else:
         try:
             if writer:
-                from hermes_state_registry import acquire
+                from scout_state_registry import acquire
                 db = acquire(Path(profile_home) / "state.db")
             else:
-                from hermes_cli.web_server_sessions import _open_session_db_at_path
+                from scout_cli.web_server_sessions import _open_session_db_at_path
                 db = _open_session_db_at_path(Path(profile_home) / "state.db", read_only=True)
             owns = True
         except Exception as exc:
@@ -501,12 +501,12 @@ def _canonical_profile_request(name: str) -> str:
     """Canonicalize profile basenames emitted by older session-info payloads.
 
     ``Path(default_home).name`` was historically sent as a profile id. Those basenames are
-    installation details — unless a real named profile of that name exists (``hermes`` is a legal
+    installation details — unless a real named profile of that name exists (``scout`` is a legal
     id), in which case it wins; other unknown names keep failing closed in ``_profile_home``.
     """
-    if name.casefold() in {".hermes", "hermes"}:
-        from hermes_cli import profiles as profiles_mod
-        # Check the profiles root directly: get_profile_dir rejects "hermes" as a
+    if name.casefold() in {".scout", "scout"}:
+        from scout_cli import profiles as profiles_mod
+        # Check the profiles root directly: get_profile_dir rejects "scout" as a
         # reserved name, but a pre-reserved-list install may still carry that dir.
         if not (profiles_mod._get_profiles_root() / profiles_mod.normalize_profile_name(name)).is_dir():
             return "default"
@@ -525,7 +525,7 @@ def _response_profile_name(profile: str | None = None) -> str:
 
 
 def _db_unavailable_error(rid, *, code: int):
-    from hermes_state_user_copy import describe_storage_failure, storage_failure_details
+    from scout_state_user_copy import describe_storage_failure, storage_failure_details
     failure = describe_storage_failure(_db_error)
     return _err(
         rid, code,
@@ -534,7 +534,7 @@ def _db_unavailable_error(rid, *, code: int):
 
 
 # ── Per-session profile scoping: the desktop's app-global remote mode points every profile at this
-# backend, so calls carry ``profile`` → open that profile's db and bind its HERMES_HOME (ContextVar
+# backend, so calls carry ``profile`` → open that profile's db and bind its SCOUT_HOME (ContextVar
 # override) so config/skills/model/persistence resolve to it. Omitted/own profile → launch profile.
 class ProfileUnavailableError(FileNotFoundError):
     """An explicit ``profile`` param names no live profile on this host. Raised out of the method
@@ -546,14 +546,14 @@ def _profile_home(profile: str | None) -> Path | None:
     """Resolve a named profile's home on THIS host, or None for the launch profile."""
     if not (name := _canonical_profile_request((profile or "").strip())):
         return None
-    from hermes_cli import profiles as profiles_mod
+    from scout_cli import profiles as profiles_mod
     try:
         home = Path(profiles_mod.get_profile_dir(name))
     except ValueError:
         home = None
     if home is None or not home.is_dir():
         raise ProfileUnavailableError(f"Profile '{name}' does not exist.")
-    if home.resolve() == Path(_hermes_home).resolve():
+    if home.resolve() == Path(_scout_home).resolve():
         return None  # already the launch profile (no override needed)
     if home not in _served_profile_homes:
         # This process now hosts a second profile home: freeze the launch env as the launch
@@ -572,7 +572,7 @@ _served_profile_homes: set[Path] = set()
 
 
 def _profile_scoped(handler):
-    """Bind ``params['profile']``'s full runtime scope (HERMES_HOME + secrets + terminal policy) around a
+    """Bind ``params['profile']``'s full runtime scope (SCOUT_HOME + secrets + terminal policy) around a
     handler, so config.yaml ``${VAR}`` refs, provider credential checks and ``.env`` writes resolve to
     THAT profile (app-global remote mode hits the focused profile). Home alone left ``get_secret`` on the
     launch process's ``os.environ``: ``config.get full`` for a secondary shipped the default profile's
@@ -628,7 +628,7 @@ def _profile_configured_cwd(profile_home: Path | None) -> str | None:
     if profile_home is None:
         return None
     with contextlib.suppress(Exception):
-        from hermes_cli.config_effective import load_user_config_effective
+        from scout_cli.config_effective import load_user_config_effective
         p = Path(profile_home) / "config.yaml"
         return _configured_cwd_from_cfg(load_user_config_effective(p)) if p.exists() else None
     return None
@@ -637,9 +637,9 @@ def _profile_configured_cwd(profile_home: Path | None) -> str | None:
 def _launch_configured_cwd() -> str | None:
     """Launch profile's ``terminal.cwd`` from config.yaml: the dashboard's in-memory gateway gets no bridged
     ``TERMINAL_CWD`` env (only the Node PTY child does), so a fresh /chat would otherwise start in ``os.getcwd()``."""
-    # Read the launch file by path. ``_load_cfg`` follows the active HERMES_HOME
+    # Read the launch file by path. ``_load_cfg`` follows the active SCOUT_HOME
     # override, which may belong to a different profile-scoped RPC.
-    return _profile_configured_cwd(Path(_hermes_home))
+    return _profile_configured_cwd(Path(_scout_home))
 
 
 def _default_session_cwd() -> str:
@@ -693,7 +693,7 @@ _server_requests.bind_sinks(lambda frame: write_json(frame), lambda event, sid, 
 _live_transports: set[Transport] = set()
 _live_transports_lock = threading.Lock()
 # True only when real stdout IS the JSON-RPC client channel (``tui_gateway.entry.main``, the stdio TUI).
-# `hermes serve` / dashboard processes speak JSON-RPC over WS only: their stdout is captured into
+# `scout serve` / dashboard processes speak JSON-RPC over WS only: their stdout is captured into
 # desktop.log, so a peer-less global broadcast (the change watcher keeps ticking after the last WS client
 # leaves) must be dropped there, not printed.
 _stdio_is_rpc_channel = False
@@ -809,7 +809,7 @@ def _emit_approval_request(sid: str, data: dict | None) -> None:
             if request_id:
                 _approval.withdraw_gateway_approval(session_key, request_id,
                                                     "the attached client cannot answer approval requests "
-                                                    "(update the Hermes app)")
+                                                    "(update the Scout app)")
             return
         choice = str(result.get("choice") or "deny")
         _approval.resolve_gateway_approval(session_key, choice, resolve_all=bool(result.get("all")),
@@ -973,7 +973,7 @@ def _wait_agent_for_prompt(session: dict, rid: str, sid: str) -> dict | None:
 
 
 def _bind_build_profile_scopes(profile_home: "str | None") -> "_TurnScopes | None":
-    """Bind a session profile's HERMES_HOME / secret / terminal scopes for an agent build. ``None`` is the
+    """Bind a session profile's SCOUT_HOME / secret / terminal scopes for an agent build. ``None`` is the
     launch profile: its own launch-env secret scope (live env while single-profile, frozen once
     multiplexing is active — a hosted-room turn for a default member otherwise died at build with
     ``UnscopedSecretError`` because the launch profile was treated as "no scope"). Fail-open per scope (the build must not die on
@@ -983,7 +983,7 @@ def _bind_build_profile_scopes(profile_home: "str | None") -> "_TurnScopes | Non
     with contextlib.suppress(Exception):
         return _profile_runtime_scope_tokens(profile_home)
     if profile_home:  # secret/terminal helper failed: keep at least the home + terminal refusal scope
-        scopes.home = set_hermes_home_override(profile_home)
+        scopes.home = set_scout_home_override(profile_home)
         with contextlib.suppress(Exception):
             from tools.terminal_scope import install_profile_terminal_scope
             scopes.terminal = install_profile_terminal_scope(Path(profile_home))
@@ -1138,7 +1138,7 @@ def _start_agent_build(sid: str, session: dict) -> None:
                 current["agent_error"] = AGENT_BUILD_ABANDONED
                 return
             tokens = _set_session_context(key, cwd=_session_cwd(current))
-            # Global-remote: bind the session profile's HERMES_HOME and hand the agent that profile's db —
+            # Global-remote: bind the session profile's SCOUT_HOME and hand the agent that profile's db —
             # DEDICATED and ours until _transfer_db_to_agent in the finally; FAIL CLOSED rather than
             # binding the launch DB and bleeding rows into the wrong state.db.
             scopes = _bind_build_profile_scopes(profile_home)
@@ -1239,8 +1239,8 @@ def _load_dashboard_process_isolation_config(cfg: dict | None = None) -> dict[st
 
 def _active_config_path() -> Path:
     """config.yaml of the per-session profile override (session.resume) when bound, else the launch home."""
-    override = get_hermes_home_override()
-    return Path(override if isinstance(override, str) and override else _hermes_home) / "config.yaml"
+    override = get_scout_home_override()
+    return Path(override if isinstance(override, str) and override else _scout_home) / "config.yaml"
 
 
 def _load_cfg_raw() -> dict:
@@ -1249,8 +1249,8 @@ def _load_cfg_raw() -> dict:
     expansion applied here would be persisted on the next save). Behavioral reads use :func:`_load_cfg`.
     Cache keyed on the resolved path so profiles don't clobber."""
     global _cfg_cache, _cfg_sig, _cfg_path
-    from hermes_cli.config import read_user_config_raw
-    from hermes_cli.config_read_errors import FailedConfigRead
+    from scout_cli.config import read_user_config_raw
+    from scout_cli.config_read_errors import FailedConfigRead
     try:
         p = _active_config_path()
         sig = file_signature(p.stat()) if p.exists() else None
@@ -1271,14 +1271,14 @@ def _load_cfg() -> dict:
     ``_load_cfg() == {}`` sentinels. Fail-open to ``{}``. Never pass the result to ``_save_cfg`` (use
     ``_load_cfg_raw()``)."""
     with contextlib.suppress(Exception):
-        from hermes_cli.config_effective import load_user_config_effective
+        from scout_cli.config_effective import load_user_config_effective
         return load_user_config_effective(_active_config_path())
     return {}
 
 
 def _save_cfg(cfg: dict):
     global _cfg_cache, _cfg_sig, _cfg_path
-    from hermes_cli.config import atomic_config_write
+    from scout_cli.config import atomic_config_write
     path = _active_config_path()
     atomic_config_write(path, cfg)
     with _cfg_lock:
@@ -1305,7 +1305,7 @@ def _set_session_context(session_key: str, cwd: str | None = None, *, ui_session
         source = _resolve_session_platform()
         profile = _current_profile_name()
         browser_control_principal = browser_control_transport_family = ""
-        # Live conversation id for subprocess HERMES_SESSION_ID: an explicitly empty contextvar is authoritative
+        # Live conversation id for subprocess SCOUT_SESSION_ID: an explicitly empty contextvar is authoritative
         # (no os.environ fallback), so never leave it "" — agent's durable session_id, then session_key.
         session_id = session_key
         if sess is not None:
@@ -1335,7 +1335,7 @@ def _clear_session_context(tokens: list) -> None:
 
 def _enable_gateway_prompts() -> None:
     """Route approvals through gateway callbacks instead of CLI input()."""
-    os.environ.update(HERMES_GATEWAY_SESSION="1", HERMES_EXEC_ASK="1", HERMES_INTERACTIVE="1")
+    os.environ.update(SCOUT_GATEWAY_SESSION="1", SCOUT_EXEC_ASK="1", SCOUT_INTERACTIVE="1")
 
 
 # ── Blocking prompt factory ──────────────────────────────────────────
@@ -1389,9 +1389,9 @@ _TOUR_PROBE_TIMEOUT_S = 10
 
 _TOUR_BRIDGE_UNAVAILABLE = json.dumps({
     "success": False,
-    "error": ("No Hermes Desktop window answered the tour request. The tour is driven by the desktop app's "
+    "error": ("No Scout Desktop window answered the tour request. The tour is driven by the desktop app's "
               "renderer, which updates separately from this backend, so an app build older than the tour tool "
-              "has nothing listening. Update the Hermes Desktop app and start a new session. Do not retry tour "
+              "has nothing listening. Update the Scout Desktop app and start a new session. Do not retry tour "
               "in this session.")})
 
 
@@ -1432,8 +1432,8 @@ def _clear_pending(sid: str | None = None) -> None:
 
 
 def _env_model_seed() -> str:
-    """The launch-scoped model seed (``hermes --tui -m``, hosted provisioning); "" when unset."""
-    return (os.environ.get("HERMES_MODEL", "") or os.environ.get("HERMES_INFERENCE_MODEL", "")).strip()
+    """The launch-scoped model seed (``scout --tui -m``, hosted provisioning); "" when unset."""
+    return (os.environ.get("SCOUT_MODEL", "") or os.environ.get("SCOUT_INFERENCE_MODEL", "")).strip()
 
 
 def _resolve_model() -> str:
@@ -1446,16 +1446,16 @@ def _resolve_model() -> str:
         return m.strip()
     # No env seed / config preference: the cost-safe silent default (cache-only read), never an unpicked flagship.
     with contextlib.suppress(Exception):
-        from hermes_cli.models import get_preferred_silent_default_model
+        from scout_cli.models import get_preferred_silent_default_model
         return get_preferred_silent_default_model()
     return "z-ai/glm-5.2"
 
 
 def _resolve_session_platform() -> str:
-    """``HERMES_DESKTOP=1`` without ``HERMES_DESKTOP_TERMINAL`` → "desktop" (chat panel; the agent then
-    suggests TUI-only slash commands), else "tui" (embedded terminal pane or standalone ``hermes --tui``)."""
-    desktop = is_truthy_value(os.environ.get("HERMES_DESKTOP"))
-    return "desktop" if desktop and not is_truthy_value(os.environ.get("HERMES_DESKTOP_TERMINAL")) else "tui"
+    """``SCOUT_DESKTOP=1`` without ``SCOUT_DESKTOP_TERMINAL`` → "desktop" (chat panel; the agent then
+    suggests TUI-only slash commands), else "tui" (embedded terminal pane or standalone ``scout --tui``)."""
+    desktop = is_truthy_value(os.environ.get("SCOUT_DESKTOP"))
+    return "desktop" if desktop and not is_truthy_value(os.environ.get("SCOUT_DESKTOP_TERMINAL")) else "tui"
 
 
 def _resolve_session_source(explicit: str | None) -> str:
@@ -1469,7 +1469,7 @@ def _resolve_agent_platform(source: str | None) -> str:
 
 
 def _config_model_target() -> tuple[str, str]:
-    """(model, provider) selected by config.yaml — and ONLY config: the HERMES_MODEL launch seed fed into
+    """(model, provider) selected by config.yaml — and ONLY config: the SCOUT_MODEL launch seed fed into
     the per-turn sync would be replayed as a /model switch and persisted globally, or pin the session so
     dashboard/CLI model changes never reach an open chat. Empty model = "no preference" → no-op sync."""
     cfg_model = _load_cfg().get("model")
@@ -1481,18 +1481,18 @@ def _config_model_target() -> tuple[str, str]:
 
 def _resolve_startup_runtime() -> tuple[str, str | None]:
     model = _resolve_model()
-    if explicit_provider := os.environ.get("HERMES_TUI_PROVIDER", "").strip():
+    if explicit_provider := os.environ.get("SCOUT_TUI_PROVIDER", "").strip():
         return model, explicit_provider
     if not (explicit_model := _env_model_seed()):
         return model, None
     with contextlib.suppress(Exception):
-        from hermes_cli.model_switch import resolve_startup_model_route
-        from hermes_cli.models import detect_static_provider_for_model
+        from scout_cli.model_switch import resolve_startup_model_route
+        from scout_cli.models import detect_static_provider_for_model
         full_cfg = _load_cfg()
         cfg = full_cfg.get("model") or {}
         current_provider = ((str(cfg.get("provider") or "").strip().lower() if isinstance(cfg, dict) else "")
-                            or os.environ.get("HERMES_INFERENCE_PROVIDER", "").strip().lower() or "auto")
-        # Same owner as HermesCLI/oneshot: ``custom:<name>:<model>`` selects that provider (#73943).
+                            or os.environ.get("SCOUT_INFERENCE_PROVIDER", "").strip().lower() or "auto")
+        # Same owner as ScoutCLI/oneshot: ``custom:<name>:<model>`` selects that provider (#73943).
         if route := resolve_startup_model_route(
                 explicit_model, current_provider=current_provider,
                 user_providers=full_cfg.get("providers"), custom_providers=full_cfg.get("custom_providers")):
@@ -1505,7 +1505,7 @@ def _resolve_startup_runtime() -> tuple[str, str | None]:
 
 def _is_routable_provider(provider: str) -> bool:
     with contextlib.suppress(Exception):
-        from hermes_cli.runtime_provider import is_routable_provider
+        from scout_cli.runtime_provider import is_routable_provider
         return is_routable_provider(provider)
     return False
 
@@ -1548,7 +1548,7 @@ def _stored_session_runtime_overrides(row: dict | None) -> dict:
     """Runtime fields persisted with a stored session (model column, ``billing_provider``, JSON ``model_config``):
     resume restores the model/provider/reasoning THAT chat used, not the global pick. Plugin-owned Bot-Mode
     sessions normally rebuild from the member profile's CURRENT config (a stale provider pin left room bots
-    "out of Nous credits" after a profile switch). A canonical Bot Chat may instead restore an explicit
+    "out of SpaceshipResearch credits" after a profile switch). A canonical Bot Chat may instead restore an explicit
     composer pick while the profile model it diverged from remains unchanged."""
     if not row:
         return {}
@@ -1566,12 +1566,12 @@ def _stored_session_runtime_overrides(row: dict | None) -> dict:
     model = str(row.get("model") or model_config.get("model") or "").strip()
     # Canonical route reader shared with CLI --resume: nested ``gateway_runtime`` (the route the messaging
     # gateway last ran) before the TUI's top-level keys, then a routable ``billing_provider`` (#125942).
-    from hermes_state import SessionDB
+    from scout_state import SessionDB
     route = SessionDB.session_gateway_runtime(row)
     provider, base_url, api_mode = (str(route.get(k) or "").strip() for k in ("provider", "base_url", "api_mode"))
     service_tier = str(model_config.get("service_tier") or "").strip()
     reasoning_config = model_config.get("reasoning_config")
-    from hermes_cli.runtime_provider import is_foreign_provider_endpoint
+    from scout_cli.runtime_provider import is_foreign_provider_endpoint
     if is_foreign_provider_endpoint(provider, base_url):
         # The endpoint and its wire belong to the provider this chat left; resolve the stored one's own.
         base_url = api_mode = ""
@@ -1580,7 +1580,7 @@ def _stored_session_runtime_overrides(row: dict | None) -> dict:
     if provider and not _is_routable_provider(provider):
         healed = None
         try:
-            from hermes_cli.runtime_provider import canonical_custom_identity
+            from scout_cli.runtime_provider import canonical_custom_identity
             healed = canonical_custom_identity(base_url=base_url or None, model=model or None)
         except Exception:
             logger.debug("custom provider identity recovery failed", exc_info=True)
@@ -1615,7 +1615,7 @@ def _runtime_model_config(agent, existing: dict | None = None) -> dict:
         # ``agent.provider`` resolves every named custom entry to the literal "custom", losing the entry
         # identity (api_key is never persisted): recover ``custom:<name>`` from the endpoint URL.
         try:
-            from hermes_cli.runtime_provider import canonical_custom_identity
+            from scout_cli.runtime_provider import canonical_custom_identity
             provider = canonical_custom_identity(base_url=base_url, model=model or None) or provider
         except Exception:
             logger.debug("custom provider identity lookup failed", exc_info=True)
@@ -1677,7 +1677,7 @@ def _persist_live_session_system_prompt(session: dict | None) -> None:
     agent, session_key, db = live
     # Re-bind the session's profile runtime scope (the build's finally reset it → root profile's SOUL.md/skills,
     # #50233) and session context (on the RPC thread _SESSION_CWD is unset → the process TERMINAL_CWD would
-    # persist). The full scope, not HERMES_HOME alone: the external memory provider's system_prompt_block()
+    # persist). The full scope, not SCOUT_HOME alone: the external memory provider's system_prompt_block()
     # reads its credential through get_secret, which fails closed once this process multiplexes (#112927).
     session_tokens = _set_session_context(session_key, cwd=_session_cwd(session))
     try:
@@ -1805,12 +1805,12 @@ def _display_mouse_tracking(display: dict) -> str:
 
 
 def _load_reasoning_config(model: str = "") -> dict | None:
-    """Via the shared chokepoint :func:`hermes_constants.resolve_reasoning_config` (per-model override >
+    """Via the shared chokepoint :func:`scout_constants.resolve_reasoning_config` (per-model override >
     global ``agent.reasoning_effort``; YAML False = disabled).
 
     Closes #21256.
     """
-    from hermes_constants import resolve_reasoning_config
+    from scout_constants import resolve_reasoning_config
     return resolve_reasoning_config(_load_cfg(), model)
 
 
@@ -1847,7 +1847,7 @@ _TOOL_PROGRESS_MODES = frozenset({"off", "new", "all", "verbose"})
 
 
 def _load_tool_progress_mode() -> str:
-    env = os.environ.get("HERMES_TUI_TOOL_PROGRESS", "").strip().lower()
+    env = os.environ.get("SCOUT_TUI_TOOL_PROGRESS", "").strip().lower()
     if env in _TOOL_PROGRESS_MODES:
         return env
     raw = _display_cfg().get("tool_progress", "all")
@@ -1858,9 +1858,9 @@ def _load_tool_progress_mode() -> str:
 
 
 def _gui_surface_toolsets(platform: str) -> set[str]:
-    """Toolsets that exist because of the CLIENT (both off ``_HERMES_CORE_TOOLS``; this is the one gate).
+    """Toolsets that exist because of the CLIENT (both off ``_SCOUT_CORE_TOOLS``; this is the one gate).
     ``platform`` is the SESSION's source, never a process env var: the desktop may drive a URL/cloud
-    backend where ``HERMES_DESKTOP`` is unset (AGENTS.md surface rule)."""
+    backend where ``SCOUT_DESKTOP`` is unset (AGENTS.md surface rule)."""
     from toolsets import CLIENT_SURFACE_TOOLSETS
     return set(CLIENT_SURFACE_TOOLSETS) if platform == "desktop" else {"project"}
 
@@ -1891,12 +1891,12 @@ def _tui_notice(text: str) -> None:
 
 
 def _resolve_explicit_toolsets(explicit: list[str], validate_toolset) -> list[str] | None | bool:
-    """Resolve a HERMES_TUI_TOOLSETS pin: list, None for "all", False when nothing was valid."""
+    """Resolve a SCOUT_TUI_TOOLSETS pin: list, None for "all", False when nothing was valid."""
     built_in = [name for name in explicit if validate_toolset(name)]
     unresolved = [name for name in explicit if name not in built_in]
     if unresolved:
         try:
-            from hermes_cli.plugins import discover_plugins
+            from scout_cli.plugins import discover_plugins
             discover_plugins()
             plugin_valid = [name for name in unresolved if validate_toolset(name)]
         except Exception:
@@ -1905,12 +1905,12 @@ def _resolve_explicit_toolsets(explicit: list[str], validate_toolset) -> list[st
         unresolved = [name for name in unresolved if name not in plugin_valid]
     if any(name in {"all", "*"} for name in built_in):
         if ignored := [name for name in explicit if name not in {"all", "*"}]:
-            _tui_notice(f"[tui] HERMES_TUI_TOOLSETS=all enables every toolset; ignoring additional entries: {', '.join(ignored)}")
+            _tui_notice(f"[tui] SCOUT_TUI_TOOLSETS=all enables every toolset; ignoring additional entries: {', '.join(ignored)}")
         return None
     if not unresolved:
         return built_in
     try:  # (enabled, disabled) MCP server names from raw config; both empty on any failure
-        from hermes_cli.config import read_raw_config
+        from scout_cli.config import read_raw_config
         from tools.mcp_tool_common import mcp_server_enabled
         raw_cfg = read_raw_config()
         mcp_servers = raw_cfg.get("mcp_servers") if isinstance(raw_cfg.get("mcp_servers"), dict) else {}
@@ -1925,19 +1925,19 @@ def _resolve_explicit_toolsets(explicit: list[str], validate_toolset) -> list[st
     disabled = [name for name in unresolved if name in mcp_disabled]
     unknown = [name for name in unresolved if name not in mcp_names and name not in mcp_disabled]
     if unknown:
-        _tui_notice(f"[tui] ignoring unknown HERMES_TUI_TOOLSETS entries: {', '.join(unknown)}")
+        _tui_notice(f"[tui] ignoring unknown SCOUT_TUI_TOOLSETS entries: {', '.join(unknown)}")
     if disabled:
-        _tui_notice("[tui] ignoring disabled MCP servers in HERMES_TUI_TOOLSETS "
+        _tui_notice("[tui] ignoring disabled MCP servers in SCOUT_TUI_TOOLSETS "
                     f"(set enabled: true in config.yaml to use): {', '.join(disabled)}")
     return (built_in + mcp_valid) or False
 
 
 def _load_enabled_toolsets(platform: str | None = None) -> list[str] | None:
-    """The agent's toolsets for this session (None = all): an explicit HERMES_TUI_TOOLSETS pin; else the
+    """The agent's toolsets for this session (None = all): an explicit SCOUT_TUI_TOOLSETS pin; else the
     coding posture (coding_context collapses to coding toolset + enabled MCP servers in a code workspace);
     else the configured CLI toolsets. Client-surface toolsets fold in here — only this surface can answer them."""
     session_platform = platform or _resolve_session_platform()
-    explicit = [item.strip() for item in os.environ.get("HERMES_TUI_TOOLSETS", "").split(",") if item.strip()]
+    explicit = [item.strip() for item in os.environ.get("SCOUT_TUI_TOOLSETS", "").split(",") if item.strip()]
     fallback_notice = None
     if not explicit:
         with contextlib.suppress(Exception):
@@ -1954,10 +1954,10 @@ def _load_enabled_toolsets(platform: str | None = None) -> list[str] | None:
         if resolved is not False:
             # An operator pin replaces the surface fold-in but never strips the profile's own role toolsets.
             return resolved if resolved is None else _with_session_toolsets(resolved, None)
-        fallback_notice = "[tui] no valid HERMES_TUI_TOOLSETS entries; using configured CLI toolsets"
+        fallback_notice = "[tui] no valid SCOUT_TUI_TOOLSETS entries; using configured CLI toolsets"
     try:
-        from hermes_cli.config import load_config
-        from hermes_cli.tools_config import _get_platform_tools
+        from scout_cli.config import load_config
+        from scout_cli.tools_config import _get_platform_tools
         cfg = load_config()
         # include_default_mcp_servers=True is the runtime variant (the agent must be able to call
         # default MCP servers); the config-editing variant would silently drop MCP tools from the TUI.
@@ -1970,7 +1970,7 @@ def _load_enabled_toolsets(platform: str | None = None) -> list[str] | None:
         return sorted(_with_session_toolsets(enabled, session_platform)) if enabled else None
     except Exception:
         if fallback_notice is not None:
-            _tui_notice("[tui] no valid HERMES_TUI_TOOLSETS entries and configured CLI toolsets could not be loaded; enabling all toolsets")
+            _tui_notice("[tui] no valid SCOUT_TUI_TOOLSETS entries and configured CLI toolsets could not be loaded; enabling all toolsets")
         return None
 
 
@@ -1979,7 +1979,7 @@ def _load_disabled_toolsets() -> list[str] | None:
 
     The classic CLI (``cli_init_mixin``) and the messaging gateway both forward this list to
     AIAgent, where ``get_tool_definitions`` strips the named toolsets even out of composite
-    defaults like ``hermes-cli`` (#17309). The desktop/TUI gateway historically dropped it, so
+    defaults like ``scout-cli`` (#17309). The desktop/TUI gateway historically dropped it, so
     e.g. ``disabled_toolsets: [browser]`` silently had no effect on Desktop — the only consumer
     was ``_get_platform_tools``'s name-level subtraction, which can't reach inside a composite
     default toolset (#44499).
@@ -1987,7 +1987,7 @@ def _load_disabled_toolsets() -> list[str] | None:
     try:
         from agent.skill_utils import parse_config_string_list
 
-        from hermes_cli.config import load_config
+        from scout_cli.config import load_config
 
         agent_cfg = load_config().get("agent") or {}
         disabled = parse_config_string_list(agent_cfg.get("disabled_toolsets"))
@@ -2104,8 +2104,8 @@ def _get_usage(agent) -> dict:
     with contextlib.suppress(Exception):
         from tools.async_delegation import active_count as _async_active_count
         usage["active_subagents"] = _async_active_count()
-    # Dev-only live credits-spent readout, gated on HERMES_DEV_CREDITS so the payload stays clean otherwise.
-    if is_truthy_value(os.environ.get("HERMES_DEV_CREDITS")):
+    # Dev-only live credits-spent readout, gated on SCOUT_DEV_CREDITS so the payload stays clean otherwise.
+    if is_truthy_value(os.environ.get("SCOUT_DEV_CREDITS")):
         with contextlib.suppress(Exception):
             spent = agent.get_credits_spent_micros()
             if spent is not None:
@@ -2136,7 +2136,7 @@ def _probe_config_health(cfg: dict) -> str:
         personality = str(display_cfg.get("personality", "") or "").strip().lower()
         if personality and personality not in {"default", "none", "neutral"}:
             with contextlib.suppress(Exception):
-                from hermes_cli.personality import available_personalities
+                from scout_cli.personality import available_personalities
                 if personality not in available_personalities(cfg):
                     warnings.append(f"`display.personality: {personality}` does not match any built-in or "
                                     "`agent.personalities` entry; personality overlay will be skipped.")
@@ -2145,7 +2145,7 @@ def _probe_config_health(cfg: dict) -> str:
 
 def _current_profile_name() -> str:
     with contextlib.suppress(Exception):
-        from hermes_cli.profiles import get_active_profile_name
+        from scout_cli.profiles import get_active_profile_name
         return get_active_profile_name() or "default"
     return "default"
 
@@ -2175,7 +2175,7 @@ def _project_info_for_cwd(cwd: str) -> dict | None:
     if not str(cwd or "").strip():
         return None
     try:
-        from hermes_cli import projects_db as pdb
+        from scout_cli import projects_db as pdb
         with pdb.connect_closing() as conn:
             project = pdb.project_for_path(conn, cwd)
         return None if project is None else {
@@ -2211,7 +2211,7 @@ def _fast_tier_applies(agent, model: str, provider: str, *, route_known: bool) -
     profile-wide ``service_tier: fast`` sends nothing to a local server or a proxy, and the session must not
     report Fast there either. ``route_known`` is False while a switch is pending: the agent's base URL still
     belongs to the old route."""
-    from hermes_cli.models import resolve_fast_mode_overrides
+    from scout_cli.models import resolve_fast_mode_overrides
     base_url = None
     if route_known and agent is not None:
         if getattr(agent, "api_mode", None) == "anthropic_messages":
@@ -2255,12 +2255,12 @@ def _session_info(agent, session: dict | None = None) -> dict:
     if provider == "custom" and "provider" not in mirror and agent is not None:
         # Clients reuse this identity for new chats without carrying the endpoint or key.
         # Broadcast/resume callers need not be bound to this session's profile.
-        with _profile_build_scope(sess.get("profile_home") or _hermes_home):
+        with _profile_build_scope(sess.get("profile_home") or _scout_home):
             provider = _runtime_model_config(agent).get("provider", provider)
     model = pending_model or mirror.get("model", getattr(agent, "model", ""))
     # The level the route's entry clamp actually sends (== reasoning_effort when verbatim), so the
     # Desktop can say "ultra sends max on this route" like `/reasoning` does instead of presenting a
-    # Hermes-internal step (#61634) as a wire level the route does not have.
+    # Scout-internal step (#61634) as a wire level the route does not have.
     reasoning_effort_wire = ""
     if reasoning_effort and reasoning_effort != "none":
         reasoning_effort_wire = str(clamp_effort(reasoning_effort, route_supported_efforts(pending_provider or provider, model)) or "")
@@ -2284,8 +2284,8 @@ def _session_info(agent, session: dict | None = None) -> dict:
         "profile_name": profile_name_for_home(sess.get("profile_home")) or _current_profile_name(),
     }
     with contextlib.suppress(Exception):
-        from hermes_cli import __release_date__
-        from hermes_cli.version_info import get_version_info
+        from scout_cli import __release_date__
+        from scout_cli.version_info import get_version_info
 
         info.update(version=get_version_info().base_version, release_date=__release_date__)
     live_agent = agent is not None and not sess.get("_compute_host_active")
@@ -2297,7 +2297,7 @@ def _session_info(agent, session: dict | None = None) -> dict:
                 name = t["function"]["name"]
                 info["tools"].setdefault(get_toolset_for_tool(name) or "other", []).append(name)
         with contextlib.suppress(Exception):
-            from hermes_cli.banner import get_available_skills
+            from scout_cli.banner import get_available_skills
             info["skills"] = get_available_skills()
     info["mcp_servers"] = []
     with contextlib.suppress(Exception):
@@ -2307,8 +2307,8 @@ def _session_info(agent, session: dict | None = None) -> dict:
         info["system_prompt"] = (
             mirror.get("system_prompt") if "system_prompt" in mirror else getattr(agent, "_cached_system_prompt", "") or "")
     with contextlib.suppress(Exception):
-        from hermes_cli.banner import get_update_result
-        from hermes_cli.config import recommended_update_command
+        from scout_cli.banner import get_update_result
+        from scout_cli.config import recommended_update_command
         # Two assignments (not one info.update): if recommended_update_command() raises,
         # update_behind must still be reported, as on main.
         info["update_behind"] = get_update_result(timeout=0.5)
@@ -2386,8 +2386,8 @@ class _RuntimeFallbackResolution(NamedTuple):
 def _resolve_runtime_with_fallback(resolve_kwargs: dict | None = None) -> _RuntimeFallbackResolution:
     """Resolve the primary runtime or one complete provider/model fallback. Provider-only fallback entries
     are skipped so the unavailable primary model can never leak into a different runtime."""
-    from hermes_cli.auth import AuthError
-    from hermes_cli.runtime_provider import resolve_runtime_provider
+    from scout_cli.auth import AuthError
+    from scout_cli.runtime_provider import resolve_runtime_provider
     try:
         return _RuntimeFallbackResolution(resolve_runtime_provider(**(resolve_kwargs or {})), None, False)
     except AuthError as primary_exc:
@@ -2397,7 +2397,7 @@ def _resolve_runtime_with_fallback(resolve_kwargs: dict | None = None) -> _Runti
             if not fb_provider or not fb_model:
                 continue
             try:
-                from hermes_cli.fallback_config import effective_runtime_provider, resolve_entry_api_key
+                from scout_cli.fallback_config import effective_runtime_provider, resolve_entry_api_key
                 fb_kwargs: dict = {"requested": fb_provider, "target_model": fb_model,
                                    **({"explicit_base_url": entry["base_url"]} if entry.get("base_url") else {})}
                 if fb_api_key := resolve_entry_api_key(entry):
@@ -2406,7 +2406,7 @@ def _resolve_runtime_with_fallback(resolve_kwargs: dict | None = None) -> _Runti
                 # Named custom entries resolve to the bare "custom" billing class; keep the configured
                 # identity so the session/UI shows the provider name, matching the manual-switch path (#98739).
                 runtime["provider"] = effective_runtime_provider(entry, runtime)
-                from hermes_cli.auth import primary_failure_wording
+                from scout_cli.auth import primary_failure_wording
                 logging.getLogger(__name__).warning(
                     "Primary %s (%s), falling back to %s model %s",
                     primary_failure_wording(primary_exc)[0], primary_exc, fb_provider, fb_model)
@@ -2427,7 +2427,7 @@ def _resolve_agent_model_runtime(model_override, provider_override) -> tuple[str
         override_base_url = model_override.get("base_url")
         resolve_kwargs = {}
         if str(requested_provider or "").strip().lower() == "custom":
-            from hermes_cli.runtime_provider import canonical_custom_identity
+            from scout_cli.runtime_provider import canonical_custom_identity
             if recovered := canonical_custom_identity(base_url=override_base_url or None, model=model or None):
                 requested_provider = recovered
             if override_base_url:
@@ -2449,7 +2449,7 @@ def _resolve_agent_model_runtime(model_override, provider_override) -> tuple[str
             raise RuntimeError("Auth fallback resolved without a model")
         # Same pre-agent switch the messaging gateway surfaces (#74349); _make_agent pops it onto the
         # agent's one-shot notice so the TUI/Desktop user sees which provider actually answered.
-        from hermes_cli.fallback_config import pre_agent_fallback_notice
+        from scout_cli.fallback_config import pre_agent_fallback_notice
         # requested_provider=None means resolve_runtime_provider read the persisted config provider;
         # ``model: <id>`` (string shorthand) names no provider.
         cfg_model = _load_cfg().get("model")
@@ -2468,11 +2468,11 @@ def _resolve_agent_model_runtime(model_override, provider_override) -> tuple[str
 
 def _rederive_per_model_route(model: str, runtime: dict) -> None:
     """A row's persisted api_mode/base_url were written for whichever model the session last ran. Providers
-    that pick the wire per model (OpenCode Zen/Go, Copilot, Nous) must re-derive both from the target model,
+    that pick the wire per model (OpenCode Zen/Go, Copilot, SpaceshipResearch) must re-derive both from the target model,
     or a resumed opencode-go session keeps a MiniMax-era anthropic_messages route (and its /v1-stripped or
     other-family relay URL) for a chat_completions model like deepseek-v4-flash-vision-exp (#96066)."""
-    from hermes_cli.model_switch import model_derived_api_mode
-    from hermes_cli.models import normalize_opencode_base_url
+    from scout_cli.model_switch import model_derived_api_mode
+    from scout_cli.models import normalize_opencode_base_url
     provider = str(runtime.get("requested_provider") or runtime.get("provider") or "")
     api_mode = model_derived_api_mode(provider, model)
     if api_mode is None:
@@ -2482,9 +2482,9 @@ def _rederive_per_model_route(model: str, runtime: dict) -> None:
 
 
 def _startup_system_prompt(cfg: dict, task_id: str) -> str:
-    """Config ephemeral system prompt + HERMES_TUI_SKILLS preload block. Hard-fails only when EVERY requested
+    """Config ephemeral system prompt + SCOUT_TUI_SKILLS preload block. Hard-fails only when EVERY requested
     skill is missing (cli.py parity): a typo'd name must not auto-block the Kanban task."""
-    from hermes_cli.config import resolve_ephemeral_system_prompt_from_config
+    from scout_cli.config import resolve_ephemeral_system_prompt_from_config
     system_prompt = resolve_ephemeral_system_prompt_from_config(cfg)
     startup_skills = _parse_tui_skills_env()
     if not startup_skills:
@@ -2496,7 +2496,7 @@ def _startup_system_prompt(cfg: dict, task_id: str) -> str:
         if not loaded_skills:
             raise ValueError(f"Unknown skill(s): {missing_display}")
         logger.warning("Unknown skill(s) requested, skipping: %s. Continuing with: %s. "
-                       "List available skills with `hermes skills list`.", missing_display, ", ".join(loaded_skills))
+                       "List available skills with `scout skills list`.", missing_display, ", ".join(loaded_skills))
     if skills_prompt:
         system_prompt = "\n\n".join(part for part in (system_prompt, skills_prompt) if part).strip()
     return system_prompt
@@ -2536,7 +2536,7 @@ def _make_agent(
     from run_agent import AIAgent
     # MCP discovery runs in a daemon thread (a dead server can't freeze the shell); the agent snapshots its tool
     # list once, so briefly wait for in-flight discovery. Dashboard /api/ws uses mcp_startup; TUI stdio uses entry.
-    for _mod in ("hermes_cli.mcp_startup", "tui_gateway.entry"):
+    for _mod in ("scout_cli.mcp_startup", "tui_gateway.entry"):
         with contextlib.suppress(Exception):
             importlib.import_module(_mod).wait_for_mcp_discovery()
     cfg = _load_cfg()
@@ -2548,7 +2548,7 @@ def _make_agent(
     fallback_notice = runtime.pop("_fallback_notice", None)
     _pr = _load_provider_routing()
     platform = _resolve_agent_platform(platform_override)
-    ignore_rules = is_truthy_value(os.environ.get("HERMES_IGNORE_RULES"))
+    ignore_rules = is_truthy_value(os.environ.get("SCOUT_IGNORE_RULES"))
     with _sessions_lock:
         session = _sessions.get(sid)
     agent = AIAgent(
@@ -2572,8 +2572,8 @@ def _make_agent(
         # Builds that run before the record exists (branch, eager resume, compute host) pass it explicitly.
         user_id=auth_user_id if auth_user_id is not None else _session_auth_user_id(session),
         session_db=session_db if session_db is not None else _get_db(), ephemeral_system_prompt=system_prompt or None,
-        checkpoints_enabled=is_truthy_value(os.environ.get("HERMES_TUI_CHECKPOINTS")),
-        pass_session_id=is_truthy_value(os.environ.get("HERMES_TUI_PASS_SESSION_ID")),
+        checkpoints_enabled=is_truthy_value(os.environ.get("SCOUT_TUI_CHECKPOINTS")),
+        pass_session_id=is_truthy_value(os.environ.get("SCOUT_TUI_PASS_SESSION_ID")),
         skip_context_files=ignore_rules, skip_memory=ignore_rules, fallback_model=_load_fallback_model(),
         # The resolved provider's request body (a custom entry's extra_body), as the CLI/cron/gateway pass it.
         request_overrides=runtime.get("request_overrides"),
@@ -2637,7 +2637,7 @@ def _init_session(
             "explicit_cwd": bool(explicit_cwd), "cols": cols, "slash_worker": None,
             "show_reasoning": _load_show_reasoning(), "source": _resolve_session_source(source),
             "tool_progress_mode": _load_tool_progress_mode(), "edit_snapshots": {}, "tool_started_at": {},
-            # Profile-scoped HERMES_HOME (None = launch); SessionBranch copies the parent's (same state.db).
+            # Profile-scoped SCOUT_HOME (None = launch); SessionBranch copies the parent's (same state.db).
             "profile_home": profile_home,
             # In-session /model switch, honored on rebuild (/new, resume) — never leaks to siblings via env vars.
             "model_override": None,
@@ -2790,7 +2790,7 @@ def _schedule_agent_build(sid: str, delay: float = 0.05) -> None:
 def _load_resume_transcript(db, stored_id: str, *, model_history_only: bool = False) -> tuple[list, list, list]:
     """(raw_history, display_history, ancestor_prefix) for a cold resume. The full lineage is materialized
     only while it fits sessions.max_resume_messages (the transcript is REST-paginated), else the tip alone."""
-    from hermes_state import SessionResumeTooLargeError
+    from scout_state import SessionResumeTooLargeError
     if model_history_only:
         raw_history = db.get_messages_as_conversation(
             stored_id, repair_alternation=True, include_row_ids=True)
@@ -3089,7 +3089,7 @@ def _pet_row_frame_counts(spritesheet) -> dict:
 def _pet_cfg() -> dict:
     """``display.pet`` from the canonical config ({} on any failure)."""
     with contextlib.suppress(Exception):
-        from hermes_cli.config import load_config
+        from scout_cli.config import load_config
         display = load_config().get("display")
         pet = display.get("pet") if isinstance(display, dict) else None
         return pet if isinstance(pet, dict) else {}
@@ -3165,7 +3165,7 @@ def _pet_state_rows(spritesheet) -> list[str]:
 
 def _pet_gen_root():
     """Profile-scoped staging dir for in-progress generation drafts."""
-    root = get_hermes_home() / "cache" / "pet-gen"
+    root = get_scout_home() / "cache" / "pet-gen"
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -3198,7 +3198,7 @@ _pet_cancel_lock = threading.Lock()
 _pet_cancelled: set[str] = set()
 _PET_REFERENCE_MIME_EXT = {"png": "png", "jpeg": "jpg", "jpg": "jpg", "webp": "webp", "gif": "gif"}
 try:
-    _PET_REFERENCE_MAX_BYTES = max(1, int(os.environ.get("HERMES_PET_REFERENCE_MAX_BYTES") or str(16 * 1024 * 1024)))
+    _PET_REFERENCE_MAX_BYTES = max(1, int(os.environ.get("SCOUT_PET_REFERENCE_MAX_BYTES") or str(16 * 1024 * 1024)))
 except (TypeError, ValueError):
     _PET_REFERENCE_MAX_BYTES = 16 * 1024 * 1024
 
@@ -3249,7 +3249,7 @@ def _pet_is_cancelled(token: str) -> bool:
 
 
 def _spawn_trees_root():
-    root = get_hermes_home() / "spawn-trees"
+    root = get_scout_home() / "spawn-trees"
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -3439,7 +3439,7 @@ def _rank_slash_completions(items: list[dict], usage, origin_of, *, browsing: bo
         *(() if score_of is None else (score_of(item),)), -usage(name_of(item)), name_of(item)))
     if browsing:
         if registry_command_names is None:
-            from hermes_cli.commands import GATEWAY_KNOWN_COMMANDS
+            from scout_cli.commands import GATEWAY_KNOWN_COMMANDS
             registry_command_names = GATEWAY_KNOWN_COMMANDS
         fixed = [c for c in commands if name_of(c) in registry_command_names]
         other = [c for c in commands if name_of(c) not in registry_command_names]
@@ -3451,24 +3451,24 @@ def _rank_slash_completions(items: list[dict], usage, origin_of, *, browsing: bo
 
 # argv shapes that must not run headless in the gateway process → user hint.
 _CLI_EXEC_BLOCKED = {
-    ("setup",): "`hermes setup` needs a full terminal — run it outside the TUI",
-    ("gateway",): "`hermes gateway` is long-running — run it in another terminal",
-    ("sessions", "browse"): "`hermes sessions browse` is interactive — use /resume here, or run browse in another terminal",
-    ("config", "edit"): "`hermes config edit` needs $EDITOR in a real terminal",
+    ("setup",): "`scout setup` needs a full terminal — run it outside the TUI",
+    ("gateway",): "`scout gateway` is long-running — run it in another terminal",
+    ("sessions", "browse"): "`scout sessions browse` is interactive — use /resume here, or run browse in another terminal",
+    ("config", "edit"): "`scout config edit` needs $EDITOR in a real terminal",
 }
 
 
 def _cli_exec_blocked(argv: list[str]) -> str | None:
     """Return user hint if this argv must not run headless in the gateway process."""
     if not argv:
-        return "bare `hermes` is interactive — use `/hermes chat -q …` or run `hermes` in another terminal"
+        return "bare `scout` is interactive — use `/scout chat -q …` or run `scout` in another terminal"
     head = tuple(a.lower() for a in argv[:2])
     return _CLI_EXEC_BLOCKED.get(head[:1]) or _CLI_EXEC_BLOCKED.get(head)
 
 
 def _resolve_name(name: str) -> str:
     with contextlib.suppress(Exception):
-        from hermes_cli.commands import resolve_command
+        from scout_cli.commands import resolve_command
         return r.name if (r := resolve_command(name)) else name
     return name
 
@@ -3505,7 +3505,7 @@ from . import (  # noqa: E402
     methods_connectors as _methods_connectors, methods_connectors_account as _methods_connectors_account,
     methods_display as _methods_display, methods_display_watch as _methods_display_watch,
     methods_onboarding as _methods_onboarding, methods_i18n as _methods_i18n,
-    methods_shared_metrics as _methods_shared_metrics)
+    methods_shared_metrics as _methods_shared_metrics, methods_planner as _methods_planner)
 
 for _m in (
     _session_transports, _session_reaper, _session_lifecycle, _session_workdir, _compute_host_bridge, _model_switch,
@@ -3517,6 +3517,6 @@ for _m in (
     _methods_bot_relay, _prompt_turn, _billing_view, _methods_projects, _methods_session_foreign,
     _methods_session_control, _methods_subagents, _methods_vault, _methods_free_tier, _methods_connectors,
     _methods_connectors_account, _methods_display, _methods_display_watch, _methods_onboarding,
-    _methods_i18n, _methods_shared_metrics):
+    _methods_i18n, _methods_shared_metrics, _methods_planner):
     _m.register(sys.modules[__name__])
 del _m

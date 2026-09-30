@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as notifications from '@/store/notifications'
 import { makeOAuthProvider } from '@/test/oauth-provider'
-import type { OAuthProvider } from '@/types/hermes'
+import type { OAuthProvider } from '@/types/scout'
 
 import {
   $desktopOnboarding,
@@ -33,7 +33,7 @@ function baseState(overrides: Partial<DesktopOnboardingState> = {}): DesktopOnbo
 }
 
 function installApiMock(api: (request: { path: string }) => Promise<unknown>) {
-  Object.defineProperty(window, 'hermesDesktop', {
+  Object.defineProperty(window, 'scoutDesktop', {
     configurable: true,
     value: { api }
   })
@@ -226,7 +226,7 @@ describe('refreshOnboarding', () => {
 
     installApiMock(api)
     // Simulate a returning user: cache is set and store is configured.
-    window.localStorage.setItem('hermes-desktop-onboarded-v1', '1')
+    window.localStorage.setItem('scout-desktop-onboarded-v1', '1')
     $desktopOnboarding.set(
       baseState({
         configured: true,
@@ -243,7 +243,7 @@ describe('refreshOnboarding', () => {
     expect($desktopOnboarding.get().configured).toBe(true)
     expect($desktopOnboarding.get().reason).toBeNull()
     // The cache must survive the refresh — proving we didn't downgrade.
-    expect(window.localStorage.getItem('hermes-desktop-onboarded-v1')).toBe('1')
+    expect(window.localStorage.getItem('scout-desktop-onboarded-v1')).toBe('1')
   })
 
   it('keeps an unknown readiness notice temporary and clears it on recovery (#124545)', async () => {
@@ -275,7 +275,7 @@ describe('refreshOnboarding', () => {
 
   it('enters setup when the selected OpenRouter credential is genuinely empty', async () => {
     installApiMock(vi.fn())
-    window.localStorage.setItem('hermes-desktop-onboarded-v1', '1')
+    window.localStorage.setItem('scout-desktop-onboarded-v1', '1')
     $desktopOnboarding.set(
       baseState({
         configured: true,
@@ -290,7 +290,7 @@ describe('refreshOnboarding', () => {
     expect(ready).toBe(false)
     expect($desktopOnboarding.get().configured).toBe(false)
     expect($desktopOnboarding.get().reason).toContain('No usable credentials found for openrouter.')
-    expect(window.localStorage.getItem('hermes-desktop-onboarded-v1')).toBeNull()
+    expect(window.localStorage.getItem('scout-desktop-onboarded-v1')).toBeNull()
   })
 
   it('keeps a keyless custom runtime out of setup', async () => {
@@ -408,7 +408,7 @@ describe('OAuth onboarding', () => {
     installApiMock(async ({ body, path }: { body?: unknown; path: string }) => {
       calls.push({ body, path })
 
-      if (path === '/api/providers/oauth/nous/submit') {
+      if (path === '/api/providers/oauth/spaceshipresearch/submit') {
         return { ok: true, status: 'approved' }
       }
 
@@ -416,8 +416,8 @@ describe('OAuth onboarding', () => {
         return {
           providers: [
             {
-              name: 'Nous Portal',
-              slug: 'nous',
+              name: 'Scout Portal',
+              slug: 'spaceshipresearch',
               models: [model]
             }
           ]
@@ -425,11 +425,11 @@ describe('OAuth onboarding', () => {
       }
 
       if (path.startsWith('/api/model/recommended-default?')) {
-        return { provider: 'nous', model, free_tier: false }
+        return { provider: 'spaceshipresearch', model, free_tier: false }
       }
 
       if (path === '/api/model/set') {
-        return { ok: true, provider: 'nous', model, gateway_tools: [] }
+        return { ok: true, provider: 'spaceshipresearch', model, gateway_tools: [] }
       }
 
       throw new Error(`unexpected api path: ${path}`)
@@ -445,7 +445,7 @@ describe('OAuth onboarding', () => {
       }
 
       if (method === 'setup.runtime_check') {
-        expect(params).toEqual({ provider: 'nous' })
+        expect(params).toEqual({ provider: 'spaceshipresearch' })
 
         return { ok: true } as never
       }
@@ -457,7 +457,7 @@ describe('OAuth onboarding', () => {
       baseState({
         flow: {
           status: 'awaiting_user',
-          provider: makeOAuthProvider('nous', 'Nous Portal'),
+          provider: makeOAuthProvider('spaceshipresearch', 'Scout Portal'),
           start: {
             auth_url: 'https://portal.example/auth',
             expires_in: 600,
@@ -467,7 +467,7 @@ describe('OAuth onboarding', () => {
           code: 'fresh-code'
         },
         reason:
-          'No access token found for Nous Portal login. setup.status reports configured credentials, but runtime resolution still failed.',
+          'No access token found for Scout Portal login. setup.status reports configured credentials, but runtime resolution still failed.',
         requested: true
       })
     )
@@ -479,7 +479,7 @@ describe('OAuth onboarding', () => {
     expect(state.flow.status).toBe('confirming_model')
 
     if (state.flow.status === 'confirming_model') {
-      expect(state.flow.label).toBe('Nous Portal')
+      expect(state.flow.label).toBe('Scout Portal')
       expect(state.flow.currentModel).toBe(model)
     }
 
@@ -497,22 +497,22 @@ describe('OAuth onboarding', () => {
   it('does not advance when the default model assignment is not persisted', async () => {
     const model = 'openai/gpt-5.5-pro'
     installApiMock(async ({ path }: { path: string }) => {
-      if (path === '/api/providers/oauth/nous/submit') {
+      if (path === '/api/providers/oauth/spaceshipresearch/submit') {
         return { ok: true, status: 'approved' }
       }
 
       if (path.startsWith('/api/model/options')) {
-        return { providers: [{ name: 'Nous Portal', slug: 'nous', models: [model] }] }
+        return { providers: [{ name: 'Scout Portal', slug: 'spaceshipresearch', models: [model] }] }
       }
 
       if (path.startsWith('/api/model/recommended-default?')) {
-        return { provider: 'nous', model, free_tier: false }
+        return { provider: 'spaceshipresearch', model, free_tier: false }
       }
 
       if (path === '/api/model/set') {
         return {
           ok: false,
-          provider: 'nous',
+          provider: 'spaceshipresearch',
           model,
           confirm_required: true,
           confirm_message: 'Confirm this expensive model.'
@@ -535,7 +535,7 @@ describe('OAuth onboarding', () => {
       baseState({
         flow: {
           status: 'awaiting_user',
-          provider: makeOAuthProvider('nous', 'Nous Portal'),
+          provider: makeOAuthProvider('spaceshipresearch', 'Scout Portal'),
           start: {
             auth_url: 'https://portal.example/auth',
             expires_in: 600,
@@ -871,7 +871,7 @@ describe('device-code poll expiry', () => {
   function deviceCodeProvider() {
     // makeOAuthProvider builds a pkce provider; device-code flows need the
     // device_code branch instead.
-    return { ...makeOAuthProvider('nous', 'Nous Portal'), flow: 'device_code' as const }
+    return { ...makeOAuthProvider('spaceshipresearch', 'Scout Portal'), flow: 'device_code' as const }
   }
 
   function deviceStart(expiresIn: number) {
@@ -888,11 +888,11 @@ describe('device-code poll expiry', () => {
   it('lapses to an error with actionable guidance when the window expires still pending', async () => {
     vi.useFakeTimers()
     installApiMock(async ({ path }: { path: string }) => {
-      if (path === '/api/providers/oauth/nous/start') {
+      if (path === '/api/providers/oauth/spaceshipresearch/start') {
         return deviceStart(2)
       }
 
-      if (path === '/api/providers/oauth/nous/poll/device-sess-1') {
+      if (path === '/api/providers/oauth/spaceshipresearch/poll/device-sess-1') {
         return { status: 'pending' }
       }
 
@@ -915,11 +915,11 @@ describe('device-code poll expiry', () => {
   it('keeps polling while the window is open and clears the expiry on cancel', async () => {
     vi.useFakeTimers()
     installApiMock(async ({ path }: { path: string }) => {
-      if (path === '/api/providers/oauth/nous/start') {
+      if (path === '/api/providers/oauth/spaceshipresearch/start') {
         return deviceStart(600)
       }
 
-      if (path === '/api/providers/oauth/nous/poll/device-sess-1') {
+      if (path === '/api/providers/oauth/spaceshipresearch/poll/device-sess-1') {
         return { status: 'pending' }
       }
 
@@ -980,7 +980,7 @@ describe('setOnboardingModel', () => {
     })
     $desktopOnboarding.set(confirmingModelState())
 
-    await setOnboardingModel('deepseek/deepseek-v4-flash-0731', 'nous', 'Nous Portal')
+    await setOnboardingModel('deepseek/deepseek-v4-flash-0731', 'spaceshipresearch', 'Scout Portal')
 
     const flow = $desktopOnboarding.get().flow
     expect(flow.status).toBe('confirming_model')

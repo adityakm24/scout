@@ -152,7 +152,7 @@ export function initFindInPageListener(): () => void {
   listenerRefs += 1
 
   if (listenerRefs === 1) {
-    detachListener = window.hermesDesktop?.onFoundInPage?.(result => {
+    detachListener = window.scoutDesktop?.onFoundInPage?.(result => {
       updateFindResults(result.activeMatchOrdinal, result.count)
     })
   }
@@ -205,7 +205,7 @@ export function initOpenFindBarListener(): () => void {
   openFindBarRefs += 1
 
   if (openFindBarRefs === 1) {
-    detachOpenFindBar = window.hermesDesktop?.onOpenFindBarRequested?.(() => {
+    detachOpenFindBar = window.scoutDesktop?.onOpenFindBarRequested?.(() => {
       openFindBar()
     })
   }

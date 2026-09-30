@@ -204,14 +204,14 @@ class TestDefaults:
 class TestModelResolution:
 
     def test_no_config_falls_back_to_default(self, image_tool):
-        with patch("hermes_cli.config.load_config", return_value={}):
+        with patch("scout_cli.config.load_config", return_value={}):
             mid, meta = image_tool._resolve_fal_model()
         assert mid == image_tool.DEFAULT_MODEL
 
 
     def test_config_wins_over_env_var(self, image_tool, monkeypatch):
         monkeypatch.setenv("FAL_IMAGE_MODEL", "fal-ai/z-image/turbo")
-        with patch("hermes_cli.config.load_config",
+        with patch("scout_cli.config.load_config",
                    return_value={"image_gen": {"model": "fal-ai/nano-banana-pro"}}):
             mid, _ = image_tool._resolve_fal_model()
         assert mid == "fal-ai/nano-banana-pro"
@@ -276,7 +276,7 @@ class TestExtractHttpStatus:
 
 
 class TestManagedGatewayErrorTranslation:
-    """4xx from the Nous managed gateway should be translated to a user-actionable message."""
+    """4xx from the SpaceshipResearch managed gateway should be translated to a user-actionable message."""
 
     @pytest.fixture(autouse=True)
     def _fal_client_stub(self, image_tool, monkeypatch):
@@ -286,13 +286,13 @@ class TestManagedGatewayErrorTranslation:
         monkeypatch.setattr(image_tool, "fal_client", object())
 
     def test_4xx_translates_to_value_error_with_remediation(self, image_tool, monkeypatch):
-        """403 from managed gateway → ValueError mentioning FAL_KEY + hermes tools."""
+        """403 from managed gateway → ValueError mentioning FAL_KEY + scout tools."""
         from unittest.mock import MagicMock
 
         # Simulate: managed mode active, managed submit raises 4xx.
         managed_gateway = MagicMock()
         managed_gateway.gateway_origin = "https://fal-queue-gateway.example.com"
-        managed_gateway.nous_user_token = "test-token"
+        managed_gateway.spaceshipresearch_user_token = "test-token"
         monkeypatch.setattr(image_tool, "_resolve_managed_fal_gateway",
                             lambda: managed_gateway)
 
@@ -319,7 +319,7 @@ class TestManagedGatewayErrorTranslation:
 
         managed_gateway = MagicMock()
         managed_gateway.gateway_origin = "https://fal-queue-gateway.example.com"
-        managed_gateway.nous_user_token = "test-token"
+        managed_gateway.spaceshipresearch_user_token = "test-token"
         monkeypatch.setattr(
             image_tool, "_resolve_managed_fal_gateway", lambda: managed_gateway
         )
@@ -454,7 +454,7 @@ class TestManagedKreaRouting:
             lambda: SimpleNamespace(
                 vendor="krea",
                 gateway_origin="https://krea-gateway.example.com",
-                nous_user_token="tok",
+                spaceshipresearch_user_token="tok",
                 managed_mode=True,
             ),
         )
@@ -465,7 +465,7 @@ class TestManagedKreaRouting:
             "agent.image_gen_registry.get_provider", lambda name: fake_provider
         )
         monkeypatch.setattr(
-            "hermes_cli.plugins._ensure_plugins_discovered", lambda *a, **k: None
+            "scout_cli.plugins._ensure_plugins_discovered", lambda *a, **k: None
         )
 
         out = image_tool._maybe_route_managed_model("a cat", "portrait")
@@ -482,15 +482,15 @@ class TestManagedPortalRouting:
 
     def _fake_registry(self, monkeypatch, fake_provider):
         monkeypatch.setattr("agent.image_gen_registry.get_provider", lambda name: fake_provider)
-        monkeypatch.setattr("hermes_cli.plugins._ensure_plugins_discovered", lambda *a, **k: None)
+        monkeypatch.setattr("scout_cli.plugins._ensure_plugins_discovered", lambda *a, **k: None)
 
-    def test_routes_portal_model_to_nous_plugin(self, image_tool, monkeypatch):
+    def test_routes_portal_model_to_spaceshipresearch_plugin(self, image_tool, monkeypatch):
         import json as _json
         from unittest.mock import MagicMock
 
-        monkeypatch.setattr(image_tool, "_read_configured_image_provider", lambda: "nous")
+        monkeypatch.setattr(image_tool, "_read_configured_image_provider", lambda: "spaceshipresearch")
         monkeypatch.setattr(image_tool, "_read_configured_image_model", lambda: "openai/gpt-5.4-image-2")
-        fake_provider = MagicMock(display_name="Nous Portal")
+        fake_provider = MagicMock(display_name="Scout Portal")
         fake_provider.generate.return_value = {"success": True, "image": "/tmp/x.png"}
         self._fake_registry(monkeypatch, fake_provider)
 
@@ -502,7 +502,7 @@ class TestManagedPortalRouting:
     def test_portal_model_without_plugin_errors_instead_of_billing_fal(self, image_tool, monkeypatch):
         import json as _json
 
-        monkeypatch.setattr(image_tool, "_read_configured_image_provider", lambda: "nous")
+        monkeypatch.setattr(image_tool, "_read_configured_image_provider", lambda: "spaceshipresearch")
         monkeypatch.setattr(image_tool, "_read_configured_image_model", lambda: "openai/gpt-5.4-image-2")
         self._fake_registry(monkeypatch, None)
 
@@ -609,7 +609,7 @@ class TestUpscaleDispatchForwarding:
             "agent.image_gen_registry.get_provider", lambda name: fake_provider
         )
         monkeypatch.setattr(
-            "hermes_cli.plugins._ensure_plugins_discovered", lambda *a, **k: None
+            "scout_cli.plugins._ensure_plugins_discovered", lambda *a, **k: None
         )
 
         out = image_tool._dispatch_to_plugin_provider("a cat", "square", upscale=True)
@@ -627,7 +627,7 @@ class TestUpscaleDispatchForwarding:
             "agent.image_gen_registry.get_provider", lambda name: fake_provider
         )
         monkeypatch.setattr(
-            "hermes_cli.plugins._ensure_plugins_discovered", lambda *a, **k: None
+            "scout_cli.plugins._ensure_plugins_discovered", lambda *a, **k: None
         )
 
         image_tool._dispatch_to_plugin_provider("a cat", "square")

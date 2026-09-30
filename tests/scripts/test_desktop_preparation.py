@@ -54,8 +54,8 @@ def test_stable_build_accepts_the_admitted_commit_before_the_final_tag_exists(tm
     # The payload identity stays plain; the attempt ref lives only in the claim env.
     assert request.tag == "v1.2.4"
     assert request.release_epoch == 1787965323
-    env = identity_environment(request, "bundled", {"HERMES_RELEASE_EPOCH": "1"})
-    assert env["HERMES_RELEASE_EPOCH"] == "1787965323"
+    env = identity_environment(request, "bundled", {"SCOUT_RELEASE_EPOCH": "1"})
+    assert env["SCOUT_RELEASE_EPOCH"] == "1787965323"
 
     monkeypatch.setenv("RELEASE_CLAIM_OBJECT", "f" * 40)
     with pytest.raises(ValueError, match="exact claim tag object"):

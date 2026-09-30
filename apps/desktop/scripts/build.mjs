@@ -19,7 +19,7 @@ export function buildSourceDesktop({ source = repoRoot, icons, run = execFileSyn
   }
   step('apps/desktop/scripts/write-build-stamp.mjs')
   // locales/_keys.desktop.json is a committed artifact (i18n-keys.test.mjs pins it to en.ts);
-  // the build must not write into the checkout — a dirty tree breaks `hermes update`.
+  // the build must not write into the checkout — a dirty tree breaks `scout update`.
   step('apps/desktop/scripts/stage-native-deps.mjs')
   step('scripts/build/desktop.mjs', ['--source', source, '--icons', icons,
     '--stamp', join(app, 'build/install-stamp.json'), '--native-deps', join(app, 'build/native-deps'), '--out', join(app, 'dist')])

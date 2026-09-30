@@ -1,6 +1,6 @@
 import { useAuiState } from '@assistant-ui/react'
-import type { GatewayEvent } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
+import type { GatewayEvent } from '@scout/shared'
 import { QueryClient } from '@tanstack/react-query'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { useCallback, useRef } from 'react'
@@ -12,8 +12,8 @@ import { mergeOlderTranscriptPage } from '@/app/chat/transcript-backfill'
 import { useMessageStream } from '@/app/session/hooks/use-message-stream'
 import { useSessionStateCache } from '@/app/session/hooks/use-session-state-cache'
 import { stubThreadEnvironment } from '@/components/assistant-ui/test-utils'
-import { getLatestSessionMessages } from '@/hermes'
 import { chatMessageText, toChatMessages } from '@/lib/chat-messages'
+import { getLatestSessionMessages } from '@/scout'
 import { resetLiveSync } from '@/store/live-sync'
 import {
   $busy,
@@ -31,7 +31,7 @@ import {
   restoreSessionTodosFromSnapshot,
   setSessionTodos
 } from '@/store/todos'
-import type { SessionMessage } from '@/types/hermes'
+import type { SessionMessage } from '@/types/scout'
 
 import {
   hydrateStoredSessionTranscript,
@@ -40,7 +40,7 @@ import {
   useBackgroundSync
 } from './use-background-sync'
 
-vi.mock('@/hermes', async original => ({
+vi.mock('@/scout', async original => ({
   ...(await original<Record<string, unknown>>()),
   getLatestSessionMessages: vi.fn()
 }))
@@ -136,7 +136,7 @@ function Harness({
     ...cache,
     queryClient,
     hydrateFromStoredSession: fallback ? hydrate : noop,
-    refreshHermesConfig: noop,
+    refreshScoutConfig: noop,
     refreshSessions: noop
   })
   refresh = useCallback(
@@ -170,7 +170,7 @@ function Harness({
     refreshActiveTranscript: refresh,
     refreshCronJobs: noop,
     refreshCurrentModel: noop,
-    refreshHermesConfig: noop,
+    refreshScoutConfig: noop,
     refreshMessagingSessions: noop,
     refreshSessions: noop,
     requestGateway: async () => ({ sessions: [] }) as never,

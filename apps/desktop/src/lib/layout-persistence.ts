@@ -11,21 +11,21 @@ interface LayoutEntry {
 }
 
 export const LAYOUT_KEYS = {
-  floating: 'hermes.desktop.floatingPanes.v1',
-  tree: 'hermes.desktop.layoutTree.v2',
-  preset: 'hermes.desktop.layoutPreset.active',
-  panes: 'hermes.desktop.paneStates.v1',
-  dismissed: 'hermes.desktop.dismissedPanes.v1',
-  shares: 'hermes.desktop.paneShare.v1',
-  sharePartners: 'hermes.desktop.paneSharePartners.v1',
-  hiddenTabs: 'hermes.desktop.hiddenStripTabs.v1',
-  placed: 'hermes.desktop.userPlacedPanes.v1',
-  flipped: 'hermes.desktop.panesFlipped',
-  collapsed: 'hermes.desktop.collapsedTreeSides.v1'
+  floating: 'scout.desktop.floatingPanes.v1',
+  tree: 'scout.desktop.layoutTree.v2',
+  preset: 'scout.desktop.layoutPreset.active',
+  panes: 'scout.desktop.paneStates.v1',
+  dismissed: 'scout.desktop.dismissedPanes.v1',
+  shares: 'scout.desktop.paneShare.v1',
+  sharePartners: 'scout.desktop.paneSharePartners.v1',
+  hiddenTabs: 'scout.desktop.hiddenStripTabs.v1',
+  placed: 'scout.desktop.userPlacedPanes.v1',
+  flipped: 'scout.desktop.panesFlipped',
+  collapsed: 'scout.desktop.collapsedTreeSides.v1'
 } as const
 
 function migrateLayoutScopes(initialMode: InterfaceMode) {
-  const marker = 'hermes.desktop.layoutModeScopes.v1'
+  const marker = 'scout.desktop.layoutModeScopes.v1'
   const legacy = new Map<string, string>()
 
   if (readKey(marker) !== null) {

@@ -192,11 +192,17 @@ export function PanelListRow({
         className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-md pl-2 pr-1 text-left"
         onClick={onSelect}
       >
+        {/* One fixed-width lead slot, so dot rows and icon rows (cron jobs over
+            blueprints) start their titles on the same column. */}
         {lead ??
           (dotClassName ? (
-            <span aria-hidden="true" className={cn('size-1.5 shrink-0 rounded-full', dotClassName)} />
+            <span aria-hidden="true" className="grid w-3.5 shrink-0 place-items-center">
+              <span className={cn('size-1.5 rounded-full', dotClassName)} />
+            </span>
           ) : icon ? (
-            <Codicon className="shrink-0 text-muted-foreground/55" name={icon} size="0.85rem" />
+            <span aria-hidden="true" className="grid w-3.5 shrink-0 place-items-center">
+              <Codicon className="text-muted-foreground/55" name={icon} size="0.85rem" />
+            </span>
           ) : null)}
         <span className="min-w-0 flex-1 truncate font-medium text-foreground/85">{title}</span>
       </RowButton>
@@ -309,7 +315,7 @@ export function PanelEmpty({ action, description, icon = 'inbox', title }: Panel
 
 export function PanelSectionLabel({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('text-[0.6rem] font-medium uppercase tracking-wider text-muted-foreground/50', className)}>
+    <div className={cn('text-[0.6rem] font-medium text-muted-foreground/50', className)}>
       {children}
     </div>
   )

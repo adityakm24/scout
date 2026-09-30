@@ -4,14 +4,14 @@
 // in entry.tsx. Owned namespace: `chatBits`.
 //
 // loaders.tsx and banner.ts carry no prose (glyph runs + brand art only), so
-// they have no leaves here. Brand names ("Hermes", "Nous Research"), slash
+// they have no leaves here. Brand names ("Scout", "SpaceshipResearch"), slash
 // command names and hotkey chords stay as-is inside the sentences that carry
 // them; the sentence itself is the translatable unit.
 
 export const chatBitsEn = {
   chatBits: {
     branding: {
-      tagFull: 'Nous Research · Messenger of the Digital Gods',
+      tagFull: 'SpaceshipResearch · Messenger of the Digital Gods',
       tagMid: 'Messenger of the Digital Gods',
       scanningSkills: 'scanning skills',
       moreCategories: (count: number) => `(and ${count} more categories…)`,
@@ -85,14 +85,14 @@ export const chatBitsEn = {
       more: (count: number) => `…and ${count} more`
     },
     entry: {
-      noTty: 'hermes-tui: no TTY',
+      noTty: 'scout-tui: no TTY',
       // {0} = memory level ('high' | 'critical'), {1} = formatted heap size, {2} = dump path.
       memoryDump: (level: string, heap: string, path: string) =>
-        `hermes-tui: ${level} memory (${heap}) — auto heap dump → ${path}`,
+        `scout-tui: ${level} memory (${heap}) — auto heap dump → ${path}`,
       dumpFailed: '(failed)',
-      exitingOom: 'hermes-tui: exiting to avoid OOM; restart to recover',
+      exitingOom: 'scout-tui: exiting to avoid OOM; restart to recover',
       heapClimbing: (heap: string) =>
-        `hermes-tui: heap climbing fast (${heap}) — a large tool output or long session may be straining memory`
+        `scout-tui: heap climbing fast (${heap}) — a large tool output or long session may be straining memory`
     }
   }
 }

@@ -1,4 +1,4 @@
-import { compactNumber } from '@hermes/shared'
+import { compactNumber } from '@scout/shared'
 import { type MouseEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { LogSearchField, useLogSearch } from '@/components/chat/log-search'
@@ -10,8 +10,6 @@ import { SearchField } from '@/components/ui/search-field'
 import { SegmentedControl } from '@/components/ui/segmented-control'
 import { ResponsiveTabs } from '@/components/ui/tab-dropdown'
 import { Tip } from '@/components/ui/tooltip'
-import { getActionStatus, getLogs, getStatus, getUsageAnalytics, restartGateway, updateHermes } from '@/hermes'
-import type { ActionStatusResponse, AnalyticsResponse, SessionInfo, StatusResponse } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { sessionTitle } from '@/lib/chat-runtime'
 import {
@@ -29,6 +27,8 @@ import { exportSession } from '@/lib/session-export'
 import { fmtDateTime } from '@/lib/time'
 import { useStoreSelector } from '@/lib/use-session-slice'
 import { cn } from '@/lib/utils'
+import { getActionStatus, getLogs, getStatus, getUsageAnalytics, restartGateway, updateScout } from '@/scout'
+import type { ActionStatusResponse, AnalyticsResponse, SessionInfo, StatusResponse } from '@/scout'
 import { upsertDesktopActionTask } from '@/store/activity'
 import { $pinnedSessionIds, pinSession, SIDEBAR_SESSIONS_PAGE_SIZE, unpinSession } from '@/store/layout'
 import { notify } from '@/store/notifications'
@@ -311,7 +311,7 @@ export function CommandCenterView({
       }
 
       try {
-        const started = kind === 'restart' ? await restartGateway() : await updateHermes()
+        const started = kind === 'restart' ? await restartGateway() : await updateScout()
         let nextStatus: ActionStatusResponse | null = null
 
         for (let attempt = 0; attempt < 18; attempt += 1) {
@@ -497,7 +497,7 @@ export function CommandCenterView({
                             </span>
                           </div>
                           <div className="mt-1 text-[length:var(--conversation-caption-font-size)] text-(--ui-text-tertiary)">
-                            {cc.hermesActiveSessions(status.version, status.active_sessions)}
+                            {cc.scoutActiveSessions(status.version, status.active_sessions)}
                           </div>
                         </div>
                         <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 whitespace-nowrap max-[47.5rem]:whitespace-normal">
@@ -505,7 +505,7 @@ export function CommandCenterView({
                             {cc.restartGateway}
                           </Button>
                           <Button onClick={() => void runSystemAction('update')} size="xs" variant="textStrong">
-                            {cc.updateHermes}
+                            {cc.updateScout}
                           </Button>
                         </div>
                       </div>
@@ -527,7 +527,7 @@ export function CommandCenterView({
 
                 <div className="flex min-h-0 flex-col pt-2">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                    <span className="text-[0.625rem] font-medium uppercase tracking-[0.08em] text-(--ui-text-tertiary)">
+                    <span className="text-[0.6875rem] font-medium text-(--ui-text-tertiary)">
                       {cc.recentLogs}
                     </span>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -653,7 +653,7 @@ function UsagePanel({ error, loading, onRefresh, period, usage }: UsagePanelProp
 
       <section>
         <div className="mb-2 flex items-baseline justify-between">
-          <span className="text-[0.625rem] font-medium uppercase tracking-[0.08em] text-(--ui-text-tertiary)">
+          <span className="text-[0.6875rem] font-medium text-(--ui-text-tertiary)">
             {cc.dailyTokens}
           </span>
           <span className="flex items-center gap-3 text-[0.65rem] text-(--ui-text-tertiary)">
@@ -737,7 +737,7 @@ function UsageList({
 }) {
   return (
     <section className="min-w-0">
-      <div className="mb-1.5 text-[0.625rem] font-medium uppercase tracking-[0.08em] text-(--ui-text-tertiary)">
+      <div className="mb-1.5 text-[0.6875rem] font-medium text-(--ui-text-tertiary)">
         {title}
       </div>
       {rows.length === 0 ? (
@@ -761,7 +761,7 @@ function UsageList({
 function UsageStat({ hint, label, value }: { hint?: string; label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <div className="text-[0.625rem] font-medium uppercase tracking-[0.12em] text-(--ui-text-tertiary)">{label}</div>
+      <div className="text-[0.6875rem] font-medium text-(--ui-text-tertiary)">{label}</div>
       <div className="mt-1 truncate text-base font-semibold tracking-tight text-foreground">{value}</div>
       {hint && <div className="mt-0.5 truncate text-[0.62rem] text-(--ui-text-tertiary)">{hint}</div>}
     </div>

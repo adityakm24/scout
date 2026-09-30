@@ -1,4 +1,4 @@
-import type { GatewayWsUrlResult } from '@hermes/shared'
+import type { GatewayWsUrlResult } from '@scout/shared'
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,10 +11,10 @@ const gatewayMocks = vi.hoisted(() => ({
   }>
 }))
 
-vi.mock('@/hermes', async importOriginal => {
-  const actual = await importOriginal<typeof HermesModule>()
+vi.mock('@/scout', async importOriginal => {
+  const actual = await importOriginal<typeof ScoutModule>()
 
-  class FakeHermesGateway {
+  class FakeScoutGateway {
     connectionState = 'closed'
     wsUrl = ''
     request = vi.fn()
@@ -47,11 +47,11 @@ vi.mock('@/hermes', async importOriginal => {
     }
   }
 
-  return { ...actual, HermesGateway: FakeHermesGateway }
+  return { ...actual, ScoutGateway: FakeScoutGateway }
 })
 
-import type * as HermesModule from '@/hermes'
-import type { HermesGateway } from '@/hermes'
+import type * as ScoutModule from '@/scout'
+import type { ScoutGateway } from '@/scout'
 import {
   $gateway,
   closeSecondaryGateways,
@@ -71,7 +71,7 @@ interface TestGateway {
   wsUrl?: string
 }
 
-const fakeGateway = { connectionState: 'open' } as unknown as HermesGateway
+const fakeGateway = { connectionState: 'open' } as unknown as ScoutGateway
 
 const remoteConnection = {
   authMode: 'oauth' as const,
@@ -119,7 +119,7 @@ function installRemoteDesktop() {
     }
   )
 
-  Object.defineProperty(window, 'hermesDesktop', {
+  Object.defineProperty(window, 'scoutDesktop', {
     configurable: true,
     value: { getConnection, getConnectionFor, getGatewayWsUrl, getGatewayWsUrlFor }
   })
@@ -148,7 +148,7 @@ function installPrimaryDesktop(authMode: 'oauth' | 'token') {
   const getConnectionFor = vi.fn()
   const getGatewayWsUrlFor = vi.fn()
 
-  Object.defineProperty(window, 'hermesDesktop', {
+  Object.defineProperty(window, 'scoutDesktop', {
     configurable: true,
     value: { getConnection, getConnectionFor, getGatewayWsUrl, getGatewayWsUrlFor }
   })
@@ -168,8 +168,8 @@ async function activateRemoteGateway() {
   const desktop = installRemoteDesktop()
   const primary = makePrimaryGateway()
 
-  setPrimaryGateway(primary as unknown as HermesGateway, 'default')
-  $gateway.set(primary as unknown as HermesGateway)
+  setPrimaryGateway(primary as unknown as ScoutGateway, 'default')
+  $gateway.set(primary as unknown as ScoutGateway)
   await ensureGatewayForAgent('ssh-source', 'research')
 
   const gateway = $gateway.get() as unknown as TestGateway
@@ -228,7 +228,7 @@ afterEach(() => {
   $connection.set(null)
   $gatewayState.set('idle')
   $activeGatewayProfile.set('default')
-  Reflect.deleteProperty(window, 'hermesDesktop')
+  Reflect.deleteProperty(window, 'scoutDesktop')
 })
 
 describe('useGatewayRequest', () => {
@@ -254,8 +254,8 @@ describe('useGatewayRequest', () => {
     const primary = makePrimaryGateway()
     primary.request.mockRejectedValueOnce(new Error('connection closed')).mockResolvedValueOnce({ recovered: true })
 
-    setPrimaryGateway(primary as unknown as HermesGateway, 'default')
-    $gateway.set(primary as unknown as HermesGateway)
+    setPrimaryGateway(primary as unknown as ScoutGateway, 'default')
+    $gateway.set(primary as unknown as ScoutGateway)
     $gatewayState.set('open')
 
     const { result } = renderHook(() => useGatewayRequest())
@@ -274,8 +274,8 @@ describe('useGatewayRequest', () => {
     primary.connectionState = 'closed'
     primary.request.mockRejectedValueOnce(new Error('connection closed')).mockResolvedValueOnce({ recovered: true })
 
-    setPrimaryGateway(primary as unknown as HermesGateway, 'default')
-    $gateway.set(primary as unknown as HermesGateway)
+    setPrimaryGateway(primary as unknown as ScoutGateway, 'default')
+    $gateway.set(primary as unknown as ScoutGateway)
     $gatewayState.set('open')
 
     const { result } = renderHook(() => useGatewayRequest())
@@ -364,7 +364,7 @@ describe('useGatewayRequest', () => {
 
   it('surfaces a missing optional scoped mint bridge without falling back to a stale ticket or local lookup', async () => {
     const { desktop, gateway } = await activateRemoteGateway()
-    Reflect.deleteProperty(window.hermesDesktop, 'getGatewayWsUrlFor')
+    Reflect.deleteProperty(window.scoutDesktop, 'getGatewayWsUrlFor')
 
     const { result } = renderHook(() => useGatewayRequest())
 
@@ -383,8 +383,8 @@ describe('useGatewayRequest', () => {
     const primary = makePrimaryGateway()
     primary.request.mockRejectedValueOnce(new Error('connection closed')).mockResolvedValueOnce({ recovered: true })
 
-    setPrimaryGateway(primary as unknown as HermesGateway, 'default')
-    $gateway.set(primary as unknown as HermesGateway)
+    setPrimaryGateway(primary as unknown as ScoutGateway, 'default')
+    $gateway.set(primary as unknown as ScoutGateway)
     $gatewayState.set('closed')
 
     const { result } = renderHook(() => useGatewayRequest())
@@ -415,12 +415,12 @@ describe('useGatewayRequest', () => {
         })
       }
 
-      Object.defineProperty(window, 'hermesDesktop', { configurable: true, value: desktop })
+      Object.defineProperty(window, 'scoutDesktop', { configurable: true, value: desktop })
 
       const primary = makePrimaryGateway()
       primary.request.mockRejectedValueOnce(new Error('connection closed')).mockResolvedValueOnce({ recovered: true })
-      setPrimaryGateway(primary as unknown as HermesGateway, connection.profile)
-      $gateway.set(primary as unknown as HermesGateway)
+      setPrimaryGateway(primary as unknown as ScoutGateway, connection.profile)
+      $gateway.set(primary as unknown as ScoutGateway)
       $activeGatewayProfile.set(connection.profile)
       $gatewayState.set('closed')
 
@@ -451,11 +451,11 @@ describe('useGatewayRequest', () => {
     const dropped = {
       connectionState: 'closed',
       request: vi.fn().mockRejectedValue(new Error('connection closed'))
-    } as unknown as HermesGateway
+    } as unknown as ScoutGateway
 
     const getConnection = vi.fn(() => new Promise(() => undefined))
 
-    ;(window as unknown as { hermesDesktop: unknown }).hermesDesktop = { getConnection }
+    ;(window as unknown as { scoutDesktop: unknown }).scoutDesktop = { getConnection }
     $gateway.set(dropped)
 
     const { result } = renderHook(() => useGatewayRequest())

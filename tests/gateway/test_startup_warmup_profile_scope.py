@@ -1,6 +1,6 @@
 """Boot probes run inside the launch profile's scope under multiplex.
 
-``get_tool_definitions`` runs every ``check_fn``; the vision probe resolves Nous runtime
+``get_tool_definitions`` runs every ``check_fn``; the vision probe resolves SpaceshipResearch runtime
 credentials, whose Portal / inference routing overrides read through ``agent.secret_scope.get_secret``.
 With multiplex active and no scope on the executor thread that read fails closed, the override is
 absent, and a non-production Portal's refresh token is POSTed to the production Portal. The warm-up
@@ -17,17 +17,17 @@ from agent import secret_scope
 from gateway import run as gateway_run
 from gateway.run_startup import GatewayStartupMixin
 
-PORTAL = "https://portal.staging-nousresearch.com"
+PORTAL = "https://portal.staging-spaceshipresearch.com"
 
 
 @pytest.fixture
 def multiplex_home(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir()
-    (home / ".env").write_text(f"HERMES_PORTAL_BASE_URL={PORTAL}\n")
-    monkeypatch.setenv("HERMES_HOME", str(home))
-    monkeypatch.delenv("HERMES_PORTAL_BASE_URL", raising=False)
-    monkeypatch.delenv("NOUS_PORTAL_BASE_URL", raising=False)
+    (home / ".env").write_text(f"SCOUT_PORTAL_BASE_URL={PORTAL}\n")
+    monkeypatch.setenv("SCOUT_HOME", str(home))
+    monkeypatch.delenv("SCOUT_PORTAL_BASE_URL", raising=False)
+    monkeypatch.delenv("SCOUT_PORTAL_BASE_URL", raising=False)
     secret_scope.set_multiplex_active(True)
     try:
         yield home
@@ -37,9 +37,9 @@ def multiplex_home(tmp_path, monkeypatch):
 
 def _probe(seen: dict):
     def probe() -> int:
-        from hermes_cli.auth_nous import _nous_portal_env_override
+        from scout_cli.auth_spaceshipresearch import _scout_portal_env_override
         seen["scope_installed"] = secret_scope._SECRET_SCOPE.get() is not None
-        seen["portal_override"] = _nous_portal_env_override()
+        seen["portal_override"] = _scout_portal_env_override()
         return 1
     return probe
 
@@ -58,9 +58,9 @@ def _run_warmup(monkeypatch, *, multiplex: bool) -> dict:
     async def drive() -> None:
         await _Runner(multiplex=multiplex)._warm_turn_prerequisites()
         # Same task as the warm-up (asyncio.run copies the context, so the caller's view proves nothing).
-        from hermes_constants import get_hermes_home_override
+        from scout_constants import get_scout_home_override
         seen["scope_after"] = secret_scope._SECRET_SCOPE.get()
-        seen["home_override_after"] = get_hermes_home_override()
+        seen["home_override_after"] = get_scout_home_override()
 
     asyncio.run(drive())
     return seen
@@ -81,8 +81,8 @@ def test_single_profile_warmup_keeps_environ_semantics(tmp_path, monkeypatch):
     """Multiplex off: no scope is installed and the process env stays the override source."""
     home = tmp_path / "home"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
-    monkeypatch.setenv("HERMES_PORTAL_BASE_URL", PORTAL)
+    monkeypatch.setenv("SCOUT_HOME", str(home))
+    monkeypatch.setenv("SCOUT_PORTAL_BASE_URL", PORTAL)
     secret_scope.set_multiplex_active(False)
     seen = _run_warmup(monkeypatch, multiplex=False)
     assert seen["scope_installed"] is False

@@ -43,23 +43,23 @@ import { useProfileScope } from "@/contexts/useProfileScope";
 import { ToolsetConfigDrawer } from "@/components/ToolsetConfigDrawer";
 import { SkillEditorDialog } from "@/components/SkillEditorDialog";
 import { LoadErrorNotice } from "@/components/LoadErrorNotice";
-import { useToast } from "@nous-research/ui/hooks/use-toast";
-import { Toast } from "@nous-research/ui/ui/components/toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@nous-research/ui/ui/components/card";
-import { Badge } from "@nous-research/ui/ui/components/badge";
-import { Button } from "@nous-research/ui/ui/components/button";
-import { ListItem } from "@nous-research/ui/ui/components/list-item";
-import { Spinner } from "@nous-research/ui/ui/components/spinner";
-import { Switch } from "@nous-research/ui/ui/components/switch";
+import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
+import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@spaceshipresearch/ui/ui/components/card";
+import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
+import { Button } from "@spaceshipresearch/ui/ui/components/button";
+import { ListItem } from "@spaceshipresearch/ui/ui/components/list-item";
+import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
+import { Switch } from "@spaceshipresearch/ui/ui/components/switch";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@nous-research/ui/ui/components/dialog";
+} from "@spaceshipresearch/ui/ui/components/dialog";
 import { cn } from "@/lib/utils";
-import { Input } from "@nous-research/ui/ui/components/input";
+import { Input } from "@spaceshipresearch/ui/ui/components/input";
 import { useI18n } from "@/i18n";
 import { en } from "@/i18n/en";
 import { usePageHeader } from "@/contexts/usePageHeader";
@@ -706,7 +706,7 @@ export default function SkillsPage() {
           <DialogHeader>
             <DialogTitle>Learn a skill</DialogTitle>
             <DialogDescription>
-              Point Hermes at anything and it will distill a reusable skill —
+              Point Scout at anything and it will distill a reusable skill —
               following the house authoring standards. Fill in any combination
               below; the agent gathers the sources and writes the skill in chat.
             </DialogDescription>
@@ -1117,7 +1117,7 @@ function HubBrowser({
                   Featured skills
                 </span>
                 <span className="text-xs text-text-tertiary">
-                  from the Hermes index — search above for thousands more
+                  from the Scout index — search above for thousands more
                 </span>
               </div>
               {featured.map((r) => (
@@ -1208,7 +1208,7 @@ function ConnectedHubs({
     return (
       <p className="text-xs text-muted-foreground">
         Results come from the same sources as{" "}
-        <span className="font-mono">hermes skills search</span>.
+        <span className="font-mono">scout skills search</span>.
       </p>
     );
   }
@@ -1220,7 +1220,7 @@ function ConnectedHubs({
       </span>
       {sources.map((s) => {
         const down =
-          (s.id === "hermes-index" && s.available === false) ||
+          (s.id === "scout-index" && s.available === false) ||
           (s.id === "github" && s.rate_limited === true);
         return (
           <Badge
@@ -1230,7 +1230,7 @@ function ConnectedHubs({
             title={
               s.id === "github" && s.rate_limited
                 ? "GitHub API rate-limited — set GITHUB_TOKEN to raise the limit"
-                : s.id === "hermes-index" && s.available === false
+                : s.id === "scout-index" && s.available === false
                   ? "Centralized index unavailable — falling back to live sources"
                   : undefined
             }

@@ -1,7 +1,7 @@
-import { LOCAL_CONNECTION_ID } from '@hermes/shared'
+import { LOCAL_CONNECTION_ID } from '@scout/shared'
 
-import { capabilityScoped, hermesApi, type OwnerScope } from '@/api/client'
-import type { HermesConnection } from '@/global'
+import { capabilityScoped, type OwnerScope, scoutApi } from '@/api/client'
+import type { ScoutConnection } from '@/global'
 import { translateNow } from '@/i18n'
 import { desktopFsCacheKey, readDesktopFileDataUrl } from '@/lib/desktop-fs'
 import { LruCache } from '@/lib/lru-cache'
@@ -99,14 +99,14 @@ export async function resolveMediaDisplaySrc(path: string, owner?: OwnerScope): 
   // An explicit local owner is this device, even with a remote foreground.
   // Keep the native reader and its configured size cap; the backend preview
   // endpoint has a separate fixed limit.
-  if (owner?.connectionId === LOCAL_CONNECTION_ID && window.hermesDesktop?.readFileDataUrl) {
-    return window.hermesDesktop.readFileDataUrl(filePathFromMediaPath(path))
+  if (owner?.connectionId === LOCAL_CONNECTION_ID && window.scoutDesktop?.readFileDataUrl) {
+    return window.scoutDesktop.readFileDataUrl(filePathFromMediaPath(path))
   }
 
   // A tile can belong to a different gateway than the foreground. Pin both
   // halves at read admission rather than resolving them when the read settles.
-  if (window.hermesDesktop && (owner?.connectionId || owner?.profile)) {
-    const result = await hermesApi<string | { dataUrl?: string }>({
+  if (window.scoutDesktop && (owner?.connectionId || owner?.profile)) {
+    const result = await scoutApi<string | { dataUrl?: string }>({
       path: `/api/fs/read-data-url?path=${encodeURIComponent(filePathFromMediaPath(path))}`,
       ...(owner.connectionId ? { connectionId: owner.connectionId } : {}),
       ...(owner.profile ? { profile: owner.profile } : {})
@@ -115,15 +115,15 @@ export async function resolveMediaDisplaySrc(path: string, owner?: OwnerScope): 
     return typeof result === 'string' ? result : result.dataUrl || ''
   }
 
-  if (window.hermesDesktop && isRemoteGateway()) {
+  if (window.scoutDesktop && isRemoteGateway()) {
     return gatewayMediaDataUrl(path)
   }
 
-  if (!window.hermesDesktop?.readFileDataUrl) {
+  if (!window.scoutDesktop?.readFileDataUrl) {
     return mediaExternalUrl(path)
   }
 
-  return window.hermesDesktop.readFileDataUrl(filePathFromMediaPath(path))
+  return window.scoutDesktop.readFileDataUrl(filePathFromMediaPath(path))
 }
 
 export interface MediaImageDimensions {
@@ -137,7 +137,7 @@ export interface MediaImageDimensions {
 // of reserving a frame that collapses again.
 const imageDimensions = new LruCache<string, 'broken' | MediaImageDimensions>(512)
 
-export function mediaImageKey(path: string, connection: HermesConnection | null, owner?: OwnerScope): string {
+export function mediaImageKey(path: string, connection: ScoutConnection | null, owner?: OwnerScope): string {
   // File reads ignore URL query/fragment, but callers can use them to identify
   // a new revision. Keep them in the geometry key while joining proven aliases.
   const revision = /^file:/i.test(path) ? (path.match(/[?#].*$/)?.[0] ?? '') : ''
@@ -208,7 +208,7 @@ export async function resolveMediaPlaybackSrc(path: string): Promise<string> {
     return path
   }
 
-  if (window.hermesDesktop && ['audio', 'video'].includes(mediaKind(path))) {
+  if (window.scoutDesktop && ['audio', 'video'].includes(mediaKind(path))) {
     return isRemoteGateway() ? mediaGatewayStreamUrl(path) : mediaStreamUrl(path)
   }
 
@@ -253,7 +253,7 @@ export function mediaGatewayStreamUrl(path: string): string {
       .filter(Boolean)
       .join('&')
 
-    return `hermes-media://remote/${file}${scope ? `?${scope}` : ''}`
+    return `scout-media://remote/${file}${scope ? `?${scope}` : ''}`
   }
 
   return mediaExternalUrl(path)
@@ -263,7 +263,7 @@ export function mediaGatewayStreamUrl(path: string): string {
 // file with Range support. Used for audio/video so playback bypasses the data
 // URL size cap and supports seeking. `path` may be a plain path or `file://…`.
 export function mediaStreamUrl(path: string): string {
-  return `hermes-media://stream/${encodeURIComponent(filePathFromMediaPath(path))}`
+  return `scout-media://stream/${encodeURIComponent(filePathFromMediaPath(path))}`
 }
 
 export function mediaPathFromMarkdownHref(href?: string): string | null {
@@ -298,7 +298,7 @@ export function isRemoteGateway(): boolean {
 
 // Fetch gateway-local media as a data URL via the authenticated desktop FS
 // bridge. Remote Desktop artifacts can live anywhere the gateway can read
-// (workspace, skills, ~/.hermes/cache, etc.); /api/media is intentionally
+// (workspace, skills, ~/.scout/cache, etc.); /api/media is intentionally
 // narrower and rejects non-images plus images outside its media roots.
 export async function gatewayMediaDataUrl(path: string): Promise<string> {
   return readDesktopFileDataUrl(filePathFromMediaPath(path))
@@ -336,14 +336,14 @@ export async function downloadGatewayMediaFile(
     throw new Error('Missing gateway file path')
   }
 
-  if (!window.hermesDesktop?.saveGatewayFile) {
+  if (!window.scoutDesktop?.saveGatewayFile) {
     throw new Error('Desktop file download bridge is unavailable')
   }
 
   const conn = $connection.get()
   const owner = origin.owner ?? { connectionId: conn?.connectionId, profile: origin.profile ?? conn?.profile }
 
-  return window.hermesDesktop.saveGatewayFile({
+  return window.scoutDesktop.saveGatewayFile({
     ...(owner.connectionId ? { connectionId: owner.connectionId } : {}),
     path,
     ...(owner.profile ? { profile: owner.profile } : {}),

@@ -410,7 +410,7 @@ axolotl inference your_config.yml --gradio
 
 Example 4 (bash):
 ```bash
-cat ~/.hermes/cache/scratch/prompt.txt | axolotl inference your_config.yml \
+cat ~/.scout/cache/scratch/prompt.txt | axolotl inference your_config.yml \
   --base-model="./completed-model" --prompter=None
 ```
 
@@ -3181,7 +3181,7 @@ axolotl train examples/llama-3/lora-1b.yml
 
 Example 3 (yaml):
 ```yaml
-base_model: NousResearch/Llama-3.2-1B
+base_model: SpaceshipResearch/Llama-3.2-1B
 
 load_in_8bit: true
 adapter: lora
@@ -3196,7 +3196,7 @@ output_dir: ./outputs/lora-out
 
 Example 4 (yaml):
 ```yaml
-base_model: NousResearch/Nous-Hermes-llama-1b-v1
+base_model: SpaceshipResearch/SpaceshipResearch-Scout-llama-1b-v1
 
 load_in_8bit: true
 adapter: lora

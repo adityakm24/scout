@@ -1,6 +1,6 @@
 """OpenAI-compatible TTS backends for ``tools.tts_tool``: OpenAI and DeepInfra.
 
-Also owns the managed-gateway (Nous portal ``openai-audio`` proxy) route selection that
+Also owns the managed-gateway (Scout portal ``openai-audio`` proxy) route selection that
 decides where the OpenAI client points. Seams defined on the origin module (``_load_tts_config``,
 ``_import_openai_client``, ``_resolve_provider_key``, ``_generate_openai_tts``) are resolved
 through :func:`_origin` at call time.
@@ -15,7 +15,7 @@ from urllib.parse import urljoin
 
 from tools.managed_tool_gateway import resolve_managed_tool_gateway
 from tools.tool_backend_helpers import (
-    NOUS_MANAGED_PROVIDER, managed_nous_tools_enabled, nous_tool_gateway_unavailable_message,
+    SPACESHIPRESEARCH_MANAGED_PROVIDER, managed_spaceshipresearch_tools_enabled, spaceshipresearch_tool_gateway_unavailable_message,
     read_selection, resolve_openai_audio_api_key, selection_error)
 from tools.tts_tool_delivery import _origin, _section
 from tools.tts_tool_providers import _tts_response_format_from_path
@@ -27,7 +27,7 @@ DEFAULT_OPENAI_MODEL = "gpt-4o-mini-tts"
 MANAGED_OPENAI_TTS_MODELS = frozenset({"gpt-4o-mini-tts"})
 DEFAULT_OPENAI_VOICE = "alloy"
 DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
-# DeepInfra base URL is resolved via hermes_cli.models.deepinfra_base_url (shared).
+# DeepInfra base URL is resolved via scout_cli.models.deepinfra_base_url (shared).
 DEFAULT_DEEPINFRA_TTS_VOICE = "default"
 
 
@@ -35,23 +35,23 @@ def _managed_openai_audio_route() -> Optional[tuple]:
     gateway = resolve_managed_tool_gateway("openai-audio")
     if gateway is None:
         return None
-    return gateway.nous_user_token, urljoin(f"{gateway.gateway_origin.rstrip('/')}/", "v1"), True
+    return gateway.spaceshipresearch_user_token, urljoin(f"{gateway.gateway_origin.rstrip('/')}/", "v1"), True
 
 
 def _resolve_openai_audio_client_config() -> tuple[str, str, bool]:
     """``(api_key, base_url, is_managed)`` for the OpenAI audio client (``is_managed`` = the restricted
-    Nous proxy, so callers coerce the request). Strict on the stored ``tts`` selection: ``"nous"``
+    SpaceshipResearch proxy, so callers coerce the request). Strict on the stored ``tts`` selection: ``"spaceshipresearch"``
     → managed ONLY (error if unavailable); any other → direct credentials ONLY (``tts.openai.api_key``
     then ``VOICE_TOOLS_OPENAI_KEY``/``OPENAI_API_KEY``); unset → config key → env key → managed."""
     origin = _origin()
     openai_cfg = _section(origin._load_tts_config(), "openai")
     selected = read_selection("tts")
-    if selected == NOUS_MANAGED_PROVIDER:
+    if selected == SPACESHIPRESEARCH_MANAGED_PROVIDER:
         route = _managed_openai_audio_route()
         if route is None:
             raise ValueError(selection_error(
-                "tts", NOUS_MANAGED_PROVIDER,
-                "the Nous Tool Gateway is not available (not entitled or unreachable)"))
+                "tts", SPACESHIPRESEARCH_MANAGED_PROVIDER,
+                "the SpaceshipResearch Tool Gateway is not available (not entitled or unreachable)"))
         return route
     direct_api_key = openai_cfg.get("api_key") or resolve_openai_audio_api_key()
     if direct_api_key:
@@ -64,8 +64,8 @@ def _resolve_openai_audio_client_config() -> tuple[str, str, bool]:
     route = _managed_openai_audio_route()
     if route is None:
         message = "Neither tts.openai.api_key in config nor VOICE_TOOLS_OPENAI_KEY/OPENAI_API_KEY is set"
-        if managed_nous_tools_enabled():
-            message += ". " + nous_tool_gateway_unavailable_message("managed OpenAI audio for TTS")
+        if managed_spaceshipresearch_tools_enabled():
+            message += ". " + spaceshipresearch_tool_gateway_unavailable_message("managed OpenAI audio for TTS")
         raise ValueError(message)
     return route
 
@@ -147,13 +147,13 @@ def _generate_openai_tts(
 
 
 def _generate_deepinfra_tts(text: str, output_path: str, tts_config: Dict[str, Any]) -> str:
-    """Resolve DeepInfra credentials/model (live ``hermes_cli.models`` catalog, no hardcoded ids), then
+    """Resolve DeepInfra credentials/model (live ``scout_cli.models`` catalog, no hardcoded ids), then
     delegate to the OpenAI-compatible handler."""
     api_key = _origin()._resolve_provider_key("DEEPINFRA_API_KEY", "deepinfra")
     if not api_key:
-        raise ValueError("DEEPINFRA_API_KEY not set. Run `hermes setup` to configure, or set the env var directly.")
+        raise ValueError("DEEPINFRA_API_KEY not set. Run `scout setup` to configure, or set the env var directly.")
     di_config = _section(tts_config, "deepinfra")
-    from hermes_cli.models import deepinfra_base_url, deepinfra_model_ids
+    from scout_cli.models import deepinfra_base_url, deepinfra_model_ids
     model = di_config.get("model")
     if not isinstance(model, str) or not model.strip():
         candidates = deepinfra_model_ids("tts")

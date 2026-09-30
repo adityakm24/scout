@@ -15,15 +15,15 @@
  * drift on the next page.
  */
 
-import { getOlderSessionMessages, type ProfileScope } from '@/hermes'
 import { type ChatMessage, chatMessageText, toChatMessages } from '@/lib/chat-messages'
+import { getOlderSessionMessages, type ProfileScope } from '@/scout'
 import {
   recordTranscriptBackfillPage,
   tailStateFromPage,
   type TranscriptProfileScope,
   transcriptTailState
 } from '@/store/transcript-tail'
-import type { SessionMessagesResponse } from '@/types/hermes'
+import type { SessionMessagesResponse } from '@/types/scout'
 
 /** Older rows likely exist beyond what the in-memory store holds. */
 export function transcriptBackfillAvailable(

@@ -179,8 +179,8 @@ class TestLifecycle:
         method_calls = [m for (m, _) in client.requests if m == "thread/start"]
         assert len(method_calls) == 1
 
-    def test_thread_start_carries_hermes_prompt_and_disables_codex_personality(self):
-        """thread/start carries cwd, Hermes' composed prompt as developerInstructions and
+    def test_thread_start_carries_scout_prompt_and_disables_codex_personality(self):
+        """thread/start carries cwd, Scout's composed prompt as developerInstructions and
         personality "none" (#74712, #72104, #26035). We intentionally do NOT pass `permissions`
         (experimentalApi-gated + requires a matching config.toml [permissions] table)."""
         client = FakeClient()
@@ -201,7 +201,7 @@ class TestLifecycle:
         """#75186: for ``provider=custom`` + a configured ``providers.<name>`` entry, the session built by
         ``_ensure_codex_session`` sends ``model`` + ``modelProvider=<name>`` on thread/start and never the
         API key; openai/openai-codex agents keep codex's defaults (cwd only)."""
-        import hermes_cli.runtime_provider as rp
+        import scout_cli.runtime_provider as rp
         from agent.codex_runtime import _ensure_codex_session
         from agent.transports import codex_app_server_session as sess_mod
         monkeypatch.setattr(rp, "load_config", lambda: {
@@ -1139,7 +1139,7 @@ class TestTransportLoss:
         steer_session._issue_interrupt("turn-fake-001")  # must not raise
 
 
-def test_only_current_turn_progress_reaches_hermes_activity_clock():
+def test_only_current_turn_progress_reaches_scout_activity_clock():
     from agent.activity_tracking import ActivityTrackingMixin
     from agent.codex_runtime import make_codex_app_server_event_bridge
 

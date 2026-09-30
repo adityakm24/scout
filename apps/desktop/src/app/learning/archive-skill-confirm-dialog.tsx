@@ -1,9 +1,9 @@
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { deleteLearningNode, type ProfileScope } from '@/hermes'
 import { type Translations, useI18n } from '@/i18n'
+import { deleteLearningNode, type ProfileScope } from '@/scout'
 import { notify } from '@/store/notifications'
 
-export const ARCHIVE_SKILL_DESCRIPTION = 'The skill is archived and can be restored with `hermes curator restore`.'
+export const ARCHIVE_SKILL_DESCRIPTION = 'The skill is archived and can be restored with `scout curator restore`.'
 
 export function notifySkillArchived(t: Translations): void {
   notify({ kind: 'success', message: t.skills.skillArchivedMessage, title: t.skills.skillArchivedTitle })

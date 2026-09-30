@@ -1,7 +1,7 @@
 import { atom } from 'nanostores'
 
 import { translateNow } from '@/i18n'
-import { type HermesOpenTarget, resolveHermesOpenPath } from '@/lib/hermes-open-target'
+import { resolveScoutOpenPath, type ScoutOpenTarget } from '@/lib/scout-open-target'
 import { persistString, storedString } from '@/lib/storage'
 
 import { recordFeatureToggle } from './desktop-metrics'
@@ -18,12 +18,12 @@ import { isSessionGone, isSessionGoneForBackgroundPolling, markSessionGone } fro
 import { $activeSessionId, ownerLookupSessionRows, sessionMatchesStoredId } from './session'
 import { storedSessionIdForRuntimeId } from './session-states'
 
-export type { HermesOpenTarget }
+export type { ScoutOpenTarget }
 
 // Native OS notifications (Electron `Notification`), separate from the in-app
 // toast feed in `notifications.ts`. Each kind toggles independently.
 export type NativeNotificationKind =
-  'approval' | 'backgroundDone' | 'credits' | 'input' | 'plugin' | 'turnDone' | 'turnError'
+  'approval' | 'backgroundDone' | 'credits' | 'input' | 'plugin' | 'reminder' | 'turnDone' | 'turnError'
 
 export const NATIVE_NOTIFICATION_KINDS: readonly NativeNotificationKind[] = [
   'approval',
@@ -32,18 +32,23 @@ export const NATIVE_NOTIFICATION_KINDS: readonly NativeNotificationKind[] = [
   'turnError',
   'backgroundDone',
   'credits',
-  'plugin'
+  'plugin',
+  'reminder'
 ]
 
 // Blocking prompts — surface even while focused if they're for another session.
 const ATTENTION_KINDS = new Set<NativeNotificationKind>(['approval', 'input'])
+
+// Time-critical and asked for by the user — like a Reminders alert, these ring
+// whether or not Scout is in front.
+const ALWAYS_KINDS = new Set<NativeNotificationKind>(['reminder'])
 
 export interface NativeNotificationPrefs {
   enabled: boolean
   kinds: Record<NativeNotificationKind, boolean>
 }
 
-const STORAGE_KEY = 'hermes:native-notifications'
+const STORAGE_KEY = 'scout:native-notifications'
 
 const DEFAULT_PREFS: NativeNotificationPrefs = {
   enabled: true,
@@ -53,6 +58,7 @@ const DEFAULT_PREFS: NativeNotificationPrefs = {
     credits: true,
     input: true,
     plugin: true,
+    reminder: true,
     turnDone: true,
     turnError: true
   }
@@ -125,7 +131,7 @@ function throttled(key: string, now: number): boolean {
   return false
 }
 
-// "Backgrounded" = the user isn't on Hermes. `document.hidden` only flips when
+// "Backgrounded" = the user isn't on Scout. `document.hidden` only flips when
 // minimized/occluded; an alt-tabbed window is visible-but-unfocused, so we also
 // check `document.hasFocus()`.
 function isBackgrounded(): boolean {
@@ -141,6 +147,10 @@ function isBackgrounded(): boolean {
 }
 
 function shouldFire(kind: NativeNotificationKind, sessionId?: null | string, global = false): boolean {
+  if (ALWAYS_KINDS.has(kind)) {
+    return true
+  }
+
   // Global notifications aren't tied to a chat session (e.g. pet generation,
   // which runs from the command center with no active conversation). They fire
   // whenever the user is away, with no session-match requirement — otherwise a
@@ -212,7 +222,7 @@ export interface NativeNotificationInput {
   icon?: string
   /**
    * Resolved hash-router path to open on body click when there is no
-   * `sessionId` (plugins). Same vocabulary as `hermes://index-network/intent/1`.
+   * `sessionId` (plugins). Same vocabulary as `scout://index-network/intent/1`.
    */
   activate?: string
   /** Renderer-side handle so click/action can invoke registered callbacks. */
@@ -229,7 +239,9 @@ export function dispatchNativeNotification(input: NativeNotificationInput): bool
     return false
   }
 
-  if (withinNativeNotifyBaseline()) {
+  // Reminders are exempt: one that fired while Scout was closed is news on
+  // launch, and the planner already dedupes what it has announced.
+  if (withinNativeNotifyBaseline() && !ALWAYS_KINDS.has(input.kind)) {
     return false
   }
 
@@ -244,7 +256,7 @@ export function dispatchNativeNotification(input: NativeNotificationInput): bool
   const namedKey = input.sessionId ? NAMED_TITLE_KEYS[input.kind] : undefined
   const title = namedKey && input.sessionId ? withSessionLabel(namedKey, input.sessionId) : input.title
 
-  void window.hermesDesktop?.notify({
+  void window.scoutDesktop?.notify({
     actions: input.actions,
     activate: input.activate,
     body: input.body,
@@ -266,8 +278,8 @@ export function dispatchNativeNotification(input: NativeNotificationInput): bool
 export interface PluginNotificationAction {
   id: string
   label: string
-  /** Navigate here on button press (path or `hermes://index-network/intent/1`). */
-  activate?: HermesOpenTarget
+  /** Navigate here on button press (path or `scout://index-network/intent/1`). */
+  activate?: ScoutOpenTarget
   /** Renderer callback — only `id` crosses IPC; this stays in-process. */
   onAction?: () => void
 }
@@ -280,10 +292,10 @@ export interface PluginNativeNotificationInput {
   icon?: string
   /**
    * Where body-click should land. Accepts a plugin deep link
-   * (`hermes://index-network/intent/1`), a hash path (`/index-network/intent/1`),
+   * (`scout://index-network/intent/1`), a hash path (`/index-network/intent/1`),
    * or `{ path, params }` — all resolve through the same helper as OS deep links.
    */
-  activate?: HermesOpenTarget
+  activate?: ScoutOpenTarget
   /** Extra work on body click (runs in addition to `activate` navigation). */
   onActivate?: () => void
   actions?: PluginNotificationAction[]
@@ -341,14 +353,14 @@ export function clearPluginNotifyHandlers(notifyId?: string): void {
 /** Native OS notification on behalf of a plugin. One "Plugin notifications"
  *  preference gates all plugins; the plugin id keys throttling/dedupe so two
  *  plugins can't collapse each other's notifications. Fires only while the
- *  user is away from Hermes — the in-app toast (`host.notify`) covers the
+ *  user is away from Scout — the in-app toast (`host.notify`) covers the
  *  foreground case. */
 export function dispatchPluginNativeNotification(pluginId: string, input: PluginNativeNotificationInput): void {
-  const activate = resolveHermesOpenPath(input.activate) ?? undefined
+  const activate = resolveScoutOpenPath(input.activate) ?? undefined
   const notifyId = input.onActivate || input.actions?.some(a => a.onAction) ? mintNotifyId(pluginId) : undefined
 
   const actions: NativeNotificationAction[] | undefined = input.actions?.map(action => ({
-    activate: resolveHermesOpenPath(action.activate) ?? undefined,
+    activate: resolveScoutOpenPath(action.activate) ?? undefined,
     id: action.id,
     text: action.label
   }))
@@ -427,7 +439,7 @@ export async function respondToApprovalAction(sessionId: null | string, actionId
 // Settings "send test" — bypasses gating. Returns whether the OS accepted it so
 // the panel can flag a silent permission failure instead of looking dead.
 export async function sendTestNativeNotification(title: string, body: string): Promise<boolean> {
-  const bridge = window.hermesDesktop
+  const bridge = window.scoutDesktop
 
   if (!bridge?.notify) {
     return false

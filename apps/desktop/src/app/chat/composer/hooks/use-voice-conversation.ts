@@ -296,7 +296,7 @@ export function useVoiceConversation({
 
     try {
       // VAD tuning mirrors `tools.voice_mode` defaults so the browser loop matches the CLI.
-      // `silenceMs` honours `voice.silence_duration` (seeded by useHermesConfig): only a
+      // `silenceMs` honours `voice.silence_duration` (seeded by useScoutConfig): only a
       // user-set value overrides the desktop's tuned 1.25 s hold, which every turn sits
       // through as dead air.
       await handle.start({
@@ -416,7 +416,7 @@ export function useVoiceConversation({
         // Fail-closed echo guard (tools/voice_mode_transcript.is_tts_echo):
         // over speakers the reply bleeds into the mic and trips the playback-
         // phase trigger. A transcript matching what was being spoken is
-        // Hermes hearing itself — treat it as silence: no submit, and clear
+        // Scout hearing itself — treat it as silence: no submit, and clear
         // the interruption latch so a later real turn isn't annotated.
         if (echoSource && isTtsEcho(transcript, echoSource)) {
           takeVoicePlaybackInterrupted()

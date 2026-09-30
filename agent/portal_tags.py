@@ -1,8 +1,8 @@
-"""Centralized Nous Portal request tags.
+"""Centralized Scout Portal request tags.
 
-Every Hermes request to the Nous Portal (main loop, auxiliary client, fallback
+Every Scout request to the Scout Portal (main loop, auxiliary client, fallback
 paths) must carry the same product-attribution tags, sent in OpenAI-compatible
-``extra_body['tags']``: ``["product=hermes-agent", "client=hermes-client-v<base_version>"]``.
+``extra_body['tags']``: ``["product=scout-agent", "client=scout-client-v<base_version>"]``.
 The value comes from the canonical runtime identity's base version so build
 provenance never leaks into this compatibility tag.
 """
@@ -15,18 +15,18 @@ from typing import List, Optional
 # Ambient conversation id (ATTRIBUTION value, sent as ``conversation=<id>``).
 # The agent loop publishes it at turn entry; auxiliary call sites funnelling
 # through ``auxiliary_client.call_llm`` (no session handle) pick it up via
-# ``nous_portal_tags()``. A ContextVar so concurrent agents in one process never
+# ``scout_portal_tags()``. A ContextVar so concurrent agents in one process never
 # see each other's id; ``propagate_context_to_thread`` workers inherit it.
-_conversation_id: ContextVar[Optional[str]] = ContextVar("nous_portal_conversation_id", default=None)
+_conversation_id: ContextVar[Optional[str]] = ContextVar("scout_portal_conversation_id", default=None)
 
-# Ambient affinity scope (ROUTING value): OpenRouter's sticky ``session_id``, Nous
+# Ambient affinity scope (ROUTING value): OpenRouter's sticky ``session_id``, SpaceshipResearch
 # Portal's sticky key and xAI's ``x-grok-conv-id`` pin a conversation to one
 # backend/prompt cache. Usually equal to the conversation id, but a host that mints
 # one physical session per RESPONSE must route on the key it declared for the whole
 # chat (``prompt_cache_scope.declared_conversation_scope``). Only that declared value
 # is published; unset means consumers fall back to the conversation id, so delegate
 # trees keep sharing their parent's sticky key.
-_affinity_scope: ContextVar[Optional[str]] = ContextVar("hermes_affinity_scope", default=None)
+_affinity_scope: ContextVar[Optional[str]] = ContextVar("scout_affinity_scope", default=None)
 
 
 def _reset_var(var: ContextVar, token) -> None:
@@ -70,10 +70,10 @@ def get_conversation_context() -> Optional[str]:
     return _conversation_id.get()
 
 
-def hermes_client_tag() -> str:
-    """``client=hermes-client-v<MAJOR>.<MINOR>.<PATCH>`` from canonical runtime identity."""
-    from hermes_cli.version_info import get_version_info
-    return f"client=hermes-client-v{get_version_info().base_version}"
+def scout_client_tag() -> str:
+    """``client=scout-client-v<MAJOR>.<MINOR>.<PATCH>`` from canonical runtime identity."""
+    from scout_cli.version_info import get_version_info
+    return f"client=scout-client-v{get_version_info().base_version}"
 
 
 def conversation_tag(session_id: str) -> str:
@@ -82,13 +82,13 @@ def conversation_tag(session_id: str) -> str:
     return f"conversation={session_id}"
 
 
-def nous_portal_tags(session_id: str | None = None) -> List[str]:
-    """Fresh list of the canonical Nous Portal tags.
+def scout_portal_tags(session_id: str | None = None) -> List[str]:
+    """Fresh list of the canonical Scout Portal tags.
 
     The ambient conversation context (lineage ROOT id) wins over the explicit
     ``session_id``, a fallback for callers outside any agent turn.
     """
-    tags = ["product=hermes-agent", hermes_client_tag()]
+    tags = ["product=scout-agent", scout_client_tag()]
     effective = get_conversation_context() or session_id
     if effective:
         tags.append(conversation_tag(effective))

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createCloudSessionRecovery } from './cloud-session-recovery'
 
-const cloud = 'https://test-agent.agents.nousresearch.com'
+const cloud = 'https://test-agent.agents.spaceshipresearch.com'
 const rejection = (statusCode = 401) => Object.assign(new Error('rejected'), { statusCode })
 
 describe('Cloud cookie session recovery', () => {
@@ -19,7 +19,7 @@ describe('Cloud cookie session recovery', () => {
     const restore = vi.fn(async () => true)
 
     const run = createCloudSessionRecovery({
-      hasNativeSession: url => url.endsWith('native.agents.nousresearch.com'),
+      hasNativeSession: url => url.endsWith('native.agents.spaceshipresearch.com'),
       restoreCookieSession: restore
     })
 
@@ -27,7 +27,7 @@ describe('Cloud cookie session recovery', () => {
       ['https://example.com', 401],
       [cloud, 403],
       [cloud, 500],
-      ['https://native.agents.nousresearch.com', 401]
+      ['https://native.agents.spaceshipresearch.com', 401]
     ] as const) {
       const error = rejection(status)
       await expect(

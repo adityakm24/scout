@@ -5,15 +5,15 @@ import {
   graftRefreshedTailOntoBackfill,
   olderPageReader
 } from '@/app/chat/transcript-backfill'
-import {
-  fetchStoredTranscriptAcrossBackends,
-  getLatestSessionMessages,
-  PROMPT_SUBMIT_REQUEST_TIMEOUT_MS
-} from '@/hermes'
 import { translateNow } from '@/i18n/runtime'
 import { type ChatMessage, chatMessageText, toChatMessages } from '@/lib/chat-messages'
 import { markReasoningEffortPending } from '@/lib/chat-runtime'
 import { profileScopeForSessionOwner, refreshIfTranscriptStale } from '@/lib/stale-transcript-guard'
+import {
+  fetchStoredTranscriptAcrossBackends,
+  getLatestSessionMessages,
+  PROMPT_SUBMIT_REQUEST_TIMEOUT_MS
+} from '@/scout'
 import { noteMessageSent } from '@/store/desktop-metrics'
 import { notify } from '@/store/notifications'
 import {
@@ -30,7 +30,7 @@ import {
   sessionTileOwnerRoute,
   setSessionTileDelegate
 } from '@/store/session-states'
-import type { SessionResumeResult } from '@/types/hermes'
+import type { SessionResumeResult } from '@/types/scout'
 
 import type { usePromptActions } from '../../session/hooks/use-prompt-actions'
 import { singleFlightSessionResume } from '../../session/hooks/use-prompt-actions/single-flight-resume'

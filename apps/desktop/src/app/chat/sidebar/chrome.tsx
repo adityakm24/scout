@@ -1,5 +1,5 @@
-import { compactNumber } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
+import { compactNumber } from '@scout/shared'
 import type * as React from 'react'
 
 import { type NewSessionSplitHandler, startNewProjectDrag, startNewSessionDrag } from '@/app/chat/new-session-drag'
@@ -132,7 +132,7 @@ export function SidebarDateDivider({
   toggle?: { ariaLabel: string; onToggle: () => void; open: boolean }
 }) {
   const caption = (
-    <span className="shrink-0 text-[0.64rem] font-semibold uppercase tracking-[0.12em] text-(--ui-text-quaternary)">
+    <span className="shrink-0 text-[0.6875rem] font-semibold text-(--ui-text-quaternary)">
       {label}
     </span>
   )

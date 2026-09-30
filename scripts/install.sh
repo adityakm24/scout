@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Hermes Agent bootstrap: clone, acquire uv/Python, then hand the checkout to
+# Scout Agent bootstrap: clone, acquire uv/Python, then hand the checkout to
 # the same completion an update runs -- command publication, product builds and
 # post-build maintenance -- so a fresh install and a finished update land in one
 # state. Heavy dependencies (tool binaries, browsers, node) are pm's job:
-# `hermes pm install`.
+# `scout pm install`.
 #
-# Stage protocol kept for Hermes-Setup:
+# Stage protocol kept for Scout-Setup:
 #   --manifest            print the stage list as JSON
 #   --stage NAME [--json] run one stage
 #   --non-interactive     skip stages that need input
@@ -20,11 +20,11 @@ set -u
 # hygiene can't break the locked sync the way it used to before pm owned it.
 export UV_NO_CONFIG=1
 
-REPO_URL="${HERMES_REPO_URL:-https://github.com/NousResearch/hermes-agent.git}"
+REPO_URL="${SCOUT_REPO_URL:-https://github.com/SpaceshipResearch/scout-agent.git}"
 BRANCH="main"
 INSTALL_COMMIT=""
-INSTALL_DIR="${HERMES_INSTALL_DIR:-}"
-HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
+INSTALL_DIR="${SCOUT_INSTALL_DIR:-}"
+SCOUT_HOME="${SCOUT_HOME:-$HOME/.scout}"
 STAGE=""
 WANT_MANIFEST=false
 JSON=false
@@ -36,7 +36,7 @@ SKIP_COMPUTER_USE=false
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --branch|-Branch|--commit|-Commit|--dir|--hermes-home|-HermesHome|--stage|-Stage)
+        --branch|-Branch|--commit|-Commit|--dir|--scout-home|-ScoutHome|--stage|-Stage)
             option="$1"
             if [ $# -lt 2 ] || [ -z "$2" ] || [[ "$2" == -* ]]; then
                 printf '%s needs a value\n' "$option" >&2
@@ -46,7 +46,7 @@ while [ $# -gt 0 ]; do
                 --branch|-Branch) BRANCH="$2" ;;
                 --commit|-Commit) INSTALL_COMMIT="$2" ;;
                 --dir) INSTALL_DIR="$2" ;;
-                --hermes-home|-HermesHome) HERMES_HOME="$2" ;;
+                --scout-home|-ScoutHome) SCOUT_HOME="$2" ;;
                 --stage|-Stage) STAGE="$2" ;;
             esac
             shift 2 ;;
@@ -60,29 +60,29 @@ while [ $# -gt 0 ]; do
         --verbose|-Verbose) VERBOSE=true; shift ;;
         -h|--help)
             echo "Usage: install.sh [--branch NAME] [--commit SHA] [--dir PATH]"
-            echo "                  [--hermes-home PATH]"
+            echo "                  [--scout-home PATH]"
             echo "                  [--manifest] [--stage NAME] [--json]"
             echo "                  [--non-interactive] [--include-desktop] [--verbose]"
             echo "                  [--skip-browser] [--skip-computer-use]"
             echo
             echo "  --skip-browser  Do not install the browser tools (agent-browser + Chromium)."
             echo "                  Alias: --no-playwright. Remembered by later"
-            echo "                  installs and 'hermes update'; undo with 'hermes pm install agent-browser'."
+            echo "                  installs and 'scout update'; undo with 'scout pm install agent-browser'."
             echo "  --skip-computer-use"
             echo "                  Do not install the computer-use driver (cua-driver). Remembered"
-            echo "                  the same way; undo with 'hermes pm install cua-driver'."
+            echo "                  the same way; undo with 'scout pm install cua-driver'."
             exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 1 ;;
     esac
 done
 
-INSTALL_DIR="${INSTALL_DIR:-$HERMES_HOME/hermes-agent}"
-export HERMES_HOME
+INSTALL_DIR="${INSTALL_DIR:-$SCOUT_HOME/scout-agent}"
+export SCOUT_HOME
 
-INSTALL_LOG="$HERMES_HOME/logs/install.log"
+INSTALL_LOG="$SCOUT_HOME/logs/install.log"
 
 # Same glyphs as the pre-pm installer. Colour only on a terminal, so CI
-# transcripts and the Hermes-Setup driver read plain text.
+# transcripts and the Scout-Setup driver read plain text.
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
     C_RED=$'\033[0;31m' C_GREEN=$'\033[0;32m' C_YELLOW=$'\033[0;33m'
     C_CYAN=$'\033[0;36m' C_MAGENTA=$'\033[0;35m' C_BOLD=$'\033[1m'
@@ -100,20 +100,20 @@ fail() { STAGE_REASON="$1"; log_error "$1"; exit 1; }
 print_banner() {
     printf '\n%s%s' "$C_MAGENTA" "$C_BOLD"
     printf '%s\n' "┌─────────────────────────────────────────────────────────┐"
-    printf '%s\n' "│             ☤ Hermes Agent Installer                    │"
+    printf '%s\n' "│             ☤ Scout Agent Installer                    │"
     printf '%s\n' "├─────────────────────────────────────────────────────────┤"
-    printf '%s\n' "│  An open source AI agent by Nous Research.              │"
+    printf '%s\n' "│  An open source AI agent by SpaceshipResearch.              │"
     printf '%s\n' "└─────────────────────────────────────────────────────────┘"
     printf '%s\n' "$C_NC"
 }
 
 # Interactive runs collapse child-process output (git, uv, pm, the builds)
 # into one status line. CI, --verbose and a non-terminal stdout -- the
-# Hermes-Setup --json driver, E2E transcripts -- keep the full stream those
+# Scout-Setup --json driver, E2E transcripts -- keep the full stream those
 # readers parse.
 quiet_output() {
     [ "$VERBOSE" = true ] && return 1
-    if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${HERMES_INSTALL_VERBOSE:-}" ]; then
+    if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${SCOUT_INSTALL_VERBOSE:-}" ]; then
         return 1
     fi
     [ -t 1 ]
@@ -176,32 +176,32 @@ uv_bootstrap_pin() {
     case "$1" in
         linux-x64)
             UV_PIN_URL="https://github.com/astral-sh/uv/releases/download/0.12.3/uv-x86_64-unknown-linux-gnu.tar.gz"
-            UV_PIN_MIRROR="https://hermes-assets.nousresearch.com/upstream/sha256/600cf9a742aca00d292673b16b5acffaa7b8c269a364ad0c2e79498dcb1fe101"
+            UV_PIN_MIRROR="https://scout-assets.spaceshipresearch.com/upstream/sha256/600cf9a742aca00d292673b16b5acffaa7b8c269a364ad0c2e79498dcb1fe101"
             UV_PIN_SHA256="600cf9a742aca00d292673b16b5acffaa7b8c269a364ad0c2e79498dcb1fe101"
             ;;
         linux-arm64)
             UV_PIN_URL="https://github.com/astral-sh/uv/releases/download/0.12.3/uv-aarch64-unknown-linux-gnu.tar.gz"
-            UV_PIN_MIRROR="https://hermes-assets.nousresearch.com/upstream/sha256/bb66cb52e7b1823aed1183630d8d8e5c958840d584a4c55ec10a4cfc168dcca2"
+            UV_PIN_MIRROR="https://scout-assets.spaceshipresearch.com/upstream/sha256/bb66cb52e7b1823aed1183630d8d8e5c958840d584a4c55ec10a4cfc168dcca2"
             UV_PIN_SHA256="bb66cb52e7b1823aed1183630d8d8e5c958840d584a4c55ec10a4cfc168dcca2"
             ;;
         linux-x64-musl)
             UV_PIN_URL="https://github.com/astral-sh/uv/releases/download/0.12.3/uv-x86_64-unknown-linux-musl.tar.gz"
-            UV_PIN_MIRROR="https://hermes-assets.nousresearch.com/upstream/sha256/0643b9fb8c9fb27458e709ce6ff939695013c41975ff7b02d3f3b138d8d4bdb3"
+            UV_PIN_MIRROR="https://scout-assets.spaceshipresearch.com/upstream/sha256/0643b9fb8c9fb27458e709ce6ff939695013c41975ff7b02d3f3b138d8d4bdb3"
             UV_PIN_SHA256="0643b9fb8c9fb27458e709ce6ff939695013c41975ff7b02d3f3b138d8d4bdb3"
             ;;
         linux-arm64-musl)
             UV_PIN_URL="https://github.com/astral-sh/uv/releases/download/0.12.3/uv-aarch64-unknown-linux-musl.tar.gz"
-            UV_PIN_MIRROR="https://hermes-assets.nousresearch.com/upstream/sha256/fa513fca1eb2913334c944fe9adbdd410274a1cbe8dd05d03699a9eb85311d4e"
+            UV_PIN_MIRROR="https://scout-assets.spaceshipresearch.com/upstream/sha256/fa513fca1eb2913334c944fe9adbdd410274a1cbe8dd05d03699a9eb85311d4e"
             UV_PIN_SHA256="fa513fca1eb2913334c944fe9adbdd410274a1cbe8dd05d03699a9eb85311d4e"
             ;;
         darwin-x64)
             UV_PIN_URL="https://github.com/astral-sh/uv/releases/download/0.12.3/uv-x86_64-apple-darwin.tar.gz"
-            UV_PIN_MIRROR="https://hermes-assets.nousresearch.com/upstream/sha256/4c9f52262a14da336e4a42ed24992d12d0c956acde87619e4611d321dffa602b"
+            UV_PIN_MIRROR="https://scout-assets.spaceshipresearch.com/upstream/sha256/4c9f52262a14da336e4a42ed24992d12d0c956acde87619e4611d321dffa602b"
             UV_PIN_SHA256="4c9f52262a14da336e4a42ed24992d12d0c956acde87619e4611d321dffa602b"
             ;;
         darwin-arm64)
             UV_PIN_URL="https://github.com/astral-sh/uv/releases/download/0.12.3/uv-aarch64-apple-darwin.tar.gz"
-            UV_PIN_MIRROR="https://hermes-assets.nousresearch.com/upstream/sha256/546f7f8a6c70ff13a3a9d2bc958db3427298cebf3e0cb756f9177133b7068843"
+            UV_PIN_MIRROR="https://scout-assets.spaceshipresearch.com/upstream/sha256/546f7f8a6c70ff13a3a9d2bc958db3427298cebf3e0cb756f9177133b7068843"
             UV_PIN_SHA256="546f7f8a6c70ff13a3a9d2bc958db3427298cebf3e0cb756f9177133b7068843"
             ;;
         *)
@@ -263,23 +263,23 @@ uv_bootstrap_target() {
 UV_CMD=""
 ensure_uv() {
     [ -n "$UV_CMD" ] && return 0
-    # Always the pinned artifact, never a uv already on PATH: Hermes runs only
+    # Always the pinned artifact, never a uv already on PATH: Scout runs only
     # its own packaged toolchain.
     local _target
     if ! _target="$(uv_bootstrap_target)"; then
-        fail "no pinned uv build for this platform ($(uname -s) $(uname -m)); Hermes does not support this host"
+        fail "no pinned uv build for this platform ($(uname -s) $(uname -m)); Scout does not support this host"
     fi
     if ! uv_bootstrap_pin "$_target"; then
-        fail "no pinned uv artifact for $_target; Hermes does not support this host"
+        fail "no pinned uv artifact for $_target; Scout does not support this host"
     fi
-    local _store="${HERMES_RUNTIME_DIR:-$HERMES_HOME/tools}"
+    local _store="${SCOUT_RUNTIME_DIR:-$SCOUT_HOME/tools}"
     local _entry="$_store/uv-$UV_PIN_VERSION-$_target"
     UV_CMD="$_entry/uv"
     if [ ! -x "$UV_CMD" ]; then
         log "Downloading uv $UV_PIN_VERSION ($_target)"
         local _tmp
         # no-tmp: ok — last-resort fallback when mktemp itself is missing
-        _tmp="$(mktemp -d 2>/dev/null || echo "/tmp/hermes-uv-bootstrap.$$")"
+        _tmp="$(mktemp -d 2>/dev/null || echo "/tmp/scout-uv-bootstrap.$$")"
         mkdir -p "$_tmp"
         local _fetched_from="$UV_PIN_URL"
         # Only network availability failures permit trying identical mirrored bytes.
@@ -337,7 +337,7 @@ check_platform() {
     # install the phone cannot run (no Android wheels in the lock). The
     # signed APT package is the only supported shape there.
     if [ -n "${TERMUX_VERSION:-}" ] || case "${PREFIX:-}" in *com.termux/files/usr*) true ;; *) false ;; esac; then
-        fail "Termux is installed from its APT repository, not install.sh: pkg install hermes-agent (setup: https://hermes-agent.nousresearch.com/docs/getting-started/termux)"
+        fail "Termux is installed from its APT repository, not install.sh: pkg install scout-agent (setup: https://scout-agent.spaceshipresearch.com/docs/getting-started/termux)"
     fi
     case "$(uname -s 2>/dev/null)" in
         Linux*) : ;;
@@ -382,7 +382,7 @@ stage_result() {
 
 # The single authoritative stage list: emit_manifest prints it AND the
 # no-flag ladder runs it. `products` is the shared completion tail -- the same
-# call `hermes update` makes -- so the manifest and the run cannot disagree.
+# call `scout update` makes -- so the manifest and the run cannot disagree.
 # `desktop` stays directly dispatchable via --stage for external callers, but
 # is never listed: --include-desktop selects the desktop product inside
 # `products` instead of adding a second build stage.
@@ -403,7 +403,7 @@ products_record() {
 stage_record() {
     case "$1" in
         prerequisites) echo "System prerequisites|runtime|false" ;;
-        repository)    echo "Download Hermes Agent|runtime|false" ;;
+        repository)    echo "Download Scout Agent|runtime|false" ;;
         venv)          echo "Create Python environment|runtime|false" ;;
         python-deps)   echo "Install Python dependencies|runtime|false" ;;
         config)        echo "Prepare config and skills|configuration|false" ;;
@@ -455,9 +455,9 @@ stage_repository() {
     fi
     if [ -d "$INSTALL_DIR/.git" ]; then
         log "Updating $INSTALL_DIR ($BRANCH)"
-        # An explicit HERMES_REPO_URL names the source for reruns too, not
+        # An explicit SCOUT_REPO_URL names the source for reruns too, not
         # just the first clone.
-        if [ -n "${HERMES_REPO_URL:-}" ]; then
+        if [ -n "${SCOUT_REPO_URL:-}" ]; then
             git -C "$INSTALL_DIR" remote set-url origin "$REPO_URL" || fail "cannot point origin at $REPO_URL"
         fi
         # Explicit refspec: a tag-pinned --single-branch checkout from an older
@@ -491,9 +491,9 @@ stage_repository() {
                 git -C "$INSTALL_DIR" reset -q || fail "cannot clear the unmerged index in $INSTALL_DIR"
             fi
             run_logged "Stashing local changes" \
-                git -C "$INSTALL_DIR" stash push --include-untracked -m "hermes-install-autostash-$stamp" \
+                git -C "$INSTALL_DIR" stash push --include-untracked -m "scout-install-autostash-$stamp" \
                 || fail "could not stash local changes in $INSTALL_DIR; commit or move them aside, then rerun"
-            log_warn "local changes stashed as hermes-install-autostash-$stamp"
+            log_warn "local changes stashed as scout-install-autostash-$stamp"
         fi
         # checkout's branch guess only sees remote refs the refspec maps, so a
         # narrow checkout (detached at its tag, no local branch) gets the branch
@@ -509,10 +509,10 @@ stage_repository() {
             # A release cut off the main line, a force-pushed remote, or the
             # user's own commits cannot fast-forward. Every stage below reads
             # files only the new tree has (pm/), so an install left on the old
-            # tree cannot finish -- match the remote the way `hermes update`
+            # tree cannot finish -- match the remote the way `scout update`
             # does, after parking the old tip.
             # Only commits absent from origin need a rescue ref. Keep the same
-            # namespace as `hermes update` so its pruning and recovery work.
+            # namespace as `scout update` so its pruning and recovery work.
             local dropped rescue_kind rescue_ref prior
             dropped="$(git -C "$INSTALL_DIR" rev-list --count "origin/$BRANCH..HEAD")" \
                 || fail "cannot count commits before reset"
@@ -522,7 +522,7 @@ stage_repository() {
                     || rescue_kind="orphan"
                 prior="$(git -C "$INSTALL_DIR" rev-parse --short=12 HEAD)" \
                     || fail "cannot identify commits before reset"
-                rescue_ref="refs/hermes-update-backups/$rescue_kind-$BRANCH-$stamp-$prior"
+                rescue_ref="refs/scout-update-backups/$rescue_kind-$BRANCH-$stamp-$prior"
                 git -C "$INSTALL_DIR" update-ref "$rescue_ref" HEAD \
                     || fail "cannot back up $dropped local commit(s); refusing to reset"
                 log_warn "$dropped commit(s) not on origin/$BRANCH backed up to $rescue_ref"
@@ -540,7 +540,7 @@ stage_repository() {
             if [ -d "$INSTALL_DIR" ] && [ ! -L "$INSTALL_DIR" ] && [ -z "$(ls -A "$INSTALL_DIR")" ]; then
                 rmdir "$INSTALL_DIR" || fail "cannot replace empty $INSTALL_DIR"
             else
-                fail "$INSTALL_DIR exists and is not a Hermes git checkout. Move it aside, or install elsewhere with --dir <path>."
+                fail "$INSTALL_DIR exists and is not a Scout git checkout. Move it aside, or install elsewhere with --dir <path>."
             fi
         fi
         mkdir -p "$(dirname "$INSTALL_DIR")"
@@ -548,7 +548,7 @@ stage_repository() {
         # Phase lines ("Receiving objects: 42%") feed the status line; git
         # prints none to a pipe unless asked.
         if quiet_output; then progress=(--progress); fi
-        staged="$(mktemp -d "$(dirname "$INSTALL_DIR")/.hermes-clone-XXXXXX")" || fail "cannot stage clone"
+        staged="$(mktemp -d "$(dirname "$INSTALL_DIR")/.scout-clone-XXXXXX")" || fail "cannot stage clone"
         for attempt in 1 2 3; do
             # Treeless: every commit and release tag (runtime identity is the
             # nearest reachable release; --commit pins and branch switches
@@ -589,7 +589,7 @@ stage_repository() {
             fail "cannot publish cloned checkout"
         fi
         rmdir "$staged"
-        log_success "Hermes Agent cloned"
+        log_success "Scout Agent cloned"
     fi
     if [ -n "$INSTALL_COMMIT" ]; then
         # A pin must come from the branch being installed: the complete
@@ -615,7 +615,7 @@ bootstrap_python() {
     ensure_uv
     local _py
     # Read packages.python.version by following object names and braces, not
-    # indentation — same pre-Python reader contract as setup-hermes.sh's pin().
+    # indentation — same pre-Python reader contract as setup-scout.sh's pin().
     _py="$(awk -F '"' '
         /^[[:space:]]*("[^"]+"[[:space:]]*:[[:space:]]*)?\{/ { path[++depth] = $2; next }
         /^[[:space:]]*\}[[:space:]]*,?[[:space:]]*$/ { delete path[depth--]; next }
@@ -641,8 +641,8 @@ bootstrap_python() {
 bootstrap_pm() {
     local boot_py
     local pm_args=(install)
-    # PM records the opt-outs, so later installs and `hermes update` keep the
-    # tools off until `hermes pm install <name>` opts back in.
+    # PM records the opt-outs, so later installs and `scout update` keep the
+    # tools off until `scout pm install <name>` opts back in.
     [ "$SKIP_BROWSER" = true ] && pm_args+=(--without agent-browser)
     [ "$SKIP_COMPUTER_USE" = true ] && pm_args+=(--without cua-driver)
     bootstrap_python
@@ -685,7 +685,7 @@ append_shell_path() {
         return 0
     fi
     mkdir -p "$(dirname "$rc")"
-    printf '\n# Hermes Agent command\n%s\n' "$line" >> "$rc" || fail "cannot update PATH in $rc"
+    printf '\n# Scout Agent command\n%s\n' "$line" >> "$rc" || fail "cannot update PATH in $rc"
     log_success "added ~/.local/bin to PATH in $rc"
 }
 
@@ -726,11 +726,11 @@ stage_products() {
     if [ "$INCLUDE_DESKTOP" = true ] || desktop_product_present; then
         args+=(--desktop)
     fi
-    (cd "$INSTALL_DIR" && run_logged "Building the hermes command and apps" \
-        "$boot_py" -I -B -X utf8 hermes_cli/source_completion.py "${args[@]}") \
+    (cd "$INSTALL_DIR" && run_logged "Building the scout command and apps" \
+        "$boot_py" -I -B -X utf8 scout_cli/source_completion.py "${args[@]}") \
         || fail "app products or command publication failed"
     wire_shell_path
-    log_success "app products and hermes command ready"
+    log_success "app products and scout command ready"
 }
 
 stage_desktop() {
@@ -742,17 +742,17 @@ stage_desktop() {
 }
 
 stage_config() {
-    mkdir -p "$HERMES_HOME"/cron "$HERMES_HOME"/sessions "$HERMES_HOME"/logs \
-        "$HERMES_HOME"/pairing "$HERMES_HOME"/hooks "$HERMES_HOME"/image_cache \
-        "$HERMES_HOME"/audio_cache "$HERMES_HOME"/memories "$HERMES_HOME"/skills
-    if [ ! -f "$HERMES_HOME/.env" ]; then
-        cp "$INSTALL_DIR/.env.example" "$HERMES_HOME/.env" 2>/dev/null || touch "$HERMES_HOME/.env"
+    mkdir -p "$SCOUT_HOME"/cron "$SCOUT_HOME"/sessions "$SCOUT_HOME"/logs \
+        "$SCOUT_HOME"/pairing "$SCOUT_HOME"/hooks "$SCOUT_HOME"/image_cache \
+        "$SCOUT_HOME"/audio_cache "$SCOUT_HOME"/memories "$SCOUT_HOME"/skills
+    if [ ! -f "$SCOUT_HOME/.env" ]; then
+        cp "$INSTALL_DIR/.env.example" "$SCOUT_HOME/.env" 2>/dev/null || touch "$SCOUT_HOME/.env"
     fi
-    chmod 600 "$HERMES_HOME/.env"
-    if [ ! -f "$HERMES_HOME/config.yaml" ] && [ -f "$INSTALL_DIR/cli-config.yaml.example" ]; then
-        cp "$INSTALL_DIR/cli-config.yaml.example" "$HERMES_HOME/config.yaml"
+    chmod 600 "$SCOUT_HOME/.env"
+    if [ ! -f "$SCOUT_HOME/config.yaml" ] && [ -f "$INSTALL_DIR/cli-config.yaml.example" ]; then
+        cp "$INSTALL_DIR/cli-config.yaml.example" "$SCOUT_HOME/config.yaml"
     fi
-    log_success "config prepared in $HERMES_HOME"
+    log_success "config prepared in $SCOUT_HOME"
 }
 
 # Interactive stages read the terminal, not stdin: under `curl | bash` stdin
@@ -763,20 +763,20 @@ has_terminal() { (: </dev/tty) 2>/dev/null; }
 stage_setup() {
     if [ "$NON_INTERACTIVE" = true ]; then return 0; fi
     if ! has_terminal; then
-        log "setup skipped (no terminal); run 'hermes setup' after install"
+        log "setup skipped (no terminal); run 'scout setup' after install"
         return 0
     fi
-    "$INSTALL_DIR/.hermes/bin/hermes" setup </dev/tty || fail "setup failed"
+    "$INSTALL_DIR/.scout/bin/scout" setup </dev/tty || fail "setup failed"
 }
 
 stage_gateway() {
     if [ "$NON_INTERACTIVE" = true ]; then return 0; fi
     if ! has_terminal; then
-        log "gateway setup skipped (no terminal); run 'hermes gateway install' after install"
+        log "gateway setup skipped (no terminal); run 'scout gateway install' after install"
         return 0
     fi
     # Setup installs the service when it handles the gateway; ask only if it did not.
-    "$INSTALL_DIR/.hermes/bin/hermes" gateway install --if-missing </dev/tty || fail "gateway installation failed"
+    "$INSTALL_DIR/.scout/bin/scout" gateway install --if-missing </dev/tty || fail "gateway installation failed"
 }
 
 stage_complete() {
@@ -785,17 +785,17 @@ stage_complete() {
     [ -n "$commit" ] || commit=$(git -C "$INSTALL_DIR" rev-parse HEAD 2>/dev/null) || commit=""
     if [ -n "$commit" ]; then
         printf '{\n  "schemaVersion": 1,\n  "pinnedCommit": "%s",\n  "pinnedBranch": "%s",\n  "completedAt": "%s"\n}\n' \
-            "$commit" "$BRANCH" "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" > "$INSTALL_DIR/.hermes-bootstrap-complete.tmp"
-        mv -f "$INSTALL_DIR/.hermes-bootstrap-complete.tmp" "$INSTALL_DIR/.hermes-bootstrap-complete"
+            "$commit" "$BRANCH" "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" > "$INSTALL_DIR/.scout-bootstrap-complete.tmp"
+        mv -f "$INSTALL_DIR/.scout-bootstrap-complete.tmp" "$INSTALL_DIR/.scout-bootstrap-complete"
     fi
-    log_success "Hermes Agent install complete. Run: hermes"
+    log_success "Scout Agent install complete. Run: scout"
 }
 
 print_path_reload_hint() {
     # The rc files only reach shells started later, and this installer is
     # always a child (`curl | bash`, `bash install.sh`) that cannot change its
     # parent's PATH. The inherited PATH is the parent's, so it says whether
-    # the user can run `hermes` right away.
+    # the user can run `scout` right away.
     case ":$PATH:" in *":$HOME/.local/bin:"*|*":$HOME/.local/bin/:"*) return 0 ;; esac
     local rc
     local login_shell="${SHELL:-}"
@@ -805,7 +805,7 @@ print_path_reload_hint() {
         bash|"") rc="source ~/.bashrc" ;;
         *) rc=". ~/.profile" ;;
     esac
-    log "Reload your shell to use hermes: open a new terminal, or run: $rc"
+    log "Reload your shell to use scout: open a new terminal, or run: $rc"
 }
 
 run_stage() (

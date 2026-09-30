@@ -16,7 +16,7 @@ import { BootFailureOverlay } from './boot-failure-overlay'
 
 function failBoot() {
   $desktopBoot.set({
-    error: 'Could not connect to Hermes gateway',
+    error: 'Could not connect to Scout gateway',
     fakeMode: false,
     message: 'boot failed',
     phase: 'renderer.error',
@@ -28,8 +28,8 @@ function failBoot() {
 }
 
 function stubDesktop(config: Record<string, unknown>, overrides: Record<string, unknown> = {}) {
-  const original = window.hermesDesktop
-  Object.defineProperty(window, 'hermesDesktop', {
+  const original = window.scoutDesktop
+  Object.defineProperty(window, 'scoutDesktop', {
     configurable: true,
     value: {
       getRecentLogs: async () => ({ lines: [] }),
@@ -50,7 +50,7 @@ function stubDesktop(config: Record<string, unknown>, overrides: Record<string, 
     }
   })
 
-  return () => Object.defineProperty(window, 'hermesDesktop', { configurable: true, value: original })
+  return () => Object.defineProperty(window, 'scoutDesktop', { configurable: true, value: original })
 }
 
 const remoteToken = {
@@ -92,7 +92,7 @@ describe('BootFailureOverlay', () => {
       </>
     )
 
-    const recoverySurface = screen.getByRole('dialog', { name: /Hermes couldn't start/i })
+    const recoverySurface = screen.getByRole('dialog', { name: /Scout couldn't start/i })
     const retry = screen.getByRole('button', { name: /retry/i })
     const backgroundAction = screen.getByText(/background action/i)
 
@@ -129,7 +129,7 @@ describe('BootFailureOverlay', () => {
 
     $desktopBoot.set({ ...$desktopBoot.get(), error: 'A different startup failure' })
     rerender(<BootFailureOverlay />)
-    expect(screen.getByRole('dialog', { name: /Hermes couldn't start/i })).toBeTruthy()
+    expect(screen.getByRole('dialog', { name: /Scout couldn't start/i })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /^close$/i }))
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -139,14 +139,14 @@ describe('BootFailureOverlay', () => {
     $desktopBoot.set({ ...$desktopBoot.get(), error, running: false })
     rerender(<BootFailureOverlay />)
 
-    expect(screen.getByRole('dialog', { name: /Hermes couldn't start/i })).toBeTruthy()
+    expect(screen.getByRole('dialog', { name: /Scout couldn't start/i })).toBeTruthy()
   })
 
   it('dismisses on Escape and keeps the boot error latched', () => {
     render(<BootFailureOverlay />)
     const error = $desktopBoot.get().error
 
-    fireEvent.keyDown(screen.getByRole('dialog', { name: /Hermes couldn't start/i }), { key: 'Escape' })
+    fireEvent.keyDown(screen.getByRole('dialog', { name: /Scout couldn't start/i }), { key: 'Escape' })
 
     expect(screen.queryByRole('dialog')).toBeNull()
     expect($desktopBoot.get().error).toBe(error)
@@ -174,7 +174,7 @@ describe('BootFailureOverlay', () => {
     act(() => $desktopBoot.set({ ...$desktopBoot.get(), running: true }))
     act(() => $desktopBoot.set({ ...$desktopBoot.get(), error, running: false }))
 
-    expect(screen.getByRole('dialog', { name: /Hermes couldn't start/i })).toBeTruthy()
+    expect(screen.getByRole('dialog', { name: /Scout couldn't start/i })).toBeTruthy()
   })
 
   it('drops local-only Repair and Use-local-gateway on a local failure', () => {
@@ -246,14 +246,14 @@ describe('BootFailureOverlay', () => {
   })
 
   it('recovers a cloud connection through the portal cascade instead of native OAuth', async () => {
-    const gatewayUrl = 'https://agent-1.agents.nousresearch.com'
+    const gatewayUrl = 'https://agent-1.agents.spaceshipresearch.com'
     const logout = vi.fn().mockResolvedValue({ ok: true, connected: false })
     const nativeLogin = vi.fn().mockResolvedValue({ ok: true, connected: false })
-    const cloudStatus = vi.fn().mockResolvedValue({ portalBaseUrl: 'https://portal.nousresearch.com', signedIn: false })
+    const cloudStatus = vi.fn().mockResolvedValue({ portalBaseUrl: 'https://portal.spaceshipresearch.com', signedIn: false })
 
     const cloudLogin = vi.fn().mockResolvedValue({
       ok: true,
-      portalBaseUrl: 'https://portal.nousresearch.com',
+      portalBaseUrl: 'https://portal.spaceshipresearch.com',
       signedIn: true
     })
 
@@ -272,7 +272,7 @@ describe('BootFailureOverlay', () => {
         cloud: { status: cloudStatus, login: cloudLogin, agentSignIn: cloudAgentSignIn },
         oauthLoginConnectionConfig: nativeLogin,
         oauthLogoutConnectionConfig: logout,
-        probeConnectionConfig: vi.fn().mockResolvedValue({ providers: [{ id: 'nous', type: 'oauth' }] })
+        probeConnectionConfig: vi.fn().mockResolvedValue({ providers: [{ id: 'spaceshipresearch', type: 'oauth' }] })
       }
     )
 
@@ -291,10 +291,10 @@ describe('BootFailureOverlay', () => {
     }
   })
 
-  it('shows the Nous Cloud down recovery when the backend flags isCloudBackendDown', async () => {
+  it('shows the SpaceshipResearch Cloud down recovery when the backend flags isCloudBackendDown', async () => {
     const restore = stubDesktop(remoteToken)
     $desktopBoot.set({
-      error: 'Nous Cloud agent ares-3009.agents.nousresearch.com is down (HTTP 503: server-side fault).',
+      error: 'SpaceshipResearch Cloud agent ares-3009.agents.spaceshipresearch.com is down (HTTP 503: server-side fault).',
       fakeMode: false,
       isCloudBackendDown: true,
       message: 'boot failed',
@@ -310,7 +310,7 @@ describe('BootFailureOverlay', () => {
       render(<BootFailureOverlay />)
       // Cloud-specific title + actionable recovery instead of the generic
       // remote-failure copy.
-      expect(await screen.findByText(/Nous Cloud agent is down/i)).toBeTruthy()
+      expect(await screen.findByText(/SpaceshipResearch Cloud agent is down/i)).toBeTruthy()
       // Portal and Discord are dedicated action buttons (localized labels
       // can't drift the URLs, which live in code).
       expect(screen.getByRole('button', { name: /check portal status/i })).toBeTruthy()
@@ -322,7 +322,7 @@ describe('BootFailureOverlay', () => {
       expect(screen.getByRole('button', { name: /use local gateway/i })).toBeTruthy()
       // The electron-built error message (portal / local mode / Discord) is
       // still surfaced in the error box.
-      expect(screen.getByText(/ares-3009\.agents\.nousresearch\.com/i)).toBeTruthy()
+      expect(screen.getByText(/ares-3009\.agents\.spaceshipresearch\.com/i)).toBeTruthy()
     } finally {
       restore()
     }
@@ -347,7 +347,7 @@ describe('BootFailureOverlay', () => {
     $desktopBoot.set({
       ...$desktopBoot.get(),
       error:
-        'This app bundles its own Hermes runtime, but the runtime files are missing or damaged. Reinstall Hermes Desktop to restore it.'
+        'This app bundles its own Scout runtime, but the runtime files are missing or damaged. Reinstall Scout Desktop to restore it.'
     })
 
     try {
@@ -361,7 +361,7 @@ describe('BootFailureOverlay', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /reinstall the app/i }))
       await waitFor(() =>
-        expect(openExternal).toHaveBeenCalledWith('https://hermes-agent.nousresearch.com/docs/user-guide/desktop')
+        expect(openExternal).toHaveBeenCalledWith('https://scout-agent.spaceshipresearch.com/docs/user-guide/desktop')
       )
     } finally {
       restore()

@@ -1,11 +1,11 @@
-import type { GatewayWsUrlResult } from '@hermes/shared'
-import type { HermesSkin } from '@hermes/shared/skin'
-import type { TranslucencyState } from '@hermes/shared/translucency'
+import type { GatewayWsUrlResult } from '@scout/shared'
+import type { ScoutSkin } from '@scout/shared/skin'
+import type { TranslucencyState } from '@scout/shared/translucency'
 
 import type { ScreenshotApi } from '../electron/command-screenshot-types'
 import type { HudModifierApi } from '../electron/hud-modifier-types'
 import type { MachineProfile } from '../electron/machine-profile'
-import type { HermesNotification } from '../electron/notification-types'
+import type { ScoutNotification } from '../electron/notification-types'
 import type { PoolLimits } from '../electron/pool-limits'
 import type { UpdateRunReport } from '../electron/updater/update-metrics'
 import type { GrowRequest } from '../electron/window-growth'
@@ -25,21 +25,21 @@ export type DesktopMachineProfile = MachineProfile
 
 declare global {
   interface Window {
-    hermesDesktop: {
+    scoutDesktop: {
       // Resolve a backend connection. Omit `profile` (or pass the primary) for
       // the window's backend; pass a named profile to lazily spawn/reuse that
       // profile's backend from the pool.
       getConnection: (
         profile?: string | null,
         opts?: { priority?: 'foreground' | 'background' }
-      ) => Promise<HermesConnection>
+      ) => Promise<ScoutConnection>
       // Registry-scoped backend resolution: dial (connectionId, profile). An
       // empty/local connectionId delegates to the legacy getConnection path.
       getConnectionFor?: (payload: {
         connectionId?: null | string
         profile?: null | string
         priority?: 'foreground' | 'background'
-      }) => Promise<HermesConnection>
+      }) => Promise<ScoutConnection>
       // Registry-scoped fresh WS URL (same result contract as getGatewayWsUrl).
       getGatewayWsUrlFor?: (payload: {
         connectionId?: null | string
@@ -81,7 +81,7 @@ declare global {
         sessionId: string,
         opts?: { connectionId?: null | string; profile?: null | string; watch?: boolean }
       ) => Promise<{ ok: boolean; error?: string }>
-      // Resume this session in the user's own terminal emulator (`hermes --tui
+      // Resume this session in the user's own terminal emulator (`scout --tui
       // --resume <id>`) — the external terminal, not the in-app pane.
       openSessionInTerminal: (
         sessionId: string,
@@ -101,7 +101,7 @@ declare global {
       // peers — so N open windows don't all fire the same cue.
       claimAmbientCue: (key: string) => Promise<boolean>
       // Renderer-drawn min/max/close for WSLg (`custom` true there only), sent
-      // over hermes:window-control; Electron/OS chrome owns them elsewhere.
+      // over scout:window-control; Electron/OS chrome owns them elsewhere.
       windowControls: {
         custom: boolean
         minimize: () => void
@@ -218,7 +218,7 @@ declare global {
         // Drain/update/restore one Desktop-managed SSH install. External URL
         // and cloud sources are refused without touching their processes.
         updateManaged?: (id: string) => Promise<DesktopManagedConnectionUpdateResult>
-        // Fan out `hermes update` to every eligible registered connection;
+        // Fan out `scout update` to every eligible registered connection;
         // cloud entries are skipped (platform-managed), each row independent.
         // excludeIds skips connections the caller updates through another
         // path (the everything-update flow's active backend + local client).
@@ -241,7 +241,7 @@ declare global {
         options?: DesktopOauthLoginOptions
       ) => Promise<DesktopOauthLoginResult>
       oauthLogoutConnectionConfig: (remoteUrl: string) => Promise<DesktopOauthLogoutResult>
-      // Hermes Cloud: one portal login powers discovery + silent per-agent
+      // Scout Cloud: one portal login powers discovery + silent per-agent
       // sign-in (cloud-auto-discovery Phase 3).
       cloud: {
         status: () => Promise<DesktopCloudStatus>
@@ -259,12 +259,12 @@ declare global {
         // replacing an explicit default route.
         remember: (name: string | null) => Promise<DesktopActiveProfile>
         // Persists the desktop's profile choice and relaunches the local
-        // backend under the new HERMES_HOME (reloads the window). Pass null to
+        // backend under the new SCOUT_HOME (reloads the window). Pass null to
         // clear the preference.
         set: (name: string | null) => Promise<DesktopActiveProfile>
       }
-      api: <T>(request: HermesApiRequest) => Promise<T>
-      notify: (payload: HermesNotification) => Promise<boolean>
+      api: <T>(request: ScoutApiRequest) => Promise<T>
+      notify: (payload: ScoutNotification) => Promise<boolean>
       /** Launch -> ready ms for the first caller per app launch, null afterwards. Absent on older shells. */
       claimStartupLatency?: () => Promise<null | number>
       requestMicrophoneAccess: () => Promise<boolean>
@@ -288,12 +288,12 @@ declare global {
         get: () => Promise<{ defaultMaxMb: number; maxBytes: number; maxMb: number }>
         set: (maxMb: number) => Promise<{ defaultMaxMb: number; maxBytes: number; maxMb: number }>
       }
-      readFileText: (filePath: string) => Promise<HermesReadFileTextResult>
+      readFileText: (filePath: string) => Promise<ScoutReadFileTextResult>
       /** Full-source read for runtime desktop plugins (readFileText truncates
        *  at the 512 KiB preview cap). Absent on older shells — callers fall
        *  back to readFileText and must reject a `truncated` result. */
-      readPluginSource?: (filePath: string) => Promise<HermesReadFileTextResult>
-      selectPaths: (options?: HermesSelectPathsOptions) => Promise<string[]>
+      readPluginSource?: (filePath: string) => Promise<ScoutReadFileTextResult>
+      selectPaths: (options?: ScoutSelectPathsOptions) => Promise<string[]>
       /** Native save dialog; returns the chosen path or null on cancel. */
       selectSavePath?: (options?: {
         defaultPath?: string
@@ -340,15 +340,15 @@ declare global {
       savePastedText: (text: string) => Promise<string>
       saveClipboardImage: () => Promise<string>
       getPathForFile: (file: File) => string
-      normalizePreviewTarget: (target: string, baseDir?: string) => Promise<HermesPreviewTarget | null>
-      watchPreviewFile: (url: string) => Promise<HermesPreviewWatch>
+      normalizePreviewTarget: (target: string, baseDir?: string) => Promise<ScoutPreviewTarget | null>
+      watchPreviewFile: (url: string) => Promise<ScoutPreviewWatch>
       /** Watch a directory for entry churn (disk-plugin door); same watcher
        *  registry + onPreviewFileChanged channel as watchPreviewFile. Optional:
        *  older Electron shells predate it and fall back to the readdir poll. */
-      watchDirectory?: (dir: string) => Promise<HermesPreviewWatch>
+      watchDirectory?: (dir: string) => Promise<ScoutPreviewWatch>
       stopPreviewFileWatch: (id: string) => Promise<boolean>
-      setActiveWork?: (payload: HermesActiveWork) => void
-      setTitleBarTheme?: (payload: HermesTitleBarTheme) => void
+      setActiveWork?: (payload: ScoutActiveWork) => void
+      setTitleBarTheme?: (payload: ScoutTitleBarTheme) => void
       setNativeTheme?: (mode: 'dark' | 'light' | 'system') => void
       /** Main-process fact: this OS can back glass with a native material. */
       glassSupported?: boolean
@@ -359,7 +359,7 @@ declare global {
       /** Launch flag shared with every backend the app starts. */
       guestOnboardingEnabled?: boolean
       /** Sanitized local `display.skin`, available before any gateway connects. */
-      localSkin?: { profile: string; skin: HermesSkin } | null
+      localSkin?: { profile: string; skin: ScoutSkin } | null
       setTranslucency?: (payload: TranslucencyState) => void
       setKeepAwake?: (on: boolean) => void
       minimizeToTray?: {
@@ -424,22 +424,22 @@ declare global {
       }) => void
       /** Append one raw line to desktop.log (fire-and-forget, notifyError path). */
       logLine?: (line: string) => void
-      readDir: (path: string) => Promise<HermesReadDirResult>
+      readDir: (path: string) => Promise<ScoutReadDirResult>
       gitRoot?: (path: string) => Promise<string | null>
       // Reveal a path in the OS file manager (Finder / Explorer).
       revealPath?: (path: string) => Promise<boolean>
       // Open a DIRECTORY (created if missing) in the OS file manager.
       openDir?: (path: string) => Promise<{ ok: boolean; error?: string }>
-      // Local Desktop runtime-plugin root (<HERMES_HOME>/desktop-plugins),
+      // Local Desktop runtime-plugin root (<SCOUT_HOME>/desktop-plugins),
       // resolved by Electron independently of the connected backend (#66899).
       // Created on demand; returns the normalized absolute path.
       desktopPluginsRoot?: () => Promise<string>
       /** Refresh unified packages' desktop halves and return the touched paths. */
       reconcileDesktopPlugins?: () => Promise<string[]>
-      /** LOCAL `<HERMES_HOME>/logs` of `profile` (default: the active Desktop
+      /** LOCAL `<SCOUT_HOME>/logs` of `profile` (default: the active Desktop
        *  profile) — error card "Open Logs". */
       logsRoot?: (profile?: string) => Promise<string>
-      // Local AGENT-plugin root (<HERMES_HOME>/plugins), same Electron-local
+      // Local AGENT-plugin root (<SCOUT_HOME>/plugins), same Electron-local
       // resolution. The disk door also scans it for `<name>/desktop/plugin.js`
       // so one agent-plugin package can ship a desktop UI half. Optional:
       // older Electron shells predate it — the scanner then skips this root.
@@ -452,7 +452,7 @@ declare global {
       trashPath?: (path: string) => Promise<boolean>
       // Git-driven worktree management for the "Start work" flow.
       git?: {
-        worktreeList: (repoPath: string) => Promise<HermesGitWorktree[]>
+        worktreeList: (repoPath: string) => Promise<ScoutGitWorktree[]>
         worktreeAdd: (
           repoPath: string,
           options?: { name?: string; branch?: string; base?: string; existingBranch?: string }
@@ -465,25 +465,25 @@ declare global {
         branchSwitch: (repoPath: string, branch: string) => Promise<{ branch: string }>
         // The local branches, plus the remote-tracking refs that have no local
         // branch, for the "convert a branch into a worktree" picker.
-        branchList: (repoPath: string) => Promise<HermesGitBranch[]>
+        branchList: (repoPath: string) => Promise<ScoutGitBranch[]>
         // Local + remote-tracking branches for the "base branch" picker in the
         // new-worktree dialog. The remote default (origin/HEAD) is flagged so
         // the UI can preselect it.
-        baseBranchList: (repoPath: string) => Promise<HermesGitBaseBranch[]>
+        baseBranchList: (repoPath: string) => Promise<ScoutGitBaseBranch[]>
         // Compact working-tree status for the composer coding rail. Null on a
         // non-repo / remote backend (where the Electron probe can't run).
-        repoStatus: (repoPath: string) => Promise<HermesRepoStatus | null>
+        repoStatus: (repoPath: string) => Promise<ScoutRepoStatus | null>
         // Working-tree-vs-HEAD unified diff for one file (the preview's diff
         // view). Empty string when the file is unchanged or not in a repo.
         fileDiff: (repoPath: string, filePath: string) => Promise<string>
         // Codex-style review pane: changed files per scope, per-file diff, and
         // stage / unstage / revert.
         review: {
-          list: (repoPath: string, scope: HermesReviewScope, baseRef?: null | string) => Promise<HermesReviewList>
+          list: (repoPath: string, scope: ScoutReviewScope, baseRef?: null | string) => Promise<ScoutReviewList>
           diff: (
             repoPath: string,
             filePath: string,
-            scope: HermesReviewScope,
+            scope: ScoutReviewScope,
             baseRef?: null | string,
             staged?: boolean
           ) => Promise<string>
@@ -496,11 +496,11 @@ declare global {
           // commit message. Reads only; empty strings off-repo.
           commitContext: (repoPath: string) => Promise<{ diff: string; recent: string }>
           push: (repoPath: string) => Promise<{ ok: boolean }>
-          shipInfo: (repoPath: string) => Promise<HermesReviewShipInfo>
+          shipInfo: (repoPath: string) => Promise<ScoutReviewShipInfo>
           // The PR on each of the given branches — plus any known only by
           // number — for badging a list of sessions in one request instead of
           // one `pr view` per checkout.
-          prList: (repoPath: string, branches: string[], numbers?: number[]) => Promise<HermesRepoPullRequests>
+          prList: (repoPath: string, branches: string[], numbers?: number[]) => Promise<ScoutRepoPullRequests>
           createPr: (repoPath: string) => Promise<{ url: string }>
         }
         // Repo-first discovery: scan bounded roots for git repos (depth-capped).
@@ -517,9 +517,9 @@ declare global {
         cwd: (id: string) => Promise<string | null>
         dispose: (id: string) => Promise<boolean>
         onData: (id: string, callback: (payload: string) => void) => () => void
-        onExit: (id: string, callback: (payload: HermesTerminalExit) => void) => () => void
+        onExit: (id: string, callback: (payload: ScoutTerminalExit) => void) => () => void
         resize: (id: string, size: { cols: number; rows: number }) => Promise<boolean>
-        start: (options?: { cols?: number; cwd?: string; rows?: number }) => Promise<HermesTerminalSession>
+        start: (options?: { cols?: number; cwd?: string; rows?: number }) => Promise<ScoutTerminalSession>
         write: (id: string, data: string) => Promise<boolean>
       }
       reachPreviewUrl?: (url: string) => Promise<string>
@@ -556,14 +556,14 @@ declare global {
       /** Delete a STANDALONE desktop plugin folder (`<desktop-plugins root>/<name>`);
        *  Electron re-checks containment and refuses unified-package halves. */
       removeDesktopPlugin?: (payload: { name: string }) => Promise<{ ok: boolean; path?: string; error?: string }>
-      onWindowStateChanged?: (callback: (payload: HermesWindowState) => void) => () => void
+      onWindowStateChanged?: (callback: (payload: ScoutWindowState) => void) => () => void
       onFocusSession?: (callback: (sessionId: string) => void) => () => void
       onNotificationAction?: (callback: (payload: { actionId: string; sessionId?: string }) => void) => () => void
       /** Plugin (and other session-less) notification body/action activation. */
       onNotificationActivate?: (
         callback: (payload: { actionId?: string; activate?: string; notifyId?: string; tag?: string }) => void
       ) => () => void
-      onPreviewFileChanged: (callback: (payload: HermesPreviewFileChanged) => void) => () => void
+      onPreviewFileChanged: (callback: (payload: ScoutPreviewFileChanged) => void) => () => void
       onBackendExit: (callback: (payload: BackendExit) => void) => () => void
       // Cooperative pool retirement: main is stopping the pooled backend under
       // `poolKey` for a foreground open. The renderer parks that scope.
@@ -663,13 +663,13 @@ export interface DesktopMarketplaceThemeResult {
   themes: DesktopMarketplaceThemeFile[]
 }
 
-export interface HermesTerminalSession {
+export interface ScoutTerminalSession {
   cwd: string
   id: string
   shell: string
 }
 
-export interface HermesTerminalExit {
+export interface ScoutTerminalExit {
   code: number | null
   signal: string | null
 }
@@ -712,7 +712,7 @@ export interface DesktopVersionInfo {
   electronVersion: string
   nodeVersion: string
   platform: string
-  hermesRoot: string
+  scoutRoot: string
   /** True when the running renderer bundle predates desktop changes in the
    *  installed source tree (runtime updated, app binary not rebuilt/swapped). */
   bundleOutOfSync?: boolean
@@ -736,38 +736,38 @@ export interface DesktopVersionInfo {
    *  a managed checkout; the Distribution label keys on it. */
   payload?: 'bootstrap' | 'bundled' | 'light'
   /** True when the runtime checkout carries the bootstrap installers'
-   *  `.hermes-bootstrap-complete` receipt — install.sh / install.ps1 (or the
+   *  `.scout-bootstrap-complete` receipt — install.sh / install.ps1 (or the
    *  desktop first-launch bootstrap) created it, a manual clone did not. */
   installedByScript?: boolean
   /** sha16 of the canonical install-root path — the per-install channel key and
-   *  the shape `hermes update --install-id` prints. */
+   *  the shape `scout update --install-id` prints. */
   installId?: string
   /** What this build carries (embedded / light / external) and where an
    *  external backend resolved from. Bundled artifacts run their payload; light
    *  artifacts have no runtime and only reach remote backends. */
-  hermesRuntime?: { type: 'embedded' } | { type: 'light' } | { type: 'external'; source?: RuntimeSource }
+  scoutRuntime?: { type: 'embedded' } | { type: 'light' } | { type: 'external'; source?: RuntimeSource }
   /** True when the bundle on disk is newer than the running process — a plain
    *  app restart (no rebuild, no installer) is enough to load it. */
   bundleSwapPending?: boolean
 }
 
 /** Where an external build's backend came from. Mirrors the resolution ladder
- *  in `resolveHermesBackend()`: `git` / `source` / sealed stewards are the
+ *  in `resolveScoutBackend()`: `git` / `source` / sealed stewards are the
  *  Python install methods from `installation.tree.install_method()`; the
- *  Electron-only rungs (`hermes-root`, `path`, `system-python`, `bootstrap`)
+ *  Electron-only rungs (`scout-root`, `path`, `system-python`, `bootstrap`)
  *  are resolution facts the backend cannot see. Each variant carries the
  *  location it resolved from, when there is one. */
 export type RuntimeSource =
-  | { type: 'hermes-root'; root: string } // HERMES_DESKTOP_HERMES_ROOT — explicit developer override
-  | { type: 'git'; root: string } // checkout at a managed install root, $HERMES_HOME/hermes-agent
+  | { type: 'scout-root'; root: string } // SCOUT_DESKTOP_SCOUT_ROOT — explicit developer override
+  | { type: 'git'; root: string } // checkout at a managed install root, $SCOUT_HOME/scout-agent
   | { type: 'source'; root: string } // a git checkout anywhere else
   | { type: 'docker'; root: string | null } // sealed tree stewarded by Docker
   | { type: 'nix'; root: string | null } // sealed tree stewarded by Nix
   | { type: 'desktop-app'; root: string | null } // sealed tree stewarded by the desktop bundle
   | { type: 'desktop-bootstrap'; root: string } // canonical install created by the desktop first-launch bootstrap
   | { type: 'unknown' } // no stamp, no .git — provenance cannot be told
-  | { type: 'path'; command: string } // an existing `hermes` CLI found on PATH
-  | { type: 'system-python'; command: string } // pip-installed hermes_cli on system Python
+  | { type: 'path'; command: string } // an existing `scout` CLI found on PATH
+  | { type: 'system-python'; command: string } // pip-installed scout_cli on system Python
   | { type: 'bootstrap' } // nothing usable yet; the first-launch installer runs
 
 export type DesktopUninstallMode = 'full' | 'gui' | 'lite'
@@ -775,7 +775,7 @@ export type DesktopUninstallMode = 'full' | 'gui' | 'lite'
 export interface DesktopUninstallSummary {
   /** Local package ownership, resolved by Electron before offering removal. */
   code_removal_allowed: boolean
-  hermes_home: string
+  scout_home: string
   agent_installed: boolean
   gui_installed: boolean
   source_built_artifacts: string[]
@@ -854,10 +854,10 @@ export interface DesktopUpdateApplyResult {
   message?: string
 
   /** True when no staged updater exists (CLI install) and the user should run
-   *  `hermes update` themselves. `command` is the exact line to run. */
+   *  `scout update` themselves. `command` is the exact line to run. */
   manual?: boolean
   command?: string
-  hermesRoot?: string
+  scoutRoot?: string
   /** True when the backend was updated but the GUI couldn't be relaunched in
    *  place (AppImage / dev run): the new version loads on next launch. */
   backendUpdated?: boolean
@@ -915,7 +915,7 @@ export interface DesktopPluginProfileRoute {
   targetProfile: string
 }
 
-export interface HermesConnection {
+export interface ScoutConnection {
   baseUrl: string
   customWindowControls?: boolean
   darwinMajor?: number
@@ -929,7 +929,7 @@ export interface HermesConnection {
   remoteHost?: string
   remoteIdentity?: string
   remoteKind?: 'cloud' | 'ssh' | 'url'
-  remoteHermesVersion?: string
+  remoteScoutVersion?: string
   nativeOverlayWidth: number
   source?: 'env' | 'local' | 'settings'
   token: string
@@ -956,18 +956,18 @@ export interface HermesConnection {
   windowButtonPosition: { x: number; y: number } | null
 }
 
-export interface HermesTitleBarTheme {
+export interface ScoutTitleBarTheme {
   background: string
   foreground: string
 }
 
 /** Turns in flight, so the main process can confirm before a quit kills them. */
-export interface HermesActiveWork {
+export interface ScoutActiveWork {
   count: number
   titles: string[]
 }
 
-export interface HermesWindowState {
+export interface ScoutWindowState {
   customWindowControls?: boolean
   darwinMajor?: number
   isFullscreen: boolean
@@ -991,7 +991,7 @@ export interface DesktopActiveProfile {
 
 export interface DesktopConnectionConfig {
   envOverride: boolean
-  // The saved connection mode. 'cloud' is a Hermes Cloud connection: it carries
+  // The saved connection mode. 'cloud' is a Scout Cloud connection: it carries
   // a remote-shaped block (remoteUrl = the selected agent's dashboardUrl,
   // remoteAuthMode 'oauth') but is remembered as cloud so settings reopens into
   // the cloud picker. Resolution treats cloud exactly as remote
@@ -1014,7 +1014,7 @@ export interface DesktopConnectionConfig {
   // encryption is opted out — plain text is the chosen mode there.
   remoteTokenPlainText: boolean
   remoteUrl: string
-  // For a 'cloud' connection: the persisted Hermes Cloud org (slug or id) the
+  // For a 'cloud' connection: the persisted Scout Cloud org (slug or id) the
   // connected instance was discovered under, so Settings → Gateway can reopen
   // into that org. Empty string for remote/local.
   cloudOrg: string
@@ -1022,7 +1022,7 @@ export interface DesktopConnectionConfig {
   sshUser: string
   sshPort: number | null
   sshKeyPath: string
-  sshRemoteHermesPath: string
+  sshRemoteScoutPath: string
   sshRemoteProfile: string
 }
 
@@ -1038,7 +1038,7 @@ export interface DesktopConnectionConfigInput {
   // user opt-in from the renderer.
   allowPlainTextToken?: boolean
   remoteUrl?: string
-  // For a 'cloud' connection: the selected Hermes Cloud org (slug or id) to
+  // For a 'cloud' connection: the selected Scout Cloud org (slug or id) to
   // persist so Settings can reopen into it. Ignored for remote/local modes.
   cloudOrg?: string
   cloudName?: string
@@ -1046,7 +1046,7 @@ export interface DesktopConnectionConfigInput {
   sshUser?: string
   sshPort?: number | null
   sshKeyPath?: string
-  sshRemoteHermesPath?: string
+  sshRemoteScoutPath?: string
   sshRemoteProfile?: string
   // For a URL-remote/cloud per-profile override: the profile name on the remote
   // host when it differs from this Desktop routing label.
@@ -1060,7 +1060,7 @@ export interface DesktopConnectionTestResult {
   reachable?: boolean
   sshError?:
     | 'auth-failed'
-    | 'hermes-not-found'
+    | 'scout-not-found'
     | 'host-key-changed'
     | 'timeout'
     | 'unreachable'
@@ -1070,8 +1070,8 @@ export interface DesktopConnectionTestResult {
     | null
   error?: string | null
   host?: string
-  remoteHermesPath?: string
-  remoteHermesVersion?: string
+  remoteScoutPath?: string
+  remoteScoutVersion?: string
   remotePlatform?: string
 }
 
@@ -1093,7 +1093,7 @@ export interface DesktopRegistryConnection {
   user?: string
   port?: number
   keyPath?: string
-  remoteHermesPath?: string
+  remoteScoutPath?: string
   remoteProfile?: string
   tokenSet: boolean
   tokenPreview: null | string
@@ -1144,7 +1144,7 @@ export interface DesktopRegistryConnectionInput {
   user?: string
   port?: null | number
   keyPath?: string
-  remoteHermesPath?: string
+  remoteScoutPath?: string
   remoteProfile?: string
 }
 
@@ -1291,7 +1291,7 @@ export interface DesktopOauthLogoutResult {
   connected: boolean
 }
 
-// --- Hermes Cloud (cloud-auto-discovery Phase 3) ---
+// --- Scout Cloud (cloud-auto-discovery Phase 3) ---
 
 export interface DesktopCloudStatus {
   // The portal base URL the desktop talks to (default or env-overridden).
@@ -1301,7 +1301,7 @@ export interface DesktopCloudStatus {
   signedIn: boolean
 }
 
-// A discovered Hermes Cloud agent — the trimmed DTO from NAS GET /api/agents.
+// A discovered Scout Cloud agent — the trimmed DTO from NAS GET /api/agents.
 export interface DesktopCloudAgent {
   id: string
   name: string
@@ -1342,7 +1342,7 @@ export interface DesktopCloudAgentSignInResult {
 export interface DesktopBootProgress {
   error: string | null
   fakeMode: boolean
-  /** True when the boot failure is a Nous Cloud agent that is down (HTTP 502/503/504). */
+  /** True when the boot failure is a SpaceshipResearch Cloud agent that is down (HTTP 502/503/504). */
   isCloudBackendDown?: boolean
   message: string
   phase: string
@@ -1441,7 +1441,7 @@ export type DesktopBootstrapEvent =
       docsUrl: string
     }
 
-export interface HermesApiRequest {
+export interface ScoutApiRequest {
   path: string
   method?: string
   body?: unknown
@@ -1471,7 +1471,7 @@ export interface HermesApiRequest {
   priority?: 'foreground'
 }
 
-export interface HermesPreviewTarget {
+export interface ScoutPreviewTarget {
   binary?: boolean
   byteSize?: number
   kind: 'file' | 'url'
@@ -1486,7 +1486,7 @@ export interface HermesPreviewTarget {
   url: string
 }
 
-export interface HermesReadFileTextResult {
+export interface ScoutReadFileTextResult {
   binary?: boolean
   byteSize?: number
   language?: string
@@ -1496,14 +1496,14 @@ export interface HermesReadFileTextResult {
   truncated?: boolean
 }
 
-export interface HermesPreviewWatch {
+export interface ScoutPreviewWatch {
   id: string
   path: string
 }
 
 // A real git worktree as reported by `git worktree list` (source of truth for
 // the "Start work" flow), as opposed to the session-cwd-derived grouping above.
-export interface HermesGitWorktree {
+export interface ScoutGitWorktree {
   path: string
   branch: null | string
   isMain: boolean
@@ -1517,7 +1517,7 @@ export interface HermesGitWorktree {
 // that a selection switches the main checkout, and does not make
 // `.worktrees/main`. `isRemote` means that a selection first makes a local
 // branch that tracks the remote one.
-export interface HermesGitBranch {
+export interface ScoutGitBranch {
   name: string
   checkedOut: boolean
   isDefault: boolean
@@ -1529,7 +1529,7 @@ export interface HermesGitBranch {
 // refs. `isRemote` distinguishes `origin/main` from a local `main` (the UI
 // may show a remote glyph); `isDefault` flags origin/HEAD so the dialog can
 // preselect it.
-export interface HermesGitBaseBranch {
+export interface ScoutGitBaseBranch {
   name: string
   isRemote: boolean
   isDefault: boolean
@@ -1537,7 +1537,7 @@ export interface HermesGitBaseBranch {
 
 // A single changed path from `git status --porcelain=v2`, classified by state
 // so the coding rail / switcher can group + open the right diff.
-export interface HermesRepoStatusFile {
+export interface ScoutRepoStatusFile {
   path: string
   staged: boolean
   unstaged: boolean
@@ -1547,7 +1547,7 @@ export interface HermesRepoStatusFile {
 
 // Compact working-tree status for the composer coding rail (parsed from
 // `git status --porcelain=v2 --branch`).
-export interface HermesRepoStatus {
+export interface ScoutRepoStatus {
   branch: null | string
   // The repo's trunk ("main" / "master" / …), so the UI can offer "branch off
   // the default" from anywhere. Null when no trunk is detected.
@@ -1566,16 +1566,16 @@ export interface HermesRepoStatus {
   added: number
   removed: number
   // Capped changed-file list (REPO_STATUS_FILE_CAP) for the diff/open actions.
-  files: HermesRepoStatusFile[]
+  files: ScoutRepoStatusFile[]
 }
 
 // Diff scope for the review pane, mirroring Codex: uncommitted working-tree
 // changes, all changes vs the branch base, or everything since the current
 // turn began.
-export type HermesReviewScope = 'branch' | 'lastTurn' | 'uncommitted'
+export type ScoutReviewScope = 'branch' | 'lastTurn' | 'uncommitted'
 
 // One changed file in the review pane (status letter, +/- lines, staged flag).
-export interface HermesReviewFile {
+export interface ScoutReviewFile {
   path: string
   added: number
   removed: number
@@ -1584,15 +1584,15 @@ export interface HermesReviewFile {
   staged: boolean
 }
 
-export interface HermesReviewList {
-  files: HermesReviewFile[]
+export interface ScoutReviewList {
+  files: ScoutReviewFile[]
   // The resolved base ref the scope diffed against (branch merge-base / turn
   // baseline), or null for the uncommitted scope.
   base: null | string
 }
 
 // The branch's PR (if any) as reported by `gh pr view`.
-export interface HermesReviewPr {
+export interface ScoutReviewPr {
   url: string
   state: string
   number: number
@@ -1600,7 +1600,7 @@ export interface HermesReviewPr {
 
 // One repo's PRs as reported by `gh pr list`, each tied to the branch it was
 // opened from — how a session row finds its own PR.
-export interface HermesBranchPullRequest {
+export interface ScoutBranchPullRequest {
   branch: string
   draft: boolean
   number: number
@@ -1610,36 +1610,36 @@ export interface HermesBranchPullRequest {
   url: string
 }
 
-export interface HermesRepoPullRequests {
+export interface ScoutRepoPullRequests {
   ghReady: boolean
-  prs: HermesBranchPullRequest[]
+  prs: ScoutBranchPullRequest[]
 }
 
 // gh availability/auth + the current branch's PR — drives the review pane's PR
 // button (disabled when gh isn't ready, "Open PR" vs "Create PR" otherwise).
-export interface HermesReviewShipInfo {
+export interface ScoutReviewShipInfo {
   ghReady: boolean
-  pr: HermesReviewPr | null
+  pr: ScoutReviewPr | null
 }
 
-export interface HermesReadDirEntry {
+export interface ScoutReadDirEntry {
   name: string
   path: string
   isDirectory: boolean
 }
 
-export interface HermesReadDirResult {
-  entries: HermesReadDirEntry[]
+export interface ScoutReadDirResult {
+  entries: ScoutReadDirEntry[]
   error?: string
 }
 
-export interface HermesPreviewFileChanged {
+export interface ScoutPreviewFileChanged {
   id: string
   path: string
   url: string
 }
 
-export interface HermesSelectPathsOptions {
+export interface ScoutSelectPathsOptions {
   title?: string
   defaultPath?: string
   directories?: boolean

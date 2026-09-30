@@ -11,8 +11,8 @@ import {
   AccentSwatch,
   LayoutPreviewCard,
   LAYOUTS,
-  NOUS_ACCENT,
-  orderConnectorPicks
+  orderConnectorPicks,
+  SPACESHIPRESEARCH_ACCENT
 } from '@/components/onboarding-chat/options'
 import type { LayoutNode } from '@/components/pane-shell/tree/model'
 import { ConnectorLogo } from '@/components/ui/connector-logo'
@@ -155,7 +155,7 @@ export function ConnectorPicks({ catalog, commit, done, locked, plugins }: Conne
         </>
       )}
       <p className="text-xs text-muted-foreground">
-        <strong className="font-medium text-foreground">Nothing connects or installs yet.</strong> Hermes will offer to
+        <strong className="font-medium text-foreground">Nothing connects or installs yet.</strong> Scout will offer to
         link these, or install a plugin, when a task needs them, and asks first.
       </p>
     </CardFrame>
@@ -169,7 +169,7 @@ function pickAccent(value: string, receipt?: string): void {
     return
   }
 
-  const accent = hex === NOUS_ACCENT ? null : hex
+  const accent = hex === SPACESHIPRESEARCH_ACCENT ? null : hex
 
   setOnboardingAnswers({
     accent,
@@ -183,7 +183,7 @@ export function LookCard({ attrs, locked, messageId }: CardProps) {
   const { renderedMode } = useTheme()
   const { commit, done } = useCardCommit('look')
   const accents = accentsFor(renderedMode === 'dark')
-  const accent = answers.accent ?? NOUS_ACCENT
+  const accent = answers.accent ?? SPACESHIPRESEARCH_ACCENT
   const picked = accents.find(swatch => swatch.hex === accent.toLowerCase())
 
   const requested = normalizeHex(attrs.value)

@@ -8,7 +8,7 @@ import { type ChatMessage, type GatewayEventPayload, toChatMessages, upsertToolP
 import { toRuntimeMessage } from '@/lib/chat-runtime'
 import { getToolDiff } from '@/store/tool-diffs'
 import { $toolDisclosureStates, setHideCodeDiffs, setToolViewMode } from '@/store/tool-view'
-import type { SessionMessage } from '@/types/hermes'
+import type { SessionMessage } from '@/types/scout'
 
 import { stubThreadEnvironment, stubThreadViewportSize, ThreadRuntime } from '../test-utils'
 import { Thread } from '../thread'

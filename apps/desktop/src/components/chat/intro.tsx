@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { type CSSProperties, useState } from 'react'
 
 import { useI18n } from '@/i18n'
+import type { Translations } from '@/i18n/types'
 import { capitalize, normalize } from '@/lib/text'
 
 import introCopyJsonl from './intro-copy.jsonl?raw'
-import { Wordmark } from './wordmark'
+import { ScoutOrb } from './scout-orb'
 
 type IntroCopy = {
   headline: string
@@ -32,7 +33,7 @@ const FALLBACK_COPY: IntroCopy[] = [
     body: "Bring the code, question, or stuck part. I'll read the room before making changes."
   },
   {
-    headline: 'What should Hermes look at?',
+    headline: 'What should Scout look at?',
     body: "Send the task, failing path, or half-formed plan. I'll help turn it into action."
   },
   {
@@ -124,7 +125,7 @@ function fallbackCopyForPersonality(personalityKey: string): IntroCopy[] {
       body: "Send the task, file, or rough idea. I'll use your configured voice and keep the work grounded in this repo."
     },
     {
-      headline: `What does ${label} Hermes need to see?`,
+      headline: `What does ${label} Scout need to see?`,
       body: "Bring the context or the stuck part. I'll adapt to your configured personality."
     },
     {
@@ -132,7 +133,7 @@ function fallbackCopyForPersonality(personalityKey: string): IntroCopy[] {
       body: "Send the problem, file, or idea. I'll follow the personality you've configured."
     },
     {
-      headline: `What should ${label} Hermes tackle?`,
+      headline: `What should ${label} Scout tackle?`,
       body: "Drop the task here. I'll keep the work grounded in the repo."
     },
     {
@@ -146,7 +147,26 @@ function pickCopy(copies: IntroCopy[], seed = 0): IntroCopy {
   return copies[Math.abs(seed) % copies.length] || FALLBACK_COPY[0]
 }
 
-const WORDMARK = 'HERMES AGENT'
+export type DayPart = keyof Translations['intro']['greeting']
+
+/** Which greeting an hour (0–23, local time) gets. Night runs 22:00–04:59. */
+export function dayPart(hour: number): DayPart {
+  if (hour >= 5 && hour < 12) {
+    return 'morning'
+  }
+
+  if (hour >= 12 && hour < 17) {
+    return 'afternoon'
+  }
+
+  if (hour >= 17 && hour < 22) {
+    return 'evening'
+  }
+
+  return 'night'
+}
+
+const rise = (index: number) => ({ '--rise-index': index }) as CSSProperties
 
 function resolveCopy(personality?: string, seed?: number): IntroCopy {
   const personalityKey = normalizeKey(personality)
@@ -160,6 +180,7 @@ function resolveCopy(personality?: string, seed?: number): IntroCopy {
 
 export function Intro({ personality, seed }: IntroProps) {
   const [mountSeed] = useState(() => Math.floor(Math.random() * 100000))
+  const [part] = useState(() => dayPart(new Date().getHours()))
   const { t } = useI18n()
   const rotationSeed = mountSeed + (seed ?? 0)
   const copy = resolveCopy(personality, rotationSeed)
@@ -172,13 +193,18 @@ export function Intro({ personality, seed }: IntroProps) {
 
   return (
     <div
-      className="pointer-events-none flex w-full min-w-0 flex-col items-center justify-center px-0.5 py-6 text-center text-muted-foreground sm:px-6 lg:px-8"
+      className="pointer-events-none relative flex w-full min-w-0 flex-col items-center justify-center px-0.5 py-6 text-center text-muted-foreground sm:px-6 lg:px-8"
       data-slot="aui_intro"
     >
-      <div className="w-full min-w-0">
-        <Wordmark className="mb-1" text={WORDMARK} />
-
-        <p className="m-0 text-center leading-normal tracking-tight">{body}</p>
+      <div aria-hidden="true" className="scout-horizon" />
+      <div className="relative flex w-full min-w-0 flex-col items-center">
+        <ScoutOrb className="scout-rise mb-8" style={rise(0)} />
+        <h1 className="scout-greeting scout-rise m-0" style={rise(1)}>
+          {t.intro.greeting[part]}
+        </h1>
+        <p className="scout-rise m-0 mt-3 max-w-[34rem] text-center text-[0.95rem] leading-relaxed" style={rise(2)}>
+          {body}
+        </p>
       </div>
     </div>
   )

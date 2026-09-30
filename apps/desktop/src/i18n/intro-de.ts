@@ -2,6 +2,7 @@ import type { Translations } from './types'
 
 /** Display-only translations, in the stock JSONL's per-personality rotation order. */
 export const introDe: Translations['intro'] = {
+  greeting: { morning: 'Guten Morgen', afternoon: 'Guten Tag', evening: 'Guten Abend', night: 'Noch wach?' },
   stock: {
     helpful: [
       'Bitten Sie mich, ein Repo zu öffnen, Tests auszuführen, einen Bug zu beheben oder einen PR zu entwerfen. Ich gehe die Schritte mit Ihnen durch.',

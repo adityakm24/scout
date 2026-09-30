@@ -106,9 +106,66 @@ export interface Translations {
       message: string
     }
   }
+  dashboard: {
+    title: string
+    subtitle: string
+    greetingLine: (open: number, upcoming: number) => string
+    unsupported: string
+    openDashboard: string
+    todos: {
+      title: string
+      addPlaceholder: string
+      add: string
+      emptyTitle: string
+      empty: string
+      completed: (count: number) => string
+      clearCompleted: string
+      overdue: string
+      today: string
+      tomorrow: string
+      due: string
+      clearDue: string
+      priority: string
+      priorities: Record<'none' | 'low' | 'medium' | 'high', string>
+      byScout: string
+      notesPlaceholder: string
+      markDone: string
+      markOpen: string
+      delete: string
+    }
+    reminders: {
+      title: string
+      textPlaceholder: string
+      add: string
+      emptyTitle: string
+      empty: string
+      upcoming: string
+      fired: string
+      clearFired: string
+      repeats: string
+      byScout: string
+      delete: string
+      snooze: string
+      custom: string
+      whenLabel: string
+      repeatLabel: string
+      presets: Record<'in15m' | 'in1h' | 'evening' | 'tomorrow', string>
+      repeatOptions: Record<'never' | 'daily' | 'weekdays' | 'weekly', string>
+      inRelative: (label: string) => string
+      firedAt: (label: string) => string
+      notificationTitle: string
+    }
+    sidebar: {
+      nextReminder: string
+      nothingNext: string
+      quickAdd: string
+    }
+  }
   intro: {
     stock: Record<string, string[]>
     custom: (label: string) => string[]
+    /** Welcome-screen greeting by time of day (night = 22:00–04:59). */
+    greeting: { morning: string; afternoon: string; evening: string; night: string }
   }
   catalog: {
     add: string
@@ -341,7 +398,7 @@ export interface Translations {
       turnOffLocal: string
       providedByPlugin: (plugin: string) => string
       openPlugins: string
-      nousLine: string
+      spaceshipResearchLine: string
       rulesReadOnly: string
       rulesAppOff: (name: string) => string
       rulesSignIn: string
@@ -528,13 +585,13 @@ export interface Translations {
       loadingSessions: string
       retryingRemoteBackend: string
       startingDesktopConnection: string
-      startingHermesDesktop: string
+      startingScoutDesktop: string
     }
     errors: {
       backgroundExited: string
       backgroundExitedDuringStartup: string
       backendStopped: string
-      restartHermes: string
+      restartScout: string
       openLogs: string
       desktopBootFailed: string
       gatewayConnectionLost: string
@@ -608,7 +665,7 @@ export interface Translations {
     desktopOutOfDateMessage: string
     updateDesktopApp: string
     installMethodUnsupportedTitle: string
-    updateHermes: string
+    updateScout: string
     updateReadyTitle: string
     updateReadyMessage: (count: number) => string
     updateReadyMessageUnknown: string
@@ -637,10 +694,10 @@ export interface Translations {
       openaiTtsNeedsKey: string
       codeSkewRestartRequired: string
       rpcOutOfSync: string
-      restartHermesFailed: string
+      restartScoutFailed: string
     }
     actions: {
-      restartHermes: string
+      restartScout: string
       openKeys: string
       openGateways: string
       openMaintenance: string
@@ -695,7 +752,7 @@ export interface Translations {
   }
 
   billingBlock: {
-    titleNous: string
+    titleSpaceshipResearch: string
     titleProvider: (provider: string) => string
     fallbackMessage: string
     openBilling: string
@@ -946,7 +1003,7 @@ export interface Translations {
       enableAllDesc: string
       focusedHint: string
       kinds: Record<
-        'approval' | 'backgroundDone' | 'credits' | 'input' | 'plugin' | 'turnDone' | 'turnError',
+        'approval' | 'backgroundDone' | 'credits' | 'input' | 'plugin' | 'reminder' | 'turnDone' | 'turnError',
         { label: string; description: string }
       >
       test: string
@@ -1110,7 +1167,7 @@ export interface Translations {
     uninstallSection: {
       dangerZone: string
       checkingInstalled: string
-      uninstallHermes: string
+      uninstallScout: string
       chooseHowMuch: string
       confirmUninstall: string
       confirmBody: (what: string) => string
@@ -1460,9 +1517,9 @@ export interface Translations {
       sshPortDesc: string
       sshKeyTitle: string
       sshKeyDesc: string
-      sshHermesPathTitle: string
-      sshHermesPathDesc: string
-      sshHermesPathPlaceholder: string
+      sshScoutPathTitle: string
+      sshScoutPathDesc: string
+      sshScoutPathPlaceholder: string
       sshTestConnection: string
       sshConnect: string
       sshButtonsHint: string
@@ -1994,15 +2051,15 @@ export interface Translations {
       activeBackend: string
       activeBackendHint: string
       useBackend: string
-      nousIncluded: string
-      nousAuthNeededTitle: string
-      nousAuthNeededMessage: (provider: string) => string
-      nousAuthSignIn: string
-      nousAuthDoneTitle: string
-      nousAuthDoneMessage: string
-      nousAuthFailed: string
-      nousAuthFailedMessage: string
-      nousAuthTryAgain: string
+      spaceshipResearchIncluded: string
+      spaceshipResearchAuthNeededTitle: string
+      spaceshipResearchAuthNeededMessage: (provider: string) => string
+      spaceshipResearchAuthSignIn: string
+      spaceshipResearchAuthDoneTitle: string
+      spaceshipResearchAuthDoneMessage: string
+      spaceshipResearchAuthFailed: string
+      spaceshipResearchAuthFailedMessage: string
+      spaceshipResearchAuthTryAgain: string
       noApiKeyRequired: string
       postSetupHint: (step: string) => string
       postSetupInstalledHint: string
@@ -2163,7 +2220,7 @@ export interface Translations {
       serverStates: {
         connected: string
         app_not_running: string
-        hermes_not_connected: string
+        scout_not_connected: string
         endpoint_unavailable: string
         no_interactive_session: string
         version_too_old: string
@@ -2427,7 +2484,7 @@ export interface Translations {
     noSessions: string
     gatewayRunning: string
     gatewayStopped: string
-    hermesActiveSessions: (version: string, count: number) => string
+    scoutActiveSessions: (version: string, count: number) => string
     restartGateway: string
     openBrowser: string
     toggleBrowser: string
@@ -2436,7 +2493,7 @@ export interface Translations {
     sharedGatewayRestartDescription: (bots: string) => string
     sharedGatewayRestartConfirm: string
     sharedGatewayRestarted: (count: number) => string
-    updateHermes: string
+    updateScout: string
     reloadWindow: string
     actionRunning: string
     actionDone: string
@@ -3038,7 +3095,6 @@ export interface Translations {
     files: string
     review: string
     logs: string
-    cronJobs: string
     groupAriaGrouped: string
     groupAriaUngrouped: string
     showProjects: string
@@ -3781,7 +3837,7 @@ export interface Translations {
   }
 
   freeTier: {
-    /** Settings › Providers row title while the Nous identity is the free tier. */
+    /** Settings › Providers row title while the SpaceshipResearch identity is the free tier. */
     providerRowTitle: string
     /** The featured row's pitch while the identity is the free tier: what signing in adds. */
     providerRowPitch: string
@@ -3833,8 +3889,8 @@ export interface Translations {
     alreadySignedInHeading: string
     alreadySignedInBody: string
     // First-launch set-up failure notice: the free tier could not be created at boot.
-    // One sentence per backend code (`hermes_cli/anon_auth.py::ANON_*`); the copy never says
-    // the free MODEL is off — what is unavailable is using Hermes without signing in.
+    // One sentence per backend code (`scout_cli/anon_auth.py::ANON_*`); the copy never says
+    // the free MODEL is off — what is unavailable is using Scout without signing in.
     setupFailed: {
       gateClosed: string
       paused: string
@@ -3844,7 +3900,7 @@ export interface Translations {
       powRequired: string
       locked: string
       generic: string
-      /** The sign-in door, when the account service is reachable: the Nous row sits right below. */
+      /** The sign-in door, when the account service is reachable: the SpaceshipResearch row sits right below. */
       signInBelow: string
       tryAgain: string
       retrying: string
@@ -4355,8 +4411,8 @@ export interface Translations {
       errorChooseModel: string
       errorCompressConversation: string
       errorCompressFailed: string
-      errorOpenHermesFolder: string
-      errorOpenHermesFolderFailed: string
+      errorOpenScoutFolder: string
+      errorOpenScoutFolderFailed: string
       errorUpdateApiKey: string
       /** One-click recovery for an expired/revoked OAuth grant: re-runs that
        *  provider's sign-in flow (auth layer, authKind 'oauth'). */

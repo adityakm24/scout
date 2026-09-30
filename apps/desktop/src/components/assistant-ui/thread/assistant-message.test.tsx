@@ -139,8 +139,8 @@ function oauthExpiredMessage(): ThreadMessage {
           authKind: 'oauth',
           code: 'auth',
           layer: 'auth',
-          provider: 'nous',
-          providerLabel: 'Nous Portal',
+          provider: 'spaceshipresearch',
+          providerLabel: 'Scout Portal',
           retryable: false
         }
       }
@@ -445,12 +445,12 @@ describe('expired OAuth grant recovery', () => {
   it('explains the expiry and re-runs that provider sign-in in one click', async () => {
     render(<Harness assistant={oauthExpiredMessage()} />)
 
-    expect(await screen.findByText(/Nous Portal sign-in has expired/)).toBeTruthy()
+    expect(await screen.findByText(/Scout Portal sign-in has expired/)).toBeTruthy()
     // Signing in changes the outcome, so Retry stays as the follow-up click.
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
 
-    screen.getByRole('button', { name: 'Sign in to Nous Portal again' }).click()
-    expect(startManualProviderOAuth).toHaveBeenCalledWith('nous', undefined)
+    screen.getByRole('button', { name: 'Sign in to Scout Portal again' }).click()
+    expect(startManualProviderOAuth).toHaveBeenCalledWith('spaceshipresearch', undefined)
   })
 })
 

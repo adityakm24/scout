@@ -41,11 +41,11 @@ async def test_handle_model_command_stores_request_overrides_for_named_custom_pr
     monkeypatch,
 ):
     import gateway.run as gateway_run
-    from hermes_cli.model_switch import ModelSwitchResult
+    from scout_cli.model_switch import ModelSwitchResult
 
-    hermes_home = tmp_path / ".hermes"
-    hermes_home.mkdir()
-    (hermes_home / "config.yaml").write_text(
+    scout_home = tmp_path / ".scout"
+    scout_home.mkdir()
+    (scout_home / "config.yaml").write_text(
         """
 model:
   default: gpt-5.4
@@ -62,13 +62,13 @@ custom_providers:
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(gateway_run, "_hermes_home", hermes_home)
-    # resolve_persist_behavior() reads the profile config through get_hermes_home(); without this
+    monkeypatch.setattr(gateway_run, "_scout_home", scout_home)
+    # resolve_persist_behavior() reads the profile config through get_scout_home(); without this
     # the sandbox home looks like a fresh install and the --provider switch persists globally.
-    monkeypatch.setattr("hermes_cli.config.get_hermes_home", lambda: hermes_home)
+    monkeypatch.setattr("scout_cli.config.get_scout_home", lambda: scout_home)
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
     monkeypatch.setattr(
-        "hermes_cli.model_switch.switch_model",
+        "scout_cli.model_switch.switch_model",
         lambda **kw: ModelSwitchResult(
             success=True,
             new_model="rotator-openrouter-coding",

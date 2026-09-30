@@ -1,6 +1,6 @@
-import type { ModelOptionProvider, ModelPricing } from '@hermes/shared'
-import { fuzzyRank, modelSearchText } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
+import type { ModelOptionProvider, ModelPricing } from '@scout/shared'
+import { fuzzyRank, modelSearchText } from '@scout/shared'
 import { useQuery } from '@tanstack/react-query'
 import { type ReactElement, useMemo, useRef, useState } from 'react'
 
@@ -18,9 +18,9 @@ import {
   useLocalModelsStatus,
   useLocalRuntimeJobs
 } from '@/store/local-runtime-jobs'
-import type { LocalModelLoadProgress, LocalRuntimeJob } from '@/types/hermes'
+import type { LocalModelLoadProgress, LocalRuntimeJob } from '@/types/scout'
 
-import type { HermesGateway } from '../hermes'
+import type { ScoutGateway } from '../scout'
 import { startManualOnboarding } from '../store/onboarding'
 
 import { InlineNotice } from './notifications'
@@ -33,7 +33,7 @@ import { Skeleton } from './ui/skeleton'
 interface ModelPickerDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  gw?: HermesGateway
+  gw?: ScoutGateway
   sessionId?: string | null
   currentModel: string
   currentProvider: string
@@ -71,7 +71,7 @@ export function ModelPickerDialog({
   // Own the search term so we can filter manually. cmdk's built-in
   // shouldFilter reorders items by its fuzzy-match score (≈alphabetical with
   // an empty query), which destroys the backend's curated order. We disable
-  // it: an empty query shows the curated list verbatim (like the `hermes
+  // it: an empty query shows the curated list verbatim (like the `scout
   // model` CLI picker) and a query ranks with the shared fuzzyRank.
   const [search, setSearch] = useState<string>('')
   // "Add custom model…" flips the search into slug entry: the typed id is
@@ -391,7 +391,7 @@ function ModelResults({
                     </span>
                   )}
                   {locked && (
-                    <span className="shrink-0 text-[0.62rem] uppercase tracking-wide opacity-80">{copy.pro}</span>
+                    <span className="shrink-0 text-[0.6875rem] font-medium opacity-80">{copy.pro}</span>
                   )}
                   <ModelPrice isCurrent={isCurrent} price={price} />
                 </CommandItem>
@@ -518,7 +518,7 @@ function ModelPrice({ price, isCurrent }: { price?: ModelPricing; isCurrent: boo
         ) : null}
         <span
           className={cn(
-            'shrink-0 rounded-sm px-1 py-0.5 text-[0.62rem] font-semibold uppercase tracking-wide',
+            'shrink-0 rounded-full px-1.5 py-0.5 text-[0.6875rem] font-medium',
             isCurrent ? 'bg-primary-foreground/20' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
           )}
         >
@@ -581,17 +581,17 @@ function ProviderHeading({ provider }: { provider: ModelOptionProvider }) {
   const { t } = useI18n()
   const copy = t.modelPicker
 
-  // Two different facts wear the same badge: `free_tier` is a signed-in Nous
+  // Two different facts wear the same badge: `free_tier` is a signed-in SpaceshipResearch
   // account on the free plan; `free_tier_row` is the no-account route's own
   // row. Either way the user is on free inference, so say so. Never match the
   // route by name — the label is copy.
   const tierBadge =
     provider.free_tier === true || provider.free_tier_row === true ? (
-      <span className="rounded-sm bg-emerald-500/15 px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+      <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-emerald-600 dark:text-emerald-400">
         {copy.freeTier}
       </span>
     ) : provider.free_tier === false ? (
-      <span className="rounded-sm bg-primary/15 px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-primary">
+      <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-primary">
         {copy.pro}
       </span>
     ) : null

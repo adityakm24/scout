@@ -2,20 +2,20 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type * as HermesApi from '@/hermes'
-import type { SessionInfo } from '@/hermes'
+import type * as ScoutApi from '@/scout'
+import type { SessionInfo } from '@/scout'
 import { $sessions } from '@/store/session'
 
 import { CommandCenterView } from './index'
 
-vi.mock('@/hermes', async importOriginal => ({
-  ...(await importOriginal<typeof HermesApi>()),
+vi.mock('@/scout', async importOriginal => ({
+  ...(await importOriginal<typeof ScoutApi>()),
   getActionStatus: vi.fn(() => Promise.resolve({ running: false })),
   getLogs: vi.fn(() => Promise.resolve({ lines: [] })),
   getStatus: vi.fn(() => Promise.resolve({})),
   getUsageAnalytics: vi.fn(() => Promise.resolve({})),
   restartGateway: vi.fn(),
-  updateHermes: vi.fn()
+  updateScout: vi.fn()
 }))
 vi.mock('@/lib/session-export', () => ({ exportSession: vi.fn() }))
 vi.mock('./maintenance', () => ({ MaintenancePanel: () => null }))

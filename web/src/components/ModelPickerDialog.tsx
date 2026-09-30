@@ -1,19 +1,19 @@
-import { Button } from "@nous-research/ui/ui/components/button";
-import { Checkbox } from "@nous-research/ui/ui/components/checkbox";
-import { ListItem } from "@nous-research/ui/ui/components/list-item";
-import { Spinner } from "@nous-research/ui/ui/components/spinner";
-import { Input } from "@nous-research/ui/ui/components/input";
-import { Label } from "@nous-research/ui/ui/components/label";
+import { Button } from "@spaceshipresearch/ui/ui/components/button";
+import { Checkbox } from "@spaceshipresearch/ui/ui/components/checkbox";
+import { ListItem } from "@spaceshipresearch/ui/ui/components/list-item";
+import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
+import { Input } from "@spaceshipresearch/ui/ui/components/input";
+import { Label } from "@spaceshipresearch/ui/ui/components/label";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { GatewayClient } from "@/lib/gatewayClient";
-import type { ModelOptionProvider, ModelOptionsResult } from "@hermes/shared";
+import type { ModelOptionProvider, ModelOptionsResult } from "@scout/shared";
 import { Check, RefreshCw, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { cn, themedBody } from "@/lib/utils";
 import { queryMatchesProviderOnly } from "@/lib/model-picker-filter";
-import { fuzzyRank, modelSearchText } from "@hermes/shared";
+import { fuzzyRank, modelSearchText } from "@scout/shared";
 import { errorMessage } from "@/lib/api-error";
 
 /**

@@ -58,8 +58,8 @@ def test_delivery_is_idempotent_fenced_and_permanent(tmp_path, terminal_status):
 def test_live_dm_bom_readers_preserve_pinned_intent(tmp_path, monkeypatch, intent_state):
     from pathlib import Path
 
-    from hermes_cli.active_sessions import try_acquire_active_session
-    from hermes_state import SessionDB
+    from scout_cli.active_sessions import try_acquire_active_session
+    from scout_state import SessionDB
     from tools import bot_live_delivery as mailbox, bot_mode_dm
 
     db = SessionDB(db_path=tmp_path / "state.db")
@@ -121,8 +121,8 @@ def test_fifo_survives_clock_rollback(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("capable", [True, False])
 def test_only_canonical_capable_owner_receives_across_compression(tmp_path, capable):
-    from hermes_state import SessionDB
-    from hermes_cli.active_sessions import try_acquire_active_session, transfer_active_session
+    from scout_state import SessionDB
+    from scout_cli.active_sessions import try_acquire_active_session, transfer_active_session
     from tools import bot_live_delivery as mailbox
 
     db = SessionDB(db_path=tmp_path / "state.db")

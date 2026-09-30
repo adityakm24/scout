@@ -51,13 +51,11 @@ const renderSidebar = (pathname: string, currentView: AppView, onRetrySessions: 
           onBranchSession={noop}
           onDeleteSession={noop}
           onLoadMoreSessions={noop}
-          onManageCronJob={noop}
           onNavigate={noop}
           onNewSessionInWorkspace={noop}
           onNewSessionSplit={noop}
           onResumeSession={noop}
           onRetrySessions={onRetrySessions}
-          onTriggerCronJob={noopAsync}
         />
       </SidebarProvider>
     </MemoryRouter>

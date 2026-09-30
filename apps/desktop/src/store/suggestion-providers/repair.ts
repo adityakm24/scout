@@ -1,7 +1,7 @@
-import { listMcpServers } from '@/hermes'
 import { translateNow } from '@/i18n'
 import { completeMcpDesktopOAuth, McpOAuthCancelled } from '@/lib/mcp-dashboard-oauth'
 import { prettyName } from '@/lib/text'
+import { listMcpServers } from '@/scout'
 import { type ComposerSuggestion, offerSuggestions } from '@/store/composer-suggestions'
 import { $gateway } from '@/store/gateway'
 import { notifyError } from '@/store/notifications'

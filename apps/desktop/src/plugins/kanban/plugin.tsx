@@ -14,7 +14,6 @@ import './kanban.css'
 import {
   cn,
   Codicon,
-  type HermesPlugin,
   host,
   type KeybindContribution,
   KEYBINDS_AREA,
@@ -22,13 +21,14 @@ import {
   type PaletteContribution,
   type RouteContribution,
   ROUTES_AREA,
+  type ScoutPlugin,
   SIDEBAR_NAV_AREA,
   type SidebarNavContribution,
   STATUSBAR_AREAS,
   Tip,
   useQuery,
   useValue
-} from '@hermes/plugin-sdk'
+} from '@scout/plugin-sdk'
 
 import { $boardSlug, bindApi, boardKey, fetchBoard, useKanbanScope } from './api'
 import { KanbanBoardPage } from './board'
@@ -78,7 +78,7 @@ function KanbanCount() {
   )
 }
 
-const plugin: HermesPlugin = {
+const plugin: ScoutPlugin = {
   id: 'kanban',
   name: 'Kanban',
   description: 'Multi-agent task board — board page, sidebar entry, and a live in-flight count in the status bar.',

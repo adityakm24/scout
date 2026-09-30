@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from agent.image_eviction_policy import outbound_image_retire_count
 from agent.anthropic_endpoints import (
-    _is_deepseek_anthropic_endpoint, _is_kimi_family_endpoint, _is_nous_portal_endpoint,
+    _is_deepseek_anthropic_endpoint, _is_kimi_family_endpoint, _is_scout_portal_endpoint,
     _is_third_party_anthropic_endpoint, _model_name_is_deepseek_thinking,
 )
 
@@ -414,7 +414,7 @@ def _convert_assistant_message(m: Dict[str, Any]) -> Dict[str, Any]:
     # (injected as a fallback upstream). Prepend, since thinking must precede text/tool_use. Skip
     # when reasoning_details already supplied (signed) thinking blocks: a duplicate unsigned one
     # would be downgraded to a spurious text block on the last assistant message.
-    # See hermes-agent#13848. Accept empty string "" — _copy_reasoning_content_for_api() injects "" as a
+    # See scout-agent#13848. Accept empty string "" — _copy_reasoning_content_for_api() injects "" as a
     # tier-3 fallback for Kimi tool-call messages that had no reasoning.
     reasoning_content = m.get("reasoning_content")
     if isinstance(reasoning_content, str) and not _has_block_type(blocks, _THINKING_TYPES):
@@ -570,11 +570,11 @@ def _manage_thinking_signatures(result: List[Dict[str, Any]], base_url: str | No
     Anthropic signs thinking blocks against the full turn; any upstream mutation invalidates them
     (400 "Invalid signature in thinking block"), so on direct Anthropic only the LATEST assistant
     turn keeps signed blocks. Signatures are proprietary: third-party endpoints strip all thinking.
-    Kimi replays as-is; DeepSeek needs unsigned blocks round-tripped but rejects signed ones. Nous
+    Kimi replays as-is; DeepSeek needs unsigned blocks round-tripped but rejects signed ones. SpaceshipResearch
     Portal proxies Claude with sticky sessions and validates the same signatures, so it takes the
     native path despite not being anthropic.com.
     """
-    is_third_party = _is_third_party_anthropic_endpoint(base_url) and not _is_nous_portal_endpoint(base_url)
+    is_third_party = _is_third_party_anthropic_endpoint(base_url) and not _is_scout_portal_endpoint(base_url)
     is_kimi = _is_kimi_family_endpoint(base_url, model)
     is_deepseek = _is_deepseek_anthropic_endpoint(base_url) or (
         is_third_party and _model_name_is_deepseek_thinking(model)

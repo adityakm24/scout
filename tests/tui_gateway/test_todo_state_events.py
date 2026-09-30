@@ -2,7 +2,7 @@
 
 import json
 
-from hermes_state import SessionDB
+from scout_state import SessionDB
 import tui_gateway.server as server
 
 

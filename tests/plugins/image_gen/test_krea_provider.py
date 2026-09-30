@@ -164,7 +164,7 @@ class TestGenerate:
         assert post_url.endswith("/generate/image/krea/krea-2/large")
 
     def test_aspect_ratio_mapping(self):
-        """Hermes 'square' must map to Krea '1:1' in the wire payload."""
+        """Scout 'square' must map to Krea '1:1' in the wire payload."""
         from plugins.image_gen.krea import KreaImageGenProvider
 
         submit = _submit_response()
@@ -441,27 +441,27 @@ class TestPollRetryPolicy:
 
 
 # ---------------------------------------------------------------------------
-# Managed Nous gateway path
+# Managed SpaceshipResearch gateway path
 # ---------------------------------------------------------------------------
 
 
 def _managed_cfg(
     origin: str = "https://krea-gateway.example.com",
-    token: str = "nous-tok-abc",
+    token: str = "spaceshipresearch-tok-abc",
 ):
     from types import SimpleNamespace
 
     return SimpleNamespace(
         vendor="krea",
         gateway_origin=origin,
-        nous_user_token=token,
+        spaceshipresearch_user_token=token,
         managed_mode=True,
     )
 
 
 class TestManagedGateway:
-    def test_managed_submit_uses_gateway_origin_and_nous_token(self, monkeypatch):
-        """Managed mode submits to the gateway origin with the Nous token."""
+    def test_managed_submit_uses_gateway_origin_and_spaceshipresearch_token(self, monkeypatch):
+        """Managed mode submits to the gateway origin with the SpaceshipResearch token."""
         import plugins.image_gen.krea as krea_mod
         from plugins.image_gen.krea import KreaImageGenProvider
 
@@ -485,14 +485,14 @@ class TestManagedGateway:
             "https://krea-gateway.example.com/generate/image/krea/krea-2/medium"
         )
         headers = mock_post.call_args.kwargs["headers"]
-        assert headers["Authorization"] == "Bearer nous-tok-abc"
+        assert headers["Authorization"] == "Bearer spaceshipresearch-tok-abc"
         # Idempotency key drives the gateway's per-generation billing boundary.
         assert headers["x-idempotency-key"]
-        # Poll is bound to the same gateway + Nous token.
+        # Poll is bound to the same gateway + SpaceshipResearch token.
         poll_url = mock_get.call_args[0][0]
         assert poll_url.startswith("https://krea-gateway.example.com/jobs/")
         poll_headers = mock_get.call_args.kwargs["headers"]
-        assert poll_headers["Authorization"] == "Bearer nous-tok-abc"
+        assert poll_headers["Authorization"] == "Bearer spaceshipresearch-tok-abc"
 
 
     def test_managed_429_concurrency_hint(self, monkeypatch):

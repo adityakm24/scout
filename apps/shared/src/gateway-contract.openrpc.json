@@ -1,7 +1,7 @@
 {
   "openrpc": "1.3.2",
   "info": {
-    "title": "Hermes TUI/Desktop gateway",
+    "title": "Scout TUI/Desktop gateway",
     "version": "1",
     "description": "Generated from tui_gateway/contracts by scripts/gen_gateway_contracts.py."
   },
@@ -134,7 +134,7 @@
     },
     {
       "name": "billing.state",
-      "summary": "Read-only billing view (no scope); the Nous free tier is answered locally without a portal call.",
+      "summary": "Read-only billing view (no scope); the SpaceshipResearch free tier is answered locally without a portal call.",
       "params": [
         {
           "name": "params",
@@ -350,7 +350,7 @@
     },
     {
       "name": "cli.exec",
-      "summary": "Run ``hermes <argv>`` non-interactively and capture its output; ``blocked`` explains a refusal.",
+      "summary": "Run ``scout <argv>`` non-interactively and capture its output; ``blocked`` explains a refusal.",
       "params": [
         {
           "name": "params",
@@ -674,7 +674,7 @@
     },
     {
       "name": "connectors.operation.wake",
-      "summary": "The browser leg came back (hermes://connections/done): read the accounts now, not at the next tick.",
+      "summary": "The browser leg came back (scout://connections/done): read the accounts now, not at the next tick.",
       "params": [
         {
           "name": "params",
@@ -799,20 +799,20 @@
       }
     },
     {
-      "name": "diagnostics.share_nous",
-      "summary": "Upload a force-redacted debug bundle to Nous-internal diagnostics storage.",
+      "name": "diagnostics.share_spaceshipresearch",
+      "summary": "Upload a force-redacted debug bundle to SpaceshipResearch-internal diagnostics storage.",
       "params": [
         {
           "name": "params",
           "schema": {
-            "$ref": "#/components/schemas/DiagnosticsShareNousParams"
+            "$ref": "#/components/schemas/DiagnosticsShareSpaceshipResearchParams"
           }
         }
       ],
       "result": {
         "name": "result",
         "schema": {
-          "$ref": "#/components/schemas/DiagnosticsShareNousResult"
+          "$ref": "#/components/schemas/DiagnosticsShareSpaceshipResearchResult"
         }
       }
     },
@@ -2311,6 +2311,42 @@
       }
     },
     {
+      "name": "planner.reminders",
+      "summary": "List/add/update/delete the user's reminders (reminder-kind cron jobs).",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/PlannerRemindersParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/PlannerRemindersResult"
+        }
+      }
+    },
+    {
+      "name": "planner.todos",
+      "summary": "List/add/update/delete/reorder the user's to-dos (shared with the agent's planner tool).",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/PlannerTodosParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/PlannerTodosResult"
+        }
+      }
+    },
+    {
       "name": "plugins.list",
       "summary": "Loaded plugin manager entries (legacy flat view); the Plugins Hub uses plugins.manage list.",
       "params": [
@@ -2888,7 +2924,7 @@
     },
     {
       "name": "reload.env",
-      "summary": "Re-read ~/.hermes/.env (CLI /reload parity); built agents keep their pool until /new.",
+      "summary": "Re-read ~/.scout/.env (CLI /reload parity); built agents keep their pool until /new.",
       "params": [
         {
           "name": "params",
@@ -3446,7 +3482,7 @@
     },
     {
       "name": "session.save",
-      "summary": "Export the transcript to ~/.hermes/sessions/saved (classic /save).",
+      "summary": "Export the transcript to ~/.scout/sessions/saved (classic /save).",
       "params": [
         {
           "name": "params",
@@ -3554,7 +3590,7 @@
     },
     {
       "name": "session.usage",
-      "summary": "Token / context / cost counters for the session (+ Nous credit lines when available).",
+      "summary": "Token / context / cost counters for the session (+ SpaceshipResearch credit lines when available).",
       "params": [
         {
           "name": "params",
@@ -5580,8 +5616,8 @@
             ],
             "title": "Billing Url"
           },
-          "is_nous": {
-            "title": "Is Nous",
+          "is_spaceshipresearch": {
+            "title": "Is Spaceshipresearch",
             "type": "boolean"
           },
           "message": {
@@ -5606,7 +5642,7 @@
           "provider_label",
           "model",
           "billing_url",
-          "is_nous",
+          "is_spaceshipresearch",
           "message"
         ],
         "title": "BillingBlock",
@@ -7468,7 +7504,7 @@
         "type": "object"
       },
       "CatalogAppState": {
-        "description": "The desktop app a catalog plugin drives, from its ``hermes_platform`` declaration.",
+        "description": "The desktop app a catalog plugin drives, from its ``scout_platform`` declaration.",
         "enum": [
           "present",
           "missing_app",
@@ -8704,7 +8740,7 @@
       },
       "ConfigProviderRef": {
         "additionalProperties": true,
-        "description": "``hermes_cli/models.py::list_available_providers`` row.",
+        "description": "``scout_cli/models.py::list_available_providers`` row.",
         "properties": {
           "id": {
             "title": "Id",
@@ -12166,7 +12202,7 @@
         "title": "DelegationStatusResult",
         "type": "object"
       },
-      "DiagnosticsShareNousParams": {
+      "DiagnosticsShareSpaceshipResearchParams": {
         "additionalProperties": false,
         "properties": {
           "error_context": {
@@ -12209,10 +12245,10 @@
             "title": "Log Lines"
           }
         },
-        "title": "DiagnosticsShareNousParams",
+        "title": "DiagnosticsShareSpaceshipResearchParams",
         "type": "object"
       },
-      "DiagnosticsShareNousResult": {
+      "DiagnosticsShareSpaceshipResearchResult": {
         "additionalProperties": false,
         "description": "Structured envelope: ``ok=False`` + ``error`` renders inline instead of failing the RPC.",
         "properties": {
@@ -12272,7 +12308,7 @@
         "required": [
           "ok"
         ],
-        "title": "DiagnosticsShareNousResult",
+        "title": "DiagnosticsShareSpaceshipResearchResult",
         "type": "object"
       },
       "DiscoveredRepo": {
@@ -13812,7 +13848,7 @@
       },
       "ForeignSessionRow": {
         "additionalProperties": false,
-        "description": "``hermes_cli/foreign_sessions_browser.py::list_foreign_sessions`` \u2014 ``id`` is an opaque\nhandle, never a path.",
+        "description": "``scout_cli/foreign_sessions_browser.py::list_foreign_sessions`` \u2014 ``id`` is an opaque\nhandle, never a path.",
         "properties": {
           "id": {
             "title": "Id",
@@ -14114,7 +14150,7 @@
       },
       "GoalContractSnapshot": {
         "additionalProperties": false,
-        "description": "``hermes_cli/goals.py::GoalContract.to_dict``.",
+        "description": "``scout_cli/goals.py::GoalContract.to_dict``.",
         "properties": {
           "outcome": {
             "default": "",
@@ -18636,7 +18672,7 @@
       },
       "MessageReaction": {
         "additionalProperties": true,
-        "description": "One persisted reaction row (``hermes_state_messages.set_message_reaction``); ``seen`` is\nstamped once announced.",
+        "description": "One persisted reaction row (``scout_state_messages.set_message_reaction``); ``seen`` is\nstamped once announced.",
         "properties": {
           "emoji": {
             "title": "Emoji",
@@ -18840,7 +18876,7 @@
       },
       "ModelCapabilities": {
         "additionalProperties": false,
-        "description": "``hermes_cli/inventory.py::_apply_capabilities``.",
+        "description": "``scout_cli/inventory.py::_apply_capabilities``.",
         "properties": {
           "fast": {
             "title": "Fast",
@@ -18922,7 +18958,7 @@
       },
       "ModelOptionProvider": {
         "additionalProperties": true,
-        "description": "One ``hermes_cli/inventory.py::build_models_payload`` provider row (the union of every field\nthe builder sets; ``pricing_pending`` / ``free_tier_pending`` mark the cached-only path).",
+        "description": "One ``scout_cli/inventory.py::build_models_payload`` provider row (the union of every field\nthe builder sets; ``pricing_pending`` / ``free_tier_pending`` mark the cached-only path).",
         "properties": {
           "slug": {
             "title": "Slug",
@@ -19253,7 +19289,7 @@
       },
       "ModelPricing": {
         "additionalProperties": false,
-        "description": "``hermes_cli/inventory.py::_apply_pricing`` \u2014 formatted $/Mtok strings (``\"\"`` unknown,\n``\"free\"``); the sale fields are Nous Portal-only.",
+        "description": "``scout_cli/inventory.py::_apply_pricing`` \u2014 formatted $/Mtok strings (``\"\"`` unknown,\n``\"free\"``); the sale fields are Scout Portal-only.",
         "properties": {
           "input": {
             "title": "Input",
@@ -21767,9 +21803,524 @@
         "title": "PingResult",
         "type": "object"
       },
+      "PlannerReminder": {
+        "additionalProperties": true,
+        "description": "``planner/reminders.py::_view`` \u2014 a reminder-kind cron job.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "when": {
+            "default": "",
+            "title": "When",
+            "type": "string"
+          },
+          "recurring": {
+            "default": false,
+            "title": "Recurring",
+            "type": "boolean"
+          },
+          "next_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Next At"
+          },
+          "last_fired_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Fired At"
+          },
+          "status": {
+            "default": "scheduled",
+            "title": "Status",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created At"
+          },
+          "created_by": {
+            "default": "user",
+            "title": "Created By",
+            "type": "string"
+          },
+          "deliver": {
+            "default": "local",
+            "title": "Deliver",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "PlannerReminder",
+        "type": "object"
+      },
+      "PlannerReminderAction": {
+        "enum": [
+          "list",
+          "add",
+          "update",
+          "delete",
+          "clear_fired"
+        ],
+        "title": "PlannerReminderAction",
+        "type": "string"
+      },
+      "PlannerRemindersParams": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "action": {
+            "$ref": "#/components/schemas/PlannerReminderAction",
+            "default": "list"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Text"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "When"
+          },
+          "include_fired": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Include Fired"
+          }
+        },
+        "title": "PlannerRemindersParams",
+        "type": "object"
+      },
+      "PlannerRemindersResult": {
+        "additionalProperties": true,
+        "properties": {
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "reminders": {
+            "items": {
+              "$ref": "#/components/schemas/PlannerReminder"
+            },
+            "title": "Reminders",
+            "type": "array"
+          },
+          "reminder": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlannerReminder"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "removed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Removed"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "title": "PlannerRemindersResult",
+        "type": "object"
+      },
+      "PlannerTodo": {
+        "additionalProperties": true,
+        "description": "``planner/todos.py`` item.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          },
+          "status": {
+            "default": "open",
+            "title": "Status",
+            "type": "string"
+          },
+          "priority": {
+            "default": "none",
+            "title": "Priority",
+            "type": "string"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Due"
+          },
+          "created_by": {
+            "default": "user",
+            "title": "Created By",
+            "type": "string"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Updated By"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Updated At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Completed At"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "PlannerTodo",
+        "type": "object"
+      },
+      "PlannerTodoAction": {
+        "enum": [
+          "list",
+          "add",
+          "update",
+          "delete",
+          "clear_completed",
+          "reorder"
+        ],
+        "title": "PlannerTodoAction",
+        "type": "string"
+      },
+      "PlannerTodosParams": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "action": {
+            "$ref": "#/components/schemas/PlannerTodoAction",
+            "default": "list"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Title"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Due"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Priority"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Status"
+          },
+          "include_done": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Include Done"
+          },
+          "ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Ids"
+          }
+        },
+        "title": "PlannerTodosParams",
+        "type": "object"
+      },
+      "PlannerTodosResult": {
+        "additionalProperties": true,
+        "properties": {
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Revision"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlannerTodo"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlannerTodo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "title": "PlannerTodosResult",
+        "type": "object"
+      },
       "PluginActivation": {
         "additionalProperties": false,
-        "description": "What a plugin loaded mid-run does NOW vs later (``hermes_cli.plugins_activation``). ``activated_now``\nkinds (``{kind: [names]}``): ``gateway_commands`` (slash names), ``locales`` (``<lang>.<surface>``\nlanguage-pack layers), ``gateway_transforms`` / ``hooks`` (hook\nnames), ``callbacks`` (platforms / ``slack:<action_id>``) \u2014 live in the running gateway once it reloaded\n(``gateway_reloaded``). ``live_now``: the plugin's MCP servers (connected, with their tools, or the\nerror) and skills, usable in every open chat of the profile from its next turn \u2014 the chats also get a\nnote listing them. ``deferred`` kinds: ``tools`` (Python tool names) and ``prompt`` (section ids)\napply from the next session.",
+        "description": "What a plugin loaded mid-run does NOW vs later (``scout_cli.plugins_activation``). ``activated_now``\nkinds (``{kind: [names]}``): ``gateway_commands`` (slash names), ``locales`` (``<lang>.<surface>``\nlanguage-pack layers), ``gateway_transforms`` / ``hooks`` (hook\nnames), ``callbacks`` (platforms / ``slack:<action_id>``) \u2014 live in the running gateway once it reloaded\n(``gateway_reloaded``). ``live_now``: the plugin's MCP servers (connected, with their tools, or the\nerror) and skills, usable in every open chat of the profile from its next turn \u2014 the chats also get a\nnote listing them. ``deferred`` kinds: ``tools`` (Python tool names) and ``prompt`` (section ids)\napply from the next session.",
         "properties": {
           "name": {
             "title": "Name",
@@ -21925,7 +22476,7 @@
         "enum": [
           "connected",
           "app_not_running",
-          "hermes_not_connected",
+          "scout_not_connected",
           "endpoint_unavailable",
           "no_interactive_session",
           "version_too_old",
@@ -21937,7 +22488,7 @@
       },
       "PluginSettingField": {
         "additionalProperties": false,
-        "description": "One ``config_schema`` key of a plugin manifest, rendered by the Plugins hub\n(``hermes_cli.plugins_settings.plugin_settings_fields``). ``secret`` fields carry no value: ``env``\nnames the ``.env`` variable and ``has_value`` whether it is set.",
+        "description": "One ``config_schema`` key of a plugin manifest, rendered by the Plugins hub\n(``scout_cli.plugins_settings.plugin_settings_fields``). ``secret`` fields carry no value: ``env``\nnames the ``.env`` variable and ``has_value`` whether it is set.",
         "properties": {
           "key": {
             "title": "Key",
@@ -22223,7 +22774,7 @@
       },
       "PluginsManageResult": {
         "additionalProperties": false,
-        "description": "``list`` \u2192 ``plugins`` + counts; ``toggle`` \u2192 ``ok``/``unchanged``/``restart_required``/``name``\n(the canonical key written)/``plugin``; ``install`` \u2192 ``hermes_cli.plugins_cmd.dashboard_install_plugin``'s\nok payload; ``toggle``/``install``/``update`` that loaded a plugin also carry ``gateway_reloaded`` (the\nrunning gateway picked it up and re-wired its handlers) and ``activation`` \u2014 the honest split of what is\nlive now vs deferred, so ``restart_required`` is True only when no gateway answered; ``update`` \u2192 ``ok``/``unchanged``/``sha``, or ``ok=false`` + ``consent_required`` with the\n``delta`` (``{surface: [added...]}``) / ``delta_lines`` a widened pin adds \u2014 nothing changed until the\nclient retries with ``accept_capabilities``; ``remove`` \u2192 ``ok``/``name`` plus\n``cleared_memory_provider`` when the removed plugin was the live ``memory.provider``.",
+        "description": "``list`` \u2192 ``plugins`` + counts; ``toggle`` \u2192 ``ok``/``unchanged``/``restart_required``/``name``\n(the canonical key written)/``plugin``; ``install`` \u2192 ``scout_cli.plugins_cmd.dashboard_install_plugin``'s\nok payload; ``toggle``/``install``/``update`` that loaded a plugin also carry ``gateway_reloaded`` (the\nrunning gateway picked it up and re-wired its handlers) and ``activation`` \u2014 the honest split of what is\nlive now vs deferred, so ``restart_required`` is True only when no gateway answered; ``update`` \u2192 ``ok``/``unchanged``/``sha``, or ``ok=false`` + ``consent_required`` with the\n``delta`` (``{surface: [added...]}``) / ``delta_lines`` a widened pin adds \u2014 nothing changed until the\nclient retries with ``accept_capabilities``; ``remove`` \u2192 ``ok``/``name`` plus\n``cleared_memory_provider`` when the removed plugin was the live ``memory.provider``.",
         "properties": {
           "plugins": {
             "anyOf": [
@@ -24652,7 +25203,7 @@
       },
       "ProjectFolder": {
         "additionalProperties": false,
-        "description": "``hermes_cli/projects_db.py::ProjectFolder.to_dict``.",
+        "description": "``scout_cli/projects_db.py::ProjectFolder.to_dict``.",
         "properties": {
           "path": {
             "title": "Path",
@@ -24754,7 +25305,7 @@
       },
       "ProjectInfo": {
         "additionalProperties": false,
-        "description": "``hermes_cli/projects_db.py::Project.to_dict`` \u2014 one stored project with its folders.",
+        "description": "``scout_cli/projects_db.py::Project.to_dict`` \u2014 one stored project with its folders.",
         "properties": {
           "id": {
             "title": "Id",
@@ -31982,7 +32533,7 @@
       },
       "SetupReadyPayload": {
         "additionalProperties": true,
-        "description": "``hermes_cli/free_tier_bootstrap.py::SetupRecord.as_payload``.",
+        "description": "``scout_cli/free_tier_bootstrap.py::SetupRecord.as_payload``.",
         "properties": {
           "provider_configured": {
             "title": "Provider Configured",
@@ -32706,7 +33257,7 @@
       },
       "SharedMetricsStartupLatencyParams": {
         "additionalProperties": false,
-        "description": "``elapsed_ms`` = the client's own launch (TUI process start / Desktop app start) to ready\n(TUI gateway ready / Desktop backend attached), measured once per launch by the client. The\nclient names its surface because a Desktop may attach to a URL/cloud backend where\n``HERMES_DESKTOP`` is unset; without it the backend falls back to its own client detection.\n``launch_id`` is an opaque per-launch token the backend latches on (never recorded), so a\nreconnect re-sending the same launch counts once while a new launch counts again.",
+        "description": "``elapsed_ms`` = the client's own launch (TUI process start / Desktop app start) to ready\n(TUI gateway ready / Desktop backend attached), measured once per launch by the client. The\nclient names its surface because a Desktop may attach to a URL/cloud backend where\n``SCOUT_DESKTOP`` is unset; without it the backend falls back to its own client detection.\n``launch_id`` is an opaque per-launch token the backend latches on (never recorded), so a\nreconnect re-sending the same launch counts once while a new launch counts again.",
         "properties": {
           "profile": {
             "anyOf": [
@@ -32775,7 +33326,7 @@
       },
       "SharedMetricsUpdateRunParams": {
         "additionalProperties": false,
-        "description": "One Desktop PACKAGED self-update (electron-updater / App Installer / Store). Source-checkout\nhand-offs run ``hermes update`` and are counted from its receipt, never here. Raw words; the\nbackend buckets them: ``outcome`` success|failed|noop|refused, ``failed_stage``\ndownload|verify|apply|restart, ``mechanism`` the updater strategy kind, ``duration_ms`` wall\ntime, ``from_commit_date`` the updated-from build's commit time (epoch seconds) when known.",
+        "description": "One Desktop PACKAGED self-update (electron-updater / App Installer / Store). Source-checkout\nhand-offs run ``scout update`` and are counted from its receipt, never here. Raw words; the\nbackend buckets them: ``outcome`` success|failed|noop|refused, ``failed_stage``\ndownload|verify|apply|restart, ``mechanism`` the updater strategy kind, ``duration_ms`` wall\ntime, ``from_commit_date`` the updated-from build's commit time (epoch seconds) when known.",
         "properties": {
           "profile": {
             "anyOf": [
@@ -32977,7 +33528,7 @@
       },
       "SkillBrowseItem": {
         "additionalProperties": true,
-        "description": "``hermes_cli.skills_hub.browse_skills`` row.",
+        "description": "``scout_cli.skills_hub.browse_skills`` row.",
         "properties": {
           "name": {
             "default": "",
@@ -33079,7 +33630,7 @@
       },
       "SkillInspectInfo": {
         "additionalProperties": true,
-        "description": "``hermes_cli.skills_hub.inspect_skill``; ``{}`` when the identifier resolves nowhere.",
+        "description": "``scout_cli.skills_hub.inspect_skill``; ``{}`` when the identifier resolves nowhere.",
         "properties": {
           "name": {
             "anyOf": [
@@ -33449,7 +34000,7 @@
       },
       "SkinPayload": {
         "additionalProperties": true,
-        "description": "``tui_gateway/change_watcher.py::resolve_skin`` \u2014 the resolved active skin (``HermesSkin``).\n``{}`` when the skin engine failed to load. Colour maps are token \u2192 colour string.",
+        "description": "``tui_gateway/change_watcher.py::resolve_skin`` \u2014 the resolved active skin (``ScoutSkin``).\n``{}`` when the skin engine failed to load. Colour maps are token \u2192 colour string.",
         "properties": {
           "name": {
             "default": "",
@@ -38965,7 +39516,7 @@
           "REISSUE_REFUSED",
           "UNKNOWN_OPERATION",
           "INVALID_ANSWER",
-          "NEEDS_NOUS_AUTH",
+          "NEEDS_SPACESHIPRESEARCH_AUTH",
           "CONNECTOR_NOT_FOUND",
           "TOOLS_UNAVAILABLE",
           "CONNECTORS_UNAVAILABLE",
@@ -39389,7 +39940,7 @@
     },
     {
       "name": "display.status",
-      "summary": "This profile's screen started or stopped (also for transitions made outside hermes serve).",
+      "summary": "This profile's screen started or stopped (also for transitions made outside scout serve).",
       "params": [
         {
           "name": "payload",
@@ -39636,6 +40187,18 @@
           "name": "payload",
           "schema": {
             "$ref": "#/components/schemas/PetHatchProgressPayload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "planner.changed",
+      "summary": "planner/todos.json moved; refetch the to-do list.",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/ChangeSignalPayload"
           }
         }
       ]

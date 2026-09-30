@@ -3,9 +3,8 @@ import type { CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * The oversized display lettering of an empty chat — the Collapse face that
- * writes "HERMES AGENT" across a fresh draft, and a bot's name across its own
- * empty chat.
+ * The oversized display lettering of a bot's empty chat — its name, set in
+ * the Instrument Serif display face. (A fresh draft greets with `Intro`.)
  *
  * The doubled children are load-bearing, not a typo: `.fit-text` sizes the
  * visible span from a container query and needs the `aria-hidden` twin laid

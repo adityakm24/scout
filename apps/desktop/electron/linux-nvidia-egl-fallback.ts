@@ -15,8 +15,8 @@
  *
  * Skipped when a remote display already forced software rendering (the
  * `--disable-gpu-compositing` path covers it), under WSLg (vGPU is healthy
- * there), or when `HERMES_DESKTOP_DISABLE_GPU=0` keeps the GPU on.
- * `HERMES_DESKTOP_NVIDIA_SWIFTSHADER=1` can force the fallback back on on an
+ * there), or when `SCOUT_DESKTOP_DISABLE_GPU=0` keeps the GPU on.
+ * `SCOUT_DESKTOP_NVIDIA_SWIFTSHADER=1` can force the fallback back on on an
  * affected series that this closed set does not yet list (e.g. a future
  * series that reintroduces the #40077 crash); it cannot force it on where an
  * earlier gate already returned (remote display, WSLg, `DISABLE_GPU=0`).
@@ -72,7 +72,7 @@ export function decideNvidiaEglFallback(options: {
   const remoteDisplayReason = options.remoteDisplayReason ?? null
   const driverMajor = options.driverMajor
 
-  const nvidiaOverride = String(env.HERMES_DESKTOP_NVIDIA_SWIFTSHADER || '')
+  const nvidiaOverride = String(env.SCOUT_DESKTOP_NVIDIA_SWIFTSHADER || '')
     .trim()
     .toLowerCase()
 
@@ -84,8 +84,8 @@ export function decideNvidiaEglFallback(options: {
     return { enable: false, reason: null }
   }
 
-  // A user who forced GPU back on (HERMES_DESKTOP_DISABLE_GPU=0) owns that call.
-  const gpuOverride = String(env.HERMES_DESKTOP_DISABLE_GPU || '')
+  // A user who forced GPU back on (SCOUT_DESKTOP_DISABLE_GPU=0) owns that call.
+  const gpuOverride = String(env.SCOUT_DESKTOP_DISABLE_GPU || '')
     .trim()
     .toLowerCase()
 
@@ -113,7 +113,7 @@ export function decideNvidiaEglFallback(options: {
 
   const reason = detected
     ? `NVIDIA driver ${driverMajor} (known-broken EGL series)`
-    : 'override (HERMES_DESKTOP_NVIDIA_SWIFTSHADER)'
+    : 'override (SCOUT_DESKTOP_NVIDIA_SWIFTSHADER)'
 
   return { enable: true, reason }
 }

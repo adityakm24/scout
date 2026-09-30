@@ -1,5 +1,5 @@
-import { registryBackendScopeKey } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
+import { registryBackendScopeKey } from '@scout/shared'
 import { act, cleanup, render, waitFor } from '@testing-library/react'
 import type { MutableRefObject } from 'react'
 import { useEffect, useRef } from 'react'
@@ -10,6 +10,7 @@ import { NO_PROJECT_ID } from '@/app/chat/sidebar/projects/workspace-groups'
 import { resolveSessionRpcOwner } from '@/app/contrib/wiring-routing'
 import { $terminalTakeover, setTerminalTakeover } from '@/app/right-sidebar/store'
 import { noteActiveTreeGroup, revealTreePane } from '@/components/pane-shell/tree/store'
+import { createClientSessionState } from '@/lib/chat-runtime'
 import {
   deleteSession,
   getAllSessionMessages,
@@ -19,8 +20,7 @@ import {
   type SessionInfo,
   type SessionResumeResult,
   setSessionArchived
-} from '@/hermes'
-import { createClientSessionState } from '@/lib/chat-runtime'
+} from '@/scout'
 import { $clarifyRequests, clearClarifyRequest, setClarifyRequest } from '@/store/clarify'
 import { clearSessionDraft, stashSessionDraft, takeSessionDraft } from '@/store/composer'
 import {
@@ -112,7 +112,7 @@ import { suppressTranscriptForView, transcriptRowContentKey } from './use-sessio
 import type { TranscriptViewCutoff } from './use-session-actions/transcript-provenance'
 import { useSessionStateCache } from './use-session-state-cache'
 
-vi.mock('@/hermes', async importOriginal => ({
+vi.mock('@/scout', async importOriginal => ({
   ...(await importOriginal<Record<string, unknown>>()),
   deleteSession: vi.fn(),
   getSession: vi.fn(),
@@ -3163,7 +3163,7 @@ describe('resumeSession warm-cache mapping integrity', () => {
   )
 
   it('pins an untagged row to the active registry connection instead of the same-named local profile', async () => {
-    setConnection({ connectionId: 'hermes01', mode: 'remote' } as never)
+    setConnection({ connectionId: 'scout01', mode: 'remote' } as never)
     setSessions([storedSession({ id: 'remote-stored', profile: 'default' })])
     vi.mocked(getLatestSessionMessages).mockResolvedValue({ messages: [], session_id: 'remote-stored' } as never)
     vi.mocked(requestGatewayForAgent).mockResolvedValue({
@@ -3187,7 +3187,7 @@ describe('resumeSession warm-cache mapping integrity', () => {
     await resume!('remote-stored', true)
 
     expect(requestGatewayForAgent).toHaveBeenCalledWith(
-      'hermes01',
+      'scout01',
       'default',
       'session.resume',
       expect.objectContaining({ session_id: 'remote-stored' })

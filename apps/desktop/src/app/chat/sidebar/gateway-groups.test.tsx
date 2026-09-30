@@ -27,13 +27,11 @@ const mount = () =>
           onBranchSession={noop}
           onDeleteSession={noop}
           onLoadMoreSessions={noop}
-          onManageCronJob={noop}
           onNavigate={noop}
           onNewSessionInWorkspace={noop}
           onNewSessionSplit={noop}
           onResumeSession={resume}
           onRetrySessions={noopAsync}
-          onTriggerCronJob={async () => {}}
         />
       </SidebarProvider>
     </MemoryRouter>

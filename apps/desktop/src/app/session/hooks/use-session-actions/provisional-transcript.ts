@@ -1,5 +1,5 @@
-import type { SessionInfo } from '@/hermes'
 import type { ChatMessage } from '@/lib/chat-messages'
+import type { SessionInfo } from '@/scout'
 import { $messages, setMessages } from '@/store/session'
 import type { SessionProfileRoute } from '@/store/session-request-router'
 import { loadTranscriptTail, type TranscriptTailScope } from '@/store/transcript-tail-cache'

@@ -2,7 +2,7 @@
 ``mark_exhausted_and_rotate()`` must be bounded and must not write cooldowns
 onto innocent healthy keys.
 
-With OAuth-token auth (provider ``nous``), the upstream 401's ``api_key_hint``
+With OAuth-token auth (provider ``spaceshipresearch``), the upstream 401's ``api_key_hint``
 never matches any pool entry's ``runtime_api_key`` — the wrapper's runtime key
 rotates. The no-match branch deliberately marks nothing exhausted (marking
 would quarantine an innocent healthy key for the full cooldown TTL) and hands
@@ -25,12 +25,12 @@ import pytest
 
 
 def _seed_pool(tmp_path, monkeypatch, entries, provider="openrouter"):
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    (hermes_home / "auth.json").write_text(
+    scout_home = tmp_path / "scout"
+    scout_home.mkdir(parents=True, exist_ok=True)
+    (scout_home / "auth.json").write_text(
         json.dumps({"version": 1, "credential_pool": {provider: entries}})
     )
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("SCOUT_HOME", str(scout_home))
     from agent.credential_pool import load_pool
 
     return load_pool(provider)

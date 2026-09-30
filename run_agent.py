@@ -6,19 +6,19 @@
     response = agent.run_conversation("Tell me about the latest Python updates")
 """
 
-# hermes_bootstrap must be the very first import (UTF-8 stdio on Windows; no-op on POSIX).
+# scout_bootstrap must be the very first import (UTF-8 stdio on Windows; no-op on POSIX).
 try:
-    import hermes_bootstrap  # noqa: F401
-except ModuleNotFoundError as exc:  # partial `hermes update` left the bootstrap unregistered
-    if exc.name != "hermes_bootstrap":
+    import scout_bootstrap  # noqa: F401
+except ModuleNotFoundError as exc:  # partial `scout update` left the bootstrap unregistered
+    if exc.name != "scout_bootstrap":
         raise  # the bootstrap exists but cannot load: skipping it would skip PM activation
 
 import sys
 
-# `hermes-agent` runs this module without hermes_cli.main, which repairs a `hermes update` killed
+# `scout-agent` runs this module without scout_cli.main, which repairs a `scout update` killed
 # while git wrote the new tree; do it here, before importing anything else from the checkout.
-if "hermes_cli.main" not in sys.modules:
-    from hermes_cli import _early_recovery
+if "scout_cli.main" not in sys.modules:
+    from scout_cli import _early_recovery
 
     if _early_recovery.restore_interrupted_pull():
         _early_recovery.relaunch_after_restore()
@@ -36,11 +36,11 @@ from typing import List, Dict, Any, Optional, Callable
 from datetime import datetime
 from pathlib import Path
 
-from hermes_constants import get_hermes_home
+from scout_constants import get_scout_home
 
 
 def _launch_cwd_for_session(source: str) -> Optional[str]:
-    """cwd to stamp on a new session row (``hermes -c`` / ``--resume``), or None.
+    """cwd to stamp on a new session row (``scout -c`` / ``--resume``), or None.
 
     Only local CLI sessions record one: gateway/cron/remote backends (non-"local" ``TERMINAL_ENV``) have no
     stable host cwd for the agent's tools.
@@ -53,15 +53,15 @@ def _launch_cwd_for_session(source: str) -> Optional[str]:
         return None
 
 
-# Sources that label the human conversation an interactive UI transport hosts. A finite ``hermes chat -q`` /
-# one-shot child spawned from such a session inherits HERMES_SESSION_SOURCE (the terminal tool bridges the
+# Sources that label the human conversation an interactive UI transport hosts. A finite ``scout chat -q`` /
+# one-shot child spawned from such a session inherits SCOUT_SESSION_SOURCE (the terminal tool bridges the
 # session env into child processes) but is NOT that conversation: labelling it ``tui``/``desktop`` lists it
-# in the TUI/WebUI pickers as a resumable chat and lets ``hermes -c`` in the TUI continue it (#112550).
+# in the TUI/WebUI pickers as a resumable chat and lets ``scout -c`` in the TUI continue it (#112550).
 # Automation sources (kanban, tool, cron, a2a, ...) are inherited on purpose.
 _UI_TRANSPORT_SOURCES = frozenset({"tui", "desktop"})
 
-# Finite non-interactive CLI runs (``hermes chat -q``/``--oneshot``, ``hermes -z``) get their own source so human
-# pickers hide them without title/cwd heuristics; ``hermes -c`` still treats them as CLI history.
+# Finite non-interactive CLI runs (``scout chat -q``/``--oneshot``, ``scout -z``) get their own source so human
+# pickers hide them without title/cwd heuristics; ``scout -c`` still treats them as CLI history.
 ONESHOT_SOURCE = "oneshot"
 CLI_FAMILY_SOURCES = frozenset({"cli", ONESHOT_SOURCE})
 
@@ -71,9 +71,9 @@ def _session_source_for_agent(platform: Optional[str]) -> str:
         from gateway.session_context import get_session_env
     except Exception:
         get_session_env = os.environ.get
-    source = str(get_session_env("HERMES_SESSION_SOURCE", "") or "").strip()
-    single_query = get_session_env("HERMES_SINGLE_QUERY_SESSION", "") == "1"
-    explicit = get_session_env("HERMES_SESSION_SOURCE_EXPLICIT", "") == "1"
+    source = str(get_session_env("SCOUT_SESSION_SOURCE", "") or "").strip()
+    single_query = get_session_env("SCOUT_SINGLE_QUERY_SESSION", "") == "1"
+    explicit = get_session_env("SCOUT_SESSION_SOURCE_EXPLICIT", "") == "1"
     if single_query and not explicit and source in _UI_TRANSPORT_SOURCES:
         source = ""
     if single_query and not source and (platform or "cli") == "cli":
@@ -101,7 +101,7 @@ def _gateway_origin_json(agent: "AIAgent") -> Optional[str]:
     profile = getattr(agent, "_profile_name", None)
     if not profile:
         try:
-            from hermes_cli.profiles import get_active_profile_name
+            from scout_cli.profiles import get_active_profile_name
             profile = get_active_profile_name()
         except Exception:
             profile = None
@@ -116,11 +116,11 @@ def _gateway_origin_json(agent: "AIAgent") -> Optional[str]:
 
 
 from agent.iteration_budget import IterationBudget
-from hermes_cli.env_loader import load_hermes_dotenv
-from hermes_cli.timeouts import get_provider_request_timeout, get_provider_stale_timeout
+from scout_cli.env_loader import load_scout_dotenv
+from scout_cli.timeouts import get_provider_request_timeout, get_provider_stale_timeout
 
-_hermes_home = get_hermes_home()  # read by agent_init via _ra()._hermes_home
-_loaded_env_paths = load_hermes_dotenv(hermes_home=_hermes_home, project_env=Path(__file__).parent / '.env')
+_scout_home = get_scout_home()  # read by agent_init via _ra()._scout_home
+_loaded_env_paths = load_scout_dotenv(scout_home=_scout_home, project_env=Path(__file__).parent / '.env')
 for _env_path in _loaded_env_paths:
     logger.info("Loaded environment variables from %s", _env_path)
 if not _loaded_env_paths:
@@ -162,7 +162,7 @@ from agent.codex_responses_adapter import (
     _summarize_user_message_for_log,
 )
 from agent.tool_guardrails import ToolGuardrailDecision, append_toolguard_guidance, toolguard_synthetic_result
-from hermes_cli.observability.shared_metrics_harness import record_guardrail_decision, record_guardrail_warnings
+from scout_cli.observability.shared_metrics_harness import record_guardrail_decision, record_guardrail_warnings
 from utils import base_url_host_matches, base_url_hostname, env_float, model_forces_max_completion_tokens
 
 
@@ -246,7 +246,7 @@ class AIAgent(
     """AI Agent with tool calling capabilities."""
 
     _TOOL_CALL_ARGUMENTS_CORRUPTION_MARKER = (
-        "[hermes-agent: tool call arguments were corrupted in this session and "
+        "[scout-agent: tool call arguments were corrupted in this session and "
         "have been dropped to keep the conversation alive. See issue #15236.]"
     )
 
@@ -321,7 +321,7 @@ class AIAgent(
         if self._session_db is not None:
             return self._session_db
         try:
-            from hermes_state_registry import acquire
+            from scout_state_registry import acquire
 
             self._session_db = acquire()
             self._owns_session_db = True  # we opened it, so close() must release it
@@ -334,7 +334,7 @@ class AIAgent(
         """``model_config`` for the session row: the init config plus the live YOLO bypass.
 
         The row is created lazily on the first turn, so this is the only chance to record a pre-first-turn
-        /yolo toggle for ``hermes --resume``.
+        /yolo toggle for ``scout --resume``.
         """
         model_config = self._session_init_model_config
         try:
@@ -355,7 +355,7 @@ class AIAgent(
             # Persist the profile name explicitly, including "default": profile-keyed consumers treat NULL
             # as unowned.
             try:
-                from hermes_cli.profiles import get_active_profile_name
+                from scout_cli.profiles import get_active_profile_name
                 profile_for_session = get_active_profile_name()
             except Exception:
                 # Persist the profile name EXPLICITLY, including "default". NULL used to stand in for the
@@ -486,7 +486,7 @@ class AIAgent(
         if (getattr(self, "lmstudio_load_mode", "explicit") or "explicit").strip().lower() == "jit":
             logger.debug("LM Studio explicit preload skipped: lmstudio_load_mode=jit")
             return None
-        from hermes_cli.models_local import ensure_lmstudio_model_loaded
+        from scout_cli.models_local import ensure_lmstudio_model_loaded
 
         if config_context_length is None:
             config_context_length = getattr(self, "_config_context_length", None)
@@ -565,13 +565,13 @@ class AIAgent(
 
     def _resolved_api_call_timeout(self) -> float:
         """Per-call request timeout: per-model ``timeout_seconds`` > provider ``request_timeout_seconds`` >
-        ``HERMES_API_TIMEOUT`` > 1800s."""
+        ``SCOUT_API_TIMEOUT`` > 1800s."""
         cfg = get_provider_request_timeout(self.provider, self.model)
-        return cfg if cfg is not None else env_float("HERMES_API_TIMEOUT", 1800.0)
+        return cfg if cfg is not None else env_float("SCOUT_API_TIMEOUT", 1800.0)
 
     def _resolved_api_call_stale_timeout_base(self) -> tuple[float, bool]:
         """Base non-stream stale timeout: per-model ``stale_timeout_seconds`` > provider-wide >
-        ``HERMES_API_CALL_STALE_TIMEOUT`` > reasoning floor > 90s.
+        ``SCOUT_API_CALL_STALE_TIMEOUT`` > reasoning floor > 90s.
 
         Returns ``(seconds, uses_implicit_default)``; the implicit flag lets callers auto-disable the detector
         for local endpoints only when the user configured nothing.
@@ -579,7 +579,7 @@ class AIAgent(
         cfg = get_provider_stale_timeout(self.provider, self.model)
         if cfg is not None:
             return cfg, False
-        env_timeout = os.getenv("HERMES_API_CALL_STALE_TIMEOUT")
+        env_timeout = os.getenv("SCOUT_API_CALL_STALE_TIMEOUT")
         if env_timeout is not None:
             return float(env_timeout), False
         # Reasoning-model floor (cloud gateways idle-kill mid-think); not "implicit" so the local-endpoint
@@ -616,7 +616,7 @@ class AIAgent(
         """True when the user explicitly configured the stale timeout (config or env var); implicit values
         (reasoning floors, the 90s default) yield to the run-budget cap, explicit ones never do."""
         return (get_provider_stale_timeout(self.provider, self.model) is not None
-                or os.getenv("HERMES_API_CALL_STALE_TIMEOUT") is not None)
+                or os.getenv("SCOUT_API_CALL_STALE_TIMEOUT") is not None)
 
     def _codex_silent_hang_hint(self, model: Optional[str] = None) -> Optional[str]:
         """Actionable hint when the request matches a known Codex silent-reject shape (currently the ``gpt-5.5``
@@ -639,7 +639,7 @@ class AIAgent(
             "Workaround: try `gpt-5.4` on the same OAuth profile, "
             "or switch to a different model/provider in your fallback chain. "
             "Some ChatGPT Codex accounts do not support `gpt-5.4-codex`. "
-            "See hermes-agent#21444 for symptom history."
+            "See scout-agent#21444 for symptom history."
         )
 
     def _is_openrouter_url(self) -> bool:
@@ -673,22 +673,22 @@ class AIAgent(
     @staticmethod
     def _provider_model_requires_responses_api(model: str, *, provider: Optional[str] = None) -> bool:
         """Return True when this provider/model pair should use Responses API."""
-        from hermes_cli.providers import is_actual_route
+        from scout_cli.providers import is_actual_route
         normalized_provider = (provider or "").strip().lower()
-        # Nous serves GPT-5.x via chat completions (its /v1/responses returns 404); generic custom endpoints
+        # SpaceshipResearch serves GPT-5.x via chat completions (its /v1/responses returns 404); generic custom endpoints
         # may relay GPT-5 without full Responses semantics — only direct OpenAI/xAI URLs auto-upgrade.
-        if normalized_provider in ("nous", "custom") or is_actual_route(provider):
+        if normalized_provider in ("spaceshipresearch", "custom") or is_actual_route(provider):
             return False
         # ACP facades expose the OpenAI-compatible chat.completions shape regardless of model
         # family and have no ``responses`` attribute, so neither primary routing nor GPT-5
         # fallback activation may upgrade them. Keyed on the profile's auth_type: every
         # external-process provider, not one vendor's names.
-        from hermes_cli.runtime_provider_backends import _is_external_process_provider
+        from scout_cli.runtime_provider_backends import _is_external_process_provider
         if _is_external_process_provider(normalized_provider):
             return False
         if normalized_provider == "copilot":
             try:
-                from hermes_cli.models import _should_use_copilot_responses_api
+                from scout_cli.models import _should_use_copilot_responses_api
                 return _should_use_copilot_responses_api(model)
             except Exception:
                 pass  # fall back to the generic GPT-5 rule
@@ -1030,7 +1030,7 @@ class AIAgent(
     @staticmethod
     def _trim_process_memory() -> None:
         """Return freed heap pages to the OS on glibc; safe no-op elsewhere."""
-        from hermes_cli.mem_trim import trim_memory
+        from scout_cli.mem_trim import trim_memory
         trim_memory(force=True, reason="agent close")
 
     def _finalize_owned_session_row(self) -> None:
@@ -1046,7 +1046,7 @@ class AIAgent(
             self._owns_session_db = False
             # Shared instances no-op on close(); release the refcount so the registry closes on the last caller.
             # See #90837.
-            from hermes_state_registry import release_or_close
+            from scout_state_registry import release_or_close
             release_or_close(session_db)
 
     def _hydrate_todo_store(self, history: List[Dict[str, Any]]) -> None:
@@ -1356,7 +1356,7 @@ class AIAgent(
             # would pin those frames via its traceback, so that path leaves the flag for the
             # next completed batch (agent/tool_executor.py, #70684).
             self._trim_after_tool_batch = False
-            from hermes_cli.mem_trim import trim_memory
+            from scout_cli.mem_trim import trim_memory
             trim_memory(reason="large tool result")
 
     def _dispatch_delegate_task(self, function_args: dict) -> str:
@@ -1537,7 +1537,7 @@ def main(
 
     # One TLS authority: trust the OS store before any outbound call (bare
     # requests/urllib included) resolves a CA bundle — see agent/ssl_verify.py.
-    # The `hermes` CLI does this in hermes_cli.main; this console script
+    # The `scout` CLI does this in scout_cli.main; this console script
     # bypasses it. Never raises.
     from agent.ssl_verify import install_truststore
 

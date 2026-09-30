@@ -4,7 +4,7 @@
  * Pure, electron-free helpers for the desktop's multi-connection registry —
  * the v2 successor to the single global `mode` + `remote` block in
  * connection.json. The registry is a named list of agent SOURCES (local
- * runtime, remote gateways, Hermes Cloud instances, SSH hosts) that are all
+ * runtime, remote gateways, Scout Cloud instances, SSH hosts) that are all
  * registered at once; routing/pooling changes that consume the registry land
  * separately, so this module is deliberately storage-shaped, not
  * transport-shaped.
@@ -71,7 +71,7 @@ export interface RegistryConnection {
   user?: string
   port?: number
   keyPath?: string
-  remoteHermesPath?: string
+  remoteScoutPath?: string
   remoteProfile?: string
 }
 
@@ -175,7 +175,7 @@ export function agentHandle(profile: string, connectionLabel: string, duplicated
  * profile names).
  *
  * NOTE: the renderer's socket registry uses the twin implementation in
- * apps/shared/src/backend-scope.ts (`@hermes/shared`) — tsconfig project
+ * apps/shared/src/backend-scope.ts (`@scout/shared`) — tsconfig project
  * boundaries prevent a single physical module here. The two are pinned
  * byte-identical by the cross-copy contract test in
  * connection-registry.test.ts; change BOTH or that test fails.
@@ -229,7 +229,7 @@ export interface ResolvedConnectionSshDescriptor {
   host?: string
   keyPath?: string
   port?: number
-  remoteHermesPath?: string
+  remoteScoutPath?: string
   remoteProfile?: string
   user?: string
 }
@@ -428,7 +428,7 @@ export async function reuseMatchingPrimarySshBackend({
     !sourceFingerprint ||
     !activeSsh ||
     sourceFingerprint !== String(activeSsh.effectiveConfigFingerprint || '').trim() ||
-    String(source.remoteHermesPath || '').trim() !== String(activeSsh.remoteHermesPath || '').trim() ||
+    String(source.remoteScoutPath || '').trim() !== String(activeSsh.remoteScoutPath || '').trim() ||
     rootProfile(source.remoteProfile) !== rootProfile(activeSsh.remoteProfile)
   ) {
     return null
@@ -525,7 +525,7 @@ function normalizedSshTarget(route: { host?: unknown; port?: unknown; user?: unk
  * route's REMOTE descriptor — so the forced-local child pools under the
  * `conn:local::<profile>` form instead (colons are invalid in profile names,
  * so it cannot collide). A concrete named profile that does not exist on
- * this machine is refused instead of spawned. `default` is `$HERMES_HOME`
+ * this machine is refused instead of spawned. `default` is `$SCOUT_HOME`
  * itself, so it always exists here and is never refused. A per-profile
  * remote override still delegates to the legacy profile route.
  */
@@ -553,7 +553,7 @@ export function resolveRegistryLocalRoute(
     // A concrete named profile that does not exist on this machine is
     // remote-only. Spawning it locally is the #90477 loop, so refuse. An
     // unprofiled call is enumeration, not a dial. `default` lives at
-    // $HERMES_HOME, not profiles/default, so This device -> default always
+    // $SCOUT_HOME, not profiles/default, so This device -> default always
     // force-locals. A profile that exists locally still force-locals so
     // "This device" does not dial the remote.
     if (concrete && profileKey !== 'default' && opts.localProfileExists === false) {
@@ -703,7 +703,7 @@ export function shouldRetrySshInventory(
 
 const PROFILE_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/
 
-/** Turn `ls ~/.hermes/profiles` output into roster names. Always includes
+/** Turn `ls ~/.scout/profiles` output into roster names. Always includes
  *  `default`. Drops rollback snapshots and junk lines. */
 export function parseRemoteProfileListing(text: string): string[] {
   const names = new Set<string>(['default'])
@@ -853,8 +853,8 @@ export interface UpdateEligibility {
 }
 
 /**
- * Whether "Update all instances" may drive this connection. Hermes Cloud
- * instances are platform-managed — we never run `hermes update` against them.
+ * Whether "Update all instances" may drive this connection. Scout Cloud
+ * instances are platform-managed — we never run `scout update` against them.
  * Local, remote, and ssh sources are all eligible (reachability and busy
  * checks happen at dispatch time, not here).
  */
@@ -929,7 +929,7 @@ export interface ConnectionInput {
   user?: string
   port?: number | string
   keyPath?: string
-  remoteHermesPath?: string
+  remoteScoutPath?: string
   remoteProfile?: string
 }
 
@@ -940,7 +940,7 @@ export interface ConnectionInput {
  * edit and that entry is excluded from the label-collision check.
  */
 /**
- * Auth mode a stored remote-shaped entry actually uses. A Hermes Cloud gateway
+ * Auth mode a stored remote-shaped entry actually uses. A Scout Cloud gateway
  * signs in through its OAuth session and never keeps a pasted token (the save
  * path drops one), so a cloud entry on token auth with no token has no
  * credential at all and Test can only fail (#89529). Read it as oauth; a cloud
@@ -998,7 +998,7 @@ export function normalizeConnectionInput(input: ConnectionInput, registry: Conne
       user: input.user,
       port: input.port,
       keyPath: input.keyPath,
-      remoteHermesPath: input.remoteHermesPath,
+      remoteScoutPath: input.remoteScoutPath,
       remoteProfile: input.remoteProfile
     })
 
@@ -1064,7 +1064,7 @@ export function normalizeConnectionInput(input: ConnectionInput, registry: Conne
     // Extra gateway headers (access-proxy credentials) apply to any
     // remote-shaped entry regardless of auth mode — Cloudflare Access sits in
     // front of both token- and OAuth-gated gateways. Normalization drops
-    // transport-/Hermes-managed names; an empty result stores nothing.
+    // transport-/Scout-managed names; an empty result stores nothing.
     if (input.headers !== undefined) {
       const headers = normalizeRemoteHeaders(input.headers)
 
@@ -1096,7 +1096,7 @@ export function normalizeConnectionInput(input: ConnectionInput, registry: Conne
  * editor doesn't carry survive a save. Renaming a migrated cloud entry must
  * not drop its `org` (downstream update-fanout uses it to skip
  * platform-managed instances), and renaming an ssh entry must not drop
- * `remoteHermesPath`/`remoteProfile`. Only fields the payload explicitly
+ * `remoteScoutPath`/`remoteProfile`. Only fields the payload explicitly
  * carries (non-undefined) override; `token` is deliberately NOT merged here —
  * the caller owns secret handling.
  */
@@ -1126,7 +1126,7 @@ export function mergeConnectionInput(input: ConnectionInput, existing?: null | R
 
   inherit('host')
   inherit('keyPath')
-  inherit('remoteHermesPath')
+  inherit('remoteScoutPath')
   inherit('remoteProfile')
   // Headers inherit like other dial fields: an edit payload that omits the
   // field keeps the stored set; an explicit payload (even {}) is
@@ -1168,7 +1168,7 @@ export function connectionDialFieldsChanged(before: RegistryConnection, after: R
     'user',
     'port',
     'keyPath',
-    'remoteHermesPath',
+    'remoteScoutPath',
     'remoteProfile'
   ]
 
@@ -1405,7 +1405,7 @@ export function migrateV1ToRegistry(v1: unknown): ConnectionRegistry {
     }
 
     const label = uniqueLabel(
-      hostLabelFromBaseUrl(url) || (kind === 'cloud' ? 'Hermes Cloud' : 'Remote gateway'),
+      hostLabelFromBaseUrl(url) || (kind === 'cloud' ? 'Scout Cloud' : 'Remote gateway'),
       connections.map(c => c.label)
     )
 
@@ -1620,7 +1620,7 @@ export function reconcileAppliedGlobalConnection(
 
   const kind: ConnectionKind = mode === 'cloud' ? 'cloud' : 'remote'
 
-  const hostLabel = hostLabelFromBaseUrl(url) || (kind === 'cloud' ? 'Hermes Cloud' : 'Remote gateway')
+  const hostLabel = hostLabelFromBaseUrl(url) || (kind === 'cloud' ? 'Scout Cloud' : 'Remote gateway')
   const name = kind === 'cloud' ? String(block.name ?? existing?.name ?? '').trim() : ''
 
   const label =

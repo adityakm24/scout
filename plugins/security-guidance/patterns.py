@@ -20,9 +20,9 @@ Forked from Anthropic's claude-plugins-official repository
   See the License for the specific language governing permissions and
   limitations under the License.
 
-NousResearch modifications: pattern data unchanged from upstream; the upstream RuleId
-telemetry table (Claude Code PostToolUse metrics) is dropped — Hermes has no consumer.
-Hermes-side wiring lives in __init__.py.
+SpaceshipResearch modifications: pattern data unchanged from upstream; the upstream RuleId
+telemetry table (Claude Code PostToolUse metrics) is dropped — Scout has no consumer.
+Scout-side wiring lives in __init__.py.
 """
 _JS_EXTS = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts", ".vue", ".svelte")
 _PY_EXTS = (".py", ".pyi", ".ipynb")

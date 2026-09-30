@@ -2,7 +2,6 @@ import type { Unstable_TriggerAdapter, Unstable_TriggerItem } from '@assistant-u
 import { useStore } from '@nanostores/react'
 import { useCallback, useEffect, useMemo } from 'react'
 
-import type { HermesGateway } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { sessionTitle } from '@/lib/chat-runtime'
 import {
@@ -18,6 +17,7 @@ import {
 } from '@/lib/desktop-slash-commands'
 import { $slashCompletionsEpoch, cachedSlashCompletion, hasCachedSlashCompletion } from '@/lib/slash-completion-cache'
 import { normalize } from '@/lib/text'
+import type { ScoutGateway } from '@/scout'
 import { $sessions } from '@/store/session'
 
 import type { CompletionEntry, CompletionPayload } from './use-live-completion-adapter'
@@ -57,7 +57,7 @@ const SESSION_INLINE_LIMIT = 7
 
 /** Live `/` completions backed by the gateway's `complete.slash` RPC. */
 export function useSlashCompletions(options: {
-  gateway: HermesGateway | null
+  gateway: ScoutGateway | null
   /** Skill completions are per session: project-local skills follow the
    *  session's repo, so the catalog and each query are fetched and cached per
    *  session. */
@@ -296,7 +296,7 @@ export function useSlashCompletions(options: {
       meta,
       group: textValue(entry.group),
       action: textValue(entry.action),
-      // Provide rawText so hermesDirectiveFormatter.serialize uses the
+      // Provide rawText so scoutDirectiveFormatter.serialize uses the
       // direct-insertion path instead of the legacy @type:id fallback.
       // Without this, the item.id (which includes a "|index" suffix for
       // trigger-adapter uniqueness) leaks into the serialized chip text

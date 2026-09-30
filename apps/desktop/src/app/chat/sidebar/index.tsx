@@ -23,15 +23,14 @@ import {
 } from '@/components/ui/sidebar'
 import { Tip, TipKeybindLabel } from '@/components/ui/tooltip'
 import { useContributions } from '@/contrib/react/use-contributions'
-import { searchSessions, type SessionInfo, type SessionSearchResult } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { comboTokens } from '@/lib/keybinds/combo'
 import { sessionMatchesSearch } from '@/lib/session-search'
 import { normalizeSessionSource, sessionSourceLabel } from '@/lib/session-source'
 import { cn } from '@/lib/utils'
+import { searchSessions, type SessionInfo, type SessionSearchResult } from '@/scout'
 import { $connectionsRegistry } from '@/store/connection-registry-state'
 import { $activeConnectionId } from '@/store/connections'
-import { $cronJobs } from '@/store/cron'
 import { recordAction } from '@/store/desktop-metrics'
 import { $interfaceMode, $showsAdvancedChrome, shownInMode } from '@/store/interface-mode'
 import { $bindings } from '@/store/keybinds'
@@ -40,7 +39,6 @@ import {
   $panesFlipped,
   $pinnedSessionIds,
   $sidebarCardRows,
-  $sidebarCronOpen,
   $sidebarFiltersActive,
   $sidebarGrouping,
   $sidebarMessagingOpenIds,
@@ -63,7 +61,6 @@ import {
   pinSession,
   SESSION_SEARCH_FOCUS_EVENT,
   setPinnedSessionOrder,
-  setSidebarCronOpen,
   setSidebarPinsOpen,
   setSidebarProjectOrderIds,
   setSidebarRecentsOpen,
@@ -150,7 +147,6 @@ import type { SidebarNavItem } from '../../types'
 import { type NewSessionSplitHandler, startNewSessionDrag } from '../new-session-drag'
 
 import { SidebarSectionAddButton } from './chrome'
-import { SidebarCronJobsSection } from './cron-jobs-section'
 import { SidebarFilterMenu } from './filter-menu'
 import { buildGatewaySessionGroups, scopeGatewaySessionGroups, useGatewaySessionGroups } from './gateway-group-model'
 import { SidebarLoadMoreRow } from './load-more-row'
@@ -226,7 +222,7 @@ const SIDEBAR_NAV: SidebarNavItem[] = [
     route: MESSAGING_ROUTE,
     keybindActionId: 'nav.messaging'
   },
-  // Artifacts and Scheduled jobs are outputs of running Hermes the developer
+  // Artifacts and Scheduled jobs are outputs of running Scout the developer
   // way; Capabilities and Messaging are how anyone sets it up.
   {
     id: 'artifacts',
@@ -282,7 +278,7 @@ const HEADER_NAV_BTN =
 // by id; the snippet stands in for the preview).
 
 // The backend's FTS layer wraps matched terms in literal '>>>' / '<<<'
-// highlight markers (sqlite snippet() delimiters — see hermes_state_search.py).
+// highlight markers (sqlite snippet() delimiters — see scout_state_search.py).
 // The sidebar renders the snippet as plain text, so the markers must be
 // stripped or a search for "foo" paints rows titled ">>>foo<<<".
 // Exported for tests.
@@ -387,8 +383,6 @@ interface ChatSidebarProps extends React.ComponentProps<typeof Sidebar> {
    *  buttons), which land a fresh session exactly where it's dropped. The
    *  context-menu "Open in split" path passes just a `dir`. */
   onNewSessionSplit: NewSessionSplitHandler
-  onManageCronJob: (jobId: string) => void
-  onTriggerCronJob: (jobId: string) => Promise<void>
 }
 
 export function ChatSidebar({
@@ -402,9 +396,7 @@ export function ChatSidebar({
   onArchiveSession,
   onBranchSession,
   onNewSessionInWorkspace,
-  onNewSessionSplit,
-  onManageCronJob,
-  onTriggerCronJob
+  onNewSessionSplit
 }: ChatSidebarProps) {
   const { t } = useI18n()
   const s = t.sidebar
@@ -475,7 +467,6 @@ export function ChatSidebar({
   const unconfirmedPinWrites = useStore($unconfirmedPinWrites)
   const pinsOpen = useStore($sidebarPinsOpen)
   const agentsOpen = useStore($sidebarRecentsOpen)
-  const cronOpen = useStore($sidebarCronOpen)
   // The sidebar highlight tracks the FOCUSED session — the interacted tile's
   // tab, else the main selection — so it stays 1:1 with whatever tab is active.
   const selectedSessionId = useStore($focusedStoredSessionId)
@@ -483,7 +474,6 @@ export function ChatSidebar({
   const currentView = focusedSessionIsTile ? 'chat' : routeView
   const sessions = useStore($sessions)
   const cronSessions = useStore($cronSessions)
-  const cronJobs = useStore($cronJobs)
   const messagingSessions = useStore($messagingSessions)
   const messagingPlatformTotals = useStore($messagingPlatformTotals)
   const messagingTruncated = useStore($messagingTruncated)
@@ -575,10 +565,10 @@ export function ChatSidebar({
       timeout = setTimeout(() => setNewSessionKbdFlash(false), 140)
     }
 
-    window.addEventListener('hermes:new-session-shortcut', onShortcut)
+    window.addEventListener('scout:new-session-shortcut', onShortcut)
 
     return () => {
-      window.removeEventListener('hermes:new-session-shortcut', onShortcut)
+      window.removeEventListener('scout:new-session-shortcut', onShortcut)
       clearTimeout(timeout)
     }
   }, [])
@@ -1138,7 +1128,7 @@ export function ChatSidebar({
   const [scopedRepoWorktrees] = useRepoWorktreeMap(scopedRepoPaths, inEnteredProject)
 
   // Re-probe worktree lanes on out-of-band git changes the renderer can't see.
-  // A turn can `git worktree add/remove` in the terminal (e.g. you ask Hermes to
+  // A turn can `git worktree add/remove` in the terminal (e.g. you ask Scout to
   // "remove that worktree"), and the window never blurs during an in-app chat,
   // so nothing would otherwise re-run the visual probe. Re-sync when a working
   // session settles (its turn finished) or the window refocuses (an external
@@ -1540,8 +1530,7 @@ export function ChatSidebar({
     filtersActive ||
     sortedSessions.length > 0 ||
     projectModel.length > 0 ||
-    messagingGroups.length > 0 ||
-    (showsAdvancedChrome && cronJobs.length > 0)
+    messagingGroups.length > 0
 
   // The sidebar's session-area mode — exposed as data-attributes so custom
   // skins can target project mode (overview vs. entered), archived, or search
@@ -2063,17 +2052,6 @@ export function ChatSidebar({
                 )
               })}
 
-            {!trimmedQuery && !worktreeGroupingActive && showsAdvancedChrome && cronJobs.length > 0 && (
-              <SidebarCronJobsSection
-                jobs={cronJobs}
-                label={s.cronJobs}
-                onManageJob={onManageCronJob}
-                onOpenRun={onResumeSession}
-                onToggle={() => setSidebarCronOpen(!cronOpen)}
-                onTriggerJob={onTriggerCronJob}
-                open={cronOpen}
-              />
-            )}
           </div>
         )}
 
@@ -2082,7 +2060,8 @@ export function ChatSidebar({
         {/* Off, the statusbar's profile dropdown (beside the gateway switcher)
             takes over — the rail is a duplicate door for bot-only setups. */}
         {profileRailVisible && (
-          <div className="shrink-0 px-0.5 pb-1 pt-0.5">
+          // Clears the glass plate's rounded bottom corners (surfaces.css).
+          <div className="shrink-0 pb-3 pt-0.5">
             <ProfileRail />
           </div>
         )}

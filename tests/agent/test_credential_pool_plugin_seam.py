@@ -19,9 +19,9 @@ from agent.credential_pool import (
     CredentialPool,
     PooledCredential,
 )
-from hermes_cli.auth import read_credential_pool
-from hermes_cli.auth_constants import AuthError
-from hermes_cli.auth_plugin_providers import is_refreshable_oauth_provider
+from scout_cli.auth import read_credential_pool
+from scout_cli.auth_constants import AuthError
+from scout_cli.auth_plugin_providers import is_refreshable_oauth_provider
 
 
 def _entry(**over):
@@ -37,7 +37,7 @@ def test_plugin_metadata_survives_load_save_load():
     assert again["tenant"] == "acme" and again["region"] == "eu"
     assert PooledCredential.from_dict("example-oauth", again).extra == {"tenant": "acme", "region": "eu"}
     # Core-known extra keys keep their attribute surface; unknown ones stay opaque payload.
-    assert PooledCredential.from_dict("nous", {"access_token": "t", "org_id": "o1"}).org_id == "o1"
+    assert PooledCredential.from_dict("spaceshipresearch", {"access_token": "t", "org_id": "o1"}).org_id == "o1"
     # A stray row-level ``provider`` is pool bookkeeping, not plugin metadata: it must not be swept
     # into ``extra`` and written back over the owning provider's row.
     assert "provider" not in PooledCredential.from_dict(
@@ -118,13 +118,13 @@ def test_plugin_refresh_outcome(plugin_profiles, caplog, hook, status, tokens, e
     if extra_key:
         assert row.extra[extra_key] == 3600 and row.expires_at_ms == 4102444800000
     if status == STATUS_DEAD:
-        assert "hermes auth add example-oauth" in caplog.text
+        assert "scout auth add example-oauth" in caplog.text
     else:
-        assert "hermes auth add" not in caplog.text
+        assert "scout auth add" not in caplog.text
 
 
 def test_plugin_refresh_adopts_peer_rotation_without_spending_token(plugin_profiles):
-    """Two Hermes processes share one auth.json: the second refresh adopts the first's rotated pair
+    """Two Scout processes share one auth.json: the second refresh adopts the first's rotated pair
     instead of POSTing the same single-use refresh token again."""
     calls = []
 

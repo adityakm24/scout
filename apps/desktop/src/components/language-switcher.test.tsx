@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { HermesConfigRecord } from '@/hermes'
 import { type I18nConfigClient, I18nProvider, registerAppLocale } from '@/i18n'
+import type { ScoutConfigRecord } from '@/scout'
 import { stubMenuDomApis, stubResizeObserver } from '@/test/jsdom'
 
 import { LanguageSwitcher } from './language-switcher'
@@ -17,7 +17,7 @@ describe('LanguageSwitcher', () => {
 
   it('persists language changes through display.language config', async () => {
     const saveConfig = vi.fn().mockResolvedValue({ ok: true })
-    const latestConfig: HermesConfigRecord = { display: { language: 'en', skin: 'slate' } }
+    const latestConfig: ScoutConfigRecord = { display: { language: 'en', skin: 'slate' } }
 
     const configClient: I18nConfigClient = {
       getConfig: vi.fn().mockResolvedValue(latestConfig),
@@ -45,11 +45,11 @@ describe('LanguageSwitcher', () => {
     const dispose = registerAppLocale(
       'pl',
       { endonym: 'Polski', translations: { language: { switchTo: 'Zmień język' } } },
-      'plugin:hermes-lang-pl'
+      'plugin:scout-lang-pl'
     )
 
     const saveConfig = vi.fn().mockResolvedValue({ ok: true })
-    const latestConfig: HermesConfigRecord = { display: { language: 'en' } }
+    const latestConfig: ScoutConfigRecord = { display: { language: 'en' } }
 
     const configClient: I18nConfigClient = {
       getConfig: vi.fn().mockResolvedValue(latestConfig),

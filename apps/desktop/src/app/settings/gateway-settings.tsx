@@ -1,5 +1,5 @@
-import { isGatewayReauthRequired } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
+import { isGatewayReauthRequired } from '@scout/shared'
 import { useEffect, useRef, useState } from 'react'
 
 import { RemoteSetupFields } from '@/components/remote-setup/fields'
@@ -54,7 +54,7 @@ import { useSettingDeepLink } from './use-setting-deep-link'
 
 type Mode = 'local' | 'remote' | 'cloud' | 'ssh'
 type AuthMode = 'oauth' | 'token'
-// Hermes Cloud discovery lifecycle for the cloud-mode panel.
+// Scout Cloud discovery lifecycle for the cloud-mode panel.
 type CloudDiscoverStatus = 'idle' | 'loading' | 'done' | 'error'
 
 export interface GatewaySettingsState {
@@ -76,7 +76,7 @@ export interface GatewaySettingsState {
   sshUser: string
   sshPort: number | null
   sshKeyPath: string
-  sshRemoteHermesPath: string
+  sshRemoteScoutPath: string
   sshRemoteProfile: string
 }
 
@@ -97,7 +97,7 @@ const EMPTY_STATE: GatewaySettingsState = {
   sshUser: '',
   sshPort: null,
   sshKeyPath: '',
-  sshRemoteHermesPath: '',
+  sshRemoteScoutPath: '',
   sshRemoteProfile: ''
 }
 
@@ -263,7 +263,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
     host: 'settings',
     enabled: !loading && state.mode === 'remote',
     beforeOAuthLogin: async (payload: DesktopConnectionConfigInput): Promise<void> => {
-      await window.hermesDesktop.saveConnectionConfig(payload)
+      await window.scoutDesktop.saveConnectionConfig(payload)
     },
     onNotice: notify
   })
@@ -295,7 +295,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
   useEffect(() => {
     let cancelled = false
 
-    void window.hermesDesktop
+    void window.scoutDesktop
       ?.getSecretStorageEncryption?.()
       .then(res => {
         if (!cancelled && res) {
@@ -315,7 +315,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
     setKeychainEncryptionState(on)
 
     try {
-      const res = await window.hermesDesktop.setSecretStorageEncryption(on)
+      const res = await window.scoutDesktop.setSecretStorageEncryption(on)
 
       setKeychainEncryptionState(res?.on === true)
     } catch (err) {
@@ -344,7 +344,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
   // so confirm resumes the right one.
   const [plainTextConfirm, setPlainTextConfirm] = useState<null | { apply: boolean }>(null)
 
-  // --- Hermes Cloud (cloud mode) state ---
+  // --- Scout Cloud (cloud mode) state ---
   // One portal session powers discovery + the silent per-agent cascade. These
   // track the cloud panel: whether we're signed in, the discovered agent list,
   // and which agent is mid-connect.
@@ -372,7 +372,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
 
   useEffect(() => {
     let cancelled = false
-    const desktop = window.hermesDesktop
+    const desktop = window.scoutDesktop
 
     if (!desktop?.getConnectionConfig) {
       setLoading(false)
@@ -443,7 +443,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
         throw error
       }
 
-      const desktop = window.hermesDesktop
+      const desktop = window.scoutDesktop
 
       // Cloud registry URLs are the persisted agent dashboardUrl. Keep saved
       // rows usable without discovery, but never run the cascade against ''.
@@ -491,12 +491,12 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
   }, [state.sshHost, sshHostSuggestions])
 
   useEffect(() => {
-    if (state.mode !== 'ssh' || !window.hermesDesktop?.sshConfigHosts) {
+    if (state.mode !== 'ssh' || !window.scoutDesktop?.sshConfigHosts) {
       return
     }
 
     let cancelled = false
-    void window.hermesDesktop
+    void window.scoutDesktop
       .sshConfigHosts()
       .then(result => {
         if (!cancelled) {
@@ -529,7 +529,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
     state.sshUser,
     state.sshPort,
     state.sshKeyPath,
-    state.sshRemoteHermesPath,
+    state.sshRemoteScoutPath,
     state.sshRemoteProfile
   ])
 
@@ -544,7 +544,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
           sshUser: state.sshUser.trim() || undefined,
           sshPort: state.sshPort,
           sshKeyPath: state.sshKeyPath.trim() || undefined,
-          sshRemoteHermesPath: state.sshRemoteHermesPath.trim(),
+          sshRemoteScoutPath: state.sshRemoteScoutPath.trim(),
           // A blank clears an existing remote-profile mapping.
           sshRemoteProfile: state.sshRemoteProfile.trim()
         }),
@@ -568,8 +568,8 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
 
     try {
       const next = apply
-        ? await window.hermesDesktop.applyConnectionConfig(payload(allowPlainTextToken))
-        : await window.hermesDesktop.saveConnectionConfig(payload(allowPlainTextToken))
+        ? await window.scoutDesktop.applyConnectionConfig(payload(allowPlainTextToken))
+        : await window.scoutDesktop.saveConnectionConfig(payload(allowPlainTextToken))
 
       if (seq !== saveSeq.current) {
         return
@@ -597,7 +597,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
 
       const errors = {
         'auth-failed': g.sshErrAuth,
-        'hermes-not-found': g.sshErrNotInstalled,
+        'scout-not-found': g.sshErrNotInstalled,
         'host-key-changed': g.sshErrHostKey,
         timeout: g.sshErrTimeout,
         unreachable: g.sshErrUnreachable,
@@ -644,14 +644,14 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
     await performSave(apply, false)
   }
 
-  // --- Hermes Cloud handlers ---
+  // --- Scout Cloud handlers ---
 
   // Pull the discovered agent list over the shared portal session. Tolerant of
   // a lapsed session: a needsCloudLogin error flips us back to signed-out.
   // `org` scopes discovery for multi-org users; when discovery comes back with
   // needsOrgSelection we surface the org list and show a picker instead.
   const discoverCloud = async (org?: string) => {
-    const desktop = window.hermesDesktop
+    const desktop = window.scoutDesktop
     const seq = contextSeq.current
 
     if (!desktop?.cloud) {
@@ -736,7 +736,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
       return
     }
 
-    const desktop = window.hermesDesktop
+    const desktop = window.scoutDesktop
 
     if (!desktop?.cloud) {
       return
@@ -782,7 +782,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
   }, [state.mode])
 
   const cloudSignIn = async () => {
-    const desktop = window.hermesDesktop
+    const desktop = window.scoutDesktop
     const seq = ++signingSeq.current
 
     if (!desktop?.cloud) {
@@ -815,7 +815,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
   }
 
   const cloudSignOut = async () => {
-    const desktop = window.hermesDesktop
+    const desktop = window.scoutDesktop
     const seq = ++signingSeq.current
 
     if (!desktop?.cloud) {
@@ -858,7 +858,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
       return
     }
 
-    const desktop = window.hermesDesktop
+    const desktop = window.scoutDesktop
 
     if (!desktop?.cloud) {
       return
@@ -951,14 +951,14 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
   }
 
   const resolveSshHost = async (host: string) => {
-    if (!host || !window.hermesDesktop?.sshResolveHost) {
+    if (!host || !window.scoutDesktop?.sshResolveHost) {
       return
     }
 
     const seq = ++sshResolveSeq.current
 
     try {
-      const resolved = await window.hermesDesktop.sshResolveHost(host)
+      const resolved = await window.scoutDesktop.sshResolveHost(host)
 
       if (seq !== sshResolveSeq.current) {
         return
@@ -996,7 +996,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
     setLastTest(null)
 
     try {
-      const result = await window.hermesDesktop.testConnectionConfig(payload())
+      const result = await window.scoutDesktop.testConnectionConfig(payload())
 
       if (seq !== sshTestSeq.current) {
         return
@@ -1005,7 +1005,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
       if (!result.reachable) {
         const errors = {
           'auth-failed': g.sshErrAuth,
-          'hermes-not-found': g.sshErrNotInstalled,
+          'scout-not-found': g.sshErrNotInstalled,
           'host-key-changed': g.sshErrHostKey,
           timeout: g.sshErrTimeout,
           unreachable: g.sshErrUnreachable,
@@ -1042,7 +1042,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
     )
   }
 
-  if (!window.hermesDesktop?.getConnectionConfig) {
+  if (!window.scoutDesktop?.getConnectionConfig) {
     return <EmptyState description={g.unavailableDesc} title={g.unavailableTitle} />
   }
 
@@ -1113,7 +1113,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
         </div>
       </div>
 
-      {/* Hermes Cloud panel: one portal sign-in, then a discovered-agent picker
+      {/* Scout Cloud panel: one portal sign-in, then a discovered-agent picker
           whose selection drives the silent per-agent cascade + a cloud
           connection. Replaces the URL/token form while in cloud mode. */}
       {state.mode === 'cloud' && !state.envOverride ? (
@@ -1240,7 +1240,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
                     <AlertCircle className="mt-0.5 size-4 shrink-0" />
                     <span>
                       {g.cloudNoAgents.before}
-                      <ExternalLink href="https://portal.nousresearch.com/agents" showExternalIcon={false}>
+                      <ExternalLink href="https://portal.spaceshipresearch.com/agents" showExternalIcon={false}>
                         {g.cloudNoAgents.linkText}
                       </ExternalLink>
                       {g.cloudNoAgents.after}
@@ -1294,7 +1294,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
         </div>
       ) : null}
 
-      {/* An env-pinned remote (HERMES_DESKTOP_REMOTE_URL) still renders this
+      {/* An env-pinned remote (SCOUT_DESKTOP_REMOTE_URL) still renders this
           block: the override pins the URL/mode, but the browser SESSION is not
           env-owned — docs promise "you still sign in from the Gateway settings
           panel" (user-guide/desktop.md). Hiding it left a lapsed session with
@@ -1412,13 +1412,13 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
             action={
               <Input
                 className={cn('h-8 font-mono', CONTROL_TEXT)}
-                onChange={event => setState(current => ({ ...current, sshRemoteHermesPath: event.target.value }))}
-                placeholder={g.sshHermesPathPlaceholder}
-                value={state.sshRemoteHermesPath}
+                onChange={event => setState(current => ({ ...current, sshRemoteScoutPath: event.target.value }))}
+                placeholder={g.sshScoutPathPlaceholder}
+                value={state.sshRemoteScoutPath}
               />
             }
-            description={g.sshHermesPathDesc}
-            title={g.sshHermesPathTitle}
+            description={g.sshScoutPathDesc}
+            title={g.sshScoutPathTitle}
           />
         </div>
       ) : null}
@@ -1482,7 +1482,7 @@ function GatewayConnectionSettings({ embedded, standalone }: { embedded: boolean
           />
           <ListRow
             action={
-              <Button onClick={() => void window.hermesDesktop?.revealLogs()} size="sm" variant="textStrong">
+              <Button onClick={() => void window.scoutDesktop?.revealLogs()} size="sm" variant="textStrong">
                 <FileText />
                 {g.openLogs}
               </Button>

@@ -7,8 +7,8 @@ from scripts.releases import r2, upload_summary
 from scripts.releases.r2_scope import R2Scope
 
 
-BASE = "https://hermes-assets.nousresearch.com"
-KEY = "releases/commit/" + "a" * 40 + "/HermesBundled-1.2.3-win-x64.msix"
+BASE = "https://scout-assets.spaceshipresearch.com"
+KEY = "releases/commit/" + "a" * 40 + "/ScoutBundled-1.2.3-win-x64.msix"
 
 
 @pytest.fixture(autouse=True)

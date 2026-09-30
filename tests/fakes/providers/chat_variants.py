@@ -1,9 +1,9 @@
 """Scripted, recording loopback server for OpenAI **chat-completions** dialect variants.
 
-The vendor boundary behind Hermes' ``chat_completions`` transport as spoken by the
+The vendor boundary behind Scout' ``chat_completions`` transport as spoken by the
 routes that bend the base dialect:
 
-* OpenRouter / Nous Portal: a unified ``reasoning_details`` array on the assistant
+* OpenRouter / Scout Portal: a unified ``reasoning_details`` array on the assistant
   message (streamed as ``delta.reasoning_details``) that the client must replay, and
   provider errors delivered as an ``{"error": {...}}`` chunk INSIDE a 200 SSE stream
   (an upstream ban or moderation block after the stream opened);
@@ -18,8 +18,8 @@ tool call, and an in-stream error object. Every request body is recorded and val
 against the installed ``openai`` SDK's ``CompletionCreateParams`` (pydantic
 ``TypeAdapter``); every chunk is built from ``openai.types.chat.ChatCompletionChunk``.
 
-Vendor-host impersonation: routes Hermes gates by hostname (``openrouter.ai``,
-``nousresearch.com``) are reached by configuring ``base_url: http://<vendor host>/...``
+Vendor-host impersonation: routes Scout gates by hostname (``openrouter.ai``,
+``spaceshipresearch.com``) are reached by configuring ``base_url: http://<vendor host>/...``
 and pointing the child's ``HTTP_PROXY`` at this server — the client sends absolute-form
 requests here, no DNS or real network involved (``https://`` URLs get a refused
 ``CONNECT``, so no request can escape to the real vendor).

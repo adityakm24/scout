@@ -11,9 +11,9 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
-import { saveHermesConfigRecord } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { Check, Globe } from '@/lib/icons'
+import { saveScoutConfigRecord } from '@/scout'
 import { notify, notifyError } from '@/store/notifications'
 import {
   $realProfilePromptClaim,
@@ -23,7 +23,7 @@ import {
   releaseRealProfilePrompt
 } from '@/store/real-profile-consent'
 
-import { hermesConfigCacheWriter, useHermesConfigRecord } from '../../hooks/use-config-record'
+import { scoutConfigCacheWriter, useScoutConfigRecord } from '../../hooks/use-config-record'
 
 interface RealProfileConsentDialogProps {
   /** The Browser tab this pane renders — used only to claim the prompt so
@@ -50,8 +50,8 @@ export function RealProfileConsentDialog({ tabId }: RealProfileConsentDialogProp
   const dismissed = useStore($realProfilePromptDismissed)
   const muted = useStore($realProfilePromptMuted)
   const claim = useStore($realProfilePromptClaim)
-  const { data: config, writeScope } = useHermesConfigRecord()
-  const setConfig = hermesConfigCacheWriter()
+  const { data: config, writeScope } = useScoutConfigRecord()
+  const setConfig = scoutConfigCacheWriter()
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export function RealProfileConsentDialog({ tabId }: RealProfileConsentDialogProp
     try {
       // Sparse patch: PUT /api/config deep-merges, and echoing the cached
       // snapshot would overwrite keys other surfaces changed since it loaded.
-      await saveHermesConfigRecord({ browser: { use_real_profile: true } }, writeScope)
+      await saveScoutConfigRecord({ browser: { use_real_profile: true } }, writeScope)
 
       notify({ kind: 'info', title: copy.enabledTitle, message: copy.enabledMessage })
     } catch (err) {

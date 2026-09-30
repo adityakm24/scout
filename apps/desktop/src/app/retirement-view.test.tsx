@@ -13,7 +13,7 @@ afterEach((): void => {
   cleanup()
   resetUpdateApplyState()
   $updateStatus.set(null)
-  Reflect.deleteProperty(window, 'hermesDesktop')
+  Reflect.deleteProperty(window, 'scoutDesktop')
 })
 
 test('discontinued retirement shows the uninstall notice and persists dismissal per revision', async (): Promise<void> => {

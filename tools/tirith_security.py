@@ -11,7 +11,7 @@ import time
 from contextvars import copy_context
 from pathlib import Path
 
-from hermes_constants import hermes_home_key
+from scout_constants import scout_home_key
 
 logger = logging.getLogger(__name__)
 _REPO = "sheeki03/tirith"
@@ -35,7 +35,7 @@ def _env_int(key: str, default: int) -> int:
 def _load_security_config() -> dict:
     """Security settings from config.yaml, with env var overrides."""
     try:
-        from hermes_cli.config import load_config_readonly
+        from scout_cli.config import load_config_readonly
         cfg = load_config_readonly().get("security", {}) or {}
     except Exception:
         cfg = {}
@@ -137,7 +137,7 @@ _install_attempted: set[str] = set()
 def _claim_install_attempt() -> bool:
     """Share the one-attempt budget between cold scans and startup threads."""
     with _install_lock:
-        home = hermes_home_key()
+        home = scout_home_key()
         if home in _install_attempted:
             return False
         _install_attempted.add(home)
@@ -224,7 +224,7 @@ def ensure_installed(*, log_failures: bool = True, explicit: bool = False):
             target=context.run, args=(_background_install,),
             kwargs={"log_failures": log_failures}, daemon=True,
         )
-        _install_threads[hermes_home_key()] = thread
+        _install_threads[scout_home_key()] = thread
         thread.start()
     return None
 
@@ -241,7 +241,7 @@ def missing_is_expected() -> bool:
     configured = _load_security_config()["tirith_path"]
     if configured != "tirith":
         return False
-    thread = _install_threads.get(hermes_home_key())
+    thread = _install_threads.get(scout_home_key())
     if thread is not None and thread.is_alive():
         return True
     return _local_tirith(configured) is not None or not pm.lazy_installs_allowed()

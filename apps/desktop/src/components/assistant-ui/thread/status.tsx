@@ -11,9 +11,9 @@ import { SCAFFOLD_LABEL_CLASS } from '@/components/chat/scaffold-row'
 import { Codicon } from '@/components/ui/codicon'
 import { Loader } from '@/components/ui/loader'
 import { StatusPulse } from '@/components/ui/status-pulse'
-import { getLocalModelsStatus } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
+import { getLocalModelsStatus } from '@/scout'
 import { sessionBackgroundResume } from '@/store/background-delegation'
 import { sessionCompacting } from '@/store/compaction'
 import { $localModelsEnabled } from '@/store/local-models-flag'
@@ -21,7 +21,7 @@ import { sessionAwaitingInput } from '@/store/prompts'
 import { parseModelLoadWait, sessionProviderWait } from '@/store/provider-wait'
 import { $currentModel } from '@/store/session'
 import { type DraftingTool, sessionDraftingTool } from '@/store/tool-drafting'
-import type { LocalModelLoadProgress } from '@/types/hermes'
+import type { LocalModelLoadProgress } from '@/types/scout'
 
 // A status line is scaffolding like any other — "Editing" while the model
 // drafts a call is the same kind of line as "Explored 3 files" once it has run,
@@ -379,7 +379,7 @@ export const TurnActivityIndicator: FC = () => {
       className={cn(!active && 'sr-only')}
       data-slot="aui_turn-activity"
       data-state={active ? 'active' : 'idle'}
-      label={active ? hint || 'Hermes is working' : ''}
+      label={active ? hint || 'Scout is working' : ''}
     >
       {active && (
         <>

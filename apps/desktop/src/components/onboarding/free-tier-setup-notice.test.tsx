@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { en } from '@/i18n/en'
 import { $freeTierStatus, freeTierSetupFailure } from '@/store/free-tier'
 import type { OnboardingContext } from '@/store/onboarding'
-import type { FreeTierStatus } from '@/types/hermes'
+import type { FreeTierStatus } from '@/types/scout'
 
 import { FreeTierSetupNotice, setupFailureCopy } from './free-tier-setup-notice'
 
@@ -12,8 +12,8 @@ const NO_IDENTITY: FreeTierStatus = {
   available: false,
   enabled: true,
   has_guest: false,
-  label: 'Nous · free tier',
-  model: 'nous/welcome',
+  label: 'SpaceshipResearch · free tier',
+  model: 'spaceshipresearch/welcome',
   notice_pending: false
 }
 

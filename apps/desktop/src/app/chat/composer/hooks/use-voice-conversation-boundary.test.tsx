@@ -20,11 +20,11 @@ const mocks = vi.hoisted(() => ({
   }
 }))
 
-vi.mock('@/hermes', async importOriginal => ({
+vi.mock('@/scout', async importOriginal => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getApiRequestConnection: () => null,
   getApiRequestProfile: () => null,
-  hermesApi: mocks.config,
+  scoutApi: mocks.config,
   speakText: vi.fn()
 }))
 vi.mock('@/api/client', async importOriginal => ({

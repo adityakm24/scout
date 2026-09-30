@@ -13,7 +13,7 @@ _registry = HandlerRegistry()
 
 def resolve_skin() -> dict:
     try:
-        from hermes_cli.skin_engine import init_skin_from_config, get_active_skin
+        from scout_cli.skin_engine import init_skin_from_config, get_active_skin
         init_skin_from_config(_load_cfg())
         skin = get_active_skin()
         # light/dark are paired palettes: the TUI prefers the block matching terminal polarity.
@@ -36,8 +36,8 @@ _last_skin_sig: tuple[str, float | None] | None = None
 
 def _watcher_home() -> Path:
     """Active profile home for the change watcher's signature probes."""
-    override = get_hermes_home_override()
-    return Path(override if isinstance(override, str) and override else _hermes_home)
+    override = get_scout_home_override()
+    return Path(override if isinstance(override, str) and override else _scout_home)
 
 
 def _watcher_mtime_ns(path: Path):
@@ -157,8 +157,8 @@ def _session_db_content_sig(db_path: Path):
     conn = None
     try:
         import hashlib
-        from hermes_state import _connect_tracked_db
-        from hermes_state_holders import read_only_db_uri
+        from scout_state import _connect_tracked_db
+        from scout_state_holders import read_only_db_uri
 
         conn = _connect_tracked_db(read_only_db_uri(db_path), tracking_path=db_path,
                                    uri=True, timeout=0.05)
@@ -245,7 +245,7 @@ def _pairing_roots(home: Path) -> list:
     cached = _pairing_roots_cache
     if cached is not None and cached[0] == home and cached[1] == dir_mtime and now - cached[2] < _PAIRING_ROOTS_TTL_S:
         return cached[3]
-    from hermes_constants import named_profile_is_live
+    from scout_constants import named_profile_is_live
     roots = [home / "pairing", home / "platforms" / "pairing"]
     with contextlib.suppress(OSError):
         for profile_dir in profiles_dir.iterdir():
@@ -285,6 +285,9 @@ def _bot_relay_outbox_sig():
 _CHANGE_WATCHES: dict[str, tuple[float, Any, Any]] = {
     "pet.changed": (2.0, _pet_sig, _pet_changed_payload),
     "cron.changed": (1.0, lambda: _home_mtime_ns("cron", "jobs.json"), lambda: {}),
+    # The user's to-dos: written by the agent's planner tool in any process (gateway turns,
+    # CLI, cron runs) and by other windows — the Dashboard refetches on this.
+    "planner.changed": (1.0, lambda: _home_mtime_ns("planner", "todos.json"), lambda: {}),
     "sessions.changed": (0.5, _sessions_sig, lambda: {}),
     # Projects created/switched by CLI or agent tooling write projects.db without any
     # state.db movement, so sessions.changed never fires and the desktop Projects
@@ -348,7 +351,7 @@ def _ensure_skin_watcher() -> None:
             time.sleep(0.5)
             _broadcast_skin_if_changed()
             _broadcast_watched_changes()
-    threading.Thread(target=_loop, name="hermes-change-watcher", daemon=True).start()
+    threading.Thread(target=_loop, name="scout-change-watcher", daemon=True).start()
 
 
 def register(server) -> None:

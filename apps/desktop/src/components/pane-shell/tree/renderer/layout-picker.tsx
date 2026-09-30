@@ -81,7 +81,7 @@ function TreeThumbnail({ node, resting }: { node: LayoutNode; resting: ReadonlyS
 /** Small-caps section heading — the app's SidebarPanelLabel voice. */
 function PickerSectionLabel({ children }: { children: ReactNode }) {
   return (
-    <span className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-(--ui-text-quaternary)">
+    <span className="text-[0.6rem] font-semibold text-(--ui-text-quaternary)">
       {children}
     </span>
   )

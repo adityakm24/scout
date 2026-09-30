@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { H2 } from "@nous-research/ui/ui/components/typography/h2";
-import { Card, CardContent } from "@nous-research/ui/ui/components/card";
-import { Badge } from "@nous-research/ui/ui/components/badge";
-import { Button } from "@nous-research/ui/ui/components/button";
-import { Input } from "@nous-research/ui/ui/components/input";
-import { Label } from "@nous-research/ui/ui/components/label";
-import { Checkbox } from "@nous-research/ui/ui/components/checkbox";
-import { Toast } from "@nous-research/ui/ui/components/toast";
-import { useToast } from "@nous-research/ui/hooks/use-toast";
+import { H2 } from "@spaceshipresearch/ui/ui/components/typography/h2";
+import { Card, CardContent } from "@spaceshipresearch/ui/ui/components/card";
+import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
+import { Button } from "@spaceshipresearch/ui/ui/components/button";
+import { Input } from "@spaceshipresearch/ui/ui/components/input";
+import { Label } from "@spaceshipresearch/ui/ui/components/label";
+import { Checkbox } from "@spaceshipresearch/ui/ui/components/checkbox";
+import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
+import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
 import { api } from "@/lib/api";
 import type {
   McpHttpAuth,

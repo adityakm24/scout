@@ -16,7 +16,7 @@ from tools.environments.base_output import _popen_bash
 from tools.environments.file_sync import (
     FileSyncManager, iter_sync_files, quoted_mkdir_command, quoted_rm_command, unique_parent_dirs)
 from tools.environments.remote_common import (
-    bash_argv, client_env_with, load_hermes_env_vars, prepend_unset, resolve_passthrough_env, run_capture)
+    bash_argv, client_env_with, load_scout_env_vars, prepend_unset, resolve_passthrough_env, run_capture)
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 # Skip multiplexing there; each command pays a fresh connection but the backend works. See #73927.
 _SSH_MULTIPLEX = os.name != "nt"
 
-# Module-level binding: tests patch ``ssh._load_hermes_env_vars`` to fake the .env file.
-_load_hermes_env_vars = load_hermes_env_vars
+# Module-level binding: tests patch ``ssh._load_scout_env_vars`` to fake the .env file.
+_load_scout_env_vars = load_scout_env_vars
 
 
 def _ensure_ssh_available() -> None:
@@ -60,7 +60,7 @@ class SSHEnvironment(BaseEnvironment):
                  probe_only: bool = False):
         super().__init__(cwd=cwd, timeout=timeout)
         self.host, self.user, self.port, self.key_path = host, user, port, key_path
-        self.control_dir = Path(tempfile.gettempdir()) / "hermes-ssh"
+        self.control_dir = Path(tempfile.gettempdir()) / "scout-ssh"
         self.control_dir.mkdir(parents=True, exist_ok=True)
         # Short, deterministic socket name: the path must stay under macOS's 104-byte sun_path
         # limit (raw user@host:port + SSH's 16-byte suffix under a deep $TMPDIR exceeds it), and
@@ -80,7 +80,7 @@ class SSHEnvironment(BaseEnvironment):
         self._remote_home = self._detect_remote_home()
         self._ensure_remote_dirs()
         self._sync_manager = FileSyncManager(
-            get_files_fn=lambda: iter_sync_files(f"{self._remote_home}/.hermes"),
+            get_files_fn=lambda: iter_sync_files(f"{self._remote_home}/.scout"),
             upload_fn=self._scp_upload, delete_fn=self._ssh_delete,
             bulk_upload_fn=self._ssh_bulk_upload, bulk_download_fn=self._ssh_bulk_download)
         self._sync_manager.sync(force=True)
@@ -159,8 +159,8 @@ class SSHEnvironment(BaseEnvironment):
         return "/root" if self.user == "root" else f"/home/{self.user}"
 
     def _ensure_remote_dirs(self) -> None:
-        """Create base ~/.hermes directory tree on remote in one SSH call."""
-        base = f"{self._remote_home}/.hermes"
+        """Create base ~/.scout directory tree on remote in one SSH call."""
+        base = f"{self._remote_home}/.scout"
         self._run_ssh(quoted_mkdir_command([base, f"{base}/skills", f"{base}/credentials", f"{base}/cache"]),
                       timeout=10)
 
@@ -178,7 +178,7 @@ class SSHEnvironment(BaseEnvironment):
         connection to remote ``tar x``, after a single batched ``mkdir -p``."""
         if not files:
             return
-        base = f"{self._remote_home}/.hermes"
+        base = f"{self._remote_home}/.scout"
         parents = unique_parent_dirs(files)
         if parents:
             self._run_ssh_checked(quoted_mkdir_command(parents), 30, "remote mkdir failed",
@@ -187,7 +187,7 @@ class SSHEnvironment(BaseEnvironment):
         # Symlink staging avoids fragile GNU tar --transform rules. On Windows
         # without Developer Mode symlink creation raises OSError winerror 1314;
         # only that case falls back to a plain copy, other OSErrors re-raise.
-        with tempfile.TemporaryDirectory(prefix="hermes-ssh-bulk-") as staging:
+        with tempfile.TemporaryDirectory(prefix="scout-ssh-bulk-") as staging:
             for host_path, remote_path in files:
                 try:
                     rel_remote = os.path.relpath(remote_path, base)
@@ -242,11 +242,11 @@ class SSHEnvironment(BaseEnvironment):
         logger.debug("SSH: bulk-uploaded %d file(s) via tar pipe", len(files))
 
     def _ssh_bulk_download(self, dest: Path) -> None:
-        """Download remote .hermes/ as a tar archive."""
+        """Download remote .scout/ as a tar archive."""
         # Tar from / with the full path so archive entries keep absolute paths
-        # (home/user/.hermes/skills/f.py), matching _pushed_hashes keys.
-        rel_base = f"{self._remote_home}/.hermes".lstrip("/")
-        # Live sockets inside .hermes (gateway.sock and friends) cannot be archived: tar prints
+        # (home/user/.scout/skills/f.py), matching _pushed_hashes keys.
+        rel_base = f"{self._remote_home}/.scout".lstrip("/")
+        # Live sockets inside .scout (gateway.sock and friends) cannot be archived: tar prints
         # "socket ignored" and some builds exit 2, which failed every sync-back and left a
         # multi-GB temp tar behind on each retry. Exclude them up front.
         ssh_cmd = self._build_ssh_command() + [
@@ -280,7 +280,7 @@ class SSHEnvironment(BaseEnvironment):
         client's env carries the values, so secrets never enter the remote ``bash -c`` argv. The
         remote sshd must ``AcceptEnv`` them (#14091). Profile-scoped names missing from the active
         scope are unset remotely so a shared host cannot serve another profile's value."""
-        values, unset_names = resolve_passthrough_env(hermes_env_loader=_load_hermes_env_vars)
+        values, unset_names = resolve_passthrough_env(scout_env_loader=_load_scout_env_vars)
         cmd = self._build_ssh_command(send_env=values) + bash_argv(shlex.quote(prepend_unset(cmd_string, unset_names)), login)
         client_env = client_env_with(values)
         return _popen_bash(cmd, stdin_data, env=client_env) if client_env is not None else _popen_bash(cmd, stdin_data)

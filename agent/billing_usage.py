@@ -2,7 +2,7 @@
 
 Terminal surfaces show **dollars**, never "credits"; the plan allowance and top-up
 dollars stay distinctly visible as two SEPARATE bars (a three-segment bar is
-unreadable at terminal widths). Source: ``NousPortalAccountInfo.paid_service_access_info``
+unreadable at terminal widths). Source: ``ScoutPortalAccountInfo.paid_service_access_info``
 (USD floats despite the legacy ``*_credits`` names) plus ``subscription.monthly_credits``
 (plan bar denominator) and ``current_period_end``. Fail-open: missing/non-finite fields
 degrade to fewer bars; logged-out / unreachable portal yields ``available=False``.
@@ -16,7 +16,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from hermes_time import safe_strftime
+from scout_time import safe_strftime
 
 logger = logging.getLogger(__name__)
 
@@ -38,17 +38,17 @@ def _fmt_usd(value: Optional[float]) -> str:
     return f"${(value or 0.0):,.2f}"
 
 
-def nous_logged_in() -> bool:
-    """Cheap local auth-state check: a Nous access token is present. Fail-closed."""
+def spaceshipresearch_logged_in() -> bool:
+    """Cheap local auth-state check: a SpaceshipResearch access token is present. Fail-closed."""
     try:
-        from hermes_cli.auth import get_provider_auth_state
-        tok = (get_provider_auth_state("nous") or {}).get("access_token")
+        from scout_cli.auth import get_provider_auth_state
+        tok = (get_provider_auth_state("spaceshipresearch") or {}).get("access_token")
         return isinstance(tok, str) and bool(tok.strip())
     except Exception:
         return False
 
 
-def fetch_nous_account(timeout: float):
+def fetch_spaceshipresearch_account(timeout: float):
     """Wall-clock-bounded fresh portal account fetch. Raises on failure/timeout.
 
     Shares the one bounded implementation so a stalled portal releases the
@@ -119,7 +119,7 @@ class UsageModel:
 
 
 def usage_model_from_account(account_info: Any) -> UsageModel:
-    """Build a :class:`UsageModel` from a ``NousPortalAccountInfo``. Never raises."""
+    """Build a :class:`UsageModel` from a ``ScoutPortalAccountInfo``. Never raises."""
     try:
         if account_info is None or not getattr(account_info, "logged_in", False):
             return UsageModel(available=False)
@@ -167,14 +167,14 @@ def usage_model_from_account(account_info: Any) -> UsageModel:
 
 
 def build_usage_model(*, timeout: float = 10.0) -> UsageModel:
-    """Fetch account-info and build the usage model; fail-open. ``HERMES_DEV_CREDITS_FIXTURE`` short-circuits to a fixture."""
+    """Fetch account-info and build the usage model; fail-open. ``SCOUT_DEV_CREDITS_FIXTURE`` short-circuits to a fixture."""
     fixture = _dev_fixture_usage_model()
     if fixture is not None:
         return fixture
-    if not nous_logged_in():
+    if not spaceshipresearch_logged_in():
         return UsageModel(available=False)
     try:
-        return usage_model_from_account(fetch_nous_account(timeout))
+        return usage_model_from_account(fetch_spaceshipresearch_account(timeout))
     except Exception:
         logger.debug("usage ▸ portal fetch failed (fail-open)", exc_info=True)
         return UsageModel(available=False)
@@ -185,8 +185,8 @@ def _plan_bar(remaining: float, spent: float) -> UsageBar:
 
 
 def _dev_fixture_usage_model() -> Optional[UsageModel]:
-    """``HERMES_DEV_CREDITS_FIXTURE`` -> fixture model (``free|healthy|low|topup|depleted``), else None."""
-    name = (os.getenv("HERMES_DEV_CREDITS_FIXTURE") or "").strip().lower()
+    """``SCOUT_DEV_CREDITS_FIXTURE`` -> fixture model (``free|healthy|low|topup|depleted``), else None."""
+    name = (os.getenv("SCOUT_DEV_CREDITS_FIXTURE") or "").strip().lower()
     name = {"mid": "healthy", "top-up": "topup"}.get(name, name)
     plus = dict(available=True, plan_name="Plus", renews_at="2026-07-01")
     specs: dict[str, dict] = {

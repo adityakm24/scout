@@ -5,14 +5,14 @@ import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { isMain } from './frontend-common.mjs'
 
-const receiptName = 'hermes-build.json'
+const receiptName = 'scout-build.json'
 const workspaces = { tui: 'ui-tui', web: 'web', desktop: 'apps/desktop' }
 const generated = new Set(['node_modules', 'dist', 'build', 'release', '.cache', '.git', 'coverage', 'test-results', 'playwright-report'])
 
 // buildTui bundles these source roots (including the Ink source alias), not
 // the workspaces' documentation, test runners or other product recipes.
 const tuiInputs = [
-  ...['ui-tui', 'ui-tui/packages/hermes-ink', 'apps/shared'].flatMap(root => [
+  ...['ui-tui', 'ui-tui/packages/scout-ink', 'apps/shared'].flatMap(root => [
     `${root}/src`, `${root}/package.json`, `${root}/tsconfig.json`,
   ]),
   'tsconfig.json', 'package.json', 'package-lock.json', '.npmrc', 'pm/lock.json',
@@ -60,7 +60,7 @@ export function sourceHash(source, product) {
 function outputHash(out) {
   // Native binaries can be signed after compilation. Their ABI validation is
   // owned by native preparation; renderer/main/preload bytes must stay intact.
-  return treeHash(out, readdirSync(out).sort(), name => name === receiptName || name === '.hermes-product',
+  return treeHash(out, readdirSync(out).sort(), name => name === receiptName || name === '.scout-product',
     name => !name.split('/').includes('node_modules') && !name.startsWith('native/'))
 }
 

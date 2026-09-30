@@ -2,13 +2,13 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import {
   type CronTriggerController,
   createCronTriggerController,
-} from "@hermes/shared";
+} from "@scout/shared";
 import { Clock, Pause, Pencil, Play, Trash2, X, Zap } from "lucide-react";
-import { Badge } from "@nous-research/ui/ui/components/badge";
-import { Button } from "@nous-research/ui/ui/components/button";
-import { Select, SelectOption } from "@nous-research/ui/ui/components/select";
-import { Spinner } from "@nous-research/ui/ui/components/spinner";
-import { H2 } from "@nous-research/ui/ui/components/typography/h2";
+import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
+import { Button } from "@spaceshipresearch/ui/ui/components/button";
+import { Select, SelectOption } from "@spaceshipresearch/ui/ui/components/select";
+import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
+import { H2 } from "@spaceshipresearch/ui/ui/components/typography/h2";
 import { api } from "@/lib/api";
 import type {
   CronJob,
@@ -42,19 +42,19 @@ import {
   type ScheduleBuilderState,
   type ScheduleDescribeStrings,
 } from "@/lib/schedule";
-import { useToast } from "@nous-research/ui/hooks/use-toast";
-import { useConfirmDelete } from "@nous-research/ui/hooks/use-confirm-delete";
+import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
+import { useConfirmDelete } from "@spaceshipresearch/ui/hooks/use-confirm-delete";
 import { useModalBehavior } from "@/hooks/useModalBehavior";
-import { Toast } from "@nous-research/ui/ui/components/toast";
-import { Card, CardContent } from "@nous-research/ui/ui/components/card";
-import { Input } from "@nous-research/ui/ui/components/input";
-import { Label } from "@nous-research/ui/ui/components/label";
+import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
+import { Card, CardContent } from "@spaceshipresearch/ui/ui/components/card";
+import { Input } from "@spaceshipresearch/ui/ui/components/input";
+import { Label } from "@spaceshipresearch/ui/ui/components/label";
 import { useI18n } from "@/i18n";
 import { en } from "@/i18n/en";
 import { usePageHeader } from "@/contexts/usePageHeader";
 import { PluginSlot } from "@/plugins";
 import { LoadErrorNotice } from "@/components/LoadErrorNotice";
-import { Segmented } from "@nous-research/ui/ui/components/segmented";
+import { Segmented } from "@spaceshipresearch/ui/ui/components/segmented";
 import { AutomationBlueprints } from "@/components/AutomationBlueprints";
 import { cn, themedBody } from "@/lib/utils";
 import { errorMessage } from "@/lib/api-error";
@@ -607,7 +607,7 @@ export default function CronPage() {
   });
 
   // Skills installed in the profile a job will run under, for the
-  // attach-skill selector (parity with `hermes cron edit --add-skill`).
+  // attach-skill selector (parity with `scout cron edit --add-skill`).
   // Keyed on the create-modal profile; the edit modal reuses the list —
   // a job's current skills are always shown even if not in it.
   const [availableSkills, setAvailableSkills] = useState<SkillInfo[]>([]);

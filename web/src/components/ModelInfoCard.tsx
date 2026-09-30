@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Brain, Eye, Gauge, Lightbulb, Wrench } from "lucide-react";
-import { Spinner } from "@nous-research/ui/ui/components/spinner";
+import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
 import { api } from "@/lib/api";
 import type { ModelInfoResponse } from "@/lib/api";
-import { compactNumber } from "@hermes/shared";
+import { compactNumber } from "@scout/shared";
 
 interface ModelInfoCardProps {
   /** Current model string from config state — used to detect changes */

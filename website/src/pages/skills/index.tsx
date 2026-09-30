@@ -360,7 +360,7 @@ function SkillCard({
             href={installUrl}
             onClick={(e) => e.stopPropagation()}
           >
-            Install in Hermes
+            Install in Scout
           </a>
         )}
 
@@ -432,9 +432,9 @@ function SkillCard({
               </div>
             )}
             <div className={styles.installHint}>
-              <code>{skill.installCmd || `hermes skills install ${skillCatalogInstallIdentifier(skill) || skill.name}`}</code>
+              <code>{skill.installCmd || `scout skills install ${skillCatalogInstallIdentifier(skill) || skill.name}`}</code>
               <CopyButton
-                text={skill.installCmd || `hermes skills install ${skillCatalogInstallIdentifier(skill) || skill.name}`}
+                text={skill.installCmd || `scout skills install ${skillCatalogInstallIdentifier(skill) || skill.name}`}
               />
             </div>
             {onPick ? (
@@ -517,10 +517,10 @@ function buildSearchHaystack(s: Skill): string {
 
 export default function SkillsDashboard() {
   // Picker embed mode (?embed=picker): the page is being iframed by a host
-  // app (Hermes desktop's Bot Mode agent editor) as a skill PICKER. Site
+  // app (Scout desktop's Bot Mode agent editor) as a skill PICKER. Site
   // chrome is hidden via a CSS class and every card gains an
   // "+ Add to this Agent" button that posts
-  //   { type: 'hermes-skill-pick', name, identifier, installCmd, source }
+  //   { type: 'scout-skill-pick', name, identifier, installCmd, source }
   // to the parent window. The HOST performs the actual install through its
   // own gateway (skills.manage) — the page never installs anything, so
   // there is no origin to trust in this direction; parents must validate
@@ -534,10 +534,10 @@ export default function SkillsDashboard() {
       if (typeof window === "undefined" || window.parent === window) return;
       window.parent.postMessage(
         {
-          type: "hermes-skill-pick",
+          type: "scout-skill-pick",
           name: skill.name,
           identifier: skillCatalogInstallIdentifier(skill) || skill.name,
-          installCmd: skill.installCmd || `hermes skills install ${skillCatalogInstallIdentifier(skill) || skill.name}`,
+          installCmd: skill.installCmd || `scout skills install ${skillCatalogInstallIdentifier(skill) || skill.name}`,
           source: skill.source,
         },
         "*"
@@ -774,13 +774,13 @@ export default function SkillsDashboard() {
   return (
     <Layout
       title="Skills Hub"
-      description="Browse all skills and plugins available for Hermes Agent"
+      description="Browse all skills and plugins available for Scout Agent"
     >
       <div className={`${styles.page} ${pickerMode ? styles.pickerMode : ""}`}>
         <header className={styles.hero}>
           <div className={styles.heroGlow} />
           <div className={styles.heroContent}>
-            <p className={styles.heroEyebrow}>Hermes Agent</p>
+            <p className={styles.heroEyebrow}>Scout Agent</p>
             <h1 className={styles.heroTitle}>Skills Hub</h1>
             <nav className={styles.crossNav} aria-label="Catalog pages">
               <span className={`${styles.crossNavLink} ${styles.crossNavActive}`}>
@@ -795,7 +795,7 @@ export default function SkillsDashboard() {
               <strong className={styles.heroAccent}>
                 {data ? allSkillsLocal.length.toLocaleString() : "…"}
               </strong>{" "}
-              skills across {sources.length - 1} registries. Open in Hermes Desktop to review and install, or copy the CLI command.
+              skills across {sources.length - 1} registries. Open in Scout Desktop to review and install, or copy the CLI command.
               {loadError && (
                 <span style={{ color: "#f87171", marginLeft: 8 }}>
                   · failed to load catalog ({loadError})
@@ -815,9 +815,9 @@ export default function SkillsDashboard() {
             )}
 
             <p className={styles.heroSub} style={{ fontSize: "0.85rem", opacity: 0.85 }}>
-              <a href="https://portal.nousresearch.com/terms" target="_blank" rel="noopener noreferrer">Terms</a>
+              <a href="https://portal.spaceshipresearch.com/terms" target="_blank" rel="noopener noreferrer">Terms</a>
               {" • "}
-              <a href="https://portal.nousresearch.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+              <a href="https://portal.spaceshipresearch.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
             </p>
 
             <div className={styles.statsRow}>

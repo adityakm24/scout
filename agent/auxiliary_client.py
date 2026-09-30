@@ -1,8 +1,8 @@
 """Shared auxiliary client router for side tasks (compression, search, vision, ...).
 
-Text auto chain: main provider+model → OpenRouter → Nous Portal → custom endpoint →
+Text auto chain: main provider+model → OpenRouter → Scout Portal → custom endpoint →
 native Anthropic → direct API-key providers → None. Vision auto chain: main
-provider (if a supported vision backend) → OpenRouter → Nous → Anthropic → custom.
+provider (if a supported vision backend) → OpenRouter → SpaceshipResearch → Anthropic → custom.
 ``auxiliary.free_only`` restricts the OpenRouter lane to ``:free`` SKUs. Codex OAuth is
 in neither chain (undocumented, shifting allow-list): main provider or explicit
 ``auxiliary.<task>.provider`` only. HTTP 402 in call_llm() falls through the chain.
@@ -118,16 +118,16 @@ def aux_probe_mode():
 
 from agent.credential_pool import load_pool
 from agent.model_metadata import MINIMUM_CONTEXT_LENGTH, get_model_context_length
-from hermes_cli.config import get_hermes_home
-from hermes_cli.config_providers import _canonical_api_mode
+from scout_cli.config import get_scout_home
+from scout_cli.config_providers import _canonical_api_mode
 from agent.auxiliary_health import (
     _custom_health_base_url, _unhealthy_cache_key, fallback_candidate_quarantine_ttl,
     fallback_candidate_unavailable_reason,
 )
 from agent.auxiliary_unavailable import (
-    AuxiliaryClientUnavailable, clear_nous_credential_failure, missing_provider_credentials_message,
-    nous_credential_failure_detail, record_nous_credential_failure)
-from hermes_constants import OPENROUTER_BASE_URL, hermes_home_key
+    AuxiliaryClientUnavailable, clear_spaceshipresearch_credential_failure, missing_provider_credentials_message,
+    spaceshipresearch_credential_failure_detail, record_spaceshipresearch_credential_failure)
+from scout_constants import OPENROUTER_BASE_URL, scout_home_key
 from utils import base_url_host_matches, base_url_hostname, base_url_origin, env_float, is_truthy_value, model_forces_max_completion_tokens, normalize_proxy_env_vars
 
 logger = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ def _resolve_aux_verify(base_url: Optional[str]) -> Any:
     ``ssl_verify``; otherwise the OS trust store); any failure → httpx default (``True``)."""
     try:
         from agent.ssl_verify import resolve_httpx_verify
-        from hermes_cli.config import get_custom_provider_tls_settings, load_config_readonly
+        from scout_cli.config import get_custom_provider_tls_settings, load_config_readonly
         tls = get_custom_provider_tls_settings(str(base_url or ""), config=load_config_readonly())
         return resolve_httpx_verify(
             ca_bundle=tls.get("ssl_ca_cert"), ssl_verify=tls.get("ssl_verify"), base_url=str(base_url or ""))
@@ -172,7 +172,7 @@ def _openai_http_client_kwargs(base_url: Optional[str], *, async_mode: bool = Fa
             logger.warning(
                 "agent.process_bootstrap.build_keepalive_http_client is "
                 "unavailable — mixed/stale install detected (#64333). Falling "
-                "back to the SDK default HTTP client. Run `hermes update` (or "
+                "back to the SDK default HTTP client. Run `scout update` (or "
                 "reinstall the Desktop app) to resync the runtime.")
         client = None
     return {"http_client": client} if client is not None else {}
@@ -184,13 +184,13 @@ def _create_openai_client(*, api_key: str, base_url: str, **kwargs: Any) -> Any:
         return _AuxProbeClientStub(api_key=api_key, base_url=base_url)
     kwargs = {**_openai_http_client_kwargs(base_url), **kwargs}
     _apply_required_codex_headers(kwargs, access_token=api_key, base_url=base_url)
-    # Hermes owns aux retry/fallback policy; the SDK default (max_retries=2) would triple
-    # wall time on a hung endpoint before Hermes sees one failure.
-    # Hermes owns auxiliary retry + provider/model fallback policy (the same-provider transient retry in
+    # Scout owns aux retry/fallback policy; the SDK default (max_retries=2) would triple
+    # wall time on a hung endpoint before Scout sees one failure.
+    # Scout owns auxiliary retry + provider/model fallback policy (the same-provider transient retry in
     # call_llm plus the except-chain fallback). The OpenAI SDK's own default (max_retries=2 → up to 3
     # attempts) silently multiplies the effective wall time of every aux call by 3× on a slow/hung endpoint,
-    # so a 120s timeout can stall ~360s before Hermes sees a single failure (issue #54465). Disable
-    # SDK-internal retries by default and let Hermes control the budget; explicit callers can still override
+    # so a 120s timeout can stall ~360s before Scout sees a single failure (issue #54465). Disable
+    # SDK-internal retries by default and let Scout control the budget; explicit callers can still override
     # via kwargs.
     kwargs.setdefault("max_retries", 0)
     return OpenAI(api_key=api_key, base_url=base_url, **kwargs)
@@ -482,7 +482,7 @@ def _run_protected_sync_provider_call(callback: Callable[[dict[str, Any]], Any],
             done.set()
 
     threading.Thread(
-        target=provider_context.run, args=(_provider_worker,), name="hermes-protected-aux-provider",
+        target=provider_context.run, args=(_provider_worker,), name="scout-protected-aux-provider",
         daemon=True).start()
     while True:
         # Check cancel before AND after each wait so it wins when result publication and the
@@ -501,7 +501,7 @@ def _run_protected_sync_provider_call(callback: Callable[[dict[str, Any]], Any],
 
 def _client_declares(client_obj: Any, flag: str) -> bool:
     """Whether ``client_obj`` (or its class) sets ``flag`` truthy; absent → False. Capability declaration,
-    not isinstance, so out-of-tree clients can opt out of wrappers unimported (cf. SUPPORTS_HERMES_TOOL_CALLS)."""
+    not isinstance, so out-of-tree clients can opt out of wrappers unimported (cf. SUPPORTS_SCOUT_TOOL_CALLS)."""
     try:
         return bool(getattr(client_obj, flag, False))
     except Exception:
@@ -528,7 +528,7 @@ def _extract_url_query_params(url: str):
 _stale_base_url_warned = False
 
 # Local OpenAI-compatible servers (Ollama, vLLM, llama.cpp) route through the generic custom
-# provider — mirrors hermes_cli.auth._PROVIDER_ALIASES. Without this group an explicit
+# provider — mirrors scout_cli.auth._PROVIDER_ALIASES. Without this group an explicit
 # ``provider: ollama`` aux lane matches no registry entry and raises a misleading
 # ``OLLAMA_API_KEY`` error instead of using the lane's base_url (#106010).
 _LOCAL_SERVER_ALIASES = {
@@ -540,7 +540,7 @@ _ALIAS_TABLE: Optional[Dict[str, str]] = None
 
 
 def _provider_alias_table() -> Dict[str, str]:
-    """The same alias table the main provider path resolves against (hermes_cli.auth).
+    """The same alias table the main provider path resolves against (scout_cli.auth).
 
     A hand-copied mirror here rots silently every time auth grows a family — the local
     servers (#106010) and the OpenCode entries were both missed that way. Local-server
@@ -551,7 +551,7 @@ def _provider_alias_table() -> Dict[str, str]:
     if _ALIAS_TABLE is None:
         merged: Dict[str, str] = dict(_LOCAL_SERVER_ALIASES)
         with contextlib.suppress(Exception):
-            from hermes_cli.auth import _PROVIDER_ALIASES as _auth_table
+            from scout_cli.auth import _PROVIDER_ALIASES as _auth_table
             merged.update(_auth_table)
         _ALIAS_TABLE = merged
     return _ALIAS_TABLE
@@ -721,10 +721,10 @@ def _fast_model_from_catalog(provider_id: str) -> str:
     "" when the catalog is unavailable or holds no small model (caller falls through to the
     curated default). Never raises; the fetch is memory+disk cached.
     """
-    is_nous = provider_id.strip().lower() == "nous"
+    is_spaceshipresearch = provider_id.strip().lower() == "spaceshipresearch"
     try:
-        from hermes_cli.auth import resolve_api_key_provider_credentials
-        from hermes_cli.models_pricing import fetch_models_with_pricing
+        from scout_cli.auth import resolve_api_key_provider_credentials
+        from scout_cli.models_pricing import fetch_models_with_pricing
         from providers import get_provider_profile
         # Most /v1/models endpoints are authenticated; an anonymous 401 would read as "no small
         # model" and pin the curated default forever.
@@ -736,13 +736,13 @@ def _fast_model_from_catalog(provider_id: str) -> str:
         except Exception:
             # Not an API-key provider, or nothing configured; anonymous fetch may still work.
             logger.debug("No credentials for %s catalog", provider_id, exc_info=True)
-        if not api_key and is_nous:
-            # Nous is OAuth (resolver raises); anonymous reads return the full catalog.
+        if not api_key and is_spaceshipresearch:
+            # SpaceshipResearch is OAuth (resolver raises); anonymous reads return the full catalog.
             try:
-                from hermes_cli.models_pricing import _resolve_nous_pricing_credentials
-                api_key, base_url = _resolve_nous_pricing_credentials()
+                from scout_cli.models_pricing import _resolve_spaceshipresearch_pricing_credentials
+                api_key, base_url = _resolve_spaceshipresearch_pricing_credentials()
             except Exception:
-                logger.debug("No Nous credentials for catalog", exc_info=True)
+                logger.debug("No SpaceshipResearch credentials for catalog", exc_info=True)
         if not base_url:
             base_url = str(getattr(get_provider_profile(provider_id), "base_url", "") or "")
         base_url = base_url.rstrip("/")
@@ -750,25 +750,25 @@ def _fast_model_from_catalog(provider_id: str) -> str:
             return ""
         if base_url.endswith("/v1"):  # fetch_models_with_pricing appends /v1/models
             base_url = base_url[:-3]
-        # Nous-only args must match the pickers' or the seeded cache loses sale chrome and
+        # SpaceshipResearch-only args must match the pickers' or the seeded cache loses sale chrome and
         # policy-catalog expiry.
-        _nous_kwargs = {}
-        if is_nous:
-            from hermes_cli.models_pricing import _NOUS_CATALOG_TTL_SECONDS
-            _nous_kwargs = {"include_sale_original": True, "cache_ttl_seconds": _NOUS_CATALOG_TTL_SECONDS}
+        _spaceshipresearch_kwargs = {}
+        if is_spaceshipresearch:
+            from scout_cli.models_pricing import _SPACESHIPRESEARCH_CATALOG_TTL_SECONDS
+            _spaceshipresearch_kwargs = {"include_sale_original": True, "cache_ttl_seconds": _SPACESHIPRESEARCH_CATALOG_TTL_SECONDS}
         catalog = fetch_models_with_pricing(
-            api_key=api_key or None, base_url=base_url, timeout=3.0, **_nous_kwargs) or {}
+            api_key=api_key or None, base_url=base_url, timeout=3.0, **_spaceshipresearch_kwargs) or {}
     except Exception:
         logger.debug("Fast-model catalog lookup failed for %s", provider_id, exc_info=True)
         return ""
     ids = sorted((str(m) for m in catalog), key=_model_recency_key, reverse=True)
-    if is_nous:
+    if is_spaceshipresearch:
         # Narrow catalog ids by org policy, as the pickers do.
         try:
-            from hermes_cli.models_pricing import nous_policy_allowed_ids, restrict_to_nous_policy
-            ids = restrict_to_nous_policy(ids, nous_policy_allowed_ids())
+            from scout_cli.models_pricing import spaceshipresearch_policy_allowed_ids, restrict_to_spaceshipresearch_policy
+            ids = restrict_to_spaceshipresearch_policy(ids, spaceshipresearch_policy_allowed_ids())
         except Exception:
-            logger.debug("Nous policy filter unavailable", exc_info=True)
+            logger.debug("SpaceshipResearch policy filter unavailable", exc_info=True)
     for family in _FAST_MODEL_FAMILIES:
         for model_id in ids:
             lowered = model_id.lower()
@@ -803,14 +803,14 @@ def _get_aux_model_for_provider(provider_id: str, *, prefer_fast: bool = False) 
         picked = _API_KEY_PROVIDER_AUX_MODELS_FALLBACK.get(provider_id, "")
     # Rungs 2-4 are policy-blind; a blocked pick is refused at request time, so drop it and
     # let the caller keep the main model.
-    if picked and provider_id.strip().lower() == "nous":
+    if picked and provider_id.strip().lower() == "spaceshipresearch":
         try:
-            from hermes_cli.models_pricing import nous_policy_allowed_ids, restrict_to_nous_policy
-            allowed = nous_policy_allowed_ids()
-            if allowed and not restrict_to_nous_policy([picked], allowed):
+            from scout_cli.models_pricing import spaceshipresearch_policy_allowed_ids, restrict_to_spaceshipresearch_policy
+            allowed = spaceshipresearch_policy_allowed_ids()
+            if allowed and not restrict_to_spaceshipresearch_policy([picked], allowed):
                 return ""
         except Exception:
-            logger.debug("Nous policy check unavailable", exc_info=True)
+            logger.debug("SpaceshipResearch policy check unavailable", exc_info=True)
     return picked
 
 
@@ -867,8 +867,8 @@ _PROVIDERS_WITHOUT_VISION: frozenset = frozenset({"kimi-coding", "kimi-coding-cn
 
 # OpenRouter app attribution (always sent). `X-Title` is what the dashboard reads.
 _OR_HEADERS_BASE = {
-    "HTTP-Referer": "https://hermes-agent.nousresearch.com",
-    "X-Title": "Hermes Agent",
+    "HTTP-Referer": "https://scout-agent.spaceshipresearch.com",
+    "X-Title": "Scout Agent",
     "X-OpenRouter-Categories": "productivity,cli-agent",
 }
 
@@ -878,7 +878,7 @@ def _apply_user_default_headers(headers: dict | None) -> dict | None:
     alias wins over both). Mirrors ``AIAgent._apply_user_default_headers`` so a custom endpoint behind a
     WAF rejecting ``User-Agent`` / ``X-Stainless-*`` works for aux calls. SECURITY: never log values."""
     try:
-        from hermes_cli.config import cfg_get, load_config
+        from scout_cli.config import cfg_get, load_config
         _cfg = load_config()
         user_headers = cfg_get(_cfg, "model", "default_headers")
         alias_headers = cfg_get(_cfg, "model", "extra_headers")
@@ -896,22 +896,22 @@ def _apply_user_default_headers(headers: dict | None) -> dict | None:
 def build_or_headers(or_config: dict | None = None) -> dict:
     """OpenRouter headers, plus response-cache headers when enabled.
 
-    Precedence env > config > default: ``HERMES_OPENROUTER_CACHE`` overrides
-    ``openrouter.response_cache``; ``HERMES_OPENROUTER_CACHE_TTL`` (1-86400 s) overrides
+    Precedence env > config > default: ``SCOUT_OPENROUTER_CACHE`` overrides
+    ``openrouter.response_cache``; ``SCOUT_OPENROUTER_CACHE_TTL`` (1-86400 s) overrides
     ``openrouter.response_cache_ttl``. ``or_config=None`` reads from disk.
     """
     headers = dict(_OR_HEADERS_BASE)
     if or_config is None:
         try:
-            from hermes_cli.config import load_config_readonly
+            from scout_cli.config import load_config_readonly
             or_config = load_config_readonly().get("openrouter", {})
         except Exception:
             or_config = {}
-    env_cache = os.environ.get("HERMES_OPENROUTER_CACHE", "").strip().lower()
+    env_cache = os.environ.get("SCOUT_OPENROUTER_CACHE", "").strip().lower()
     if not (env_cache in {"1", "true", "yes", "on"} if env_cache else or_config.get("response_cache", False)):
         return headers
     headers["X-OpenRouter-Cache"] = "true"
-    env_ttl = os.environ.get("HERMES_OPENROUTER_CACHE_TTL", "").strip()
+    env_ttl = os.environ.get("SCOUT_OPENROUTER_CACHE_TTL", "").strip()
     if env_ttl:
         if env_ttl.isdigit() and 1 <= int(env_ttl) <= 86400:
             headers["X-OpenRouter-Cache-TTL"] = str(int(env_ttl))
@@ -923,7 +923,7 @@ def build_or_headers(or_config: dict | None = None) -> dict:
 
 
 # NVIDIA NIM cloud billing attribution; host-gated because NVIDIA_BASE_URL may be a local NIM.
-_NVIDIA_NIM_CLOUD_HEADERS = {"X-BILLING-INVOKE-ORIGIN": "HermesAgent"}
+_NVIDIA_NIM_CLOUD_HEADERS = {"X-BILLING-INVOKE-ORIGIN": "ScoutAgent"}
 
 
 def build_nvidia_nim_headers(base_url: str | None) -> dict:
@@ -932,43 +932,43 @@ def build_nvidia_nim_headers(base_url: str | None) -> dict:
 
 
 # Vercel AI Gateway attribution (HTTP-Referer → referrerUrl, X-Title → appName).
-from hermes_cli.version_info import get_version_info
+from scout_cli.version_info import get_version_info
 
 _AI_GATEWAY_HEADERS = {
-    "HTTP-Referer": "https://hermes-agent.nousresearch.com",
-    "X-Title": "Hermes Agent",
-    "User-Agent": f"HermesAgent/{get_version_info().base_version}",
+    "HTTP-Referer": "https://scout-agent.spaceshipresearch.com",
+    "X-Title": "Scout Agent",
+    "User-Agent": f"ScoutAgent/{get_version_info().base_version}",
 }
 
-# Nous Portal attribution extra_body. Tags come from agent.portal_tags so the client= marker
+# Scout Portal attribution extra_body. Tags come from agent.portal_tags so the client= marker
 # tracks the canonical base version — never inline a literal here.
-from agent.portal_tags import nous_portal_tags as _nous_portal_tags
+from agent.portal_tags import scout_portal_tags as _scout_portal_tags
 
 
-def _nous_extra_body() -> dict:
-    """Fresh Nous Portal ``extra_body`` (per call, so a hot-reloaded version is reflected)."""
-    return {"tags": _nous_portal_tags()}
+def _spaceshipresearch_extra_body() -> dict:
+    """Fresh Scout Portal ``extra_body`` (per call, so a hot-reloaded version is reflected)."""
+    return {"tags": _scout_portal_tags()}
 
 
-# Set at resolve time — True if the auxiliary client points to Nous Portal
-auxiliary_is_nous: bool = False
+# Set at resolve time — True if the auxiliary client points to Scout Portal
+auxiliary_is_spaceshipresearch: bool = False
 
 # _OPENROUTER_MODEL MUST stay a :free SKU (matching the free_only warning): this lane engages
 # silently, and a paid default meant spend the user never opted into. User-configured values
 # are honored untouched (_warn_paid_lane_once fires).
 _OPENROUTER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
-_NOUS_MODEL = "google/gemini-3.6-flash"
-_NOUS_DEFAULT_BASE_URL = "https://inference-api.nousresearch.com/v1"
+_SPACESHIPRESEARCH_MODEL = "google/gemini-3.6-flash"
+_SPACESHIPRESEARCH_DEFAULT_BASE_URL = "https://inference-api.spaceshipresearch.com/v1"
 _ANTHROPIC_DEFAULT_BASE_URL = "https://api.anthropic.com"
-_AUTH_JSON_PATH = get_hermes_home() / "auth.json"
+_AUTH_JSON_PATH = get_scout_home() / "auth.json"
 _AUTH_JSON_PATH_AT_IMPORT = _AUTH_JSON_PATH
 
 
 def _auth_json_path():
     """Active profile's ``auth.json`` at call time (a patched ``_AUTH_JSON_PATH`` still wins). The
     import-time constant is the LAUNCH profile's; under multiplexing a secondary's auxiliary calls
-    would otherwise authenticate to Nous with the default profile's token."""
-    from hermes_cli.auth import _auth_file_path
+    would otherwise authenticate to SpaceshipResearch with the default profile's token."""
+    from scout_cli.auth import _auth_file_path
     return _AUTH_JSON_PATH if _AUTH_JSON_PATH != _AUTH_JSON_PATH_AT_IMPORT else _auth_file_path()
 
 # Hosts exposing BOTH ``…/anthropic`` and a sibling OpenAI ``…/v1``. Matched on the URL *host*
@@ -997,7 +997,7 @@ def _to_openai_base_url(base_url: str) -> str:
     """
     url = str(base_url or "").strip().rstrip("/")
     if base_url_hostname(url) == "api.actual.inc":
-        from hermes_cli.auth import normalize_actual_base_url
+        from scout_cli.auth import normalize_actual_base_url
         return normalize_actual_base_url(url)
     if url.endswith("/anthropic"):
         if base_url_host_matches(url, "open.bigmodel.cn") or base_url_host_matches(url, "api.z.ai"):
@@ -1063,7 +1063,7 @@ def _peek_pool_entry(provider: str, pool: Any = None) -> Optional[Any]:
 
 
 def _pool_runtime_api_key(entry: Any) -> str:
-    # runtime_api_key handles provider-specific fallback (e.g. agent_key for nous); None entry → "".
+    # runtime_api_key handles provider-specific fallback (e.g. agent_key for spaceshipresearch); None entry → "".
     key = getattr(entry, "runtime_api_key", None) or getattr(entry, "access_token", "")
     return str(key or "").strip()
 
@@ -1071,10 +1071,10 @@ def _pool_runtime_api_key(entry: Any) -> str:
 def _pool_runtime_base_url(entry: Any, fallback: str = "") -> str:
     if entry is None:
         return str(fallback or "").strip().rstrip("/")
-    if getattr(entry, "provider", None) == "nous":
+    if getattr(entry, "provider", None) == "spaceshipresearch":
         # Canonical auth-layer reader so the env override shares one normalization path.
-        from hermes_cli.auth import _nous_inference_env_override
-        env_url = _nous_inference_env_override()
+        from scout_cli.auth import _spaceshipresearch_inference_env_override
+        env_url = _spaceshipresearch_inference_env_override()
         if env_url:
             return env_url
     # runtime_base_url is provider-aware; fall back for non-PooledCredential entries.
@@ -1104,9 +1104,9 @@ def _is_anthropic_compatible_host(url: str) -> bool:
         return False
 
 
-def _nous_min_key_ttl_seconds() -> int:
+def _spaceshipresearch_min_key_ttl_seconds() -> int:
     try:
-        return max(60, int(os.getenv("HERMES_NOUS_MIN_KEY_TTL_SECONDS", "1800")))
+        return max(60, int(os.getenv("SCOUT_SPACESHIPRESEARCH_MIN_KEY_TTL_SECONDS", "1800")))
     except (TypeError, ValueError):
         return 1800
 
@@ -1452,7 +1452,7 @@ class _CodexCompletionsAdapter:
         # (``_wire_aliases``, popped in ``create()``), never on the instance — aux adapters are shared.
         wire_tools, wire_aliases = _alias_wire_tools(
             _responses_tools(tools),
-            {"provider": getattr(self._client, "_hermes_aux_effective_provider", "") or None, "base_url": host},
+            {"provider": getattr(self._client, "_scout_aux_effective_provider", "") or None, "base_url": host},
             is_xai,
         )
         renamed = {original: alias for alias, original in wire_aliases.items()}
@@ -1487,7 +1487,7 @@ class _CodexCompletionsAdapter:
             current_issuer_model=wire_model, native_compaction_eligible=False,
         )
         resp_kwargs: Dict[str, Any] = {
-            # Codex only knows the base slug; strip the Hermes ``-900k`` picker suffix.
+            # Codex only knows the base slug; strip the Scout ``-900k`` picker suffix.
             "model": wire_model, "instructions": instructions,
             "input": input_items or [{"role": "user", "content": ""}], "store": False,
         }
@@ -1556,10 +1556,10 @@ class _CodexCompletionsAdapter:
         return resp_kwargs, model, timeout
 
     def create(self, **kwargs) -> Any:
-        from hermes_cli.providers import is_actual_route
+        from scout_cli.providers import is_actual_route
 
         if is_actual_route(
-            getattr(self._client, "_hermes_aux_effective_provider", ""),
+            getattr(self._client, "_scout_aux_effective_provider", ""),
             str(getattr(self._client, "base_url", "") or ""),
         ):
             raise ValueError(
@@ -1598,7 +1598,7 @@ class _CodexCompletionsAdapter:
             if final is None:
                 raise RuntimeError("Codex auxiliary Responses stream did not return a final response")
             text_parts, tool_calls_raw, usage = _parse_codex_final_response(final)
-            # Undo only the aliases THIS request emitted, before the call reaches Hermes dispatch.
+            # Undo only the aliases THIS request emitted, before the call reaches Scout dispatch.
             for tc in tool_calls_raw or ():
                 if tc.function.name in wire_aliases:
                     tc.function.name = wire_aliases[tc.function.name]
@@ -1707,15 +1707,15 @@ class _AnthropicCompletionsAdapter:
         self._client = real_client
         self._model = model
         self._is_oauth = is_oauth
-        # Caller URL first; fall back to the SDK client's host only for Nous Portal — a blanket
+        # Caller URL first; fall back to the SDK client's host only for Scout Portal — a blanket
         # fallback would flip MiniMax/Zhipu aux adapters to third-party handling (strips thinking sigs).
         self._base_url = base_url or None
         if not self._base_url:
             candidate = str(getattr(real_client, "base_url", "") or "") or None
             if candidate:
                 with contextlib.suppress(Exception):
-                    from agent.anthropic_endpoints import _is_nous_portal_endpoint
-                    if _is_nous_portal_endpoint(candidate):
+                    from agent.anthropic_endpoints import _is_scout_portal_endpoint
+                    if _is_scout_portal_endpoint(candidate):
                         self._base_url = candidate
 
     def create(self, **kwargs) -> Any:
@@ -1770,7 +1770,7 @@ class _AnthropicCompletionsAdapter:
             }
         # response_format: top-level gets the same translation as the extra_body form; when both
         # are present the extra_body form wins. Passthrough excludes ``reasoning``/``response_format``
-        # (already TRANSLATED to native fields — raw would 400 on strict gateways) and ``_`` Hermes plumbing.
+        # (already TRANSLATED to native fields — raw would 400 on strict gateways) and ``_`` Scout plumbing.
         # The adapter builds the Messages body from a fixed allow-list of kwargs, so before this an
         # unrecognized top-level kwarg was dropped on the floor: the request succeeded but the schema
         # contract silently became prompt compliance (#85626 review, point 2).
@@ -1896,7 +1896,7 @@ class AsyncBedrockAuxiliaryClient(_AsyncAuxiliaryClientBase):
 def _endpoint_speaks_anthropic_messages(base_url: str) -> bool:
     """True if ``base_url`` speaks Anthropic Messages, not OpenAI chat.completions.
 
-    Mirrors ``hermes_cli.runtime_provider._detect_api_mode_for_url`` so aux and main agree: any
+    Mirrors ``scout_cli.runtime_provider._detect_api_mode_for_url`` so aux and main agree: any
     ``/anthropic`` URL (MiniMax, Zhipu, LiteLLM), ``api.kimi.com/coding`` (chat 404s), ``api.anthropic.com``.
     """
     normalized = (base_url or "").strip().lower().rstrip("/")
@@ -1917,13 +1917,13 @@ def _maybe_wrap_anthropic(
     ``client_obj`` unchanged for probe stubs/specialized adapters, OpenAI-wire, explicit non-Anthropic
     ``api_mode``, or missing ``anthropic`` SDK.
     """
-    # Anthropic/Bedrock/Codex wrappers, plus any client declaring HERMES_SKIP_TRANSPORT_WRAP
+    # Anthropic/Bedrock/Codex wrappers, plus any client declaring SCOUT_SKIP_TRANSPORT_WRAP
     # (native/ACP shims, in-tree or plugin), must never be re-dispatched through a wire adapter —
     # a class-attribute declaration rather than isinstance so this hot path never imports them.
     if (
         isinstance(client_obj, _AuxProbeClientStub)
         or _safe_isinstance(client_obj, (AnthropicAuxiliaryClient, BedrockAuxiliaryClient, CodexAuxiliaryClient))
-        or _client_declares(client_obj, "HERMES_SKIP_TRANSPORT_WRAP")
+        or _client_declares(client_obj, "SCOUT_SKIP_TRANSPORT_WRAP")
     ):
         return client_obj
     # Explicit non-anthropic api_mode wins over URL heuristics.
@@ -1954,9 +1954,9 @@ def _maybe_wrap_anthropic(
     return AnthropicAuxiliaryClient(real_client, model, api_key, base_url, is_oauth=False)
 
 
-def _read_nous_auth() -> Optional[dict]:
-    """Nous provider state dict from the credential pool or ~/.hermes/auth.json; None when not active with tokens."""
-    pool_present, entry = _select_pool_entry("nous")
+def _read_spaceshipresearch_auth() -> Optional[dict]:
+    """SpaceshipResearch provider state dict from the credential pool or ~/.scout/auth.json; None when not active with tokens."""
+    pool_present, entry = _select_pool_entry("spaceshipresearch")
     if pool_present:
         if entry is None:
             return None
@@ -1964,7 +1964,7 @@ def _read_nous_auth() -> Optional[dict]:
             "access_token": getattr(entry, "access_token", ""),
             "refresh_token": getattr(entry, "refresh_token", None),
             "agent_key": getattr(entry, "agent_key", None),
-            "inference_base_url": _pool_runtime_base_url(entry, _NOUS_DEFAULT_BASE_URL),
+            "inference_base_url": _pool_runtime_base_url(entry, _SPACESHIPRESEARCH_DEFAULT_BASE_URL),
             "portal_base_url": getattr(entry, "portal_base_url", None),
             "client_id": getattr(entry, "client_id", None),
             "scope": getattr(entry, "scope", None),
@@ -1976,44 +1976,44 @@ def _read_nous_auth() -> Optional[dict]:
         if not auth_path.is_file():
             return None
         data = json.loads(auth_path.read_text(encoding="utf-8-sig"))
-        if data.get("active_provider") != "nous":
+        if data.get("active_provider") != "spaceshipresearch":
             return None
-        provider = data.get("providers", {}).get("nous", {})
+        provider = data.get("providers", {}).get("spaceshipresearch", {})
         # Must have at least an access_token or agent_key.
         if not provider.get("agent_key") and not provider.get("access_token"):
             return None
         return provider
     except Exception as exc:
-        logger.debug("Could not read Nous auth: %s", exc)
+        logger.debug("Could not read SpaceshipResearch auth: %s", exc)
         return None
 
 
-def _nous_api_key(provider: dict) -> str:
-    """Extract a usable Nous inference JWT from stored auth state."""
-    from hermes_cli.auth import _nous_invoke_jwt_is_usable
+def _spaceshipresearch_api_key(provider: dict) -> str:
+    """Extract a usable SpaceshipResearch inference JWT from stored auth state."""
+    from scout_cli.auth import _spaceshipresearch_invoke_jwt_is_usable
     for token_key, expiry_key in (("agent_key", "agent_key_expires_at"), ("access_token", "expires_at")):
         token = provider.get(token_key)
         if not isinstance(token, str) or not token.strip():
             continue
-        if _nous_invoke_jwt_is_usable(token, scope=provider.get("scope"), expires_at=provider.get(expiry_key)):
+        if _spaceshipresearch_invoke_jwt_is_usable(token, scope=provider.get("scope"), expires_at=provider.get(expiry_key)):
             return token
     return ""
 
 
-def _resolve_nous_pool_runtime_api(*, force_refresh: bool = False) -> Optional[tuple[str, str]]:
-    """Resolve Nous auxiliary credentials from the selected pool entry."""
+def _resolve_spaceshipresearch_pool_runtime_api(*, force_refresh: bool = False) -> Optional[tuple[str, str]]:
+    """Resolve SpaceshipResearch auxiliary credentials from the selected pool entry."""
     try:
-        from hermes_cli.auth import _agent_key_is_usable
-        pool = load_pool("nous")
+        from scout_cli.auth import _agent_key_is_usable
+        pool = load_pool("spaceshipresearch")
     except Exception as exc:
-        logger.debug("Auxiliary Nous pool credential resolution failed: %s", exc)
+        logger.debug("Auxiliary SpaceshipResearch pool credential resolution failed: %s", exc)
         return None
     if not pool or not pool.has_credentials():
         return None
     try:
         entry = pool.select()
     except Exception as exc:
-        logger.debug("Auxiliary Nous pool selection failed: %s", exc)
+        logger.debug("Auxiliary SpaceshipResearch pool selection failed: %s", exc)
         return None
     if entry is None:
         return None
@@ -2022,44 +2022,44 @@ def _resolve_nous_pool_runtime_api(*, force_refresh: bool = False) -> Optional[t
         return {k: getattr(e, k, None) for k in (
             "agent_key", "agent_key_expires_at", "access_token", "expires_at", "scope")}
 
-    if force_refresh or not _agent_key_is_usable(_entry_state(entry), _nous_min_key_ttl_seconds()):
+    if force_refresh or not _agent_key_is_usable(_entry_state(entry), _spaceshipresearch_min_key_ttl_seconds()):
         try:
             refreshed = pool.try_refresh_current()
         except Exception as exc:
-            logger.debug("Auxiliary Nous pool refresh failed: %s", exc)
+            logger.debug("Auxiliary SpaceshipResearch pool refresh failed: %s", exc)
             refreshed = None
         if refreshed is None:
             return None
         entry = refreshed
-    api_key = _nous_api_key(_entry_state(entry))
-    base_url = _pool_runtime_base_url(entry, _NOUS_DEFAULT_BASE_URL)
+    api_key = _spaceshipresearch_api_key(_entry_state(entry))
+    base_url = _pool_runtime_base_url(entry, _SPACESHIPRESEARCH_DEFAULT_BASE_URL)
     if not api_key or not base_url:
         return None
     return api_key, base_url
 
 
-def _resolve_nous_runtime_api(
+def _resolve_spaceshipresearch_runtime_api(
     *, force_refresh: bool = False, stale_access_token: Optional[str] = None
 ) -> Optional[tuple[str, str]]:
-    """Fresh Nous runtime credentials (pool first, then auth store + JWT refresh) — mirrors the main
+    """Fresh SpaceshipResearch runtime credentials (pool first, then auth store + JWT refresh) — mirrors the main
     agent's 401 recovery. ``stale_access_token`` is the bearer that just 401'd; with ``force_refresh``
     it lets the auth store adopt a sibling process's rotation instead of re-POSTing the shared grant."""
-    pooled = _resolve_nous_pool_runtime_api(force_refresh=force_refresh)
+    pooled = _resolve_spaceshipresearch_pool_runtime_api(force_refresh=force_refresh)
     if pooled is not None:
         return pooled
     try:
-        from hermes_cli.auth import resolve_nous_runtime_credentials
-        creds = resolve_nous_runtime_credentials(
-            timeout_seconds=env_float("HERMES_NOUS_TIMEOUT_SECONDS", 15),
+        from scout_cli.auth import resolve_spaceshipresearch_runtime_credentials
+        creds = resolve_spaceshipresearch_runtime_credentials(
+            timeout_seconds=env_float("SCOUT_SPACESHIPRESEARCH_TIMEOUT_SECONDS", 15),
             force_refresh=force_refresh,
             stale_access_token=stale_access_token or None,
         )
     except Exception as exc:
         # Kept at WARNING (once per message) and remembered: the ladder falls back silently, and
         # without this the goal judge only ever saw "judge error: RuntimeError" (#42177).
-        record_nous_credential_failure(exc)
+        record_spaceshipresearch_credential_failure(exc)
         return None
-    clear_nous_credential_failure()
+    clear_spaceshipresearch_credential_failure()
     return _creds_pair(creds)
 
 
@@ -2078,7 +2078,7 @@ def _resolve_xai_oauth_for_aux() -> Optional[Tuple[str, str]]:
     Pool first (some xAI OAuth logins exist only as pool entries), then the singleton auth-store resolver.
     """
     try:
-        from hermes_cli.auth import DEFAULT_XAI_OAUTH_BASE_URL, _xai_validate_inference_base_url
+        from scout_cli.auth import DEFAULT_XAI_OAUTH_BASE_URL, _xai_validate_inference_base_url
         pool = load_pool("xai-oauth")
         if pool and pool.has_credentials():
             entry = pool.select()
@@ -2088,7 +2088,7 @@ def _resolve_xai_oauth_for_aux() -> Optional[Tuple[str, str]]:
                 ).strip()
                 _url = lambda v: str(v or "").strip().rstrip("/")  # noqa: E731
                 base_url = _xai_validate_inference_base_url(
-                    _url(_scoped_key_env("HERMES_XAI_BASE_URL"))
+                    _url(_scoped_key_env("SCOUT_XAI_BASE_URL"))
                     or _url(_scoped_key_env("XAI_BASE_URL"))
                     or _url(getattr(entry, "runtime_base_url", None))
                     or _url(getattr(entry, "base_url", None)),
@@ -2099,7 +2099,7 @@ def _resolve_xai_oauth_for_aux() -> Optional[Tuple[str, str]]:
     except Exception as exc:
         logger.debug("Auxiliary xAI OAuth pool credential resolution failed: %s", exc)
     try:
-        from hermes_cli.auth import resolve_xai_oauth_runtime_credentials
+        from scout_cli.auth import resolve_xai_oauth_runtime_credentials
         creds = resolve_xai_oauth_runtime_credentials()
     except Exception as exc:
         logger.debug("Auxiliary xAI OAuth runtime credential resolution failed: %s", exc)
@@ -2109,7 +2109,7 @@ def _resolve_xai_oauth_for_aux() -> Optional[Tuple[str, str]]:
 
 def _resolve_codex_credential_and_base() -> Tuple[Optional[str], str]:
     """``(token, base_url)`` taken from ONE authority, so a Codex key is only ever sent to the host
-    it belongs to (#121486): the profile-scoped ``HERMES_CODEX_BASE_URL`` wins; otherwise a pooled
+    it belongs to (#121486): the profile-scoped ``SCOUT_CODEX_BASE_URL`` wins; otherwise a pooled
     key goes where that pool entry routes (row URL / ``model.base_url``) and the auth.json OAuth
     token goes to the ChatGPT default. ``(None, <base>)`` without a usable token."""
     override = _codex_base_url_override()
@@ -2120,7 +2120,7 @@ def _resolve_codex_credential_and_base() -> Tuple[Optional[str], str]:
             if override:
                 return token, override
             # Same route rule as the chat path (row URL, else ``model.base_url``); never empty.
-            from hermes_cli.auth_codex import _codex_pool_route_base_url
+            from scout_cli.auth_codex import _codex_pool_route_base_url
             return token, _codex_pool_route_base_url(_pool_runtime_base_url(entry))
     # No usable pool token: auth.json only (re-selecting could pair another row's key with the default).
     return _read_codex_singleton_token(), override or _CODEX_AUX_BASE_URL
@@ -2129,7 +2129,7 @@ def _resolve_codex_credential_and_base() -> Tuple[Optional[str], str]:
 def _read_codex_singleton_token() -> Optional[str]:
     """The profile's auth.json Codex access token (expired JWTs skipped), else None."""
     try:
-        from hermes_cli.auth import _read_codex_tokens
+        from scout_cli.auth import _read_codex_tokens
         access_token = _read_codex_tokens().get("tokens", {}).get("access_token")
         if not isinstance(access_token, str) or not access_token.strip():
             return None
@@ -2153,7 +2153,7 @@ def _read_codex_singleton_token() -> Optional[str]:
 def _resolve_api_key_provider() -> Tuple[Optional[OpenAI], Optional[str]]:
     """Try each API-key provider in PROVIDER_REGISTRY order; (client, model) or (None, None)."""
     try:
-        from hermes_cli.auth import PROVIDER_REGISTRY, resolve_api_key_provider_credentials
+        from scout_cli.auth import PROVIDER_REGISTRY, resolve_api_key_provider_credentials
     except ImportError:
         logger.debug("Could not import PROVIDER_REGISTRY for API-key fallback")
         return None, None
@@ -2166,14 +2166,14 @@ def _resolve_api_key_provider() -> Tuple[Optional[OpenAI], Optional[str]]:
         if provider_id == "anthropic":
             # Explicit-config gate: Claude Code credentials must not silently become aux fallback.
             with contextlib.suppress(ImportError):
-                from hermes_cli.auth import is_provider_explicitly_configured
+                from scout_cli.auth import is_provider_explicitly_configured
                 if not is_provider_explicitly_configured("anthropic"):
                     continue
             return _try_anthropic()
         if provider_id == "copilot":
             # Explicit-config gate: ambient gh-CLI credentials must not silently become aux fallback (#114740).
             with contextlib.suppress(ImportError):
-                from hermes_cli.auth import is_provider_explicitly_configured
+                from scout_cli.auth import is_provider_explicitly_configured
                 if not is_provider_explicitly_configured("copilot"):
                     continue
         model = _get_aux_model_for_provider(provider_id) or None
@@ -2211,7 +2211,7 @@ def _resolve_api_key_provider() -> Tuple[Optional[OpenAI], Optional[str]]:
         if base_url_host_matches(base_url, "api.kimi.com"):
             headers = {"User-Agent": "claude-code/0.1.0"}
         elif base_url_host_matches(base_url, "githubcopilot.com"):
-            from hermes_cli.models import copilot_default_headers
+            from scout_cli.models import copilot_default_headers
             headers = copilot_default_headers()
         elif base_url_host_matches(base_url, "integrate.api.nvidia.com"):
             headers = build_nvidia_nim_headers(base_url)
@@ -2238,13 +2238,13 @@ def _endpoint_default_headers(
     if base_url_host_matches(base_url, "api.kimi.com"):
         headers: dict = {"User-Agent": "claude-code/0.1.0"}
     elif base_url_host_matches(base_url, "githubcopilot.com"):
-        from hermes_cli.copilot_auth import copilot_request_headers
+        from scout_cli.copilot_auth import copilot_request_headers
         headers = dict(copilot_request_headers(is_agent_turn=True, is_vision=is_vision))
     elif base_url_host_matches(base_url, "integrate.api.nvidia.com"):
         headers = dict(build_nvidia_nim_headers(base_url))
     elif xai and base_url_host_matches(base_url, "x.ai"):
-        from tools.xai_http import hermes_xai_default_headers
-        headers = dict(hermes_xai_default_headers())
+        from tools.xai_http import scout_xai_default_headers
+        headers = dict(scout_xai_default_headers())
     else:
         headers = _profile_default_headers(provider) or {}
     return _apply_user_default_headers(headers or None) or None
@@ -2278,7 +2278,7 @@ def _is_free_model(model: Optional[str]) -> bool:
 def _aux_openrouter_settings() -> Tuple[bool, str]:
     """Read (free_only, openrouter_model) from config; (False, _OPENROUTER_MODEL) on failure."""
     try:
-        from hermes_cli.config import cfg_get, load_config_readonly
+        from scout_cli.config import cfg_get, load_config_readonly
         cfg = load_config_readonly()
         free_only = bool(cfg_get(cfg, "auxiliary", "free_only", default=False))
         val = cfg_get(cfg, "auxiliary", "openrouter_model")
@@ -2359,63 +2359,63 @@ def _describe_openrouter_unavailable(model: str = None) -> str:
     return "no usable OpenRouter credentials found"
 
 
-def _try_nous(vision: bool = False) -> Tuple[Optional[OpenAI], Optional[str]]:
-    nous = _read_nous_auth()
-    runtime = _resolve_nous_runtime_api(force_refresh=False)
-    if runtime is None and not nous:
-        logger.warning("Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).")
-        _mark_provider_unhealthy("nous", ttl=60, reason="no Nous authentication found", level=logging.DEBUG)
+def _try_spaceshipresearch(vision: bool = False) -> Tuple[Optional[OpenAI], Optional[str]]:
+    spaceshipresearch = _read_spaceshipresearch_auth()
+    runtime = _resolve_spaceshipresearch_runtime_api(force_refresh=False)
+    if runtime is None and not spaceshipresearch:
+        logger.warning("Auxiliary SpaceshipResearch client unavailable: no SpaceshipResearch authentication found (run: scout auth).")
+        _mark_provider_unhealthy("spaceshipresearch", ttl=60, reason="no SpaceshipResearch authentication found", level=logging.DEBUG)
         return None, None
-    if runtime is None and nous:
-        logger.debug("Auxiliary Nous: runtime JWT refresh failed; checking stored auth.json token.")
+    if runtime is None and spaceshipresearch:
+        logger.debug("Auxiliary SpaceshipResearch: runtime JWT refresh failed; checking stored auth.json token.")
     if runtime is not None:
         api_key, base_url = runtime
     else:
-        api_key = _nous_api_key(nous or {})
+        api_key = _spaceshipresearch_api_key(spaceshipresearch or {})
         if not api_key:
             logger.warning(
-                "Auxiliary Nous client unavailable: no usable inference JWT found "
-                "(run: hermes auth add nous)."
+                "Auxiliary SpaceshipResearch client unavailable: no usable inference JWT found "
+                "(run: scout auth add spaceshipresearch)."
             )
-            _mark_provider_unhealthy("nous", ttl=60, reason="no usable Nous inference JWT", level=logging.DEBUG)
+            _mark_provider_unhealthy("spaceshipresearch", ttl=60, reason="no usable SpaceshipResearch inference JWT", level=logging.DEBUG)
             return None, None
         base_url = str(
-            (nous or {}).get("inference_base_url") or _scoped_key_env("NOUS_INFERENCE_BASE_URL") or _NOUS_DEFAULT_BASE_URL
+            (spaceshipresearch or {}).get("inference_base_url") or _scoped_key_env("SPACESHIPRESEARCH_INFERENCE_BASE_URL") or _SPACESHIPRESEARCH_DEFAULT_BASE_URL
         ).rstrip("/")
     with contextlib.suppress(Exception):
-        from agent.nous_rate_guard import nous_rate_limit_remaining
-        from hermes_cli.anon_auth import is_anonymous_request
-        anonymous = is_anonymous_request("nous", api_key)
-        remaining = nous_rate_limit_remaining(anonymous=anonymous)
+        from agent.spaceshipresearch_rate_guard import spaceshipresearch_rate_limit_remaining
+        from scout_cli.anon_auth import is_anonymous_request
+        anonymous = is_anonymous_request("spaceshipresearch", api_key)
+        remaining = spaceshipresearch_rate_limit_remaining(anonymous=anonymous)
         if remaining is not None and remaining > 0:
-            logger.debug("Auxiliary: skipping Nous Portal (rate-limited, resets in %.0fs)", remaining)
+            logger.debug("Auxiliary: skipping Scout Portal (rate-limited, resets in %.0fs)", remaining)
             # The health marker is provider-wide, so a full-length anonymous cooldown would
             # outlive signing in mid-cooldown; bound it instead of re-resolving credentials
             # (auth store lock, pool read) on every auxiliary call for the cooldown's duration.
             _mark_provider_unhealthy(
-                "nous", ttl=min(remaining, 60.0) if anonymous else remaining,
-                reason="Nous Portal rate-limited", level=logging.INFO)
+                "spaceshipresearch", ttl=min(remaining, 60.0) if anonymous else remaining,
+                reason="Scout Portal rate-limited", level=logging.INFO)
             return None, None
     lane = "vision" if vision else "text"
     # The free tier's host serves exactly one model, for every lane: asking it for the Portal's
     # recommended aux model is a guaranteed 429 ``model_not_free``. Pin the route's model instead.
     # Vision rides the same id (the backing model is multimodal; a backing that is not answers
     # the request with the upstream's own error, which the ladder handles like any other).
-    from hermes_cli.anon_auth import GUEST_MODEL, route_is_welcome_host
-    global auxiliary_is_nous
+    from scout_cli.anon_auth import GUEST_MODEL, route_is_welcome_host
+    global auxiliary_is_spaceshipresearch
     if route_is_welcome_host(base_url):
-        auxiliary_is_nous = True
-        logger.debug("Auxiliary/%s: Nous free tier; using %s", lane, GUEST_MODEL)
+        auxiliary_is_spaceshipresearch = True
+        logger.debug("Auxiliary/%s: SpaceshipResearch free tier; using %s", lane, GUEST_MODEL)
         return _create_openai_client(api_key=api_key, base_url=base_url), GUEST_MODEL
-    auxiliary_is_nous = True
-    logger.debug("Auxiliary client: Nous Portal")
-    # Portal recommended-models is authoritative (tier-aware); _NOUS_MODEL when unreachable/null.
+    auxiliary_is_spaceshipresearch = True
+    logger.debug("Auxiliary client: Scout Portal")
+    # Portal recommended-models is authoritative (tier-aware); _SPACESHIPRESEARCH_MODEL when unreachable/null.
     # Probes skip the lookup: exact model is irrelevant and it hits the network.
-    model = _NOUS_MODEL
+    model = _SPACESHIPRESEARCH_MODEL
     if not _aux_probe_active():
         try:
-            from hermes_cli.models import get_nous_recommended_aux_model
-            recommended = get_nous_recommended_aux_model(vision=vision)
+            from scout_cli.models import get_spaceshipresearch_recommended_aux_model
+            recommended = get_spaceshipresearch_recommended_aux_model(vision=vision)
             if recommended:
                 model = recommended
                 logger.debug("Auxiliary/%s: using Portal-recommended model %s", lane, model)
@@ -2430,21 +2430,21 @@ def _try_nous(vision: bool = False) -> Tuple[Optional[OpenAI], Optional[str]]:
     return _create_openai_client(api_key=api_key, base_url=base_url), model
 
 
-def _refresh_nous_recommended_model(*, vision: bool, stale_model: Optional[str]) -> Optional[str]:
+def _refresh_spaceshipresearch_recommended_model(*, vision: bool, stale_model: Optional[str]) -> Optional[str]:
     """Fresh Portal recommended model after a stale-model 404 (long-lived processes pin dropped models).
 
-    Returns the fresh recommendation, else ``_NOUS_MODEL``, whichever differs from ``stale_model``; None if neither.
+    Returns the fresh recommendation, else ``_SPACESHIPRESEARCH_MODEL``, whichever differs from ``stale_model``; None if neither.
     """
     stale = (stale_model or "").strip().lower()
     fresh: Optional[str] = None
     try:
-        from hermes_cli.models import get_nous_recommended_aux_model
-        fresh = get_nous_recommended_aux_model(vision=vision, force_refresh=True)
+        from scout_cli.models import get_spaceshipresearch_recommended_aux_model
+        fresh = get_spaceshipresearch_recommended_aux_model(vision=vision, force_refresh=True)
     except Exception as exc:
-        logger.debug("Nous recommended-model refresh failed (%s); using default %s", exc, _NOUS_MODEL)
+        logger.debug("SpaceshipResearch recommended-model refresh failed (%s); using default %s", exc, _SPACESHIPRESEARCH_MODEL)
     if fresh and fresh.strip().lower() != stale:
         return fresh
-    return _NOUS_MODEL if _NOUS_MODEL.strip().lower() != stale else None
+    return _SPACESHIPRESEARCH_MODEL if _SPACESHIPRESEARCH_MODEL.strip().lower() != stale else None
 
 
 def _read_main_field(field: str, *, readonly: bool, lower: bool = False) -> str:
@@ -2458,7 +2458,7 @@ def _read_main_field(field: str, *, readonly: bool, lower: bool = False) -> str:
         value = override.strip()
         return value.lower() if lower else value
     with contextlib.suppress(Exception):
-        from hermes_cli import config as _cfg_mod
+        from scout_cli import config as _cfg_mod
         cfg = (_cfg_mod.load_config_readonly if readonly else _cfg_mod.load_config)()
         model_cfg = cfg.get("model", {})
         if field == "model" and isinstance(model_cfg, str) and model_cfg.strip():
@@ -2485,8 +2485,8 @@ def _resolve_moa_aggregator(preset_name: Optional[str]) -> Tuple[Optional[str], 
     "moa" is virtual — aux tasks skip the fan-out and use the aggregator slot; shared so lookup can't drift.
     """
     try:
-        from hermes_cli.config import load_config
-        from hermes_cli.moa_config import resolve_moa_preset
+        from scout_cli.config import load_config
+        from scout_cli.moa_config import resolve_moa_preset
         preset = resolve_moa_preset(load_config().get("moa") or {}, preset_name or None)
         agg = preset.get("aggregator") or {}
         agg_provider = str(agg.get("provider") or "").strip()
@@ -2794,8 +2794,8 @@ def clear_runtime_main() -> None:
 def _resolve_custom_runtime() -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """Resolve the active custom/main endpoint like the main CLI (env OPENAI_BASE_URL or config-saved)."""
     try:
-        from hermes_cli.auth import AuthError
-        from hermes_cli.runtime_provider import resolve_runtime_provider
+        from scout_cli.auth import AuthError
+        from scout_cli.runtime_provider import resolve_runtime_provider
         runtime = resolve_runtime_provider(requested="custom")
     except AuthError as exc:
         # Bare 'custom' with nothing configured fails fast in the main resolver: there is no
@@ -2867,7 +2867,7 @@ def _validate_base_url(base_url: str) -> None:
     except ValueError as exc:
         raise RuntimeError(
             f"Malformed custom endpoint URL: {candidate!r}. "
-            "Run `hermes setup` or `hermes model` and enter a valid http(s) base URL."
+            "Run `scout setup` or `scout model` and enter a valid http(s) base URL."
         ) from exc
 
 
@@ -2925,17 +2925,17 @@ def _build_xai_oauth_aux_client(model: str) -> Tuple[Optional[Any], Optional[str
         return None, None
     api_key, base_url = resolved
     logger.debug("Auxiliary client: xAI OAuth (%s via Responses API)", model)
-    from tools.xai_http import hermes_xai_default_headers
+    from tools.xai_http import scout_xai_default_headers
     real_client = _create_openai_client(
-        api_key=api_key, base_url=base_url, default_headers=hermes_xai_default_headers()
+        api_key=api_key, base_url=base_url, default_headers=scout_xai_default_headers()
     )
     return CodexAuxiliaryClient(real_client, model), model
 
 
 def _codex_base_url_override() -> str:
-    """Profile-scoped ``HERMES_CODEX_BASE_URL`` (same read as the API-key env vars: under a
+    """Profile-scoped ``SCOUT_CODEX_BASE_URL`` (same read as the API-key env vars: under a
     multiplexer the routed profile's .env decides the endpoint, never a sibling's process env)."""
-    return _scoped_key_env("HERMES_CODEX_BASE_URL").rstrip("/")
+    return _scoped_key_env("SCOUT_CODEX_BASE_URL").rstrip("/")
 
 
 def _build_codex_client(model: str) -> Tuple[Optional[Any], Optional[str]]:
@@ -2967,9 +2967,9 @@ def _try_azure_foundry(
     """Azure Foundry aux client via the main agent's ``_resolve_azure_foundry_runtime`` (api_key vs Entra
     callable bearer, per-model api_mode, base_url overrides). Returns ``(client, model)`` or ``(None, None)``."""
     try:
-        from hermes_cli.runtime_provider import _resolve_azure_foundry_runtime
-        from hermes_cli.auth import AuthError
-        from hermes_cli.config import load_config_readonly
+        from scout_cli.runtime_provider import _resolve_azure_foundry_runtime
+        from scout_cli.auth import AuthError
+        from scout_cli.config import load_config_readonly
     except ImportError:
         return None, None
     try:
@@ -3037,7 +3037,7 @@ def _try_anthropic(explicit_api_key: Optional[Union[str, Callable[[], str]]] = N
     # Anthropic-compatible; a foreign host (Codex, OpenRouter) would 401 every aux call.
     base_url = _pool_runtime_base_url(entry, _ANTHROPIC_DEFAULT_BASE_URL) if pool_present else _ANTHROPIC_DEFAULT_BASE_URL
     with contextlib.suppress(Exception):
-        from hermes_cli.config import load_config_readonly
+        from scout_cli.config import load_config_readonly
         cfg = load_config_readonly()
         model_cfg = cfg.get("model")
         if isinstance(model_cfg, dict):
@@ -3114,7 +3114,7 @@ def _get_provider_chain() -> List[tuple]:
     ``openai-codex`` is deliberately absent (shifting allow-list breaks guessed-model fallback).
     """
     return [
-        ("openrouter", _try_openrouter), ("nous", _try_nous),
+        ("openrouter", _try_openrouter), ("spaceshipresearch", _try_spaceshipresearch),
         ("local/custom", _try_custom_endpoint), ("api-key", _resolve_api_key_provider),
     ]
 
@@ -3127,7 +3127,7 @@ _aux_unhealthy_logged_at: Dict[Any, float] = {}
 _aux_unhealthy_reason: Dict[Any, str] = {}
 # resolved_provider / explicit-config names → chain labels.
 _AUX_UNHEALTHY_LABEL_ALIASES = {
-    "openrouter": "openrouter", "nous": "nous", "custom": "local/custom",
+    "openrouter": "openrouter", "spaceshipresearch": "spaceshipresearch", "custom": "local/custom",
     "local/custom": "local/custom", "openai-codex": "openai-codex", "codex": "openai-codex",
 }
 
@@ -3235,13 +3235,13 @@ def _is_payment_error(exc: Exception) -> bool:
     )
 
 
-def _nous_portal_account_has_fresh_paid_access() -> bool:
-    """Return True only when the fresh Nous account API says paid access is allowed."""
+def _scout_portal_account_has_fresh_paid_access() -> bool:
+    """Return True only when the fresh SpaceshipResearch account API says paid access is allowed."""
     try:
-        from hermes_cli.nous_account import get_nous_portal_account_info
-        return get_nous_portal_account_info(force_fresh=True).paid_service_access is True
+        from scout_cli.spaceshipresearch_account import get_scout_portal_account_info
+        return get_scout_portal_account_info(force_fresh=True).paid_service_access is True
     except Exception as exc:
-        logger.debug("Auxiliary Nous paid-entitlement refresh check failed: %s", exc)
+        logger.debug("Auxiliary SpaceshipResearch paid-entitlement refresh check failed: %s", exc)
         return False
 
 
@@ -3330,7 +3330,7 @@ def _transient_retry_count() -> int:
     """Same-provider retries for a transient blip: ``auxiliary.transient_retries``
     (default 2), clamped to [0, 6]; config-read failures fall back to default."""
     try:
-        from hermes_cli.config import cfg_get, load_config
+        from scout_cli.config import cfg_get, load_config
         val = cfg_get(load_config(), "auxiliary", "transient_retries")
         return _DEFAULT_TRANSIENT_RETRIES if val is None else max(0, min(int(val), 6))
     except Exception:
@@ -3542,7 +3542,7 @@ def _should_skip_same_provider_retry(task: Optional[str], exc: Exception) -> boo
 def _evict_cached_clients(provider: str) -> None:
     """Drop this profile's cached auxiliary clients for a provider so fresh creds are used.
 
-    Scoped to the calling profile (``hermes_home_key()`` is the first key slot): a rotation in
+    Scoped to the calling profile (``scout_home_key()`` is the first key slot): a rotation in
     one profile must not drop another profile's client for the same provider in a multiplexing
     gateway, since that profile's credentials did not change. Entries are popped, not closed:
     a concurrent caller may be mid-request on the shared client (closing it raises ReadError /
@@ -3550,7 +3550,7 @@ def _evict_cached_clients(provider: str) -> None:
     overflow path in ``_get_cached_client``.
     """
     normalized = _normalize_aux_provider(provider)
-    home = hermes_home_key()
+    home = scout_home_key()
     with _client_cache_lock:
         for key in [key for key in _client_cache
                     if key[0] == home and _normalize_aux_provider(str(key[1])) == normalized]:
@@ -3631,12 +3631,12 @@ def _pool_cache_hint(provider: str, *, main_runtime: Optional[Dict[str, Any]] = 
 # Ordered (host, provider) tables for inferring a backend from a client base URL.
 _POOL_PROVIDER_BY_HOST = (
     ("chatgpt.com", "openai-codex"), ("openrouter.ai", "openrouter"),
-    ("inference-api.nousresearch.com", "nous"), ("api.anthropic.com", "anthropic"),
+    ("inference-api.spaceshipresearch.com", "spaceshipresearch"), ("api.anthropic.com", "anthropic"),
     ("githubcopilot.com", "copilot"), ("api.kimi.com", "kimi-coding"), ("api.x.ai", "xai-oauth"),
 )
 _AUTH_REFRESH_PROVIDER_BY_HOST = (
     ("api.githubcopilot.com", "copilot"), ("chatgpt.com", "openai-codex"),
-    ("api.anthropic.com", "anthropic"), ("inference-api.nousresearch.com", "nous"),
+    ("api.anthropic.com", "anthropic"), ("inference-api.spaceshipresearch.com", "spaceshipresearch"),
     # An aux call that inherits the main xai-oauth route arrives as "auto"; without this row the
     # 403 bad-credentials rung skipped the refresh and benched the only grant (#84845).
     ("api.x.ai", "xai-oauth"),
@@ -3686,7 +3686,7 @@ def _recoverable_pool_provider(
         rt_provider = runtime.get("provider", "")
         if rt_provider and rt_provider not in {"", "auto", "custom"}:
             with contextlib.suppress(Exception):
-                from hermes_cli.auth import PROVIDER_REGISTRY
+                from scout_cli.auth import PROVIDER_REGISTRY
                 pconfig = PROVIDER_REGISTRY.get(rt_provider)
                 if pconfig and getattr(pconfig, "auth_type", None) == "api_key":
                     # The pool's key was issued for the endpoint the main runtime actually uses; a
@@ -3807,7 +3807,7 @@ def _creds_have_api_key(creds: Dict[str, Any]) -> bool:
 
 
 def _refresh_copilot_credentials() -> bool:
-    from hermes_cli.copilot_auth import _jwt_cache, _token_fingerprint, exchange_copilot_token, resolve_copilot_token
+    from scout_cli.copilot_auth import _jwt_cache, _token_fingerprint, exchange_copilot_token, resolve_copilot_token
     raw_token, _source = resolve_copilot_token()
     if not str(raw_token or "").strip():
         return False
@@ -3817,14 +3817,14 @@ def _refresh_copilot_credentials() -> bool:
 
 
 def _refresh_codex_credentials() -> bool:
-    from hermes_cli.auth import resolve_codex_runtime_credentials
+    from scout_cli.auth import resolve_codex_runtime_credentials
     return _creds_have_api_key(resolve_codex_runtime_credentials(force_refresh=True))
 
 
-def _refresh_nous_credentials() -> bool:
-    from hermes_cli.auth import resolve_nous_runtime_credentials
-    return _creds_have_api_key(resolve_nous_runtime_credentials(
-        timeout_seconds=env_float("HERMES_NOUS_TIMEOUT_SECONDS", 15), force_refresh=True
+def _refresh_spaceshipresearch_credentials() -> bool:
+    from scout_cli.auth import resolve_spaceshipresearch_runtime_credentials
+    return _creds_have_api_key(resolve_spaceshipresearch_runtime_credentials(
+        timeout_seconds=env_float("SCOUT_SPACESHIPRESEARCH_TIMEOUT_SECONDS", 15), force_refresh=True
     ))
 
 
@@ -3851,7 +3851,7 @@ def _refresh_xai_oauth_credentials() -> bool:
         refreshed = pool.try_refresh_current()
         if refreshed is not None and str(getattr(refreshed, "runtime_api_key", "") or "").strip():
             return True
-    from hermes_cli.auth import resolve_xai_oauth_runtime_credentials
+    from scout_cli.auth import resolve_xai_oauth_runtime_credentials
     return _creds_have_api_key(resolve_xai_oauth_runtime_credentials(force_refresh=True))
 
 
@@ -3866,7 +3866,7 @@ def _refresh_vertex_credentials() -> bool:
 # Each refresher returns True when a usable credential exists; the caller then evicts cached clients.
 _CREDENTIAL_REFRESHERS: Dict[str, Callable[..., bool]] = {
     "copilot": _refresh_copilot_credentials, "openai-codex": _refresh_codex_credentials,
-    "nous": _refresh_nous_credentials, "anthropic": _refresh_anthropic_credentials,
+    "spaceshipresearch": _refresh_spaceshipresearch_credentials, "anthropic": _refresh_anthropic_credentials,
     "xai-oauth": _refresh_xai_oauth_credentials, "vertex": _refresh_vertex_credentials,
 }
 
@@ -3960,7 +3960,7 @@ def _complete_fallback_destination(
             api_mode = "anthropic_messages"
         else:
             with contextlib.suppress(Exception):
-                from hermes_cli.runtime_provider import resolve_runtime_provider
+                from scout_cli.runtime_provider import resolve_runtime_provider
                 runtime = resolve_runtime_provider(
                     requested=provider, explicit_base_url=base_url or None, target_model=model or ""
                 )
@@ -3982,7 +3982,7 @@ def _fallback_destination(
     task: Optional[str], fb_client: Any, fb_model: Optional[str], fb_label: str
 ) -> _FallbackDestination:
     """Route identity of a fallback request: attached destination, else configured entry, else label."""
-    attached = getattr(fb_client, "_hermes_fallback_destination", None)
+    attached = getattr(fb_client, "_scout_fallback_destination", None)
     if isinstance(attached, _FallbackDestination):
         return attached
     entry = _fallback_chain_entry(task, fb_label)
@@ -4437,7 +4437,7 @@ def _try_configured_fallback_for_unavailable_client(
 
 def _fallback_entry_api_key(entry: Dict[str, Any]) -> Optional[str]:
     """Resolve inline or env-backed API key via the secret-scope-aware resolver (no raw os.getenv under multiplexing)."""
-    from hermes_cli.fallback_config import resolve_entry_api_key
+    from scout_cli.fallback_config import resolve_entry_api_key
     return resolve_entry_api_key(entry)
 
 
@@ -4454,7 +4454,7 @@ def _resolve_fallback_entry(entry: Dict[str, Any]) -> Tuple[Optional[Any], Optio
     )
     if client is not None:
         with contextlib.suppress(Exception):
-            client._hermes_fallback_destination = _fallback_destination_from_entry(entry, client, resolved_model)
+            client._scout_fallback_destination = _fallback_destination_from_entry(entry, client, resolved_model)
     return client, resolved_model
 
 
@@ -4466,8 +4466,8 @@ def _try_main_fallback_chain(
     user's main fallback policy before the built-in discovery chain; read via ``get_fallback_chain`` so
     ``fallback_providers`` and legacy ``fallback_model`` keep the main agent's order."""
     try:
-        from hermes_cli.config import load_config_readonly
-        from hermes_cli.fallback_config import get_fallback_chain
+        from scout_cli.config import load_config_readonly
+        from scout_cli.fallback_config import get_fallback_chain
         chain = get_fallback_chain(load_config_readonly())
     except Exception as exc:
         logger.debug("Auxiliary %s: could not load main fallback chain: %s", task or "call", exc)
@@ -4518,7 +4518,7 @@ def _try_main_fallback_chain(
 
 def _warn_stale_openai_base_url(runtime_provider: str) -> None:
     """Warn once when OPENAI_BASE_URL is set but config.yaml names a non-custom provider (a stale
-    ~/.hermes/.env value after `hermes model` poisons routing)."""
+    ~/.scout/.env value after `scout model` poisons routing)."""
     global _stale_base_url_warned
     if _stale_base_url_warned:
         return
@@ -4528,8 +4528,8 @@ def _warn_stale_openai_base_url(runtime_provider: str) -> None:
         logger.warning(
             "OPENAI_BASE_URL is set (%s) but model.provider is '%s'. "
             "Auxiliary clients may route to the wrong endpoint. "
-            "Run: hermes model to reconfigure, or remove "
-            "OPENAI_BASE_URL from ~/.hermes/.env",
+            "Run: scout model to reconfigure, or remove "
+            "OPENAI_BASE_URL from ~/.scout/.env",
             _env_base, _cfg_provider,
         )
         _stale_base_url_warned = True
@@ -4578,7 +4578,7 @@ def _try_main_provider_route(
         # Named custom provider (custom_providers / providers dict entry).
         _has_named_entry = False
         with contextlib.suppress(ImportError):
-            from hermes_cli.runtime_provider import _get_named_custom_provider
+            from scout_cli.runtime_provider import _get_named_custom_provider
             _has_named_entry = _get_named_custom_provider(main_provider) is not None
         if _has_named_entry:
             # KEEP the full ``custom:<name>`` so the named arm honours the entry's api_mode
@@ -4614,12 +4614,12 @@ def _discovery_chain_allowed(main_provider: str, task: Optional[str] = None) -> 
     Once the user picked one, every auxiliary route must be a provider they configured (main,
     ``auxiliary.<task>``, ``fallback_providers``); guessing "whatever else is logged in" bills an
     account they never pointed this session at (xAI OAuth session with a dead token → every
-    compression silently charged to a Nous Portal balance)."""
+    compression silently charged to a Scout Portal balance)."""
     if (main_provider or "").strip().lower() in {"", "auto"}:
         return True
     logger.warning(
         "Auxiliary %s: main provider %s is unavailable and no fallback_chain / fallback_providers is "
-        "configured — refusing to guess another logged-in provider. Re-authenticate (`hermes model`) "
+        "configured — refusing to guess another logged-in provider. Re-authenticate (`scout model`) "
         "or declare a fallback.", task or "call", main_provider)
     return False
 
@@ -4654,10 +4654,10 @@ def _resolve_auto_route(
     """Full auto-detection chain, including the selected provider identity. Priority: (1) main provider +
     main model, regardless of provider type ("auto" means "my main model for side tasks too"; explicit
     per-task overrides still win); (2) configured fallback policy — task chain, then the main agent's
-    top-level chain; (3) OpenRouter → Nous → custom → Codex → API-key providers, only with no policy
+    top-level chain; (3) OpenRouter → SpaceshipResearch → custom → Codex → API-key providers, only with no policy
     and no working main client."""
-    global auxiliary_is_nous
-    auxiliary_is_nous = False  # Reset — _try_nous() will set True if it wins
+    global auxiliary_is_spaceshipresearch
+    auxiliary_is_spaceshipresearch = False  # Reset — _try_spaceshipresearch() will set True if it wins
     runtime = _normalize_main_runtime(main_runtime)
     _warn_stale_openai_base_url(runtime.get("provider", ""))
     main_provider, main_model, base_url, api_key, api_mode = _main_route_target(runtime, task)
@@ -4680,7 +4680,7 @@ def _resolve_auto_route(
 
 def _effective_provider_for_client(client: Any, fallback: str) -> str:
     """Return the concrete provider selected for an auto-routed client."""
-    effective_provider = getattr(client, "_hermes_aux_effective_provider", "")
+    effective_provider = getattr(client, "_scout_aux_effective_provider", "")
     if isinstance(effective_provider, str) and effective_provider:
         return effective_provider
     return str(fallback or "")
@@ -4706,7 +4706,7 @@ def _to_async_client(sync_client, model: str, is_vision: bool = False):
         if isinstance(sync_client, GeminiNativeClient):
             return AsyncGeminiNativeClient(sync_client), model
     # ACP shims (subprocess, not an HTTP pool) are already async-safe and opt out of the wrapper.
-    if _client_declares(sync_client, "HERMES_SKIP_ASYNC_WRAP"):
+    if _client_declares(sync_client, "SCOUT_SKIP_ASYNC_WRAP"):
         return sync_client, model
     sync_base_url = str(sync_client.base_url)
     # A key_cmd/Entra client keeps its credential in the SDK's per-request provider slot, not in
@@ -4732,7 +4732,7 @@ def _to_async_client(sync_client, model: str, is_vision: bool = False):
         async_kwargs["default_headers"] = headers
     _apply_required_codex_headers(async_kwargs, access_token=sync_client.api_key, base_url=sync_base_url)
     async_kwargs = {**_openai_http_client_kwargs(sync_base_url, async_mode=True), **async_kwargs}
-    # Hermes owns the auxiliary retry/timeout budget; disable SDK-internal retries.
+    # Scout owns the auxiliary retry/timeout budget; disable SDK-internal retries.
     # See #54465.
     async_kwargs.setdefault("max_retries", 0)
     return AsyncOpenAI(**async_kwargs), model
@@ -4743,7 +4743,7 @@ def _normalize_resolved_model(model_name: Optional[str], provider: str) -> Optio
     if not model_name:
         return model_name
     try:
-        from hermes_cli.model_normalize import normalize_model_for_provider
+        from scout_cli.model_normalize import normalize_model_for_provider
         return normalize_model_for_provider(model_name, provider)
     except Exception:
         return model_name
@@ -4888,9 +4888,9 @@ def _log_once_debug(seen: set, key: Any, msg: str, *args: Any) -> None:
 
 
 def _is_actual_auxiliary_route(req: _ResolveRequest, base_url: str) -> bool:
-    from hermes_cli.auth import normalize_actual_base_url
-    from hermes_cli.providers import is_actual_route
-    from hermes_cli.route_identity import normalize_route_base_url
+    from scout_cli.auth import normalize_actual_base_url
+    from scout_cli.providers import is_actual_route
+    from scout_cli.route_identity import normalize_route_base_url
 
     if is_actual_route(req.provider, base_url):
         return True
@@ -4917,7 +4917,7 @@ def _wrap_transport(req: _ResolveRequest, client_obj: Any, final_model_str: str,
             if isinstance(client_obj, CodexAuxiliaryClient)
             else client_obj
         )
-        client._hermes_aux_effective_provider = "actual"
+        client._scout_aux_effective_provider = "actual"
         return client
     # OpenCode relay targets pick the wire per model; a task/provider-level api_mode is stale for
     # every other model (#98799), so it is re-derived here like the main runtime does.
@@ -4983,7 +4983,7 @@ def _resolve_auto_branch(req: _ResolveRequest) -> _ResolveResult:
     routed_client, routed_model = _route_client(req, client, model or resolved)
     if routed_client is not None and effective_provider:
         try:
-            setattr(routed_client, "_hermes_aux_effective_provider", effective_provider)
+            setattr(routed_client, "_scout_aux_effective_provider", effective_provider)
         except (AttributeError, TypeError):
             logger.debug("Auxiliary client %s cannot retain effective provider %s",
                          type(routed_client).__name__, effective_provider)
@@ -5001,22 +5001,22 @@ def _resolve_openrouter_branch(req: _ResolveRequest) -> _ResolveResult:
     return _route_client(req, client, _normalize_resolved_model(req.model or default, req.provider))
 
 
-def _resolve_nous_branch(req: _ResolveRequest) -> _ResolveResult:
-    """Nous Portal (OAuth)."""
+def _resolve_spaceshipresearch_branch(req: _ResolveRequest) -> _ResolveResult:
+    """Scout Portal (OAuth)."""
     model = req.model
     # Vision: caller flag, _PROVIDER_VISION_MODELS override, or a known vision id.
-    client, default = _try_nous(vision=(req.is_vision or model in _PROVIDER_VISION_MODELS.values()
+    client, default = _try_spaceshipresearch(vision=(req.is_vision or model in _PROVIDER_VISION_MODELS.values()
                                         or (model or "").strip().lower() == "mimo-v2-omni"))
     if client is None:
-        logger.warning("resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)")
+        logger.warning("resolve_provider_client: spaceshipresearch requested but Scout Portal not configured (run: scout auth)")
         return None, None
     final_model = _normalize_resolved_model(model or default, req.provider)
     # Dual-wire: anthropic/* → /v1/messages, else /chat/completions. Derive from the catalog id
     # (not a stale api_mode) so aux matches the main agent.
-    from hermes_cli.providers import nous_api_mode
+    from scout_cli.providers import spaceshipresearch_api_mode
     client = _maybe_wrap_anthropic(
         client, final_model, str(getattr(client, "api_key", "") or ""),
-        str(getattr(client, "base_url", "") or ""), nous_api_mode(final_model),
+        str(getattr(client, "base_url", "") or ""), spaceshipresearch_api_mode(final_model),
     )
     return _route_client(req, client, final_model)
 
@@ -5029,7 +5029,7 @@ def _resolve_openai_codex_branch(req: _ResolveRequest) -> _ResolveResult:
                        "model; pass model explicitly (e.g. model.model in config.yaml "
                        "or auxiliary.<task>.model for per-task aux routing).")
         return None, None
-    no_token_msg = "resolve_provider_client: openai-codex requested but no Codex OAuth token found (run: hermes model)"
+    no_token_msg = "resolve_provider_client: openai-codex requested but no Codex OAuth token found (run: scout model)"
     if req.raw_codex:
         # Raw OpenAI client for callers needing responses.stream() (main agent loop).
         codex_token, base_url = _resolve_codex_credential_and_base()
@@ -5049,7 +5049,7 @@ def _resolve_xai_oauth_branch(req: _ResolveRequest) -> _ResolveResult:
     client, default = _build_xai_oauth_aux_client(req.model)
     return _route_or_warn(req, client, default,
                           "resolve_provider_client: xai-oauth requested but no xAI "
-                          "OAuth token found (run: hermes model -> xAI Grok OAuth — SuperGrok / Premium+)")
+                          "OAuth token found (run: scout model -> xAI Grok OAuth — SuperGrok / Premium+)")
 
 
 def _resolve_custom_branch(req: _ResolveRequest) -> _ResolveResult:
@@ -5093,7 +5093,7 @@ def _resolve_custom_branch(req: _ResolveRequest) -> _ResolveResult:
             custom_base, custom_key = _main_base, _main_key
     if custom_base and custom_key:
         if _is_actual_auxiliary_route(req, custom_base):
-            from hermes_cli.auth import normalize_actual_base_url
+            from scout_cli.auth import normalize_actual_base_url
             custom_base = normalize_actual_base_url(custom_base)
         final_model = _normalize_resolved_model(
             model or (main_runtime.get("model") if main_runtime else None) or "gpt-4o-mini", provider,
@@ -5141,11 +5141,11 @@ def _named_custom_openai_wire_client(custom_base: str, custom_key: Any, extra_he
 
 def _resolve_named_custom_branch(req: _ResolveRequest) -> Optional[_ResolveResult]:
     """Named custom provider (config.yaml providers dict / custom_providers list); None if no entry matches."""
-    from hermes_cli.runtime_provider import _get_named_custom_provider
+    from scout_cli.runtime_provider import _get_named_custom_provider
     provider = req.provider
     # If the raw name is an alias (``kimi`` → ``kimi-coding``) and a custom_providers entry exists
     # under it, the custom entry wins over alias rewriting. Only for aliases, so entries matching a
-    # canonical name (e.g. ``nous``) still defer to the built-in.
+    # canonical name (e.g. ``spaceshipresearch``) still defer to the built-in.
     custom_entry = None
     if req.original_provider and req.original_provider != provider:
         custom_entry = _get_named_custom_provider(req.original_provider)
@@ -5165,13 +5165,13 @@ def _resolve_named_custom_branch(req: _ResolveRequest) -> Optional[_ResolveResul
     # Actual's wire protocol takes precedence over persisted task/provider modes.
     entry_api_mode = (req.api_mode or custom_entry.get("api_mode") or "").strip()
     if _is_actual_auxiliary_route(req, custom_base):
-        from hermes_cli.auth import normalize_actual_base_url
+        from scout_cli.auth import normalize_actual_base_url
         custom_base = normalize_actual_base_url(custom_base)
         entry_api_mode = "chat_completions"
     if not custom_base:
         logger.warning("resolve_provider_client: named custom provider %r has no base_url", provider)
         return None, None
-    from hermes_cli.config import normalize_extra_headers
+    from scout_cli.config import normalize_extra_headers
     entry_headers = normalize_extra_headers(custom_entry.get("extra_headers"))
     final_model = _normalize_resolved_model(
         req.model
@@ -5224,7 +5224,7 @@ def _resolve_azure_foundry_branch(req: _ResolveRequest) -> _ResolveResult:
                                                explicit_base_url=req.explicit_base_url, api_mode=req.api_mode)
     return _route_or_warn(req, client, default_model,
                           "resolve_provider_client: azure-foundry requested but "
-                          "runtime resolution failed (run: hermes doctor for diagnostics)")
+                          "runtime resolution failed (run: scout doctor for diagnostics)")
 
 
 def _api_key_profile_supplied_client(provider: str, **client_kwargs: Any) -> Any | None:
@@ -5269,7 +5269,7 @@ def _resolve_api_key_branch(req: _ResolveRequest, pconfig: Any, resolve_creds: C
         raw_base_url = req.explicit_base_url.strip().rstrip("/")
     if provider == "actual":
         with contextlib.suppress(Exception):
-            from hermes_cli.auth import (
+            from scout_cli.auth import (
                 ACTUAL_LOCAL_NOAUTH_PLACEHOLDER, is_actual_local_base_url, normalize_actual_base_url
             )
             raw_base_url = normalize_actual_base_url(raw_base_url)
@@ -5302,7 +5302,7 @@ def _resolve_api_key_branch(req: _ResolveRequest, pconfig: Any, resolve_creds: C
     # wrap so call_llm() transparently routes through responses.stream().
     if provider == "copilot" and final_model and not req.raw_codex:
         with contextlib.suppress(ImportError):
-            from hermes_cli.models import _should_use_copilot_responses_api
+            from scout_cli.models import _should_use_copilot_responses_api
             if _should_use_copilot_responses_api(final_model):
                 logger.debug("resolve_provider_client: copilot model %s needs "
                              "Responses API — wrapping with CodexAuxiliaryClient", final_model)
@@ -5358,12 +5358,12 @@ def _resolve_registry_branch(req: _ResolveRequest) -> _ResolveResult:
     """PROVIDER_REGISTRY providers, dispatched on ``auth_type``; unknown providers log once."""
     provider = req.provider
     try:
-        from hermes_cli.auth import (
+        from scout_cli.auth import (
             PROVIDER_REGISTRY, resolve_api_key_provider_credentials,
             resolve_external_process_provider_credentials,
         )
     except ImportError:
-        logger.debug("hermes_cli.auth not available for provider %s", provider)
+        logger.debug("scout_cli.auth not available for provider %s", provider)
         return None, None
     pconfig = PROVIDER_REGISTRY.get(provider)
     if pconfig is None:
@@ -5380,7 +5380,7 @@ def _resolve_registry_branch(req: _ResolveRequest) -> _ResolveResult:
     elif auth_type == "aws_sdk":
         client, final_model = _build_bedrock_client(provider, req.model, raw_codex=req.raw_codex)
     elif auth_type in {"oauth_device_code", "oauth_external"}:
-        # nous / openai-codex / xai-oauth already returned from their explicit branches.
+        # spaceshipresearch / openai-codex / xai-oauth already returned from their explicit branches.
         _log_once_debug(_LOGGED_UNSUPPORTED_OAUTH_KEYS, provider,
                         "resolve_provider_client: OAuth provider %s not "
                         "directly supported, try 'auto'", provider)
@@ -5399,7 +5399,7 @@ def _resolve_registry_branch(req: _ResolveRequest) -> _ResolveResult:
 _EXPLICIT_PROVIDER_BRANCHES: Dict[str, Callable[[_ResolveRequest], _ResolveResult]] = {
     "auto": _resolve_auto_branch,
     "openrouter": _resolve_openrouter_branch,
-    "nous": _resolve_nous_branch,
+    "spaceshipresearch": _resolve_spaceshipresearch_branch,
     "openai-codex": _resolve_openai_codex_branch,
     "xai-oauth": _resolve_xai_oauth_branch,
     "custom": _resolve_custom_branch,
@@ -5438,9 +5438,9 @@ def resolve_provider_client(
                 explicit_api_key = None
     # Model for concrete providers: caller ``model`` → catalog default (empty for OAuth-gated providers whose
     # lists drift) → configured main model (MoA → aggregator), keeping OAuth aux tasks off the Step-2 fallback.
-    # Excluded: ``auto`` (a stale main slug could pair with any picked provider) and Nous + vision (the
+    # Excluded: ``auto`` (a stale main slug could pair with any picked provider) and SpaceshipResearch + vision (the
     # Portal's tier-aware vision recommendation must win over a text-only model).
-    if not model and provider != "auto" and not (provider == "nous" and is_vision):
+    if not model and provider != "auto" and not (provider == "spaceshipresearch" and is_vision):
         # ``auto`` is intentionally excluded: `_resolve_auto_route(main_runtime=...)` returns the model paired
         # with the provider it actually selected. Pre-filling an auto call from `_read_main_model()` can
         # leak a stale process-global runtime into a different provider (for example Claude model slug on
@@ -5458,9 +5458,9 @@ def resolve_provider_client(
         # ``_resolve_auto_route`` falls through to the Step-2 chain as before. Do NOT pre-fill a blank ``auto``
         # request from the config/main default here. Claude model sent to Codex after the main lane fell
         # back to gpt-5.5). Let _resolve_auto_route() return the actual current runtime model when the caller did
-        # not explicitly request one. (# compression-current-model) Nous + vision is the one carve-out: the
+        # not explicitly request one. (# compression-current-model) SpaceshipResearch + vision is the one carve-out: the
         # branch below resolves its model from the Portal's tier-aware vision recommendation
-        # (``_try_nous(vision= True)``), and ``final_model = model or default`` means anything pre-filled
+        # (``_try_spaceshipresearch(vision= True)``), and ``final_model = model or default`` means anything pre-filled
         # here wins over that. The main chat model is routinely text-only (e.g. a ``:free`` chat SKU), so
         # pre-filling it sends the image to a model that cannot accept one and the Portal 404s. Leave
         # ``model`` unset and let the Portal slot through; only an explicit caller model may override it.
@@ -5499,14 +5499,14 @@ def get_text_auxiliary_client(task: str = "", *, main_runtime: Optional[Dict[str
     )
 
 
-_VISION_AUTO_PROVIDER_ORDER = ("openrouter", "nous", "deepinfra")
+_VISION_AUTO_PROVIDER_ORDER = ("openrouter", "spaceshipresearch", "deepinfra")
 
 
 def _main_model_supports_vision(provider: str, model: Optional[str]) -> bool:
     """True when ``provider``/``model`` is known to accept image input; unknown capability → True (attempt the call)."""
     try:
         from agent.image_routing import _lookup_supports_vision
-        from hermes_cli.config import load_config_readonly
+        from scout_cli.config import load_config_readonly
     except ImportError:
         return True
     try:
@@ -5529,13 +5529,13 @@ def _deepinfra_strict_vision_backend(model: Optional[str]) -> Tuple[Optional[Any
     return resolve_provider_client("deepinfra", vision_model, is_vision=True)
 
 
-# Strict (explicitly requested) vision backends by normalized provider name. nous MUST go
-# through resolve_provider_client so anthropic/* picks wrap onto /v1/messages (a bare _try_nous
+# Strict (explicitly requested) vision backends by normalized provider name. spaceshipresearch MUST go
+# through resolve_provider_client so anthropic/* picks wrap onto /v1/messages (a bare _try_spaceshipresearch
 # client 404s). openai-codex has no safe default model; callers set auxiliary.<task>.model.
 _STRICT_VISION_BACKENDS: Dict[str, Callable[[Optional[str]], Tuple[Optional[Any], Optional[str]]]] = {
     "copilot": lambda model: resolve_provider_client("copilot", model, is_vision=True),
     "openrouter": lambda model: _try_openrouter(model=model),
-    "nous": lambda model: resolve_provider_client("nous", model, is_vision=True),
+    "spaceshipresearch": lambda model: resolve_provider_client("spaceshipresearch", model, is_vision=True),
     "openai-codex": lambda model: resolve_provider_client("openai-codex", model, is_vision=True),
     "anthropic": lambda model: _try_anthropic(),
     "deepinfra": _deepinfra_strict_vision_backend,
@@ -5549,7 +5549,7 @@ def _resolve_strict_vision_backend(provider: str, model: Optional[str] = None) -
 
 
 def get_available_vision_backends() -> List[str]:
-    """Available vision backends in auto-selection order (active provider → OpenRouter → Nous → DeepInfra).
+    """Available vision backends in auto-selection order (active provider → OpenRouter → SpaceshipResearch → DeepInfra).
 
     Single source of truth for setup, tool gating, and runtime auto-routing.
     """
@@ -5591,8 +5591,8 @@ def _vision_main_provider_client(
     # model; the pinned chat model usually isn't, so only fall back to it when no default exists.
     provider_vision_default = _resolve_provider_vision_default(main_provider)
     vision_model = provider_vision_default or main_model
-    if main_provider == "nous":
-        # Nous picks its vision model from Portal tier-aware slots inside _try_nous(vision=True);
+    if main_provider == "spaceshipresearch":
+        # SpaceshipResearch picks its vision model from Portal tier-aware slots inside _try_spaceshipresearch(vision=True);
         # passing the chat model would override that and 404. Only auxiliary.vision.model may.
         sync_client, default_model = _resolve_strict_vision_backend(main_provider, resolved_model or provider_vision_default)
         if sync_client is None:
@@ -5634,7 +5634,7 @@ def _vision_auto_route(
     runtime: Dict[str, Any], resolved_model: Optional[str], resolved_api_mode: Optional[str],
     async_mode: bool,
 ) -> Tuple[Optional[str], Optional[Any], Optional[str]]:
-    """Auto-detect order: 1. main provider + model, 2. OpenRouter, 3. Nous Portal, 4. DeepInfra, 5. stop."""
+    """Auto-detect order: 1. main provider + model, 2. OpenRouter, 3. Scout Portal, 4. DeepInfra, 5. stop."""
     main_provider = str(runtime.get("provider") or _read_main_provider())
     main_model = str(runtime.get("model") or _read_main_model())
     if main_provider.strip().lower() == "moa":
@@ -5709,8 +5709,8 @@ def resolve_vision_provider_client(
 
 
 def get_auxiliary_extra_body() -> dict:
-    """Return extra_body kwargs (Nous Portal product tags when Nous-backed, else {})."""
-    return _nous_extra_body() if auxiliary_is_nous else {}
+    """Return extra_body kwargs (Scout Portal product tags when SpaceshipResearch-backed, else {})."""
+    return _spaceshipresearch_extra_body() if auxiliary_is_spaceshipresearch else {}
 
 
 def auxiliary_max_tokens_param(value: int, *, model: Optional[str] = None) -> dict:
@@ -5718,7 +5718,7 @@ def auxiliary_max_tokens_param(value: int, *, model: Optional[str] = None) -> di
     models (by ``model`` name, so custom endpoints fronting gpt-5.x are caught) need max_completion_tokens."""
     _custom_host = base_url_hostname(_current_custom_base_url()) or ""
     direct_openai_family = (
-        not _scoped_key_env("OPENROUTER_API_KEY") and _read_nous_auth() is None
+        not _scoped_key_env("OPENROUTER_API_KEY") and _read_spaceshipresearch_auth() is None
         and (_custom_host in ("api.openai.com", "api.githubcopilot.com") or _custom_host.endswith(".githubcopilot.com"))
     )
     if direct_openai_family or model_forces_max_completion_tokens(model):
@@ -5781,9 +5781,9 @@ def _client_cache_key(
     # share an entry, and the second builder's _store_cached_client would close the first's client.
     model_key = model or runtime.get("model", "")
     api_key_key = _runtime_cache_discriminator("api_key", api_key or "")
-    # Profile home leads the key: callers that omit api_key (pool / Nous auth.json paths) would
+    # Profile home leads the key: callers that omit api_key (pool / SpaceshipResearch auth.json paths) would
     # otherwise share one client across multiplex profiles holding different credentials.
-    return (hermes_home_key(), provider, async_mode, base_url or "", api_key_key, api_mode or "", runtime_key, is_vision, task_key, pool_hint, model_key)
+    return (scout_home_key(), provider, async_mode, base_url or "", api_key_key, api_mode or "", runtime_key, is_vision, task_key, pool_hint, model_key)
 
 
 def _current_event_loop() -> Any:
@@ -5805,13 +5805,13 @@ def _store_cached_client(cache_key: tuple, client: Any, default_model: Optional[
         _client_cache[cache_key] = (client, default_model, bound_loop)
 
 
-def _refresh_nous_auxiliary_client(
+def _refresh_spaceshipresearch_auxiliary_client(
     *, cache_provider: str, model: Optional[str], async_mode: bool, base_url: Optional[str] = None,
     api_key: Optional[str] = None, api_mode: Optional[str] = None,
     main_runtime: Optional[Dict[str, Any]] = None, is_vision: bool = False,
     lookup_model: Optional[str] = None, lookup_task: Optional[str] = None,
 ) -> Tuple[Optional[Any], Optional[str]]:
-    """Refresh Nous runtime creds, rebuild the client, and replace the cache entry.
+    """Refresh SpaceshipResearch runtime creds, rebuild the client, and replace the cache entry.
 
     ``model`` is the resolved wire model stored as the entry's usable model and returned. The
     cache KEY MUST be built from ``lookup_model``/``lookup_task`` — the model and task as passed
@@ -5825,7 +5825,7 @@ def _refresh_nous_auxiliary_client(
     client refreshed on a 401 lands under the ``task=""`` key while the stale entry survives under the
     task-scoped key (#58894).
     """
-    runtime = _resolve_nous_runtime_api(force_refresh=True, stale_access_token=api_key)
+    runtime = _resolve_spaceshipresearch_runtime_api(force_refresh=True, stale_access_token=api_key)
     if runtime is None:
         return None, model
     fresh_key, fresh_base_url = runtime
@@ -6065,11 +6065,11 @@ def _preserve_provider_with_base_url(prov: Optional[str]) -> bool:
     if normalized in _LOCAL_SERVER_ALIASES:
         return True  # the custom branch applies the /v1 tail only when it still sees the alias
     try:
-        from hermes_cli.providers import get_provider
+        from scout_cli.providers import get_provider
         return get_provider(normalized) is not None
     except Exception:  # keep provider-backed routes safe when the catalog can't load
         return normalized in {
-            "anthropic", "copilot", "copilot-acp", "minimax-oauth", "nous", "openai-codex", "qwen-oauth", "xai-oauth",
+            "anthropic", "copilot", "copilot-acp", "minimax-oauth", "spaceshipresearch", "openai-codex", "qwen-oauth", "xai-oauth",
         }
 
 
@@ -6120,7 +6120,7 @@ def _resolve_task_provider_model(
             cfg_api_key = None
     # One shared alias table with resolve_runtime_provider(): ``provider: openai`` routes the same
     # way here (compression/vision/title) and on the runtime path (background review, curator, MoA).
-    from hermes_cli.runtime_provider_custom import expand_direct_api_alias
+    from scout_cli.runtime_provider_custom import expand_direct_api_alias
     if provider:
         provider, base_url = expand_direct_api_alias(provider, base_url)
     if cfg_provider:
@@ -6169,7 +6169,7 @@ def _get_auxiliary_task_config(task: str) -> Dict[str, Any]:
     if not task:
         return {}
     try:
-        from hermes_cli.config import load_config_readonly
+        from scout_cli.config import load_config_readonly
         config = load_config_readonly()
     except ImportError:
         return {}
@@ -6178,7 +6178,7 @@ def _get_auxiliary_task_config(task: str) -> Dict[str, Any]:
     if not isinstance(task_config, dict):
         task_config = {}
     try:
-        from hermes_cli.plugins import get_plugin_auxiliary_tasks
+        from scout_cli.plugins import get_plugin_auxiliary_tasks
         for _entry in get_plugin_auxiliary_tasks():
             if _entry.get("key") == task:
                 _defaults = _entry.get("defaults") or {}
@@ -6199,7 +6199,7 @@ class CompressionFastLane(NamedTuple):
 
 def _fast_lane_config_fields(config: Dict[str, Any]) -> tuple[str, str, bool]:
     """Only explicit reasoning disablement certifies a non-reasoning route."""
-    from hermes_constants import parse_reasoning_effort
+    from scout_constants import parse_reasoning_effort
     provider = str(config.get("provider") or "").strip().lower()
     model = str(config.get("model") or "").strip()
     parsed_effort = parse_reasoning_effort(config.get("reasoning_effort"))
@@ -6310,7 +6310,7 @@ def _with_custom_endpoint_extra_body(
         return extra_body
     try:
         from agent.agent_init import _custom_provider_extra_body_for_agent
-        from hermes_cli.config import get_compatible_custom_providers, load_config_readonly
+        from scout_cli.config import get_compatible_custom_providers, load_config_readonly
         inherited = _custom_provider_extra_body_for_agent(
             provider=provider or "", model=model or "", base_url=str(base_url),
             custom_providers=get_compatible_custom_providers(load_config_readonly()),
@@ -6342,7 +6342,7 @@ def _get_task_extra_body(task: str) -> Dict[str, Any]:
             task,
         )
         return result
-    from hermes_constants import parse_reasoning_effort
+    from scout_constants import parse_reasoning_effort
     parsed = parse_reasoning_effort(effort)
     if parsed is not None:
         result["reasoning"] = parsed
@@ -6392,8 +6392,8 @@ def _acquire_sync_aux_semaphore(task: Optional[str]) -> Optional[threading.Bound
     limit = _get_task_max_concurrency(task)
     if limit is None:
         return None
-    from hermes_constants import hermes_home_key
-    return _cached_semaphore(_aux_sync_semaphores, (hermes_home_key(), task), limit, threading.BoundedSemaphore)
+    from scout_constants import scout_home_key
+    return _cached_semaphore(_aux_sync_semaphores, (scout_home_key(), task), limit, threading.BoundedSemaphore)
 
 
 def _acquire_async_aux_semaphore(task: Optional[str]):
@@ -6406,8 +6406,8 @@ def _acquire_async_aux_semaphore(task: Optional[str]):
         loop = asyncio.get_running_loop()
     except RuntimeError:
         return None
-    from hermes_constants import hermes_home_key
-    return _cached_semaphore(_aux_async_semaphores, (hermes_home_key(), task, id(loop)), limit, asyncio.Semaphore)
+    from scout_constants import scout_home_key
+    return _cached_semaphore(_aux_async_semaphores, (scout_home_key(), task, id(loop)), limit, asyncio.Semaphore)
 
 
 def _reset_aux_semaphores() -> None:
@@ -6480,15 +6480,15 @@ def _contains_profile_reasoning_fields(value: Any) -> bool:
     )
 
 
-_NOUS_PROVIDER_NAMES = frozenset({"nous", "nous-portal", "nousresearch"})
+_SPACESHIPRESEARCH_PROVIDER_NAMES = frozenset({"spaceshipresearch", "scout-portal", "spaceshipresearch"})
 
 
-def _nous_on_messages_wire(provider_norm: str, model: str) -> bool:
-    """True when a Nous Portal route serves ``model`` over /v1/messages (dual-wire catalog)."""
-    if provider_norm not in _NOUS_PROVIDER_NAMES:
+def _spaceshipresearch_on_messages_wire(provider_norm: str, model: str) -> bool:
+    """True when a Scout Portal route serves ``model`` over /v1/messages (dual-wire catalog)."""
+    if provider_norm not in _SPACESHIPRESEARCH_PROVIDER_NAMES:
         return False
-    from hermes_cli.providers import nous_api_mode
-    return nous_api_mode(model) == "anthropic_messages"
+    from scout_cli.providers import spaceshipresearch_api_mode
+    return spaceshipresearch_api_mode(model) == "anthropic_messages"
 
 
 _NVIDIA_PROVIDER_NAMES = {"nvidia", "nvidia-nim", "nim", "build-nvidia", "nemotron"}
@@ -6519,7 +6519,7 @@ def _forwards_max_tokens(provider: str, provider_norm: str, model: str, effectiv
     """
     return (
         _is_anthropic_compat_endpoint(provider, effective_base)
-        or _nous_on_messages_wire(provider_norm, model)
+        or _spaceshipresearch_on_messages_wire(provider_norm, model)
         or provider_norm in _NVIDIA_PROVIDER_NAMES
         or base_url_host_matches(effective_base, "integrate.api.nvidia.com")
         or str(task) == "moa_reference"
@@ -6563,7 +6563,7 @@ def _routes_to_custom_endpoint(provider_norm: str) -> bool:
     name = _normalize_aux_provider(provider_norm)
     if name == "custom":
         return True
-    from hermes_cli.runtime_provider import _get_named_custom_provider
+    from scout_cli.runtime_provider import _get_named_custom_provider
     return _get_named_custom_provider(name) is not None
 
 
@@ -6610,7 +6610,7 @@ def _project_provider_profile(
 def _merge_aux_extra_body(
     extra_body: Optional[dict], projection: _ProfileProjection, reasoning_config: Optional[dict], provider_norm: str,
 ) -> Dict[str, Any]:
-    """Caller extra_body + profile body/reasoning + generic reasoning fallback + Nous tags."""
+    """Caller extra_body + profile body/reasoning + generic reasoning fallback + SpaceshipResearch tags."""
     merged_extra = dict(extra_body or {})
     caller_reasoning_fields = {
         key: value for key, value in merged_extra.items()
@@ -6637,7 +6637,7 @@ def _merge_aux_extra_body(
             # ``reasoning_config`` is already clamped to the OpenAI-compat wire by _build_call_kwargs.
             merged_extra["reasoning"] = {"enabled": True, "effort": reasoning_config.get("effort") or "medium"}
     # Caller/task ``extra_body.reasoning`` (``auxiliary.<task>.reasoning_effort`` folds in here via
-    # _get_task_extra_body) takes the same wire clamp: Hermes-only ``ultra`` never reaches the
+    # _get_task_extra_body) takes the same wire clamp: Scout-only ``ultra`` never reaches the
     # OpenAI-compat wire from any aux task (#112010).
     if isinstance(merged_extra.get("reasoning"), dict):
         from agent.reasoning_effort import clamp_reasoning_config
@@ -6645,9 +6645,9 @@ def _merge_aux_extra_body(
     # Portal tags + sticky session_id fallback when the profile didn't supply them; session_id
     # keeps aux calls on the main turn's upstream instance (cache warmth) — tags alone are not
     # enough on /v1/messages.
-    if provider_norm in _NOUS_PROVIDER_NAMES:
+    if provider_norm in _SPACESHIPRESEARCH_PROVIDER_NAMES:
         if "tags" not in merged_extra:
-            merged_extra["tags"] = _nous_portal_tags()
+            merged_extra["tags"] = _scout_portal_tags()
         if "session_id" not in merged_extra:
             try:
                 from agent.portal_tags import get_conversation_context
@@ -6693,7 +6693,7 @@ def _build_call_kwargs(
         kwargs["tools"] = _dedupe_tool_names(tools, provider, model)
     # Provider profiles are the source of truth for reasoning wire shapes (top-level, nested body,
     # or extra_body.reasoning); providers without a reasoning-aware profile keep the generic
-    # ``extra_body.reasoning`` fallback. Clamp Hermes-internal levels (``ultra``) to the
+    # ``extra_body.reasoning`` fallback. Clamp Scout-internal levels (``ultra``) to the
     # OpenAI-compat wire ONCE here, before either path sees the config — the same entry clamp the
     # main transport applies (#89503); MoA aggregator/reference and aux calls 400'd without it (#112010).
     from agent.reasoning_effort import clamp_reasoning_config
@@ -6724,7 +6724,7 @@ def _build_call_kwargs(
     if reasoning_config and isinstance(reasoning_config, dict):
         raw_base = base_url or ""
         if (
-            provider_norm == "anthropic" or projection.messages_wire or _nous_on_messages_wire(provider_norm, model)
+            provider_norm == "anthropic" or projection.messages_wire or _spaceshipresearch_on_messages_wire(provider_norm, model)
             or _endpoint_speaks_anthropic_messages(raw_base) or _is_anthropic_compat_endpoint(provider_norm, raw_base)
         ):
             kwargs["_reasoning_config"] = dict(reasoning_config)
@@ -6877,7 +6877,7 @@ def _managed_local_netloc() -> str:
     if now - ts < _MANAGED_LOCAL_STATE_TTL_S:
         return cached
     try:
-        from hermes_cli.local_runtime.supervisor import state_path
+        from scout_cli.local_runtime.supervisor import state_path
 
         raw = state_path().read_text(encoding="utf-8-sig")
         base = str((json.loads(raw) or {}).get("base_url", ""))
@@ -6889,7 +6889,7 @@ def _managed_local_netloc() -> str:
 
 
 def _is_managed_local_endpoint(base_url: Optional[str]) -> bool:
-    """True when *base_url* targets the llama-server this Hermes manages."""
+    """True when *base_url* targets the llama-server this Scout manages."""
     if not base_url:
         return False
     managed = _managed_local_netloc()
@@ -6911,7 +6911,7 @@ def _provider_requires_stream(provider: str, base_url: Optional[str]) -> bool:
     if base_url_host_matches(_url, "copilot.tencent.com") or _is_managed_local_endpoint(_url):
         return True
     try:
-        from hermes_cli.config import load_config
+        from scout_cli.config import load_config
         markers = (load_config() or {}).get("auxiliary", {}).get("stream_only_base_urls") or []
         if isinstance(markers, (list, tuple)):
             return any(
@@ -7304,9 +7304,9 @@ def _resolve_call_client(
                 fb_client, fb_model, fb_label = _try_configured_fallback_for_unavailable_client(
                     task, _explicit)
                 if fb_client is None:
-                    nous_detail = nous_credential_failure_detail() if _explicit == "nous" else None
+                    spaceshipresearch_detail = spaceshipresearch_credential_failure_detail() if _explicit == "spaceshipresearch" else None
                     raise AuxiliaryClientUnavailable(
-                        nous_detail or missing_provider_credentials_message(_explicit))
+                        spaceshipresearch_detail or missing_provider_credentials_message(_explicit))
                 client, final_model = fb_client, fb_model
                 if async_mode:
                     client, final_model = _to_async_client(
@@ -7323,7 +7323,7 @@ def _resolve_call_client(
                 effective_provider = _effective_provider_for_client(client, "auto")
     if client is None:
         raise AuxiliaryClientUnavailable(f"No LLM provider configured for task={task} "
-                                         f"provider={resolved_provider}. Run: hermes setup")
+                                         f"provider={resolved_provider}. Run: scout setup")
     return _ResolvedAuxRoute(client, final_model, resolved_provider, effective_provider)
 
 
@@ -7503,7 +7503,7 @@ def _parameter_rungs(client: Any, max_tokens: Optional[int]) -> tuple:
         # (top-level ``reasoning_effort: none``), and strict-schema gateways reject the generic
         # ``extra_body.reasoning`` fallback outright (#109774); the caller only wanted "no thinking",
         # so retry with every reasoning field omitted and let the route default apply (#112781).
-        # The endpoint refuses the *disable* rather than the field (Nous Portal gpt-6-astra: "Reasoning is
+        # The endpoint refuses the *disable* rather than the field (Scout Portal gpt-6-astra: "Reasoning is
         # mandatory ... cannot be disabled"): step the effort up to the floor and remember the route so
         # the next thinking-off aux call starts there. Ordered before the strip so a floor that still
         # 400s falls through to it.
@@ -7549,10 +7549,10 @@ def _ladder_parameter_rungs(
     return None, first_err, kwargs
 
 
-def _refreshed_nous_step(route: _LadderRoute, kwargs: Dict[str, Any], message: str) -> Optional[_LadderStep]:
-    """Rebuild the Nous client after a credential event; None when nothing refreshed."""
-    refreshed_client, refreshed_model = _refresh_nous_auxiliary_client(
-        cache_provider=route.resolved_provider or "nous", model=route.final_model,
+def _refreshed_spaceshipresearch_step(route: _LadderRoute, kwargs: Dict[str, Any], message: str) -> Optional[_LadderStep]:
+    """Rebuild the SpaceshipResearch client after a credential event; None when nothing refreshed."""
+    refreshed_client, refreshed_model = _refresh_spaceshipresearch_auxiliary_client(
+        cache_provider=route.resolved_provider or "spaceshipresearch", model=route.final_model,
         lookup_model=route.resolved_model, lookup_task=route.task, async_mode=route.async_mode,
         base_url=route.resolved_base_url, api_key=route.resolved_api_key,
         api_mode=route.resolved_api_mode, main_runtime=route.main_runtime,
@@ -7566,19 +7566,19 @@ def _refreshed_nous_step(route: _LadderRoute, kwargs: Dict[str, Any], message: s
     return _LadderStep("call", (refreshed_client, kwargs))
 
 
-def _ladder_nous_rungs(
-    first_err: Exception, route: _LadderRoute, kwargs: Dict[str, Any], client_is_nous: bool,
+def _ladder_spaceshipresearch_rungs(
+    first_err: Exception, route: _LadderRoute, kwargs: Dict[str, Any], client_is_spaceshipresearch: bool,
 ):
-    """Nous-only rungs: stale-model self-heal, paid-account refresh, 401 refresh.
+    """SpaceshipResearch-only rungs: stale-model self-heal, paid-account refresh, 401 refresh.
     Returns ``(response, None)`` or ``(None, first_err)`` to fall through."""
     client, task, tag = route.client, route.task, route.tag
     # A long-lived process can pin a Portal model since dropped from the catalog (every call
     # 404s); force a fresh Portal fetch and retry once.
-    if _is_model_not_found_error(first_err) and client_is_nous:
-        healed_model = _refresh_nous_recommended_model(
+    if _is_model_not_found_error(first_err) and client_is_spaceshipresearch:
+        healed_model = _refresh_spaceshipresearch_recommended_model(
             vision=(task == "vision"), stale_model=kwargs.get("model"))
         if healed_model and healed_model != kwargs.get("model"):
-            logger.warning("Auxiliary %s%s: model %r no longer in Nous catalog; "
+            logger.warning("Auxiliary %s%s: model %r no longer in SpaceshipResearch catalog; "
                            "retrying with refreshed recommendation %r",
                            task or "call", tag, kwargs.get("model"), healed_model)
             kwargs["model"] = healed_model
@@ -7586,18 +7586,18 @@ def _ladder_nous_rungs(
             if first_err is None:
                 return resp, None
     # Auth refresh parity with the main agent.
-    if _is_payment_error(first_err) and client_is_nous and _nous_portal_account_has_fresh_paid_access():
-        step = _refreshed_nous_step(
+    if _is_payment_error(first_err) and client_is_spaceshipresearch and _scout_portal_account_has_fresh_paid_access():
+        step = _refreshed_spaceshipresearch_step(
             route, kwargs,
-            "Auxiliary %s%s: refreshed Nous runtime credentials after paid account check, retrying")
+            "Auxiliary %s%s: refreshed SpaceshipResearch runtime credentials after paid account check, retrying")
         if step is not None:
             resp, first_err = yield from _rung(
                 step, lambda exc: _credential_rung_accepts(exc) or _is_connection_error(exc))
             if first_err is None:
                 return resp, None
-    if _is_auth_error(first_err) and client_is_nous:
-        step = _refreshed_nous_step(
-            route, kwargs, "Auxiliary %s%s: refreshed Nous runtime credentials after 401, retrying")
+    if _is_auth_error(first_err) and client_is_spaceshipresearch:
+        step = _refreshed_spaceshipresearch_step(
+            route, kwargs, "Auxiliary %s%s: refreshed SpaceshipResearch runtime credentials after 401, retrying")
         if step is not None:
             resp, first_err = yield from _rung(
                 step, lambda exc: _credential_rung_accepts(exc) or _is_connection_error(exc))
@@ -7607,7 +7607,7 @@ def _ladder_nous_rungs(
 
 
 def _ladder_credential_rungs(
-    first_err: Exception, route: _LadderRoute, kwargs: Dict[str, Any], client_is_nous: bool,
+    first_err: Exception, route: _LadderRoute, kwargs: Dict[str, Any], client_is_spaceshipresearch: bool,
 ):
     """OAuth credential refresh + same-provider retry, then credential-pool rotation.
     Returns ``(response, None)`` or ``(None, first_err)`` to fall through."""
@@ -7615,7 +7615,7 @@ def _ladder_credential_rungs(
     auth_refresh_provider = _auth_refresh_provider_for_route(
         resolved_provider, route.base_info, _effective_provider_for_client(client, ""))
     if (_is_auth_error(first_err) and auth_refresh_provider not in {"auto", "", None}
-            and not client_is_nous):
+            and not client_is_spaceshipresearch):
         refresh_kwargs = ({"failed_api_key": getattr(client, "api_key", "")}
                           if auth_refresh_provider == "anthropic" else {})
         if _refresh_provider_credentials(auth_refresh_provider, **refresh_kwargs):
@@ -7797,7 +7797,7 @@ def _aux_recovery_ladder(
     main_runtime: Optional[Dict[str, Any]], route_info: Optional[Dict[str, str]],
 ):
     """Ordered recovery rungs after the primary request failed (generator): parameter
-    strips → Nous heal/refresh → credential refresh/pool rotation → provider fallback.
+    strips → SpaceshipResearch heal/refresh → credential refresh/pool rotation → provider fallback.
     Each rung returns a response, narrows ``first_err`` and falls through, or re-raises.
     Raises the narrowed ``first_err`` when exhausted (after evicting a connection-poisoned client)."""
     tag = " (async)" if async_mode else ""
@@ -7808,12 +7808,12 @@ def _aux_recovery_ladder(
     resp, first_err, kwargs = yield from _ladder_parameter_rungs(first_err, route, kwargs, max_tokens)
     if first_err is None:
         return resp
-    client_is_nous = (resolved_provider == "nous"
-                      or base_url_host_matches(base_info, "inference-api.nousresearch.com"))
-    resp, first_err = yield from _ladder_nous_rungs(first_err, route, kwargs, client_is_nous)
+    client_is_spaceshipresearch = (resolved_provider == "spaceshipresearch"
+                      or base_url_host_matches(base_info, "inference-api.spaceshipresearch.com"))
+    resp, first_err = yield from _ladder_spaceshipresearch_rungs(first_err, route, kwargs, client_is_spaceshipresearch)
     if first_err is None:
         return resp
-    resp, first_err = yield from _ladder_credential_rungs(first_err, route, kwargs, client_is_nous)
+    resp, first_err = yield from _ladder_credential_rungs(first_err, route, kwargs, client_is_spaceshipresearch)
     if first_err is None:
         return resp
     resp = yield from _ladder_provider_fallback(first_err, route)

@@ -18,7 +18,7 @@ import sys
 import pytest
 
 import pm
-from hermes_cli import venv_sync
+from scout_cli import venv_sync
 from pm.environments import install_state_dir, runtime_facts_path, selected_venv, site_packages
 from pm import paths
 from pm.lock import Facts
@@ -35,9 +35,9 @@ def source_launch(tmp_path, monkeypatch, isolated_python):
     engine = importlib.import_module("pm.install")
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "home"))
-    monkeypatch.setenv("HERMES_RUNTIME_DIR", str(tmp_path / "store"))
-    monkeypatch.delenv("HERMES_DISABLE_LAZY_INSTALLS", raising=False)
+    monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("SCOUT_RUNTIME_DIR", str(tmp_path / "store"))
+    monkeypatch.delenv("SCOUT_DISABLE_LAZY_INSTALLS", raising=False)
     monkeypatch.setattr(paths, "lockfile_path", lambda: tmp_path / "tool-lock.json")
 
     uv = shutil.which("uv")
@@ -62,10 +62,10 @@ def source_launch(tmp_path, monkeypatch, isolated_python):
         json.dumps({"updateMechanism": "self"}), encoding="utf-8",
     )
     # The startup heal hands the shared completion tail (launchers, products,
-    # maintenance) to the checkout's own hermes_cli/source_completion.py. This
+    # maintenance) to the checkout's own scout_cli/source_completion.py. This
     # source slice has no products; record the hand-off instead of running it.
-    (root / "hermes_cli").mkdir()
-    (root / "hermes_cli" / "source_completion.py").write_text(
+    (root / "scout_cli").mkdir()
+    (root / "scout_cli" / "source_completion.py").write_text(
         "import json, sys\n"
         f"open({str(tmp_path / 'completion-calls')!r}, 'a').write(json.dumps(sys.argv[1:]) + '\\n')\n",
         encoding="utf-8",
@@ -97,11 +97,11 @@ def source_launch(tmp_path, monkeypatch, isolated_python):
 @pytest.mark.platforms("posix")
 @pytest.mark.parametrize("update", ["launch", "sync", "pm-update"])
 def test_source_python_pin_update_survives_real_gc(source_launch, tmp_path, monkeypatch, update):
-    from hermes_cli import _launchers
+    from scout_cli import _launchers
     from pm.cli import cmd_gc
     from pm.lock import Lockfile
     from pm.store import current_target, tree_digest
-    from tests.hermes_cli.test_source_launcher_publication import BOOT_FILES
+    from tests.scout_cli.test_source_launcher_publication import BOOT_FILES
 
     root, old_python, _ = source_launch
     repository = Path(__file__).resolve().parents[2]
@@ -120,10 +120,10 @@ def test_source_python_pin_update_survives_real_gc(source_launch, tmp_path, monk
     pm.sync_venv(explicit=True, project_root=root)
     # Initial installation is allowed to publish. No explicit writer is called
     # after replacement: the source-update owner must refresh this same command.
-    _launchers.ensure_install_launchers(root, root / ".hermes" / "bin")
+    _launchers.ensure_install_launchers(root, root / ".scout" / "bin")
     command = _launchers.installation_command(root, module="source_probe")
     (site_packages(selected_venv(root)) / "selected_probe.py").write_text("VALUE = 'A'\n")
-    child_env = {**os.environ, "HERMES_DISABLE_LAZY_INSTALLS": "1"}
+    child_env = {**os.environ, "SCOUT_DISABLE_LAZY_INSTALLS": "1"}
     before = subprocess.run(command, env=child_env, capture_output=True, text=True, timeout=30)
     assert before.returncode == 0, before.stderr
     assert json.loads(before.stdout)["executable"] == str(old_python)
@@ -182,7 +182,7 @@ def test_source_python_pin_update_survives_real_gc(source_launch, tmp_path, monk
 
 @pytest.mark.platforms("posix")
 def test_launcher_publication_failure_retries_without_rebuilding_dependencies(source_launch, monkeypatch):
-    from hermes_cli import _launchers
+    from scout_cli import _launchers
 
     root, store_python, _ = source_launch
     with monkeypatch.context() as failed_publication:
@@ -193,7 +193,7 @@ def test_launcher_publication_failure_retries_without_rebuilding_dependencies(so
     committed = runtime_facts_path(root).read_bytes()
     assert venv_sync.prepare_launch(root, []) == store_python
     assert runtime_facts_path(root).read_bytes() == committed
-    assert (root / ".hermes" / "bin" / "hermes").is_file()
+    assert (root / ".scout" / "bin" / "scout").is_file()
 
 
 @pytest.mark.platforms("posix")
@@ -205,7 +205,7 @@ def test_source_publication_leaves_external_install_launchers_alone(source_launc
     )
     if not checkout:
         (root / ".git").rmdir()
-    launcher = root / ".hermes" / "bin" / "hermes"
+    launcher = root / ".scout" / "bin" / "scout"
     launcher.parent.mkdir(parents=True)
     launcher.write_text("externally owned launcher\n", encoding="utf-8")
     assert venv_sync.sync(root)["ok"]
@@ -273,7 +273,7 @@ def test_process_spawned_by_the_update_commits_dependencies_but_not_the_tail(sou
     """A process an update spawns before its dependencies are current (its restarted gateway)
     must not boot on a tree built for another interpreter; it syncs, but leaves the tail alone."""
     import time
-    from hermes_cli.update_lock import update_marker_path
+    from scout_cli.update_lock import update_marker_path
     from pm.environments import committed_venv
 
     root, store_python, _ = source_launch
@@ -368,7 +368,7 @@ def test_real_bootstrap_reexecs_before_app_imports(source_launch, tmp_path, isol
     repository = Path(__file__).resolve().parents[2]
     # Copy the real bootstrap so it owns this disposable source install. The
     # other modules remain real checkout imports; only acquisition is injected.
-    shutil.copy2(repository / "hermes_bootstrap.py", root / "hermes_bootstrap.py")
+    shutil.copy2(repository / "scout_bootstrap.py", root / "scout_bootstrap.py")
     (root / "launch_test_tools.py").write_text(
         "import sys\n"
         "from pathlib import Path\n"
@@ -382,11 +382,11 @@ def test_real_bootstrap_reexecs_before_app_imports(source_launch, tmp_path, isol
     entry = root / "launch_probe.py"
     entry.write_text(
         "import launch_test_tools\n"
-        "import hermes_bootstrap\n"
+        "import scout_bootstrap\n"
         "import json, sys\n"
         "from pathlib import Path\n"
         "from pm.environments import selected_venv, site_packages\n"
-        "from hermes_cli.venv_sync import prepare_launch\n"
+        "from scout_cli.venv_sync import prepare_launch\n"
         "root = Path(__file__).parent\n"
         "selected = selected_venv(root)\n"
         "print(json.dumps({'executable': sys.executable, 'args': sys.argv[1:],\n"
@@ -457,7 +457,7 @@ def test_failed_launch_completion_degrades_to_a_warning(source_launch, tmp_path,
     CLI on the previous generation with a warning — and a metadata query must not even try."""
     root, store_python, worker_command = source_launch
     repository = Path(__file__).resolve().parents[2]
-    shutil.copy2(repository / "hermes_bootstrap.py", root / "hermes_bootstrap.py")
+    shutil.copy2(repository / "scout_bootstrap.py", root / "scout_bootstrap.py")
     (root / "launch_test_tools.py").write_text(
         "import sys\n"
         "from pathlib import Path\n"
@@ -471,7 +471,7 @@ def test_failed_launch_completion_degrades_to_a_warning(source_launch, tmp_path,
     entry = root / "launch_probe.py"
     entry.write_text(
         "import launch_test_tools\n"
-        "import hermes_bootstrap\n"
+        "import scout_bootstrap\n"
         "import json, sys\n"
         "print(json.dumps({'executable': sys.executable, 'args': sys.argv[1:]}))\n",
         encoding="utf-8",
@@ -496,5 +496,5 @@ def test_failed_launch_completion_degrades_to_a_warning(source_launch, tmp_path,
         assert _receipts(tmp_path) == before_receipts, "a metadata query attempted a dependency sync"
     else:
         assert "source-update completion failed" in result.stderr
-        assert "hermes update" in result.stderr
+        assert "scout update" in result.stderr
 

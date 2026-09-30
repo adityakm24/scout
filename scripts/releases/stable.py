@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from hermes_cli.update_channel import STABLE_TAG_RE
+from scout_cli.update_channel import STABLE_TAG_RE
 from scripts.releases.draft_warning import strip_draft_warning
 SHA = re.compile(r"[a-f0-9]{40}")
 DIGEST = re.compile(r"[a-f0-9]{64}")
@@ -770,7 +770,7 @@ def ensure_final_tag(tag: str, commit: str, claim: dict, *, candidate_manifest_s
         except subprocess.CalledProcessError:
             message = json.dumps(expected, sort_keys=True, separators=(",", ":"))
             run([
-                "git", "-c", "user.name=Hermes Release Automation",
+                "git", "-c", "user.name=Scout Release Automation",
                 "-c", "user.email=release-bot@users.noreply.github.com",
                 "tag", "-a", tag, commit, "-m", message,
             ])

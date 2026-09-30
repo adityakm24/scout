@@ -1,9 +1,9 @@
-import { resolveGatewayWsUrl } from '@hermes/shared'
+import { resolveGatewayWsUrl } from '@scout/shared'
 
 import type { OwnerScope } from '@/api/client'
-import { getApiRequestConnection, getApiRequestProfile, speakText } from '@/hermes'
 import { directTtsConfig, type DirectTtsConfig, synthesizeSpeechClientDirect } from '@/lib/voice-client-direct'
 import { RECONNECT_ATTEMPT_TIMEOUT_MS, withTimeout } from '@/lib/with-timeout'
+import { getApiRequestConnection, getApiRequestProfile, speakText } from '@/scout'
 import {
   $voicePlayback,
   setVoicePlaybackState,
@@ -114,7 +114,7 @@ export function stopVoicePlayback() {
 /** Exported for tests: the (connection, profile) routing contract below is
  *  exactly what broke in the desktop-remote voice report — keep it pinned. */
 export async function resolveSpeakStreamUrl(owner?: OwnerScope): Promise<null | string> {
-  const desktop = window.hermesDesktop
+  const desktop = window.scoutDesktop
 
   if (!desktop?.getConnection) {
     return null

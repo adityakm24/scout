@@ -1,7 +1,7 @@
-"""Live A/B of the Nous hourly-expiry stampede, no real network.
+"""Live A/B of the SpaceshipResearch hourly-expiry stampede, no real network.
 
 Local server: accepts bearer FRESH, returns 401 {"type":"authentication_error", "Your API key is invalid,
-blocked or out of funds..."} for any other bearer. resolve_nous_runtime_credentials is patched to return
+blocked or out of funds..."} for any other bearer. resolve_spaceshipresearch_runtime_credentials is patched to return
 FRESH (standing in for the auth store the keepalive/peers have refreshed). N agents are built holding a
 STALE JWT that expires in 30 s and each fires one API call concurrently. Count 401s the server saw.
 
@@ -12,8 +12,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 root, n = sys.argv[1], int(sys.argv[2])
 sys.path.insert(0, root)
-os.environ["HERMES_HOME"] = tempfile.mkdtemp(prefix="hh-")
-os.environ["HERMES_STREAM_RETRIES"] = "0"
+os.environ["SCOUT_HOME"] = tempfile.mkdtemp(prefix="hh-")
+os.environ["SCOUT_STREAM_RETRIES"] = "0"
 
 
 def jwt(exp, sub="acct-A"):
@@ -43,7 +43,7 @@ class H(BaseHTTPRequestHandler):
         else:
             if os.environ.get("TRACE401"):
                 import traceback; sys.stderr.write("401 path: "+self.path+"\n")
-            body = json.dumps({"error": {"type": "authentication_error", "message": "Your API key is invalid, blocked or out of funds. Please go visit the portal to sort that out: https://portal.nousresearch.com "}}).encode()
+            body = json.dumps({"error": {"type": "authentication_error", "message": "Your API key is invalid, blocked or out of funds. Please go visit the portal to sort that out: https://portal.spaceshipresearch.com "}}).encode()
             with lock: hits["401"] += 1
             self.send_response(401)
         self.send_header("content-type", "application/json"); self.send_header("content-length", str(len(body))); self.end_headers(); self.wfile.write(body)
@@ -52,16 +52,16 @@ class H(BaseHTTPRequestHandler):
 srv = ThreadingHTTPServer(("127.0.0.1", 0), H); threading.Thread(target=srv.serve_forever, daemon=True).start()
 base = f"http://127.0.0.1:{srv.server_address[1]}/v1"
 
-import hermes_cli.auth as auth_mod
-auth_mod.resolve_nous_runtime_credentials = lambda **kw: {"api_key": FRESH, "base_url": base}
-import hermes_cli.nous_auth_keepalive as ka
-ka.start_nous_auth_keepalive = lambda **kw: None  # thread itself is out of scope here; we test adoption
+import scout_cli.auth as auth_mod
+auth_mod.resolve_spaceshipresearch_runtime_credentials = lambda **kw: {"api_key": FRESH, "base_url": base}
+import scout_cli.spaceshipresearch_auth_keepalive as ka
+ka.start_spaceshipresearch_auth_keepalive = lambda **kw: None  # thread itself is out of scope here; we test adoption
 
 from run_agent import AIAgent
 
 agents = []
 for i in range(n):
-    a = AIAgent(api_key=STALE, base_url=base, provider="nous", model="test/model", quiet_mode=True,
+    a = AIAgent(api_key=STALE, base_url=base, provider="spaceshipresearch", model="test/model", quiet_mode=True,
                 skip_context_files=True, skip_memory=True)
     a.api_mode = "chat_completions"
     a._interrupt_requested = False

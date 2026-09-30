@@ -68,7 +68,7 @@ function renderBilling(initialEntries: string[] = ['/settings?tab=billing']) {
 beforeEach(() => {
   apiMocks.fetchBillingState.mockResolvedValue(okBilling(todayBillingState))
   apiMocks.fetchSubscriptionState.mockResolvedValue(okSubscription(todaySubscriptionState))
-  Object.defineProperty(window, 'hermesDesktop', {
+  Object.defineProperty(window, 'scoutDesktop', {
     configurable: true,
     value: {
       openExternal: apiMocks.openExternal
@@ -603,7 +603,7 @@ describe('BillingSettings', () => {
 
     renderBilling()
 
-    expect(await screen.findByText('Connect your Nous account')).toBeTruthy()
+    expect(await screen.findByText('Connect your SpaceshipResearch account')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     expect($freeTierSignIn.get()).toEqual({ status: 'requested' })
     expect(apiMocks.openExternal).not.toHaveBeenCalled()

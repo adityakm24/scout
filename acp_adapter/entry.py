@@ -1,28 +1,28 @@
-"""CLI entry point for the hermes-agent ACP adapter.
+"""CLI entry point for the scout-agent ACP adapter.
 
-Loads ``~/.hermes/.env``, routes logging to stderr (stdout is reserved for ACP
+Loads ``~/.scout/.env``, routes logging to stderr (stdout is reserved for ACP
 JSON-RPC), and starts the ACP agent server.
 
 Usage::
 
-    python -m acp_adapter.entry   # or: hermes acp / hermes-acp
+    python -m acp_adapter.entry   # or: scout acp / scout-acp
 """
 
-# IMPORTANT: hermes_bootstrap must be the very first import — UTF-8 stdio
-# on Windows.  No-op on POSIX.  See hermes_bootstrap.py for full rationale.
+# IMPORTANT: scout_bootstrap must be the very first import — UTF-8 stdio
+# on Windows.  No-op on POSIX.  See scout_bootstrap.py for full rationale.
 try:
-    import hermes_bootstrap  # noqa: F401
+    import scout_bootstrap  # noqa: F401
 except ModuleNotFoundError as exc:
-    # Partial ``hermes update`` (git-reset landed, ``uv pip install -e .`` did not).
-    if exc.name != "hermes_bootstrap":
+    # Partial ``scout update`` (git-reset landed, ``uv pip install -e .`` did not).
+    if exc.name != "scout_bootstrap":
         raise  # the bootstrap exists but cannot load: skipping it would skip PM activation
 else:
-    # Stop a ``utils/``/``proxy/``/``ui/`` package in the launch cwd from shadowing Hermes modules.
-    hermes_bootstrap.harden_import_path()
+    # Stop a ``utils/``/``proxy/``/``ui/`` package in the launch cwd from shadowing Scout modules.
+    scout_bootstrap.harden_import_path()
 
-# `hermes-acp` runs without hermes_cli.main: repair a `hermes update` killed mid-pull here, before
-# importing anything else from the checkout (a no-op under `hermes acp`, which already did).
-from hermes_cli import _early_recovery
+# `scout-acp` runs without scout_cli.main: repair a `scout update` killed mid-pull here, before
+# importing anything else from the checkout (a no-op under `scout acp`, which already did).
+from scout_cli import _early_recovery
 
 if _early_recovery.restore_interrupted_pull():
     _early_recovery.relaunch_after_restore()
@@ -33,7 +33,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from hermes_constants import get_hermes_home
+from scout_constants import get_scout_home
 
 
 # Liveness-probe methods outside the ACP schema. The router correctly answers JSON-RPC -32601
@@ -79,24 +79,24 @@ def _setup_logging() -> None:
 
 
 def _load_env() -> None:
-    """Load .env from HERMES_HOME (default ``~/.hermes``)."""
-    from hermes_cli.env_loader import load_hermes_dotenv
+    """Load .env from SCOUT_HOME (default ``~/.scout``)."""
+    from scout_cli.env_loader import load_scout_dotenv
 
-    hermes_home = get_hermes_home()
-    loaded = load_hermes_dotenv(hermes_home=hermes_home)
+    scout_home = get_scout_home()
+    loaded = load_scout_dotenv(scout_home=scout_home)
     log = logging.getLogger(__name__)
     for env_file in loaded or ():
         log.info("Loaded env from %s", env_file)
     if not loaded:
-        log.info("No .env found at %s, using system env", hermes_home / ".env")
+        log.info("No .env found at %s, using system env", scout_home / ".env")
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="hermes-acp", description="Run Hermes Agent as an ACP stdio server.")
-    parser.add_argument("--version", action="store_true", help="Print Hermes version and exit")
+    parser = argparse.ArgumentParser(prog="scout-acp", description="Run Scout Agent as an ACP stdio server.")
+    parser.add_argument("--version", action="store_true", help="Print Scout version and exit")
     parser.add_argument("--check", action="store_true", help="Verify ACP dependencies and adapter imports, then exit")
     parser.add_argument("--setup", action="store_true",
-                        help="Run interactive Hermes provider/model setup for ACP terminal auth")
+                        help="Run interactive Scout provider/model setup for ACP terminal auth")
     parser.add_argument("--setup-browser", action="store_true",
                         help="Prepare PM's pinned browser tools and Chromium.")
     parser.add_argument("--yes", "-y", action="store_true", dest="assume_yes",
@@ -105,25 +105,25 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _print_version() -> None:
-    from hermes_cli.version_info import get_version_info
+    from scout_cli.version_info import get_version_info
 
     print(get_version_info().derived_version)
 
 
 def _run_check() -> None:
     import acp  # noqa: F401
-    from acp_adapter.server import HermesACPAgent  # noqa: F401
+    from acp_adapter.server import ScoutACPAgent  # noqa: F401
 
-    print("Hermes ACP check OK")
+    print("Scout ACP check OK")
 
 
 def _run_setup() -> None:
-    from hermes_cli.main import main as hermes_main
+    from scout_cli.main import main as scout_main
 
     old_argv = sys.argv[:]
     try:
-        sys.argv = [old_argv[0] if old_argv else "hermes", "model"]
-        hermes_main()
+        sys.argv = [old_argv[0] if old_argv else "scout", "model"]
+        scout_main()
     finally:
         sys.argv = old_argv
 
@@ -175,7 +175,7 @@ def main(argv: list[str] | None = None) -> None:
     _load_env()
 
     logger = logging.getLogger(__name__)
-    logger.info("Starting hermes-agent ACP adapter")
+    logger.info("Starting scout-agent ACP adapter")
 
     # Ensure the project root is on sys.path so ``from run_agent import AIAgent`` works
     project_root = str(Path(__file__).resolve().parent.parent)
@@ -184,16 +184,16 @@ def main(argv: list[str] | None = None) -> None:
 
     # One TLS authority: trust the OS store before any outbound call (bare
     # requests/urllib included) resolves a CA bundle — see agent/ssl_verify.py.
-    # This console script bypasses hermes_cli.main, which does the same.
+    # This console script bypasses scout_cli.main, which does the same.
     from agent.ssl_verify import install_truststore
 
     install_truststore()
 
     import acp
-    from .server import HermesACPAgent
+    from .server import ScoutACPAgent
 
     # Windows: import the configured memory provider (and numpy) on the main thread before
-    # the MCP-discovery and ACP stdin-reader threads start (hermes_cli's ~150 ms
+    # the MCP-discovery and ACP stdin-reader threads start (scout_cli's ~150 ms
     # plugin-discovery thread is the only one already running). A first-time
     # native-extension import (numpy via holographic / mnemosyne / hindsight) racing another
     # thread's import chain deadlocked in create_module and session/new never answered
@@ -207,15 +207,15 @@ def main(argv: list[str] | None = None) -> None:
     # Previously this blocked asyncio.run() for 2-5 s. (ACP also registers per-session MCP servers
     # dynamically via asyncio.to_thread inside the event loop; that path is unaffected.)  Moved from
     # model_tools.py module scope to avoid freezing the gateway's loop on lazy import (#16856).
-    if os.environ.get("HERMES_ACP_SKIP_CONFIGURED_MCP", "").strip() != "1":
+    if os.environ.get("SCOUT_ACP_SKIP_CONFIGURED_MCP", "").strip() != "1":
         try:
-            from hermes_cli.mcp_startup import start_background_mcp_discovery
+            from scout_cli.mcp_startup import start_background_mcp_discovery
 
             start_background_mcp_discovery(logger=logger, thread_name="acp-mcp-discovery")
         except Exception:
             logger.debug("MCP tool discovery failed at ACP startup", exc_info=True)
 
-    agent = HermesACPAgent()
+    agent = ScoutACPAgent()
     try:
         asyncio.run(acp.run_agent(agent, use_unstable_protocol=True))
     except KeyboardInterrupt:

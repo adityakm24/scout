@@ -53,7 +53,7 @@ def _coerce_bool(value: Any, fallback: bool) -> bool:
 
 def load_config() -> ConnectorConfig:
     try:
-        from hermes_cli.config import load_config_readonly as _load
+        from scout_cli.config import load_config_readonly as _load
 
         cfg = _load() or {}
         tools_cfg = cfg.get("tools") if isinstance(cfg.get("tools"), dict) else {}
@@ -73,9 +73,9 @@ def managed_tools_rolled_out() -> bool:
     says nothing about that, so entitlement is the wrong predicate here: the portal mints its
     answer onto the token as ``managed_tools`` and this reads only that. A token minted before
     the claim existed carries none and reads as not enabled."""
-    from hermes_cli.nous_account import get_nous_portal_account_info
+    from scout_cli.spaceshipresearch_account import get_scout_portal_account_info
 
-    account_info = get_nous_portal_account_info()
+    account_info = get_scout_portal_account_info()
     return bool(account_info.logged_in) and account_info.managed_tools_rolled_out
 
 
@@ -94,11 +94,11 @@ def connectors_available(
         if not resolved_loader().enabled:
             return False
         if entitlement_check is None:
-            from hermes_cli.anon_auth import is_guest_state
-            from tools.managed_tool_gateway import _read_nous_provider_state
+            from scout_cli.anon_auth import is_guest_state
+            from tools.managed_tool_gateway import _read_spaceshipresearch_provider_state
 
             # Availability must not mint or refresh an identity.
-            if is_guest_state(_read_nous_provider_state()):
+            if is_guest_state(_read_spaceshipresearch_provider_state()):
                 return True
 
             entitlement_check = managed_tools_rolled_out
@@ -110,16 +110,16 @@ def connectors_available(
 
 def operation_session_key(session_id: Optional[str]) -> str:
     """The key an operation is registered under: the gateway session key the RPCs look up by
-    (``HERMES_SESSION_KEY``), falling back to the agent's session id where no gateway bound one.
+    (``SCOUT_SESSION_KEY``), falling back to the agent's session id where no gateway bound one.
     The agent id alone is wrong on the desktop: compaction rotates it mid-turn while the gateway
     key stays, and a card keyed by the old id can no longer be driven."""
     from gateway.session_context import get_session_env
 
-    return get_session_env("HERMES_SESSION_KEY", "") or str(session_id or "")
+    return get_session_env("SCOUT_SESSION_KEY", "") or str(session_id or "")
 
 
 def session_platform() -> str:
     from gateway.session_context import get_session_env
 
-    platform = get_session_env("HERMES_SESSION_PLATFORM", "") or get_session_env("HERMES_SESSION_SOURCE", "")
+    platform = get_session_env("SCOUT_SESSION_PLATFORM", "") or get_session_env("SCOUT_SESSION_SOURCE", "")
     return str(platform or "").strip().lower()

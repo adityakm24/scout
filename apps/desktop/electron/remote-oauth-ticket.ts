@@ -1,4 +1,4 @@
-import { makeNousCloudBackendDownError } from './backend-health'
+import { makeSpaceshipResearchCloudBackendDownError } from './backend-health'
 import { gatewayTicketFailure } from './connection-config'
 import { oauthTicketFailureAuthMessage } from './native-auth-decisions'
 
@@ -28,11 +28,11 @@ export async function resolveRemoteOauthTicket(
     return await deps.mintGatewayWsTicket(baseUrl, headers)
   } catch (error) {
     throw (
-      makeNousCloudBackendDownError(baseUrl, error) ??
+      makeSpaceshipResearchCloudBackendDownError(baseUrl, error) ??
       gatewayTicketFailure(
         error,
         oauthTicketFailureAuthMessage(hadNativeSession),
-        'Could not reach the remote Hermes gateway while refreshing its WebSocket ticket. Try reconnecting.'
+        'Could not reach the remote Scout gateway while refreshing its WebSocket ticket. Try reconnecting.'
       )
     )
   }

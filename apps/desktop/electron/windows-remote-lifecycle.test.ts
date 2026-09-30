@@ -23,13 +23,13 @@ const ownershipId = '0123456789abcdef0123456789abcdef'
 
 test('Windows spawn holds the update mutex across marker check and helper spawn', () => {
   const command = atomicWindowsSpawnCommand({
-    hermesHome: 'C:\\Users\\andre\\.hermes',
-    python: 'C:\\Users\\andre\\.hermes\\python.exe'
+    scoutHome: 'C:\\Users\\andre\\.scout',
+    python: 'C:\\Users\\andre\\.scout\\python.exe'
   })
 
   const encoded = command.match(/-EncodedCommand\s+([^\s]+)$/)?.[1]
   const script = encoded ? Buffer.from(encoded, 'base64').toString('utf16le') : ''
-  assert.match(script, /\.hermes-update-in-progress/)
+  assert.match(script, /\.scout-update-in-progress/)
   assert.match(script, /\$mutexPath=\$marker\+"\.mutex"/)
   assert.match(script, /\.Lock\(0,1\)/)
   assert.match(script, /windows_ssh_runtime.*spawn/)
@@ -38,15 +38,15 @@ test('Windows spawn holds the update mutex across marker check and helper spawn'
 test('Windows spawn publishes the initial ownership record before releasing the mutex', () => {
   const command = atomicWindowsSpawnCommand(
     {
-      hermesHome: 'C:\\Users\\andre\\.hermes',
-      python: 'C:\\Users\\andre\\.hermes\\python.exe'
+      scoutHome: 'C:\\Users\\andre\\.scout',
+      python: 'C:\\Users\\andre\\.scout\\python.exe'
     },
     {
       ownershipId,
       spawnNonce: '0123456789abcdef',
       profile: 'default',
-      hermesPath: 'C:\\Hermes\\hermes.exe',
-      hermesHome: 'C:\\Users\\andre\\.hermes',
+      scoutPath: 'C:\\Scout\\scout.exe',
+      scoutHome: 'C:\\Users\\andre\\.scout',
       tokenFingerprint: 'a'.repeat(32),
       startedAt: '2026-07-14T00:00:00.000Z'
     }
@@ -92,10 +92,10 @@ test('every emitted PowerShell script keeps try blocks attached to their catch/f
 
       return 'CLEAR'
     }),
-    'C:\\Users\\alice\\.hermes'
+    'C:\\Users\\alice\\.scout'
   )
   scripts.push(
-    decode(atomicWindowsSpawnCommand({ hermesHome: 'C:\\Users\\alice\\.hermes', python: 'C:\\py\\python.exe' })),
+    decode(atomicWindowsSpawnCommand({ scoutHome: 'C:\\Users\\alice\\.scout', python: 'C:\\py\\python.exe' })),
     decode(buildWindowsInteractiveCommand('C:\\work'))
   )
 
@@ -122,17 +122,17 @@ test('Windows relaunch gate refuses live and uncertain markers before executing 
       const script = Buffer.from(command.split(' ').at(-1) || '', 'base64').toString('utf16le')
       scripts.push(script)
 
-      if (script.includes('Get-Command hermes.exe')) {
+      if (script.includes('Get-Command scout.exe')) {
         return JSON.stringify({
           os: 'Windows',
           arch: 'AMD64',
-          hermesHome: 'C:\\Users\\alice\\.hermes',
-          hermesPath: 'C:\\Hermes\\hermes.exe',
-          python: 'C:\\Hermes\\python.exe'
+          scoutHome: 'C:\\Users\\alice\\.scout',
+          scoutPath: 'C:\\Scout\\scout.exe',
+          python: 'C:\\Scout\\python.exe'
         })
       }
 
-      if (script.includes('.hermes-update-in-progress')) {
+      if (script.includes('.scout-update-in-progress')) {
         return observation
       }
 
@@ -147,13 +147,13 @@ test('Windows relaunch gate refuses live and uncertain markers before executing 
           pickLocalPort: async () => 50000,
           forward: async () => {},
           cancelForward: async () => {},
-          waitForHermes: async () => {},
+          waitForScout: async () => {},
           probeReuseProof: async () => 'authenticated-ok'
         }),
       (error: any) => error.kind === 'update-in-progress'
     )
     assert.equal(
-      scripts.some(script => script.includes('hermes_cli.windows_ssh_runtime')),
+      scripts.some(script => script.includes('scout_cli.windows_ssh_runtime')),
       false
     )
   }
@@ -168,8 +168,8 @@ test('Windows relaunch gate uses strict install-wide marker parsing and fail-clo
     return 'CLEAR'
   })
 
-  await assertWindowsRemoteInstallUpdateClear(ssh, 'C:\\Users\\alice\\.hermes\\profiles\\research')
-  assert.match(script, /\.hermes-update-in-progress/)
+  await assertWindowsRemoteInstallUpdateClear(ssh, 'C:\\Users\\alice\\.scout\\profiles\\research')
+  assert.match(script, /\.scout-update-in-progress/)
   assert.match(script, /Split-Path -Leaf \$parent.*profiles/)
   assert.match(script, /UTF8Encoding.*true/)
   assert.match(script, /\\A\(\[1-9\]/)
@@ -177,7 +177,7 @@ test('Windows relaunch gate uses strict install-wide marker parsing and fail-clo
   assert.doesNotMatch(script, /ErrorAction SilentlyContinue/)
 })
 
-test('Windows probe validates Hermes and Python topology before selection', async () => {
+test('Windows probe validates Scout and Python topology before selection', async () => {
   let script = ''
   await probeWindowsRemote(
     sshWith(async command => {
@@ -186,21 +186,21 @@ test('Windows probe validates Hermes and Python topology before selection', asyn
       return JSON.stringify({
         os: 'Windows',
         arch: 'AMD64',
-        hermesHome: 'C:\\\\h',
-        hermesPath: 'C:\\\\h\\\\hermes.exe',
+        scoutHome: 'C:\\\\h',
+        scoutPath: 'C:\\\\h\\\\scout.exe',
         python: 'C:\\\\h\\\\python.exe'
       })
     }),
-    'C:\\\\h\\\\hermes.exe'
+    'C:\\\\h\\\\scout.exe'
   )
 
   const explicitCheck = script.indexOf('if($explicit){Assert-NoReparse $explicit $false;')
   const explicitPythonCheck = script.indexOf('Assert-NoReparse $explicitPython $false')
-  const envHome = script.indexOf('$hermesHome=$env:HERMES_HOME')
-  // #118988: HERMES_HOME is trusted only when it is a directory on the remote; anything else
+  const envHome = script.indexOf('$scoutHome=$env:SCOUT_HOME')
+  // #118988: SCOUT_HOME is trusted only when it is a directory on the remote; anything else
   // (stale User-scope value, client path leaked over SSH) falls back to the remote default.
-  const envHomeGuard = script.indexOf('Test-Path -LiteralPath $hermesHome -PathType Container')
-  const fallbackJoin = script.indexOf('Join-Path $hermesHome')
+  const envHomeGuard = script.indexOf('Test-Path -LiteralPath $scoutHome -PathType Container')
+  const fallbackJoin = script.indexOf('Join-Path $scoutHome')
   const candidatePythonCheck = script.indexOf('Assert-NoReparse $candidatePython $true')
   const candidateSelection = script.indexOf('Get-Item -LiteralPath $candidate')
   const pythonJoin = script.indexOf('$python=[IO.Path]::Combine')
@@ -234,8 +234,8 @@ test('platform detection preserves POSIX and falls back to Windows PowerShell', 
       return JSON.stringify({
         os: 'Windows',
         arch: 'ARM64',
-        hermesHome: 'C:\\h',
-        hermesPath: 'C:\\h\\hermes.exe',
+        scoutHome: 'C:\\h',
+        scoutPath: 'C:\\h\\scout.exe',
         python: 'C:\\h\\python.exe'
       })
     })
@@ -267,23 +267,23 @@ test('platform detection surfaces transport failures as themselves, not unsuppor
           throw new Error('not recognized')
         }
 
-        throw new Error('Hermes is not installed on the remote Windows host.')
+        throw new Error('Scout is not installed on the remote Windows host.')
       })
     ),
-    (err: any) => err.kind === 'unsupported-platform' && /Hermes is not installed/.test(err.message)
+    (err: any) => err.kind === 'unsupported-platform' && /Scout is not installed/.test(err.message)
   )
 })
 
 test('helper command uses the fixed remote Python entry point and quotes path data', () => {
-  const command = helperCommand({ python: "C:\\Program Files\\Hermes's\\python.exe" }, 'inspect', [
-    'C:\\x y\\hermes.exe'
+  const command = helperCommand({ python: "C:\\Program Files\\Scout's\\python.exe" }, 'inspect', [
+    'C:\\x y\\scout.exe'
   ])
 
   const encoded = command.split(' ').pop()!
   const script = Buffer.from(encoded, 'base64').toString('utf16le')
-  assert.match(script, /-m' 'hermes_cli\.windows_ssh_runtime' 'inspect'/)
-  assert.match(script, /Hermes''s/)
-  assert.match(script, /C:\\x y\\hermes\.exe/)
+  assert.match(script, /-m' 'scout_cli\.windows_ssh_runtime' 'inspect'/)
+  assert.match(script, /Scout''s/)
+  assert.match(script, /C:\\x y\\scout\.exe/)
 })
 
 test('Windows lock validation is scoped and exact', () => {
@@ -296,8 +296,8 @@ test('Windows lock validation is scoped and exact', () => {
     creationTimeNs: '1784219690452757504',
     port: 1234,
     tokenFingerprint: 'a'.repeat(32),
-    hermesPath: 'C:\\h\\hermes.exe',
-    hermesHome: 'C:\\h'
+    scoutPath: 'C:\\h\\scout.exe',
+    scoutHome: 'C:\\h'
   }
 
   assert.equal(validLock(lock, ownershipId), true)
@@ -322,12 +322,12 @@ test('Windows SSH reuse requires the requested remote profile to match the lock'
     port: 1234,
     profile: 'default',
     tokenFingerprint: crypto.createHash('sha256').update(token).digest('hex').slice(0, 32),
-    hermesPath: 'C:\\h\\hermes.exe',
-    hermesHome: 'C:\\h'
+    scoutPath: 'C:\\h\\scout.exe',
+    scoutHome: 'C:\\h'
   }
 
   const state = { alive: true, owned: true }
-  const runtime = { hermesPath: lock.hermesPath, hermesHome: lock.hermesHome }
+  const runtime = { scoutPath: lock.scoutPath, scoutHome: lock.scoutHome }
 
   assert.equal(reusableWindowsLock(lock, state, 'default', token, runtime), true)
   assert.equal(reusableWindowsLock(lock, state, 'desktop-work', token, runtime), false)
@@ -352,8 +352,8 @@ test('managed update drain preserves a Windows owner when creation time does not
     port: 1234,
     profile: 'default',
     tokenFingerprint: 'a'.repeat(32),
-    hermesPath: 'C:\\h\\hermes.exe',
-    hermesHome: 'C:\\h'
+    scoutPath: 'C:\\h\\scout.exe',
+    scoutHome: 'C:\\h'
   }
 
   const operations: string[] = []
@@ -394,8 +394,8 @@ test('managed update drain rechecks Windows PID/create-time ownership before exa
     port: 1234,
     profile: 'default',
     tokenFingerprint: 'a'.repeat(32),
-    hermesPath: 'C:\\h\\hermes.exe',
-    hermesHome: 'C:\\h'
+    scoutPath: 'C:\\h\\scout.exe',
+    scoutHome: 'C:\\h'
   }
 
   const operations: string[] = []

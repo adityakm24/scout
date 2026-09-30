@@ -5,8 +5,8 @@ import { LEGACY_OAUTH_PARTITION, resolveOauthPartition } from './oauth-partition
 // #92183 — two basic-auth (cookie-flow) gateways registered in the v2
 // connections registry must not share one cookie jar. Chromium cookie jars
 // ignore the port, so two gateways on the same VPN host (different ports)
-// evict each other's `hermes_session*` cookies when they ride the single
-// shared `persist:hermes-remote-oauth` partition — and, worse, gateway A's
+// evict each other's `scout_session*` cookies when they ride the single
+// shared `persist:scout-remote-oauth` partition — and, worse, gateway A's
 // cookie is silently PRESENTED to gateway B on every request. The resolver
 // under test keys the jar on the registry connection's identity instead.
 
@@ -76,10 +76,10 @@ describe('resolveOauthPartition (#92183 per-connection cookie jars)', () => {
 
   it('keeps cloud connections on the legacy partition (silent portal cascade needs the shared jar)', () => {
     const reg = registry('local', [
-      { id: 'cloud-1', kind: 'cloud', url: 'https://agent.nousresearch.com', authMode: 'oauth' }
+      { id: 'cloud-1', kind: 'cloud', url: 'https://agent.spaceshipresearch.com', authMode: 'oauth' }
     ])
 
-    expect(resolveOauthPartition('https://agent.nousresearch.com/api/status', { registry: reg })).toBe(
+    expect(resolveOauthPartition('https://agent.spaceshipresearch.com/api/status', { registry: reg })).toBe(
       LEGACY_OAUTH_PARTITION
     )
   })
@@ -93,7 +93,7 @@ describe('resolveOauthPartition (#92183 per-connection cookie jars)', () => {
   it('falls back to the legacy partition for unmatched, portal, and malformed inputs', () => {
     const reg = registry('local', [remote('conn-a', 'https://gw-a.example.com')])
 
-    expect(resolveOauthPartition('https://portal.nousresearch.com/api/agents', { registry: reg })).toBe(
+    expect(resolveOauthPartition('https://portal.spaceshipresearch.com/api/agents', { registry: reg })).toBe(
       LEGACY_OAUTH_PARTITION
     )
     expect(resolveOauthPartition('not a url', { registry: reg })).toBe(LEGACY_OAUTH_PARTITION)
@@ -220,7 +220,7 @@ describe('resolveOauthPartition with connectionId (pre-save sign-in identity)', 
       { id: 'local', kind: 'local' },
       remote('conn-a', 'https://gw-a.example.com'),
       remote('tok-1', 'https://gw-t.example.com', { authMode: 'token' }),
-      { id: 'cloud-1', kind: 'cloud', url: 'https://agent.nousresearch.com', authMode: 'oauth' }
+      { id: 'cloud-1', kind: 'cloud', url: 'https://agent.spaceshipresearch.com', authMode: 'oauth' }
     ])
 
     expect(resolveOauthPartition('https://gw-a.example.com', { registry: reg, connectionId: 'conn-a' })).toBe(
@@ -232,7 +232,7 @@ describe('resolveOauthPartition with connectionId (pre-save sign-in identity)', 
     expect(resolveOauthPartition('https://gw-t.example.com', { registry: reg, connectionId: 'tok-1' })).toBe(
       LEGACY_OAUTH_PARTITION
     )
-    expect(resolveOauthPartition('https://agent.nousresearch.com', { registry: reg, connectionId: 'cloud-1' })).toBe(
+    expect(resolveOauthPartition('https://agent.spaceshipresearch.com', { registry: reg, connectionId: 'cloud-1' })).toBe(
       LEGACY_OAUTH_PARTITION
     )
   })
@@ -262,8 +262,8 @@ describe('resolveOauthPartition with connectionId (pre-save sign-in identity)', 
   // The unknown-id shortcut must grant a private jar ONLY to the draft
   // shapes that earn one after the save. Before this gate, ANY unsaved id got
   // its own jar — so a pre-save CLOUD sign-in wrote its portal session into
-  // `persist:hermes-remote-oauth-conn-<id>` while the saved cloud entry kept
-  // reading the shared `persist:hermes-remote-oauth` (the silent per-agent
+  // `persist:scout-remote-oauth-conn-<id>` while the saved cloud entry kept
+  // reading the shared `persist:scout-remote-oauth` (the silent per-agent
   // cascade jar): a successful-looking sign-in that bounces straight back to
   // signed-out, plus an orphan jar. The invariant below is the contract: for
   // every draft shape, the jar the login writes equals the jar the saved
@@ -301,7 +301,7 @@ describe('resolveOauthPartition with connectionId (pre-save sign-in identity)', 
   it('keeps a pending cloud draft on the legacy shared jar (portal cascade)', () => {
     const reg = registry('local', [{ id: 'local', kind: 'local' }])
 
-    const got = resolveOauthPartition('https://team.hermes.cloud', {
+    const got = resolveOauthPartition('https://team.scout.cloud', {
       registry: reg,
       connectionId: 'team-cloud',
       pendingAuthMode: 'oauth',

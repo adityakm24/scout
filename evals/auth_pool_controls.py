@@ -34,8 +34,8 @@ def main():
             payload = parse_qs(self.rfile.read(int(self.headers["Content-Length"])).decode())
             requests.append({"grant_type": payload.get("grant_type"),
                              "target_grant": (payload.get("refresh_token") == ["fixture-refresh-1"]
-                                              or self.headers.get("x-nous-refresh-token") == "fixture-refresh-1")})
-            body = ({"access_token": nous_new_token if self.path == "/api/oauth/token" else "fixture-new-access",
+                                              or self.headers.get("x-spaceshipresearch-refresh-token") == "fixture-refresh-1")})
+            body = ({"access_token": spaceshipresearch_new_token if self.path == "/api/oauth/token" else "fixture-new-access",
                      "refresh_token": "fixture-new-refresh", "expires_in": 3600, "scope": "inference:invoke"}
                     if response_status == 200 else {"error": "invalid_grant" if response_status == 401 else "unavailable"})
             self.send_response(response_status)
@@ -51,7 +51,7 @@ def main():
         return encode({"alg": "none"}) + "." + encode({"sub": subject, "exp": int(time.time()) + 3600,
                                                         "scope": "inference:invoke"}) + ".fixture"
 
-    nous_new_token = token("singleton-renewed")
+    spaceshipresearch_new_token = token("singleton-renewed")
     server = ThreadingHTTPServer(("127.0.0.1", 0), Endpoint)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -68,8 +68,8 @@ def main():
         *[(f"refresh-{status}", "openai-codex", ["refresh", "openai-codex", "row1"], status)
           for status in (200, 503, 401)],
     ]
-    cases.extend((name, "nous", ["refresh", "nous", target], None) for name, target in
-                 (("nous-independent", "row0"), ("nous-singleton", "row1")))
+    cases.extend((name, "spaceshipresearch", ["refresh", "spaceshipresearch", target], None) for name, target in
+                 (("spaceshipresearch-independent", "row0"), ("spaceshipresearch-singleton", "row1")))
     results = []
     try:
         for name, provider, command, status in cases:
@@ -85,26 +85,26 @@ def main():
                              priority=i, last_status="exhausted", last_status_at=now,
                              last_error_code=429, last_error_reset_at=now+3600) for i in range(2)]
                 providers = {}
-                if provider == "nous":
+                if provider == "spaceshipresearch":
                     for row in rows:
                         row.update(auth_type="oauth", source="manual:device_code")
                     state = dict(access_token=token("singleton"), refresh_token="fixture-refresh-1",
                                  expires_at=now+3600, portal_base_url=f"http://127.0.0.1:{server.server_port}",
-                                 scope="inference:invoke", inference_base_url="https://inference-api.nousresearch.com/v1")
+                                 scope="inference:invoke", inference_base_url="https://inference-api.spaceshipresearch.com/v1")
                     rows[1].update(source="device_code", **state)
-                    providers["nous"] = state
+                    providers["spaceshipresearch"] = state
                 store = home / "auth.json"
                 store.write_text(json.dumps({"version": 1, "providers": providers, "active_provider": provider, "credential_pool": {provider: rows}}), encoding="utf-8")
                 env = {k: v for k, v in os.environ.items() if not any(t in k for t in
-                       ("TOKEN", "API_KEY", "SECRET", "PASSWORD", "HERMES", "PYTEST"))}
-                env.update(HOME=temp, HERMES_HOME=temp, HERMES_SHARED_AUTH_DIR=str(home / "shared"), PYTHONPATH=str(Path(args.repo).absolute()), TERM="xterm")
+                       ("TOKEN", "API_KEY", "SECRET", "PASSWORD", "SCOUT", "PYTEST"))}
+                env.update(HOME=temp, SCOUT_HOME=temp, SCOUT_SHARED_AUTH_DIR=str(home / "shared"), PYTHONPATH=str(Path(args.repo).absolute()), TERM="xterm")
                 bootstrap = ("import sys, httpx; original_send=httpx.Client.send; "
                              "httpx.Client.send=lambda self, request, **kw: original_send(self, request, **kw) "
                              "if request.url.host == '127.0.0.1' else (_ for _ in ()).throw(AssertionError('NONLOCAL_NETWORK')); "
-                             "from hermes_cli import auth_codex; "
+                             "from scout_cli import auth_codex; "
                              f"auth_codex.CODEX_OAUTH_TOKEN_URL='http://127.0.0.1:{server.server_port}/token'; "
-                             "from hermes_cli.main import main; "
-                             f"sys.argv=['hermes','auth',*{command!r}]; main()")
+                             "from scout_cli.main import main; "
+                             f"sys.argv=['scout','auth',*{command!r}]; main()")
                 master, slave = pty.openpty()
                 child = subprocess.Popen([sys.executable, "-c", bootstrap], cwd=args.repo,
                                          env=env, stdin=slave, stdout=slave, stderr=slave)
@@ -129,7 +129,7 @@ def main():
                                 "disk": [{k: e.get(k) for k in ("id", "priority", "last_status", "last_error_reset_at", "request_count")}
                                          for e in disk],
                                 "target_refresh_rotated": any(e["id"] == "row1" and e.get("refresh_token") == "fixture-new-refresh" for e in disk),
-                                "target_rotated": any(e["id"] == "row1" and e.get("access_token") == (nous_new_token if provider == "nous" else "fixture-new-access") for e in disk),
+                                "target_rotated": any(e["id"] == "row1" and e.get("access_token") == (spaceshipresearch_new_token if provider == "spaceshipresearch" else "fixture-new-access") for e in disk),
                                 "independent_tokens_preserved": all(next(e for e in disk if e["id"] == "row0").get(k) == rows[0].get(k) for k in ("access_token", "refresh_token")),
                                 "sibling_cooldown_preserved": next(e for e in disk if e["id"] == "row0").get("last_error_reset_at") == now+3600})
     finally:
@@ -137,10 +137,10 @@ def main():
         thread.join(timeout=5)
         server.server_close()
     Path(args.output).write_text(json.dumps({"repo": args.repo, "cases": results}, indent=2), encoding="utf-8")
-    independent = next(r for r in results if r["case"] == "nous-independent")
+    independent = next(r for r in results if r["case"] == "spaceshipresearch-independent")
     assert independent["exit"] != 0 and not independent["wire"], independent
     assert independent["independent_tokens_preserved"] and independent["sibling_cooldown_preserved"], independent
-    singleton = next(r for r in results if r["case"] == "nous-singleton")
+    singleton = next(r for r in results if r["case"] == "spaceshipresearch-singleton")
     assert singleton["exit"] == 0 and singleton["target_rotated"] and singleton["target_refresh_rotated"], singleton
     assert len(singleton["wire"]) == 1 and singleton["wire"][0]["target_grant"], singleton
     assert singleton["sibling_cooldown_preserved"] and singleton["independent_tokens_preserved"], singleton

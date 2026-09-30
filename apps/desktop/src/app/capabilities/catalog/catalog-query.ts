@@ -1,4 +1,4 @@
-import { PLUGIN_CATEGORIES, PLUGIN_CATEGORY_ORDER, sortCatalogPlugins } from '@hermes/shared'
+import { PLUGIN_CATEGORIES, PLUGIN_CATEGORY_ORDER, sortCatalogPlugins } from '@scout/shared'
 
 import type { CatalogEntry, CatalogKind } from './catalog-data'
 import type { FacetRow } from './catalog-filters'

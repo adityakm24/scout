@@ -10,8 +10,8 @@ import {
   openSessionInNewWindow
 } from './windows'
 
-const desktopWindow = window as unknown as { hermesDesktop?: Window['hermesDesktop'] }
-const initialHermesDesktop = desktopWindow.hermesDesktop
+const desktopWindow = window as unknown as { scoutDesktop?: Window['scoutDesktop'] }
+const initialScoutDesktop = desktopWindow.scoutDesktop
 
 const notifyError = vi.fn()
 
@@ -20,15 +20,15 @@ vi.mock('./notifications', () => ({
 }))
 
 function installBridge(
-  openSessionWindow?: Window['hermesDesktop']['openSessionWindow'],
-  openWindow?: Window['hermesDesktop']['openWindow'],
-  openBrowserWindow?: Window['hermesDesktop']['openBrowserWindow']
+  openSessionWindow?: Window['scoutDesktop']['openSessionWindow'],
+  openWindow?: Window['scoutDesktop']['openWindow'],
+  openBrowserWindow?: Window['scoutDesktop']['openBrowserWindow']
 ) {
-  desktopWindow.hermesDesktop = {
+  desktopWindow.scoutDesktop = {
     ...(openSessionWindow ? { openSessionWindow } : {}),
     ...(openWindow ? { openWindow } : {}),
     ...(openBrowserWindow ? { openBrowserWindow } : {})
-  } as unknown as Window['hermesDesktop']
+  } as unknown as Window['scoutDesktop']
 }
 
 beforeEach(() => {
@@ -36,10 +36,10 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  if (initialHermesDesktop) {
-    desktopWindow.hermesDesktop = initialHermesDesktop
+  if (initialScoutDesktop) {
+    desktopWindow.scoutDesktop = initialScoutDesktop
   } else {
-    delete desktopWindow.hermesDesktop
+    delete desktopWindow.scoutDesktop
   }
 })
 
@@ -73,7 +73,7 @@ describe('openSessionInNewWindow', () => {
   })
 
   it('no-ops gracefully when the bridge is absent (web fallback)', async () => {
-    delete desktopWindow.hermesDesktop
+    delete desktopWindow.scoutDesktop
 
     await openSessionInNewWindow('s1')
 
@@ -121,7 +121,7 @@ describe('openSessionInNewWindow', () => {
 
 describe('openNewWindow', () => {
   it('no-ops gracefully when the bridge is absent (web fallback)', async () => {
-    delete desktopWindow.hermesDesktop
+    delete desktopWindow.scoutDesktop
 
     await openNewWindow()
 
@@ -148,7 +148,7 @@ describe('openBrowserInNewWindow', () => {
   })
 
   it('returns false when the bridge is absent', async () => {
-    delete desktopWindow.hermesDesktop
+    delete desktopWindow.scoutDesktop
 
     expect(await openBrowserInNewWindow('tab-1')).toBe(false)
     expect(notifyError).not.toHaveBeenCalled()

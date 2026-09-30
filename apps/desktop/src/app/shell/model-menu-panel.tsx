@@ -1,5 +1,5 @@
-import type { ModelOptionsResult } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
+import type { ModelOptionsResult } from '@scout/shared'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 

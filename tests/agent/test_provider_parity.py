@@ -81,7 +81,7 @@ def _make_agent(monkeypatch, provider, api_mode="chat_completions", base_url="ht
     )
     if model:
         kwargs["model"] = model
-    elif provider == "nous":
+    elif provider == "spaceshipresearch":
         kwargs["model"] = "gpt-5"
     return AIAgent(**kwargs)
 
@@ -344,19 +344,19 @@ class TestBuildApiKwargsAIGateway:
 
 
 
-class TestBuildApiKwargsNousPortal:
-    def test_includes_nous_product_tags(self, monkeypatch):
-        from agent.portal_tags import nous_portal_tags
+class TestBuildApiKwargsScoutPortal:
+    def test_includes_spaceshipresearch_product_tags(self, monkeypatch):
+        from agent.portal_tags import scout_portal_tags
         agent = _make_agent(
             monkeypatch,
-            "nous",
-            base_url="https://inference-api.nousresearch.com/v1",
+            "spaceshipresearch",
+            base_url="https://inference-api.spaceshipresearch.com/v1",
             model="gpt-5",
         )
         messages = [{"role": "user", "content": "hi"}]
         kwargs = agent._build_api_kwargs(messages)
         extra = kwargs.get("extra_body", {})
-        assert extra.get("tags") == nous_portal_tags(session_id=agent.session_id)
+        assert extra.get("tags") == scout_portal_tags(session_id=agent.session_id)
 
 
 
@@ -639,7 +639,7 @@ class TestChatMessagesToResponsesInputMessageItems:
 
 
 
-# ── Chat completions response handling (OpenRouter/Nous) ─────────────────────
+# ── Chat completions response handling (OpenRouter/SpaceshipResearch) ─────────────────────
 
 class TestBuildAssistantMessage:
     """Verify _build_assistant_message works for all provider response formats."""
@@ -717,21 +717,21 @@ class TestAuxiliaryClientProviderPriority:
         assert model == _OPENROUTER_MODEL
         assert "openrouter" in str(mock.call_args.kwargs["base_url"]).lower()
 
-    def test_nous_when_no_openrouter(self, monkeypatch):
+    def test_spaceshipresearch_when_no_openrouter(self, monkeypatch):
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-        from agent.auxiliary_client import _NOUS_MODEL, get_text_auxiliary_client
-        nous_auth = {
+        from agent.auxiliary_client import _SPACESHIPRESEARCH_MODEL, get_text_auxiliary_client
+        spaceshipresearch_auth = {
             "access_token": _fake_invoke_jwt(),
             "scope": "inference:invoke",
         }
-        with patch("agent.auxiliary_client._read_nous_auth", return_value=nous_auth), \
+        with patch("agent.auxiliary_client._read_spaceshipresearch_auth", return_value=spaceshipresearch_auth), \
              patch("agent.auxiliary_client.OpenAI") as mock, \
-             patch("hermes_cli.models.get_nous_recommended_aux_model", return_value=None):
+             patch("scout_cli.models.get_spaceshipresearch_recommended_aux_model", return_value=None):
             client, model = get_text_auxiliary_client()
-        assert model == _NOUS_MODEL
+        assert model == _SPACESHIPRESEARCH_MODEL
 
-    def test_custom_endpoint_when_no_nous(self, monkeypatch):
-        """Custom endpoint is used when no OpenRouter/Nous keys are available.
+    def test_custom_endpoint_when_no_spaceshipresearch(self, monkeypatch):
+        """Custom endpoint is used when no OpenRouter/SpaceshipResearch keys are available.
 
         Since the March 2026 config refactor, OPENAI_BASE_URL env var is no
         longer consulted — base_url comes from config.yaml via
@@ -740,7 +740,7 @@ class TestAuxiliaryClientProviderPriority:
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         monkeypatch.setenv("OPENAI_API_KEY", "local-key")
         from agent.auxiliary_client import get_text_auxiliary_client
-        with patch("agent.auxiliary_client._read_nous_auth", return_value=None), \
+        with patch("agent.auxiliary_client._read_spaceshipresearch_auth", return_value=None), \
              patch("agent.auxiliary_client._resolve_custom_runtime",
                    return_value=("http://localhost:1234/v1", "local-key", "openai-compatible")), \
              patch("agent.auxiliary_client.OpenAI") as mock:
@@ -760,7 +760,7 @@ class TestAuxiliaryClientProviderPriority:
         monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         from agent.auxiliary_client import get_text_auxiliary_client
-        with patch("agent.auxiliary_client._read_nous_auth", return_value=None), \
+        with patch("agent.auxiliary_client._read_spaceshipresearch_auth", return_value=None), \
              patch("agent.auxiliary_client._resolve_codex_credential_and_base",
                    return_value=("codex-tok", "https://chatgpt.com/backend-api/codex")), \
              patch("agent.auxiliary_client.OpenAI"):

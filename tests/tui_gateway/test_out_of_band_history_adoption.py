@@ -4,7 +4,7 @@ reach the model on the next local prompt, not only the repainted transcript."""
 import contextlib
 import threading
 
-from hermes_state import SessionDB
+from scout_state import SessionDB
 from tui_gateway import server
 
 

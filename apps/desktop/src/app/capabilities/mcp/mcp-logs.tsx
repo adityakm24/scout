@@ -1,8 +1,8 @@
 import { useStore } from '@nanostores/react'
 import { useEffect, useState } from 'react'
 
-import { getLogs } from '@/hermes'
 import { startCompletionPoll } from '@/lib/completion-poll'
+import { getLogs } from '@/scout'
 import { $activeGatewayProfile } from '@/store/profile'
 
 export const LOG_POLL_MS = 2000

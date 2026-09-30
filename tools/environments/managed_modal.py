@@ -43,7 +43,7 @@ def _result(output: str, returncode: int = 1) -> dict:
 
 
 class ManagedModalEnvironment(BaseEnvironment):
-    """Gateway-owned Modal sandbox with Hermes-compatible execute/cleanup."""
+    """Gateway-owned Modal sandbox with Scout-compatible execute/cleanup."""
 
     _stdin_mode = "payload"
     _CONNECT_TIMEOUT_SECONDS = _request_timeout_env("TERMINAL_MANAGED_MODAL_CONNECT_TIMEOUT_SECONDS", 1.0)
@@ -67,9 +67,9 @@ class ManagedModalEnvironment(BaseEnvironment):
             )
         gateway = resolve_managed_tool_gateway("modal")
         if gateway is None:
-            raise ValueError("Managed Modal requires a configured tool gateway and Nous user token")
+            raise ValueError("Managed Modal requires a configured tool gateway and SpaceshipResearch user token")
         self._gateway_origin = gateway.gateway_origin.rstrip("/")
-        self._nous_user_token = gateway.nous_user_token
+        self._spaceshipresearch_user_token = gateway.spaceshipresearch_user_token
         self._task_id, self._persistent, self._image = task_id, persistent_filesystem, image
         self._sandbox_kwargs = dict(modal_sandbox_kwargs or {})
         self._create_idempotency_key = str(uuid.uuid4())
@@ -186,7 +186,7 @@ class ManagedModalEnvironment(BaseEnvironment):
 
     def _request(self, method: str, path: str, *, json: Dict[str, Any] | None = None, timeout: int = 30,
                  extra_headers: Dict[str, str] | None = None) -> requests.Response:
-        headers = {"Authorization": f"Bearer {self._nous_user_token}", "Content-Type": "application/json",
+        headers = {"Authorization": f"Bearer {self._spaceshipresearch_user_token}", "Content-Type": "application/json",
                    **(extra_headers or {})}
         return requests.request(method, f"{self._gateway_origin}{path}", headers=headers, json=json, timeout=timeout)
 

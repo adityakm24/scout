@@ -43,7 +43,7 @@ vi.mock('react-router', () => ({
 }))
 
 vi.mock('@/lib/api', () => ({
-  HERMES_BASE_PATH: '',
+  SCOUT_BASE_PATH: '',
   api: { getModelInfo: apiMocks.getModelInfo },
   buildWsUrl: apiMocks.buildWsUrl
 }))
@@ -71,15 +71,15 @@ vi.mock('@/components/ModelReloadConfirm', () => ({
 vi.mock('@/components/ReasoningPicker', () => ({
   ReasoningPicker: () => null
 }))
-vi.mock('@nous-research/ui/ui/components/button', () => ({
+vi.mock('@spaceshipresearch/ui/ui/components/button', () => ({
   Button: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => (
     <button onClick={onClick}>{children}</button>
   )
 }))
-vi.mock('@nous-research/ui/ui/components/badge', () => ({
+vi.mock('@spaceshipresearch/ui/ui/components/badge', () => ({
   Badge: ({ children }: { children?: ReactNode }) => <span>{children}</span>
 }))
-vi.mock('@nous-research/ui/ui/components/card', () => ({
+vi.mock('@spaceshipresearch/ui/ui/components/card', () => ({
   Card: ({ children }: { children?: ReactNode }) => <div>{children}</div>
 }))
 

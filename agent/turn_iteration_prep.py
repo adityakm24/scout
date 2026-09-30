@@ -56,7 +56,7 @@ def _maybe_inject_iteration_budget_warning(agent: Any, messages: Any) -> bool:
 
     ratio = getattr(agent, "budget_warning_ratio", None)
     kanban_worker = (
-        bool(os.environ.get("HERMES_KANBAN_TASK"))
+        bool(os.environ.get("SCOUT_KANBAN_TASK"))
         and is_dispatcher_owned_worker_context()
         and "kanban_complete" in getattr(agent, "valid_tool_names", ())
     )
@@ -120,10 +120,10 @@ def prepare_iteration(
         _INTERRUPT_SCAFFOLD_MARKER, _maybe_inject_run_budget_wrapup
     )
 
-    # nous.anthropic_wire=auto: a wire switch decided from the previous response lands here,
+    # spaceshipresearch.anthropic_wire=auto: a wire switch decided from the previous response lands here,
     # before this iteration's request is built and with nothing in flight.
-    if getattr(agent, "_nous_wire_pending", None):
-        from agent.nous_wire import apply_pending_wire_switch
+    if getattr(agent, "_spaceshipresearch_wire_pending", None):
+        from agent.spaceshipresearch_wire import apply_pending_wire_switch
         apply_pending_wire_switch(agent)
 
     # Fire step_callback for gateway hooks (agent:step event).
@@ -137,14 +137,14 @@ def prepare_iteration(
     if agent._skill_nudge_interval > 0 and "skill_manage" in agent.valid_tool_names:
         agent._iters_since_skill += 1
 
-    # Nous agent keys live ~1 h and a single turn can run for hours: adopt the keepalive's fresh
+    # SpaceshipResearch agent keys live ~1 h and a single turn can run for hours: adopt the keepalive's fresh
     # key before the one in hand expires (local JWT exp read; no network unless inside the skew)
     # instead of letting this iteration's request 401. With many agents sharing the hour that
     # 401 was a storm, and the pool benched the sole credential for all of them.
     try:
-        agent._adopt_nous_key_before_expiry()
+        agent._adopt_spaceshipresearch_key_before_expiry()
     except Exception:
-        logger.debug("Nous key pre-expiry adoption failed", exc_info=True)
+        logger.debug("SpaceshipResearch key pre-expiry adoption failed", exc_info=True)
 
     # Drain a /steer sent during the last API call so it lands THIS iteration. Delivered as a
     # standalone user row after the newest tool result (never smeared onto the tool row: that
@@ -210,7 +210,7 @@ def prepare_iteration(
         )
         # The merge shrank the list, so the index recorded at turn start can point past this
         # turn's user row: prefetch would inject into a historical row and index-settling hosts
-        # (hermes-webui) would write the current turn to the FRONT of the context. Re-anchor as
+        # (scout-webui) would write the current turn to the FRONT of the context. Re-anchor as
         # the compression-restart path does (last verbatim row wins, never a historical copy);
         # without the text the index cannot be re-derived and is left detectably stale.
         if user_message is not None:

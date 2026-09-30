@@ -4,16 +4,16 @@ import { StatusDot } from '@/components/status-dot'
 import { Button } from '@/components/ui/button'
 import { LogView } from '@/components/ui/log-view'
 import { Tip } from '@/components/ui/tooltip'
-import { getLogs } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { LayoutDashboard, Power, RefreshCw } from '@/lib/icons'
 import { platformStatusTone } from '@/lib/platform-status'
 import type { RuntimeReadinessResult } from '@/lib/runtime-readiness'
 import { cn } from '@/lib/utils'
+import { getLogs } from '@/scout'
 import { reconnectGateway } from '@/store/gateway-reconnect'
 import { notifyError } from '@/store/notifications'
 import { runGatewayRestart } from '@/store/system-actions'
-import type { StatusResponse } from '@/types/hermes'
+import type { StatusResponse } from '@/types/scout'
 
 interface GatewayMenuPanelProps {
   gatewayState: string
@@ -257,6 +257,6 @@ function Section({ children, className }: { children: ReactNode; className?: str
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <div className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">{children}</div>
+    <div className="text-[0.6875rem] font-semibold text-muted-foreground/80">{children}</div>
   )
 }

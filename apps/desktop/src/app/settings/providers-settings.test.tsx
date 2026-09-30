@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ConfirmHost } from '@/components/confirm-host'
 import { $confirmRequest } from '@/store/confirm'
-import type { EnvVarInfo, OAuthProvider } from '@/types/hermes'
+import type { EnvVarInfo, OAuthProvider } from '@/types/scout'
 
 const listOAuthProviders = vi.fn()
 const disconnectOAuthProvider = vi.fn()
@@ -23,7 +23,7 @@ vi.mock('@/store/profile', () => ({
   profileLabel: (p: { display_name?: string; name: string }) => p.display_name || p.name
 }))
 
-vi.mock('@/hermes', () => ({
+vi.mock('@/scout', () => ({
   setApiRequestProfile: vi.fn(),
   getProfiles: async () => ({ profiles: (await import('@/store/profile')).$profiles.get() }),
   disconnectOAuthProvider: (...args: unknown[]) => disconnectOAuthProvider(...args),
@@ -47,12 +47,12 @@ const { $activeGatewayProfile, $profiles } = await import('@/store/profile')
 
 function provider(id: string, loggedIn: boolean, patch: Partial<OAuthProvider> = {}): OAuthProvider {
   return {
-    cli_command: `hermes auth add ${id}`,
+    cli_command: `scout auth add ${id}`,
     disconnectable: true,
     docs_url: '',
     flow: 'device_code',
     id,
-    name: id === 'nous' ? 'Nous Portal' : 'MiniMax',
+    name: id === 'spaceshipresearch' ? 'Scout Portal' : 'MiniMax',
     status: {
       logged_in: loggedIn
     },
@@ -82,11 +82,11 @@ function keyVar(patch: Partial<EnvVarInfo> = {}): EnvVarInfo {
 beforeEach(() => {
   onboarding.set({ manual: false })
   getEnvVars.mockResolvedValue({})
-  disconnectOAuthProvider.mockResolvedValue({ ok: true, provider: 'nous' })
+  disconnectOAuthProvider.mockResolvedValue({ ok: true, provider: 'spaceshipresearch' })
   revealEnvVar.mockResolvedValue({ value: 'old-secret' })
   setEnvVar.mockResolvedValue({ ok: true })
   listOAuthProviders.mockResolvedValue({
-    providers: [provider('nous', true), provider('minimax-oauth', false)]
+    providers: [provider('spaceshipresearch', true), provider('minimax-oauth', false)]
   })
 })
 
@@ -159,11 +159,11 @@ describe('ProvidersSettings', () => {
       await renderProvidersSettings()
       expect(getEnvVars).toHaveBeenCalledWith('beta')
       expect(listOAuthProviders).toHaveBeenCalledWith('beta')
-      fireEvent.click(await screen.findByText('Nous Portal'))
-      expect(startManualProviderOAuth).toHaveBeenCalledWith('nous', 'beta')
-      fireEvent.click(await screen.findByRole('button', { name: 'Remove Nous Portal' }))
+      fireEvent.click(await screen.findByText('Scout Portal'))
+      expect(startManualProviderOAuth).toHaveBeenCalledWith('spaceshipresearch', 'beta')
+      fireEvent.click(await screen.findByRole('button', { name: 'Remove Scout Portal' }))
       fireEvent.click(await screen.findByRole('button', { name: 'Disconnect' }))
-      await waitFor(() => expect(disconnectOAuthProvider).toHaveBeenCalledWith('nous', 'beta'))
+      await waitFor(() => expect(disconnectOAuthProvider).toHaveBeenCalledWith('spaceshipresearch', 'beta'))
     } finally {
       $settingsScopeOverride.set(null)
     }
@@ -172,7 +172,7 @@ describe('ProvidersSettings', () => {
   it('disconnects a connected provider account and refreshes the accounts list', async () => {
     await renderProvidersSettings()
 
-    const remove = await screen.findByRole('button', { name: 'Remove Nous Portal' })
+    const remove = await screen.findByRole('button', { name: 'Remove Scout Portal' })
     await act(async () => {
       fireEvent.click(remove)
     })
@@ -185,7 +185,7 @@ describe('ProvidersSettings', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
     })
 
-    await waitFor(() => expect(disconnectOAuthProvider).toHaveBeenCalledWith('nous', 'default'))
+    await waitFor(() => expect(disconnectOAuthProvider).toHaveBeenCalledWith('spaceshipresearch', 'default'))
     expect(listOAuthProviders).toHaveBeenCalledTimes(2)
   })
 
@@ -193,7 +193,7 @@ describe('ProvidersSettings', () => {
     await renderProvidersSettings()
 
     await act(async () => {
-      fireEvent.click(await screen.findByRole('button', { name: 'Remove Nous Portal' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Remove Scout Portal' }))
     })
 
     await act(async () => {
@@ -207,8 +207,8 @@ describe('ProvidersSettings', () => {
     listOAuthProviders.mockResolvedValue({
       providers: [
         provider('qwen-oauth', true, {
-          cli_command: 'hermes auth add qwen-oauth',
-          disconnect_hint: "Use `hermes auth add qwen-oauth` or that provider's CLI to remove it.",
+          cli_command: 'scout auth add qwen-oauth',
+          disconnect_hint: "Use `scout auth add qwen-oauth` or that provider's CLI to remove it.",
           disconnectable: false,
           flow: 'external',
           name: 'Qwen (via Qwen CLI)'

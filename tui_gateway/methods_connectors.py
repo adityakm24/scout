@@ -29,7 +29,7 @@ def _connector_auth_error(rid, exc):
             "This account cannot manage connectors for this organization.",
         )
     if exc.status == 401 or exc.code in {"invalid_token", "INVALID_TOKEN", "NO_TOKEN"}:
-        return _connector_rpc_error(rid, 4032, ConnectorErrorReason.needs_nous_auth, "Sign in to use connectors.")
+        return _connector_rpc_error(rid, 4032, ConnectorErrorReason.needs_spaceshipresearch_auth, "Sign in to use connectors.")
     return _connector_rpc_error(
         rid, 4030, ConnectorErrorReason.forbidden_scope, "Connector access is not permitted for this account."
     )
@@ -227,7 +227,7 @@ def _connector_rpc(rid, params, action):
     runtime_token = _current_runtime_session_record.set(session)
     try:
         profile_home = session.get("profile_home")
-        with _session_profile_runtime_scope({"profile_home": profile_home or str(_hermes_home)}):
+        with _session_profile_runtime_scope({"profile_home": profile_home or str(_scout_home)}):
             tokens = _set_session_context(session["session_key"], cwd=_session_cwd(session), ui_session_id=request.owner.session_id)
             try:
                 result = _session_connector_rpc(rid, request, session, action)
@@ -365,7 +365,7 @@ def _(rid, params):
     if request.owner.type == "account":
         with _account_scope(request):
             return _apply_connection_answer(rid, answer, operation)
-    with _session_profile_runtime_scope({"profile_home": session.get("profile_home") or str(_hermes_home)}):
+    with _session_profile_runtime_scope({"profile_home": session.get("profile_home") or str(_scout_home)}):
         return _apply_connection_answer(rid, answer, operation)
 
 
@@ -396,7 +396,7 @@ def _operation_view(operation):
 
 
 def _connection_update(operation, change, snapshot):
-    from hermes_constants import get_process_hermes_home, hermes_home_key
+    from scout_constants import get_process_scout_home, scout_home_key
     from tui_gateway import server
     from tui_gateway.connector_payload import connector_ui_payload
 
@@ -417,7 +417,7 @@ def _connection_update(operation, change, snapshot):
                 sid
                 for sid, session in server._sessions.items()
                 if session.get("session_key") == operation.session_key
-                and hermes_home_key(session.get("profile_home") or get_process_hermes_home()) == operation.profile_key
+                and scout_home_key(session.get("profile_home") or get_process_scout_home()) == operation.profile_key
             ),
             None,
         )

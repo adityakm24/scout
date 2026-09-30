@@ -1,7 +1,7 @@
-"""Provider fallback (``fallback_providers``) through REAL ``hermes -z`` processes.
+"""Provider fallback (``fallback_providers``) through REAL ``scout -z`` processes.
 
 Two loopback fakes stand in for two vendors: the primary and the fallback. Everything
-between the CLI and those sockets is real Hermes: config loading, credential resolution,
+between the CLI and those sockets is real Scout: config loading, credential resolution,
 the retry ladder, fallback activation and the fallback client.
 
 Proven here:
@@ -11,7 +11,7 @@ Proven here:
   the FULL conversation (system prompt, turn 1's prompt and answer, turn 2's prompt) and is
   reported as the model that served the turn;
 * a primary whose credentials cannot be resolved walks ``fallback_providers`` at
-  resolution time: a Nous Portal OAuth refresh answered with 5xx (an ``AuthError``) does,
+  resolution time: a Scout Portal OAuth refresh answered with 5xx (an ``AuthError``) does,
   and one that cannot connect at all (an outage: connection refused) must too (#120608).
 """
 
@@ -108,7 +108,7 @@ def test_persistent_primary_503_is_answered_by_fallback_with_full_conversation(t
     assert len(answers) == 1, db_messages(h, run.session_id)
 
 
-# Nous Portal credential-resolution outage (#120608) ------------------------------------
+# Scout Portal credential-resolution outage (#120608) ------------------------------------
 
 
 def _jwt(claims: dict) -> str:
@@ -117,15 +117,15 @@ def _jwt(claims: dict) -> str:
     return f"{seg({'alg': 'none', 'typ': 'JWT'})}.{seg(claims)}.sig"
 
 
-def _expired_nous_auth() -> dict:
-    """An auth.json whose Nous invoke JWT expired an hour ago but whose refresh token is fine:
+def _expired_spaceshipresearch_auth() -> dict:
+    """An auth.json whose SpaceshipResearch invoke JWT expired an hour ago but whose refresh token is fine:
     the next turn must redeem it against the Portal before any inference call."""
     past = int(time.time()) - 3600
     iso = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(past))
-    return {"version": 1, "active_provider": "nous", "providers": {"nous": {
-        "portal_base_url": "https://portal.nousresearch.com",
-        "inference_base_url": "https://inference-api.nousresearch.com/v1",
-        "client_id": "hermes-cli", "token_type": "Bearer", "scope": "inference:invoke",
+    return {"version": 1, "active_provider": "spaceshipresearch", "providers": {"spaceshipresearch": {
+        "portal_base_url": "https://portal.spaceshipresearch.com",
+        "inference_base_url": "https://inference-api.spaceshipresearch.com/v1",
+        "client_id": "scout-cli", "token_type": "Bearer", "scope": "inference:invoke",
         "access_token": _jwt({"sub": "e2e-user", "scope": "inference:invoke", "exp": past}),
         "refresh_token": "refresh-e2e", "obtained_at": iso, "expires_in": 3600, "expires_at": iso,
         "agent_key": None, "agent_key_id": None, "agent_key_expires_at": None,
@@ -182,14 +182,14 @@ def test_primary_credential_resolution_failure_falls_back(tmp_path, portal_kind:
     dead = f"http://127.0.0.1:{_closed_port()}"
     with _portal(portal_kind) as (portal_url, portal_hits), FakeLLMServer(default_text="FROM-FALLBACK") as fallback:
         env = {
-            "HERMES_PORTAL_BASE_URL": portal_url,
+            "SCOUT_PORTAL_BASE_URL": portal_url,
             # Nothing may reach a real vendor host; the loopback fakes stay direct.
             "HTTPS_PROXY": dead, "HTTP_PROXY": dead, "NO_PROXY": "127.0.0.1,localhost",
-            "HERMES_NOUS_TIMEOUT_SECONDS": "5",
+            "SCOUT_SPACESHIPRESEARCH_TIMEOUT_SECONDS": "5",
         }
-        cfg = {"model": {"provider": "nous", "default": "Hermes-4-70B", "context_length": 128000},
+        cfg = {"model": {"provider": "spaceshipresearch", "default": "Scout-4-70B", "context_length": 128000},
                "fallback_providers": _fallback_entry(fallback)}
-        h = Home(tmp_path).write(cfg, {"OPENAI_API_KEY": "sk-fake"}, auth=_expired_nous_auth())
+        h = Home(tmp_path).write(cfg, {"OPENAI_API_KEY": "sk-fake"}, auth=_expired_spaceshipresearch_auth())
         run = bounded_turn(h, PROMPT, TURN_BUDGET, env=env)
         fallback_mains = fallback.main_requests()
 

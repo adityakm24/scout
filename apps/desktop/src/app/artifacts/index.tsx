@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/pagination'
 import { RowButton } from '@/components/ui/row-button'
 import { Tip } from '@/components/ui/tooltip'
-import { getAllSessionMessages, listAllProfileSessions } from '@/hermes'
 import { type Translations, useI18n } from '@/i18n'
 import { resolveBrandIcon } from '@/lib/brand-icon'
 import {
@@ -34,6 +33,7 @@ import { downloadGatewayMediaFile, isArtifactFilePath, isRemoteGateway } from '@
 import { normalize } from '@/lib/text'
 import { fmtDayTime } from '@/lib/time'
 import { cn } from '@/lib/utils'
+import { getAllSessionMessages, listAllProfileSessions } from '@/scout'
 import { notify, notifyError } from '@/store/notifications'
 
 import { useRefreshHotkey } from '../hooks/use-refresh-hotkey'
@@ -286,8 +286,8 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
           return
         }
 
-        if (window.hermesDesktop?.openExternal) {
-          await window.hermesDesktop.openExternal(href)
+        if (window.scoutDesktop?.openExternal) {
+          await window.scoutDesktop.openExternal(href)
         } else {
           window.open(href, '_blank', 'noopener,noreferrer')
         }
@@ -522,7 +522,7 @@ function ArtifactImageCard({ artifact, failedImage, onImageError, onOpenChat }: 
 
       <div className="space-y-1.5 p-2">
         <div className="min-w-0">
-          <div className="mb-0.5 flex items-center gap-1 text-[0.625rem] uppercase tracking-[0.08em] text-(--ui-text-tertiary)">
+          <div className="mb-0.5 flex items-center gap-1 text-[0.6875rem] text-(--ui-text-tertiary)">
             <FileImage className="size-3" />
             {kindLabel}
           </div>
@@ -691,7 +691,7 @@ function ArtifactTable({
 
   return (
     <table className="w-full min-w-176 table-fixed text-left text-[length:var(--conversation-caption-font-size)]">
-      <thead className="border-b border-(--ui-stroke-tertiary) bg-(--ui-bg-quinary) text-[0.625rem] uppercase tracking-[0.08em] text-(--ui-text-tertiary)">
+      <thead className="border-b border-(--ui-stroke-tertiary) bg-(--ui-bg-quinary) text-[0.6875rem] text-(--ui-text-tertiary)">
         <tr>
           {ARTIFACT_COLUMNS.map(col => (
             <th className={cn(col.width(filter), 'px-2.5 py-1.5 font-medium')} key={col.id}>

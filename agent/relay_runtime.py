@@ -1,4 +1,4 @@
-"""Profile-scoped NeMo Relay runtimes owned by the Hermes agent core."""
+"""Profile-scoped NeMo Relay runtimes owned by the Scout agent core."""
 
 from __future__ import annotations
 
@@ -20,18 +20,18 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable
 
-from hermes_constants import get_hermes_home
-from hermes_cli.relay_plugin_cutover import (RELAY_PLUGINS_CONFIG_ENV, configured_legacy_relay_env_vars)
+from scout_constants import get_scout_home
+from scout_cli.relay_plugin_cutover import (RELAY_PLUGINS_CONFIG_ENV, configured_legacy_relay_env_vars)
 
 logger = logging.getLogger(__name__)
 
-SESSION_SCOPE = "hermes.session"
-TURN_SCOPE = "hermes.turn"
-LOGICAL_LLM_SCOPE = "hermes.logical_llm_call"
-RUNTIME_SCHEMA_KEY = "hermes.relay.schema_version"
-RUNTIME_SCHEMA_VERSION = "hermes.relay.runtime.v1"
-RUNTIME_INSTANCE_KEY = "hermes.relay.runtime_instance"
-RELAY_PLUGINS_EXECUTION_CONSUMER = "hermes.nemo_relay.plugins"
+SESSION_SCOPE = "scout.session"
+TURN_SCOPE = "scout.turn"
+LOGICAL_LLM_SCOPE = "scout.logical_llm_call"
+RUNTIME_SCHEMA_KEY = "scout.relay.schema_version"
+RUNTIME_SCHEMA_VERSION = "scout.relay.runtime.v1"
+RUNTIME_INSTANCE_KEY = "scout.relay.runtime_instance"
+RELAY_PLUGINS_EXECUTION_CONSUMER = "scout.nemo_relay.plugins"
 _PROFILE_KEY_CACHE: dict[str, str] = {}
 
 # Bound for native scope ops gating turn/session completion: a wedged pipeline costs one
@@ -69,7 +69,7 @@ _scope_op_executor = _SCOPE_OP_EXECUTOR.get
 
 
 def runtime_metadata(runtime_id: str, **extra: Any) -> dict[str, Any]:
-    """Return the scope metadata that stamps every Hermes-owned Relay scope."""
+    """Return the scope metadata that stamps every Scout-owned Relay scope."""
     return {RUNTIME_SCHEMA_KEY: RUNTIME_SCHEMA_VERSION, RUNTIME_INSTANCE_KEY: runtime_id, **extra}
 
 
@@ -118,7 +118,7 @@ def pop_relay_scope(relay: Any, handle: Any, *, output: Any = None, metadata: An
 def pop_relay_scope_if_top(relay: Any, handle: Any, *, output: Any = None, metadata: Any = None) -> bool:
     """Pop ``handle`` only while it is the top of the scope stack; return whether it was popped.
 
-    Two concurrent Hermes turns in one session share a physical stack, so the first turn to
+    Two concurrent Scout turns in one session share a physical stack, so the first turn to
     finish may find the sibling's live scope above its own. Popping through it would close the
     sibling's scope and letting the binding raise ("scope handle is not at the top of the
     stack") logs a traceback per overlap (#115471). The skipped scope is reclaimed by the
@@ -161,7 +161,7 @@ class _RelayPluginConfigurationLoadError(RuntimeError):
 
 @dataclass
 class RelaySession:
-    """One isolated Relay scope stack owned by a Hermes session."""
+    """One isolated Relay scope stack owned by a Scout session."""
 
     session_id: str
     parent_session_id: str = ""
@@ -183,10 +183,10 @@ def _load_segments_config() -> dict[str, Any]:
     on_compaction = False
     max_turns = 0
     try:
-        # Never import gateway.run here: its import-time env setup (_HERMES_GATEWAY, HERMES_QUIET,
-        # TERMINAL_CWD := home) rebinds a CLI/TUI/cron host — hung approvals (#87183), `hermes -z`
+        # Never import gateway.run here: its import-time env setup (_SCOUT_GATEWAY, SCOUT_QUIET,
+        # TERMINAL_CWD := home) rebinds a CLI/TUI/cron host — hung approvals (#87183), `scout -z`
         # running in $HOME without the launch dir's AGENTS.md (#95577). Same reader it delegates to.
-        from hermes_cli.config_effective import load_user_config_effective
+        from scout_cli.config_effective import load_user_config_effective
 
         telemetry = (load_user_config_effective().get("gateway") or {}).get("telemetry") or {}
         segments = telemetry.get("session_segments") or {}
@@ -215,7 +215,7 @@ class RelayOperationLease:
         """Run cleanup while this lease still owns the runtime lifetime."""
         with self._lock:
             if self._runtime is None:
-                raise RuntimeError("Hermes Relay operation lease is released")
+                raise RuntimeError("Scout Relay operation lease is released")
             return self._runtime._run_in_session_untracked(session, callback, *args, **kwargs)
 
     def release(self) -> None:
@@ -233,7 +233,7 @@ class _ProcessRelayPluginConfiguration:
         self._lock = threading.RLock()
         self._owners: set[int] = set()
         self._state = _RelayPluginConfigurationState.UNINITIALIZED
-        self._relay: Any = None  # set while a Hermes-owned configuration is active
+        self._relay: Any = None  # set while a Scout-owned configuration is active
         self._activation: Any = None
 
     def acquire(self, owner: Any, relay: Any) -> _RelayPluginConfigurationState:
@@ -244,7 +244,7 @@ class _ProcessRelayPluginConfiguration:
                 self._state = self._preflight(relay) or self._activate(relay)
                 if self._state is _RelayPluginConfigurationState.ACTIVE:
                     logger.info(
-                        "Relay plugins are active process-wide and apply to all profiles hosted by this Hermes process."
+                        "Relay plugins are active process-wide and apply to all profiles hosted by this Scout process."
                     )
             self._owners.add(id(owner))
             return self._state
@@ -255,7 +255,7 @@ class _ProcessRelayPluginConfiguration:
                 return _RelayPluginConfigurationState.DISABLED
         except Exception as exc:
             self._activation = None
-            logger.warning("Hermes Relay plugin initialization failed: %s", exc, exc_info=True)
+            logger.warning("Scout Relay plugin initialization failed: %s", exc, exc_info=True)
             return _RelayPluginConfigurationState.FAILED
         self._relay = relay
         return _RelayPluginConfigurationState.ACTIVE
@@ -264,21 +264,21 @@ class _ProcessRelayPluginConfiguration:
         """Return a terminal state when the process cannot take ownership; None to proceed."""
         if self._relay is not None and not self._clear_active():
             logger.warning(
-                "Hermes Relay plugin cleanup is still pending; refusing to replace the process-global configuration"
+                "Scout Relay plugin cleanup is still pending; refusing to replace the process-global configuration"
             )
             return _RelayPluginConfigurationState.FAILED
         try:
             existing_report = relay.plugin.report()
         except Exception:
             logger.warning(
-                "Hermes could not determine whether a process-global Relay plugin configuration is already "
+                "Scout could not determine whether a process-global Relay plugin configuration is already "
                 "active; refusing to replace it", exc_info=True,
             )
             return _RelayPluginConfigurationState.FAILED
         if existing_report is not None:
             logger.warning(
-                "A process-global Relay plugin configuration is already active outside Hermes native ownership; "
-                "leaving it unchanged and disabling Hermes-managed Relay middleware for this process"
+                "A process-global Relay plugin configuration is already active outside Scout native ownership; "
+                "leaving it unchanged and disabling Scout-managed Relay middleware for this process"
             )
             return _RelayPluginConfigurationState.FOREIGN
         return None
@@ -297,7 +297,7 @@ class _ProcessRelayPluginConfiguration:
                     raise RuntimeError("NeMo Relay dynamic plugin initialization returned no activation handle")
                 self._activation = activation
             except Exception as exc:
-                raise RuntimeError("Hermes Relay dynamic plugin activation failed") from exc
+                raise RuntimeError("Scout Relay dynamic plugin activation failed") from exc
         if self._activation is None:
             # Reached only after explicit opt-in. Relay 0.8 no longer layers repository-local
             # configuration onto this explicitly selected payload.
@@ -342,7 +342,7 @@ class _ProcessRelayPluginConfiguration:
             try:
                 step()
             except Exception:
-                logger.warning("Hermes Relay plugin %s failed", what, exc_info=True)
+                logger.warning("Scout Relay plugin %s failed", what, exc_info=True)
                 return False
         self._relay = self._activation = None
         return True
@@ -391,7 +391,7 @@ class RelayRuntime:
             self._execution_consumers.discard(consumer)
 
     def managed_execution_enabled(self) -> bool:
-        """Return whether a Hermes-managed consumer needs the Relay pipeline."""
+        """Return whether a Scout-managed consumer needs the Relay pipeline."""
         with self._execution_consumers_lock:
             return bool(self._execution_consumers)
 
@@ -471,22 +471,22 @@ class RelayRuntime:
             session.rotate_pending = False
             try:
                 self.run_in_session(
-                    session, self.relay.scope.pop, old_handle, output={"hermes.session.segment_reason": reason},
+                    session, self.relay.scope.pop, old_handle, output={"scout.session.segment_reason": reason},
                     metadata=runtime_metadata(self.runtime_id), timeout=_SCOPE_OP_TIMEOUT,
                 )
             except Exception:
                 logger.warning(
-                    "Hermes Relay segment close failed (session=%s segment=%d); abandoning the old segment span",
+                    "Scout Relay segment close failed (session=%s segment=%d); abandoning the old segment span",
                     session.session_id, session.segment - 1, exc_info=True,
                 )
             scope_metadata = runtime_metadata(
-                self.runtime_id, **{"hermes.session.segment": session.segment, "hermes.session.segment_reason": reason},
+                self.runtime_id, **{"scout.session.segment": session.segment, "scout.session.segment_reason": reason},
             )
             try:
                 self._open_session_scope(session, scope_metadata, resolve_parent=False)
             except Exception:
                 logger.warning(
-                    "Hermes Relay segment open failed (session=%s segment=%d); keeping the prior scope handle",
+                    "Scout Relay segment open failed (session=%s segment=%d); keeping the prior scope handle",
                     session.session_id, session.segment, exc_info=True,
                 )
 
@@ -530,7 +530,7 @@ class RelayRuntime:
             return self._sessions.get(session_id)
 
     def get_session(self, session_id: str) -> RelaySession | None:
-        """Return an active Hermes Relay session without creating one."""
+        """Return an active Scout Relay session without creating one."""
         with self._sessions_lock:
             session = None if self._closing else self._sessions.get(str(session_id or ""))
         if session is None:
@@ -542,9 +542,9 @@ class RelayRuntime:
         """Copy the current context and overlay the session's saved Relay vars (a copy: re-entrant from callbacks)."""
         with session.lock:
             if session.closing and not allow_closing:
-                raise RuntimeError("Hermes Relay session is closing")
+                raise RuntimeError("Scout Relay session is closing")
             if session.context is None or session.handle is None:
-                raise RuntimeError("Hermes Relay session context is unavailable")
+                raise RuntimeError("Scout Relay session context is unavailable")
             relay_context = session.context.copy()
         context = contextvars.copy_context()
         for variable, value in relay_context.items():
@@ -614,7 +614,7 @@ class RelayRuntime:
         """Admit one Relay call while keeping process plugins alive."""
         with self._sessions_lock:
             if self._closing:
-                raise RuntimeError("Hermes Relay runtime is shutting down")
+                raise RuntimeError("Scout Relay runtime is shutting down")
             self._active_operations += 1
             self._operations_idle.clear()
 
@@ -639,7 +639,7 @@ class RelayRuntime:
         return RelayOperationLease(self)
 
     def apply_tool_request_intercepts(self, *, session_id: str, tool_name: str, args: dict[str, Any]) -> dict[str, Any]:
-        """Apply Relay request rewriting before Hermes authorizes a tool call."""
+        """Apply Relay request rewriting before Scout authorizes a tool call."""
         request_intercepts = getattr(getattr(self.relay, "tools", None), "request_intercepts", None)
         managed = self.managed_execution_enabled() and callable(request_intercepts)
         session = self.ensure_session({"session_id": session_id}) if managed else None
@@ -665,14 +665,14 @@ class RelayRuntime:
             if session_root is not None and _same_handle(top, session_root) and handle is not session_root:
                 break
             try:
-                orphan_output = {"outcome": "cancelled", "hermes.orphan_drain": True}
+                orphan_output = {"outcome": "cancelled", "scout.orphan_drain": True}
                 pop_relay_scope(self.relay, top, output=orphan_output, metadata=metadata)
                 drained += 1
             except Exception:
-                logger.warning("Hermes Relay orphaned scope drain failed", exc_info=True)
+                logger.warning("Scout Relay orphaned scope drain failed", exc_info=True)
                 break
         if drained:
-            logger.warning("Hermes Relay drained %d orphaned scope(s) before closing %s", drained, handle)
+            logger.warning("Scout Relay drained %d orphaned scope(s) before closing %s", drained, handle)
         try:
             pop_relay_scope(self.relay, handle, output=output, metadata=metadata)
             return None
@@ -728,7 +728,7 @@ class RelayRuntime:
                 del self._sessions[session_id]
             self._forget_subagent(session_id)
         if failure:
-            logger.warning("Hermes Relay session %s closed with errors: %s", session_id, failure)
+            logger.warning("Scout Relay session %s closed with errors: %s", session_id, failure)
 
     def shutdown(self) -> None:
         """Close core scopes and release process plugin configuration."""
@@ -742,14 +742,14 @@ class RelayRuntime:
             return
         thread = threading.Thread(
             target=lambda: (self._operations_idle.wait(), self._finish_shutdown()),
-            name=f"hermes-nemo-relay-shutdown-{self.runtime_id[:8]}", daemon=True,
+            name=f"scout-nemo-relay-shutdown-{self.runtime_id[:8]}", daemon=True,
         )
         try:
             thread.start()
         except Exception:
             with self._sessions_lock:
                 self._shutdown_started = False
-            logger.warning("Hermes Relay deferred shutdown could not start", exc_info=True)
+            logger.warning("Scout Relay deferred shutdown could not start", exc_info=True)
 
     def _finish_shutdown(self) -> None:
         try:
@@ -767,7 +767,7 @@ class RelayRuntime:
         except Exception:
             with self._sessions_lock:
                 self._shutdown_started = False
-            logger.warning("Hermes Relay shutdown failed", exc_info=True)
+            logger.warning("Scout Relay shutdown failed", exc_info=True)
             return
         with self._sessions_lock:
             self._shutdown_complete.set()
@@ -796,7 +796,7 @@ RelayHost = RelayRuntime | NoopRelayRuntime
 
 
 class RelayHostRegistry:
-    """Own exactly one Relay host for each canonical Hermes profile."""
+    """Own exactly one Relay host for each canonical Scout profile."""
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
@@ -811,7 +811,7 @@ class RelayHostRegistry:
             try:
                 host = RelayRuntime(profile_key=key)
             except Exception as exc:
-                logger.warning("Hermes Relay runtime initialization failed", exc_info=True)
+                logger.warning("Scout Relay runtime initialization failed", exc_info=True)
                 host = NoopRelayRuntime(profile_key=key, reason=str(exc))
             self._hosts[key] = host
             return host
@@ -846,7 +846,7 @@ class ConversationLease:
 
 @dataclass
 class RelayTurnContext:
-    """Runtime-only context for one Hermes turn or top-level task."""
+    """Runtime-only context for one Scout turn or top-level task."""
 
     lease: ConversationLease
     turn_id: str
@@ -862,15 +862,15 @@ class RelayTurnContext:
 
 
 _CURRENT_TURN: contextvars.ContextVar[RelayTurnContext | None] = contextvars.ContextVar(
-    "hermes_relay_turn", default=None
+    "scout_relay_turn", default=None
 )
 
-# >0 while the native pipeline is mid-dispatch of a Hermes tool/LLM callback. Nested managed
+# >0 while the native pipeline is mid-dispatch of a Scout tool/LLM callback. Nested managed
 # execution there is structurally broken (the pipeline binds its Futures to the OUTER call's
 # loop, blocked inside the synchronous callback), so resolve_execution_context() bypasses Relay.
 # A ContextVar so the marker follows copy_context() into worker threads / per-thread loops.
 _MANAGED_CALLBACK_DEPTH: contextvars.ContextVar[int] = contextvars.ContextVar(
-    "hermes_relay_managed_callback_depth", default=0
+    "scout_relay_managed_callback_depth", default=0
 )
 
 
@@ -886,11 +886,11 @@ def managed_callback_guard():
 
 
 def _warn_on_error(what: str, callback: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-    """Run fail-open telemetry work: log ``Hermes Relay <what> failed`` and return None on error."""
+    """Run fail-open telemetry work: log ``Scout Relay <what> failed`` and return None on error."""
     try:
         return callback(*args, **kwargs)
     except Exception:
-        logger.warning("Hermes Relay %s failed", what, exc_info=True)
+        logger.warning("Scout Relay %s failed", what, exc_info=True)
         return None
 
 
@@ -912,7 +912,7 @@ def _flag_open_session(session: RelaySession, flag: str) -> None:
 
 
 class RelaySessionCoordinator:
-    """Own semantic conversation and turn lifetimes for Hermes core."""
+    """Own semantic conversation and turn lifetimes for Scout core."""
 
     def __init__(self, registry: RelayHostRegistry = HOST_REGISTRY) -> None:
         self.registry = registry
@@ -933,7 +933,7 @@ class RelaySessionCoordinator:
             try:
                 callback(host, context)
             except Exception:
-                logger.warning("Hermes Relay session initializer failed: %s", name, exc_info=True)
+                logger.warning("Scout Relay session initializer failed: %s", name, exc_info=True)
 
     def acquire_conversation(
         self,
@@ -971,7 +971,7 @@ class RelaySessionCoordinator:
     def _open_conversation_session(self, host: RelayRuntime, context: dict[str, Any]) -> RelaySession | None:
         self._prepare_session(host, context)
         session_id, parent_session_id = context["session_id"], context["parent_session_id"]
-        metadata = {"hermes.execution_surface": context["platform"] or "unknown"}
+        metadata = {"scout.execution_surface": context["platform"] or "unknown"}
         cwd = context.get("cwd")
         if parent_session_id and parent_session_id != session_id:
             event = {"parent_session_id": parent_session_id, "child_session_id": session_id}
@@ -987,7 +987,7 @@ class RelaySessionCoordinator:
         metadata: dict[str, Any] | None = None,
     ) -> RelayTurnContext:
         if lease.released:
-            raise RuntimeError("Hermes Relay conversation lease is released")
+            raise RuntimeError("Scout Relay conversation lease is released")
         turn = RelayTurnContext(lease=lease, turn_id=turn_id, task_id=task_id)
         key = (lease.profile_key, lease.session_id)
         with self._active_turns_lock:
@@ -995,7 +995,7 @@ class RelaySessionCoordinator:
                 # One physical scope stack per session; concurrent turns' sibling scopes would not close LIFO.
                 turn.relay_enabled = False
                 logger.warning(
-                    "Skipping Relay instrumentation for concurrent Hermes turn %s in session %s",
+                    "Skipping Relay instrumentation for concurrent Scout turn %s in session %s",
                     turn_id, lease.session_id,
                 )
             else:
@@ -1009,7 +1009,7 @@ class RelaySessionCoordinator:
             turn_metadata.update(
                 runtime_metadata(
                     host.runtime_id,
-                    **{"hermes.execution_surface": lease.platform or "unknown"},
+                    **{"scout.execution_surface": lease.platform or "unknown"},
                 )
             )
             turn.handle = _warn_on_error(
@@ -1067,7 +1067,7 @@ class RelaySessionCoordinator:
             turn.lease.session, turn.handle, output={"outcome": outcome}, failure_label="turn scope close failed",
         )
         if failure:
-            logger.warning("Hermes Relay turn finalization failed: %s", failure)
+            logger.warning("Scout Relay turn finalization failed: %s", failure)
 
     @_fail_open("deferred session close")
     def _consume_deferred_close(self, lease: ConversationLease) -> None:
@@ -1149,7 +1149,7 @@ class RelaySessionCoordinator:
                 # Stack-owned: if the newest handle cannot close even after drain, older ones cannot either.
                 for pending_request_id, pending_handle in logical_calls:
                     turn.logical_llm_calls.setdefault(pending_request_id, pending_handle)
-            logger.warning("Hermes Relay logical LLM finalization failed: %s", failure)
+            logger.warning("Scout Relay logical LLM finalization failed: %s", failure)
             break
 
     @staticmethod
@@ -1211,7 +1211,7 @@ def resolve_execution_context(session_id: str) -> tuple[RelayRuntime | None, Rel
     # still records the tool-level event.
     if _MANAGED_CALLBACK_DEPTH.get() > 0 or not relay_instrumentation_enabled():
         # A managed Relay callback is already executing on this logical call path (e.g. the native
-        # ``tools.execute`` pipeline is mid-dispatch of a Hermes tool). Nested managed execution here is
+        # ``tools.execute`` pipeline is mid-dispatch of a Scout tool). Nested managed execution here is
         # structurally impossible: the native pipeline binds its Futures to the OUTER call's event loop,
         # which is blocked inside the synchronous tool callback until the tool returns. A nested managed LLM
         # call (the vision_analyze auxiliary path) therefore awaits a foreign-loop Future that can never
@@ -1233,7 +1233,7 @@ def resolve_execution_context(session_id: str) -> tuple[RelayRuntime | None, Rel
 
 
 def apply_tool_request_intercepts(*, session_id: str, tool_name: str, args: dict[str, Any]) -> dict[str, Any]:
-    """Return Relay-rewritten arguments at Hermes's authorization boundary."""
+    """Return Relay-rewritten arguments at Scout's authorization boundary."""
     runtime = get_runtime(create=False) if session_id else None
     if runtime is None:
         return args
@@ -1252,14 +1252,14 @@ def _is_relay_wrapped_callback_error(relay_error: BaseException, callback_error:
 
 
 def get_runtime(*, create: bool = True, profile_key: str | None = None) -> RelayRuntime | None:
-    """Return the Relay host for the active Hermes profile."""
+    """Return the Relay host for the active Scout profile."""
     host = HOST_REGISTRY.for_profile(profile_key, create=create)
     return host if isinstance(host, RelayRuntime) else None
 
 
 def current_profile_key() -> str:
     """Return the canonical profile identity used for runtime isolation."""
-    home = get_hermes_home().expanduser()
+    home = get_scout_home().expanduser()
     if not home.is_absolute():
         return str(home.resolve())
     return _PROFILE_KEY_CACHE.get(str(home)) or _PROFILE_KEY_CACHE.setdefault(str(home), str(home.resolve()))
@@ -1277,10 +1277,10 @@ def _configured_plugin_inputs(relay: Any) -> tuple[dict[str, Any], list[Any]] | 
         if legacy_vars := configured_legacy_relay_env_vars(os.environ):
             logger.warning(
                 "Legacy NeMo Relay exporter variables are set but no %s was provided — NO traces are being "
-                "exported. %s no longer activate Relay exporters. Run `hermes migrate relay` (or `hermes update`, "
+                "exported. %s no longer activate Relay exporters. Run `scout migrate relay` (or `scout update`, "
                 "which runs it for every profile) to generate %s from them and select it in .env.",
                 RELAY_PLUGINS_CONFIG_ENV, ", ".join(legacy_vars),
-                get_hermes_home() / "relay-plugins.toml",
+                get_scout_home() / "relay-plugins.toml",
             )
         return None
     config_path = Path(configured).expanduser()
@@ -1288,12 +1288,12 @@ def _configured_plugin_inputs(relay: Any) -> tuple[dict[str, Any], list[Any]] | 
         with config_path.open("rb") as config_file:
             config = tomllib.load(config_file)
         if "dynamic_plugins" in config:
-            raise ValueError("Hermes [[dynamic_plugins]] records are unsupported; use Relay [[plugins.dynamic]] records")
+            raise ValueError("Scout [[dynamic_plugins]] records are unsupported; use Relay [[plugins.dynamic]] records")
         dynamic_plugins = relay.plugin.load_dynamic_plugin_activation_specs(config_path) if "plugins" in config else []
         return {k: v for k, v in config.items() if k != "plugins"}, dynamic_plugins
     except Exception as exc:
         raise _RelayPluginConfigurationLoadError(
-            f"Hermes Relay plugin configuration could not be loaded from {config_path}; continuing without Relay plugins"
+            f"Scout Relay plugin configuration could not be loaded from {config_path}; continuing without Relay plugins"
         ) from exc
 
 
@@ -1307,7 +1307,7 @@ def _resolve_plugin_awaitable(value: Any) -> Any:
         asyncio.get_running_loop()
     except RuntimeError:
         return asyncio.run(value)
-    return _run_on_daemon_thread(lambda: asyncio.run(value), name="hermes-nemo-relay-plugin-lifecycle")
+    return _run_on_daemon_thread(lambda: asyncio.run(value), name="scout-nemo-relay-plugin-lifecycle")
 
 
 def _session_id(event: dict[str, Any]) -> str:

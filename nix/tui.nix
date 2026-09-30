@@ -1,6 +1,6 @@
-# Self-contained Hermes TUI, compiled by the same recipe as npm.
-{ hermesNpmLib, ... }:
-hermesNpmLib.buildNpmPackage {
+# Self-contained Scout TUI, compiled by the same recipe as npm.
+{ scoutNpmLib, ... }:
+scoutNpmLib.buildNpmPackage {
   dirs = [
     "ui-tui"
     "apps/shared"
@@ -19,8 +19,8 @@ hermesNpmLib.buildNpmPackage {
 
   installPhase = ''
     runHook preInstall
-    mkdir -p $out/lib/hermes-tui
-    cp -r "$TMPDIR/tui-product/." $out/lib/hermes-tui/
+    mkdir -p $out/lib/scout-tui
+    cp -r "$TMPDIR/tui-product/." $out/lib/scout-tui/
     runHook postInstall
   '';
 }

@@ -1,6 +1,6 @@
 # Browser Use Mode Benchmark
 
-The A/B battery behind PR [#81958](https://github.com/NousResearch/hermes-agent/pull/81958)
+The A/B battery behind PR [#81958](https://github.com/SpaceshipResearch/scout-agent/pull/81958)
 (Browser Use CLI 3.0 mode, salvage of #66476 by @laithrw): built-in
 `browser_*` toolset vs the single `browser_exec` driver, measured as total
 task tokens / tool calls / wall clock at accuracy parity on live multi-step
@@ -12,7 +12,7 @@ web tasks.
   `browser_*` tools from a merge-base checkout; `pr` runs `browser_exec`
   (`browser.backend: browser-use`) from the branch checkout; `prns` is `pr`
   with the schema's helpers digest stripped to the header (isolates the
-  digest's value). Each cell gets a throwaway `HERMES_HOME`; web-fetch
+  digest's value). Each cell gets a throwaway `SCOUT_HOME`; web-fetch
   credentials are stripped so every arm must actually drive the browser.
 - **Tasks are oracle-checked.** toscrape-family sites (stable content, no
   anti-bot), regex oracles over the final answer. `tasks/easy.json` (5 tasks:
@@ -23,7 +23,7 @@ web tasks.
 - **Resume-safe.** Completed cells in `results/*.jsonl` are skipped on rerun
   (same pattern as `evals/toolperf_abeval`).
 - **Backend matrix.** `orchestrate.py` drives a local headless-Chrome CDP;
-  `orchestrate_cloud.py --backend nous-cloud|browserbase` provisions a real
+  `orchestrate_cloud.py --backend spaceshipresearch-cloud|browserbase` provisions a real
   cloud browser per cell through the same provider plumbing the product uses.
 
 ## Run
@@ -73,10 +73,10 @@ nothing and saves a little; the full 11KB live skill dump adds nothing.
 ```
 model      backend          ok  tok_mean  calls   wall
 opus4.8    local-cdp     17/18     25934    2.0   17.5
-opus4.8    nous-cloud    12/12     33330    2.8   33.8
+opus4.8    spaceshipresearch-cloud    12/12     33330    2.8   33.8
 opus4.8    browserbase    6/6      26712    2.2   23.2
 kimi-k3    local-cdp     18/18     19230    2.4   33.3
-kimi-k3    nous-cloud    12/12     22050    2.9   41.4
+kimi-k3    spaceshipresearch-cloud    12/12     22050    2.9   41.4
 kimi-k3    browserbase    6/6      22121    2.8   35.2
 ```
 

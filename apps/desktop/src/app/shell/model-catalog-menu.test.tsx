@@ -27,7 +27,7 @@ import {
   setVisibleModels
 } from '@/store/model-visibility'
 import { $defaultReasoningEffort } from '@/store/session'
-import type { LocalRuntimeJob } from '@/types/hermes'
+import type { LocalRuntimeJob } from '@/types/scout'
 
 import { ModelCatalogMenu, type ModelMenuController } from './model-catalog-menu'
 
@@ -40,7 +40,7 @@ beforeAll(() => {
 
 const getGlobalModelOptions = vi.fn()
 
-vi.mock('@/hermes', () => ({
+vi.mock('@/scout', () => ({
   getGlobalModelOptions: (...args: unknown[]) => getGlobalModelOptions(...args),
   // The menu kicks the app-level job poller on mount; echo the store so a
   // poll can't wipe the jobs a test staged (the real backend is authority,
@@ -385,12 +385,12 @@ describe('the catalog renders per-model pricing', () => {
     getGlobalModelOptions.mockResolvedValue({
       providers: [
         {
-          models: ['anthropic/claude-sonnet-5', 'nous/hermes-4'],
-          name: 'Nous Portal',
-          slug: 'nous',
+          models: ['anthropic/claude-sonnet-5', 'spaceshipresearch/scout-4'],
+          name: 'Scout Portal',
+          slug: 'spaceshipresearch',
           pricing: {
             'anthropic/claude-sonnet-5': { input: '$1.60', output: '$8.00', cache: '$0.16', free: false },
-            'nous/hermes-4': { input: 'free', output: 'free', cache: null, free: true }
+            'spaceshipresearch/scout-4': { input: 'free', output: 'free', cache: null, free: true }
           }
         }
       ]
@@ -412,8 +412,8 @@ describe('the catalog renders per-model pricing', () => {
       providers: [
         {
           models: ['anthropic/claude-sonnet-5'],
-          name: 'Nous Portal',
-          slug: 'nous',
+          name: 'Scout Portal',
+          slug: 'spaceshipresearch',
           pricing: {
             'anthropic/claude-sonnet-5': {
               input: '$1.60',
@@ -437,11 +437,11 @@ describe('the catalog renders per-model pricing', () => {
     getGlobalModelOptions.mockResolvedValue({
       providers: [
         {
-          models: ['nous/hermes-4'],
-          name: 'Nous Portal',
-          slug: 'nous',
+          models: ['spaceshipresearch/scout-4'],
+          name: 'Scout Portal',
+          slug: 'spaceshipresearch',
           pricing: {
-            'nous/hermes-4': { input: 'free', output: 'free', cache: null, free: true }
+            'spaceshipresearch/scout-4': { input: 'free', output: 'free', cache: null, free: true }
           }
         }
       ]
@@ -457,8 +457,8 @@ describe('the catalog renders per-model pricing', () => {
       providers: [
         {
           models: ['anthropic/claude-sonnet-5'],
-          name: 'Nous Portal',
-          slug: 'nous',
+          name: 'Scout Portal',
+          slug: 'spaceshipresearch',
           pricing: {
             'anthropic/claude-sonnet-5': {
               input: '$1.60',
@@ -484,8 +484,8 @@ describe('the catalog renders per-model pricing', () => {
       providers: [
         {
           models: ['anthropic/claude-sonnet-5', 'anthropic/claude-sonnet-5-fast'],
-          name: 'Nous Portal',
-          slug: 'nous',
+          name: 'Scout Portal',
+          slug: 'spaceshipresearch',
           pricing: {
             'anthropic/claude-sonnet-5-fast': {
               input: '$0.80',
@@ -508,8 +508,8 @@ describe('the catalog renders per-model pricing', () => {
       providers: [
         {
           models: ['anthropic/claude-sonnet-5'],
-          name: 'Nous Portal',
-          slug: 'nous'
+          name: 'Scout Portal',
+          slug: 'spaceshipresearch'
         }
       ]
     })

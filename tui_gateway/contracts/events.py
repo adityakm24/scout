@@ -10,7 +10,7 @@ A handful of payloads stay ``extra="allow"`` on purpose: their closed shape is o
 module (the skin engine, the pet store, the goal/loop/heartbeat state files, the free-tier bootstrap
 record) or they are watcher signals whose payload is ``{}`` today and may grow. Everything else is
 closed, so a drifted emitter fails the suite (``registry.check_payload`` raises under
-``HERMES_TEST_ISOLATION``).
+``SCOUT_TEST_ISOLATION``).
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ class OpenPayload(Payload):
 
 
 class SkinPayload(OpenPayload):
-    """``tui_gateway/change_watcher.py::resolve_skin`` — the resolved active skin (``HermesSkin``).
+    """``tui_gateway/change_watcher.py::resolve_skin`` — the resolved active skin (``ScoutSkin``).
     ``{}`` when the skin engine failed to load. Colour maps are token → colour string."""
 
     name: str = ""
@@ -64,7 +64,7 @@ event("skin.changed", SkinPayload,
 
 
 class SetupReadyPayload(OpenPayload):
-    """``hermes_cli/free_tier_bootstrap.py::SetupRecord.as_payload``."""
+    """``scout_cli/free_tier_bootstrap.py::SetupRecord.as_payload``."""
 
     provider_configured: bool
     inference_provider: str
@@ -163,7 +163,7 @@ class BillingBlock(Payload):
     provider_label: str
     model: str
     billing_url: str | None
-    is_nous: bool
+    is_spaceshipresearch: bool
     message: str
     unverified: bool | None = None
 
@@ -705,6 +705,7 @@ class ChangeSignalPayload(OpenPayload):
 
 
 event("cron.changed", ChangeSignalPayload, doc="cron/jobs.json moved; refetch the cron list.")
+event("planner.changed", ChangeSignalPayload, doc="planner/todos.json moved; refetch the to-do list.")
 event("sessions.changed", ChangeSignalPayload, doc="state.db moved; refetch the session list.")
 event("platforms.changed", ChangeSignalPayload, doc="gateway_state.json moved; refetch platform status.")
 event("projects.changed", ChangeSignalPayload, doc="projects.db moved; refetch the project list + tree.")

@@ -175,7 +175,7 @@ describe('deriveBillingView', () => {
     expect(view.status).toBe('normal')
     expect(view.paymentRow?.value).toBe('Visa •••• 4242 - subscription card')
     expect(view.topupRow?.chips?.map(chip => chip.label)).toEqual(['$25', '$50', '$100'])
-    expect(view.plan?.link?.url).toBe('https://portal.nousresearch.com/manage-subscription?org_id=org_123')
+    expect(view.plan?.link?.url).toBe('https://portal.spaceshipresearch.com/manage-subscription?org_id=org_123')
     expect(view.usageRows.find(row => row.id === 'subscription_credits')).toMatchObject({
       bar: { value: 0.4 },
       value: '$40 of $100 left'
@@ -198,7 +198,7 @@ describe('deriveBillingView', () => {
     expect(view.refillRow?.caption).toContain('reconcile')
     expect(view.refillRow?.action).toEqual({
       label: 'Reconcile ↗',
-      url: 'https://portal.nousresearch.com/billing'
+      url: 'https://portal.spaceshipresearch.com/billing'
     })
   })
 
@@ -216,7 +216,7 @@ describe('deriveBillingView', () => {
 
     expect(view.refillRow?.caption).toContain('a different card')
     expect(view.refillRow?.caption).not.toContain('null')
-    expect(view.refillRow?.action?.url).toBe('https://portal.nousresearch.com/billing')
+    expect(view.refillRow?.action?.url).toBe('https://portal.spaceshipresearch.com/billing')
   })
 
   it('keeps buy credit controls visible but disabled when no card is on file', () => {
@@ -241,7 +241,7 @@ describe('deriveBillingView', () => {
     expect(view.status).toBe('logged_out')
     expect(view.summary.map(item => item.value)).toEqual(['—', '—', '—'])
     expect(view.notice).toMatchObject({
-      title: 'Connect your Nous account'
+      title: 'Connect your SpaceshipResearch account'
     })
     expect(view.paymentRow).toBeUndefined()
     expect(view.topupRow).toBeUndefined()
@@ -251,7 +251,7 @@ describe('deriveBillingView', () => {
 
   it('signs in from the logged-out notice through the shared sign-in dialog, not a portal link', () => {
     // A plain portal link never writes a credential, so the page would stay logged out forever
-    // (#87792). The action must open the one Nous sign-in dialog (device-code + poll).
+    // (#87792). The action must open the one SpaceshipResearch sign-in dialog (device-code + poll).
     $freeTierSignIn.set({ status: 'closed' })
     const view = deriveBillingView(okBilling(loggedOutBillingState), okSubscription(loggedOutSubscriptionState))
 
@@ -265,19 +265,19 @@ describe('deriveBillingView', () => {
     // A free-tier install is logged_in:false, so this branch must win — otherwise
     // the generic "connect your account" notice sends the user to the portal.
     const view = deriveBillingView(
-      okBilling({ ...loggedOutBillingState, free_tier_account: true, free_tier_model: 'nous/welcome' }),
+      okBilling({ ...loggedOutBillingState, free_tier_account: true, free_tier_model: 'spaceshipresearch/welcome' }),
       okSubscription(loggedOutSubscriptionState)
     )
 
     expect(view.status).toBe('free_tier')
-    expect(view.notice).toMatchObject({ title: "You're on the Nous free tier", tone: 'info' })
+    expect(view.notice).toMatchObject({ title: "You're on the SpaceshipResearch free tier", tone: 'info' })
     expect(view.notice?.action?.label).toBe('Sign in')
     expect(view.summary).toEqual([
       { label: 'Plan', value: 'Free tier' },
-      { label: 'Model', value: 'nous/welcome' },
+      { label: 'Model', value: 'spaceshipresearch/welcome' },
       { label: 'Connectors', tone: 'primary', value: 'Included' }
     ])
-    expect(view.plan).toMatchObject({ tierName: 'Nous · free tier' })
+    expect(view.plan).toMatchObject({ tierName: 'SpaceshipResearch · free tier' })
     expect(view.plan?.action).toBeUndefined()
     expect(view.planFootnote).toContain('no balance and nothing to pay')
     expect(view.paymentRow).toBeUndefined()
@@ -312,7 +312,7 @@ describe('deriveBillingView', () => {
     // The caption promises the portal is still reachable — so the link must exist.
     expect(view.plan?.link).toMatchObject({
       label: 'Adjust plan ↗',
-      url: 'https://portal.nousresearch.com/manage-subscription'
+      url: 'https://portal.spaceshipresearch.com/manage-subscription'
     })
   })
 
@@ -405,7 +405,7 @@ describe('derivePlanCard (current-plan card)', () => {
     expect(view.plan?.action).toBeUndefined()
     expect(view.plan?.link).toMatchObject({
       label: 'Adjust plan ↗',
-      url: 'https://portal.nousresearch.com/manage-subscription?org_id=sid-5'
+      url: 'https://portal.spaceshipresearch.com/manage-subscription?org_id=sid-5'
     })
   })
 
@@ -418,7 +418,7 @@ describe('derivePlanCard (current-plan card)', () => {
     expect(view.plan?.action).toBeUndefined()
     expect(view.plan?.link).toMatchObject({
       label: 'Adjust plan ↗',
-      url: 'https://portal.nousresearch.com/manage-subscription?org_id=sid-5'
+      url: 'https://portal.spaceshipresearch.com/manage-subscription?org_id=sid-5'
     })
   })
 
@@ -595,7 +595,7 @@ describe('derivePlanTiers (plans grid)', () => {
     expect('action' in byName.Plus).toBe(false)
     expect(byName.Super).toMatchObject({
       action: {
-        url: 'https://portal.nousresearch.com/manage-subscription?org_id=org_personal_plus&plan=cltier222super222personal'
+        url: 'https://portal.spaceshipresearch.com/manage-subscription?org_id=org_personal_plus&plan=cltier222super222personal'
       },
       creditsDisplay: '$110 credits/mo',
       state: 'upgrade'
@@ -629,7 +629,7 @@ describe('derivePlanTiers (plans grid)', () => {
     expect(view.tiers.some(tier => tier.state === 'downgrade')).toBe(false)
     expect(byName.Plus).toMatchObject({
       action: {
-        url: 'https://portal.nousresearch.com/manage-subscription?org_id=org_personal_free&plan=cltier111plus1111personal'
+        url: 'https://portal.spaceshipresearch.com/manage-subscription?org_id=org_personal_free&plan=cltier111plus1111personal'
       }
     })
   })
@@ -797,26 +797,26 @@ describe('buildManageSubscriptionUrl', () => {
     expect(
       buildManageSubscriptionUrl({
         org_id: 'org_123',
-        portal_url: 'https://portal.nousresearch.com/billing'
+        portal_url: 'https://portal.spaceshipresearch.com/billing'
       })
-    ).toBe('https://portal.nousresearch.com/manage-subscription?org_id=org_123')
+    ).toBe('https://portal.spaceshipresearch.com/manage-subscription?org_id=org_123')
   })
 
   it('appends plan=<tierId> when a tier is chosen', () => {
     expect(
       buildManageSubscriptionUrl(
-        { org_id: 'org_123', portal_url: 'https://portal.nousresearch.com/billing' },
+        { org_id: 'org_123', portal_url: 'https://portal.spaceshipresearch.com/billing' },
         null,
         'tier_abc'
       )
-    ).toBe('https://portal.nousresearch.com/manage-subscription?org_id=org_123&plan=tier_abc')
+    ).toBe('https://portal.spaceshipresearch.com/manage-subscription?org_id=org_123&plan=tier_abc')
   })
 
   it('applies org_id + plan to the hard-coded portal fallback when no portal_url resolves', () => {
     // Regression: the fallback must be the last-resort ORIGIN, not a bare return that
     // silently drops org_id/plan.
     expect(buildManageSubscriptionUrl({ org_id: 'org_z', portal_url: null }, null, 'tier_q')).toBe(
-      'https://portal.nousresearch.com/manage-subscription?org_id=org_z&plan=tier_q'
+      'https://portal.spaceshipresearch.com/manage-subscription?org_id=org_z&plan=tier_q'
     )
   })
 })

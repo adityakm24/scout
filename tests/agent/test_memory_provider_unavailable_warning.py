@@ -1,8 +1,8 @@
-"""Regression tests for NousResearch/hermes-agent#2765.
+"""Regression tests for SpaceshipResearch/scout-agent#2765.
 
 A memory provider configured via ``memory.provider`` but reporting
 ``is_available() == False`` (e.g. missing credentials, or a systemd/gateway
-service that didn't inherit ``~/.hermes/.env``) used to be dropped silently.
+service that didn't inherit ``~/.scout/.env``) used to be dropped silently.
 ``agent_init`` now emits a one-time, deduped warning instead.
 """
 

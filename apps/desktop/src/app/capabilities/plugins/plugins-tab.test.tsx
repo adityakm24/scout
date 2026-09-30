@@ -210,8 +210,8 @@ describe('PluginsTab', () => {
       {
         description: '',
         has_desktop_half: true,
-        key: 'nous-prices',
-        name: 'nous-prices',
+        key: 'spaceshipresearch-prices',
+        name: 'spaceshipresearch-prices',
         source: 'catalog',
         status: 'enabled',
         version: '1'
@@ -220,7 +220,7 @@ describe('PluginsTab', () => {
 
     renderPlugins({ profile: null })
 
-    const detail = within(screen.getByRole('row', { name: /^nous-prices/ }))
+    const detail = within(screen.getByRole('row', { name: /^spaceshipresearch-prices/ }))
     expect(detail.getByText('unavailable (remote backend)')).toBeTruthy()
     expect(detail.queryByText('copying…')).toBeNull()
   })
@@ -230,8 +230,8 @@ describe('PluginsTab', () => {
       {
         description: '',
         has_desktop_half: true,
-        key: 'nous-prices',
-        name: 'nous-prices',
+        key: 'spaceshipresearch-prices',
+        name: 'spaceshipresearch-prices',
         source: 'catalog',
         status: 'enabled',
         version: '1'
@@ -240,20 +240,20 @@ describe('PluginsTab', () => {
 
     renderPlugins({ profile: null })
 
-    const detail = within(screen.getByRole('row', { name: /^nous-prices/ }))
+    const detail = within(screen.getByRole('row', { name: /^spaceshipresearch-prices/ }))
     expect(detail.getByText('copying…')).toBeTruthy()
     expect(detail.queryByText('unavailable (remote backend)')).toBeNull()
   })
 
   it('renders a unified package as ONE row with a Desktop switch and an Agent switch', () => {
     $pluginRecords.set({
-      media: { id: 'media', name: 'Media Studio', kind: 'disk', status: 'loaded', packageName: 'hermes-media-studio' }
+      media: { id: 'media', name: 'Media Studio', kind: 'disk', status: 'loaded', packageName: 'scout-media-studio' }
     })
     $agentPlugins.set([
       {
         description: '',
-        key: 'hermes-media-studio',
-        name: 'hermes-media-studio',
+        key: 'scout-media-studio',
+        name: 'scout-media-studio',
         source: 'git',
         status: 'disabled',
         version: '1'
@@ -276,8 +276,8 @@ describe('PluginsTab', () => {
         name: 'Media Studio',
         kind: 'disk',
         status: 'loaded',
-        packageName: 'hermes-media-studio',
-        packageOrigin: { repo: 'https://github.com/NousResearch/hermes-media-studio.git', sha: 'abc' }
+        packageName: 'scout-media-studio',
+        packageOrigin: { repo: 'https://github.com/SpaceshipResearch/scout-media-studio.git', sha: 'abc' }
       }
     })
 
@@ -290,7 +290,7 @@ describe('PluginsTab', () => {
       expect($pluginInstallRequest.get()).toMatchObject({
         legacyHint: 'agent',
         profile: 'workbot',
-        repo: 'https://github.com/NousResearch/hermes-media-studio.git',
+        repo: 'https://github.com/SpaceshipResearch/scout-media-studio.git',
         sha: 'abc'
       })
     })
@@ -298,7 +298,7 @@ describe('PluginsTab', () => {
 
   it('disables "Install here" when the package has no known origin (hand-copied folder)', () => {
     $pluginRecords.set({
-      media: { id: 'media', name: 'Media Studio', kind: 'disk', status: 'loaded', packageName: 'hermes-media-studio' }
+      media: { id: 'media', name: 'Media Studio', kind: 'disk', status: 'loaded', packageName: 'scout-media-studio' }
     })
 
     renderPlugins({ profile: 'workbot', scopeLabel: 'workbot' })
@@ -504,7 +504,7 @@ describe('PluginsTab', () => {
       expect(checked()).toBe('false')
       expect($pluginRecords.get().kanban.status).toBe('disabled')
       expect($pluginDecisions.get()).not.toHaveProperty('kanban')
-      expect(window.localStorage.getItem('hermes.desktop.pluginDecisions.v2')).toBeNull()
+      expect(window.localStorage.getItem('scout.desktop.pluginDecisions.v2')).toBeNull()
       expect(notices('success')).toHaveLength(0)
 
       // Same intended value again, backend healthy: both halves turn on.
@@ -858,7 +858,7 @@ describe('PluginsTab catalog UX', () => {
   it('offers no desktop Uninstall for a bundled plugin or a unified package half', () => {
     $pluginRecords.set({
       bots: { id: 'bots', name: 'Bot Mode', kind: 'bundled', status: 'loaded' },
-      media: { id: 'media', name: 'Media Studio', kind: 'disk', status: 'loaded', packageName: 'hermes-media-studio' }
+      media: { id: 'media', name: 'Media Studio', kind: 'disk', status: 'loaded', packageName: 'scout-media-studio' }
     })
 
     renderPlugins({ profile: null })

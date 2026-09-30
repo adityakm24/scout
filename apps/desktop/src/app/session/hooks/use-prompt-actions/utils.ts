@@ -1,5 +1,5 @@
 import type { AppendMessage } from '@assistant-ui/react'
-import { JsonRpcGatewayError } from '@hermes/shared'
+import { JsonRpcGatewayError } from '@scout/shared'
 
 import { translateNow, type Translations } from '@/i18n'
 import type { ChatMessage } from '@/lib/chat-messages'
@@ -429,7 +429,7 @@ export function imageFilenameFromPath(filePath: string): string {
 export async function readImageForRemoteAttach(
   filePath: string
 ): Promise<{ contentBase64: string; filename: string } | null> {
-  const dataUrl = await window.hermesDesktop?.readFileDataUrl(filePath)
+  const dataUrl = await window.scoutDesktop?.readFileDataUrl(filePath)
   const contentBase64 = dataUrl ? base64FromDataUrl(dataUrl) : ''
 
   return contentBase64 ? { contentBase64, filename: imageFilenameFromPath(filePath) } : null
@@ -440,7 +440,7 @@ export async function readImageForRemoteAttach(
 // Prefer the attach-specific IPC (256 MiB) so remote uploads are not stuck on
 // the preview/Settings default; fall back for older Electron shells.
 export async function readFileDataUrlForAttach(filePath: string): Promise<string | null> {
-  const reader = window.hermesDesktop?.readFileDataUrlForAttach ?? window.hermesDesktop?.readFileDataUrl
+  const reader = window.scoutDesktop?.readFileDataUrlForAttach ?? window.scoutDesktop?.readFileDataUrl
 
   if (!reader) {
     return null
@@ -583,7 +583,7 @@ export function renderRpcResult(response: unknown, name: string): string {
       `Usage: ${calls.toLocaleString()} calls · ${input.toLocaleString()} in / ${output.toLocaleString()} out · ${total.toLocaleString()} total`
     ]
 
-    // Provider account limits (e.g. Codex quota windows) first, then Nous credits — same order as CLI /usage.
+    // Provider account limits (e.g. Codex quota windows) first, then SpaceshipResearch credits — same order as CLI /usage.
     for (const extra of [r.account_lines, r.credits_lines]) {
       if (Array.isArray(extra)) {
         for (const line of extra) {

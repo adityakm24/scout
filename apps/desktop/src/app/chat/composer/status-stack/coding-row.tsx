@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { CopyButton } from '@/components/ui/copy-button'
 import { DiffCount } from '@/components/ui/diff-count'
-import type { HermesGitBranch } from '@/global'
+import type { ScoutGitBranch } from '@/global'
 import { useI18n } from '@/i18n'
 import { displayPath } from '@/lib/display-path'
 import { openWorktreeDialog, registerRepoStatusCwd, repoStatusForCwd, repoWorktreesForCwd } from '@/store/coding-status'
@@ -22,7 +22,7 @@ import { notifyError } from '@/store/notifications'
 import { $pullRequestsByBranch, branchPrKey, refreshPullRequests } from '@/store/pull-requests'
 
 // Tiny uppercase section header, matching the composer "+" menu's labels.
-const MENU_SECTION = 'text-[0.625rem] font-semibold uppercase tracking-wider text-(--ui-text-tertiary)'
+const MENU_SECTION = 'text-[0.6875rem] font-semiboldr text-(--ui-text-tertiary)'
 
 interface CodingStatusRowProps {
   /** Branch the current draft off into a fresh worktree + session, based on
@@ -34,7 +34,7 @@ interface CodingStatusRowProps {
    *  branch). Drives the dialog's "convert a branch" picker. */
   onConvertBranch?: (branch: string, path?: null | string, isDefault?: boolean) => Promise<void>
   /** List the repo's local branches for the "convert a branch" picker. */
-  onListBranches?: () => Promise<HermesGitBranch[]>
+  onListBranches?: () => Promise<ScoutGitBranch[]>
   /** Open the review pane (changed files + diffs). */
   onOpen?: () => void
   /** Jump into an existing worktree (open a fresh session anchored there). */

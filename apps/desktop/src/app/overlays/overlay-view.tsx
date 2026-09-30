@@ -74,7 +74,7 @@ export function OverlayView({
   return (
     <div
       className={cn(
-        'fixed inset-0 z-50 bg-black/22 backdrop-blur-[0.125rem]',
+        'fixed inset-0 z-50 bg-black/22 backdrop-blur-[0.125rem] animate-in fade-in-0 duration-300',
         // Equidistant inset on every side. The top value is driven by the
         // titlebar height so the card clears the OS traffic-lights vertically;
         // since the card top already sits below them, the left needs no extra
@@ -89,6 +89,7 @@ export function OverlayView({
       // leak into the hidden composer (and the overlay's own bare-key shortcuts,
       // e.g. star map's Space, keep working).
       data-overlay-surface=""
+      data-slot="overlay-backdrop"
       onClick={event => {
         if (event.target === event.currentTarget) {
           closeOverlay()
@@ -105,13 +106,14 @@ export function OverlayView({
       <div className="relative h-full min-h-0">
         <div
           className={cn(
-            'relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-(--ui-stroke-secondary) bg-(--ui-chat-surface-background) shadow-md',
+            'relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-(--ui-stroke-secondary) bg-(--ui-chat-surface-background) shadow-md animate-in fade-in-0 zoom-in-97 slide-in-from-bottom-3',
             rootClassName
           )}
           // Marks the card as a RAISED surface for window glass: while the field
           // behind it thins to show the desktop, this card stays near-opaque
           // (see the [data-glass-raised] rules in styles.css). Inert otherwise.
           data-glass-raised=""
+          data-slot="overlay-card"
         >
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[calc(var(--titlebar-height)+0.1875rem)] [-webkit-app-region:drag]">
             {headerContent && (

@@ -50,7 +50,7 @@ import {
   useQueryClient,
   useValue,
   WorkspacePageHeaderControl
-} from '@hermes/plugin-sdk'
+} from '@scout/plugin-sdk'
 import {
   type CSSProperties,
   type DragEvent as ReactDragEvent,
@@ -439,7 +439,7 @@ function Column({
         <span className="grid h-5 shrink-0 place-items-center">
           <span className="size-1.5 rounded-full" style={{ backgroundColor: meta.tone }} />
         </span>
-        <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-(--ui-text-tertiary) [writing-mode:vertical-rl]">
+        <span className="text-[0.6875rem] font-medium text-(--ui-text-tertiary) [writing-mode:vertical-rl]">
           {label}
         </span>
         {column.tasks.length > 0 && (
@@ -457,7 +457,7 @@ function Column({
       <header className="mb-1.5 flex h-5 items-center gap-1.5 px-1">
         <span className="size-1.5 rounded-full" style={{ backgroundColor: meta.tone }} />
         <Tip label={columnHelp(k, column.name)}>
-          <span className="cursor-help text-[0.6875rem] font-medium uppercase tracking-wide text-(--ui-text-tertiary)">
+          <span className="cursor-help text-[0.6875rem] font-medium text-(--ui-text-tertiary)">
             {label}
           </span>
         </Tip>

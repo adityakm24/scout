@@ -3,11 +3,11 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 
 import { capabilityScoped } from '@/api/client'
 import { Loader } from '@/components/ui/loader'
-import { getOfficialSkills, type ProfileScope, profileScopeKey } from '@/hermes'
 import { useI18n } from '@/i18n'
+import { getOfficialSkills, type ProfileScope, profileScopeKey } from '@/scout'
 import { HUB_SOURCES_KEY, installHubSkill, notifyHubActionFailed, OFFICIAL_SKILLS_KEY } from '@/store/hub-actions'
 import { notify } from '@/store/notifications'
-import type { SkillHubSourcesResponse, SkillInfo } from '@/types/hermes'
+import type { SkillHubSourcesResponse, SkillInfo } from '@/types/scout'
 
 import { CatalogAlert } from './catalog-alert'
 import { CatalogBrowser } from './catalog-browser'
@@ -81,7 +81,7 @@ function ScopedSkillCatalog({
     // lock map rather than guessing identity from a community skill's name.
     // The older getSkillHubSources helper cannot carry a connection pin.
     queryFn: () =>
-      window.hermesDesktop.api<SkillHubSourcesResponse>({
+      window.scoutDesktop.api<SkillHubSourcesResponse>({
         ...capabilityScoped(profile),
         path: '/api/skills/hub/sources',
         timeoutMs: 45_000

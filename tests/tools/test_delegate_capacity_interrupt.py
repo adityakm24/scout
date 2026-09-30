@@ -107,8 +107,8 @@ def _batch(parent, *children):
 
 @pytest.fixture
 def registry_state(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-    monkeypatch.delenv("HERMES_IGNORE_USER_CONFIG", raising=False)
+    monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
+    monkeypatch.delenv("SCOUT_IGNORE_USER_CONFIG", raising=False)
     (tmp_path / "config.yaml").write_text(
         "delegation:\n  max_concurrent_children: 1\n  worktree_isolation: false\n",
         encoding="utf-8",
@@ -236,7 +236,7 @@ def test_rejected_background_child_stops_with_parent(
         child.allow_finish.set()
         result = outcome.result(timeout=5)
         if background_child is None:
-            assert "SYNCHRONOUSLY" in result["note"]
+            assert "SYNCHROSPACESHIPRESEARCHLY" in result["note"]
             assert result["results"][0]["status"] == "interrupted"
         else:
             assert result["status"] == "dispatched"

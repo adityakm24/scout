@@ -1,5 +1,5 @@
-import type { ModelOptionsResult } from '@hermes/shared'
-import { fuzzyRank, modelSearchText } from '@hermes/shared'
+import type { ModelOptionsResult } from '@scout/shared'
+import { fuzzyRank, modelSearchText } from '@scout/shared'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
@@ -9,7 +9,7 @@ import { I18nProvider } from '@/i18n'
 import { $localModelsEnabled } from '@/store/local-models-flag'
 import { localModelsKey, localModelsOwner } from '@/store/local-runtime-jobs'
 import { stubMenuDomApis, stubResizeObserver } from '@/test/jsdom'
-import type { LocalRuntimeJob } from '@/types/hermes'
+import type { LocalRuntimeJob } from '@/types/scout'
 
 import { ModelPickerDialog } from './model-picker'
 
@@ -17,7 +17,7 @@ import { ModelPickerDialog } from './model-picker'
 // whatever the backend answers; answering with the seeded jobs keeps the two equal.
 const seededJobs: { current: readonly LocalRuntimeJob[] } = vi.hoisted(() => ({ current: [] }))
 
-vi.mock('@/hermes', () => ({
+vi.mock('@/scout', () => ({
   getLocalModelsJobs: vi.fn(async () => ({ jobs: [...seededJobs.current] })),
   getLocalModelsStatus: vi.fn().mockResolvedValue({ loading: {} })
 }))
@@ -43,9 +43,9 @@ const OPTIONS: ModelOptionsResult = {
       authenticated: true
     },
     {
-      slug: 'nous',
-      name: 'Nous',
-      models: ['Hermes-4.5'],
+      slug: 'spaceshipresearch',
+      name: 'SpaceshipResearch',
+      models: ['Scout-4.5'],
       authenticated: true
     }
   ]
@@ -133,7 +133,7 @@ describe('ModelPickerDialog download rows', () => {
     })
     renderPicker()
 
-    expect(await screen.findByText('Hermes-4.5')).toBeTruthy()
+    expect(await screen.findByText('Scout-4.5')).toBeTruthy()
     expect(screen.getByText('Qwen3.8 Flash Next (UD-Q4_K_XL)')).toBeTruthy()
     expect(screen.getByText('41%')).toBeTruthy()
   })
@@ -176,9 +176,9 @@ describe('ModelPickerDialog search ranking', () => {
 
   it('orders model rows exactly as the shared fuzzyRank does', async () => {
     vi.mocked(requestModelOptions).mockResolvedValue({
-      providers: [{ slug: 'nous', name: 'Nous', models: MODELS, authenticated: true }]
+      providers: [{ slug: 'spaceshipresearch', name: 'SpaceshipResearch', models: MODELS, authenticated: true }]
     })
-    renderPicker({ currentModel: 'gpt-4o', currentProvider: 'nous' })
+    renderPicker({ currentModel: 'gpt-4o', currentProvider: 'spaceshipresearch' })
     await screen.findByText('gpt-4o')
 
     const query = 'g4o'
@@ -205,9 +205,9 @@ describe('ModelPickerDialog search ranking', () => {
     const catalog = ['gpt-4o', 'claude-3-opus', 'qwen3.8-flash']
 
     vi.mocked(requestModelOptions).mockResolvedValue({
-      providers: [{ slug: 'nous', name: 'Nous', models: catalog, authenticated: true }]
+      providers: [{ slug: 'spaceshipresearch', name: 'SpaceshipResearch', models: catalog, authenticated: true }]
     })
-    renderPicker({ currentModel: 'gpt-4o', currentProvider: 'nous' })
+    renderPicker({ currentModel: 'gpt-4o', currentProvider: 'spaceshipresearch' })
     await screen.findByText('gpt-4o')
 
     fireEvent.change(screen.getByRole('combobox'), { target: { value: query } })

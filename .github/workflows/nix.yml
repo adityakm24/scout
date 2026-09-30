@@ -42,7 +42,7 @@ concurrency:
 jobs:
   # A `paths:` filter cannot gate this workflow correctly. The flake packages
   # the product, and nine of the checks then run the built binary, so a change
-  # to hermes_cli/ alone can fail `nix flake check` without touching one file
+  # to scout_cli/ alone can fail `nix flake check` without touching one file
   # under nix/. The `nix` lane therefore follows python_prod as well as the
   # flake inputs. On push the classifier fails open and every lane is true.
   detect:
@@ -157,8 +157,8 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
-          package="$(nix build "path:$RUNNER_TEMP/release-source#hermes-agent" --no-link --print-out-paths)"
-          actual="$("$package/bin/hermes" --version)"
+          package="$(nix build "path:$RUNNER_TEMP/release-source#scout-agent" --no-link --print-out-paths)"
+          actual="$("$package/bin/scout" --version)"
           ACTUAL_VERSION="$actual" python3 - <<'PY'
           import os
 

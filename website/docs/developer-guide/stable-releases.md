@@ -291,10 +291,10 @@ and only then advances the R2 head.
 ## Canary and one-off desktop identities
 
 `release.py --canary` builds the separate canary application. Its package
-identity and CLI command (`hermes-canary`) differ from stable; the existing
+identity and CLI command (`scout-canary`) differ from stable; the existing
 canary feed updates that application only. One-off builds use
 `release.py --build-commit REV --remote REMOTE` (add `--publish` to dispatch).
-Their application identity and CLI command (`hermes-<7-character-sha>`) include
+Their application identity and CLI command (`scout-<7-character-sha>`) include
 the pinned commit. Two different commit builds do not replace each other.
 
 Branding is selected from those build inputs, not from runtime settings:
@@ -304,12 +304,12 @@ the short SHA. All desktop icon formats derive from the same artwork.
 One-off stamps use `source: commit-build`. No app update feed or App Installer
 subscription is published for them, and both the GUI and bundled CLI refuse
 update requests. They direct the recipient to ask the developer for a new
-build. Source checkout channels are separate: `hermes update --set-channel`
+build. Source checkout channels are separate: `scout update --set-channel`
 remains available there and selects the published release's source commit.
 
 `--build-commit` prints its deterministic downloads-page URL before dispatch,
 including in dry runs:
-`https://hermes-assets.nousresearch.com/releases/commit/<full-sha>/index.html`.
+`https://scout-assets.spaceshipresearch.com/releases/commit/<full-sha>/index.html`.
 `CLOUDFLARE_R2_PUBLIC_URL` overrides the public origin. After admission, the
 commit summary runs even when a build or assembly job fails; it lists only
 receipt-backed existing downloads and marks missing binaries as not built.
@@ -418,7 +418,7 @@ claim tag object's immutable tagger timestamp (`year.hourOfYear.secondOfHour.0`)
 independently of the SemVer payload tag.
 Missing baseline
 artifacts are a blocker, not permission to fabricate or skip acceptance.
-See [the bundled update contract](https://github.com/NousResearch/hermes-agent/blob/main/tests/install/BUNDLED_UPDATES.md).
+See [the bundled update contract](https://github.com/SpaceshipResearch/scout-agent/blob/main/tests/install/BUNDLED_UPDATES.md).
 
 ## Explicit exclusions and policy
 

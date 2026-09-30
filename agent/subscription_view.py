@@ -170,7 +170,7 @@ def subscription_state_from_payload(payload: dict[str, Any], *, portal_url: Opti
 
 def build_subscription_state(*, timeout: float = 15.0) -> SubscriptionState:
     """Fetch + parse ``GET /api/billing/subscription``; fail-open like ``fetch_portal_state``.
-    ``HERMES_DEV_SUBSCRIPTION_FIXTURE`` short-circuits to a fixture so every state is testable offline."""
+    ``SCOUT_DEV_SUBSCRIPTION_FIXTURE`` short-circuits to a fixture so every state is testable offline."""
     fixture = dev_fixture_subscription_state()
     if fixture is not None:
         return fixture
@@ -243,7 +243,7 @@ def is_upgrade(state: SubscriptionState, tier_id: str) -> bool:
 
 # ── Dev fixtures (env-var driven, no live portal) ────────────────────────────
 
-_DEV_FIXTURE_PORTAL = "https://portal.nousresearch.com/billing"
+_DEV_FIXTURE_PORTAL = "https://portal.spaceshipresearch.com/billing"
 _DEV_TIER_SPECS = (("free", "Free", 0, "0", "0"), ("plus", "Plus", 1, "20", "1000"),
                    ("super", "Super", 2, "40", "3000"), ("ultra", "Ultra", 3, "80", "7000"))
 _DEV_FIXTURE_ALIASES = {"logged_out": "logged-out", "loggedout": "logged-out", "mid-tier": "mid",
@@ -272,9 +272,9 @@ def _dev_plan(tier_id: str, remaining: str, **over: Any) -> dict[str, Any]:
 
 
 def dev_fixture_subscription_state() -> Optional[SubscriptionState]:
-    """``HERMES_DEV_SUBSCRIPTION_FIXTURE`` (``free | mid | top | not-admin | downgrade | cancel | team |
+    """``SCOUT_DEV_SUBSCRIPTION_FIXTURE`` (``free | mid | top | not-admin | downgrade | cancel | team |
     logged-out``) -> fixture state; None when unset; unknown name → logged-out with ``error`` set."""
-    name = (os.getenv("HERMES_DEV_SUBSCRIPTION_FIXTURE") or "").strip().lower()
+    name = (os.getenv("SCOUT_DEV_SUBSCRIPTION_FIXTURE") or "").strip().lower()
     if not name:
         return None
     name = _DEV_FIXTURE_ALIASES.get(name, name)
@@ -292,5 +292,5 @@ def dev_fixture_subscription_state() -> Optional[SubscriptionState]:
         "team": dict(context="team", current=None, org_name="Acme Engineering", org_id="org_eng"),
     }
     if name not in states:
-        return SubscriptionState(logged_in=False, error=f"unknown HERMES_DEV_SUBSCRIPTION_FIXTURE: {name}")
+        return SubscriptionState(logged_in=False, error=f"unknown SCOUT_DEV_SUBSCRIPTION_FIXTURE: {name}")
     return SubscriptionState(**{**common, **states[name]})

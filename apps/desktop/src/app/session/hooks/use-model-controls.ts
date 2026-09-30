@@ -1,9 +1,8 @@
-import type { ModelOptionsResult } from '@hermes/shared'
+import type { ModelOptionsResult } from '@scout/shared'
 import { type QueryClient } from '@tanstack/react-query'
 import { useCallback, useRef } from 'react'
 
 import type { ModelSelection } from '@/app/shell/model-menu-panel'
-import { getGlobalModelInfo } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { isBusySessionModelSwitch } from '@/lib/gateway-rpc'
 import { surfaceModelSwitchConfirm } from '@/lib/guarded-model-switch'
@@ -13,6 +12,7 @@ import {
   modelOptionsQueryKey,
   requestModelOptions
 } from '@/lib/model-options'
+import { getGlobalModelInfo } from '@/scout'
 import { notifyError } from '@/store/notifications'
 import { $activeGatewayProfile } from '@/store/profile'
 import {

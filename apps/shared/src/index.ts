@@ -116,7 +116,7 @@ export {
 } from './reconnect-backoff'
 export { skillInvocationText } from './skill-scaffold'
 export {
-  type HermesSkin,
+  type ScoutSkin,
   SKIN_BRANDING_TOKENS,
   SKIN_COLOR_TOKENS,
   type SkinBranding,
@@ -176,14 +176,14 @@ export {
   type WindowsBackgroundMaterial
 } from './translucency'
 export {
-  buildHermesWebSocketUrl,
+  buildScoutWebSocketUrl,
   type GatewayAuthMode,
   GatewayReauthRequiredError,
   type GatewayWsConnection,
   type GatewayWsUrlResult,
-  type HermesWebSocketUrlOptions,
   isGatewayReauthRequired,
   resolveGatewayWsUrl,
   type ResolveGatewayWsUrlDeps,
+  type ScoutWebSocketUrlOptions,
   type WebSocketAuthParam
 } from './websocket-url'

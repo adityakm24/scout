@@ -7,7 +7,6 @@ import {
   olderPageReader
 } from '@/app/chat/transcript-backfill'
 import { preserveLocalPendingTurnMessages } from '@/app/session/hooks/use-session-actions/utils'
-import { getLatestSessionMessages, type ProfileScope } from '@/hermes'
 import {
   type ChatMessage,
   preserveLocalAssistantErrors,
@@ -18,6 +17,7 @@ import {
 import { createClientSessionState } from '@/lib/chat-runtime'
 import { sessionMessagesSignature } from '@/lib/session-signatures'
 import { latestSessionTodos, latestSessionTodoSnapshot } from '@/lib/todos'
+import { getLatestSessionMessages, type ProfileScope } from '@/scout'
 import { pendingSessionReplay } from '@/store/gateway'
 import { $sidebarShowArchived } from '@/store/layout'
 import { $changeEventsAvailable, $cronChangeTick, $projectsChangeTick, $sessionsChangeTick } from '@/store/live-sync'
@@ -828,7 +828,7 @@ interface BackgroundSyncParams {
   refreshActiveTranscript: () => Promise<unknown> | unknown
   refreshCronJobs: () => Promise<unknown> | unknown
   refreshCurrentModel: (force?: boolean) => Promise<unknown> | unknown
-  refreshHermesConfig: () => Promise<unknown> | unknown
+  refreshScoutConfig: () => Promise<unknown> | unknown
   refreshMessagingSessions: () => Promise<unknown> | unknown
   refreshSessions: () => Promise<unknown> | unknown
   requestGateway: GatewayRequester
@@ -901,7 +901,7 @@ export function useBackgroundSync({
   refreshActiveTranscript,
   refreshCronJobs,
   refreshCurrentModel,
-  refreshHermesConfig,
+  refreshScoutConfig,
   refreshMessagingSessions,
   refreshSessions,
   requestGateway,
@@ -1270,7 +1270,7 @@ export function useBackgroundSync({
     )
   }, [changeEventsAvailable, cronChangeTick, gatewayState, refreshCronJobs])
 
-  // projects.changed (projects.db moved: a CLI `hermes projects create`, another
+  // projects.changed (projects.db moved: a CLI `scout projects create`, another
   // window's folder picker, a `set_primary` from the workspace settings) refreshes
   // both the projects list and the sidebar tree — the desktop's own mutations
   // refresh optimistically, so this only needs to cover writers in OTHER
@@ -1335,7 +1335,7 @@ export function useBackgroundSync({
   useEffect(() => {
     if (gatewayState === 'open' && !activeSessionId && freshDraftReady) {
       void refreshCurrentModel()
-      void refreshHermesConfig()
+      void refreshScoutConfig()
     }
-  }, [activeSessionId, freshDraftReady, gatewayState, refreshCurrentModel, refreshHermesConfig])
+  }, [activeSessionId, freshDraftReady, gatewayState, refreshCurrentModel, refreshScoutConfig])
 }

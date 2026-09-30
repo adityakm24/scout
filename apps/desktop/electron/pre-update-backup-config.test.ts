@@ -28,8 +28,8 @@ describe('readPreUpdateBackupEnabled', () => {
 
     const runtime = {
       command: '/runtime/python',
-      args: ['-m', 'hermes_cli.main', 'config', 'get', 'updates.pre_update_backup', '--json'],
-      env: { PYTHONPATH: '/runtime/hermes' }
+      args: ['-m', 'scout_cli.main', 'config', 'get', 'updates.pre_update_backup', '--json'],
+      env: { PYTHONPATH: '/runtime/scout' }
     }
 
     await expect(readPreUpdateBackupEnabled(runtime, '/profiles/active', run)).resolves.toBe(expected)
@@ -38,8 +38,8 @@ describe('readPreUpdateBackupEnabled', () => {
       runtime.args,
       expect.objectContaining({
         env: expect.objectContaining({
-          HERMES_HOME: '/profiles/active',
-          PYTHONPATH: '/runtime/hermes'
+          SCOUT_HOME: '/profiles/active',
+          PYTHONPATH: '/runtime/scout'
         })
       })
     )
@@ -56,7 +56,7 @@ describe('readPreUpdateBackupEnabled', () => {
     ['malformed output', vi.fn().mockResolvedValue({ stdout: 'not-json' })]
   ])('fails safe for %s', async (_name, run) => {
     await expect(
-      readPreUpdateBackupEnabled({ command: '/runtime/hermes', args: ['config', 'get'] }, '/profiles/active', run)
+      readPreUpdateBackupEnabled({ command: '/runtime/scout', args: ['config', 'get'] }, '/profiles/active', run)
     ).resolves.toBe(true)
   })
 })

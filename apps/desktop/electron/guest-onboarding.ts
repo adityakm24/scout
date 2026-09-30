@@ -1,4 +1,4 @@
-export const GUEST_ONBOARDING_ENV = 'HERMES_GUEST_ONBOARDING'
+export const GUEST_ONBOARDING_ENV = 'SCOUT_GUEST_ONBOARDING'
 export const GUEST_ONBOARDING_FLAG = '--guest-onboarding'
 
 export function guestOnboardingEnabled(

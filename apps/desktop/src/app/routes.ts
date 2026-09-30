@@ -1,7 +1,7 @@
 import { atom, onMount } from 'nanostores'
 import type { ReactNode } from 'react'
 
-import { noteActiveTreeGroup, revealTreePane } from '@/components/pane-shell/tree/store'
+import { noteActiveTreeGroup, revealTreePane, syncRouteTabs } from '@/components/pane-shell/tree/store'
 import { registry } from '@/contrib/registry'
 import type { Contribution } from '@/contrib/types'
 import type { InterfaceTier } from '@/store/interface-mode'
@@ -298,6 +298,8 @@ export function syncWorkspaceRoute(pathname: string): void {
   if (isPage) {
     revealWorkspacePane()
   }
+
+  syncRouteTabs(pathname)
 }
 
 /**

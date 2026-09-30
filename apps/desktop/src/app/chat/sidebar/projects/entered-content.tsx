@@ -5,10 +5,10 @@ import { useMemo, useState } from 'react'
 import { type NewSessionSplitHandler, startNewSessionDrag } from '@/app/chat/new-session-drag'
 import { Codicon } from '@/components/ui/codicon'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import type { HermesGitWorktree } from '@/global'
-import type { SessionInfo } from '@/hermes'
+import type { ScoutGitWorktree } from '@/global'
 import { useI18n } from '@/i18n'
 import { displayPath } from '@/lib/display-path'
+import type { SessionInfo } from '@/scout'
 import { $dismissedWorktreeIds, $removedWorktreeIds, dismissWorktree, setWorkspaceNodeOpen } from '@/store/layout'
 import { notifyError } from '@/store/notifications'
 import { removeWorktreePath } from '@/store/projects'
@@ -43,7 +43,7 @@ export function EnteredProjectContent({
   renderRows: (sessions: SessionInfo[]) => React.ReactNode
   onNewSession?: (path: null | string) => void
   onNewSessionSplit?: NewSessionSplitHandler
-  repoWorktrees?: Record<string, HermesGitWorktree[]>
+  repoWorktrees?: Record<string, ScoutGitWorktree[]>
   liveSessions?: SessionInfo[]
   removedSessionIds?: ReadonlySet<string>
 }) {
@@ -114,7 +114,7 @@ function RepoFlatSection({
   renderRows: (sessions: SessionInfo[]) => React.ReactNode
   onNewSession?: (path: null | string) => void
   onNewSessionSplit?: NewSessionSplitHandler
-  discoveredWorktrees?: HermesGitWorktree[]
+  discoveredWorktrees?: ScoutGitWorktree[]
   liveSessions?: SessionInfo[]
   removedSessionIds?: ReadonlySet<string>
 }) {

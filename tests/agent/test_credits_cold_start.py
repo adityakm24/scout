@@ -1,7 +1,7 @@
 """Tests for cold-start credits hydration at session open.
 
 The L3 cold-start seed primes agent._credits_state from /api/oauth/account (or a
-HERMES_DEV_CREDITS_FIXTURE) so depletion AND the 90% grant warning fire immediately
+SCOUT_DEV_CREDITS_FIXTURE) so depletion AND the 90% grant warning fire immediately
 at session open, not only after the first inference header. These tests assert the
 notice policy fires correctly for a seed-shaped CreditsState with the warn90 latch
 primed the way conversation_loop does it.
@@ -48,7 +48,7 @@ def test_cold_start_healthy_no_notice():
 
 
 def test_dev_fixtures_drive_cold_start():
-    """Every HERMES_DEV_CREDITS_FIXTURE state produces a valid seed CreditsState."""
+    """Every SCOUT_DEV_CREDITS_FIXTURE state produces a valid seed CreditsState."""
     import os
 
     from agent.credits_tracker import dev_fixture_credits_state
@@ -59,15 +59,15 @@ def test_dev_fixtures_drive_cold_start():
         "depleted": ["credits.depleted"],
     }
     for name, want in expected.items():
-        os.environ["HERMES_DEV_CREDITS"] = "1"  # fixtures gate on the dev flag
-        os.environ["HERMES_DEV_CREDITS_FIXTURE"] = name
+        os.environ["SCOUT_DEV_CREDITS"] = "1"  # fixtures gate on the dev flag
+        os.environ["SCOUT_DEV_CREDITS_FIXTURE"] = name
         try:
             fx = dev_fixture_credits_state()
             assert fx is not None, name
             assert _cold_start_notices(fx) == want, (name, _cold_start_notices(fx))
         finally:
-            os.environ.pop("HERMES_DEV_CREDITS_FIXTURE", None)
-            os.environ.pop("HERMES_DEV_CREDITS", None)
+            os.environ.pop("SCOUT_DEV_CREDITS_FIXTURE", None)
+            os.environ.pop("SCOUT_DEV_CREDITS", None)
 
 
 # ── seed_credits_at_session_start: the shared session-open hydrator ───────────
@@ -78,7 +78,7 @@ class _FakeAgent:
     the real policy against the latch (mirroring run_agent._emit_credits_notices,
     including the free-model suppression flag)."""
 
-    def __init__(self, provider="nous", model="", base_url="", session_id="session-1"):  # session_id may be None
+    def __init__(self, provider="spaceshipresearch", model="", base_url="", session_id="session-1"):  # session_id may be None
         from agent.credits_tracker import evaluate_credits_notices, is_free_tier_model
 
         self.provider = provider
@@ -113,13 +113,13 @@ def _seed(agent, fixture):
 
     from agent.credits_tracker import seed_credits_at_session_start
 
-    os.environ["HERMES_DEV_CREDITS"] = "1"  # fixtures gate on the dev flag
-    os.environ["HERMES_DEV_CREDITS_FIXTURE"] = fixture
+    os.environ["SCOUT_DEV_CREDITS"] = "1"  # fixtures gate on the dev flag
+    os.environ["SCOUT_DEV_CREDITS_FIXTURE"] = fixture
     try:
         return seed_credits_at_session_start(agent)
     finally:
-        os.environ.pop("HERMES_DEV_CREDITS_FIXTURE", None)
-        os.environ.pop("HERMES_DEV_CREDITS", None)
+        os.environ.pop("SCOUT_DEV_CREDITS_FIXTURE", None)
+        os.environ.pop("SCOUT_DEV_CREDITS", None)
 
 
 
@@ -158,7 +158,7 @@ def test_seed_is_idempotent():
     assert a.emitted == []
 
 
-def test_seed_skips_non_nous():
+def test_seed_skips_non_spaceshipresearch():
     from agent.credits_tracker import seed_credits_at_session_start
 
     a = _FakeAgent(provider="openrouter")
@@ -254,10 +254,10 @@ def test_agent_without_session_id_falls_back_to_prior_behavior(monkeypatch):
 
 # ── background seed: the pricing warm the free-model gate depends on ─────────
 
-_NOUS_BASE = "https://inference-api.nousresearch.com/v1"
+_SPACESHIPRESEARCH_BASE = "https://inference-api.spaceshipresearch.com/v1"
 # One subscription-billed row, keyed on the pre-/v1 root the picker caches under.
 _SUBSCRIPTION_CATALOG = {
-    "https://inference-api.nousresearch.com": {
+    "https://inference-api.spaceshipresearch.com": {
         "openai/gpt-5.6-luna": {
             "prompt": "0.0000002000", "completion": "0.0000012000", "billing_mode": "subscription",
         },
@@ -280,7 +280,7 @@ class _DepletedAccount:
 
 def _cold_pricing_cache(monkeypatch):
     """Empty the process-wide pricing cache (and its expiry map) so the peek starts cold."""
-    from hermes_cli import models_pricing
+    from scout_cli import models_pricing
 
     monkeypatch.setattr(models_pricing, "_pricing_cache", {})
     monkeypatch.setattr(models_pricing, "_pricing_cache_retry_after", {})
@@ -297,7 +297,7 @@ def _run_bg_seed(monkeypatch, agent, *, warm):
     import threading
 
     import agent.memory_provider as memory_provider
-    import hermes_cli.nous_account as nous_account
+    import scout_cli.spaceshipresearch_account as spaceshipresearch_account
     from agent import credits_tracker
 
     release_worker = threading.Event()
@@ -313,10 +313,10 @@ def _run_bg_seed(monkeypatch, agent, *, warm):
         spawned.append(thread)
         return thread
 
-    monkeypatch.delenv("HERMES_DEV_CREDITS", raising=False)  # fixtures would take the sync path
-    monkeypatch.setattr(credits_tracker, "_warm_nous_pricing_cache", _gated_warm)
+    monkeypatch.delenv("SCOUT_DEV_CREDITS", raising=False)  # fixtures would take the sync path
+    monkeypatch.setattr(credits_tracker, "_warm_spaceshipresearch_pricing_cache", _gated_warm)
     monkeypatch.setattr(memory_provider, "spawn_context_thread", _capture_spawn)
-    monkeypatch.setattr(nous_account, "get_nous_portal_account_info", lambda *a, **kw: _DepletedAccount())
+    monkeypatch.setattr(spaceshipresearch_account, "get_scout_portal_account_info", lambda *a, **kw: _DepletedAccount())
     result = credits_tracker.seed_credits_at_session_start(agent)
     try:
         assert len(spawned) == 1
@@ -335,7 +335,7 @@ def test_bg_seed_warms_pricing_so_a_subscription_model_escapes_the_banner(monkey
     """The regression: a cold process peeks an EMPTY catalog, so a subscription-billed model — which
     spends no credits — drew the depleted banner at session open. The seed fills the catalog first."""
     models_pricing = _cold_pricing_cache(monkeypatch)
-    agent = _FakeAgent(model="openai/gpt-5.6-luna", base_url=_NOUS_BASE)
+    agent = _FakeAgent(model="openai/gpt-5.6-luna", base_url=_SPACESHIPRESEARCH_BASE)
 
     assert _run_bg_seed(
         monkeypatch, agent, warm=lambda: models_pricing._pricing_cache.update(_SUBSCRIPTION_CATALOG)
@@ -348,7 +348,7 @@ def test_bg_seed_without_the_warm_still_warns(monkeypatch):
     """Guard rail for the test above: the same account and model DO warn while the catalog stays
     cold, so the suppression is the warm's doing and not the model id's."""
     _cold_pricing_cache(monkeypatch)
-    agent = _FakeAgent(model="openai/gpt-5.6-luna", base_url=_NOUS_BASE)
+    agent = _FakeAgent(model="openai/gpt-5.6-luna", base_url=_SPACESHIPRESEARCH_BASE)
 
     _run_bg_seed(monkeypatch, agent, warm=lambda: None)
     assert agent.emitted == [(["credits.depleted"], [])]
@@ -358,7 +358,7 @@ def test_bg_seed_reruns_the_policy_when_a_header_beat_it(monkeypatch):
     """A live inference header can land while the warm is still in flight; it evaluates against the
     cold catalog and shows the banner. The seed must keep that state but re-run the policy."""
     models_pricing = _cold_pricing_cache(monkeypatch)
-    agent = _FakeAgent(model="openai/gpt-5.6-luna", base_url=_NOUS_BASE)
+    agent = _FakeAgent(model="openai/gpt-5.6-luna", base_url=_SPACESHIPRESEARCH_BASE)
     header_state = _state(paid_access=False)
 
     def _warm():
@@ -372,7 +372,7 @@ def test_bg_seed_reruns_the_policy_when_a_header_beat_it(monkeypatch):
     assert agent.emitted[-1] == ([], ["credits.depleted"])  # warm re-run: cleared, no "restored"
 
 
-# ── inference-header path: the catalog goes cold again after the Nous TTL ────
+# ── inference-header path: the catalog goes cold again after the SpaceshipResearch TTL ────
 
 
 def _mixin_agent(model="openai/gpt-5.6-luna"):
@@ -381,8 +381,8 @@ def _mixin_agent(model="openai/gpt-5.6-luna"):
     from agent.status_output import StatusOutputMixin
 
     class _Agent(RateLimitCreditsMixin, StatusOutputMixin):
-        provider = "nous"
-        base_url = _NOUS_BASE
+        provider = "spaceshipresearch"
+        base_url = _SPACESHIPRESEARCH_BASE
 
         def __init__(self):
             self.model = model
@@ -403,21 +403,21 @@ def _join_pricing_warm(agent):
 
 
 def test_header_after_ttl_expiry_rewarms_instead_of_flashing_the_banner(monkeypatch):
-    """The session-start warm is one-shot; a Nous catalog expires after _NOUS_CATALOG_TTL_SECONDS. A
+    """The session-start warm is one-shot; a SpaceshipResearch catalog expires after _SPACESHIPRESEARCH_CATALOG_TTL_SECONDS. A
     header landing after that saw a cold peek and brought the depleted banner back for a
     subscription-billed model. Now the cold peek starts a re-warm and the banner never shows."""
     from agent import credits_tracker
 
     models_pricing = _cold_pricing_cache(monkeypatch)
     models_pricing._cache_catalog(
-        _NOUS_BASE[:-3] + models_pricing._PRICING_AUTH_KEY_PREFIX + "abc",
-        _SUBSCRIPTION_CATALOG[_NOUS_BASE[:-3]], models_pricing._NOUS_CATALOG_TTL_SECONDS)
+        _SPACESHIPRESEARCH_BASE[:-3] + models_pricing._PRICING_AUTH_KEY_PREFIX + "abc",
+        _SUBSCRIPTION_CATALOG[_SPACESHIPRESEARCH_BASE[:-3]], models_pricing._SPACESHIPRESEARCH_CATALOG_TTL_SECONDS)
     agent = _mixin_agent()
     agent._emit_credits_notices()
     assert agent.shown == []  # warm catalog: suppressed
     models_pricing._pricing_cache_retry_after = {  # ...then the TTL passes
-        k: v - models_pricing._NOUS_CATALOG_TTL_SECONDS - 1 for k, v in models_pricing._pricing_cache_retry_after.items()}
-    monkeypatch.setattr(credits_tracker, "_warm_nous_pricing_cache",
+        k: v - models_pricing._SPACESHIPRESEARCH_CATALOG_TTL_SECONDS - 1 for k, v in models_pricing._pricing_cache_retry_after.items()}
+    monkeypatch.setattr(credits_tracker, "_warm_spaceshipresearch_pricing_cache",
                         lambda: models_pricing._pricing_cache.update(_SUBSCRIPTION_CATALOG))
 
     agent._emit_credits_notices()  # the next inference header
@@ -437,9 +437,9 @@ def test_header_on_a_cold_catalog_still_warns_when_the_warm_fails(monkeypatch):
 
     def _failed_fetch():
         warms.append(1)
-        models_pricing._cache_catalog(_NOUS_BASE[:-3] + models_pricing._PRICING_AUTH_KEY_PREFIX + "abc", {})
+        models_pricing._cache_catalog(_SPACESHIPRESEARCH_BASE[:-3] + models_pricing._PRICING_AUTH_KEY_PREFIX + "abc", {})
 
-    monkeypatch.setattr(credits_tracker, "_warm_nous_pricing_cache", _failed_fetch)
+    monkeypatch.setattr(credits_tracker, "_warm_spaceshipresearch_pricing_cache", _failed_fetch)
     agent = _mixin_agent()
 
     agent._emit_credits_notices()

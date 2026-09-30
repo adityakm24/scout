@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const desktopWindow = window as unknown as { hermesDesktop?: Window['hermesDesktop'] }
-const initialHermesDesktop = desktopWindow.hermesDesktop
+const desktopWindow = window as unknown as { scoutDesktop?: Window['scoutDesktop'] }
+const initialScoutDesktop = desktopWindow.scoutDesktop
 
-type ZoomBridge = NonNullable<Window['hermesDesktop']['zoom']>
+type ZoomBridge = NonNullable<Window['scoutDesktop']['zoom']>
 type ZoomPayload = Awaited<ReturnType<ZoomBridge['get']>>
 
 function installZoomBridge(zoom: ZoomBridge): void {
-  desktopWindow.hermesDesktop = { zoom } as unknown as Window['hermesDesktop']
+  desktopWindow.scoutDesktop = { zoom } as unknown as Window['scoutDesktop']
 }
 
 beforeEach(() => {
@@ -15,10 +15,10 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  if (initialHermesDesktop) {
-    desktopWindow.hermesDesktop = initialHermesDesktop
+  if (initialScoutDesktop) {
+    desktopWindow.scoutDesktop = initialScoutDesktop
   } else {
-    delete desktopWindow.hermesDesktop
+    delete desktopWindow.scoutDesktop
   }
 })
 

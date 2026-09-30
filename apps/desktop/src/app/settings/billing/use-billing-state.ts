@@ -12,11 +12,11 @@ import { resolveRefusal } from './errors'
 import type { BillingStateResponse, SubscriptionStateResponse, SubscriptionTierOption, UsageModelData } from './types'
 
 export const EMPTY_BILLING_VALUE = '—'
-export const FALLBACK_PORTAL_BILLING_URL = 'https://portal.nousresearch.com/billing'
-export const FALLBACK_PORTAL_URL = 'https://portal.nousresearch.com'
+export const FALLBACK_PORTAL_BILLING_URL = 'https://portal.spaceshipresearch.com/billing'
+export const FALLBACK_PORTAL_URL = 'https://portal.spaceshipresearch.com'
 
 // The billing endpoint is the authoritative source of truth for balance / cap /
-// plan — the inference `x-nous-credits-*` headers are best-effort and can drift
+// plan — the inference `x-spaceshipresearch-credits-*` headers are best-effort and can drift
 // out of sync (notably in team/org accounts where another member's spend moves
 // the shared balance without ever touching THIS client's headers). So the page
 // never trusts a cache: `staleTime: 0` + `refetchOnMount: 'always'` force a

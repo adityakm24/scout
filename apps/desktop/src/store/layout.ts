@@ -44,32 +44,31 @@ export const SIDEBAR_SESSIONS_PAGE_SIZE = 50
 // among the last 50 rows" — so narrowing the view widens the window it reads.
 export const SIDEBAR_FILTERED_PAGE_SIZE = 300
 
-const SIDEBAR_PINNED_STORAGE_KEY = 'hermes.desktop.pinnedSessions'
-const SIDEBAR_AGENTS_GROUPED_STORAGE_KEY = 'hermes.desktop.agentsGroupedByWorkspace'
-const SIDEBAR_CRON_OPEN_STORAGE_KEY = 'hermes.desktop.sidebarCronOpen'
-const SIDEBAR_MESSAGING_OPEN_STORAGE_KEY = 'hermes.desktop.sidebarMessagingOpen'
-const SIDEBAR_SESSION_ORDER_STORAGE_KEY = 'hermes.desktop.sessionOrder'
-const SIDEBAR_SESSION_ORDER_MANUAL_STORAGE_KEY = 'hermes.desktop.sessionOrder.manual'
-const SIDEBAR_GROUPING_STORAGE_KEY = 'hermes.desktop.sidebarGrouping'
-const SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY = 'hermes.desktop.sidebarGrouping.allProfiles'
-const SIDEBAR_ALL_PROFILES_AGENTS_GROUPED_STORAGE_KEY = 'hermes.desktop.sidebarAgentsGrouped.allProfiles'
-const SIDEBAR_SORT_KEY_STORAGE_KEY = 'hermes.desktop.sidebarSortKey'
-const SIDEBAR_ROW_META_STORAGE_KEY = 'hermes.desktop.sidebarRowMeta'
-const SIDEBAR_CARD_ROWS_STORAGE_KEY = 'hermes.desktop.sidebarCardRows'
-const SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY = 'hermes.desktop.sidebarShowAllSessions'
-const SIDEBAR_STATUS_FILTER_STORAGE_KEY = 'hermes.desktop.sidebarStatusFilter'
-const SIDEBAR_SHOW_ARCHIVED_STORAGE_KEY = 'hermes.desktop.sidebarShowArchived'
-const SIDEBAR_PROJECT_FILTER_STORAGE_KEY = 'hermes.desktop.sidebarProjectFilter'
-const SIDEBAR_PROFILE_FILTER_STORAGE_KEY = 'hermes.desktop.sidebarProfileFilter'
-const SIDEBAR_PR_FILTER_STORAGE_KEY = 'hermes.desktop.sidebarPrFilter'
-const SIDEBAR_WORKSPACE_ORDER_STORAGE_KEY = 'hermes.desktop.workspaceOrder'
-const SIDEBAR_WORKSPACE_PARENT_ORDER_STORAGE_KEY = 'hermes.desktop.workspaceParentOrder'
-const SIDEBAR_PROJECT_ORDER_STORAGE_KEY = 'hermes.desktop.projectOrder'
-const SIDEBAR_WORKSPACE_COLLAPSED_STORAGE_KEY = 'hermes.desktop.workspaceCollapsed'
-const SIDEBAR_WORKSPACE_NODE_OPEN_STORAGE_KEY = 'hermes.desktop.workspaceNodeOpen'
-const SIDEBAR_DISMISSED_AUTO_PROJECTS_STORAGE_KEY = 'hermes.desktop.dismissedAutoProjects'
-const SIDEBAR_DISMISSED_WORKTREES_STORAGE_KEY = 'hermes.desktop.dismissedWorktrees'
-const RIGHT_RAIL_ACTIVE_TAB_STORAGE_KEY = 'hermes.desktop.rightRailActiveTab'
+const SIDEBAR_PINNED_STORAGE_KEY = 'scout.desktop.pinnedSessions'
+const SIDEBAR_AGENTS_GROUPED_STORAGE_KEY = 'scout.desktop.agentsGroupedByWorkspace'
+const SIDEBAR_MESSAGING_OPEN_STORAGE_KEY = 'scout.desktop.sidebarMessagingOpen'
+const SIDEBAR_SESSION_ORDER_STORAGE_KEY = 'scout.desktop.sessionOrder'
+const SIDEBAR_SESSION_ORDER_MANUAL_STORAGE_KEY = 'scout.desktop.sessionOrder.manual'
+const SIDEBAR_GROUPING_STORAGE_KEY = 'scout.desktop.sidebarGrouping'
+const SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY = 'scout.desktop.sidebarGrouping.allProfiles'
+const SIDEBAR_ALL_PROFILES_AGENTS_GROUPED_STORAGE_KEY = 'scout.desktop.sidebarAgentsGrouped.allProfiles'
+const SIDEBAR_SORT_KEY_STORAGE_KEY = 'scout.desktop.sidebarSortKey'
+const SIDEBAR_ROW_META_STORAGE_KEY = 'scout.desktop.sidebarRowMeta'
+const SIDEBAR_CARD_ROWS_STORAGE_KEY = 'scout.desktop.sidebarCardRows'
+const SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY = 'scout.desktop.sidebarShowAllSessions'
+const SIDEBAR_STATUS_FILTER_STORAGE_KEY = 'scout.desktop.sidebarStatusFilter'
+const SIDEBAR_SHOW_ARCHIVED_STORAGE_KEY = 'scout.desktop.sidebarShowArchived'
+const SIDEBAR_PROJECT_FILTER_STORAGE_KEY = 'scout.desktop.sidebarProjectFilter'
+const SIDEBAR_PROFILE_FILTER_STORAGE_KEY = 'scout.desktop.sidebarProfileFilter'
+const SIDEBAR_PR_FILTER_STORAGE_KEY = 'scout.desktop.sidebarPrFilter'
+const SIDEBAR_WORKSPACE_ORDER_STORAGE_KEY = 'scout.desktop.workspaceOrder'
+const SIDEBAR_WORKSPACE_PARENT_ORDER_STORAGE_KEY = 'scout.desktop.workspaceParentOrder'
+const SIDEBAR_PROJECT_ORDER_STORAGE_KEY = 'scout.desktop.projectOrder'
+const SIDEBAR_WORKSPACE_COLLAPSED_STORAGE_KEY = 'scout.desktop.workspaceCollapsed'
+const SIDEBAR_WORKSPACE_NODE_OPEN_STORAGE_KEY = 'scout.desktop.workspaceNodeOpen'
+const SIDEBAR_DISMISSED_AUTO_PROJECTS_STORAGE_KEY = 'scout.desktop.dismissedAutoProjects'
+const SIDEBAR_DISMISSED_WORKTREES_STORAGE_KEY = 'scout.desktop.dismissedWorktrees'
+const RIGHT_RAIL_ACTIVE_TAB_STORAGE_KEY = 'scout.desktop.rightRailActiveTab'
 
 export const CHAT_SIDEBAR_PANE_ID = 'chat-sidebar'
 export const FILE_BROWSER_PANE_ID = 'file-browser'
@@ -231,13 +230,12 @@ export const $dismissedWorktreeIds = persistentAtom(
 )
 // Only successful git removals may reappear on discovery. Explicit hides,
 // including legacy dismissals without provenance, remain hidden.
-export const $removedWorktreeIds = persistentAtom('hermes.desktop.removedWorktrees', [] as string[], Codecs.stringArray)
+export const $removedWorktreeIds = persistentAtom('scout.desktop.removedWorktrees', [] as string[], Codecs.stringArray)
 export const $sidebarPinsOpen = atom(true)
 export const $sidebarRecentsOpen = atom(true)
 // Cron-job sessions live in their own section below recents, collapsed by
 // default (it only renders at all when cron sessions exist) so the
 // scheduler's `[IMPORTANT: …]` first-message previews don't spam recents.
-export const $sidebarCronOpen = persistentAtom(SIDEBAR_CRON_OPEN_STORAGE_KEY, false, Codecs.bool)
 // Messaging platform sections collapse by default (they can be numerous and
 // tall). We persist the ids the user has *explicitly expanded*, so the default
 // stays collapsed unless they've opened a platform before.
@@ -704,7 +702,7 @@ export function revealFileInTree(path: string): void {
 
 // Hotkey → focus the sessions search field. Opens the sidebar first, then lets
 // the field (which only mounts when the sidebar is open) subscribe + focus.
-export const SESSION_SEARCH_FOCUS_EVENT = 'hermes:focus-session-search'
+export const SESSION_SEARCH_FOCUS_EVENT = 'scout:focus-session-search'
 
 export function requestSessionSearchFocus() {
   setSidebarOpen(true)
@@ -730,9 +728,6 @@ export function setSidebarRecentsOpen(open: boolean) {
   $sidebarRecentsOpen.set(open)
 }
 
-export function setSidebarCronOpen(open: boolean) {
-  $sidebarCronOpen.set(open)
-}
 
 export function toggleSidebarMessagingOpen(sourceId: string) {
   const current = $sidebarMessagingOpenIds.get()

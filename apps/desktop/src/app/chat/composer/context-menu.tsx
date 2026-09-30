@@ -65,7 +65,7 @@ export function ContextMenu({
           </DropdownMenuTrigger>
         </Tip>
         <DropdownMenuContent align="start" className={cn('w-60', composerPanelCard)} side="top" sideOffset={6}>
-          <DropdownMenuLabel className="px-2 pb-0.5 pt-0.5 text-[0.625rem] font-semibold uppercase tracking-wider text-(--ui-text-tertiary)">
+          <DropdownMenuLabel className="px-2 pb-0.5 pt-0.5 text-[0.6875rem] font-semiboldr text-(--ui-text-tertiary)">
             {c.attachLabel}
           </DropdownMenuLabel>
           <ContextMenuItem disabled={!onPickFiles} icon={FileText} onSelect={onPickFiles}>

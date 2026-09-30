@@ -3,11 +3,11 @@ import { Dialog as DialogPrimitive } from 'radix-ui'
 import { useEffect, useMemo, useState } from 'react'
 
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
-import { listAllProfileSessions } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { sessionTitle } from '@/lib/chat-runtime'
 import { Check, MessageCircle } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { listAllProfileSessions } from '@/scout'
 
 interface SessionPickerDialogProps {
   /** Stored id of the session currently open, so it can be flagged in the list. */
@@ -56,7 +56,7 @@ export function SessionPickerDialog({ activeStoredSessionId, onOpenChange, onRes
             <CommandList className="max-h-[min(24rem,60vh)]">
               <CommandEmpty>{t.commandCenter.noResults}</CommandEmpty>
               <CommandGroup
-                className="**:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-wider **:[[cmdk-group-heading]]:text-[0.6875rem] **:[[cmdk-group-heading]]:text-muted-foreground/70"
+                className="**:[[cmdk-group-heading]]: **:[[cmdk-group-heading]]:r **:[[cmdk-group-heading]]:text-[0.6875rem] **:[[cmdk-group-heading]]:text-muted-foreground/70"
                 heading={t.commandCenter.sections.sessions}
               >
                 {sessions.map(session => {

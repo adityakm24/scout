@@ -86,22 +86,22 @@ describe('themePrelude', () => {
 describe('collectThemeBridge', () => {
   afterEach(() => {
     document.documentElement.className = ''
-    delete document.documentElement.dataset.hermesMode
+    delete document.documentElement.dataset.scoutMode
   })
 
   // #123048: the frame's color-scheme must come from the same resolved
   // appearance as the injected tokens, not from the separate `.dark` class
   // React's useIsDark() reads — that class can still hold last render's
-  // value for a paint after applyTheme() has already updated data-hermes-mode.
-  it('reads color-scheme from data-hermes-mode, not the .dark class', () => {
-    document.documentElement.dataset.hermesMode = 'dark'
+  // value for a paint after applyTheme() has already updated data-scout-mode.
+  it('reads color-scheme from data-scout-mode, not the .dark class', () => {
+    document.documentElement.dataset.scoutMode = 'dark'
     document.documentElement.classList.remove('dark')
 
     expect(collectThemeBridge().colorScheme).toBe('dark')
   })
 
   it('falls back to light when the mode attribute disagrees the other way', () => {
-    document.documentElement.dataset.hermesMode = 'light'
+    document.documentElement.dataset.scoutMode = 'light'
     document.documentElement.classList.add('dark')
 
     expect(collectThemeBridge().colorScheme).toBe('light')
@@ -110,7 +110,7 @@ describe('collectThemeBridge', () => {
 
 describe('frameSizeFromMessage', () => {
   const msg = (over: Record<string, unknown> = {}) => ({
-    type: 'hermes-inline-preview-size',
+    type: 'scout-inline-preview-size',
     token: 'tok',
     height: 500,
     width: 300,
@@ -144,7 +144,7 @@ describe('frameSizeFromMessage', () => {
 
 describe('intentFromMessage', () => {
   const msg = (over: Record<string, unknown> = {}) => ({
-    type: 'hermes-inline-preview-intent',
+    type: 'scout-inline-preview-intent',
     token: 'tok',
     prompt: 'get-price eth',
     ...over
@@ -161,7 +161,7 @@ describe('intentFromMessage', () => {
 
   it('rejects wrong token, wrong type, empty, and hostile shapes', () => {
     expect(intentFromMessage(msg({ token: 'stolen' }), 'tok')).toBeNull()
-    expect(intentFromMessage(msg({ type: 'hermes-inline-preview-size' }), 'tok')).toBeNull()
+    expect(intentFromMessage(msg({ type: 'scout-inline-preview-size' }), 'tok')).toBeNull()
     expect(intentFromMessage(msg({ prompt: '   ' }), 'tok')).toBeNull()
     expect(intentFromMessage(msg({ prompt: 42 }), 'tok')).toBeNull()
     expect(intentFromMessage(null, 'tok')).toBeNull()

@@ -22,7 +22,7 @@ from agent import empty_response_guard as guard
 def _agent(**overrides):
     base = dict(
         model="anthropic/claude-fable-5",
-        provider="nous",
+        provider="spaceshipresearch",
         api_mode="chat_completions",
         base_url=None,
         api_key=None,
@@ -368,7 +368,7 @@ class TestResolveGuardSettings:
     def test_default_config_schema_matches(self):
         """The shipped DEFAULT_CONFIG section resolves to the module
         defaults — keeps config_defaults.py and this module in sync."""
-        from hermes_cli.config_defaults import DEFAULT_CONFIG
+        from scout_cli.config_defaults import DEFAULT_CONFIG
 
         section = DEFAULT_CONFIG["agent"]["empty_response_guard"]
         assert guard.resolve_guard_settings(section) == (

@@ -1,6 +1,6 @@
 """Connector tool-gateway package: typed client-side plumbing for remote tools.
 
-This package owns everything hermes-agent needs to talk to the managed tool
+This package owns everything scout-agent needs to talk to the managed tool
 gateway's connector routes (search / schemas / execute / connections) and to
 merge remote execute results back into ``tool_call`` result arrays.
 
@@ -16,7 +16,7 @@ Layering rules (enforced by review, not imports — keep them true):
   codec. Parsing never raises — a malformed name is a per-entry error and
   sibling calls still run.
 - ``config.py``: the ``tools.connectors`` config gate. Availability fails
-  closed: config flag AND the managed Nous tools entitlement.
+  closed: config flag AND the managed SpaceshipResearch tools entitlement.
 - ``merge.py`` is PURE: partition / splice / render with no I/O and no
   exceptions. Position in the original ``calls[]`` array is the only
   correlation key — the wire ``index`` field is never trusted.

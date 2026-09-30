@@ -1,7 +1,7 @@
 """Contracts: config, setup readiness, free tier, model inventory, connectors, diagnostics,
 image generation and structured session control.
 
-Handlers: ``tui_gateway/methods_config.py`` (``config.get``, ``setup.*``, ``diagnostics.share_nous``),
+Handlers: ``tui_gateway/methods_config.py`` (``config.get``, ``setup.*``, ``diagnostics.share_spaceshipresearch``),
 ``methods_config_set.py`` (``config.set``), ``methods_free_tier.py``, ``methods_shared_metrics.py``,
 ``methods_complete.py``
 (``model.options``), ``methods_connectors.py``, ``methods_images.py``, ``methods_session_control.py``
@@ -31,7 +31,7 @@ class ConfigGetParams(ProfileParams):
 
 
 class ConfigProviderRef(OpenModel):
-    """``hermes_cli/models.py::list_available_providers`` row."""
+    """``scout_cli/models.py::list_available_providers`` row."""
 
     id: str
     label: str
@@ -155,16 +155,16 @@ method("setup.runtime_check", params=SetupRuntimeCheckParams, result=SetupRuntim
        doc="Strict provider check through the same runtime resolution the agent uses on session creation.")
 
 
-# ── diagnostics.share_nous ────────────────────────────────────────────────────────────────────
+# ── diagnostics.share_spaceshipresearch ────────────────────────────────────────────────────────────────────
 
 
-class DiagnosticsShareNousParams(Params):
+class DiagnosticsShareSpaceshipResearchParams(Params):
     error_context: str | None = None
     extra_files: dict[str, str] | None = None
     log_lines: int | None = None
 
 
-class DiagnosticsShareNousResult(Result):
+class DiagnosticsShareSpaceshipResearchResult(Result):
     """Structured envelope: ``ok=False`` + ``error`` renders inline instead of failing the RPC."""
 
     ok: bool
@@ -174,8 +174,8 @@ class DiagnosticsShareNousResult(Result):
     error: str | None = None
 
 
-method("diagnostics.share_nous", params=DiagnosticsShareNousParams, result=DiagnosticsShareNousResult,
-       doc="Upload a force-redacted debug bundle to Nous-internal diagnostics storage.")
+method("diagnostics.share_spaceshipresearch", params=DiagnosticsShareSpaceshipResearchParams, result=DiagnosticsShareSpaceshipResearchResult,
+       doc="Upload a force-redacted debug bundle to SpaceshipResearch-internal diagnostics storage.")
 
 
 # ── free tier ─────────────────────────────────────────────────────────────────────────────────
@@ -272,7 +272,7 @@ class SharedMetricsStartupLatencyParams(ProfileParams):
     """``elapsed_ms`` = the client's own launch (TUI process start / Desktop app start) to ready
     (TUI gateway ready / Desktop backend attached), measured once per launch by the client. The
     client names its surface because a Desktop may attach to a URL/cloud backend where
-    ``HERMES_DESKTOP`` is unset; without it the backend falls back to its own client detection.
+    ``SCOUT_DESKTOP`` is unset; without it the backend falls back to its own client detection.
     ``launch_id`` is an opaque per-launch token the backend latches on (never recorded), so a
     reconnect re-sending the same launch counts once while a new launch counts again."""
 
@@ -293,7 +293,7 @@ method("shared_metrics.startup_latency", params=SharedMetricsStartupLatencyParam
 # ---- v4 reliability ----
 class SharedMetricsUpdateRunParams(ProfileParams):
     """One Desktop PACKAGED self-update (electron-updater / App Installer / Store). Source-checkout
-    hand-offs run ``hermes update`` and are counted from its receipt, never here. Raw words; the
+    hand-offs run ``scout update`` and are counted from its receipt, never here. Raw words; the
     backend buckets them: ``outcome`` success|failed|noop|refused, ``failed_stage``
     download|verify|apply|restart, ``mechanism`` the updater strategy kind, ``duration_ms`` wall
     time, ``from_commit_date`` the updated-from build's commit time (epoch seconds) when known."""
@@ -414,8 +414,8 @@ class ModelOptionsParams(ProfileParams):
 # TODO(common): ModelPricing / ModelCapabilities / ModelOptionProvider are also the row shape of
 # ``model.save_key``'s ``provider`` — the parent consolidates into contracts/common.py.
 class ModelPricing(Result):
-    """``hermes_cli/inventory.py::_apply_pricing`` — formatted $/Mtok strings (``""`` unknown,
-    ``"free"``); the sale fields are Nous Portal-only."""
+    """``scout_cli/inventory.py::_apply_pricing`` — formatted $/Mtok strings (``""`` unknown,
+    ``"free"``); the sale fields are Scout Portal-only."""
 
     input: str
     output: str
@@ -427,7 +427,7 @@ class ModelPricing(Result):
 
 
 class ModelCapabilities(Result):
-    """``hermes_cli/inventory.py::_apply_capabilities``."""
+    """``scout_cli/inventory.py::_apply_capabilities``."""
 
     fast: bool
     reasoning: bool
@@ -435,7 +435,7 @@ class ModelCapabilities(Result):
 
 
 class ModelOptionProvider(OpenModel):
-    """One ``hermes_cli/inventory.py::build_models_payload`` provider row (the union of every field
+    """One ``scout_cli/inventory.py::build_models_payload`` provider row (the union of every field
     the builder sets; ``pricing_pending`` / ``free_tier_pending`` mark the cached-only path)."""
 
     slug: str
@@ -500,7 +500,7 @@ method("image.generate", params=ImageGenerateParams, result=ImageGenerateResult,
 
 
 class GoalContractSnapshot(Result):
-    """``hermes_cli/goals.py::GoalContract.to_dict``."""
+    """``scout_cli/goals.py::GoalContract.to_dict``."""
 
     outcome: str = ""
     verification: str = ""

@@ -1,5 +1,5 @@
-import { compactNumber, groupCatalogPlugins, PLUGIN_CATEGORIES } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
+import { compactNumber, groupCatalogPlugins, PLUGIN_CATEGORIES } from '@scout/shared'
 import { memo, type ReactNode, useDeferredValue, useEffect, useRef, useState } from 'react'
 
 import { PageLoader } from '@/components/page-loader'
@@ -357,8 +357,10 @@ export const CatalogBrowser = memo(function CatalogBrowser({
             ) : cardView ? (
               <>
                 <div className="flex h-full min-h-0 flex-col px-3 pb-3" data-catalog-cards={kind}>
+                  {/* The stable 0.5rem scrollbar gutter hangs into the column's padding
+                      (-mr-2) so the cards share a right edge with the header and alerts. */}
                   <div
-                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]"
+                    className="-mr-2 min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]"
                     data-catalog-scroll
                     key={`${filterKey}:${sort}:${deferredQuery}:${facets.installedOnly}`}
                   >
