@@ -21,7 +21,7 @@ Build stunning 3D scenes via a concept-art fidelity loop.
 | License | MIT |
 | Platforms | linux, macos |
 | Tags | `3d`, `games`, `webgl`, `threejs`, `image-generation`, `visual-fidelity`, `creative` |
-| Related skills | [`p5js`](../../bundled/creative/creative-p5js.md), [`claude-design`](../../bundled/creative/creative-claude-design.md), [`manim-video`](../../bundled/creative/creative-manim-video.md) |
+| Related skills | [`p5js`](../../optional/creative/creative-p5js.md), [`claude-design`](../../bundled/creative/creative-claude-design.md), [`manim-video`](../../optional/creative/creative-manim-video.md) |
 
 ## Reference: full SKILL.md
 

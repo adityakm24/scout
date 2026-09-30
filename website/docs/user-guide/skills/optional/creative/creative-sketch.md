@@ -21,7 +21,7 @@ Throwaway HTML mockups: 2-3 design variants to compare.
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `sketch`, `mockup`, `design`, `ui`, `prototype`, `html`, `variants`, `exploration`, `wireframe`, `comparison` |
-| Related skills | [`spike`](../../bundled/software-development/software-development-spike.md), [`claude-design`](../../bundled/creative/creative-claude-design.md), [`popular-web-designs`](../../bundled/creative/creative-popular-web-designs.md), [`excalidraw`](../../optional/creative/creative-excalidraw.md) |
+| Related skills | [`spike`](../../optional/software-development/software-development-spike.md), [`claude-design`](../../bundled/creative/creative-claude-design.md), [`popular-web-designs`](../../optional/creative/creative-popular-web-designs.md), [`excalidraw`](../../optional/creative/creative-excalidraw.md) |
 
 ## Reference: full SKILL.md
 

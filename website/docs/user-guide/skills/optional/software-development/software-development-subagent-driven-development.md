@@ -21,7 +21,7 @@ Execute plans via delegate_task subagents (2-stage review).
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `delegation`, `subagent`, `implementation`, `workflow`, `parallel` |
-| Related skills | [`requesting-code-review`](../../bundled/software-development/software-development-requesting-code-review.md), [`test-driven-development`](../../bundled/software-development/software-development-test-driven-development.md) |
+| Related skills | [`requesting-code-review`](../../bundled/software-development/software-development-requesting-code-review.md), [`test-driven-development`](../../optional/software-development/software-development-test-driven-development.md) |
 
 ## Reference: full SKILL.md
 

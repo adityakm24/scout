@@ -6,14 +6,13 @@ import type { TerminalBackendInfo } from '@/types/scout'
 
 /**
  * Proactive warning when the selected terminal backend (Docker, SSH, …)
- * fails its probe. Without this the only signal is a "Needs setup" pill inside
- * Skills → Tools → Terminal, so the user learns that shell commands cannot run
+ * fails its probe. Without this the user learns that shell commands cannot run
  * only when a tool call fails. One toast per boot, never for the Local backend
  * (it needs no probe), and silent when the probe request itself fails — that
  * is an older/remote backend, not a broken terminal.
  */
 
-const TERMINAL_TOOLSET_ROUTE = '/capabilities?tab=toolsets'
+const TERMINAL_BACKEND_SETTINGS_ROUTE = '/settings?tab=config:advanced&page=terminal'
 const TOAST_ID = 'terminal-backend-unavailable'
 
 /** The active backend row when it is selected but not ready, else null. */
@@ -46,7 +45,7 @@ export async function warnIfTerminalBackendUnavailable(): Promise<boolean> {
     title: translateNow(`${copy}.unavailableTitle`),
     message: translateNow(`${copy}.unavailableMessage`, broken.label),
     detail: broken.detail || undefined,
-    action: { label: translateNow(`${copy}.openBackendSettings`), onClick: () => requestRoute(TERMINAL_TOOLSET_ROUTE) },
+    action: { label: translateNow(`${copy}.openBackendSettings`), onClick: () => requestRoute(TERMINAL_BACKEND_SETTINGS_ROUTE) },
     secondaryAction: {
       label: translateNow(`${copy}.useLocal`),
       onClick: () =>

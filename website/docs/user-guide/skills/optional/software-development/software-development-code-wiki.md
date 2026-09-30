@@ -21,7 +21,7 @@ Generate wiki docs + Mermaid diagrams for any codebase.
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `Documentation`, `Mermaid`, `Architecture`, `Diagrams`, `Wiki`, `Code-Analysis` |
-| Related skills | [`codebase-inspection`](../../bundled/software-development/software-development-codebase-inspection.md), [`github`](../../bundled/software-development/software-development-github.md) |
+| Related skills | [`codebase-inspection`](../../optional/software-development/software-development-codebase-inspection.md), [`github`](../../bundled/software-development/software-development-github.md) |
 
 ## Reference: full SKILL.md
 

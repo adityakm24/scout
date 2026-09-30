@@ -447,7 +447,6 @@ describe('PluginsTab', () => {
     await waitFor(() => {
       expect(setToolsetEnabled).toHaveBeenCalledWith('kanban', true, 'workbot')
     })
-    expect(invalidate).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['toolsets-list'] }))
     invalidate.mockRestore()
   })
 

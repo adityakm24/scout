@@ -277,7 +277,7 @@ own directory, so a provider installed from the plugin catalog keeps all of them
 
 | Surface | What the provider ships |
 |---|---|
-| Desktop → Capabilities → Tools → Memory (config panel) | `config_schema.py` (below) |
+| Desktop → Settings → Memory & Context (provider config) | `config_schema.py` (below) |
 | `scout memory setup` wizard | `get_config_schema()` declares the fields the wizard prompts for, `save_config(config, scout_home)` persists them, `post_setup(scout_home, config)` runs afterwards for anything interactive (OAuth, first sync); `get_status_config()` feeds `scout memory status` |
 | `scout <provider> …` subcommands | `cli.py` with `register_cli(subparser)` ([Adding CLI Commands](#adding-cli-commands)) |
 | Python dependencies | `pyproject.toml` `[project] dependencies` (or `python_dependencies` in `plugin.yaml`); installed under Scout's own pins at install time and re-applied across `scout update` |

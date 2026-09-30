@@ -9,7 +9,6 @@ import { queryClient } from '@/lib/query-client'
 import type * as ScoutApi from '@/scout'
 import type * as HubActions from '@/store/hub-actions'
 
-import { parseCatalog } from './catalog/catalog-data'
 import { $catalogCardView } from './catalog/store'
 
 const getSkills = vi.fn()
@@ -22,6 +21,8 @@ const getUsageAnalytics = vi.fn()
 const getProfiles = vi.fn()
 const getSkillContent = vi.fn()
 const getOfficialSkills = vi.fn()
+const createSkill = vi.fn()
+const deleteLearningNode = vi.fn()
 
 // Partial mock: keep the real module (CapabilitiesView pulls in @/store/profile,
 // whose import-time subscription calls setApiRequestProfile) and stub only the
@@ -39,7 +40,9 @@ vi.mock('@/scout', async importOriginal => ({
   getUsageAnalytics: (days: number, profile?: null | string) => getUsageAnalytics(days, profile),
   getProfiles: () => getProfiles(),
   getSkillContent: (name: string, profile?: null | string) => getSkillContent(name, profile),
-  getOfficialSkills: (profile?: null | string) => getOfficialSkills(profile)
+  getOfficialSkills: (profile?: null | string) => getOfficialSkills(profile),
+  createSkill: (name: string, content: string, profile?: unknown) => createSkill(name, content, profile),
+  deleteLearningNode: (id: string, profile?: unknown) => deleteLearningNode(id, profile)
 }))
 
 // Notifications hit nanostores/timers we don't care about here.
@@ -130,57 +133,15 @@ afterEach(() => {
 // right against the global 15s per-test budget, so slow runners cascade-fail
 // all 11 tests (2× in a row on PR #93612, plus a main run the same hour).
 // Give this file headroom; the tests are not slow individually.
-describe('CapabilitiesView toolset management', { timeout: 60_000 }, () => {
-  it('renders a switch for each toolset and toggles it off', async () => {
+describe('CapabilitiesView', { timeout: 60_000 }, () => {
+  it('has no Tools tab: an old ?tab=toolsets link lands on Skills', async () => {
     await renderSkills()
 
-    // The switch names the action, so an enabled toolset offers to turn it off.
-    const sw = await screen.findByRole('switch', { name: 'Turn Web Search toolset off' })
-    expect(sw.getAttribute('aria-checked')).toBe('true')
-
-    await act(async () => {
-      fireEvent.click(sw)
-    })
-
-    await waitFor(() => expect(setToolsetEnabled).toHaveBeenCalled())
-    expect(setToolsetEnabled.mock.calls[0].slice(0, 2)).toEqual(['web', false])
-  })
-
-  it('scopes Tools config to the profile chosen in the selector', async () => {
-    // Two profiles → the "Configuring:" selector renders. Picking a non-active
-    // profile must re-fetch toolsets scoped to THAT profile.
-    // jsdom's scrollIntoView is missing/non-functional; Radix Select calls it
-    // on open. Force a stub so the dropdown can render in the test env.
-    Element.prototype.scrollIntoView = vi.fn()
-    getProfiles.mockResolvedValue({
-      profiles: [
-        { name: 'default', is_default: true },
-        { name: 'researcher', is_default: false }
-      ]
-    })
-
-    await act(async () => {
-      render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/capabilities?tab=toolsets']}>
-            <CapabilitiesView />
-          </MemoryRouter>
-        </QueryClientProvider>
-      )
-    })
-
-    // The selector appears with >1 profile.
-    const trigger = await screen.findByRole('combobox')
-    await act(async () => {
-      fireEvent.click(trigger)
-    })
-    const option = await screen.findByRole('option', { name: 'researcher' })
-    await act(async () => {
-      fireEvent.click(option)
-    })
-
-    // Toolsets refetch scoped to the picked profile.
-    await waitFor(() => expect(getToolsets).toHaveBeenCalledWith('researcher'))
+    expect(await screen.findByRole('button', { name: 'New skill' })).toBeTruthy()
+    const tabs = document.querySelector('[data-tour="page-tabs"]')?.textContent ?? ''
+    expect(tabs).toContain('Connectors')
+    expect(tabs).not.toMatch(/Tools/)
+    expect(getToolsets).not.toHaveBeenCalled()
   })
 
   it('scopes the Skills tab (and skill toggles) to the profile chosen in the selector', async () => {
@@ -214,9 +175,8 @@ describe('CapabilitiesView toolset management', { timeout: 60_000 }, () => {
       )
     })
 
-    // The selector renders on the Skills tab too (Capabilities-wide), above the catalog's sort select.
-    await waitFor(() => expect(screen.getAllByRole('combobox')).toHaveLength(2))
-    const [trigger] = screen.getAllByRole('combobox')
+    // The selector renders on the Skills tab too (Capabilities-wide).
+    const trigger = await screen.findByRole('combobox')
     await act(async () => {
       fireEvent.click(trigger)
     })
@@ -236,8 +196,7 @@ describe('CapabilitiesView toolset management', { timeout: 60_000 }, () => {
     await waitFor(() => expect(setSkillEnabled).toHaveBeenCalledWith('web-research', false, 'researcher'))
   })
 
-  it('shows the FULL skill body in the detail pane, not just the description or raw frontmatter', async () => {
-    $catalogCardView.set(false)
+  it('shows the FULL skill body in the detail dialog, not just the description or raw frontmatter', async () => {
     getSkills.mockResolvedValue([
       {
         name: 'web-research',
@@ -259,24 +218,111 @@ describe('CapabilitiesView toolset management', { timeout: 60_000 }, () => {
       )
     })
 
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'web-research' }))
+    })
+
     await waitFor(() => expect(getSkillContent).toHaveBeenCalled())
     expect(getSkillContent.mock.calls[0][0]).toBe('web-research')
     expect(await screen.findByText(/Deep research steps/)).toBeTruthy()
     expect(screen.queryByText(/version: 1\.2\.0/)).toBeNull()
   })
 
-  it('keeps installed skills on their toggle and installs new cards into the pinned remote profile', async () => {
-    const { installHubSkill } = await import('@/store/hub-actions')
+  it('lists only the profile\'s own skills — no public library, no install switches', async () => {
+    const fetch = vi.fn()
+    vi.stubGlobal('fetch', fetch)
     getSkills.mockResolvedValue([
-      { name: 'web-research', description: 'Research', enabled: true, category: 'research' }
+      { name: 'web-research', description: 'Research', enabled: true, category: 'research', provenance: 'bundled' }
     ])
-    queryClient.setQueryData(
-      ['public-catalog', 'skills'],
-      parseCatalog('skills', [
-        { name: 'web-research', source: 'official', identifier: 'official/research/web-research' },
-        { name: 'gif-search', source: 'official', identifier: 'official/gifs/gif-search' }
-      ])
+    getOfficialSkills.mockResolvedValue({
+      skills: [{ name: 'gif-search', description: 'GIFs', identifier: 'official/gifs/gif-search', installed: false }]
+    })
+
+    try {
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <CapabilitiesView embedded fixedConnection="homelab" fixedProfile="inbox-bot" />
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+
+      await screen.findByRole('switch', { name: 'web-research' })
+      expect(screen.queryByRole('button', { name: 'gif-search' })).toBeNull()
+      expect(screen.queryByRole('switch', { name: /^Add / })).toBeNull()
+      expect(screen.getAllByRole('textbox', { name: 'Search skills' })).toHaveLength(1)
+      expect(fetch).not.toHaveBeenCalled()
+      expect(getOfficialSkills).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('creates an uploaded SKILL.md from just a name, keeping the file as written', async () => {
+    createSkill.mockResolvedValue({ success: true, message: 'ok', path: 'trip-planner' })
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <CapabilitiesView embedded fixedProfile="default" />
+        </MemoryRouter>
+      </QueryClientProvider>
     )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'New skill' }))
+    const dialog = await screen.findByRole('dialog')
+
+    const file = new File(
+      ['---\nname: Trip Planner\ndescription: Plan trips day by day.\nversion: 0.1.0\n---\n# Trip planner\n\nAsk for dates.\n'],
+      'SKILL.md',
+      { type: 'text/markdown' }
+    )
+
+    await act(async () => {
+      fireEvent.change(dialog.querySelector('input[type=file]')!, { target: { files: [file] } })
+    })
+
+    await waitFor(() => expect(within(dialog).getByLabelText<HTMLInputElement>('Name').value).toBe('trip-planner'))
+    expect(within(dialog).queryByLabelText('When should Scout use it?')).toBeNull()
+    expect(within(dialog).queryByLabelText('Instructions')).toBeNull()
+
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Create skill' }))
+    })
+
+    await waitFor(() => expect(createSkill).toHaveBeenCalledTimes(1))
+    const [name, content] = createSkill.mock.calls[0]
+    expect(name).toBe('trip-planner')
+    expect(content).toContain('version: 0.1.0')
+    expect(content).toContain('Ask for dates.')
+  })
+
+  it('deletes a built-in skill from its detail dialog', async () => {
+    deleteLearningNode.mockResolvedValue({ ok: true, message: 'archived' })
+    getSkills.mockResolvedValue([
+      { name: 'maps', description: 'Maps', enabled: true, category: 'productivity', provenance: 'bundled' }
+    ])
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <CapabilitiesView embedded fixedProfile="default" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'maps' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+    const confirm = (await screen.findByText('Delete maps?')).closest<HTMLElement>('[role=dialog], [role=alertdialog]')!
+    await act(async () => {
+      fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }))
+    })
+
+    await waitFor(() => expect(deleteLearningNode).toHaveBeenCalledWith('maps', 'default'))
+  })
+
+  it('writes a new custom skill into the scoped profile', async () => {
+    createSkill.mockResolvedValue({ success: true, message: 'ok', path: 'weekly-report' })
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -286,79 +332,23 @@ describe('CapabilitiesView toolset management', { timeout: 60_000 }, () => {
       </QueryClientProvider>
     )
 
-    await screen.findByRole('switch', { name: 'web-research' })
-    expect(screen.getByRole<HTMLButtonElement>('switch', { name: 'Added web-research' }).disabled).toBe(true)
-    expect(screen.queryByRole('switch', { name: 'Add web-research' })).toBeNull()
-    const available = screen.getByRole('button', { name: 'gif-search' }).closest('article')!
-    fireEvent.click(within(available).getByRole('switch', { name: 'Add gif-search' }))
-    await waitFor(() =>
-      expect(installHubSkill).toHaveBeenCalledExactlyOnceWith('official/gifs/gif-search', {
-        connectionId: 'homelab',
-        profile: 'inbox-bot'
-      })
-    )
-    expect(document.querySelector('iframe')).toBeNull()
-  })
-
-  it('fetches the public catalog once across remounts and keeps one search input', async () => {
-    queryClient.clear()
-
-    const fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [{ name: 'example', source: 'official', identifier: 'official/example' }]
+    fireEvent.click(await screen.findByRole('button', { name: 'New skill' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Weekly Report' } })
+    fireEvent.change(within(dialog).getByLabelText('When should Scout use it?'), {
+      target: { value: 'Write my weekly status report.' }
     })
-
-    vi.stubGlobal('fetch', fetch)
-
-    const view = () =>
-      render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter>
-            <CapabilitiesView embedded fixedProfile="default" />
-          </MemoryRouter>
-        </QueryClientProvider>
-      )
-
-    try {
-      const first = view()
-      await screen.findByRole('button', { name: 'example' })
-      expect(fetch).toHaveBeenCalledTimes(1)
-      first.unmount()
-      view()
-      await screen.findByRole('button', { name: 'example' })
-      expect(fetch).toHaveBeenCalledTimes(1)
-      expect(screen.getAllByRole('textbox', { name: 'Search skills' })).toHaveLength(1)
-      expect(document.querySelector('iframe')).toBeNull()
-    } finally {
-      vi.unstubAllGlobals()
-    }
-  })
-
-  it('shows a vision explainer that deep-links to Settings → Models', async () => {
-    // Vision has no TOOL_CATEGORIES provider matrix — its model lives in the
-    // auxiliary model config, so the detail pane must point there instead of
-    // rendering an empty panel.
-    getToolsets.mockResolvedValue([
-      toolset({
-        name: 'vision',
-        label: 'Vision / Image Analysis',
-        description: 'vision_analyze',
-        tools: ['vision_analyze']
-      })
-    ])
-    getToolsetConfig.mockResolvedValue({ has_category: false, active_provider: null, providers: [] })
-
-    await renderSkills()
-
-    const link = await screen.findByRole('button', { name: /Choose vision model in Settings/ })
-
+    fireEvent.change(within(dialog).getByLabelText('Instructions'), { target: { value: 'Summarize the week.' } })
     await act(async () => {
-      fireEvent.click(link)
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Create skill' }))
     })
 
-    // Internal route change into the Models section with the aux slot target —
-    // consumed by ModelSettings' deep-link highlight. Never an external URL.
-    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/settings?tab=config:model&aux=vision'))
+    await waitFor(() => expect(createSkill).toHaveBeenCalledTimes(1))
+    const [name, content, profile] = createSkill.mock.calls[0]
+    expect(name).toBe('weekly-report')
+    expect(content).toContain('Write my weekly status report.')
+    expect(content).toContain('Summarize the week.')
+    expect(profile).toEqual({ connectionId: 'homelab', profile: 'inbox-bot' })
   })
 
   it('fixedConnection pins every read to the target connection', async () => {
@@ -378,7 +368,6 @@ describe('CapabilitiesView toolset management', { timeout: 60_000 }, () => {
 
     await waitFor(() => expect(getSkills).toHaveBeenCalled())
     expect(getSkills.mock.calls[0][0]).toEqual({ connectionId: 'homelab', profile: 'inbox-bot' })
-    expect(getToolsets.mock.calls[0][0]).toEqual({ connectionId: 'homelab', profile: 'inbox-bot' })
     // Pinned scope → no roster/profiles fetch, selector hidden.
     expect(getProfiles).not.toHaveBeenCalled()
   })
@@ -431,75 +420,5 @@ describe('CapabilitiesView toolset management', { timeout: 60_000 }, () => {
     } finally {
       delete (window as { scoutDesktop?: unknown }).scoutDesktop
     }
-  })
-
-  it('lists the built-in optional-skills catalog with Add switches that route through the hub pipeline', async () => {
-    // Official optional skills merge into the same catalog as installed ones;
-    // an uninstalled row carries an Add switch that routes through the hub
-    // action pipeline scoped to the Capabilities profile. A name collision with
-    // an installed skill keeps the installed toggle, never a second Add.
-    const { installHubSkill } = await import('@/store/hub-actions')
-
-    getSkills.mockResolvedValue([
-      {
-        name: 'web-research',
-        description: 'Research the web',
-        category: 'research',
-        enabled: true,
-        usage: 3,
-        provenance: 'bundled'
-      }
-    ])
-    getOfficialSkills.mockResolvedValue({
-      skills: [
-        {
-          name: 'gif-search',
-          description: 'Search GIFs',
-          identifier: 'official/gifs/gif-search',
-          category: 'gifs',
-          installed: false,
-          tags: ['gifs']
-        },
-        {
-          name: 'web-research',
-          description: 'already here under a different source',
-          identifier: 'official/research/web-research',
-          category: 'research',
-          installed: false,
-          tags: []
-        },
-        {
-          name: 'ascii-art',
-          description: 'ASCII art',
-          identifier: 'official/creative/ascii-art',
-          category: 'creative',
-          installed: true,
-          tags: []
-        }
-      ]
-    })
-
-    await act(async () => {
-      render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/capabilities?tab=skills']}>
-            <CapabilitiesView />
-          </MemoryRouter>
-        </QueryClientProvider>
-      )
-    })
-
-    const install = await screen.findByRole('switch', { name: 'Add gif-search' })
-    expect(screen.getByRole('switch', { name: 'web-research' })).toBeTruthy()
-    expect(screen.queryByRole('switch', { name: 'Add web-research' })).toBeNull()
-    expect(screen.getByRole<HTMLButtonElement>('switch', { name: 'Added ascii-art' }).disabled).toBe(true)
-
-    await act(async () => {
-      fireEvent.click(install)
-    })
-
-    await waitFor(() =>
-      expect(vi.mocked(installHubSkill)).toHaveBeenCalledWith('official/gifs/gif-search', expect.anything())
-    )
   })
 })

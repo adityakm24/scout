@@ -99,13 +99,13 @@ Every installed skill is automatically available as a slash command:
 
 ```bash
 # In the CLI or any messaging platform:
-/gif-search funny cats
-/axolotl help me fine-tune Llama 3 on my dataset
-/github-pr-workflow create a PR for the auth refactor
-/songsee analyze the frequency spread of this mix
+/youtube-content summarize https://youtu.be/dQw4w9WgXcQ
+/humanizer make this announcement sound less robotic
+/github create a PR for the auth refactor
+/pdf merge the two contracts in ~/Downloads
 
 # Just the skill name loads it and lets the agent ask what you need:
-/excalidraw
+/weekly-review-planning
 ```
 
 ### Stacking multiple skills in one command

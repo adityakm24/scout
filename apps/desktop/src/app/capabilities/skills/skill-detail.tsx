@@ -9,21 +9,25 @@ import type { SkillInfo } from '@/types/scout'
 
 import { parseFrontmatter } from './frontmatter'
 
+/** Scout's own manual is re-seeded on every sync (agent/skill_utils.py ESSENTIAL_SKILLS). */
+const ESSENTIAL_SKILLS = new Set(['scout-agent'])
+
 export function SkillDetail({
-  onArchive,
+  onDelete,
   onEdit,
   profile,
   skill
 }: {
-  onArchive: () => void
+  onDelete: () => void
   onEdit: () => void
   profile?: ProfileScope
   skill: SkillInfo
 }) {
   const { t } = useI18n()
-  // Only learned/local skills are the user's to rewrite or archive — bundled
-  // and hub skills are managed by their sources.
+  // Only the user's own skills are theirs to rewrite; built-ins can still be
+  // deleted (a restorable archive). Hub skills belong to their hub install.
   const editable = skill.provenance === 'agent'
+  const deletable = skill.provenance !== 'hub' && !ESSENTIAL_SKILLS.has(skill.name)
 
   // The FULL skill — frontmatter metadata + complete SKILL.md body — for any
   // provenance, scoped to the Capabilities profile selector. The row list only
@@ -41,14 +45,18 @@ export function SkillDetail({
 
   return (
     <>
-      {editable && (
+      {(editable || deletable) && (
         <div className="flex items-center gap-2">
-          <Button onClick={onEdit} size="xs" variant="text">
-            {t.skills.edit}
-          </Button>
-          <Button className="text-destructive hover:text-destructive" onClick={onArchive} size="xs" variant="text">
-            {t.skills.archive}
-          </Button>
+          {editable && (
+            <Button onClick={onEdit} size="xs" variant="text">
+              {t.skills.edit}
+            </Button>
+          )}
+          {deletable && (
+            <Button className="text-destructive hover:text-destructive" onClick={onDelete} size="xs" variant="text">
+              {t.common.delete}
+            </Button>
+          )}
         </div>
       )}
       {contentQuery.isLoading ? (

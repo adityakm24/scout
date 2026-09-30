@@ -21,7 +21,7 @@ Adversarial plan interview before implementation.
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `planning`, `adversarial`, `interview`, `decision-tree`, `pre-implementation`, `review`, `alignment` |
-| Related skills | [`requesting-code-review`](../../bundled/software-development/software-development-requesting-code-review.md), [`subagent-driven-development`](../../optional/software-development/software-development-subagent-driven-development.md), [`test-driven-development`](../../bundled/software-development/software-development-test-driven-development.md) |
+| Related skills | [`requesting-code-review`](../../bundled/software-development/software-development-requesting-code-review.md), [`subagent-driven-development`](../../optional/software-development/software-development-subagent-driven-development.md), [`test-driven-development`](../../optional/software-development/software-development-test-driven-development.md) |
 
 ## Reference: full SKILL.md
 

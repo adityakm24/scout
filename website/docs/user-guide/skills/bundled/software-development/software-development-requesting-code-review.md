@@ -21,7 +21,7 @@ Pre-commit review: security scan, quality gates, auto-fix.
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `code-review`, `security`, `verification`, `quality`, `pre-commit`, `auto-fix` |
-| Related skills | [`subagent-driven-development`](../../optional/software-development/software-development-subagent-driven-development.md), [`test-driven-development`](../../bundled/software-development/software-development-test-driven-development.md), [`github`](../../bundled/software-development/software-development-github.md) |
+| Related skills | [`subagent-driven-development`](../../optional/software-development/software-development-subagent-driven-development.md), [`test-driven-development`](../../optional/software-development/software-development-test-driven-development.md), [`github`](../../bundled/software-development/software-development-github.md) |
 
 ## Reference: full SKILL.md
 

@@ -59,11 +59,14 @@ scout skills uninstall <skill-name>
 |-------|-------------|
 | [**ai-presenter-video**](../user-guide/skills/optional/creative/creative-ai-presenter-video.md) | Make a verified AI presenter video from script + image. |
 | [**archify**](../user-guide/skills/optional/creative/creative-archify.md) | Validated interactive HTML diagrams, upstream-maintained. |
+| [**architecture-diagram**](../user-guide/skills/optional/creative/creative-architecture-diagram.md) | Dark-themed SVG architecture/cloud/infra diagrams as HTML. |
 | [**ascii-art**](../user-guide/skills/optional/creative/creative-ascii-art.md) | ASCII art: pyfiglet, cowsay, boxes, image-to-ascii. |
+| [**ascii-video**](../user-guide/skills/optional/creative/creative-ascii-video.md) | ASCII video: convert video/audio to colored ASCII MP4/GIF. |
 | [**audiocraft-audio-generation**](../user-guide/skills/optional/creative/creative-audiocraft-audio-generation.md) | AudioCraft: MusicGen text-to-music, AudioGen text-to-sound. |
 | [**auteur**](../user-guide/skills/optional/creative/creative-auteur.md) | Design and build cinematic, award-level web pages. |
 | [**baoyu-article-illustrator**](../user-guide/skills/optional/creative/creative-baoyu-article-illustrator.md) | Article illustrations: type × style × palette consistency. |
 | [**baoyu-comic**](../user-guide/skills/optional/creative/creative-baoyu-comic.md) | Knowledge comics (知识漫画): educational, biography, tutorial. |
+| [**baoyu-infographic**](../user-guide/skills/optional/creative/creative-baoyu-infographic.md) | Infographics: 21 layouts x 21 styles (信息图, 可视化). |
 | [**brag**](../user-guide/skills/optional/creative/creative-brag.md) | Project launch video via Hyperframes, upstream-maintained. |
 | [**brag-slim**](../user-guide/skills/optional/creative/creative-brag-slim.md) | Launch video from a project or URL, upstream-maintained. |
 | [**comfyui**](../user-guide/skills/optional/creative/creative-comfyui.md) | Generate images, video, and audio via diffusion workflows. |
@@ -77,13 +80,17 @@ scout skills uninstall <skill-name>
 | [**impeccable**](../user-guide/skills/optional/creative/creative-impeccable.md) | Frontend design guidance, upstream-maintained (impeccable). |
 | [**ip-as-logo**](../user-guide/skills/optional/creative/creative-ip-as-logo.md) | Design minimal cute IP mascot marks readable at 32px. |
 | [**kanban-video-orchestrator**](../user-guide/skills/optional/creative/creative-kanban-video-orchestrator.md) | Plan and run multi-agent video production pipelines. |
+| [**manim-video**](../user-guide/skills/optional/creative/creative-manim-video.md) | Manim CE animations: 3Blue1Brown math/algo videos. |
 | [**meme-generation**](../user-guide/skills/optional/creative/creative-meme-generation.md) | Create meme PNGs from templates with Pillow text overlay. |
 | [**mono-color**](../user-guide/skills/optional/creative/creative-mono-color.md) | Generate one- or two-ink editorial print poster images. |
+| [**p5js**](../user-guide/skills/optional/creative/creative-p5js.md) | p5.js sketches: gen art, shaders, interactive, 3D. |
 | [**pixel-art**](../user-guide/skills/optional/creative/creative-pixel-art.md) | Pixel art w/ era palettes (NES, Game Boy, PICO-8). |
+| [**popular-web-designs**](../user-guide/skills/optional/creative/creative-popular-web-designs.md) | 54 real design systems (Stripe, Linear, Vercel) as HTML/CSS. |
 | [**pretext**](../user-guide/skills/optional/creative/creative-pretext.md) | Build creative browser demos with DOM-free text layout. |
 | [**simple-english**](../user-guide/skills/optional/creative/creative-simple-english.md) | Rewrite text to ASD-STE100 Simplified Technical English. |
 | [**sketch**](../user-guide/skills/optional/creative/creative-sketch.md) | Throwaway HTML mockups: 2-3 design variants to compare. |
 | [**social-media-content-calendar**](../user-guide/skills/optional/creative/creative-social-media-content-calendar.md) | Plan multi-platform social campaigns: briefs to posting. |
+| [**songwriting-and-ai-music**](../user-guide/skills/optional/creative/creative-songwriting-and-ai-music.md) | Songwriting craft and Suno AI music prompts. |
 | [**system-atlas**](../user-guide/skills/optional/creative/creative-system-atlas.md) | Build explorable isometric architecture atlases as HTML. |
 | [**tldraw-offline**](../user-guide/skills/optional/creative/creative-tldraw-offline.md) | Drive and script tldraw offline canvases with an agent. |
 | [**unreal-mcp**](../user-guide/skills/optional/creative/creative-unreal-mcp.md) | Automate Unreal Engine editor scenes, actors, and renders. |
@@ -100,9 +107,9 @@ scout skills uninstall <skill-name>
 |-------|-------------|
 | [**actual-setup**](../user-guide/skills/optional/devops/devops-actual-setup.md) | Set up Actual Computer (actual.inc) inference in Scout. |
 | [**docker-management**](../user-guide/skills/optional/devops/devops-docker-management.md) | Manage Docker containers, images, volumes, and Compose. |
-| [**scout-s6-container-supervision**](../user-guide/skills/optional/devops/devops-scout-s6-container-supervision.md) | Modify or debug s6 services in the Scout Docker image. |
 | [**inference-sh-cli**](../user-guide/skills/optional/devops/devops-inference-sh-cli.md) | Run 150+ AI apps (image, video, LLM) via inference.sh CLI. |
 | [**pinggy-tunnel**](../user-guide/skills/optional/devops/devops-pinggy-tunnel.md) | Zero-install localhost tunnels over SSH via Pinggy. |
+| [**scout-s6-container-supervision**](../user-guide/skills/optional/devops/devops-scout-s6-container-supervision.md) | Modify or debug s6 services in the Scout Docker image. |
 | [**setup-wizard-generator**](../user-guide/skills/optional/devops/devops-setup-wizard-generator.md) | Generate a bash wizard guiding a human through manual setup. |
 | [**watchers**](../user-guide/skills/optional/devops/devops-watchers.md) | Poll RSS, JSON APIs, and GitHub with watermark dedup. |
 
@@ -153,6 +160,13 @@ scout skills uninstall <skill-name>
 | [**fastmcp**](../user-guide/skills/optional/mcp/mcp-fastmcp.md) | Build, test, and deploy Python MCP servers. |
 | [**mcp-oauth-remote-gateway**](../user-guide/skills/optional/mcp/mcp-mcp-oauth-remote-gateway.md) | Manual OAuth for remote MCP servers on headless gateways. |
 | [**mcporter**](../user-guide/skills/optional/mcp/mcp-mcporter.md) | List, auth, and call MCP servers/tools from the terminal. |
+
+## media
+
+| Skill | Description |
+|-------|-------------|
+| [**gif-search**](../user-guide/skills/optional/media/media-gif-search.md) | Search/download GIFs from Tenor via curl + jq. |
+| [**songsee**](../user-guide/skills/optional/media/media-songsee.md) | Audio spectrograms/features (mel, chroma, MFCC) via CLI. |
 
 ## migration
 
@@ -213,6 +227,8 @@ scout skills uninstall <skill-name>
 
 | Skill | Description |
 |-------|-------------|
+| [**airtable**](../user-guide/skills/optional/productivity/productivity-airtable.md) | Airtable REST API via curl. Records CRUD, filters, upserts. |
+| [**box**](../user-guide/skills/optional/productivity/productivity-box.md) | Box manages cloud files, sharing, search, and metadata. |
 | [**canvas**](../user-guide/skills/optional/productivity/productivity-canvas.md) | Fetch Canvas LMS courses and assignments via API token. |
 | [**decision-questionnaire**](../user-guide/skills/optional/productivity/productivity-decision-questionnaire.md) | Turn an unanswerable decision into a questionnaire doc. |
 | [**here-now**](../user-guide/skills/optional/productivity/productivity-here-now.md) | Publish sites to &#123;slug&#125;.here.now and store files in Drives. |
@@ -222,12 +238,14 @@ scout skills uninstall <skill-name>
 | [**shop**](../user-guide/skills/optional/productivity/productivity-shop.md) | Shop catalog search, checkout, order tracking, returns. |
 | [**shopify**](../user-guide/skills/optional/productivity/productivity-shopify.md) | Query Shopify Admin/Storefront GraphQL APIs via curl. |
 | [**siyuan**](../user-guide/skills/optional/productivity/productivity-siyuan.md) | Query and edit a SiYuan knowledge base via its API. |
+| [**teams-meeting-pipeline**](../user-guide/skills/optional/productivity/productivity-teams-meeting-pipeline.md) | Teams meeting summaries, job replay, Graph subscriptions. |
 | [**telephony**](../user-guide/skills/optional/productivity/productivity-telephony.md) | Provision Twilio numbers, SMS/MMS, and AI outbound calls. |
 
 ## research
 
 | Skill | Description |
 |-------|-------------|
+| [**arxiv**](../user-guide/skills/optional/research/research-arxiv.md) | Search arXiv papers by keyword, author, category, or ID. |
 | [**bioinformatics**](../user-guide/skills/optional/research/research-bioinformatics.md) | Gateway to 400+ genomics and computational biology skills. |
 | [**blogwatcher**](../user-guide/skills/optional/research/research-blogwatcher.md) | Monitor blogs and RSS/Atom feeds via blogwatcher-cli tool. |
 | [**darwinian-evolver**](../user-guide/skills/optional/research/research-darwinian-evolver.md) | Evolve prompts/regex/SQL/code with Imbue's evolution loop. |
@@ -235,6 +253,7 @@ scout skills uninstall <skill-name>
 | [**drug-discovery**](../user-guide/skills/optional/research/research-drug-discovery.md) | Drug discovery: ChEMBL search, drug-likeness, interactions. |
 | [**duckduckgo-search**](../user-guide/skills/optional/research/research-duckduckgo-search.md) | Free keyless web, news, and image search via ddgs. |
 | [**gitnexus-explorer**](../user-guide/skills/optional/research/research-gitnexus-explorer.md) | Serve an interactive codebase knowledge graph web UI. |
+| [**llm-wiki**](../user-guide/skills/optional/research/research-llm-wiki.md) | Karpathy's LLM Wiki: build/query interlinked markdown KB. |
 | [**osint-investigation**](../user-guide/skills/optional/research/research-osint-investigation.md) | Follow the money via public records and sanctions data. |
 | [**parallel-cli**](../user-guide/skills/optional/research/research-parallel-cli.md) | Agent-native web search, deep research, and enrichment. |
 | [**pinecone-research**](../user-guide/skills/optional/research/research-pinecone-research.md) | Agent RAG and long-term memory with Pinecone. |
@@ -266,6 +285,7 @@ scout skills uninstall <skill-name>
 | Skill | Description |
 |-------|-------------|
 | [**reddit-reading**](../user-guide/skills/optional/social-media/social-media-reddit-reading.md) | Read Reddit: subreddits, search, threads, users. No browser. |
+| [**xurl**](../user-guide/skills/optional/social-media/social-media-xurl.md) | X/Twitter via xurl CLI: raw post search, posting, DM, media. |
 
 ## software-development
 
@@ -273,10 +293,19 @@ scout skills uninstall <skill-name>
 |-------|-------------|
 | [**ast-grep**](../user-guide/skills/optional/software-development/software-development-ast-grep.md) | AST-aware structural code search and rewrite via ast-grep. |
 | [**code-wiki**](../user-guide/skills/optional/software-development/software-development-code-wiki.md) | Generate wiki docs + Mermaid diagrams for any codebase. |
+| [**codebase-inspection**](../user-guide/skills/optional/software-development/software-development-codebase-inspection.md) | Inspect codebases w/ pygount: LOC, languages, ratios. |
+| [**dogfood**](../user-guide/skills/optional/software-development/software-development-dogfood.md) | Exploratory QA of web apps: find bugs, evidence, reports. |
 | [**grill-me**](../user-guide/skills/optional/software-development/software-development-grill-me.md) | Adversarial plan interview before implementation. |
+| [**inspecting-scout-desktop-dom**](../user-guide/skills/optional/software-development/software-development-inspecting-scout-desktop-dom.md) | Read the live Scout desktop DOM/CSS over CDP. |
+| [**node-inspect-debugger**](../user-guide/skills/optional/software-development/software-development-node-inspect-debugger.md) | Debug Node.js via --inspect + Chrome DevTools Protocol CLI. |
 | [**pr-lens**](../user-guide/skills/optional/software-development/software-development-pr-lens.md) | Draw code changes as animated architecture/data-flow SVGs. |
+| [**python-debugpy**](../user-guide/skills/optional/software-development/software-development-python-debugpy.md) | Debug Python: pdb REPL + debugpy remote (DAP). |
 | [**rest-graphql-debug**](../user-guide/skills/optional/software-development/software-development-rest-graphql-debug.md) | Debug REST/GraphQL APIs: status codes, auth, schemas, repro. |
+| [**simplify-code**](../user-guide/skills/optional/software-development/software-development-simplify-code.md) | Parallel 4-agent cleanup of recent code changes. |
+| [**spike**](../user-guide/skills/optional/software-development/software-development-spike.md) | Throwaway experiments to validate an idea before build. |
 | [**subagent-driven-development**](../user-guide/skills/optional/software-development/software-development-subagent-driven-development.md) | Execute plans via delegate_task subagents (2-stage review). |
+| [**systematic-debugging**](../user-guide/skills/optional/software-development/software-development-systematic-debugging.md) | 4-phase root cause debugging: understand bugs before fixing. |
+| [**test-driven-development**](../user-guide/skills/optional/software-development/software-development-test-driven-development.md) | TDD: enforce RED-GREEN-REFACTOR, tests before code. |
 
 ## web-development
 

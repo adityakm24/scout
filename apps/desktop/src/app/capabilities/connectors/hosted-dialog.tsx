@@ -111,6 +111,7 @@ export function HostedConnectorDialog({
           onDisconnect={card.ways.hosted?.connected === true ? onDisconnect : undefined}
           onReconnect={onReconnect}
           onRefreshTools={tools.refresh}
+          onRemove={installed ? onRemoveServer : undefined}
         />
       }
       onAuthenticate={() => void controller.authenticate(localServerName(card))}

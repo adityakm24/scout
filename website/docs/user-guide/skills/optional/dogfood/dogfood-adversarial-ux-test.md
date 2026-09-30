@@ -21,7 +21,7 @@ Roleplay a hostile user to find and triage UX pain points.
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `qa`, `ux`, `testing`, `adversarial`, `dogfood`, `personas`, `user-testing` |
-| Related skills | [`dogfood`](../../bundled/software-development/software-development-dogfood.md) |
+| Related skills | [`dogfood`](../../optional/software-development/software-development-dogfood.md) |
 
 ## Reference: full SKILL.md
 

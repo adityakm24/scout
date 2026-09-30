@@ -21,7 +21,7 @@ Render MP4/WebM videos from HTML compositions.
 | License | Apache-2.0 |
 | Platforms | linux, macos, windows |
 | Tags | `creative`, `video`, `animation`, `html`, `gsap`, `motion-graphics` |
-| Related skills | [`manim-video`](../../bundled/creative/creative-manim-video.md), [`meme-generation`](../../optional/creative/creative-meme-generation.md) |
+| Related skills | [`manim-video`](../../optional/creative/creative-manim-video.md), [`meme-generation`](../../optional/creative/creative-meme-generation.md) |
 
 ## Reference: full SKILL.md
 

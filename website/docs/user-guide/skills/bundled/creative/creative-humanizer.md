@@ -21,7 +21,7 @@ Humanize text: strip AI-isms and add real voice.
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `writing`, `editing`, `humanize`, `anti-ai-slop`, `voice`, `prose`, `text` |
-| Related skills | [`songwriting-and-ai-music`](../../bundled/creative/creative-songwriting-and-ai-music.md) |
+| Related skills | [`songwriting-and-ai-music`](../../optional/creative/creative-songwriting-and-ai-music.md) |
 
 ## Reference: full SKILL.md
 

@@ -21,7 +21,7 @@ Ground answers and documents in cited, verifiable sources.
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `Research`, `Citations`, `Grounding`, `Sources`, `Web`, `Reports` |
-| Related skills | [`arxiv`](../../bundled/research/research-arxiv.md), [`pdf`](../../bundled/productivity/productivity-pdf.md), [`reddit-reading`](../../optional/social-media/social-media-reddit-reading.md), [`rss-feeds`](../../optional/research/research-rss-feeds.md), [`youtube-content`](../../bundled/media/media-youtube-content.md) |
+| Related skills | [`arxiv`](../../optional/research/research-arxiv.md), [`pdf`](../../bundled/productivity/productivity-pdf.md), [`reddit-reading`](../../optional/social-media/social-media-reddit-reading.md), [`rss-feeds`](../../optional/research/research-rss-feeds.md), [`youtube-content`](../../bundled/media/media-youtube-content.md) |
 
 ## Reference: full SKILL.md
 

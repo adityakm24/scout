@@ -2187,6 +2187,30 @@ export interface Translations {
     archive: string
     skillArchivedTitle: string
     skillArchivedMessage: string
+    deleteTitle: (name: string) => string
+    deleteBody: string
+    skillDeletedTitle: string
+    newSkill: string
+    create: {
+      title: string
+      blurb: string
+      name: string
+      nameHint: string
+      namePlaceholder: string
+      description: string
+      descriptionHint: string
+      descriptionPlaceholder: string
+      instructions: string
+      instructionsPlaceholder: string
+      submit: string
+      created: (name: string) => string
+      failed: string
+      upload: string
+      uploaded: (file: string) => string
+      clearUpload: string
+      uploadFailed: string
+      uploadTooLarge: string
+    }
     tabPlugins: string
     plugins: {
       agentTitle: string

@@ -64,7 +64,7 @@ export function LocalConnectorDialog({
       cost={localCost(controller, name)}
       installFields={installFields}
       installing={installing}
-      menu={<ConnectorDialogMenu onRefreshTools={refreshTools} />}
+      menu={<ConnectorDialogMenu onRefreshTools={refreshTools} onRemove={owned ? onRemoveServer : undefined} />}
       onAuthenticate={() => void controller.authenticate(name)}
       onConnect={onConnect}
       onInstall={onInstall}

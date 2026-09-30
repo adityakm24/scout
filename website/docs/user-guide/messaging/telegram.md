@@ -161,7 +161,7 @@ platforms:
         priority_mode: prepend  # prepend | append | replace
         priority:
           - my_plugin_command
-          - songsee          # skill commands work here too
+          - pdf              # skill commands work here too
 ```
 
 `priority_mode` controls how your list combines with Scout's built-in priority list:

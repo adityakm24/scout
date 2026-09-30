@@ -174,7 +174,8 @@ def _delete_skill(name: str) -> dict[str, Any]:
     # consent to an edit here.
     if skill_usage.get_record(name).get("pinned"):
         return {"ok": False, "message": f"'{name}' is pinned — unpin it first (scout curator unpin {name})"}
-    ok, message = skill_usage.archive_skill(name)
+    # Every delete_node caller is a user request (dashboard, desktop, `scout journey delete`).
+    ok, message = skill_usage.archive_skill(name, by_user=True)
     if ok:
         _clear_skill_cache()
     return {"ok": ok, "message": f"archived '{name}' — restore with: scout curator restore {name}" if ok else message}

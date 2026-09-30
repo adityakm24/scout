@@ -37,6 +37,8 @@ interface ArchiveSkillConfirmDialogProps {
   profile?: ProfileScope
   skillId: string
   skillName: string
+  /** Capabilities says Delete (the user's word for it); the star map keeps Archive. Same restorable archive. */
+  verb?: 'archive' | 'delete'
 }
 
 /** Shared archive confirm for learned skills (capabilities page + memory graph). */
@@ -48,14 +50,16 @@ export function ArchiveSkillConfirmDialog({
   open,
   profile,
   skillId,
-  skillName
+  skillName,
+  verb
 }: ArchiveSkillConfirmDialogProps) {
   const { t } = useI18n()
+  const deleting = verb === 'delete'
 
   return (
     <ConfirmDialog
-      confirmLabel="Archive"
-      description={ARCHIVE_SKILL_DESCRIPTION}
+      confirmLabel={deleting ? t.common.delete : 'Archive'}
+      description={deleting ? t.skills.deleteBody : ARCHIVE_SKILL_DESCRIPTION}
       destructive
       dismissOnConfirm
       onClose={onClose}
@@ -64,7 +68,12 @@ export function ArchiveSkillConfirmDialog({
 
         fireOptimistic(
           archiveLearningSkill(skillId, profile).then(() => {
-            notifySkillArchived(t)
+            if (deleting) {
+              notify({ kind: 'success', message: t.skills.skillArchivedMessage, title: t.skills.skillDeletedTitle })
+            } else {
+              notifySkillArchived(t)
+            }
+
             onSuccess?.()
           }),
           rollback,
@@ -72,7 +81,7 @@ export function ArchiveSkillConfirmDialog({
         )
       }}
       open={open}
-      title={`Archive ${skillName}?`}
+      title={deleting ? t.skills.deleteTitle(skillName) : `Archive ${skillName}?`}
     />
   )
 }

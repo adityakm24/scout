@@ -31,10 +31,12 @@ interface CatalogChip {
 }
 
 /** Source, version and stars, trailing the author line. */
+/** Sits beside the entry's byline, which already reads the source when there is
+ *  no author — so the source badge only appears alongside a named author. */
 export function CatalogHeaderMeta({ entry }: { entry: CatalogEntry }) {
   return (
     <span className="flex min-w-0 shrink-0 items-center gap-1">
-      {entry.source && (
+      {entry.source && entry.author && (
         <Badge className="max-w-full" size="xs" variant="muted">
           <span className="truncate">{catalogLabel(entry.source)}</span>
         </Badge>

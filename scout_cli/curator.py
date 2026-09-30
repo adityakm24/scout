@@ -308,7 +308,7 @@ def _as_user(fn, skill: str) -> int:
 
 def _cmd_restore(args) -> int:
     from tools import skill_usage
-    return _as_user(skill_usage.restore_skill, args.skill)
+    return _as_user(lambda name: skill_usage.restore_skill(name, by_user=True), args.skill)
 
 
 def _cmd_archive(args) -> int:

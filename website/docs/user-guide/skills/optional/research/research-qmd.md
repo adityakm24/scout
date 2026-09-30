@@ -21,7 +21,7 @@ Hybrid local search over notes, docs, and transcripts.
 | License | MIT |
 | Platforms | macos, linux |
 | Tags | `Search`, `Knowledge-Base`, `RAG`, `Notes`, `MCP`, `Local-AI` |
-| Related skills | [`obsidian`](../../bundled/note-taking/note-taking-obsidian.md), [`scout-agent`](../../bundled/autonomous-ai-agents/autonomous-ai-agents-scout-agent.md), [`arxiv`](../../bundled/research/research-arxiv.md) |
+| Related skills | [`obsidian`](../../bundled/note-taking/note-taking-obsidian.md), [`scout-agent`](../../bundled/autonomous-ai-agents/autonomous-ai-agents-scout-agent.md), [`arxiv`](../../optional/research/research-arxiv.md) |
 
 ## Reference: full SKILL.md
 

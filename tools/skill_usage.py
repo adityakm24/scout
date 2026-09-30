@@ -623,13 +623,26 @@ def _relocate(src: Path, dest: Path, skill_name: str, action: str, **capture_kwa
     return True, f"{action}d to {dest}"
 
 
-def archive_skill(skill_name: str) -> Tuple[bool, str]:
+def _user_may_prune_builtin(skill_name: str) -> bool:
+    """A built-in the user may delete themselves. Essentials are re-seeded on every sync, so deleting one
+    would not stick; protected and hub-installed skills have other owners."""
+    from agent.skill_utils import ESSENTIAL_SKILLS
+    return (is_bundled(skill_name) and skill_name not in ESSENTIAL_SKILLS
+            and not is_protected_builtin(skill_name) and not is_hub_installed(skill_name))
+
+
+def archive_skill(skill_name: str, *, by_user: bool = False) -> Tuple[bool, str]:
     """Move a curator-eligible skill dir to ``.archive/`` (flattened; timestamp suffix on collision). Never hub;
-    bundled built-ins only with ``curator.prune_builtins`` (and then suppressed from re-seeding)."""
+    bundled built-ins only with ``curator.prune_builtins`` (and then suppressed from re-seeding).
+
+    ``by_user``: the user deleting the skill themselves (dashboard, desktop, CLI) — that request is the consent
+    ``prune_builtins`` stands in for on autonomous curator passes, so a built-in may go without it."""
     skill_dir = _find_skill_dir(skill_name)
     if skill_dir is None and _find_external_skill_dir(skill_name) is not None:
         return False, _external_read_only_message(skill_name)
-    if not is_curation_eligible(skill_name, skill_dir):
+    if by_user and is_bundled(skill_name) and not _user_may_prune_builtin(skill_name):
+        return False, f"skill '{skill_name}' is essential to Scout and cannot be deleted"
+    if not (is_curation_eligible(skill_name, skill_dir) or (by_user and _user_may_prune_builtin(skill_name))):
         if is_protected_builtin(skill_name):
             return False, f"skill '{skill_name}' is a protected built-in; it backs load-bearing UX and is never archived or consolidated"
         if is_hub_installed(skill_name):
@@ -653,12 +666,15 @@ def archive_skill(skill_name: str) -> Tuple[bool, str]:
     return _relocate(skill_dir, dest, skill_name, "archive", complete_package=True, skill=skill_name)
 
 
-def restore_skill(skill_name: str) -> Tuple[bool, str]:
+def restore_skill(skill_name: str, *, by_user: bool = False) -> Tuple[bool, str]:
     """Move an archived skill back to the flat layout (nesting NOT reconstructed). Refuses a name now colliding with
-    a hub skill, or a bundled built-in unless ``curator.prune_builtins`` is on (restoring lifts a prune)."""
+    a hub skill, or a bundled built-in unless ``curator.prune_builtins`` is on (restoring lifts a prune).
+
+    ``by_user``: the user restoring it themselves — the counterpart of ``archive_skill(by_user=True)``, so a
+    built-in they deleted can always come back."""
     if is_hub_installed(skill_name):
         return False, f"skill '{skill_name}' is now hub-installed; restore would shadow the upstream version"
-    if is_bundled(skill_name) and not _prune_builtins_enabled():
+    if is_bundled(skill_name) and not (_prune_builtins_enabled() or by_user):
         return False, f"skill '{skill_name}' is now bundled; restore would shadow the upstream version"
     archive_root = _archive_dir()
     if not archive_root.exists():

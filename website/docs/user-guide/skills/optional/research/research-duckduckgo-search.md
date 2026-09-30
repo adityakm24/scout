@@ -21,7 +21,7 @@ Free keyless web, news, and image search via ddgs.
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `search`, `duckduckgo`, `web-search`, `free`, `fallback` |
-| Related skills | [`arxiv`](../../bundled/research/research-arxiv.md) |
+| Related skills | [`arxiv`](../../optional/research/research-arxiv.md) |
 
 ## Reference: full SKILL.md
 

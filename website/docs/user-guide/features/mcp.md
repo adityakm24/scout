@@ -98,9 +98,9 @@ scout mcp install deepwiki  # install a catalog entry by name
 The picker shows each entry with its current status:
 
 ```
-deepwiki     available              Ask questions about public GitHub repositories
-linear       enabled                Linear issue/project management (remote OAuth)
-github       installed (disabled)   GitHub repo + PR tools
+notion       available              Notion pages, databases and search (remote OAuth)
+todoist      enabled                Todoist tasks and projects (remote OAuth)
+figma        installed (disabled)   Figma files, frames and comments
 ```
 
 Hit `Enter` on a row to install (and walk through any required credentials),
@@ -109,13 +109,11 @@ enable, disable, or uninstall. Catalog entries are stored under
 SpaceshipResearch approval. There is no community submission tier; entries are added by
 merging a PR.
 
-The third-party n8n bridge is no longer available for catalog installation.
-Existing installations keep their `mcp_servers` configuration, credentials,
-installed files, and selected tools. They continue to load as configured MCP
-servers and appear as custom entries in the picker, where you can still
-configure tools or enable and disable them. Catalog reinstall is no longer
-available. This change does not migrate existing connections to
-[n8n's official MCP server](https://docs.n8n.io/connect/connect-to-n8n-mcp-server/).
+When an entry leaves the catalog, existing installations are untouched: their
+`mcp_servers` configuration, credentials, installed files and selected tools
+stay, and the server keeps loading as a custom entry in the picker, where you
+can still configure tools, enable, disable or remove it. Only catalog
+(re)installation goes away.
 
 Catalog entries can require:
 

@@ -50,7 +50,6 @@ import {
   RefreshCw,
   Settings,
   Settings2,
-  SlidersHorizontal,
   Starmap,
   Sun,
   Users,
@@ -1142,13 +1141,6 @@ function CommandPaletteBody({ onExited }: { onExited: () => void }) {
           keywords: ['skills', 'capabilities'],
           label: `${capLabel}: ${t.skills.tabSkills}`,
           run: go(`${CAPABILITIES_ROUTE}?tab=skills`)
-        },
-        {
-          icon: SlidersHorizontal,
-          id: 'cap-toolsets',
-          keywords: ['tools', 'toolsets', 'capabilities'],
-          label: `${capLabel}: ${t.skills.tabToolsets}`,
-          run: go(`${CAPABILITIES_ROUTE}?tab=toolsets`)
         },
         {
           icon: Layers3,

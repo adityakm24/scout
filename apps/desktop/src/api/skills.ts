@@ -30,6 +30,21 @@ export function getSkillContent(
   })
 }
 
+/** Create the user's own skill (a SKILL.md in the profile's skills dir) through
+ *  the same validated write path the agent's skill_manage uses. */
+export function createSkill(
+  name: string,
+  content: string,
+  profile?: ProfileScope
+): Promise<{ message: string; path: string; success: boolean }> {
+  return window.scoutDesktop.api<{ message: string; path: string; success: boolean }>({
+    ...capabilityScoped(profile),
+    path: '/api/skills',
+    method: 'POST',
+    body: { name, content }
+  })
+}
+
 export function setSkillEnabled(
   name: string,
   enabled: boolean,

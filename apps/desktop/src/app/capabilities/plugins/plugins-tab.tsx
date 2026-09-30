@@ -14,7 +14,6 @@ import { useI18n } from '@/i18n'
 import { DESKTOP_PLUGIN_TOOLSETS } from '@/lib/desktop-toolsets'
 import { triggerHaptic } from '@/lib/haptics'
 import { FolderOpen, Loader2, Monitor, Package, RefreshCw, Trash2 } from '@/lib/icons'
-import { queryClient } from '@/lib/query-client'
 import { cn } from '@/lib/utils'
 import type { ProfileScope } from '@/scout'
 import {
@@ -44,7 +43,6 @@ import { useDeepLinkHighlight } from '../../settings/use-deep-link-highlight'
 import { CatalogAlert } from '../catalog/catalog-alert'
 import { CatalogBrowser } from '../catalog/catalog-browser'
 import { type CatalogEntry, parseCatalog } from '../catalog/catalog-data'
-import { TOOLSETS_QUERY_KEY } from '../toolsets/toolsets-data'
 
 import { mergePluginPackages, type PackageKind, type PluginPackage } from './plugin-packages'
 import { PluginSettingsForm } from './plugin-settings-form'
@@ -281,8 +279,6 @@ function PackageRow({
           notifyError(err, p.toolsetToggleFailed(pkg.name))
         }
       }
-
-      void queryClient.invalidateQueries({ queryKey: TOOLSETS_QUERY_KEY })
 
       if (toolsetOn === on) {
         await setPluginEnabled(id, on)

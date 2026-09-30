@@ -17,9 +17,12 @@ export interface ConnectorDialogMenuProps {
   onDisconnect?: () => void
   onReconnect?: () => void
   onRefreshTools: () => void
+  /** Delete the server from this computer's mcp.json (asks first). Omitted when
+   *  the server isn't the user's to delete. */
+  onRemove?: () => void
 }
 
-export function ConnectorDialogMenu({ onDisconnect, onReconnect, onRefreshTools }: ConnectorDialogMenuProps) {
+export function ConnectorDialogMenu({ onDisconnect, onReconnect, onRefreshTools, onRemove }: ConnectorDialogMenuProps) {
   const { t } = useI18n()
   const copy = t.connectorsPage
 
@@ -51,6 +54,18 @@ export function ConnectorDialogMenu({ onDisconnect, onReconnect, onRefreshTools 
               onSelect={onDisconnect}
             >
               {copy.dialog.disconnect}
+            </DropdownMenuItem>
+          </>
+        ) : null}
+        {onRemove ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className={cn(dropdownMenuRow, 'text-destructive focus:text-destructive')}
+              onSelect={onRemove}
+            >
+              <Codicon name="trash" size="0.8125rem" />
+              {t.common.delete}
             </DropdownMenuItem>
           </>
         ) : null}

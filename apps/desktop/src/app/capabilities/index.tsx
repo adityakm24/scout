@@ -1,8 +1,6 @@
 import type * as React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { PageLoader } from '@/components/page-loader'
-import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n'
 import { queryClient } from '@/lib/query-client'
 import { invalidateSlashCompletions } from '@/lib/slash-completion-cache'
@@ -12,7 +10,6 @@ import { OFFICIAL_SKILLS_KEY } from '@/store/hub-actions'
 
 import { useRefreshHotkey } from '../hooks/use-refresh-hotkey'
 import { useRouteEnumParam } from '../hooks/use-route-enum-param'
-import { PanelEmpty } from '../overlays/panel'
 import { PageSearchShell } from '../page-search-shell'
 import type { SetStatusbarItemGroup } from '../shell/statusbar-controls'
 
@@ -22,13 +19,10 @@ import { PluginsTab } from './plugins/plugins-tab'
 import { CapabilityScopeSelector, useCapabilityScope } from './scope-selector'
 import { SKILLS_QUERY_KEY, skillSearchTerms, useSkillsQuery } from './skills/skills-data'
 import { SkillsTab } from './skills/skills-tab'
-import { refreshToolCalls } from './toolsets/tool-calls'
-import { TOOLSETS_QUERY_KEY, toolsetSearchTerms, useToolsetsQuery, visibleToolsetCount } from './toolsets/toolsets-data'
-import { ToolsetsTab } from './toolsets/toolsets-tab'
 
-// Skills Hub browsing lives inside the Skills tab. Legacy `?tab=hub`
-// links fall back to 'skills' via useRouteEnumParam.
-const CAPABILITY_MODES = ['skills', 'toolsets', 'connectors', 'plugins'] as const
+// Legacy `?tab=hub` / `?tab=toolsets` links fall back to 'skills' via
+// useRouteEnumParam; core toolsets are configured in Settings → Advanced.
+const CAPABILITY_MODES = ['skills', 'connectors', 'plugins'] as const
 
 type CapabilityMode = (typeof CAPABILITY_MODES)[number]
 
@@ -77,19 +71,15 @@ export function CapabilitiesView({
   // The two installed lists the tab pills count. They are fetched here, as a
   // pair, because the counts stay live for the tab the user is NOT on.
   const { data: skills, isError: skillsFailed, error: skillsError } = useSkillsQuery(scope.profile)
-  const { data: toolsets, isError: toolsetsFailed } = useToolsetsQuery(scope.profile)
 
   const refreshCapabilities = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: SKILLS_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: TOOLSETS_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: OFFICIAL_SKILLS_KEY })
     ])
 
     invalidateSlashCompletions()
-
-    void refreshToolCalls(scope.profile)
-  }, [scope.profile])
+  }, [])
 
   useRefreshHotkey(refreshCapabilities)
 
@@ -99,35 +89,9 @@ export function CapabilitiesView({
 
   // Rotating placeholder nudges from the user's own data — teach that search
   // understands categories and tool names, not just titles.
-  const searchHints = useMemo(() => {
-    if (mode === 'skills' && skills?.length) {
-      return skillSearchTerms(skills).map(term => t.common.tryHint(term))
-    }
-
-    if (mode === 'toolsets' && toolsets?.length) {
-      return toolsetSearchTerms(toolsets).map(term => t.common.tryHint(term))
-    }
-
-    return undefined
-  }, [mode, skills, t, toolsets])
-
-  // MCP and Plugins load independently of the installed Skills/Tools lists.
-  const gated = mode === 'toolsets'
-  const pending = gated && !(skills && toolsets)
-
-  const loadGate = !pending ? null : skillsFailed || toolsetsFailed ? (
-    <PanelEmpty
-      action={
-        <Button onClick={() => void refreshCapabilities()} size="sm">
-          {t.skills.refresh}
-        </Button>
-      }
-      description={skillsError instanceof Error ? skillsError.message : undefined}
-      icon="error"
-      title={t.skills.skillsLoadFailed}
-    />
-  ) : (
-    <PageLoader label={t.skills.loading} />
+  const searchHints = useMemo(
+    () => (mode === 'skills' && skills?.length ? skillSearchTerms(skills).map(term => t.common.tryHint(term)) : undefined),
+    [mode, skills, t]
   )
 
   const tabContent = {
@@ -164,9 +128,6 @@ export function CapabilitiesView({
         skills={skills ?? []}
       />
     ),
-    toolsets: () => (
-      <ToolsetsTab key={`toolsets-${scope.key}`} profile={scope.profile} query={query} toolsets={toolsets ?? []} />
-    )
   } satisfies Record<CapabilityMode, () => React.ReactNode>
 
   return (
@@ -175,27 +136,20 @@ export function CapabilitiesView({
       activeTab={mode}
       onSearchChange={setQuery}
       onTabChange={id => setMode(id as CapabilityMode)}
-      // Catalogs keep search beside their results; Connectors owns its field too.
-      searchHidden={mode !== 'toolsets'}
+      // Every tab keeps its own search beside its results.
+      searchHidden
       searchHints={searchHints}
-      searchPlaceholder={
-        mode === 'plugins'
-          ? t.catalog.searchPlugins
-          : mode === 'skills'
-            ? t.catalog.searchSkills
-            : t.skills.searchToolsets
-      }
+      searchPlaceholder={mode === 'plugins' ? t.catalog.searchPlugins : t.catalog.searchSkills}
       searchValue={query}
       tabs={[
         { id: 'skills', label: t.skills.tabSkills, meta: skills?.length ?? null },
-        { id: 'toolsets', label: t.skills.tabToolsets, meta: toolsets ? visibleToolsetCount(toolsets) : null },
         { id: 'connectors', label: t.connectorsPage.title },
         { id: 'plugins', label: t.skills.tabPlugins }
       ]}
     >
       <div className="flex h-full flex-col">
         {mode !== 'plugins' && <CapabilityScopeSelector scope={scope} />}
-        <div className="flex min-h-0 flex-1 flex-col">{loadGate ?? tabContent[mode]()}</div>
+        <div className="flex min-h-0 flex-1 flex-col">{tabContent[mode]()}</div>
       </div>
     </PageSearchShell>
   )

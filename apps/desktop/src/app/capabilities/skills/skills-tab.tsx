@@ -14,9 +14,9 @@ import type { SkillInfo } from '@/types/scout'
 
 import { DetailPane, ListStripMenu, type ListStripMenuToggle } from '../../master-detail'
 import { CatalogAlert } from '../catalog/catalog-alert'
-import { SkillCatalog } from '../catalog/skill-catalog'
-import { UpdateSkillsButton } from '../catalog/update-skills-button'
 
+import { InstalledSkills } from './installed-skills'
+import { NewSkillDialog } from './new-skill-dialog'
 import { SkillDetail } from './skill-detail'
 import { skillsQueryKey, usageOf } from './skills-data'
 
@@ -32,7 +32,7 @@ interface SkillsTabProps {
   onRefresh: () => void
 }
 
-/** One management controller for the unified catalog, remounted on scope changes
+/** One management controller for the profile's skills, remounted on scope changes
  * so an old profile's editor, confirmation or pending write cannot enter another. */
 export function SkillsTab(props: SkillsTabProps) {
   return <ScopedSkillsTab key={profileScopeKey(props.profile)} {...props} />
@@ -57,6 +57,7 @@ function ScopedSkillsTab({
   const [skillDraft, setSkillDraft] = useState('')
   const [skillSaving, setSkillSaving] = useState(false)
   const [archiveTarget, setArchiveTarget] = useState<null | string>(null)
+  const [creating, setCreating] = useState(false)
 
   // eslint-disable-next-line no-restricted-syntax -- lifecycle guard drops stale async completions; it does not mirror an atom
   useEffect(() => {
@@ -230,10 +231,9 @@ function ScopedSkillsTab({
 
   return (
     <>
-      <SkillCatalog
+      <InstalledSkills
         actions={
           <>
-            <UpdateSkillsButton profile={profile} />
             <ListStripMenu
               items={[
                 {
@@ -252,12 +252,11 @@ function ScopedSkillsTab({
             />
           </>
         }
-        installedPending={installedPending || Boolean(installedError)}
         notice={notice}
+        onNewSkill={() => setCreating(true)}
         onQueryChange={onQueryChange}
-        profile={profile}
         query={query}
-        renderInstalledAction={skill => (
+        renderAction={skill => (
           <Switch
             aria-label={skill.name}
             checked={skill.enabled}
@@ -266,13 +265,13 @@ function ScopedSkillsTab({
             size="xs"
           />
         )}
-        renderInstalledDetail={skill => (
+        renderDetail={skill => (
           <>
             {usageOf(skill) > 0 && (
               <p className="text-xs text-(--ui-text-tertiary)">{t.skills.usageCount(usageOf(skill))}</p>
             )}
             <SkillDetail
-              onArchive={() => {
+              onDelete={() => {
                 if (!saving.current) {
                   setArchiveTarget(skill.name)
                 }
@@ -312,6 +311,7 @@ function ScopedSkillsTab({
         )}
         skills={skills}
       />
+      <NewSkillDialog onClose={() => setCreating(false)} open={creating} profile={profile} />
       {archiveTarget && (
         <ArchiveSkillConfirmDialog
           onApply={() => {
@@ -357,6 +357,7 @@ function ScopedSkillsTab({
           profile={profile}
           skillId={archiveTarget}
           skillName={archiveTarget}
+          verb="delete"
         />
       )}
     </>
