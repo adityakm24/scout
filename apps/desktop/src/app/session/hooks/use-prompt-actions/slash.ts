@@ -40,7 +40,6 @@ import {
   applySessionTitle,
   setActiveSessionId,
   setCurrentUsage,
-  setModelPickerOpen,
   setSessionPickerOpen,
   setSessions,
   setYoloActive
@@ -1115,19 +1114,6 @@ export function useSlashCommand(deps: SlashCommandDeps) {
       // Picker commands open a desktop overlay; a typed arg is resolved by that
       // picker so the command never dead-ends or falls through to the backend.
       const openPicker = async (pickerId: DesktopPickerId, ctx: SlashActionCtx): Promise<void> => {
-        if (pickerId === 'model') {
-          if (!ctx.arg.trim()) {
-            setModelPickerOpen(true)
-
-            return
-          }
-
-          // Power users can still type `/model <name>` — run it on the backend.
-          await runExec(ctx)
-
-          return
-        }
-
         // session picker — /resume, /sessions, /switch
         const query = ctx.arg.trim()
 

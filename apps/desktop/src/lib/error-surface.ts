@@ -233,8 +233,6 @@ export function errorCardKey(surface: ErrorSurface | null | undefined): ErrorCar
 export interface ErrorRecoveryPlan {
   /** assistant-ui reload of the failed turn. */
   retry: boolean
-  /** Open the model picker (model_not_found). */
-  chooseModel: boolean
   /** Run /compress on this session (context too long). */
   compress: boolean
   /** requestFreshSession — when this session cannot continue as-is. */
@@ -249,14 +247,7 @@ export interface ErrorRecoveryPlan {
   signInAgain: boolean
   /** Open the free-tier sign-in dialog (free_tier_* codes): signing in is free and lifts the refusal. */
   signInFreeTier: boolean
-  /** Open the live session model menu (switches THIS session via
-   *  model.switch); Settings → Models deep link fallback when no chat surface
-   *  is on screen. */
-  switchProvider: boolean
 }
-
-// Layers where the fix is provider/endpoint/auth config, not a retry.
-const SWITCH_PROVIDER_LAYERS: readonly ErrorSurfaceLayer[] = ['auth', 'billing', 'endpoint', 'provider']
 
 // Per-code overrides on top of the layer defaults. `retry: false` here means
 // the classifier may call the failure retryable at the transport level, but
@@ -268,7 +259,7 @@ const CODE_PLANS: Partial<Record<ErrorCodeKey, Partial<ErrorRecoveryPlan>>> = {
   context_overflow: { compress: true, retry: false, startNewSession: true },
   disk_full: { openScoutFolder: true, retry: true },
   loop_error: { startNewSession: true },
-  model_not_found: { chooseModel: true, retry: false },
+  model_not_found: { retry: false },
   payload_too_large: { compress: true, retry: false, startNewSession: true }
 }
 
@@ -277,7 +268,6 @@ export function errorRecoveryPlan(surface: ErrorSurface | null | undefined): Err
   const apiKeyRejected = isApiKeyRejectedSurface(surface)
 
   const base: ErrorRecoveryPlan = {
-    chooseModel: false,
     compress: false,
     editMessage: false,
     openScoutFolder: false,
@@ -289,7 +279,6 @@ export function errorRecoveryPlan(surface: ErrorSurface | null | undefined): Err
     signInAgain: oauthReauth,
     signInFreeTier: isFreeTierSurface(surface),
     startNewSession: false,
-    switchProvider: surface != null && SWITCH_PROVIDER_LAYERS.includes(surface.layer),
     updateApiKey: apiKeyRejected
   }
 

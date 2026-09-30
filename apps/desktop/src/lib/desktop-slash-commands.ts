@@ -75,7 +75,7 @@ export type DesktopActionId =
   | 'yolo'
 
 /** A command fulfilled by opening a desktop overlay picker. */
-export type DesktopPickerId = 'model' | 'session'
+export type DesktopPickerId = 'session'
 
 /** Why a known Scout command has no desktop UI surface. */
 export type DesktopUnavailableReason = 'advanced' | 'messaging' | 'settings' | 'terminal'
@@ -225,7 +225,6 @@ const DESKTOP_COMMAND_SPECS: readonly DesktopCommandSpec[] = [
   },
 
   // Overlay pickers
-  { name: '/model', description: 'Switch the model for this session', surface: picker('model'), hidden: true },
   {
     name: '/resume',
     description: 'Resume a saved session',
@@ -472,7 +471,6 @@ const UNAVAILABLE_MESSAGE: Record<DesktopUnavailableReason, (command: string) =>
 }
 
 const PICKER_UNAVAILABLE_MESSAGE: Record<DesktopPickerId, (command: string) => string> = {
-  model: command => `${command} uses the desktop model picker instead of a slash command.`,
   session: command => `${command} uses the desktop session picker instead of a slash command.`
 }
 
@@ -620,11 +618,6 @@ export function isPickerCommand(command: string, picker?: DesktopPickerId): bool
   }
 
   return picker ? surface.picker === picker : true
-}
-
-/** Back-compat shim for the model picker check. */
-export function isModelPickerCommand(command: string): boolean {
-  return isPickerCommand(command, 'model')
 }
 
 export function desktopSlashUnavailableMessage(command: string): string | null {

@@ -85,7 +85,6 @@ export const KEYBIND_ACTIONS: readonly KeybindActionMeta[] = [
   // ⌘⇧M — "m" for model; the convention chat apps converged on (LibreChat,
   // Open WebUI, and Cherry Studio all ship the same chord). Opens the pill's
   // live dropdown on the pane under the pointer, else the active composer.
-  { id: 'composer.modelPicker', category: 'composer', defaults: ['mod+shift+m'] },
   // Reasoning level up/down — one notch through off → minimal → … → xhigh,
   // clamped at the ends (#71627). Unbound: the chords a user
   // picks (Alt+., Ctrl+Alt+↑, Numpad +/- …) are too personal to claim by

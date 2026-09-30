@@ -69,7 +69,6 @@ import {
   $selectedStoredSessionId,
   markComposerSelectionManual,
   setCurrentReasoningEffort,
-  setModelPickerOpen
 } from '@/store/session'
 import { $focusedStoredSessionId, reopenLastClosedTile } from '@/store/session-states'
 import {
@@ -90,7 +89,6 @@ import { useTheme } from '@/themes/context'
 
 import {
   requestComposerFocus,
-  requestModelMenuToggle,
 } from '../chat/composer/focus'
 import { handleComposerFocusChord } from '../chat/composer/focus-chord'
 import { handleWindowPaste } from '../chat/composer/paste-to-focus'
@@ -272,13 +270,6 @@ export function useKeybinds(deps: KeybindRuntimeDeps): void {
     'keybinds.openPanel': () => navigate(`${SETTINGS_ROUTE}?tab=keybinds`),
 
     'composer.focus': () => requestComposerFocus('active'),
-    // Toggle the composer pill's live model dropdown (pane under the pointer,
-    // else active composer); no chat surface on screen → the full dialog.
-    'composer.modelPicker': () => {
-      if (!requestModelMenuToggle()) {
-        setModelPickerOpen(true)
-      }
-    },
     'composer.reasoningUp': () => stepSessionReasoning(1),
     'composer.reasoningDown': () => stepSessionReasoning(-1),
 

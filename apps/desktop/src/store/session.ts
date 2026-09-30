@@ -1422,7 +1422,6 @@ export const $currentPersonality = atom('')
 export const $availablePersonalities = atom<string[]>([])
 export const $introSeed = atom(0)
 export const $contextSuggestions = atom<ContextSuggestion[]>([])
-export const $modelPickerOpen = atom(false)
 export const $sessionPickerOpen = atom(false)
 
 function rescopeComposerSelection(nextScope: string | null): void {
@@ -1825,5 +1824,4 @@ export const setCurrentPersonality = (next: Updater<string>) => updateAtom($curr
 export const setAvailablePersonalities = (next: Updater<string[]>) => updateAtom($availablePersonalities, next)
 export const setIntroSeed = (next: Updater<number>) => updateAtom($introSeed, next)
 export const setContextSuggestions = (next: Updater<ContextSuggestion[]>) => updateAtom($contextSuggestions, next)
-export const setModelPickerOpen = (next: Updater<boolean>) => updateAtom($modelPickerOpen, next)
 export const setSessionPickerOpen = (next: Updater<boolean>) => updateAtom($sessionPickerOpen, next)

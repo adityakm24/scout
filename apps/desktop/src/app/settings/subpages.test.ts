@@ -71,7 +71,6 @@ describe('settings subpage routing', () => {
     }
 
     const cases: [SettingsView, string, string][] = [
-      ['config:model', 'aux=vision', 'auxiliary'],
       ['keybinds', 'setting=keybinds.hud-modifier', 'hud-gesture'],
       ['keybinds', 'page=shortcuts&setting=keybinds.hud-modifier', 'hud-gesture'],
       ['notifications', 'setting=notifications.completion-sound', 'sounds'],

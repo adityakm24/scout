@@ -98,8 +98,6 @@ import { useGatewayRequest } from '../gateway/hooks/use-gateway-request'
 import { useScoutConfigRecord } from '../hooks/use-config-record'
 import { useKeybinds } from '../hooks/use-keybinds'
 import { useHudHandoff } from '../hud/handoff'
-import { ModelPickerOverlay } from '../model-picker-overlay'
-import { ModelVisibilityOverlay } from '../model-visibility-overlay'
 import { mainChatOccupied, openSession, openSessionFromPicker } from '../open-session'
 import { PetGenerateOverlay } from '../pet-generate/pet-generate-overlay'
 import { FileActionDialogs } from '../right-sidebar/file-actions'
@@ -436,7 +434,7 @@ export function ContribWiring({ children }: { children: ReactNode }) {
 
   const { refreshScoutConfig } = useScoutConfig({ activeSessionIdRef })
 
-  const { applySavedMainModel, followDefaultModel, refreshCurrentModel, selectModel } = useModelControls({
+  const { applySavedMainModel, refreshCurrentModel, selectModel } = useModelControls({
     cacheOwnerConnectionId: activeConnectionId || undefined,
     cacheProfile: activeGatewayProfile,
     queryClient,
@@ -1153,7 +1151,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
     onSubmit: submitText,
     onThreadMessagesChange: handleThreadMessagesChange,
     onToggleSelectedPin: toggleSelectedPin,
-    followDefaultModel,
     getGateway: () => gatewayRef.current,
     openAgents,
     openCommandCenterSection,
@@ -1320,20 +1317,7 @@ export function ContribWiring({ children }: { children: ReactNode }) {
           the statusbar chip, the first-launch intro). It owns the flow; the
           entry points only record the intent. */}
       {!isAuxiliaryWindow() && <FreeTierSignInDialog onSelectModel={selectModel} />}
-      <ModelPickerOverlay
-        gateway={gateway || undefined}
-        onSelect={selectModel}
-        ownerConnectionId={activeConnectionId || undefined}
-        profile={activeGatewayProfile}
-        requestGateway={requestGateway}
-      />
       <SessionPickerOverlay onResume={sessionId => openSessionFromPicker(sessionId, navigate)} />
-      <ModelVisibilityOverlay
-        gateway={gateway || undefined}
-        onOpenProviders={openProviderSettings}
-        ownerConnectionId={activeConnectionId || undefined}
-        profile={activeGatewayProfile}
-      />
       <UpdatesOverlay />
       <GatewayConnectingOverlay />
       <BootFailureOverlay />

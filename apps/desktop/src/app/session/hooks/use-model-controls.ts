@@ -2,7 +2,7 @@ import type { ModelOptionsResult } from '@scout/shared'
 import { type QueryClient } from '@tanstack/react-query'
 import { useCallback, useRef } from 'react'
 
-import type { ModelSelection } from '@/app/shell/model-menu-panel'
+import type { ModelSelection } from '@/app/shell/use-model-menu-controller'
 import { useI18n } from '@/i18n'
 import { isBusySessionModelSwitch } from '@/lib/gateway-rpc'
 import { surfaceModelSwitchConfirm } from '@/lib/guarded-model-switch'
@@ -225,13 +225,6 @@ export function useModelControls({
     [cacheOwnerConnectionId, cacheProfile, queryClient, requestGateway]
   )
 
-  // Drop a sticky composer pick so new chats follow Settings → Model again,
-  // without making the user re-apply the default they already have (#107410).
-  const followDefaultModel = useCallback(() => {
-    setCurrentModelSource('default')
-    void refreshCurrentModel()
-  }, [refreshCurrentModel])
-
   // Returns whether the switch was applied so callers can await it before
   // applying follow-up changes. `true` means applied (or deferred/busy-queued
   // for the next turn). `false` means NOT applied — either pending
@@ -405,5 +398,5 @@ export function useModelControls({
     [cacheOwnerConnectionId, cacheProfile, copy.modelSwitchFailed, queryClient, requestGateway, updateModelOptionsCache]
   )
 
-  return { applySavedMainModel, followDefaultModel, refreshCurrentModel, selectModel }
+  return { applySavedMainModel, refreshCurrentModel, selectModel }
 }

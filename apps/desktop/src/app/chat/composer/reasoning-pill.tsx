@@ -3,7 +3,7 @@ import { DEFAULT_REASONING_EFFORT } from '@scout/shared'
 import { useState } from 'react'
 
 import { useSessionView } from '@/app/chat/session-view'
-import { ModelMenuCloseContext } from '@/app/shell/model-menu-panel'
+import { ModelMenuCloseContext } from '@/app/shell/model-catalog-menu'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { GlyphSpinner } from '@/components/ui/glyph-spinner'

@@ -261,17 +261,16 @@ describe('code-keyed error card copy and actions', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
   })
 
-  it('offers Choose a model and no Retry when the model is not available', async () => {
+  it('offers no Retry when the model is not available', async () => {
     render(
       <Harness
         assistant={failedMessage({ code: 'model_not_found', layer: 'provider', provider: 'openai', retryable: false })}
       />
     )
 
-    expect(await screen.findByRole('button', { name: 'Choose a model' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
     // The raw HTTP body is not the lead sentence.
-    expect(screen.getByText(copy(codes.model_not_found.title))).toBeTruthy()
+    expect(await screen.findByText(copy(codes.model_not_found.title))).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
     expect(screen.getByText(/HTTP 400/).closest('details')).not.toBeNull()
   })
 
@@ -400,44 +399,6 @@ describe('rejected API key recovery', () => {
 
     screen.getByRole('button', { name: 'Update API key' }).click()
     await waitFor(() => expect(screen.getByTestId('location').textContent).toMatch(/\?tab=keys&key=OPENAI_API_KEY$/))
-  })
-})
-
-describe('switch provider on a live session (#95066)', () => {
-  const billingFailure = () =>
-    failedMessage({ code: 'billing', layer: 'billing', provider: 'openai-codex', retryable: false }, 'HTTP 429: quota')
-
-  it('opens the live session model menu instead of leaving the chat for Settings', async () => {
-    render(
-      <MemoryRouter>
-        <LocationProbe />
-        <Harness assistant={billingFailure()} />
-      </MemoryRouter>
-    )
-
-    const button = await screen.findByRole('button', { name: 'Switch provider' })
-    const before = screen.getByTestId('location').textContent
-
-    button.click()
-
-    expect(requestModelMenuToggle).toHaveBeenCalledTimes(1)
-    // Still on the chat: the pick lands on THIS session through model.switch.
-    expect(screen.getByTestId('location').textContent).toBe(before)
-  })
-
-  it('falls back to Settings → Models only when no chat surface is on screen', async () => {
-    requestModelMenuToggle.mockReturnValue(false)
-    render(
-      <MemoryRouter>
-        <LocationProbe />
-        <Harness assistant={billingFailure()} />
-      </MemoryRouter>
-    )
-
-    ;(await screen.findByRole('button', { name: 'Switch provider' })).click()
-
-    expect(requestModelMenuToggle).toHaveBeenCalledTimes(1)
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toMatch(/\?tab=config:model$/))
   })
 })
 

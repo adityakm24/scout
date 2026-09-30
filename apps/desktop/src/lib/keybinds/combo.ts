@@ -269,7 +269,6 @@ export function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 const INPUT_SAFE_ACTIONS = new Set([
-  'composer.modelPicker',
   'keybinds.openPanel',
   'nav.commandPalette',
   'session.next',

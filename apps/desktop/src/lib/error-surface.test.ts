@@ -170,7 +170,6 @@ describe('free-tier refusals', () => {
     expect(plan.signInFreeTier).toBe(true)
     expect(plan.signInAgain).toBe(false)
     expect(plan.retry).toBe(false)
-    expect(plan.switchProvider).toBe(true)
   })
 
   it('renders the backend sentence as the body under its own title', () => {

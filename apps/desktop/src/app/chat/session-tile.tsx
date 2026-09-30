@@ -22,7 +22,6 @@ import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'r
 import { useGatewayRequest } from '@/app/gateway/hooks/use-gateway-request'
 import { useModelControls } from '@/app/session/hooks/use-model-controls'
 import { probeStoredSession, resolveStoredSession } from '@/app/session/hooks/use-session-actions/utils'
-import { ModelMenuPanel } from '@/app/shell/model-menu-panel'
 import { ReasoningMenuPanel } from '@/app/shell/reasoning-menu-panel'
 import { formatRefValue } from '@/components/assistant-ui/directive-text'
 import { CenteredThreadSpinner } from '@/components/assistant-ui/thread/status'
@@ -333,29 +332,6 @@ function TileChat({
   const onRemoveAttachment = useCallback((id: string) => void removeAttachment(id), [removeAttachment])
   const onRetryResume = useCallback(() => patchSessionTile(storedSessionId, { error: undefined }), [storedSessionId])
 
-  // Per-tile model menu — rendered under this tile's SessionView so the pill
-  // + switch target THIS runtime, not the primary (which may be mid-turn).
-  const modelMenuContent = useMemo(
-    () =>
-      gatewayOpen ? (
-        <ModelMenuPanel
-          onSelectModel={selectModel}
-          ownerConnectionId={ownerRoute?.connectionId || undefined}
-          profile={ownerRoute?.targetProfile || ownerRoute?.profile || activeGatewayProfile}
-          requestGateway={requestTileGateway}
-        />
-      ) : null,
-    [
-      activeGatewayProfile,
-      gatewayOpen,
-      ownerRoute?.connectionId,
-      ownerRoute?.profile,
-      ownerRoute?.targetProfile,
-      requestTileGateway,
-      selectModel
-    ]
-  )
-
   const reasoningMenuContent = useMemo(
     () =>
       gatewayOpen ? (
@@ -382,7 +358,6 @@ function TileChat({
       <ComposerScopeProvider value={scope}>
         <ChatView
           gateway={gateway}
-          modelMenuContent={modelMenuContent}
           modelOptionsOwnerConnectionId={ownerRoute?.connectionId || undefined}
           modelOptionsProfile={ownerRoute?.targetProfile || ownerRoute?.profile || activeGatewayProfile}
           onAddContextRef={addContextRefAttachment}

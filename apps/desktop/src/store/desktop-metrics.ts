@@ -48,7 +48,6 @@ const SETTINGS_AREAS: Record<string, DesktopFeatureArea> = {
   'config:browser': 'settings_config_browser',
   'config:chat': 'settings_config_chat',
   'config:memory': 'settings_config_memory',
-  'config:model': 'settings_config_model',
   'config:safety': 'settings_config_safety',
   'config:voice': 'settings_config_voice',
   'config:workspace': 'settings_config_workspace',

@@ -1,7 +1,6 @@
 import { REASONING_EFFORTS } from '@scout/shared'
 
 import {
-  Box,
   Brain,
   Globe,
   type IconComponent,
@@ -680,12 +679,6 @@ export const FIELD_DESCRIPTIONS: Record<string, string> = defineFieldCopy({
 
 // Curated desktop config surface: only fields a user might tune from the app.
 export const SECTIONS: DesktopConfigSection[] = [
-  {
-    id: 'model',
-    label: 'Model',
-    icon: Box,
-    keys: ['model_context_length', 'fallback_providers']
-  },
   {
     id: 'chat',
     label: 'Chat',

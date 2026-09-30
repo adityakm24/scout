@@ -179,7 +179,7 @@ describe('feature use', () => {
   })
 
   it('maps settings views and routes onto closed area ids', () => {
-    expect(settingsArea('config:model')).toBe('settings_config_model')
+    expect(settingsArea('config:chat')).toBe('settings_config_chat')
     expect(settingsArea('connections')).toBe('settings_gateway')
     expect(settingsArea('some-plugin:page')).toBe('settings_other')
     expect(routeArea('/capabilities')).toBe('capabilities')

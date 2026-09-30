@@ -31,7 +31,7 @@ import { requestGatewayForAgent } from '@/store/gateway'
 import { $gatewaySwitching } from '@/store/gateway-switch'
 import { SESSION_SEARCH_FOCUS_EVENT } from '@/store/layout'
 import { $profiles, $profilesByConnection, normalizeProfileKey } from '@/store/profile'
-import { $modelPickerOpen, $sessionPickerOpen } from '@/store/session'
+import { $sessionPickerOpen } from '@/store/session'
 import { $switcherOpen } from '@/store/session-switcher'
 import { $sharedMetricsConsent, readSharedMetricsConsent, type SharedMetricsConsent } from '@/store/shared-metrics'
 
@@ -206,7 +206,6 @@ export function useDesktopMetrics({
 
     const stops = [
       $commandPaletteOpen.listen(overlay('command_palette')),
-      $modelPickerOpen.listen(overlay('model_picker')),
       $sessionPickerOpen.listen(overlay('session_picker')),
       $switcherOpen.listen(overlay('session_switcher')),
       $findInPage.listen(next => {

@@ -11,14 +11,12 @@ import {
   onComposerDraftRequests,
   onComposerFocusRequest,
   onComposerInsertRequest,
-  onComposerModelMenuRequest,
   releaseActiveComposer,
   requestComposerFocus,
   requestComposerGetDraft,
   requestComposerInsert,
   requestComposerInsertAcked,
   requestComposerSetDraft,
-  requestModelMenuToggle
 } from './focus'
 import { RICH_INPUT_SLOT } from './rich-editor'
 
@@ -278,59 +276,6 @@ function mountZonedSurface(target: string, zone: string, hidden = false) {
   return surface
 }
 
-const collectModelMenuTargets = async (): Promise<string[]> => {
-  const saw: string[] = []
-  const off = onComposerModelMenuRequest(target => saw.push(target))
-
-  await new Promise(resolve => window.setTimeout(resolve, 0))
-  off()
-
-  return saw
-}
-
-describe('requestModelMenuToggle', () => {
-  it('targets the pane under the pointer over the focused one (#74447 convention)', async () => {
-    mountZonedSurface('main', 'zone-a')
-    mountZonedSurface('tile:hovered', 'zone-b')
-    markActiveComposer('main')
-    $hoveredTreeGroup.set('zone-b')
-
-    expect(requestModelMenuToggle()).toBe(true)
-    expect(await collectModelMenuTargets()).toEqual(['tile:hovered'])
-  })
-
-  it('falls back to the active composer when the pointer is off every zone', async () => {
-    mountZonedSurface('main', 'zone-a')
-    mountZonedSurface('tile:other', 'zone-b')
-    markActiveComposer('tile:other')
-
-    expect(requestModelMenuToggle()).toBe(true)
-    expect(await collectModelMenuTargets()).toEqual(['tile:other'])
-  })
-
-  it('skips a hidden keep-alive tab in the hovered zone (targets its visible sibling)', async () => {
-    mountZonedSurface('main', 'zone-a', true)
-    mountZonedSurface('tile:front', 'zone-a')
-    markActiveComposer('main')
-    $hoveredTreeGroup.set('zone-a')
-
-    expect(requestModelMenuToggle()).toBe(true)
-    expect(await collectModelMenuTargets()).toEqual(['tile:front'])
-  })
-
-  it('returns false with no chat surface on screen so the caller can open the dialog', async () => {
-    // Settings/profiles routes: no [data-composer-target] anywhere.
-    expect(requestModelMenuToggle()).toBe(false)
-    expect(await collectModelMenuTargets()).toEqual([])
-  })
-})
-
-/**
- * The plugin SDK's draft read/write bus (`host.composer`). A mounted composer
- * answers for its own sessions and the active composer answers `active`
- * requests; unaddressed surfaces must stay silent so a plugin addressing one
- * session never reads or writes another's draft.
- */
 describe('composer draft requests', () => {
   const disposer: (() => void)[] = []
 

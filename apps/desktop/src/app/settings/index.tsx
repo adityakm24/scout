@@ -96,7 +96,7 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
     }
   }, [navigate, search])
 
-  const [activeView] = useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)
+  const [activeView] = useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:chat' as SettingsViewId)
 
   useEffect(() => recordFeatureUse(settingsArea(activeView)), [activeView])
   const params = new URLSearchParams(search)
@@ -531,7 +531,6 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
         activeSectionId={activeView.slice('config:'.length)}
         importInputRef={importInputRef}
         onConfigSaved={onConfigSaved}
-        onMainModelChanged={onMainModelChanged}
         subpage={subpage}
       />
     ) : activeView === 'providers' ? (

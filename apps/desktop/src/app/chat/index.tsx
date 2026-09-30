@@ -92,7 +92,6 @@ interface ChatViewProps extends Omit<React.ComponentProps<'div'>, 'onSubmit'> {
   gateway: ScoutGateway | null
   modelOptionsOwnerConnectionId?: string
   modelOptionsProfile?: string
-  modelMenuContent?: React.ReactNode
   reasoningMenuContent?: React.ReactNode
   requestModelOptionsForOwner?: <T>(method: string, params?: Record<string, unknown>) => Promise<T>
   onToggleSelectedPin: () => void
@@ -476,7 +475,6 @@ const ChatViewContent = memo(function ChatViewContent({
   gateway,
   modelOptionsOwnerConnectionId,
   modelOptionsProfile,
-  modelMenuContent,
   reasoningMenuContent,
   requestModelOptionsForOwner,
   onToggleSelectedPin,
@@ -720,8 +718,7 @@ const ChatViewContent = memo(function ChatViewContent({
         provider: currentProvider,
         canSwitch: gatewayOpen,
         loading: !gatewayOpen || (!currentModel && !currentProvider),
-        modelMenuContent,
-        quickModels,
+              quickModels,
         reasoningMenuContent,
         supportsReasoning
       },
@@ -740,8 +737,7 @@ const ChatViewContent = memo(function ChatViewContent({
       currentModel,
       currentProvider,
       gatewayOpen,
-      modelMenuContent,
-      quickModels,
+          quickModels,
       reasoningMenuContent,
       supportsReasoning
     ]

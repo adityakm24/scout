@@ -149,6 +149,3 @@ const writeScoutConfigCache =
 export const setScoutConfigCache = writeScoutConfigCache(() => scoutConfigKey())
 export const scoutConfigCacheWriter = (profile?: ProfileScope) =>
   writeScoutConfigCache(() => scoutConfigKey(profile))
-
-export const invalidateScoutConfig = (profile?: ProfileScope) =>
-  queryClient.invalidateQueries({ queryKey: scoutConfigKey(profile) })

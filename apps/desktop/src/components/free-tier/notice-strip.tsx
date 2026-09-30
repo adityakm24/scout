@@ -9,7 +9,6 @@ import { useI18n } from '@/i18n'
 import { recordFriction } from '@/store/desktop-metrics'
 import { ackFreeTierNotice, claimFreeTierNotice, freeTierNoticeClaim, releaseFreeTierNotice } from '@/store/free-tier'
 import { openFreeTierSignIn } from '@/store/free-tier-sign-in'
-import { setModelPickerOpen } from '@/store/session'
 
 /**
  * Which mounted composer gets to paint the strip. Several can be on screen at
@@ -63,15 +62,6 @@ export function FreeTierNoticeStrip() {
       leading={<Codicon aria-hidden className="text-(--ui-text-tertiary)" name="account" size="0.8rem" />}
       trailing={
         <>
-          <Button
-            className="text-foreground/90 hover:text-foreground"
-            onClick={() => consume(() => setModelPickerOpen(true))}
-            size="micro"
-            type="button"
-            variant="text"
-          >
-            {copy.openModelPicker}
-          </Button>
           <Button
             className="text-foreground/90 hover:text-foreground"
             onClick={() => consume(() => openFreeTierSignIn())}

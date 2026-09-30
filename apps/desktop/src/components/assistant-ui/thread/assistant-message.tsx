@@ -12,7 +12,6 @@ import { useStore } from '@nanostores/react'
 import { type FC, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useInRouterContext, useNavigate } from 'react-router'
 
-import { requestModelMenuToggle } from '@/app/chat/composer/focus'
 import { useComposerScope } from '@/app/chat/composer/scope'
 import { useSessionView } from '@/app/chat/session-view'
 import { SETTINGS_ROUTE } from '@/app/routes'
@@ -73,7 +72,7 @@ import { startManualProviderOAuth } from '@/store/onboarding'
 import { $activeGatewayProfile, normalizeProfileKey, requestFreshSession } from '@/store/profile'
 import { sessionApprovalRequest } from '@/store/prompts'
 import { requestSendDiagnostics } from '@/store/send-diagnostics'
-import { $connection, $currentModel, setModelPickerOpen } from '@/store/session'
+import { $connection, $currentModel } from '@/store/session'
 import { sessionTileDelegate } from '@/store/session-states'
 import { notifyThreadEditOpen } from '@/store/thread-scroll'
 import { $voicePlayback } from '@/store/voice-playback'
@@ -589,32 +588,6 @@ const SettingsLinkAction: FC<{ icon?: ReactNode; label: string; to: string }> = 
   )
 }
 
-// "Switch provider" for a provider/endpoint/auth/billing failure: opens the
-// composer pill's LIVE model menu, whose picks go through `model.switch` on
-// this session (use-model-menu-controller.ts) — the same menu the
-// `composer.modelPicker` hotkey toggles. Settings → Models only changes the
-// default for NEW sessions, so it is the fallback for when no chat surface is
-// on screen (requestModelMenuToggle returns false), not the first stop.
-// Targeting follows requestModelMenuToggle: the pane under the pointer, else
-// the active composer — a click on this card puts the pointer in its own pane.
-const SwitchProviderAction: FC<{ label: string }> = ({ label }) => {
-  const navigate = useNavigate()
-
-  const switchProvider = useCallback(() => {
-    triggerHaptic('selection')
-
-    if (!requestModelMenuToggle()) {
-      navigate(`${SETTINGS_ROUTE}?tab=config:model`)
-    }
-  }, [navigate])
-
-  return (
-    <button className="aui-error-action" onClick={switchProvider} type="button">
-      {label}
-    </button>
-  )
-}
-
 // Settings → Keys deep link for a rejected API key: `?tab=keys` plus
 // `&key=<ENV>` when the descriptor names the env var (keys-settings.tsx
 // scrolls to and expands that row). Older backends omit `api_key_env`; the
@@ -885,11 +858,6 @@ const ErrorRecoveryActions: FC = () => {
     requestFreshSession()
   }, [])
 
-  const chooseModel = useCallback(() => {
-    triggerHaptic('selection')
-    setModelPickerOpen(true)
-  }, [])
-
   const localFolders = Boolean(window.scoutDesktop?.logsRoot)
   // The provider's own reset moment (429 Retry-After / resets_at), so the user knows WHEN
   // Retry will work instead of guessing (#98852). Informational only: no automatic retry.
@@ -899,11 +867,6 @@ const ErrorRecoveryActions: FC = () => {
     <div className="flex flex-wrap items-center gap-1.5">
       {plan.editMessage && <EditPreviousMessageAction label={copy.editMessage} />}
       {plan.compress && <CompressConversationAction label={copy.errorCompressConversation} />}
-      {plan.chooseModel && (
-        <button className="aui-error-action" onClick={chooseModel} type="button">
-          {copy.errorChooseModel}
-        </button>
-      )}
       {plan.startNewSession && (
         <button className="aui-error-action" onClick={startNewSession} type="button">
           {copy.errorStartNewSession}
@@ -954,7 +917,6 @@ const ErrorRecoveryActions: FC = () => {
         </span>
       )}
       {plan.retry && surface?.resetsAt !== undefined && <ScheduledRetryAction resetsAt={surface.resetsAt} />}
-      {plan.switchProvider && inRouter && <SwitchProviderAction label={copy.errorSwitchProvider} />}
       {localFolders && (
         <button className="aui-error-action" onClick={() => void openLogs()} type="button">
           {remoteConnection ? copy.errorOpenDesktopLogs : copy.errorOpenLogs}

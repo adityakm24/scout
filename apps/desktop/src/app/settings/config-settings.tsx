@@ -49,7 +49,6 @@ import {
 } from './helpers'
 import { MemoryConnect } from './memory/connect'
 import { ProviderConfigPanel } from './memory/provider-config-panel'
-import { ModelSettings, ModelSettingsSkeleton } from './model-settings'
 import { PoolLimitsSetting } from './pool-limits-setting'
 import { EmptyState, ListRow, SettingsContent, SettingsSkeleton, ToggleRow } from './primitives'
 import { SettingsProfileScope } from './profile-scope'
@@ -63,7 +62,6 @@ export function ConfigSettings({
   activeSectionId,
   subpage,
   onConfigSaved,
-  onMainModelChanged,
   importInputRef
 }: ConfigSettingsProps) {
   // Shared "Applies to" scope (null → the app's active profile). Remount the
@@ -78,7 +76,6 @@ export function ConfigSettings({
       importInputRef={importInputRef}
       key={scopeProfile ?? '__active__'}
       onConfigSaved={onConfigSaved}
-      onMainModelChanged={onMainModelChanged}
       scopeProfile={scopeProfile}
       subpage={subpage}
     />
@@ -90,7 +87,6 @@ interface ConfigSettingsProps {
   /** Undefined preserves the full section for existing embedded consumers. */
   subpage?: string
   onConfigSaved?: () => void
-  onMainModelChanged?: (provider: string, model: string) => void
   importInputRef: React.RefObject<HTMLInputElement | null>
 }
 
@@ -98,7 +94,6 @@ function ConfigSettingsInner({
   activeSectionId,
   subpage,
   onConfigSaved,
-  onMainModelChanged,
   importInputRef,
   scopeProfile
 }: ConfigSettingsProps & { scopeProfile: string | undefined }) {
@@ -302,9 +297,6 @@ function ConfigSettingsInner({
     ([key]) => subpage === undefined || configSubpageForField(activeSectionId, key) === subpage
   )
 
-  const showModelSettings =
-    activeSectionId === 'model' && (subpage === undefined || ['main', 'auxiliary', 'moa'].includes(subpage))
-
   const showDesktopSettings = activeSectionId === 'advanced' && (subpage === undefined || subpage === 'desktop')
   const showAttachments = activeSectionId === 'chat' && (subpage === undefined || subpage === 'attachments')
   const showSharedMetrics = activeSectionId === 'safety' && subpage === 'privacy'
@@ -376,16 +368,9 @@ function ConfigSettingsInner({
     e.target.value = ''
   }
 
-  // Keep the model controller and pending MoA saves at a stable position when
-  // selecting siblings or returning to the first page through the parent.
   const renderPage = (children: ReactNode) => (
     <SettingsContent>
       <SettingsProfileScope className="mb-5" />
-      {activeSectionId === 'model' && (
-        <div className={showModelSettings ? 'mb-6' : undefined}>
-          <ModelSettings onMainModelChanged={onMainModelChanged} scopeProfile={scopeProfile} subpage={subpage} />
-        </div>
-      )}
       {children}
       <input
         accept=".json,application/json"
@@ -421,19 +406,7 @@ function ConfigSettingsInner({
       )
     }
 
-    // Every section keeps its shape via a skeleton; model gets its bespoke one
-    // (its catalog fetch is the slow part), the rest the shared field rhythm.
-    if (showModelSettings) {
-      return (
-        <SettingsContent>
-          <SettingsProfileScope className="mb-5" />
-          <div className="mb-6">
-            <ModelSettingsSkeleton subpage={subpage} />
-          </div>
-        </SettingsContent>
-      )
-    }
-
+    // Every section keeps its shape via the shared field-rhythm skeleton.
     return <SettingsSkeleton sections={[{ rows: 6 }]} />
   }
 
@@ -443,8 +416,7 @@ function ConfigSettingsInner({
     visibleFields.length === 0 &&
     (subpage === undefined
       ? activeSectionId !== 'chat'
-      : !showModelSettings &&
-        !showDesktopSettings &&
+      : !showDesktopSettings &&
         !showAttachments &&
         !showSharedMetrics &&
         !showTerminalBackend &&

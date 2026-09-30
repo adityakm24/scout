@@ -1558,56 +1558,20 @@ export interface Translations {
       deepLinkErrorTooLarge: string
     }
     model: {
-      setupProviderFallback: string
-      setUpProvider: (name: string) => string
-      staleAuxBefore: (count: number, names: string) => string
-      staleAuxAfter: string
-      staleAuxOtherProviders: string
-      moaEnabled: string
-      moaSetDefault: string
-      moaNewPresetPlaceholder: string
-      moaAddPreset: string
       customModel: string
       customModelPlaceholder: string
       chooseFromList: string
-      moaDefault: string
-      moaReferenceToggle: (enabled: boolean, index: number) => string
-      moaReferenceTitle: (index: number) => string
-      moaAddReference: string
       loading: string
-      appliesDesc: string
       provider: string
       model: string
       applying: string
-      mainAppliedTitle: string
-      mainAppliedMessage: (model: string) => string
-      defaultsLabel: string
       reasoning: string
-      reasoningOff: string
-      defaultsFailed: string
       loadFailed: string
-      restartRequired: string
-      restartBackend: string
-      restartingBackend: string
       restartFailed: string
-      auxiliaryTitle: string
-      resetAllToMain: string
-      staleAuxDismiss: string
-      auxiliaryDesc: string
-      setToMain: string
       change: string
-      autoUseMain: string
-      inheritMainEffort: string
-      providerDefault: string
       fallbackAdd: string
       fallbackEmpty: string
       notInCatalog: string
-      moaTitle: string
-      moaPreset: string
-      moaDescription: string
-      moaAggregator: string
-      moaAggregatorBilled: string
-      moaReferenceHint: string
       tasks: Record<string, AuxTaskCopy>
     }
     localModels: {
@@ -3770,7 +3734,6 @@ export interface Translations {
     otherProviders: string
     stripTitle: string
     stripBody: string
-    openModelPicker: string
     dismiss: string
     // Statusbar chip.
     /** The status-bar chip's label: the provider name alone; the model id and the sign-in follow it. */
@@ -3872,8 +3835,6 @@ export interface Translations {
       search: string
       noModels: string
       editModels: string
-      followDefault: string
-      refreshModels: string
       fast: string
       free: string
       cacheRead: string
@@ -4017,12 +3978,7 @@ export interface Translations {
       focusedSinceTitle: string
       yoloOn: string
       yoloOff: string
-      modelNone: string
       noModel: string
-      switchModel: string
-      openModelPicker: string
-      modelPinned: string
-      modelTitle: (provider: string, model: string) => string
       providerModelTitle: (provider: string, model: string) => string
     }
   }
@@ -4328,8 +4284,6 @@ export interface Translations {
       errorRetryScheduledCancel: string
       /** Escape hatch when Retry would only reproduce SESSION_NOT_OWNED (#106217). */
       errorStartNewSession: string
-      errorSwitchProvider: string
-      errorChooseModel: string
       errorCompressConversation: string
       errorCompressFailed: string
       errorOpenScoutFolder: string

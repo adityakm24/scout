@@ -11,7 +11,6 @@
  */
 
 import { isElementInHiddenPane, queryAllVisible, queryVisible } from '@/components/pane-shell/pane-visibility'
-import { $hoveredTreeGroup } from '@/components/pane-shell/tree/store'
 
 import { $floatingComposerOwner } from './floating-state'
 import type { InlineRefInput } from './inline-refs'
@@ -60,7 +59,6 @@ const INSERT_REPLY_EVENT = 'scout:composer-insert-reply'
 const ATTACH_IMAGES_EVENT = 'scout:composer-attach-images'
 const INSERT_REFS_EVENT = 'scout:composer-insert-refs'
 const SUBMIT_EVENT = 'scout:composer-submit'
-const MODEL_MENU_EVENT = 'scout:composer-model-menu'
 
 /** Inline edit composer root — mounted only while a user bubble is being edited. */
 export const EDIT_COMPOSER_ROOT = '[data-slot="aui_edit-composer-root"]'
@@ -632,44 +630,6 @@ export const requestComposerSubmit = (
 
 export const onComposerSubmitRequest = (handler: (detail: SubmitDetail) => void) =>
   subscribe<SubmitDetail>(SUBMIT_EVENT, handler)
-
-/** The chat surface inside the zone the pointer is over, if any. Mirrors the
- *  tab verbs' hover-first targeting (`tabTargetGroupId`, #74447): the model
- *  hotkey lands in the pane you're pointing at without clicking into it first.
- *  Hidden keep-alive tabs are skipped like every document-wide lookup. */
-const composerTargetInHoveredZone = (): ComposerTarget | null => {
-  const zone = $hoveredTreeGroup.get()
-
-  if (!zone || typeof document === 'undefined') {
-    return null
-  }
-
-  const surface = queryAllVisible<HTMLElement>('[data-composer-target]').find(
-    el => el.closest<HTMLElement>('[data-tree-group]')?.dataset.treeGroup === zone
-  )
-
-  return (surface?.dataset.composerTarget as ComposerTarget | undefined) ?? null
-}
-
-/** Toggle ONE composer's model menu — the `composer.modelPicker` hotkey.
- *  Targets the pane under the pointer first (the tab-verb convention), then
- *  the active composer. Returns false when no chat surface is on screen at
- *  all (settings, profiles…), so the caller can fall back to the full
- *  model-picker dialog instead of dispatching into the void. */
-export const requestModelMenuToggle = (): boolean => {
-  if (typeof document !== 'undefined' && !queryVisible('[data-composer-target]')) {
-    return false
-  }
-
-  dispatch<{ target: ComposerTarget }>(MODEL_MENU_EVENT, {
-    target: composerTargetInHoveredZone() ?? resolveActive()
-  })
-
-  return true
-}
-
-export const onComposerModelMenuRequest = (handler: (target: ComposerTarget) => void) =>
-  subscribe<{ target: ComposerTarget }>(MODEL_MENU_EVENT, ({ target }) => handler(target))
 
 /**
  * Focus a composer input across React commit + browser focus restore.

@@ -10,17 +10,6 @@ interface ConfigSubpageDefinition {
 // schema is inferred at runtime. Embedded model and device-local controls use
 // these same page ids in ConfigSettings.
 const CONFIG_SUBPAGE_DEFINITIONS: Record<string, ConfigSubpageDefinition[]> = {
-  model: [
-    {
-      id: 'main',
-      labelKey: 'modelMain',
-      fields: ['model', 'model_context_length', 'agent.reasoning_effort', 'agent.service_tier'],
-      prefixes: ['model.']
-    },
-    { id: 'fallbacks', labelKey: 'modelFallbacks', fields: ['fallback_providers'] },
-    { id: 'auxiliary', labelKey: 'modelAuxiliary', prefixes: ['auxiliary.'] },
-    { id: 'moa', labelKey: 'modelMoa', prefixes: ['moa.'] }
-  ],
   chat: [
     {
       id: 'behavior',

@@ -4,7 +4,7 @@ import type * as React from 'react'
 import { type ReactNode, useEffect, useId } from 'react'
 
 import { useGatewayRequest } from '@/app/gateway/hooks/use-gateway-request'
-import type { ModelSelection } from '@/app/shell/model-menu-panel'
+import type { ModelSelection } from '@/app/shell/use-model-menu-controller'
 import { DeviceCode } from '@/components/onboarding/flow'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,7 +31,7 @@ import {
   releaseFreeTierSignIn
 } from '@/store/free-tier-sign-in'
 import { refreshOnboardingProviders } from '@/store/onboarding'
-import { $currentModel, setModelPickerOpen } from '@/store/session'
+import { $currentModel } from '@/store/session'
 
 interface FreeTierSignInDialogProps {
   /** The app's model-assignment path. Used only to re-home a live session that
@@ -159,14 +159,6 @@ export function FreeTierSignInDialog({ onSelectModel }: FreeTierSignInDialogProp
                 <span className="min-w-0 truncate font-mono text-[length:var(--conversation-text-font-size)]">
                   {state.model}
                 </span>
-                <Button
-                  onClick={() => finish(state.model, () => setModelPickerOpen(true))}
-                  size="inline"
-                  type="button"
-                  variant="text"
-                >
-                  {copy.change}
-                </Button>
               </div>
             )}
             <Actions>

@@ -12,7 +12,6 @@ import {
   isDesktopSlashExtensionCommand,
   isDesktopSlashSuggestion,
   isDesktopSlashSuggestionWithOptions,
-  isModelPickerCommand,
   isPickerCommand,
   rankSkillCommands,
   rememberDesktopCommandsCatalog,
@@ -281,23 +280,14 @@ describe('desktop slash command curation', () => {
     ])
   })
 
-  it('flags /model as a picker-owned command so the desktop opens the overlay', () => {
-    expect(isModelPickerCommand('/model')).toBe(true)
-    expect(isModelPickerCommand('/model sonnet')).toBe(true)
-    expect(isModelPickerCommand('/new')).toBe(false)
-    expect(isModelPickerCommand('/skills')).toBe(false)
-  })
-
   it('gives /resume (and its aliases) a first-class session picker surface', () => {
     expect(isPickerCommand('/resume', 'session')).toBe(true)
     expect(isPickerCommand('/sessions', 'session')).toBe(true)
     expect(isPickerCommand('/switch', 'session')).toBe(true)
-    // Unlike /model, /resume shows in the popover; its aliases stay hidden.
+    // /resume shows in the popover; its aliases stay hidden.
     expect(isDesktopSlashSuggestion('/resume')).toBe(true)
     expect(isDesktopSlashSuggestion('/sessions')).toBe(false)
     expect(isDesktopSlashCommand('/switch')).toBe(true)
-    // The session picker is distinct from the model picker.
-    expect(isModelPickerCommand('/resume')).toBe(false)
   })
 
   it('resolves commands and aliases to their declared surface', () => {

@@ -1,7 +1,6 @@
 import {
   Archive,
   Bell,
-  Box,
   Brain,
   CircleLetterA,
   Cpu,
@@ -46,10 +45,6 @@ const SUBPAGE_ICONS: Record<string, IconComponent> = {
   appearanceChatDisplay: MessageCircle,
   appearancePet: PawPrint,
   appearanceGeneral: Settings2,
-  modelMain: Box,
-  modelAuxiliary: Cpu,
-  modelMoa: Users,
-  modelFallbacks: Box,
   chatBehavior: MessageCircle,
   chatAttachments: FileImage,
   workspaceProjects: FolderOpen,
@@ -115,7 +110,6 @@ export function settingsSubpageForTarget(view: SettingsView, field?: string, set
 }
 
 const LEGACY_SUBPAGE_TARGETS: Record<string, { params: string[]; page: string }> = {
-  'config:model': { params: ['aux'], page: 'auxiliary' },
   sessions: { params: ['session'], page: 'archived' },
   vault: { params: ['kind', 'label', 'origin'], page: 'credentials' }
 }
