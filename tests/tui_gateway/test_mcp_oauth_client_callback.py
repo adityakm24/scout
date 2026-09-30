@@ -163,6 +163,22 @@ def test_start_flow_client_redirect_skips_gateway_listener(monkeypatch):
     assert pinned_bound == []
 
 
+def test_dcr_vendor_pin_wins_over_a_client_hosted_redirect(monkeypatch):
+    """A DCR vendor that pins its loopback redirect (Swiggy, Zepto: ``redirect_port``, no
+    ``client_id``) only accepts that URI, and the SDK worker binds it — so the flow must publish
+    the pinned URI even when Desktop offers its own listener, and bind no second receiver."""
+    bound = []
+    monkeypatch.setattr(mcp_oauth, "_start_loopback_receiver", lambda flow: bound.append(flow))
+    flow = DashboardOAuthFlow("dcr", "zepto", None, str(get_scout_home()), "")
+    assert mcp_oauth.choose_callback_receiver(
+        flow,
+        {"oauth": {"redirect_host": "localhost", "redirect_port": 27894}},
+        "http://127.0.0.1:51234/callback",
+    ) is None
+    assert flow.redirect_uri == "http://localhost:27894/callback"
+    assert bound == []
+
+
 def test_start_flow_rejects_bad_client_redirect(monkeypatch):
     _fake_worker_publishes_url(monkeypatch)
     with pytest.raises(ValueError):

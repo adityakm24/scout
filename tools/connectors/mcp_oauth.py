@@ -243,8 +243,11 @@ def _start_loopback_receiver(flow) -> "http.server.HTTPServer":
 
 
 def _pinned_loopback(cfg: dict) -> bool:
+    # Same rule as tools.mcp_oauth._configure_callback_port: a pinned port alone means the vendor only
+    # accepts that loopback URI (pre-registered client, or a DCR vendor such as Swiggy/Zepto), and the
+    # SDK worker binds it itself — so no second receiver, and a client-hosted redirect cannot be used.
     oauth = cfg.get("oauth") or {}
-    return bool(oauth.get("client_id") and oauth.get("redirect_port"))
+    return bool(oauth.get("redirect_port"))
 
 
 def _pinned_redirect_uri(cfg: dict) -> str:

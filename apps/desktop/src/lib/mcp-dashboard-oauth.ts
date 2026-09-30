@@ -32,6 +32,32 @@ export class McpOAuthCancelled extends Error {
 const defaultSleep = (milliseconds: number) => new Promise<void>(resolve => window.setTimeout(resolve, milliseconds))
 const UPDATE_BACKEND = 'Update the Scout backend to support Desktop MCP OAuth callbacks.'
 
+const pinnedOnRemote = (serverName: string, redirectUri: string) =>
+  `${serverName} only accepts a sign-in redirect to ${redirectUri} on the machine running Scout. ` +
+  `Run \`scout mcp login ${serverName}\` there (or update that backend if it is older than Desktop).`
+
+function isLoopbackCallback(uri: null | string): boolean {
+  let url: URL
+
+  try {
+    url = new URL(uri || '')
+  } catch {
+    return false
+  }
+
+  return (
+    url.protocol === 'http:' &&
+    (url.hostname === '127.0.0.1' || url.hostname === 'localhost') &&
+    Boolean(url.port) &&
+    Number(url.port) !== 0 &&
+    url.pathname === '/callback' &&
+    !url.username &&
+    !url.password &&
+    !url.search &&
+    !url.hash
+  )
+}
+
 /** Remote gateways require the Desktop callback bridge. An explicitly local
  *  gateway can host its own loopback listener when that capability is absent. */
 export async function completeMcpDesktopOAuth({
@@ -94,30 +120,24 @@ export async function completeMcpDesktopOAuth({
       throw new Error('OAuth server did not provide an authorization URL and session')
     }
 
-    // Pre-relay backends silently ignore unknown start params. Do not open an
-    // authorization URL whose DCR/PKCE flow points at a different machine.
     const redirectUri = new URL(authUrl).searchParams.get('redirect_uri')
 
-    if (listener && redirectUri !== listener.redirectUri) {
-      throw new Error(UPDATE_BACKEND)
-    }
+    // The backend hosts the callback when it did not take ours: a vendor that pins its loopback
+    // redirect (Swiggy, Zepto — the SDK binds that exact port), or a pre-relay backend that
+    // silently ignored `client_redirect_uri`. Only a loopback `/callback` on THIS machine can
+    // receive the browser's redirect, so that is usable against a local backend alone.
+    if (!listener || redirectUri !== listener.redirectUri) {
+      if (!isLoopbackCallback(redirectUri)) {
+        throw new Error(listener ? UPDATE_BACKEND : 'OAuth server did not provide a local loopback callback URL')
+      }
 
-    if (!listener) {
-      // Match the existing backend-hosted listener, not an arbitrary local URL.
-      const redirect = new URL(redirectUri || '')
+      if (bridge && listener) {
+        if (scope.connectionId !== 'local') {
+          throw new Error(pinnedOnRemote(serverName, redirectUri ?? ''))
+        }
 
-      if (
-        redirect.protocol !== 'http:' ||
-        redirect.hostname !== '127.0.0.1' ||
-        !redirect.port ||
-        Number(redirect.port) === 0 ||
-        redirect.pathname !== '/callback' ||
-        redirect.username ||
-        redirect.password ||
-        redirect.search ||
-        redirect.hash
-      ) {
-        throw new Error('OAuth server did not provide a local loopback callback URL')
+        await bridge.cancel(listener.id).catch(() => {})
+        listener = undefined
       }
     }
 

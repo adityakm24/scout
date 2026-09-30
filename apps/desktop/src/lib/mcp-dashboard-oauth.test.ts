@@ -146,4 +146,46 @@ describe('Desktop MCP client callback lifecycle', () => {
     expect(rpc.mock.calls.every(call => call[0] === 'remote-gateway' && call[1] === 'origin-profile')).toBe(true)
     expect(api).not.toHaveBeenCalled()
   })
+
+  // Swiggy/Zepto only accept their own pinned `localhost:<port>/callback`, which the backend's SDK
+  // worker binds itself — the Desktop listener's URI is never used for them.
+  describe('a vendor-pinned loopback redirect', () => {
+    const pinned = 'http://localhost:27894/callback'
+
+    const pinnedStart = {
+      ...started,
+      auth_url: `https://auth.zepto.example/authorize?state=s&redirect_uri=${encodeURIComponent(pinned)}`
+    }
+
+    it('lets a local backend receive the callback itself', async () => {
+      const { bridge, openExternal, rpc } = harness()
+      setApiRequestConnection('local')
+      let polls = 0
+      rpc.mockImplementation(async (_connection, _profile, method) => {
+        if (method.endsWith('.start')) {
+          return pinnedStart
+        }
+
+        return { ok: true, status: ++polls > 1 ? 'approved' : 'pending', tools }
+      })
+
+      const result = await completeMcpDesktopOAuth({ serverName: 'zepto', sleep: async () => {} })
+
+      expect(result).toMatchObject({ status: 'approved', tools })
+      expect(openExternal).toHaveBeenCalledWith(pinnedStart.auth_url)
+      expect(bridge.cancel).toHaveBeenCalledWith('listener-1')
+      expect(rpc.mock.calls.some(call => call[2] === 'mcp.servers.oauth.callback')).toBe(false)
+    })
+
+    it('refuses on a remote backend, where the redirect cannot reach it, without opening a browser', async () => {
+      const { openExternal, rpc } = harness()
+      setApiRequestConnection('remote-gateway')
+      rpc.mockImplementation(async (_connection, _profile, method) =>
+        method.endsWith('.start') ? pinnedStart : { ok: true }
+      )
+
+      await expect(completeMcpDesktopOAuth({ serverName: 'zepto' })).rejects.toThrow('scout mcp login zepto')
+      expect(openExternal).not.toHaveBeenCalled()
+    })
+  })
 })
