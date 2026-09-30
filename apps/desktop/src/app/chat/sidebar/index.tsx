@@ -1585,8 +1585,10 @@ export function ChatSidebar({
       <SidebarContent className="gap-0 overflow-hidden bg-transparent px-2.5">
         <SidebarGroup className="shrink-0 p-0 pb-2 pt-[calc(var(--titlebar-height)+0.375rem)]">
           <SidebarGroupContent>
-            <SidebarMenu className="gap-px">
-              {navItems.map(item => {
+            {/* A launcher, not a list: New session is the one wide call to
+                action, every other destination is a tile in a two-up grid. */}
+            <SidebarMenu className="grid grid-cols-2 gap-1.5" data-slot="sidebar-launcher">
+              {navItems.map((item, index) => {
                 const isInteractive = Boolean(item.action) || Boolean(item.route)
 
                 const active =
@@ -1610,15 +1612,19 @@ export function ChatSidebar({
                       // resolved region has been observed to swallow clicks on the
                       // top rows. Same carve-out as USER_BUBBLE_BASE_CLASS in
                       // thread.tsx.
-                      'flex h-7 w-full justify-start gap-2 rounded-md border border-transparent px-2 text-left text-[0.8125rem] font-medium text-(--ui-text-secondary) transition-colors duration-100 ease-out [-webkit-app-region:no-drag] hover:bg-(--ui-control-hover-background) hover:text-foreground hover:transition-none',
+                      '[-webkit-app-region:no-drag] w-full border text-left font-medium',
+                      isNewSession
+                        ? 'flex h-10 justify-start gap-2.5 rounded-xl border-transparent bg-(--dt-primary-solid) px-3 text-[0.875rem] font-semibold text-(--dt-primary-solid-foreground) shadow-[0_0.5rem_1.25rem_-0.625rem_var(--dt-primary-solid)] hover:bg-(--dt-primary-solid) hover:text-(--dt-primary-solid-foreground) hover:brightness-110'
+                        : 'flex h-auto min-h-[4.25rem] flex-col items-start justify-between gap-2 rounded-xl border-(--ui-stroke-quaternary) bg-(--ui-bg-elevated) px-2.5 py-2.5 text-[0.78rem] text-(--ui-text-secondary) hover:border-(--ui-stroke-tertiary) hover:bg-(--ui-control-hover-background) hover:text-foreground',
                       active &&
-                        'border-(--ui-stroke-tertiary) bg-(--ui-control-active-background) text-foreground shadow-none hover:border-(--ui-stroke-tertiary)!',
+                        'border-[color-mix(in_srgb,var(--theme-primary)_45%,transparent)] bg-[color-mix(in_srgb,var(--theme-primary)_12%,transparent)] text-foreground shadow-none hover:border-[color-mix(in_srgb,var(--theme-primary)_45%,transparent)]!',
                       !isInteractive &&
                         'cursor-default hover:border-transparent hover:bg-transparent hover:text-inherit'
                     )}
                     // A tip anchored to the label points at the end of the
                     // word; the row is what it's actually about.
                     data-tip-region=""
+                    isActive={active}
                     onClick={() => {
                       // A plain new session lands in whatever profile the live
                       // gateway is on (= the active switcher context). null →
@@ -1664,7 +1670,7 @@ export function ChatSidebar({
                     }
                     type="button"
                   >
-                    <item.icon className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />
+                    <item.icon className="size-4 shrink-0" />
                     {/* Shrink-to-fit, not flex-1: the label carries the row's
                         `data-tour` handle, and anything anchored to it should
                         land at the end of the WORD, not out at the sidebar's
@@ -1690,7 +1696,11 @@ export function ChatSidebar({
                 // New session + route-backed pages can open in a split —
                 // right-click for the directional "Open in split" submenu.
                 return (
-                  <SidebarMenuItem key={item.id}>
+                  <SidebarMenuItem
+                    className={cn('scout-stagger', isNewSession && 'col-span-2')}
+                    key={item.id}
+                    style={{ '--stagger-index': index } as React.CSSProperties}
+                  >
                     {isNewSession || item.route ? (
                       <ContextMenu>
                         <ContextMenuTrigger asChild>{button}</ContextMenuTrigger>
@@ -2051,7 +2061,6 @@ export function ChatSidebar({
                   />
                 )
               })}
-
           </div>
         )}
 

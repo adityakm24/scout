@@ -103,7 +103,7 @@ export function SettingsSection({
   title: string
 }) {
   return (
-    <section className="mb-6">
+    <section className="scout-stagger mb-6">
       <SectionHeading aside={aside} icon={icon} meta={meta} title={title} />
       {children}
     </section>

@@ -164,13 +164,13 @@
 /* Menus and popovers bloom from their trigger (transform-origin comes from
    Radix) — quick, crisp, no blur: they are tools, not moments. */
 :is(
-    [data-slot='dropdown-menu-content'],
-    [data-slot='dropdown-menu-sub-content'],
-    [data-slot='context-menu-content'],
-    [data-slot='context-menu-sub-content'],
-    [data-slot='popover-content'],
-    [data-slot='select-content']
-  )[data-state='open'] {
+  [data-slot='dropdown-menu-content'],
+  [data-slot='dropdown-menu-sub-content'],
+  [data-slot='context-menu-content'],
+  [data-slot='context-menu-sub-content'],
+  [data-slot='popover-content'],
+  [data-slot='select-content']
+)[data-state='open'] {
   --tw-duration: 220ms;
   --tw-ease: var(--ease-out-quint);
   --tw-enter-scale: 0.96;
@@ -296,4 +296,89 @@
 .scout-rise {
   animation: scout-rise 900ms var(--ease-out-expo) both;
   animation-delay: calc(var(--rise-index, 0) * 90ms + 60ms);
+}
+
+/* ── Choreography: things arrive in order ───────────────────────────────────
+   Collections cascade in (each item waits on its `sibling-index()`, capped so
+   a long list never makes the user wait), pages rise into place when a route
+   mounts, and anything you can pick up lifts toward the pointer. One-shot
+   entrances run even while the window is hidden, so nothing mounts blank. */
+@keyframes scout-cascade {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.5rem, 0) scale(0.985);
+  }
+}
+@keyframes scout-page-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.75rem, 0);
+    filter: blur(4px);
+  }
+}
+@keyframes scout-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+.scout-stagger,
+[data-catalog-card],
+[data-slot='connector-row-card'],
+[data-slot='dashboard-page'] .scout-panel {
+  animation: scout-cascade 560ms var(--ease-out-expo) both;
+  animation-delay: calc(min(sibling-index(), 14) * 38ms);
+}
+
+:is([data-slot='page-shell'], [data-slot='dashboard-page'], [data-slot='overlay-card'] > *) {
+  animation: scout-page-in 520ms var(--ease-out-expo) both;
+}
+
+/* Cards and tiles lift under the pointer and settle back on a spring. */
+:is([data-catalog-card], [data-slot='connector-row-card'], [data-slot='sidebar-launcher'] li:not(:first-child) > *) {
+  transition:
+    translate var(--motion-slow) var(--ease-spring),
+    box-shadow var(--motion-slow) var(--ease-out-quint),
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+:is([data-catalog-card], [data-slot='connector-row-card']):hover {
+  translate: 0 -3px;
+  box-shadow: 0 1rem 2rem -1.25rem color-mix(in srgb, var(--theme-primary, #000) 45%, transparent);
+}
+[data-slot='sidebar-launcher'] li:not(:first-child) > :hover {
+  translate: 0 -2px;
+}
+
+/* Toggles throw their thumb and land with a bounce. */
+[data-slot='switch-thumb'] {
+  transition: transform var(--motion-slow) var(--ease-spring) !important;
+}
+[data-slot='switch'] {
+  transition: background-color var(--motion-base) var(--ease-out-quint);
+}
+
+/* Segmented tabs: the lit pill glides between options (see SegmentedTabs). */
+[data-slot='segmented-glider'] {
+  transition:
+    translate 420ms var(--ease-spring),
+    width 420ms var(--ease-spring);
+}
+
+/* Toasts and inline banners drop in. */
+:is([data-slot='toast'], [data-sonner-toast], [role='alert']) {
+  animation: scout-pop-in 360ms var(--ease-spring) both;
+}
+
+/* The empty chat puts the composer centre stage under the greeting; the first
+   message sends it gliding down to its dock. */
+[data-chat-surface] [data-slot='composer-dock']:not([data-popped-out]) {
+  transition: bottom 700ms var(--ease-out-expo);
+}
+[data-chat-surface]:has([data-slot='aui_intro']) [data-slot='composer-dock']:not([data-popped-out]) {
+  bottom: calc(50% - 8.625rem);
+}
+[data-chat-surface] [data-slot='aui_intro'] {
+  translate: 0 -2.625rem;
 }

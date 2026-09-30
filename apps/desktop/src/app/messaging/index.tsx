@@ -551,6 +551,7 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
         )
       }
       searchValue={query}
+      title={t.sidebar.nav.messaging}
     >
       {!platforms ? (
         <PageLoader label={m.loading} />

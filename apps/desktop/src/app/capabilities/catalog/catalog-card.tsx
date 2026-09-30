@@ -2,6 +2,7 @@ import './catalog.css'
 
 import { type ReactNode, useState } from 'react'
 
+import { Codicon } from '@/components/ui/codicon'
 import { RowButton } from '@/components/ui/row-button'
 import { cn } from '@/lib/utils'
 
@@ -81,36 +82,43 @@ export function CatalogCard({ entry, action, accentIndex, onOpen, onCategory, on
       data-entry-id={entry.id}
     >
       {entry.imageUrl && <CatalogImage className="aspect-[2/1]" key={entry.imageUrl} src={entry.imageUrl} />}
-      <div className="flex min-h-0 w-full flex-1 flex-col gap-2 p-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          {/* Its ::after stretches over the whole card, so any empty spot opens the
-              detail; real controls sit above it (`relative`). One focus stop per card. */}
-          <RowButton
-            aria-haspopup="dialog"
-            aria-label={entry.name}
-            className="min-w-0 flex-1 text-left font-semibold leading-snug after:absolute after:inset-0 after:rounded-[inherit] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-primary focus-visible:after:-outline-offset-2"
-            onClick={() => onOpen(entry)}
+      <div className="flex min-h-0 w-full flex-1 flex-col gap-3 p-4">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          {/* The category is the card's face: an icon well tinted with its accent. */}
+          <span
+            aria-hidden="true"
+            className="grid size-10 shrink-0 place-items-center rounded-xl bg-[color-mix(in_srgb,var(--catalog-accent)_16%,transparent)] text-(--catalog-accent) transition-transform duration-300 ease-(--ease-spring) group-hover:-rotate-6 group-hover:scale-110"
           >
-            <span className="line-clamp-2 min-w-0 break-words text-lg">{entry.name}</span>
-          </RowButton>
+            <Codicon name={catalogIcon(entry.category)} size="1.125rem" />
+          </span>
           {action && (
             <span className="relative shrink-0 opacity-[.66] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
               {action}
             </span>
           )}
         </div>
-        {/* In a fixed-height grid cell the description is what gives way. */}
-        <div className="flex min-h-0 min-w-0 flex-col gap-2">
+        <div className="flex min-h-0 min-w-0 flex-col gap-1">
+          {/* Its ::after stretches over the whole card, so any empty spot opens the
+              detail; real controls sit above it (`relative`). One focus stop per card. */}
+          <RowButton
+            aria-haspopup="dialog"
+            aria-label={entry.name}
+            className="min-w-0 text-left font-semibold leading-snug after:absolute after:inset-0 after:rounded-[inherit] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-primary focus-visible:after:-outline-offset-2"
+            onClick={() => onOpen(entry)}
+          >
+            <span className="line-clamp-1 min-w-0 break-all text-[0.95rem]">{entry.name}</span>
+          </RowButton>
           <span className="flex w-full items-center gap-2 text-[length:var(--conversation-caption-font-size)] text-(--ui-text-tertiary)">
             <span className="min-w-0 flex-1 truncate">{entry.author || catalogLabel(entry.source)}</span>
             <CatalogHeaderMeta entry={entry} />
           </span>
-          <span className="line-clamp-4 min-h-0 text-[length:var(--conversation-caption-font-size)] leading-relaxed text-(--ui-text-secondary)">
+          {/* In a fixed-height grid cell the description is what gives way. */}
+          <span className="mt-1 line-clamp-3 min-h-0 text-[length:var(--conversation-caption-font-size)] leading-relaxed text-(--ui-text-secondary)">
             {entry.description}
           </span>
         </div>
       </div>
-      <div className="px-3 pb-3 [&_button]:relative">
+      <div className="px-4 pb-3 [&_button]:relative">
         <CatalogMetadata
           entry={entry}
           onCategory={onCategory}
@@ -119,7 +127,7 @@ export function CatalogCard({ entry, action, accentIndex, onOpen, onCategory, on
           onTag={onTag}
         />
       </div>
-      <div className="mt-auto px-3 pb-3">
+      <div className="mt-auto px-4 pb-3">
         <CatalogDates entry={entry} />
       </div>
     </article>

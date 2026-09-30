@@ -157,9 +157,9 @@ describe('MessagingView status filter', () => {
     const { container } = await renderMessaging()
 
     await waitFor(() => expect(rowNames(container)).toHaveLength(3))
-    expect(screen.queryByRole('button', { name: 'Errors' })).toBeNull()
+    expect(screen.queryByRole('tab', { name: 'Errors' })).toBeNull()
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Needs attention' })[0])
+    fireEvent.click(screen.getAllByRole('tab', { name: 'Needs attention' })[0])
 
     expect(rowNames(container)).toEqual(['Slack'])
   })

@@ -531,25 +531,43 @@ the blur. Don't hand-roll `backdrop-blur-*` at call sites.
 
 ### The Scout skin (`src/scout-skin.css`)
 
-Scout's identity is "Nebula" by night and "Daybreak" by day: an indigo-black
-(or lavender) field with an electric-violet accent and teal / rose aurora
-partners. The palette is `THEME_PRESET_PALETTES.spaceshipresearch` in
-`@scout/shared`; `scout-skin.css` adds what a palette can't, scoped to
-`:root[data-scout-theme='spaceshipresearch']` so other skins are untouched:
+Scout is "Paper" by day and "Deep Orbit" by night with one Signal accent —
+iMessage blue, `#0062cc` in light (deepened until it clears AA on paper) and
+`#0a84ff` in dark. The palette is `THEME_PRESET_PALETTES.spaceshipresearch` in
+`@scout/shared`; `scout-skin.css` adds shape, scoped to
+`:root[data-scout-theme='spaceshipresearch']`, and takes every colour from the
+theme's own tokens (`--theme-primary`, `--dt-primary-solid`), so a custom
+accent retints it too:
 
-- **The field.** `<body>` paints the aurora (radial washes + two slow-drifting
-  clouds on `body::before/::after`, compositor-only, paused with renderer
-  animations and under reduced motion). With sidebar-scoped window glass the
-  content column stays solid, as in `styles.css`.
-- **Gradient identity, used sparingly.** Only surfaces that speak for the user
-  or the brand wear `--scout-aurora`: the active tab chip, primary buttons and
-  the send button, the user's own message bubbles, and display type. The
-  composer gets an aurora rim, not a fill.
-- **Destination tiles.** Sidebar navigation rows render their icon as a
-  coloured tile (one hue per destination, keyed by `data-tour`), System
-  Settings style.
-- **Glass panels** (sidebar slab, dashboard panels, catalog cards) share
-  `--scout-plate` + a violet hairline (`--scout-plate-edge`).
+- **iMessage bubbles.** The user's own messages are right-aligned,
+  fit-content, solid `--dt-primary-solid` with white ink and a tail corner.
+- **Launcher tiles.** Sidebar destinations sit in a two-up grid of tiles with a
+  tinted icon well; the active tile's well fills with the accent.
+- **Segmented controls.** Sidebar pane tabs and page tabs are pills in a well.
+- **Capsule composer** that rings with the accent on focus, and Sora display
+  type with a blue gradient on the greeting.
+
+### Layout
+
+- **Launcher sidebar.** *New session* is the one full-width call to action;
+  every other destination is a tile (`data-slot='sidebar-launcher'`).
+- **Hero page headers.** `PageSearchShell` takes a `title`: a large page title,
+  then a left-aligned row of `SegmentedTabs` (a sliding glider measured from
+  the active option), search and the trailing action.
+- **Tiles, not rows.** Skill and connector cards are uniform auto-fill grids of
+  tiles: icon/logo and live state on top, name and description below.
+- **Centre-stage empty chat.** While the thread is empty the composer sits
+  directly under the greeting; the first message sends it gliding to its dock
+  (`motion.css`, keyed on `[data-slot='aui_intro']`).
+
+### Choreography (`src/motion.css`)
+
+Collections cascade in, each item delayed by `sibling-index()` (capped at 14),
+pages rise in on mount (`data-slot='page-shell'`, the dashboard, overlay
+cards), cards and tiles lift toward the pointer on a spring, switch thumbs
+bounce, and toasts pop. All one-shot entrances run even while the renderer's
+animations are paused, and the blanket reduced-motion rule in `styles.css`
+covers every one of them.
 
 ## Direct manipulation & performance
 

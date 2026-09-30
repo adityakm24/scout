@@ -9,8 +9,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { CountSkeleton } from '@/components/ui/skeleton'
-import { TextTab, TextTabMeta } from '@/components/ui/text-tab'
+import { TextTabMeta } from '@/components/ui/text-tab'
 import type { IconComponent } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
@@ -89,7 +90,7 @@ export interface ResponsiveTab {
   meta?: number | string | null
 }
 
-/** Centered/left `TextTab` row on wide viewports that collapses into a single
+/** Centered/left segmented control on wide viewports that collapses into a single
  *  `TabDropdown` once the header can't fit it — the shared behavior behind the
  *  Capabilities page tabs, log-source switches, etc. */
 export function ResponsiveTabs({
@@ -108,20 +109,16 @@ export function ResponsiveTabs({
 }) {
   return (
     <>
-      <div className={cn('hidden min-w-0 flex-wrap items-center gap-x-2 gap-y-1 md:flex', wideClassName)}>
-        {tabs.map(tab => (
-          <TextTab
-            active={tab.id === value}
-            // Names each tab by its own id, so a tour can walk them one by one
-            // (`[data-tour="tab-images"]`) on every page that uses this row.
-            data-tour={`tab-${tab.id}`}
-            key={tab.id}
-            onClick={() => onChange(tab.id)}
-          >
-            {tab.label}
-            {tab.meta !== undefined && <TextTabMeta>{tabMetaContent(tab.meta)}</TextTabMeta>}
-          </TextTab>
-        ))}
+      <div className={cn('hidden min-w-0 items-center md:flex', wideClassName)}>
+        <SegmentedTabs
+          onChange={onChange}
+          tabs={tabs.map(tab => ({
+            id: tab.id,
+            label: tab.label,
+            meta: tab.meta !== undefined ? <TextTabMeta>{tabMetaContent(tab.meta)}</TextTabMeta> : undefined
+          }))}
+          value={value}
+        />
       </div>
       <div className="md:hidden">
         <TabDropdown

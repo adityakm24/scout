@@ -31,23 +31,29 @@ interface PageSearchShellProps extends React.ComponentProps<'section'> {
   /** Right-aligned control in the header's trailing cell (e.g. a refresh button)
    *  so mouse users get a visible affordance for the refresh hotkey. */
   searchTrailingAction?: ReactNode
+  /** Page name. Given, the header becomes a hero: the title on its own line,
+   *  then a left-aligned control row (tabs, search, trailing action). */
+  title?: string
 }
 
 function ShellTabs({
   tabs,
   activeTab,
-  onTabChange
+  onTabChange,
+  align = 'center'
 }: {
   tabs: PageShellTab[]
   activeTab?: string
   onTabChange?: (id: string) => void
+  align?: 'center' | 'start'
 }) {
   return (
     <ResponsiveTabs
+      align={align}
       onChange={id => onTabChange?.(id)}
       tabs={tabs}
       value={activeTab ?? tabs[0]?.id ?? ''}
-      wideClassName="justify-center"
+      wideClassName={align === 'center' ? 'justify-center' : 'justify-start'}
     />
   )
 }
@@ -65,14 +71,26 @@ export function PageSearchShell({
   searchValue,
   searchHidden = false,
   searchTrailingAction,
+  title,
   ...props
 }: PageSearchShellProps) {
   const hasTabs = (tabs?.length ?? 0) > 0
+
+  const search = !searchHidden && (
+    <SearchField
+      containerClassName="max-w-[45vw]"
+      hints={searchHints}
+      onChange={onSearchChange}
+      placeholder={searchPlaceholder}
+      value={searchValue}
+    />
+  )
 
   return (
     <section
       {...props}
       className={cn('flex h-full min-w-0 flex-col overflow-hidden bg-(--ui-chat-surface-background)', className)}
+      data-slot="page-shell"
     >
       {/*
         Header lives in the page body, below the window chrome (the shell floats
@@ -89,32 +107,42 @@ export function PageSearchShell({
         draggable titlebar strip that is `calc()`'d around the icon clusters
         (see app-shell.tsx), so window dragging still works here.
       */}
-      <div className="shrink-0">
-        {(hasTabs || !searchHidden) && (
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-3 pb-2 pt-[calc(var(--titlebar-height)+0.5rem)]">
-            <div className="flex min-w-0 items-center justify-start">
-              {!searchHidden && (
-                <SearchField
-                  containerClassName="max-w-[45vw]"
-                  hints={searchHints}
-                  onChange={onSearchChange}
-                  placeholder={searchPlaceholder}
-                  value={searchValue}
-                />
+      {title ? (
+        <header className="shrink-0 px-6 pb-3 pt-[calc(var(--titlebar-height)+0.75rem)]">
+          <h1 className="scout-page-title m-0 text-[1.75rem] font-bold leading-tight text-foreground">{title}</h1>
+          {(hasTabs || !searchHidden || searchTrailingAction) && (
+            <div className="mt-4 flex min-w-0 flex-wrap items-center gap-3">
+              {hasTabs && (
+                <div className="flex min-w-0 items-center" data-tour="page-tabs">
+                  <ShellTabs activeTab={activeTab} align="start" onTabChange={onTabChange} tabs={tabs!} />
+                </div>
               )}
-            </div>
-            {hasTabs ? (
-              <div className="flex min-w-0 items-center justify-center" data-tour="page-tabs">
-                <ShellTabs activeTab={activeTab} onTabChange={onTabChange} tabs={tabs!} />
+              <div className="ml-auto flex min-w-0 items-center justify-end gap-2">
+                {search}
+                {searchTrailingAction}
               </div>
-            ) : (
-              <span />
-            )}
-            <div className="flex min-w-0 items-center justify-end">{searchTrailingAction}</div>
-          </div>
-        )}
-        {filters ? <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 pb-2">{filters}</div> : null}
-      </div>
+            </div>
+          )}
+          {filters ? <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">{filters}</div> : null}
+        </header>
+      ) : (
+        <div className="shrink-0">
+          {(hasTabs || !searchHidden) && (
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-3 pb-2 pt-[calc(var(--titlebar-height)+0.5rem)]">
+              <div className="flex min-w-0 items-center justify-start">{search}</div>
+              {hasTabs ? (
+                <div className="flex min-w-0 items-center justify-center" data-tour="page-tabs">
+                  <ShellTabs activeTab={activeTab} onTabChange={onTabChange} tabs={tabs!} />
+                </div>
+              ) : (
+                <span />
+              )}
+              <div className="flex min-w-0 items-center justify-end">{searchTrailingAction}</div>
+            </div>
+          )}
+          {filters ? <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 pb-2">{filters}</div> : null}
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-hidden bg-(--ui-chat-surface-background)">{children}</div>
     </section>
   )

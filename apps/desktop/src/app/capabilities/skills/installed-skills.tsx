@@ -2,7 +2,6 @@ import { type ReactNode, useDeferredValue, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
-import { Masonry } from '@/components/ui/masonry'
 import { SearchField } from '@/components/ui/search-field'
 import { useI18n } from '@/i18n'
 import type { SkillInfo } from '@/types/scout'
@@ -62,11 +61,13 @@ export function InstalledSkills({
 
     return {
       entries: parsed,
-      skillById: new Map(parsed.flatMap(entry => {
-        const skill = byName.get(entry.name)
+      skillById: new Map(
+        parsed.flatMap(entry => {
+          const skill = byName.get(entry.name)
 
-        return skill ? [[entry.id, skill] as const] : []
-      }))
+          return skill ? [[entry.id, skill] as const] : []
+        })
+      )
     }
   }, [skills])
 
@@ -94,7 +95,7 @@ export function InstalledSkills({
   return (
     <div className="@container/catalog flex h-full min-h-0 min-w-0 flex-col" data-catalog="skills">
       <header
-        className="grid shrink-0 grid-cols-1 items-center gap-2 px-3 pb-1 pt-3 @[48rem]/catalog:grid-cols-[minmax(0,1fr)_auto] @[48rem]/catalog:gap-4"
+        className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 pb-1 pt-1"
         data-catalog-header
       >
         <SearchField
@@ -134,7 +135,10 @@ export function InstalledSkills({
             className="-mr-2 min-h-0 flex-1 overflow-y-auto overscroll-contain py-2 [scrollbar-gutter:stable]"
             data-catalog-scroll
           >
-            <Masonry data-catalog-hover-group>
+            <div
+              className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] gap-3"
+              data-catalog-hover-group
+            >
               {visible.map((entry, index) => (
                 <CatalogCard
                   accentIndex={index}
@@ -147,7 +151,7 @@ export function InstalledSkills({
                   onTag={searchFor}
                 />
               ))}
-            </Masonry>
+            </div>
           </div>
         )}
       </div>

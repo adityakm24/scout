@@ -345,6 +345,7 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
         { id: 'file', label: a.tabFiles, meta: artifacts ? counts.file : null },
         { id: 'link', label: a.tabLinks, meta: artifacts ? counts.link : null }
       ]}
+      title={t.sidebar.nav.artifacts}
     >
       {!artifacts ? (
         <PageLoader label={a.indexing} />

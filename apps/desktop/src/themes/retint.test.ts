@@ -15,7 +15,7 @@ const seedAt = (hue: number) => withHue(scoutTheme.colors.primary, hue)
 // for the orbit sidebar, so it exercises the per-mode AA clamp.
 const SPACESHIPRESEARCH_BLUE = '#0053FD'
 
-// Ignition ships as two seeds, one per mode: each must stay legible as sidebar
+// Signal ships as two seeds, one per mode: each must stay legible as sidebar
 // label text and as the ground under its own ink.
 describe('the shipped Scout accents', () => {
   const cases = [

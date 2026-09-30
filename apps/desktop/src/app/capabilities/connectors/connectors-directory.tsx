@@ -188,7 +188,7 @@ function Group({
   return (
     <section className="grid gap-2">
       <header className="flex items-center gap-2">
-        <h3 className="text-xs font-semibold text-(--ui-text-primary)">
+        <h3 className="text-sm font-semibold text-(--ui-text-primary)">
           {group.id === 'local' ? where : copy[group.id]}
         </h3>
         <span className="tabular-nums text-xs text-(--ui-text-tertiary)">{group.cards.length}</span>
@@ -197,7 +197,7 @@ function Group({
         {group.id === 'off' ? <Note>{copy.offNote}</Note> : null}
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] gap-3">
         {group.cards.map(card => {
           const key = cardKey(card)
 

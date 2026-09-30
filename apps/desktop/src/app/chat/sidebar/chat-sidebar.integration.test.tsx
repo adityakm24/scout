@@ -61,8 +61,7 @@ const renderSidebar = (pathname: string, currentView: AppView, onRetrySessions: 
     </MemoryRouter>
   )
 
-const currentButtons = () =>
-  screen.queryAllByRole('button').filter(button => button.classList.contains('bg-(--ui-control-active-background)'))
+const currentButtons = () => screen.queryAllByRole('button').filter(button => button.dataset.active === 'true')
 
 const expectOnlyCurrent = (label: string | null) => {
   const button = label ? screen.getByRole('button', { name: label }) : null

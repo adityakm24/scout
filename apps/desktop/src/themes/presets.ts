@@ -112,16 +112,16 @@ export const githubTheme: DesktopTheme = {
 /**
  * Scout — the canonical desktop identity of Spaceship Research.
  *
- * "Daybreak" by day: lavender paper and deep-indigo ink. "Nebula" by night: an
- * indigo-black sky. One accent family, electric violet — `#5a45f5` in light
- * (white text 6:1) and `#9888ff` in dark (dark ink 6.5:1) — with teal and rose
- * aurora partners in the desktop's Scout layer. The palette itself lives in
- * `@scout/shared`'s THEME_PRESET_PALETTES.
+ * "Paper" by day: warm off-white surfaces and near-black ink, in the manner of
+ * Dia and Arc. "Deep Orbit" by night: a blue-black navy with the same ink
+ * inverted. One accent, Signal — iMessage blue, `#0062cc` in light (clears AA
+ * on the paper sidebar, white ink on it) and `#0a84ff` in dark (clears AA on the
+ * orbit sidebar, near-black ink on it). The palette itself lives in `@scout/shared`'s THEME_PRESET_PALETTES.
  */
 export const scoutTheme: DesktopTheme = {
   name: 'spaceshipresearch',
   label: 'Scout',
-  description: 'Daybreak by day, Nebula by night, violet aurora accent',
+  description: 'Paper by day, Deep Orbit by night, Signal blue accent',
   ...THEME_PRESET_PALETTES.spaceshipresearch,
   typography: {
     fontSans: `"Plus Jakarta Sans", ${SYSTEM_SANS}`,
