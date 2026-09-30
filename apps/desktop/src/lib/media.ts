@@ -58,10 +58,6 @@ export function isMarkdownDocumentPath(path: string): boolean {
   return ext ? MARKDOWN_EXTENSIONS.has(ext) : false
 }
 
-export function mediaMime(path: string): string {
-  return mediaInfo(path)?.mime ?? 'application/octet-stream'
-}
-
 export function mediaName(path: string): string {
   // `C:\Users\…` parses as a URL with scheme `c:`; a drive letter is a path, not a scheme.
   if (!/^[A-Za-z]:[\\/]/.test(path)) {

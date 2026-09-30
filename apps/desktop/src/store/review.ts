@@ -518,19 +518,6 @@ export async function generateCommitMessage(previous = ''): Promise<string> {
   }
 }
 
-export async function pushChanges(): Promise<void> {
-  const ctx = reviewCtx()
-
-  if (!ctx) {
-    return
-  }
-
-  await runShip(async () => {
-    await ctx.review.push(ctx.cwd)
-    void refreshShipInfo()
-  })
-}
-
 // PR button: open the existing PR in the browser, or create one (pushing first)
 // then open it. Caller gates this on shipInfo.ghReady.
 export async function createOrOpenPr(): Promise<void> {

@@ -51,8 +51,6 @@ export const ANNOTATE_CSS_KEYS = [
   'align-items'
 ] as const
 
-export type AnnotateCssKey = (typeof ANNOTATE_CSS_KEYS)[number]
-
 /**
  * Markup budget for one comment. Enough for the opening tag plus a couple of
  * levels of children — the part an agent greps a component out of — without

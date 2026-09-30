@@ -14,10 +14,6 @@ import { TextTab, TextTabMeta } from '@/components/ui/text-tab'
 import type { IconComponent } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
-// A count badge beside a tab label. `null` = still loading (pulsing chip, not a
-// fake 0); numbers render compact; strings pass through; `undefined` = no badge.
-export type TabMeta = number | string | null | undefined
-
 export function tabMetaContent(meta: number | string | null) {
   return meta === null ? <CountSkeleton /> : typeof meta === 'number' ? compactNumber(meta) : meta
 }

@@ -13,8 +13,6 @@ import { sanitizeComposerInput } from '@/lib/composer-input-sanitize'
 import { triggerHaptic } from '@/lib/haptics'
 import { setMutableRef } from '@/lib/mutable-ref'
 import { normalize } from '@/lib/text'
-import { transcribeAudioClientDirect } from '@/lib/voice-client-direct'
-import { transcribeAudio } from '@/scout'
 import { clearClarifyRequest } from '@/store/clarify'
 import { setSessionCompacting } from '@/store/compaction'
 import {
@@ -73,7 +71,6 @@ import { useSlashCommand } from './slash'
 import { captureSteeringSession } from './steering-session'
 import { useSubmitPrompt } from './submit'
 import {
-  blobToDataUrl,
   delay,
   friendlyRemoteAttachError,
   type GatewayRequest,
@@ -230,7 +227,6 @@ interface PromptActionsOptions {
   runtimeIdByStoredSessionIdRef: MutableRefObject<Map<string, string>>
   selectedStoredSessionIdRef: MutableRefObject<string | null>
   startFreshSessionDraft: () => void
-  sttEnabled: boolean
   updateSessionState: (
     sessionId: string,
     updater: (state: ClientSessionState) => ClientSessionState,
@@ -262,7 +258,6 @@ export function usePromptActions({
   runtimeIdByStoredSessionIdRef,
   selectedStoredSessionIdRef,
   startFreshSessionDraft,
-  sttEnabled,
   updateSessionState
 }: PromptActionsOptions) {
   const { t } = useI18n()
@@ -638,32 +633,6 @@ export function usePromptActions({
       return await submitPromptText(rawText, options)
     },
     [executeSlashCommand, submitPromptText]
-  )
-
-  const transcribeVoiceAudio = useCallback(
-    async (audio: Blob) => {
-      if (!sttEnabled) {
-        throw new Error(copy.sttDisabled)
-      }
-
-      // Client-direct first: mic audio goes straight to the profile's STT
-      // provider (config + key fetched from the connected gateway), cutting
-      // the desktop→gateway audio hop. `null` = provider not client-callable
-      // (local whisper, command providers, older backend) → relay unchanged.
-      // Provider REJECTIONS surface — re-running the same request through
-      // the relay would fail identically, just slower.
-      const direct = await transcribeAudioClientDirect(audio)
-
-      if (direct !== null) {
-        return direct
-      }
-
-      const dataUrl = await blobToDataUrl(audio)
-      const result = await transcribeAudio(dataUrl, audio.type)
-
-      return result.transcript
-    },
-    [copy.sttDisabled, sttEnabled]
   )
 
   const cancelRun = useCallback(async () => {
@@ -1249,7 +1218,6 @@ export function usePromptActions({
     redirectPrompt,
     /** @deprecated Use `redirectPrompt` — this is an active-turn redirect, not tool steer. */
     steerPrompt: redirectPrompt,
-    submitText,
-    transcribeVoiceAudio
+    submitText
   }
 }

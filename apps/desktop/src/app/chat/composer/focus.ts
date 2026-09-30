@@ -60,8 +60,6 @@ const INSERT_REPLY_EVENT = 'scout:composer-insert-reply'
 const ATTACH_IMAGES_EVENT = 'scout:composer-attach-images'
 const INSERT_REFS_EVENT = 'scout:composer-insert-refs'
 const SUBMIT_EVENT = 'scout:composer-submit'
-const VOICE_TOGGLE_EVENT = 'scout:composer-voice-toggle'
-const DICTATION_EVENT = 'scout:composer-dictation'
 const MODEL_MENU_EVENT = 'scout:composer-model-menu'
 
 /** Inline edit composer root — mounted only while a user bubble is being edited. */
@@ -634,23 +632,6 @@ export const requestComposerSubmit = (
 
 export const onComposerSubmitRequest = (handler: (detail: SubmitDetail) => void) =>
   subscribe<SubmitDetail>(SUBMIT_EVENT, handler)
-
-/** Toggle ONE composer's voice conversation — the `composer.voice` hotkey
- *  reaches the composer that owns voice. Defaults to the active
- *  composer so N tiles don't all flip together. */
-export const requestVoiceToggle = (target: ComposerTarget | 'active' = 'active') =>
-  dispatch<{ target: ComposerTarget }>(VOICE_TOGGLE_EVENT, { target: resolve(target) })
-
-export const onComposerVoiceToggleRequest = (handler: (target: ComposerTarget) => void) =>
-  subscribe<{ target: ComposerTarget }>(VOICE_TOGGLE_EVENT, ({ target }) => handler(target))
-
-/** Start or stop dictation on one composer. Like voice conversation, the
- * rebindable action targets only the active visible composer. */
-export const requestComposerDictation = (target: ComposerTarget | 'active' = 'active') =>
-  dispatch<{ target: ComposerTarget }>(DICTATION_EVENT, { target: resolve(target) })
-
-export const onComposerDictationRequest = (handler: (target: ComposerTarget) => void) =>
-  subscribe<{ target: ComposerTarget }>(DICTATION_EVENT, ({ target }) => handler(target))
 
 /** The chat surface inside the zone the pointer is over, if any. Mirrors the
  *  tab verbs' hover-first targeting (`tabTargetGroupId`, #74447): the model

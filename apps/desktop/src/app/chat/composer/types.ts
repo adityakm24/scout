@@ -40,7 +40,6 @@ export interface ChatBarProps {
   busy: boolean
   disabled: boolean
   focusKey?: string | null
-  maxRecordingSeconds?: number
   state: ChatBarState
   gateway?: ScoutGateway | null
   queueSessionKey?: string | null
@@ -63,13 +62,4 @@ export interface ChatBarProps {
   /** Delivers a hidden note to the model mid-turn with no user turn (gateway session.steer). */
   onSteerHidden?: (text: string) => Promise<boolean> | boolean
   onSubmit: (value: string, options?: SubmitTextOptions) => Promise<boolean> | boolean
-  onTranscribeAudio?: (audio: Blob) => Promise<string>
-}
-
-export type VoiceStatus = 'idle' | 'recording' | 'transcribing'
-
-export interface VoiceActivityState {
-  elapsedSeconds: number
-  level: number
-  status: VoiceStatus
 }

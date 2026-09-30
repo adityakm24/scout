@@ -353,17 +353,6 @@ export function saveThreadScrollPosition(
   persistPositions(storageKey, positions)
 }
 
-export function clearThreadScrollPosition(sessionKey: string, storageKey = threadScrollStorageKey()) {
-  const positions = loadPositions(storageKey)
-
-  if (positions[sessionKey] === undefined) {
-    return
-  }
-
-  delete positions[sessionKey]
-  persistPositions(storageKey, positions)
-}
-
 /**
  * The restore/record gate for the session-switch settle loop. Pure so the
  * warm/cold switch lifecycle is testable without a DOM:

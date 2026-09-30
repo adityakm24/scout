@@ -297,17 +297,6 @@ def _tally_silence(spoke: bool, held: bool, where: str) -> tuple[bool, int]:
 # ── Push-to-talk API ─────────────────────────────────────────────────
 
 
-def start_recording() -> None:
-    """Begin capturing from the default input device (push-to-talk)."""
-    global _recorder
-    with _recorder_lock:
-        if _recorder is not None and getattr(_recorder, "is_recording", False):
-            return
-        rec = create_audio_recorder()
-        rec.start()  # only publish a recorder that actually started
-        _recorder = rec
-
-
 def stop_and_transcribe() -> Optional[str]:
     """Stop the active push-to-talk recording, transcribe, return text."""
     global _recorder

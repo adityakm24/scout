@@ -147,13 +147,6 @@ def _forget(key: tuple[str, str]) -> None:
     _generation[key] = _generation.get(key, 0) + 1
 
 
-def lock_all_profiles() -> None:
-    """Process shutdown: drop every token."""
-    with _lock:
-        for key in list(_sessions):
-            _forget(key)
-
-
 def is_unlocked(backend: str) -> bool:
     """Status probe: does NOT extend the idle TTL (only real manager calls do)."""
     return _live(backend, touch=False) is not None

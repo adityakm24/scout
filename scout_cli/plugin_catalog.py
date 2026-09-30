@@ -220,10 +220,6 @@ def load_removed_list(catalog_dir: Optional[Path] = None) -> List[RemovedEntry]:
     return _removed_from_list(data.get("removed")) if isinstance(data, dict) else []
 
 
-def get_catalog_entry(name: str, catalog_dir: Optional[Path] = None) -> Optional[PluginCatalogEntry]:
-    return next((e for e in load_catalog(catalog_dir) if e.name == name), None)
-
-
 def filter_entries(entries: List[PluginCatalogEntry], query: str) -> List[PluginCatalogEntry]:
     """Case-insensitive substring match over name, description and declared tools; empty query = all."""
     q = (query or "").strip().lower()

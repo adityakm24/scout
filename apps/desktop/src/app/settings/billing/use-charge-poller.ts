@@ -1,8 +1,7 @@
 import { refusalPolicy } from '@scout/shared/billing-policy'
 import {
   driveChargeSettlement,
-  SETTLEMENT_POLL_CAP_MS,
-  SETTLEMENT_POLL_INTERVAL_MS
+  SETTLEMENT_POLL_CAP_MS
 } from '@scout/shared/charge-settlement'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
@@ -14,8 +13,6 @@ import type { BillingApi, BillingRefusal } from './api'
 import { useBillingApi } from './api'
 import { resolveRefusal } from './errors'
 import type { BillingChargeStatusResponse } from './types'
-
-export const CHARGE_POLL_INTERVAL_MS = SETTLEMENT_POLL_INTERVAL_MS
 export const CHARGE_POLL_CAP_MS = SETTLEMENT_POLL_CAP_MS
 
 export type ChargeFlowPhase = 'charging' | 'done' | 'idle' | 'polling'

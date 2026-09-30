@@ -4,11 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ChatBarState } from '@/app/chat/composer/types'
 import { I18nProvider } from '@/i18n'
 import { $hudMode } from '@/store/hud'
-import { applyWakeStartResult, applyWakeStatus, resetWakeWordState } from '@/store/wake-word'
 
 import { ComposerControls } from './controls'
-
-vi.mock('./model-pill', () => ({ ModelPill: () => null }))
 
 const state: ChatBarState = {
   model: { canSwitch: false, model: '', provider: '' },
@@ -24,23 +21,11 @@ function renderControls(overrides: Partial<React.ComponentProps<typeof ComposerC
         busy={false}
         busyAction="stop"
         canSubmit={true}
-        conversation={{
-          active: false,
-          level: 0,
-          muted: false,
-          onEnd: vi.fn(),
-          onStart: vi.fn(),
-          onStopTurn: vi.fn(),
-          onToggleMute: vi.fn(),
-          status: 'idle'
-        }}
         disabled={false}
         hasComposerPayload={true}
-        onDictate={vi.fn()}
         onQueue={vi.fn()}
         onToggleAutoSpeak={vi.fn()}
         state={state}
-        voiceStatus="idle"
         {...overrides}
       />
     </I18nProvider>
@@ -61,80 +46,46 @@ afterEach(() => {
   $hudMode.set(false)
 })
 
-// The HUD is a Spotlight bar a few hundred pixels wide: the voice controls
-// fold into one menu there, and the way out of HUD mode joins the row instead
-// of floating above the bar in a reserved strip. The docked composer keeps the
-// mic inline, with the other voice toggles fanned out of it on hover, and
-// shows no exit.
-describe('HUD mode', () => {
-  it('keeps the mic inline, fans the toggles on hover, and offers no exit in the docked composer', async () => {
-    renderControls()
+describe('read-aloud toggle', () => {
+  it('reflects the preference and flips it', () => {
+    const onToggleAutoSpeak = vi.fn()
+    renderControls({ autoSpeak: true, onToggleAutoSpeak })
 
-    const mic = screen.getByLabelText('Voice dictation')
+    const toggle = screen.getByLabelText('Stop reading replies aloud')
+    expect(toggle.getAttribute('aria-pressed')).toBe('true')
 
-    expect(mic).toBeTruthy()
-    expect(screen.queryByLabelText('Read replies aloud')).toBeNull()
-
-    fireEvent.pointerEnter(mic.parentElement!)
-
-    expect(await screen.findByLabelText('Read replies aloud')).toBeTruthy()
-    expect(screen.getByLabelText('Wake word "hey scout"')).toBeTruthy()
-    expect(screen.queryByLabelText('Exit HUD mode')).toBeNull()
-    expect(screen.queryByLabelText('Reset HUD size and position')).toBeNull()
-    // No folded menu trigger — the fan's group shares the "Voice" name.
-    expect(screen.queryByRole('button', { name: 'Voice' })).toBeNull()
-  })
-
-  it('folds them into one menu and offers the way out in the HUD', () => {
-    $hudMode.set(true)
-    renderControls()
-
-    expect(screen.getByLabelText('Voice')).toBeTruthy()
-    expect(screen.getByLabelText('Reset HUD size and position')).toBeTruthy()
-    expect(screen.getByLabelText('Exit HUD mode')).toBeTruthy()
-
-    // Folded away, not duplicated — the whole point is the row's width back.
-    expect(screen.queryByLabelText('Voice dictation')).toBeNull()
-    expect(screen.queryByLabelText('Read replies aloud')).toBeNull()
-  })
-
-  // A collapsed menu that looked idle while the mic was open would be a worse
-  // trade than the space it saves, so the trigger reports the live state.
-  it('reports a live voice state on the collapsed trigger', () => {
-    $hudMode.set(true)
-    renderControls({ voiceStatus: 'recording' })
-
-    expect(screen.getByLabelText('Stop dictation')).toBeTruthy()
-    expect(screen.queryByLabelText('Voice')).toBeNull()
+    fireEvent.click(toggle)
+    expect(onToggleAutoSpeak).toHaveBeenCalledTimes(1)
   })
 })
 
-// A tile can be narrower than the controls cost, and the row is inside an
-// overflow-hidden surface — so anything that doesn't fold gets clipped off the
-// right edge, send button first. The ladder keeps going past `stacked`: voice
-// folds into the same menu the HUD uses, then the model pill drops. Send is
-// the last thing standing.
-describe('narrow tiles', () => {
-  it('folds the voice controls into one menu without entering HUD mode', () => {
-    renderControls({ foldVoice: true })
-
-    expect(screen.getByLabelText('Voice')).toBeTruthy()
-    expect(screen.queryByLabelText('Voice dictation')).toBeNull()
-    expect(screen.queryByLabelText('Read replies aloud')).toBeNull()
-
-    // Folding is a width decision, not the HUD: no exit affordance appears.
+// The way out of HUD mode rides the controls row instead of floating above the
+// bar; the docked composer shows no exit.
+describe('HUD mode', () => {
+  it('offers the way out only in the HUD', () => {
+    renderControls()
     expect(screen.queryByLabelText('Exit HUD mode')).toBeNull()
-  })
+    cleanup()
 
+    $hudMode.set(true)
+    renderControls()
+    expect(screen.getByLabelText('Reset HUD size and position')).toBeTruthy()
+    expect(screen.getByLabelText('Exit HUD mode')).toBeTruthy()
+  })
+})
+
+// A tile can be narrower than the controls cost, inside an overflow-hidden
+// surface: at `minimal` everything but Send/Stop drops.
+describe('narrow tiles', () => {
   it('keeps Send at the tightest width, with everything else dropped', () => {
-    renderControls({ foldVoice: true, minimal: true })
+    renderControls({ minimal: true })
 
     expect(screen.getByLabelText('Send')).toBeTruthy()
-    expect(screen.queryByLabelText('Voice')).toBeNull()
+    expect(screen.queryByLabelText('Read replies aloud')).toBeNull()
   })
 
   it('keeps Stop reachable mid-turn at the tightest width', () => {
-    renderControls({ busy: true, busyAction: 'stop', foldVoice: true, hasComposerPayload: false, minimal: true })
+    renderControls({ busy: true, busyAction: 'stop', hasComposerPayload: false, minimal: true })
 
     expect(screen.getByLabelText('Stop')).toBeTruthy()
   })
@@ -157,63 +108,5 @@ describe('ComposerControls shortcut tooltips', () => {
     renderControls({ busy: true, busyAction: 'queue' })
 
     await expectShortcutTooltip('Queue message', 'Ctrl+↵')
-  })
-})
-
-describe('wake-word ear visibility', () => {
-  afterEach(() => {
-    resetWakeWordState()
-  })
-
-  // The ear lives in the mic's fan now: hover the mic to reach it.
-  const findEar = async () => {
-    fireEvent.pointerEnter(screen.getByLabelText('Voice dictation').parentElement!)
-
-    return screen.findByLabelText('Wake word "hey scout"')
-  }
-
-  it('stays reachable during a busy agent turn', async () => {
-    applyWakeStatus({ available: true, enabled: true, listening: true, phrase: 'hey scout' })
-    renderControls({ busy: true, busyAction: 'stop' })
-
-    expect((await findEar()).getAttribute('aria-pressed')).toBe('true')
-  })
-
-  it('stays reachable (enabled in config) even when a start was refused', async () => {
-    applyWakeStatus({ available: true, enabled: true, listening: false, phrase: 'hey scout' })
-    // Transient refusal marks available false but enabled keeps it mounted.
-    applyWakeStartResult({ hint: 'mic busy', reason: 'unavailable', started: false })
-    renderControls()
-
-    expect((await findEar()).getAttribute('aria-pressed')).toBe('false')
-  })
-
-  it('stays reachable (never hides) even when unavailable and not enabled', async () => {
-    applyWakeStatus({ available: false, enabled: false, listening: false, phrase: 'hey scout' })
-    applyWakeStartResult({ hint: 'run `scout tools` (Voice section)', reason: 'unavailable', started: false })
-    renderControls()
-
-    // The ear ALWAYS shows so the user can click to enable; a refused start
-    // never hides the control.
-    expect(((await findEar()) as HTMLButtonElement).disabled).toBe(false)
-  })
-
-  it('shows a disabled paused ear inside the voice-conversation pill', () => {
-    applyWakeStatus({ available: true, enabled: true, listening: true, phrase: 'hey scout' })
-    renderControls({
-      conversation: {
-        active: true,
-        level: 0,
-        muted: false,
-        onEnd: vi.fn(),
-        onStart: vi.fn(),
-        onStopTurn: vi.fn(),
-        onToggleMute: vi.fn(),
-        status: 'listening'
-      }
-    })
-
-    const ear = screen.getByLabelText('Wake word: "hey scout" — paused during voice chat')
-    expect((ear as HTMLButtonElement).disabled).toBe(true)
   })
 })

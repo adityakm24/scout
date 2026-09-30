@@ -5,7 +5,6 @@ import { createClientSessionState } from '@/lib/chat-runtime'
 import { setApiRequestConnection, setApiRequestProfile } from '@/scout'
 import { adoptNewSessionDraft, stashSessionDraft, takeSessionDraft } from '@/store/composer'
 import { $confirmRequest, runConfirm, settleConfirm } from '@/store/confirm'
-import { $hubInstalledOverride } from '@/store/hub-actions'
 import { requestMcpInstallFromDeepLink } from '@/store/mcp-deeplink-install'
 import { requestPluginCatalogInstallFromDeepLink } from '@/store/plugin-catalog-install'
 import { openPluginInstallRequest } from '@/store/plugin-install-request'
@@ -721,7 +720,6 @@ describe('useDesktopIntegrations', () => {
 
     afterEach(() => {
       settleConfirm(false)
-      $hubInstalledOverride.set({})
       setApiRequestConnection(null)
       setApiRequestProfile(null)
     })
@@ -768,8 +766,7 @@ describe('useDesktopIntegrations', () => {
         setApiRequestConnection(connection)
         setApiRequestProfile(profile)
         api.mockClear()
-        $hubInstalledOverride.set({})
-        act(() => deepLink(payload))
+          act(() => deepLink(payload))
         expect($confirmRequest.get()?.title).toBe('Install “skill”?')
         expect($confirmRequest.get()?.details).toEqual([
           { label: 'Source', value: identifier },
@@ -783,7 +780,9 @@ describe('useDesktopIntegrations', () => {
         await act(async () => runConfirm($confirmRequest.get()!))
         expect($confirmRequest.get()?.phase).toBe('done')
         settleConfirm(true)
-        await waitFor(() => expect($hubInstalledOverride.get()[identifier]).toBe(true))
+        await waitFor(() =>
+          expect(api.mock.calls.some(([r]) => r.path === '/api/actions/skill-link-test/status?lines=200')).toBe(true)
+        )
         expect(installs()).toEqual([
           [
             {

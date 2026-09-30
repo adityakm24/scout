@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { approvePairing, getMessagingPlatforms } from './api/messaging'
 import { getAuxiliaryModels, getGlobalModelInfo } from './api/models'
-import { getOfficialSkills, getSkillHubSources } from './api/skills'
 import { getTerminalBackends, getToolsetConfig, selectTerminalBackend } from './api/toolsets'
 import {
   getMcpCatalog,
@@ -125,10 +124,7 @@ describe('capability helpers are connection-scoped', () => {
     // any api/ module inherits it — Capabilities hub/toolset-config reads and
     // the Messaging page were left queueing as background work when the rule
     // was spread per call site.
-    void getOfficialSkills('coder')
-    expect(last()).toMatchObject({ profile: 'coder', priority: 'foreground' })
-
-    void getSkillHubSources('coder')
+    void getSkills('coder')
     expect(last()).toMatchObject({ profile: 'coder', priority: 'foreground' })
 
     void getToolsetConfig('browser', { connectionId: 'homelab', profile: 'coder' })
@@ -139,7 +135,7 @@ describe('capability helpers are connection-scoped', () => {
 
     // `null` deliberately targets the primary — that backend is always warm,
     // so it stays untagged like the ambient path.
-    void getOfficialSkills(null)
+    void getSkills(null)
     expect(last()).not.toHaveProperty('priority')
   })
 

@@ -65,15 +65,6 @@ export function statusOf(server: McpServerEntry, probe: Probe | undefined): Serv
   return NEEDS_AUTH_RE.test(probe.error ?? '') ? 'needs-auth' : 'error'
 }
 
-export const STATUS_DOT = {
-  ok: 'bg-emerald-500',
-  error: 'bg-red-500',
-  'needs-auth': 'bg-amber-500',
-  probing: 'animate-pulse bg-foreground/40',
-  off: 'bg-foreground/20',
-  unknown: 'bg-foreground/20'
-} satisfies Record<ServerStatus, string>
-
 export function canAuthenticate(server: McpServerEntry, status: ServerStatus): boolean {
   const hasHeaderAuth = server.headers instanceof Object
 

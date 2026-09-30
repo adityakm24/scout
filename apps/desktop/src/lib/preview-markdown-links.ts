@@ -1,21 +1,5 @@
 import { previewMarkdownHref } from '@/lib/preview-targets'
 
-/**
- * Where a click in the desktop markdown preview goes.
- *
- * Electron denies every `target=_blank` / `window.open` (GHSA-9f4c-93c8-jc8g),
- * so a web link has to travel through `ExternalLink` like chat links do. A
- * `#fragment` href is the app's HashRouter, so a table-of-contents click must
- * scroll the note instead of changing the route. A path to a sibling note is
- * protected from Streamdown's URL hardening by the same `#preview/…` door
- * chat transcripts use, and resolved against the note's directory on click.
- */
-export type PreviewMarkdownLink =
-  | { kind: 'external'; href: string }
-  | { kind: 'file'; target: string }
-  | { kind: 'hash'; fragment: string }
-  | { kind: 'inert' }
-
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6'
 const NOTE_DIRECTORY_RE = /^(.*)[\\/][^\\/]*$/

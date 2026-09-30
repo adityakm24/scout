@@ -34,6 +34,7 @@ import { scoutConfigCacheWriter, useScoutConfigRecord } from '../hooks/use-confi
 import { useOnProfileSwitch } from '../hooks/use-on-profile-switch'
 import { PanelEmpty } from '../overlays/panel'
 
+import { ComputerUsePanel } from './computer-use-panel'
 import { ConfigField } from './config-field'
 import { configSubpageForField } from './config-subpages'
 import {
@@ -55,6 +56,7 @@ import { SettingsProfileScope } from './profile-scope'
 import { QuickEntrySettings } from './quick-entry-settings'
 import { SETTING_IDS, settingElementId } from './settings-manifest'
 import { SharedMetricsSettings } from './shared-metrics-settings'
+import { TerminalBackendPanel } from './terminal-backend-panel'
 import { useSettingDeepLink } from './use-setting-deep-link'
 
 export function ConfigSettings({
@@ -306,6 +308,9 @@ function ConfigSettingsInner({
   const showDesktopSettings = activeSectionId === 'advanced' && (subpage === undefined || subpage === 'desktop')
   const showAttachments = activeSectionId === 'chat' && (subpage === undefined || subpage === 'attachments')
   const showSharedMetrics = activeSectionId === 'safety' && subpage === 'privacy'
+  // The Capabilities Tools tab is gone; its two stateful panels live beside the matching config fields.
+  const showTerminalBackend = activeSectionId === 'advanced' && subpage === 'terminal'
+  const showComputerUse = activeSectionId === 'advanced' && subpage === 'tools'
 
   // Deep-link target from the command palette (?field=<key>): scroll the row
   // into view and flash it, then drop the param so it doesn't re-fire.
@@ -438,7 +443,12 @@ function ConfigSettingsInner({
     visibleFields.length === 0 &&
     (subpage === undefined
       ? activeSectionId !== 'chat'
-      : !showModelSettings && !showDesktopSettings && !showAttachments && !showSharedMetrics)
+      : !showModelSettings &&
+        !showDesktopSettings &&
+        !showAttachments &&
+        !showSharedMetrics &&
+        !showTerminalBackend &&
+        !showComputerUse)
 
   return renderPage(
     <>
@@ -478,9 +488,10 @@ function ConfigSettingsInner({
       {/* Shared metrics are two coupled opt-ins with a consent side effect, so they
           go through their own RPC rather than the generic field autosave. */}
       {showSharedMetrics ? <SharedMetricsSettings /> : null}
-      {activeSectionId === 'voice' ? (
-        <ListRow description={c.voiceShortcutHintDesc} title={c.voiceShortcutHintTitle} />
-      ) : null}
+      {/* Backend picker with live readiness probes (Docker, SSH, …) above the raw terminal.* fields. */}
+      {showTerminalBackend ? <TerminalBackendPanel profile={scopeProfile} /> : null}
+      {/* macOS permission grants + driver install for the computer_use toolset. */}
+      {showComputerUse ? <ComputerUsePanel /> : null}
       {showEmptyState ? (
         <EmptyState description={c.emptyDesc} title={c.emptyTitle} />
       ) : visibleFields.length === 0 ? null : (

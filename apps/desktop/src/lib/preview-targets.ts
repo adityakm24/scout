@@ -104,9 +104,3 @@ export function previewArtifactKey(target: string, cwd: string): string {
 
   return path.replace(/\/\.\//g, '/')
 }
-
-export function previewDisplayLabel(target: string): string {
-  const escaped = previewName(target).replace(/[[\]\\]/g, '\\$&')
-
-  return `Preview: ${escaped}`
-}

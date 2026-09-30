@@ -231,12 +231,6 @@ def mark_awaiting_text(clarify_id: str) -> bool:
         return entry is not None
 
 
-def has_pending(session_key: str) -> bool:
-    """True when this session has at least one pending clarify entry."""
-    with _lock:
-        return any(_entries.get(cid) is not None for cid in _session_index.get(session_key) or [])
-
-
 def clear_session(session_key: str) -> int:
     """Drop every pending clarify for a session (``/new``, shutdown, cached-agent eviction) so
     blocked agent threads don't outlive it; returns how many were cancelled. Cancelled waiters

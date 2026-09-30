@@ -42,10 +42,6 @@ export function toolPartDisclosureId(part: Pick<ToolPart, 'toolCallId' | 'toolNa
   return `tool:${part.toolName}:${stableHash(JSON.stringify(part.args ?? ''))}`
 }
 
-export function toolGroupDisclosureId(parts: ToolPart[]): string {
-  return `tool-group:${parts.map(toolPartDisclosureId).join('|')}`
-}
-
 /** Shared by a tool row and the activity summaries that open it. */
 export function toolEntryDisclosureId(
   messageId: string,

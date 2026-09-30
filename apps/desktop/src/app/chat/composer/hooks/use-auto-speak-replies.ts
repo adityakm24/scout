@@ -19,7 +19,6 @@ interface AutoSpeakReply {
 }
 
 interface UseAutoSpeakReplies {
-  conversationActive: boolean
   failureLabel: string
   /** Mark the current last reply spoken — shared dedupe with the conversation consumer. */
   markSpoken: () => void
@@ -37,7 +36,6 @@ interface UseAutoSpeakReplies {
  * the latest reply, so a backlog collapses to the newest.
  */
 export function useAutoSpeakReplies({
-  conversationActive,
   failureLabel,
   markSpoken,
   pendingReply,
@@ -47,8 +45,8 @@ export function useAutoSpeakReplies({
   // Wake on THIS composer's transcript: a tile subscribed to the primary's
   // would never fire on its own replies (and would fire on someone else's).
   const { $messages, connectionId, profile } = useComposerScope()
-  const latest = useRef({ connectionId, conversationActive, failureLabel, markSpoken, pendingReply, profile })
-  latest.current = { connectionId, conversationActive, failureLabel, markSpoken, pendingReply, profile }
+  const latest = useRef({ connectionId, failureLabel, markSpoken, pendingReply, profile })
+  latest.current = { connectionId, failureLabel, markSpoken, pendingReply, profile }
 
   useEffect(() => {
     if (!enabled) {
@@ -62,9 +60,9 @@ export function useAutoSpeakReplies({
     let attemptSeq = 0
 
     const speakLatest = () => {
-      const { connectionId, conversationActive, failureLabel, markSpoken, pendingReply, profile } = latest.current
+      const { connectionId, failureLabel, markSpoken, pendingReply, profile } = latest.current
 
-      if (conversationActive || $voicePlayback.get().status !== 'idle') {
+      if ($voicePlayback.get().status !== 'idle') {
         return
       }
 

@@ -40,11 +40,8 @@ import { emitGatewayEvent } from '@/contrib/events'
 import { translateNow } from '@/i18n'
 import { type ChatMessage, chatMessageText } from '@/lib/chat-messages'
 import { isMessagingSource } from '@/lib/session-source'
-import { activateWakeIndicator } from '@/lib/wake-indicator'
-import { playWakeSound } from '@/lib/wake-sound'
 import { $billingSettingsRequest } from '@/store/billing-block'
 import { $desktopBoot } from '@/store/boot'
-import { requestVoiceConversationStart } from '@/store/composer'
 import { $activeConnectionId } from '@/store/connections'
 import { $cronReviewRequest } from '@/store/cron'
 import { requestGatewayForProfile } from '@/store/gateway'
@@ -58,8 +55,6 @@ import {
   $activeGatewayProfile,
   $freshSessionRequest,
   $profileScope,
-  ensureGatewayProfile,
-  newSessionInProfile,
   normalizeProfileKey,
   refreshActiveProfile
 } from '@/store/profile'
@@ -90,7 +85,6 @@ import {
 import { reportPendingUpdateRun } from '@/store/shared-metrics'
 import { $archivedSessions } from '@/store/sidebar-archive'
 import { $titlebarAppActionsSide, titlebarAppActionsClusterCounts } from '@/store/titlebar-app-actions'
-import { armWakeWord, stopClientCapture } from '@/store/wake-word'
 import { isAuxiliaryWindow, isBrowserWindow, isHudWindow } from '@/store/windows'
 import { useSkinCommand } from '@/themes/use-skin-command'
 import type { SessionInfo } from '@/types/scout'
@@ -440,7 +434,7 @@ export function ContribWiring({ children }: { children: ReactNode }) {
     requestGateway
   })
 
-  const { refreshScoutConfig, sttEnabled, voiceMaxRecordingSeconds } = useScoutConfig({ activeSessionIdRef })
+  const { refreshScoutConfig } = useScoutConfig({ activeSessionIdRef })
 
   const { applySavedMainModel, followDefaultModel, refreshCurrentModel, selectModel } = useModelControls({
     cacheOwnerConnectionId: activeConnectionId || undefined,
@@ -753,8 +747,7 @@ export function ContribWiring({ children }: { children: ReactNode }) {
     restoreToMessage,
     steerPrompt,
     injectHiddenPrompt,
-    submitText,
-    transcribeVoiceAudio
+    submitText
   } = usePromptActions({
     activeSessionId,
     activeSessionIdRef,
@@ -772,7 +765,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
     runtimeIdByStoredSessionIdRef,
     selectedStoredSessionIdRef,
     startFreshSessionDraft,
-    sttEnabled,
     updateSessionState
   })
 
@@ -872,46 +864,9 @@ export function ContribWiring({ children }: { children: ReactNode }) {
     (event: Parameters<typeof handleDesktopGatewayEvent>[0]) => {
       emitGatewayEvent(event)
 
-      if (event.type === 'wake.detected') {
-        const payload = event.payload as { profile?: null | string; start_new_session?: boolean } | undefined
-
-        // Free the Mac mic so voice conversation can open getUserMedia.
-        // Server already pauses the detector lease; this stops client PCM feed.
-        stopClientCapture()
-
-        // Audible confirmation that the wake registered, before voice capture
-        // starts. Gated by the shared sound-mute toggle.
-        playWakeSound()
-        activateWakeIndicator()
-
-        // Multi-profile routing: a wake phrase enrolled by another profile
-        // re-homes the gateway to that profile first (live swap — same path
-        // as clicking it in the profile rail), then opens the fresh session
-        // and starts voice there.
-        const targetProfile = payload?.profile?.trim()
-        const activeProfile = normalizeProfileKey($activeGatewayProfile.get())
-
-        if (targetProfile && normalizeProfileKey(targetProfile) !== activeProfile) {
-          if (payload?.start_new_session !== false) {
-            newSessionInProfile(targetProfile)
-          } else {
-            void ensureGatewayProfile(normalizeProfileKey(targetProfile)).catch((error: unknown) => {
-              // #81094: the voice-path switch must surface its failure too.
-              notifyError(error, `Failed to switch to profile "${normalizeProfileKey(targetProfile)}"`)
-            })
-          }
-        } else if (payload?.start_new_session !== false) {
-          startFreshSessionDraft()
-        }
-
-        requestVoiceConversationStart()
-
-        return
-      }
-
       handleDesktopGatewayEvent(event)
     },
-    [handleDesktopGatewayEvent, startFreshSessionDraft]
+    [handleDesktopGatewayEvent]
   )
 
   useGatewayBoot({
@@ -932,14 +887,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
     refreshScoutConfig,
     refreshSessions
   })
-
-  useEffect(() => {
-    if (gatewayState === 'open') {
-      // Status-then-arm, syncing $wakeWord so the composer toggle reflects the
-      // same listener this auto-arm claims.
-      void armWakeWord(requestGateway)
-    }
-  }, [gatewayState, requestGateway])
 
   useEffect(() => {
     if (gatewayState !== 'open' || isAuxiliaryWindow()) {
@@ -1206,7 +1153,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
     onSubmit: submitText,
     onThreadMessagesChange: handleThreadMessagesChange,
     onToggleSelectedPin: toggleSelectedPin,
-    onTranscribeAudio: transcribeVoiceAudio,
     followDefaultModel,
     getGateway: () => gatewayRef.current,
     openAgents,
@@ -1251,8 +1197,8 @@ export function ContribWiring({ children }: { children: ReactNode }) {
   // The voice cap changes only on config load; the gateway instance + all
   // chat reactivity are subscribed inside ChatRoutesSurface / ChatView.
   const chatRoutesNode = useMemo(
-    () => <ChatRoutesSurface actions={actions} maxVoiceRecordingSeconds={voiceMaxRecordingSeconds} />,
-    [actions, voiceMaxRecordingSeconds]
+    () => <ChatRoutesSurface actions={actions} />,
+    [actions]
   )
 
   const api = useMemo<WiringApi>(

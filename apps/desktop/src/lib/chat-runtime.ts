@@ -139,10 +139,6 @@ export function coerceThinkingText(value: unknown): string {
   return EMPTY_THINKING_PLACEHOLDER_RE.test(raw) ? '' : raw
 }
 
-export function isImageGenerationTool(name?: string): boolean {
-  return name === 'image_generate'
-}
-
 export function contextPath(path: string, cwd: string): string {
   if (!cwd) {
     return path

@@ -8,9 +8,7 @@
  */
 import {
   directiveIconElement,
-  directiveIconSvg,
   formatRefValue,
-  refAttrsHtml,
   refChipLabel,
   type SlashChipKind,
   slashIconElement
@@ -128,15 +126,6 @@ export function quoteRefValue(value: string) {
   }
 
   return formatRefValue(value)
-}
-
-export function refChipHtml(kind: string, rawValue: string, displayLabel?: string) {
-  const id = unquoteRef(rawValue)
-  const text = `@${kind}:${quoteRefValue(id)}`
-
-  const label = displayLabel || refChipLabel(kind, id)
-
-  return `<span contenteditable="false" title="${escapeHtml(id)}" data-ref-text="${escapeHtml(text)}" data-ref-id="${escapeHtml(id)}" data-ref-kind="${escapeHtml(kind)}" ${refAttrsHtml(kind)}>${directiveIconSvg(kind)}${escapeHtml(label)}</span>`
 }
 
 export function refChipElement(kind: string, rawValue: string, displayLabel?: string) {
@@ -538,23 +527,6 @@ export function deleteSelectionInEditor(editor: HTMLElement) {
   hit.selection.addRange(hit.range)
 
   return true
-}
-
-/** Serialize a draft string into chip-HTML for the contenteditable surface. */
-export function composerHtml(text: string) {
-  let cursor = 0
-  let html = ''
-
-  REF_RE.lastIndex = 0
-
-  for (const match of text.matchAll(REF_RE)) {
-    const index = match.index ?? 0
-    html += escapeHtml(text.slice(cursor, index)).replace(/\n/g, '<br>')
-    html += refChipHtml(match[1] || 'file', match[2] || '')
-    cursor = index + match[0].length
-  }
-
-  return html + escapeHtml(text.slice(cursor)).replace(/\n/g, '<br>')
 }
 
 /** Walk a DOM subtree back to the plain `@kind:value` text it represents. */

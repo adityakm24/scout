@@ -128,7 +128,6 @@ export interface Translations {
       priority: string
       priorities: Record<'none' | 'low' | 'medium' | 'high', string>
       byScout: string
-      notesPlaceholder: string
       markDone: string
       markOpen: string
       delete: string
@@ -147,11 +146,8 @@ export interface Translations {
       delete: string
       snooze: string
       custom: string
-      whenLabel: string
-      repeatLabel: string
       presets: Record<'in15m' | 'in1h' | 'evening' | 'tomorrow', string>
       repeatOptions: Record<'never' | 'daily' | 'weekdays' | 'weekly', string>
-      inRelative: (label: string) => string
       firedAt: (label: string) => string
       notificationTitle: string
     }
@@ -172,8 +168,6 @@ export interface Translations {
     added: string
     discover: string
     featured: string
-    explorePlugins: string
-    exploreSkills: string
     mostStarred: string
     newest: string
     recentlyUpdated: string
@@ -703,30 +697,7 @@ export interface Translations {
       openMaintenance: string
     }
     voice: {
-      configureSpeechToText: string
-      couldNotStartSession: string
-      microphoneAccessDenied: string
-      microphoneConstraintsUnsupported: string
-      microphoneFailed: string
-      microphoneInUse: string
-      microphonePermissionDenied: string
-      microphoneStartFailed: string
-      microphoneUnsupported: string
-      noMicrophone: string
-      noSpeechDetected: string
-      playbackFailed: string
-      recordingFailed: string
-      sayStopToEnd: (phrase: string) => string
-      transcriptionFailed: string
-      transcriptionUnavailable: string
-      tryRecordingAgain: string
       unavailable: string
-      liveEnded: string
-      liveEndedConnectionLost: string
-      liveEndedClosed: string
-      liveError: string
-      liveDelegationFailed: string
-      liveUnavailable: (reason: string) => string
     }
     // Native OS notification copy (titles + generic fallback bodies). Dynamic
     // bodies (the agent's reply, a command, an error) are passed through raw.
@@ -1266,8 +1237,6 @@ export interface Translations {
       attachmentSizeDesc: string
       attachmentSizeUnit: string
       attachmentSizeLabel: string
-      voiceShortcutHintTitle: string
-      voiceShortcutHintDesc: string
       showOptions: string
     }
     hudModifier: {
@@ -2139,48 +2108,26 @@ export interface Translations {
 
   skills: {
     tabSkills: string
-    tabToolsets: string
     configuringProfile: string
     all: string
     searchSkills: string
-    searchToolsets: string
     refresh: string
     refreshing: string
     loading: string
     noSkillsTitle: string
-    noSkillsDesc: string
-    noToolsetsTitle: string
-    noToolsetsDesc: string
     noDescription: string
     configured: string
-    needsKeys: string
-    visionModelHint: string
-    visionModelLink: string
     toolsetsEnabled: (enabled: number, total: number) => string
-    configureToolset: (label: string) => string
     toggleToolset: (label: string, enabled: boolean) => string
     skillsLoadFailed: string
-    toolsetsRefreshFailed: string
-    skillEnabled: string
-    skillDisabled: string
-    toolsetEnabled: string
-    toolsetDisabled: string
     appliesToNewSessions: (name: string) => string
     failedToUpdate: (name: string) => string
-    sortMostUsed: string
-    sortAlpha: string
-    sortMostUsedDesc: string
-    sortLeastUsedAsc: string
     enableAll: string
-    disableAll: string
     disableUnused: string
     bulkUpdated: (count: number) => string
-    bulkNoChange: string
     usageCount: (count: number | string) => string
     provenance: Record<'agent' | 'bundled' | 'hub', string>
-    emptyNoneFound: (noun: string) => string
     emptyNothingMatches: (query: string) => string
-    emptyNoneAvailable: (noun: string) => string
     changesApplyNewSessions: string
     skillUpdated: string
     edit: string
@@ -2214,10 +2161,7 @@ export interface Translations {
     tabPlugins: string
     plugins: {
       agentTitle: string
-      agentBlurb: string
-      pageBlurb: string
       halfDesktop: string
-      halfDesktopHint: string
       halfAgent: string
       halfAgentIn: (profile: string) => string
       defaultProfile: string
@@ -2231,7 +2175,6 @@ export interface Translations {
       desktopHalfPendingTip: string
       desktopHalfRemote: string
       desktopHalfRemoteTip: string
-      emptyAll: string
       empty: string
       emptyHint: string
       loadFailed: string
@@ -2251,9 +2194,6 @@ export interface Translations {
         missing_app: string
         unknown: string
       }
-      catalogTitle: string
-      catalogBrowse: string
-      catalogHide: string
       catalogHint: string
       alreadyInstalled: (name: string) => string
       catalogProvenance: (sha: string) => string
@@ -2290,16 +2230,11 @@ export interface Translations {
         secretStoredAs: (env: string) => string
       }
     }
-    officialCatalog: string
-    officialPill: string
     hub: {
       searchPlaceholder: string
       search: string
       searching: string
-      connectingHubs: string
-      connectedHubs: string
       featured: string
-      landingHint: string
       noResults: string
       resultCount: (count: number, ms: number | null) => string
       timedOut: (sources: string) => string
@@ -2315,34 +2250,20 @@ export interface Translations {
       scanning: string
       close: string
       files: string
-      noReadme: string
       trust: Record<string, string>
-      verdictSafe: string
-      verdictCaution: string
-      verdictDangerous: string
-      policyAllow: string
-      policyAsk: string
-      policyBlock: string
       findings: (count: number) => string
-      noFindings: string
       installStarted: (name: string) => string
-      uninstallStarted: (name: string) => string
-      updateStarted: string
       actionFailed: string
       installBlockedTitle: (name: string) => string
       installBlockedMessage: (findings: number, unverified: boolean) => string
       viewScan: string
-      openLog: string
-      actionLog: string
       alreadyInstalled: (name: string) => string
-      pickerTitle: string
       pickerBrowse: string
       pickerHide: string
       pickerHint: string
       loadFailed: string
       previewFailed: string
       scanFailed: string
-      searchFailed: string
     }
   }
 
@@ -3286,40 +3207,17 @@ export interface Translations {
     placeholderFollowUp: string
     newSessionPlaceholders: readonly string[]
     followUpPlaceholders: readonly string[]
-    startVoice: string
     openDirective: string
     queueMessage: string
     steer: string
     stop: string
     send: string
     speaking: string
-    transcribing: string
     thinking: string
     muted: string
     listening: string
-    muteMic: string
-    unmuteMic: string
-    stopListening: string
-    stopShort: string
-    endConversation: string
-    endShort: string
-    stopDictation: string
-    transcribingDictation: string
-    voiceControls: string
-    voiceEngine: string
-    voiceEngineChained: string
-    voiceEngineLive: string
-    voiceEngineLiveNeedsKey: string
-    voiceEngineChangeFailed: string
-    voiceEngineChainedShort: string
-    voiceEngineLiveShort: string
-    voiceDictation: string
     speakReplies: string
     stopSpeakingReplies: string
-    wakeWord: (phrase: string) => string
-    wakeWordListening: (phrase: string) => string
-    wakeWordOff: (phrase: string) => string
-    wakeWordPausedVoice: (phrase: string) => string
     lookupLoading: string
     lookupNoMatches: string
     lookupTry: string
@@ -3361,7 +3259,6 @@ export interface Translations {
     previewLabel: (label: string) => string
     couldNotPreview: (label: string) => string
     removeAttachment: (label: string) => string
-    dictating: string
     preparingAudio: string
     speakingResponse: string
     readingAloud: string
@@ -4677,7 +4574,6 @@ export interface Translations {
     noProfileNamed: (target: string, available: string) => string
     newChatsProfile: (name: string) => string
     setProfileFailed: string
-    sttDisabled: string
     stopFailed: string
     regenerateFailed: string
     editFailed: string

@@ -54,13 +54,6 @@ def find_provider_dir(name: str) -> Optional[Path]:
     return user if user and user.is_dir() and _is_cron_provider_dir(user) else None
 
 
-def discover_cron_schedulers() -> List[Tuple[str, str, bool]]:
-    """Return ``[(name, description, is_available), ...]`` for all discovered providers."""
-    return [(name, _loader.read_plugin_description(child),
-             _loader.probe_availability(lambda c=child: _load_provider_from_dir(c)))
-            for name, child in _iter_provider_dirs()]
-
-
 def load_cron_scheduler(name: str) -> Optional["CronScheduler"]:  # noqa: F821
     """Load a CronScheduler instance by name; None if not found or it fails to load."""
     provider_dir = find_provider_dir(name)

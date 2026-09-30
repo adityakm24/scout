@@ -2,7 +2,6 @@ import type {
   ActionResponse,
   ActionStatusResponse,
   AudioSpeakResponse,
-  AudioTranscriptionResponse,
   AudioTtsLeaseResponse,
   BackendUpdateCheckResponse,
   CuratorStatusResponse,
@@ -165,22 +164,6 @@ export function getActionStatus(name: string, lines = 200, profile?: ProfileScop
   return window.scoutDesktop.api<ActionStatusResponse>({
     ...capabilityScoped(profile),
     path: `/api/actions/${encodeURIComponent(name)}/status?lines=${Math.max(1, lines)}`
-  })
-}
-
-export function transcribeAudio(dataUrl: string, mimeType?: string): Promise<AudioTranscriptionResponse> {
-  return scoutApi<AudioTranscriptionResponse>({
-    path: '/api/audio/transcribe',
-    method: 'POST',
-    ...profileScoped(),
-    body: {
-      data_url: dataUrl,
-      mime_type: mimeType
-    },
-    // Transcription blocks until provider STT, file handling, and response
-    // encoding finish. Remote providers and long clips regularly exceed the
-    // default 15s Electron backend timeout.
-    timeoutMs: audioTranscribeRequestTimeoutMs(dataUrl)
   })
 }
 

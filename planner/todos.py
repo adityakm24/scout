@@ -17,7 +17,7 @@ import secrets
 from contextlib import contextmanager, suppress
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, Optional
 
 try:
     import fcntl
@@ -232,17 +232,3 @@ def clear_completed() -> Dict[str, Any]:
 
     return _mutate(apply)
 
-
-def reorder_todos(ids: List[str]) -> Dict[str, Any]:
-    """Put ``ids`` first in the given order; unnamed items keep their relative order after them."""
-    wanted = [str(i) for i in ids]
-
-    def apply(doc):
-        by_id = {i["id"]: i for i in doc["items"]}
-        unknown = [i for i in wanted if i not in by_id]
-        if unknown:
-            raise PlannerError(f"no to-do with id {unknown[0]!r}")
-        head = [by_id[i] for i in dict.fromkeys(wanted)]
-        doc["items"] = head + [i for i in doc["items"] if i["id"] not in set(wanted)]
-
-    return _mutate(apply)

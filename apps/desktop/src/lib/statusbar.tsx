@@ -16,24 +16,6 @@ export function formatDuration(elapsedMs: number): string {
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${minutes}:${ss}`
 }
 
-export function compactPath(path: string, max = 44): string {
-  const trimmed = path.trim()
-
-  if (trimmed.length <= max) {
-    return trimmed
-  }
-
-  const segments = trimmed.split('/').filter(Boolean)
-
-  if (segments.length < 2) {
-    return `…${trimmed.slice(-(max - 1))}`
-  }
-
-  const tail = segments.slice(-2).join('/')
-
-  return tail.length + 2 >= max ? `…${tail.slice(-(max - 1))}` : `…/${tail}`
-}
-
 export function contextBar(percent: number | undefined, width = 10): string {
   const bounded = Math.max(0, Math.min(100, percent ?? 0))
   const filled = Math.round((bounded / 100) * width)

@@ -100,7 +100,6 @@ describe('useAutoSpeakReplies — Edge TTS fallback chain (#93515)', () => {
     renderHook(
       () =>
         useAutoSpeakReplies({
-          conversationActive: false,
           failureLabel: 'read-aloud failed',
           markSpoken,
           pendingReply,
@@ -184,7 +183,6 @@ describe('useAutoSpeakReplies — Edge TTS fallback chain (#93515)', () => {
     renderHook(
       () =>
         useAutoSpeakReplies({
-          conversationActive: false,
           failureLabel: 'read-aloud failed',
           markSpoken,
           pendingReply,
@@ -250,7 +248,6 @@ describe('useAutoSpeakReplies — Edge TTS fallback chain (#93515)', () => {
     renderHook(
       () =>
         useAutoSpeakReplies({
-          conversationActive: false,
           failureLabel: 'read-aloud failed',
           markSpoken,
           pendingReply,
@@ -302,7 +299,6 @@ describe('useAutoSpeakReplies — Edge TTS fallback chain (#93515)', () => {
     renderHook(
       () =>
         useAutoSpeakReplies({
-          conversationActive: false,
           failureLabel: 'read-aloud failed',
           markSpoken,
           pendingReply,

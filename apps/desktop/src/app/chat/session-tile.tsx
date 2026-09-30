@@ -21,7 +21,6 @@ import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'r
 
 import { useGatewayRequest } from '@/app/gateway/hooks/use-gateway-request'
 import { useModelControls } from '@/app/session/hooks/use-model-controls'
-import { blobToDataUrl } from '@/app/session/hooks/use-prompt-actions/utils'
 import { probeStoredSession, resolveStoredSession } from '@/app/session/hooks/use-session-actions/utils'
 import { ModelMenuPanel } from '@/app/shell/model-menu-panel'
 import { ReasoningMenuPanel } from '@/app/shell/reasoning-menu-panel'
@@ -39,8 +38,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useI18n } from '@/i18n'
 import type { ChatMessage } from '@/lib/chat-messages'
 import { NEW_SESSION_TITLE, sessionTitle } from '@/lib/chat-runtime'
-import { transcribeAudioClientDirect } from '@/lib/voice-client-direct'
-import { transcribeAudio } from '@/scout'
 import { createComposerAttachmentScope, draftTitleFor, takeSessionDraft } from '@/store/composer'
 import { $gatewaySwitching } from '@/store/gateway-switch'
 import { $pinnedSessionIds, pinSession, unpinSession } from '@/store/layout'
@@ -222,22 +219,9 @@ function buildTileView(storedSessionId: string): SessionView {
   }
 }
 
-// Module-level constants so these ChatView props are referentially stable —
-// tiles have no pin/delete affordance, and transcription needs no per-tile state.
+// Module-level so these ChatView props are referentially stable — tiles have
+// no pin/delete affordance.
 const noop = () => undefined
-
-const tileTranscribeAudio = async (audio: Blob) => {
-  // Client-direct first (profile's own STT provider, no gateway audio hop);
-  // relay when the provider is not client-callable. Same ladder as the main
-  // composer's transcribeVoiceAudio.
-  const direct = await transcribeAudioClientDirect(audio)
-
-  if (direct !== null) {
-    return direct
-  }
-
-  return (await transcribeAudio(await blobToDataUrl(audio), audio.type)).transcript
-}
 
 function TileChat({
   runtimeId,
@@ -423,7 +407,6 @@ function TileChat({
           onSubmit={actions.submitText}
           onThreadMessagesChange={actions.handleThreadMessagesChange}
           onToggleSelectedPin={noop}
-          onTranscribeAudio={tileTranscribeAudio}
           reasoningMenuContent={reasoningMenuContent}
           requestModelOptionsForOwner={requestTileGateway}
         />

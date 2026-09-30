@@ -22,7 +22,6 @@ def client(_isolate_scout_home):
     ("GET", "/api/cron/blueprints", None),
     ("GET", "/api/model/recommended-default", None),
     ("GET", "/api/audio/voice-config", None),
-    ("GET", "/api/skills/hub/official", None),
 ])
 def test_unknown_profile_is_the_scopes_404(client, method, path, body):
     resp = client.request(method, path, params={"profile": "no-such-profile"}, json=body)

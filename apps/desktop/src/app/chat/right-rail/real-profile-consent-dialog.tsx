@@ -1,7 +1,6 @@
 import { useStore } from '@nanostores/react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { readUseRealProfile } from '@/app/settings/browser-real-profile-panel'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -24,6 +23,17 @@ import {
 } from '@/store/real-profile-consent'
 
 import { scoutConfigCacheWriter, useScoutConfigRecord } from '../../hooks/use-config-record'
+
+/** Whether `browser.use_real_profile` is on in a config record. */
+function readUseRealProfile(record: Record<string, unknown> | undefined): boolean {
+  const browser = record?.browser
+
+  if (browser && typeof browser === 'object' && !Array.isArray(browser)) {
+    return Boolean((browser as Record<string, unknown>).use_real_profile)
+  }
+
+  return false
+}
 
 interface RealProfileConsentDialogProps {
   /** The Browser tab this pane renders — used only to claim the prompt so

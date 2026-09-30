@@ -126,10 +126,6 @@ def _binary_supports_http_cache(binary: str) -> bool:
         return False
 
 
-def _record_path(session_name: str) -> Path:
-    return _state_dir() / f"{session_name}.json"
-
-
 def _browser_env() -> dict:
     try:
         from tools.browser_tool import _build_browser_env

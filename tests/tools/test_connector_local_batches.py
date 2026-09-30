@@ -73,7 +73,7 @@ def test_single_local_unwrap_keeps_session_db_todo_store_and_setup_callback(tmp_
         {"name": "session_search", "arguments": {"session_id": "past-session"}},
         {"name": "todo_list", "arguments": {"todos": [{"id": "a", "content": "live-store-proof", "status": "pending"}]}},
         {"name": "manage_connections", "arguments": {
-            "action": "install", "connectors": [{"name": "linear", "mcp": True}]}},
+            "action": "install", "connectors": [{"name": "notion", "mcp": True}]}},
     ]
     results = []
     try:
@@ -90,8 +90,8 @@ def test_single_local_unwrap_keeps_session_db_todo_store_and_setup_callback(tmp_
         assert "live-db-proof" in json.dumps(results[0])
         assert agent._todo_store.read()[0]["content"] == "live-store-proof"
         assert results[2]["targets"][0] == {
-            "name": "linear", "kind": "mcp", "action": "install", "state": "skipped"}
-        assert [(c["tool_call_id"], [t["name"] for t in c["targets"]]) for c in callbacks] == [("call", ["linear"])]
+            "name": "notion", "kind": "mcp", "action": "install", "state": "skipped"}
+        assert [(c["tool_call_id"], [t["name"] for t in c["targets"]]) for c in callbacks] == [("call", ["notion"])]
     finally:
         db.close()
         reset_session_vars()

@@ -206,18 +206,6 @@ export function clearCompletedTodos(): Promise<boolean> {
   return mutateTodos(todos => todos.filter(t => t.status !== 'done'), { action: 'clear_completed' })
 }
 
-export function reorderTodos(ids: string[]): Promise<boolean> {
-  return mutateTodos(
-    todos => {
-      const byId = new Map(todos.map(t => [t.id, t]))
-      const head = ids.map(id => byId.get(id)).filter((t): t is PlannerTodo => Boolean(t))
-
-      return [...head, ...todos.filter(t => !ids.includes(t.id))]
-    },
-    { action: 'reorder', ids }
-  )
-}
-
 // ── Reminders: the backend schedules, so writes wait for its answer ───────────
 
 async function mutateReminders(params: Record<string, unknown>): Promise<boolean> {

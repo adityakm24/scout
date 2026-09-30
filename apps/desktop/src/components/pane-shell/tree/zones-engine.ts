@@ -20,7 +20,6 @@
 // ---------------------------------------------------------------------------
 
 export const FADE_IN_DURATION_MILLIS = 200
-export const FLASH_ZONES_DURATION_MILLIS = 700
 /** LayoutDefaultSettings::DefaultSensitivityRadius. */
 export const DEFAULT_SENSITIVITY_RADIUS = 20
 /** ZoneSelectionAlgorithms::OVERLAPPING_CENTERS_SENSITIVITY. */
@@ -48,21 +47,6 @@ interface Point {
 const zoneArea = (z: EngineZone) => Math.max(0, z.rect.right - z.rect.left) * Math.max(0, z.rect.bottom - z.rect.top)
 
 // ---------------------------------------------------------------------------
-// ZonesOverlay::GetAnimationAlpha (verbatim ramp)
-// ---------------------------------------------------------------------------
-
-export function getAnimationAlpha(startedAtMs: number, nowMs: number, autoHide: boolean): number {
-  const millis = nowMs - startedAtMs
-
-  if (autoHide && millis > FLASH_ZONES_DURATION_MILLIS) {
-    return 0
-  }
-
-  // Return a positive value to avoid hiding.
-  return Math.min(Math.max(millis / FADE_IN_DURATION_MILLIS, 0.001), 1)
-}
-
-// ---------------------------------------------------------------------------
 // Colors (Colors.cpp + FancyZones settings defaults)
 // ---------------------------------------------------------------------------
 
@@ -73,30 +57,6 @@ export interface ZoneColors {
   numberColor: string
   /** 0..100, applied as fill alpha to BOTH primary and highlight fills. */
   highlightOpacity: number
-}
-
-/** FancyZonesSettings defaults (custom-color mode). */
-export const FANCYZONES_DEFAULT_COLORS: ZoneColors = {
-  primaryColor: '#F5FCFF',
-  borderColor: '#FFFFFF',
-  highlightColor: '#008CFF',
-  numberColor: '#000000',
-  highlightOpacity: 50
-}
-
-/**
- * Colors::GetZoneColors systemTheme branch, mapped to our design tokens:
- * accent -> border + highlight, surface -> primary, number auto-contrast
- * (CSS light-dark handles what the C++ does with the black-background check).
- */
-export function systemThemeZoneColors(): ZoneColors {
-  return {
-    primaryColor: 'var(--ui-bg-editor)',
-    borderColor: 'var(--ui-accent)',
-    highlightColor: 'var(--ui-accent)',
-    numberColor: 'var(--ui-text-primary)',
-    highlightOpacity: 50
-  }
 }
 
 // ---------------------------------------------------------------------------

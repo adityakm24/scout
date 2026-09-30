@@ -66,7 +66,6 @@ from scout_cli.setup import (  # noqa: F401 — resolved lazily by siblings thro
     prompt_choice,
     prompt_yes_no,
 )
-from scout_cli.colors import Colors, color
 logger = logging.getLogger(__name__)
 
 # Shared ``subprocess.run`` kwargs for text-mode probes (stdout/stderr captured, decode-tolerant).
@@ -3047,8 +3046,6 @@ def _remap_path_for_user(path: str, target_home_dir: str) -> str:
         return str(p)
 
 
-
-
 def _systemd_env_line(name: str, value: str) -> str:
     """One ``Environment="NAME=value"`` line: ``\\`` and ``"`` escaped for systemd's quoting, ``%``
     doubled so specifier expansion leaves the value alone."""
@@ -4023,7 +4020,6 @@ from scout_cli.gateway_launchd import (  # noqa: E402,F401 — facade re-exports
 _resolved_launchd_domain: str | None = None
 
 
-
 def _wait_for_gateway_exit(timeout: float = 10.0, force_after: float | None = 5.0) -> bool:
     """Wait up to ``timeout`` s for the gateway (by gateway.pid, not launchd labels, so multiple
     SCOUT_HOMEs work) to exit; SIGKILL it after ``force_after`` s of graceful waiting."""
@@ -4096,7 +4092,6 @@ def _wait_for_api_server_port_free(*, timeout: float = 10.0) -> bool:
             "new api_server may fail to bind"
         )
     return freed
-
 
 
 # =============================================================================
@@ -4796,11 +4791,9 @@ def _runtime_health_lines() -> list[str]:
     return lines
 
 
-
 def _print_info_lines(*lines: str) -> None:
     for line in lines:
         print_info(line)
-
 
 
 # WhatsApp/DingTalk/WeCom/Feishu setup flows live in their plugins' adapter.py::interactive_setup.
@@ -4834,7 +4827,6 @@ def _is_service_running() -> bool:
     return len(find_gateway_pids()) > 0
 
 
-
 def _print_indented(text: str, emit=print) -> None:
     for line in text.splitlines():
         emit(f"  {line}")
@@ -4861,7 +4853,6 @@ def _service_call(backend: str, verb: str, system: bool | None = False) -> None:
         return globals()[f"launchd_{verb}"]()
     fn = globals()[f"systemd_{verb}"]
     return fn() if system is None else fn(system=system)
-
 
 
 # =============================================================================
@@ -5718,23 +5709,4 @@ def _gateway_command_inner(args):
     if handler is not None:
         handler(args)
 
-
-def _pm_runtime_venv_dir(project_root: Path | None = None) -> Path | None:
-    """The venv pm provisioned for this install, resolved through
-    ``runtime_paths.selected_venv`` — the committed-environment contract —
-    never from interpreter state.
-
-    Under no-boot-through-venv the gateway runs the store python with the
-    venv's site-packages on PYTHONPATH, so ``sys.prefix`` always equals
-    ``sys.base_prefix`` and ``VIRTUAL_ENV`` is unset in bundled installs;
-    prefix/env probing silently degrades. Resolution follows the committed-
-    environment contract: a committed selection is returned as-is, a host
-    with nothing committed yields nothing launchable, and a malformed
-    selection raises — fail closed, never a silently wrong venv.
-    """
-    root = Path(project_root) if project_root is not None else PROJECT_ROOT
-    from pm.environments import selected_venv
-
-    venv = selected_venv(root)  # a malformed committed selection raises: fail closed
-    return venv if venv.is_dir() else None
 

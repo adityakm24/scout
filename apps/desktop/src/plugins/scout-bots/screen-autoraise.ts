@@ -26,7 +26,7 @@ import type { RpcEvent } from '@scout/plugin-sdk'
 
 import { $botMeta, $lastRoster, botSelectionKey } from './data'
 import { botRosterMeta, resolveBotConnectionRoute } from './routing'
-import { openBotScreen, screenPaneId } from './screen-open'
+import { openBotScreen } from './screen-open'
 import type { RosterRow } from './types'
 
 /** Tools whose first call means the bot is now using its screen. Browser tools count:
@@ -157,8 +157,4 @@ export function startScreenAutoRaise(): () => void {
 export function resetScreenAutoRaise(): void {
   raiseState.clear()
   openTabs.clear()
-}
-
-export function screenTabPaneId(bot: RosterRow): string {
-  return screenPaneId(bot)
 }

@@ -49,7 +49,6 @@ export type ChatActions = Pick<
   | 'onSubmit'
   | 'onThreadMessagesChange'
   | 'onToggleSelectedPin'
-  | 'onTranscribeAudio'
 >
 
 /**

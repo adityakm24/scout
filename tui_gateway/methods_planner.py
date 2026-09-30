@@ -22,48 +22,56 @@ def _planner_fields(params: dict, *keys: str) -> dict:
     return {k: params[k] for k in keys if params.get(k) is not None}
 
 
-def _planner_todo_action(params: dict) -> dict:
+def _item_id(params: dict) -> str:
+    return str(params.get("id") or "")
+
+
+def _todo_handlers():
     from planner import todos
 
-    action = str(params.get("action") or "list")
-    item_id = str(params.get("id") or "")
-    if action == "list":
-        return todos.list_todos(include_done=params.get("include_done") is not False)
-    if action == "add":
-        return todos.add_todo(params.get("title"), actor="user",
-                              **_planner_fields(params, "notes", "due", "priority"))
-    if action == "update":
-        return todos.update_todo(item_id, actor="user",
-                                 **_planner_fields(params, "title", "notes", "due", "priority", "status"))
-    if action == "delete":
-        return todos.delete_todo(item_id)
-    if action == "clear_completed":
-        return todos.clear_completed()
-    if action == "reorder":
-        return todos.reorder_todos(list(params.get("ids") or []))
-    raise todos.PlannerError(f"unknown to-do action: {action}")
+    return {
+        "list": lambda p: todos.list_todos(include_done=p.get("include_done") is not False),
+        "add": lambda p: todos.add_todo(p.get("title"), actor="user",
+                                        **_planner_fields(p, "notes", "due", "priority")),
+        "update": lambda p: todos.update_todo(_item_id(p), actor="user",
+                                              **_planner_fields(p, "title", "notes", "due", "priority", "status")),
+        "delete": lambda p: todos.delete_todo(_item_id(p)),
+        "clear_completed": lambda p: todos.clear_completed(),
+    }
 
 
-def _planner_reminder_action(params: dict) -> dict:
+def _reminder_handlers():
     from planner import reminders
-    from planner.todos import PlannerError
 
-    action = str(params.get("action") or "list")
-    item_id = str(params.get("id") or "")
-    if action == "list":
-        return reminders.list_reminders(include_fired=params.get("include_fired") is not False)
-    if action == "add":
+    # Every write answers with the full list, so the Dashboard repaints from one response.
+    def write(fn):
+        return lambda p: {**fn(p), **reminders.list_reminders()}
+
+    return {
+        "list": lambda p: reminders.list_reminders(include_fired=p.get("include_fired") is not False),
         # No origin: a reminder set from the Dashboard stays local and the desktop notifies.
-        changed = reminders.add_reminder(params.get("text"), params.get("when"), actor="user")
-    elif action == "update":
-        changed = reminders.update_reminder(item_id, actor="user", **_planner_fields(params, "text", "when"))
-    elif action == "delete":
-        changed = reminders.delete_reminder(item_id)
-    elif action == "clear_fired":
-        changed = reminders.clear_fired()
-    else:
-        raise PlannerError(f"unknown reminder action: {action}")
-    return {**changed, **reminders.list_reminders()}
+        "add": write(lambda p: reminders.add_reminder(p.get("text"), p.get("when"), actor="user")),
+        "update": write(lambda p: reminders.update_reminder(_item_id(p), actor="user",
+                                                            **_planner_fields(p, "text", "when"))),
+        "delete": write(lambda p: reminders.delete_reminder(_item_id(p))),
+        "clear_fired": write(lambda p: reminders.clear_fired()),
+    }
+
+
+def _dispatch(handlers, kind: str):
+    def run(params: dict) -> dict:
+        from planner.todos import PlannerError
+
+        action = str(params.get("action") or "list")
+        handler = handlers().get(action)
+        if handler is None:
+            raise PlannerError(f"unknown {kind} action: {action}")
+        return handler(params)
+    return run
+
+
+_planner_todo_action = _dispatch(_todo_handlers, "to-do")
+_planner_reminder_action = _dispatch(_reminder_handlers, "reminder")
 
 
 def _planner_call(rid, fn, params: dict) -> dict:

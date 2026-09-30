@@ -52,7 +52,6 @@ describe('useAutoSpeakReplies — owner-routed synthesis', () => {
     renderHook(
       () =>
         useAutoSpeakReplies({
-          conversationActive: false,
           failureLabel: 'failed',
           markSpoken: () => {
             reply = null

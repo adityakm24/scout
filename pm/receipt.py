@@ -179,10 +179,6 @@ def record_feature_list(extras: Optional[list[str]]) -> None:
     _record(lambda r: r.__setitem__("feature_list", extras))
 
 
-def record_platform(platform_id: str) -> None:
-    _record(lambda r: r.__setitem__("platform", platform_id))
-
-
 def record_plugin_checks(results: list) -> None:
     """Plugin update-check results (the cadence's receipt section).
     Each item is a plugins_updates.CheckResult.to_json() dict."""

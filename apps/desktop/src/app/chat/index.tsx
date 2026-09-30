@@ -101,7 +101,6 @@ interface ChatViewProps extends Omit<React.ComponentProps<'div'>, 'onSubmit'> {
   onAddContextRef: (refText: string, label?: string, detail?: string) => void
   onAddUrl: (url: string) => void
   onBranchInNewChat?: (messageId: string) => void
-  maxVoiceRecordingSeconds?: number
   onAttachImageBlob: (blob: Blob, isCurrent?: () => boolean) => Promise<boolean | void> | boolean | void
   onAttachDroppedItems: (candidates: DroppedFile[]) => Promise<boolean | void> | boolean | void
   onAttachPastedText?: (text: string) => Promise<boolean> | boolean
@@ -118,7 +117,6 @@ interface ChatViewProps extends Omit<React.ComponentProps<'div'>, 'onSubmit'> {
   onReload: (parentId: string | null) => Promise<void>
   onRestoreToMessage?: (messageId: string, target?: { text?: string; userOrdinal?: number | null }) => Promise<void>
   onRetryResume: (sessionId: string) => void
-  onTranscribeAudio?: (audio: Blob) => Promise<string>
   onDismissError?: (messageId: string) => void
 }
 
@@ -490,7 +488,6 @@ const ChatViewContent = memo(function ChatViewContent({
   onAttachDroppedItems,
   onAttachPastedText,
   onBranchInNewChat,
-  maxVoiceRecordingSeconds,
   onPasteClipboardImage,
   onPickFiles,
   onPickFolders,
@@ -504,7 +501,6 @@ const ChatViewContent = memo(function ChatViewContent({
   onReload,
   onRestoreToMessage,
   onRetryResume,
-  onTranscribeAudio,
   onDismissError
 }: ChatViewProps) {
   const location = useLocation()
@@ -886,7 +882,6 @@ const ChatViewContent = memo(function ChatViewContent({
                 disabled={!gatewayOpen}
                 focusKey={activeSessionId}
                 gateway={gateway}
-                maxRecordingSeconds={maxVoiceRecordingSeconds}
                 onAddContextRef={onAddContextRef}
                 onAddUrl={onAddUrl}
                 onAttachDroppedItems={onAttachDroppedItems}
@@ -901,7 +896,6 @@ const ChatViewContent = memo(function ChatViewContent({
                 onSteer={onSteer}
                 onSteerHidden={onSteerHidden}
                 onSubmit={onSubmit}
-                onTranscribeAudio={onTranscribeAudio}
                 profile={modelOptionsProfile || activeGatewayProfile}
                 queueSessionKey={queueSessionKey}
                 sessionId={activeSessionId}

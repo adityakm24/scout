@@ -3,12 +3,11 @@ import { useEffect, useRef } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n'
-import { iconSize, Loader2, Mic, Volume2, VolumeX } from '@/lib/icons'
+import { iconSize, Loader2, Volume2, VolumeX } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { stopVoicePlayback } from '@/lib/voice-playback'
 import { $voicePlayback } from '@/store/voice-playback'
 
-import type { VoiceActivityState } from './types'
 
 type BrowserAudioContext = typeof AudioContext
 
@@ -161,46 +160,6 @@ function PlaybackWaveform({ audioElement }: { audioElement: HTMLAudioElement | n
   }, [audioElement])
 
   return <canvas aria-hidden="true" className="block h-4 w-[88px]" ref={canvasRef} />
-}
-
-export function VoiceActivity({ state }: { state: VoiceActivityState }) {
-  const { t } = useI18n()
-
-  if (state.status === 'idle') {
-    return null
-  }
-
-  const recording = state.status === 'recording'
-  const title = recording ? t.composer.dictating : t.composer.transcribing
-
-  return (
-    <div
-      aria-live="polite"
-      className={cn(
-        'flex h-8 items-center gap-2 rounded-xl border border-border/55 bg-muted/55 px-2.5 text-xs text-muted-foreground',
-        'shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-sm'
-      )}
-      role="status"
-    >
-      <div
-        className={cn(
-          'flex size-5 shrink-0 items-center justify-center rounded-full',
-          recording ? 'bg-primary/15 text-primary' : 'bg-primary/10 text-primary'
-        )}
-      >
-        {recording ? <Mic className={iconSize.xs} /> : <Loader2 className={cn('animate-spin', iconSize.xs)} />}
-      </div>
-
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="truncate font-medium text-foreground/85">{title}</span>
-        <span aria-hidden="true" className="font-mono text-[0.6875rem] text-muted-foreground/85">
-          {formatElapsed(state.elapsedSeconds)}
-        </span>
-      </div>
-
-      <VoiceLevelBars active={recording} level={state.level} />
-    </div>
-  )
 }
 
 export function VoicePlaybackActivity() {

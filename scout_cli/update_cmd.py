@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import NoReturn
 
 from scout_cli.config import get_scout_home  # noqa: F401  (re-exported; patched via update_cmd)
-from scout_cli import update_handoff as _update_handoff
 from scout_cli.update_cmd_common import _best_effort
 # Captured BEFORE a checkout swap: parent transport/lifecycle never imports new code.
 from scout_cli.update_completion import run_completion
@@ -259,7 +258,6 @@ def _record_pre_update_backup_outcome(args, snapshot_id) -> None:
 def _record_snapshot_stage(args, snapshot_id) -> None:
     skipped = not snapshot_id and _resolve_pre_update_backup_mode(args) == "off"
     _completion_receipt.record_stage("snapshot", "success" if snapshot_id else "skipped" if skipped else "failed")
-
 
 
 def _git_run(git_cmd, args, cwd=None, *, check=False, network=False):
@@ -526,7 +524,6 @@ def _write_lazy_refresh_incomplete_marker() -> None:
     stop_for_relaunch()
 
 
-
 def _filter_non_gateway_concurrent_instances(
     matches: list[tuple[int, str]],
 ) -> list[tuple[int, str]]:
@@ -690,19 +687,6 @@ def _is_shallow_checkout(git_cmd) -> bool:
 def _tip_shas(git_cmd, target_ref: str, base: str = "HEAD") -> tuple[str, str]:
     """``(<base> sha, <target_ref> sha)`` as printed by rev-parse ("" when unresolvable)."""
     return tuple(_git_run(git_cmd, ["rev-parse", ref]).stdout.strip() for ref in (base, target_ref))
-
-
-def _print_update_check_result(behind: int | None, compare_branch: str) -> None:
-    """Report ``--check``'s verdict: up to date, N commits behind, or behind by an unknown count."""
-    if behind == 0:
-        print("✓ Already up to date.")
-        return
-    if behind is not None:
-        print(f"☤ Update available: {behind} {'commit' if behind == 1 else 'commits'} behind {compare_branch}.")
-    else:
-        print(f"☤ Update available (behind {compare_branch}).")
-    from scout_cli.config import recommended_update_command
-    print(f"  Run '{recommended_update_command()}' to install.")
 
 
 def _source_completion_request(opts, plan, snapshot_id, windows_resume, desktop, gateway_mode) -> dict:

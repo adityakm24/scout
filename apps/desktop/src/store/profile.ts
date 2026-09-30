@@ -270,19 +270,6 @@ export async function refreshActiveProfile(): Promise<void> {
   }
 }
 
-// Persist the choice and relaunch the backend under the new SCOUT_HOME. The
-// main process reloads the window, so this normally never returns to the caller
-// (the renderer is torn down). We optimistically reflect the selection first so
-// the pill updates instantly if the reload is delayed.
-export async function switchProfile(name: string): Promise<void> {
-  if (!name || name === $activeProfile.get()) {
-    return
-  }
-
-  setActiveProfile(name)
-  await window.scoutDesktop.profile.set(name)
-}
-
 // ── Swap-minimal gateway routing ──────────────────────────────────────────
 // One live gateway at a time. When the user opens/sends a session whose profile
 // differs from the gateway's current profile, we lazily reconnect the single

@@ -96,13 +96,6 @@ export function connectorTitle(slug: string): string {
   )
 }
 
-/** The identity every connector row and summary renders from. */
-export const connectorSubject = (slug: string) => ({
-  iconUrl: connectorIconUrl(slug),
-  name: slug,
-  title: connectorTitle(slug)
-})
-
 export function connectorToolName(name: string): { connector: string; action: string } | null {
   const match = /^connectors__([a-z0-9_-]+)__(.+)$/i.exec(name)
 

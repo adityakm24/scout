@@ -570,7 +570,6 @@ import { preflightStateDb } from './updater/state-db-preflight'
 import { createStoreStrategy } from './updater/store-client'
 import { isExternalVenvHolder, isScoutOwnedVenvDaemon } from './venv-holder-select'
 import { fetchMarketplaceThemes, searchMarketplaceThemes } from './vscode-marketplace'
-import { createWakeIndicatorWindowController } from './wake-indicator-window'
 import { decodeWebText } from './web-text-decoder'
 import { windowAcceleratorAction } from './window-accelerator'
 import { enumerateWindowsFrontToBack, enumerationFailed, readWindowBelow } from './window-below'
@@ -13899,18 +13898,6 @@ function createInstanceWindow(
   return win
 }
 
-// A macOS-only ambient wake cue. It is deliberately a gateway-less helper
-// window: the active renderer owns voice state and sends only the visual phase.
-const wakeIndicatorController = createWakeIndicatorWindowController({
-  devServer: DEV_SERVER,
-  isMac: IS_MAC,
-  loadWindowUrl,
-  log: rememberLog,
-  preloadPath: PRELOAD_PATH,
-  rendererIndex: resolveRendererIndex,
-  wireWindow: window => wireCommonWindowHandlers(window, zoomWiringForWindowKind('wakeIndicator'))
-})
-
 registerChatOnboardingWindow({ enabled: GUEST_ONBOARDING, mainWindow: (): BrowserWindow | null => mainWindow })
 registerMachineProfile()
 
@@ -15032,7 +15019,6 @@ function createWindow() {
   // the closed wrapper remains truthy, so clear only the window this callback owns.
   mainWindow.on('closed', () => {
     closePetOverlay()
-    wakeIndicatorController.close()
 
     if (mainWindow === createdMainWindow) {
       mainWindow = null
@@ -15579,10 +15565,6 @@ ipcMain.handle('scout:window:openInTerminal', async (_event, sessionId, opts) =>
 
     return { ok: false, error: error.message }
   }
-})
-ipcMain.handle('scout:wake-indicator:get', () => wakeIndicatorController.getState())
-ipcMain.on('scout:wake-indicator:set', (_event, state) => {
-  wakeIndicatorController.setState(state)
 })
 
 // --- Text size (zoom) -------------------------------------------------------
@@ -18933,15 +18915,6 @@ app.whenReady().then(() => {
     }
   })
 
-  if (IS_MAC) {
-    const reposition = () => wakeIndicatorController.reposition()
-
-    screen.on('display-added', reposition)
-
-    screen.on('display-metrics-changed', reposition)
-
-    screen.on('display-removed', reposition)
-  }
 
   // The popped-out pet must never be stranded on a disconnected display: when
   // the topology changes, pull an off-screen overlay back onto the display
@@ -19182,7 +19155,6 @@ app.on('before-quit', event => {
   // The always-on-top overlay isn't a "real" app window; close it so a stray
   // pet can't keep the process alive or float over a quit app.
   closePetOverlay()
-  wakeIndicatorController.close()
 
   // Same for the HUD — an always-on-top panel outliving the app would leave a
   // floating composer with nothing behind it. Close it directly rather than via

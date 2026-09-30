@@ -10,13 +10,13 @@ const installSkillFromHub = vi.fn()
 
 vi.mock('@/scout', () => ({
   getActionStatus: (...args: unknown[]) => getActionStatus(...args),
-  installSkillFromHub: (...args: unknown[]) => installSkillFromHub(...args),
-  uninstallSkillFromHub: vi.fn(),
-  updateSkillsFromHub: vi.fn()
+  installSkillFromHub: (...args: unknown[]) => installSkillFromHub(...args)
 }))
 
+const invalidateQueries = vi.fn()
+
 vi.mock('@/lib/query-client', () => ({
-  queryClient: { invalidateQueries: vi.fn() }
+  queryClient: { invalidateQueries: (...args: unknown[]) => invalidateQueries(...args) }
 }))
 
 vi.mock('@/lib/slash-completion-cache', () => ({
@@ -34,14 +34,15 @@ vi.mock('@/store/profile', () => ({
   normalizeProfileKey: (value: unknown) => String(value ?? '') || 'default'
 }))
 
-import { $hubActions, $hubInstalledOverride, installHubSkill } from './hub-actions'
+import { SKILLS_QUERY_KEY } from '@/app/capabilities/skills/skills-data'
+
+import { installHubSkill } from './hub-actions'
 
 describe('installHubSkill failure surfacing', () => {
   beforeEach(() => {
     getActionStatus.mockReset()
     installSkillFromHub.mockReset()
-    $hubActions.set({})
-    $hubInstalledOverride.set({})
+    invalidateQueries.mockReset()
   })
 
   it('rejects with the action log tail when the subprocess exits non-zero', async () => {
@@ -55,11 +56,6 @@ describe('installHubSkill failure surfacing', () => {
     })
 
     await expect(installHubSkill('ascii-art')).rejects.toThrow('security scan blocked install')
-
-    // A failed install must not paint the row as installed.
-    expect($hubInstalledOverride.get()['ascii-art']).toBeUndefined()
-    // ...but the row's running flag still settles to false for the button.
-    expect($hubActions.get()['ascii-art']?.running).toBe(false)
   })
 
   it('rejects with the exit code when the log carries no detail', async () => {
@@ -75,7 +71,7 @@ describe('installHubSkill failure surfacing', () => {
     await expect(installHubSkill('x')).rejects.toThrow('exited with code 7')
   })
 
-  it('resolves and flips the row on a clean exit', async () => {
+  it('resolves and refreshes the Skills list on a clean exit', async () => {
     installSkillFromHub.mockResolvedValue({ name: 'skills-install-ok-11111111' })
     getActionStatus.mockResolvedValue({
       name: 'skills-install-ok-11111111',
@@ -86,6 +82,6 @@ describe('installHubSkill failure surfacing', () => {
     })
 
     await expect(installHubSkill('ok')).resolves.toBeUndefined()
-    expect($hubInstalledOverride.get()['ok']).toBe(true)
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: SKILLS_QUERY_KEY })
   })
 })

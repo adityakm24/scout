@@ -2330,7 +2330,7 @@
     },
     {
       "name": "planner.todos",
-      "summary": "List/add/update/delete/reorder the user's to-dos (shared with the agent's planner tool).",
+      "summary": "List/add/update/delete the user's to-dos (shared with the agent's planner tool).",
       "params": [
         {
           "name": "params",
@@ -22134,8 +22134,7 @@
           "add",
           "update",
           "delete",
-          "clear_completed",
-          "reorder"
+          "clear_completed"
         ],
         "title": "PlannerTodoAction",
         "type": "string"
@@ -22242,21 +22241,6 @@
             ],
             "default": null,
             "title": "Include Done"
-          },
-          "ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Ids"
           }
         },
         "title": "PlannerTodosParams",

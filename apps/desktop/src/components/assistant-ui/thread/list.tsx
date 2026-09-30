@@ -150,12 +150,6 @@ const BACKFILL_STEP = 290
 // re-arming forever.
 const PARKED_OFFSET_MAX_PAGES = 96
 
-export const transcriptBackfillFrameCount = (
-  firstPaint = FIRST_PAINT_BUDGET,
-  step = BACKFILL_STEP,
-  budget = RENDER_BUDGET
-): number => Math.ceil(Math.max(0, budget - firstPaint) / step)
-
 // Browsers may quantize a requested scrollTop to a nearby device-pixel
 // boundary. use-stick-to-bottom otherwise compares the lower actual value to
 // the integer target forever, re-requesting the same instant scroll every

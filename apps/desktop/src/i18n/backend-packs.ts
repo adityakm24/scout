@@ -27,13 +27,6 @@ export interface BackendLanguageOption {
   source?: string
 }
 
-/** `i18n.catalog` reply: the pack + overlay layer for one surface, flat. */
-export interface BackendLocaleCatalog {
-  lang: string
-  surface: string
-  messages: Record<string, string>
-}
-
 export const DESKTOP_SURFACE = 'desktop'
 
 function languageRows(value: unknown): BackendLanguageOption[] {

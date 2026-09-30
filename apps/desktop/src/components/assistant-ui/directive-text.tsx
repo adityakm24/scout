@@ -1,7 +1,6 @@
 'use client'
 
 import type { Unstable_DirectiveFormatter, Unstable_DirectiveSegment, Unstable_TriggerItem } from '@assistant-ui/core'
-import type { TextMessagePartComponent, TextMessagePartProps } from '@assistant-ui/react'
 import type { FC } from 'react'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 
@@ -47,15 +46,6 @@ export function refAttrs(kind?: string, extra?: string): { className: string; 'd
 /** The same thing as a raw attribute string, for HTML built by hand. */
 export function refAttrsHtml(kind?: string): string {
   return kind ? `class="ref" data-ref="${referenceKind(kind)}"` : 'class="ref"'
-}
-
-/** SVG markup string for embedding directly in HTML (composer contenteditable). */
-export function directiveIconSvg(type: string) {
-  const inner = iconPathsFor(type)
-    .map(d => `<path d="${d}"/>`)
-    .join('')
-
-  return `<svg ${SVG_ATTRS}>${inner}</svg>`
 }
 
 function iconElementFromPaths(paths: string[]) {
@@ -407,11 +397,6 @@ export function DirectiveContent({ text }: { text: string }) {
     </span>
   )
 }
-
-/** assistant-ui adapter: same renderer, exposed as a TextMessagePartComponent. */
-export const DirectiveText: TextMessagePartComponent = ({ text }: TextMessagePartProps) => (
-  <DirectiveContent text={text ?? ''} />
-)
 
 /** Image refs render as a thumbnail rather than a chip — matches how persisted
  * messages render after the backend embeds the data URL, so the UX is stable

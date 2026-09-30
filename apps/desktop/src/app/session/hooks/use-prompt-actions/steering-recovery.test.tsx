@@ -80,7 +80,6 @@ function Harness() {
       throw new Error('unexpected foreground resume')
     },
     startFreshSessionDraft: () => undefined,
-    sttEnabled: false
   })
 
   handle = { actions, cache }

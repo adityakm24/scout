@@ -25,19 +25,6 @@ import {
   setPaneWidthOverride
 } from '@/store/panes'
 
-// Monospace capability chip (tool name, transport, …). Shared by the Skills
-// and MCP tabs so the pill reads identically everywhere.
-export function ToolChip({ children, title }: { children: ReactNode; title?: string }) {
-  return (
-    <span
-      className="rounded-md bg-(--ui-bg-quinary) px-1.5 py-0.5 font-mono text-[0.65rem] text-(--ui-text-tertiary)"
-      title={title}
-    >
-      {children}
-    </span>
-  )
-}
-
 // Master–detail page scaffolding (14rem rail, p-2, centered max-w-2xl detail):
 // dense uniform rows on the left, roomy inspector on the right. Shared by the
 // Capabilities and Messaging pages — pages bring their own row/detail content
@@ -311,17 +298,6 @@ export function DetailPane({
   )
 }
 
-// One-line control strip pinned above the list: sort/primary action on the
-// left, overflow kebab on the right.
-export function ListStrip({ left, right }: { left?: ReactNode; right?: ReactNode }) {
-  return (
-    <div className="mb-1 flex h-6 shrink-0 items-center justify-between gap-2 pl-2 pr-1">
-      <div className="flex min-w-0 items-center gap-1.5">{left}</div>
-      <div className="flex shrink-0 items-center gap-1.5">{right}</div>
-    </div>
-  )
-}
-
 export interface ListStripMenuItem {
   disabled?: boolean
   label: string
@@ -392,41 +368,6 @@ export function ListStripMenu({
 }
 
 const LIST_STRIP_LABEL_CLASS = 'text-[0.68rem] font-medium text-muted-foreground/70'
-
-export function ListStripLabel({ children }: { children: ReactNode }) {
-  return (
-    <span className={LIST_STRIP_LABEL_CLASS} role="status">
-      {children}
-    </span>
-  )
-}
-
-export function ListStripButton({
-  active,
-  children,
-  disabled,
-  onClick
-}: {
-  active?: boolean
-  children: ReactNode
-  disabled?: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      className={cn(
-        LIST_STRIP_LABEL_CLASS,
-        'cursor-pointer transition-colors disabled:opacity-40',
-        active ? 'text-foreground' : 'text-muted-foreground/70 hover:text-foreground'
-      )}
-      disabled={disabled}
-      onClick={onClick}
-      type="button"
-    >
-      {children}
-    </button>
-  )
-}
 
 interface CapRowProps {
   /** Rendered in the switch slot instead of the Switch (e.g. an Install

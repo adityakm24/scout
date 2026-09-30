@@ -188,4 +188,3 @@ export function registryGroupSetter<T>(prefix: string): GroupSetter<T> {
 /** The app's page-facing setters — the same `GroupSetter` shape pages already
  *  take as props, backed by the registry instead of component state. */
 export const setStatusbarItemGroup = registryGroupSetter<StatusbarItem>('statusBar')
-export const setTitlebarToolGroup = registryGroupSetter<TitlebarTool>('titleBar.tools')

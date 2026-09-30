@@ -65,16 +65,6 @@ contextBridge.exposeInMainWorld('scoutDesktop', {
     toggleMaximize: () => ipcRenderer.send('scout:window-control', 'toggle-maximize'),
     close: () => ipcRenderer.send('scout:window-control', 'close')
   },
-  wakeIndicator: {
-    getState: () => ipcRenderer.invoke('scout:wake-indicator:get'),
-    setState: state => ipcRenderer.send('scout:wake-indicator:set', state),
-    onState: callback => {
-      const listener = (_event, state) => callback(state)
-      ipcRenderer.on('scout:wake-indicator:state', listener)
-
-      return () => ipcRenderer.removeListener('scout:wake-indicator:state', listener)
-    }
-  },
   chatOnboarding: {
     grow: request => ipcRenderer.send('scout:chat-onboarding:grow', request),
     soloBoot: () => ipcRenderer.send('scout:chat-onboarding:solo-boot')

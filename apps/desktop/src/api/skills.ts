@@ -1,9 +1,5 @@
 import type {
-  OfficialSkillInfo,
-  SkillHubPreview,
   SkillHubScanResult,
-  SkillHubSearchResponse,
-  SkillHubSourcesResponse,
   SkillInfo,
   StarmapGraph
 } from '@/types/scout'
@@ -111,47 +107,6 @@ export function editLearningNode(
 
 const HUB_REQUEST_TIMEOUT_MS = 45_000
 
-/** The full built-in optional-skills catalog (local checkout scan — fast),
- *  with per-profile installed flags. Feeds the Capabilities Skills list's
- *  "available to install" rows. */
-export function getOfficialSkills(profile?: ProfileScope): Promise<{ skills: OfficialSkillInfo[] }> {
-  return window.scoutDesktop.api<{ skills: OfficialSkillInfo[] }>({
-    ...capabilityScoped(profile),
-    path: '/api/skills/hub/official'
-  })
-}
-
-export function getSkillHubSources(profile?: null | string): Promise<SkillHubSourcesResponse> {
-  return scoutApi<SkillHubSourcesResponse>({
-    ...profileScoped(profile),
-    path: '/api/skills/hub/sources',
-    timeoutMs: HUB_REQUEST_TIMEOUT_MS
-  })
-}
-
-export function searchSkillsHub(
-  query: string,
-  source = 'all',
-  limit = 20,
-  profile?: null | string
-): Promise<SkillHubSearchResponse> {
-  const params = new URLSearchParams({ q: query, source, limit: String(limit) })
-
-  return scoutApi<SkillHubSearchResponse>({
-    ...profileScoped(profile),
-    path: `/api/skills/hub/search?${params.toString()}`,
-    timeoutMs: HUB_REQUEST_TIMEOUT_MS
-  })
-}
-
-export function previewSkillHub(identifier: string, profile?: ProfileScope): Promise<SkillHubPreview> {
-  return window.scoutDesktop.api<SkillHubPreview>({
-    ...capabilityScoped(profile),
-    path: `/api/skills/hub/preview?identifier=${encodeURIComponent(identifier)}`,
-    timeoutMs: HUB_REQUEST_TIMEOUT_MS
-  })
-}
-
 export function scanSkillHub(identifier: string, profile?: null | string): Promise<SkillHubScanResult> {
   return scoutApi<SkillHubScanResult>({
     ...profileScoped(profile),
@@ -166,23 +121,5 @@ export function installSkillFromHub(identifier: string, profile?: ProfileScope):
     path: '/api/skills/hub/install',
     method: 'POST',
     body: { identifier }
-  })
-}
-
-export function uninstallSkillFromHub(name: string, profile?: ProfileScope): Promise<ActionResponse> {
-  return window.scoutDesktop.api<ActionResponse>({
-    ...capabilityScoped(profile),
-    path: '/api/skills/hub/uninstall',
-    method: 'POST',
-    body: { name }
-  })
-}
-
-export function updateSkillsFromHub(profile?: ProfileScope): Promise<ActionResponse> {
-  return window.scoutDesktop.api<ActionResponse>({
-    ...capabilityScoped(profile),
-    path: '/api/skills/hub/update',
-    method: 'POST',
-    body: {}
   })
 }

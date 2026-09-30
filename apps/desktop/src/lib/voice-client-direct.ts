@@ -2,8 +2,8 @@ import { type OwnerScope, ownerScoped } from '@/api/client'
 import { getApiRequestConnection, getApiRequestProfile, scoutApi } from '@/scout'
 
 /**
- * Client-direct voice: call the active profile's STT/TTS providers straight
- * from the desktop, cutting the audio relay hop through the gateway.
+ * Client-direct speech: call the active profile's text-to-speech provider
+ * straight from the desktop, cutting the audio relay hop through the gateway.
  *
  * The gateway stays the single source of truth for WHICH provider and WHICH
  * credentials to use — `GET /api/audio/voice-config` returns the same
@@ -11,25 +11,12 @@ import { getApiRequestConnection, getApiRequestProfile, scoutApi } from '@/scout
  * `tools/voice_client_config.py`). This module only executes the provider
  * call locally. Direction of travel:
  *
- *   mic → provider (audio up, once) → text → gateway   (STT)
- *   gateway → text (already streaming) → provider → speaker   (TTS)
+ *   gateway → text (already streaming) → provider → speaker
  *
  * Keys live in renderer MEMORY only — never persisted, never logged. A
  * provider that can only run on the gateway host resolves to
  * `{mode:'relay'}` and callers fall back to the existing relay endpoints.
  */
-
-export interface DirectSttConfig {
-  mode: 'direct'
-  wire: 'elevenlabs-stt' | 'openai-multipart' | 'xai-stt'
-  provider: string
-  base_url: string
-  api_key: string
-  model: null | string
-  language: null | string
-  /** Seconds the gateway allows one transcription request (`stt.openai.timeout`); absent on older backends. */
-  timeout_s?: null | number
-}
 
 export interface DirectTtsConfig {
   mode: 'direct'
@@ -52,7 +39,6 @@ interface RelayConfig {
 }
 
 export interface VoiceClientConfig {
-  stt: DirectSttConfig | RelayConfig
   tts: DirectTtsConfig | RelayConfig
 }
 
@@ -63,9 +49,6 @@ export interface VoiceClientConfig {
 // ---------------------------------------------------------------------------
 
 const CONFIG_TTL_MS = 60_000
-// Per-request cap on a direct STT upload; the gateway's stt timeout is not part of the
-// client config, so this mirrors its 60s default rather than hanging dictation forever.
-const STT_REQUEST_TIMEOUT_MS = 60_000
 
 let cached: { key: string; at: number; config: VoiceClientConfig } | null = null
 let inflight: { key: string; promise: Promise<null | VoiceClientConfig> } | null = null
@@ -103,11 +86,11 @@ export async function fetchVoiceClientConfig(owner?: OwnerScope): Promise<null |
         path: '/api/audio/voice-config'
       })
 
-      if (!response?.ok || !response.stt || !response.tts) {
+      if (!response?.ok || !response.tts) {
         return null
       }
 
-      const config: VoiceClientConfig = { stt: response.stt, tts: response.tts }
+      const config: VoiceClientConfig = { tts: response.tts }
       cached = { key, at: Date.now(), config }
 
       return config
@@ -122,16 +105,6 @@ export async function fetchVoiceClientConfig(owner?: OwnerScope): Promise<null |
   inflight = { key, promise }
 
   return promise
-}
-
-// ---------------------------------------------------------------------------
-// STT — audio blob → transcript, provider-direct.
-// ---------------------------------------------------------------------------
-
-function sttFileName(audio: Blob): string {
-  const subtype = (audio.type.split(';')[0].split('/')[1] || 'webm').toLowerCase()
-
-  return `recording.${subtype === 'mpeg' ? 'mp3' : subtype}`
 }
 
 async function providerErrorText(response: Response): Promise<string> {
@@ -149,167 +122,6 @@ async function providerErrorText(response: Response): Promise<string> {
   }
 
   return body.slice(0, 300)
-}
-
-/**
- * Normalize an OpenAI-compatible transcription HTTP body to spoken text.
- *
- * Groq and OpenAI honor `response_format=text` and return a bare string.
- * Mistral Voxtral ignores that flag and returns JSON
- * `{ text, model, usage, ... }` — dumping that object into the Desktop
- * composer is the dictation regression (plain speech becomes raw JSON).
- */
-export function transcriptFromOpenAiMultipartBody(body: string): string {
-  const trimmed = String(body || '').trim()
-
-  if (!trimmed) {
-    return ''
-  }
-
-  if (trimmed.startsWith('{')) {
-    try {
-      const parsed = JSON.parse(trimmed) as { text?: unknown }
-
-      if (typeof parsed?.text === 'string') {
-        return parsed.text.trim()
-      }
-    } catch {
-      // Not JSON — treat the body as the transcript.
-    }
-  }
-
-  return trimmed
-}
-
-const DEFAULT_STT_TIMEOUT_S = 60
-
-/** Same budget the gateway's own transcription client uses (`stt.openai.timeout`, default 60 s). */
-export function sttTimeoutSeconds(stt: Pick<DirectSttConfig, 'timeout_s'>): number {
-  const value = Number(stt.timeout_s)
-
-  return Number.isFinite(value) && value > 0 ? value : DEFAULT_STT_TIMEOUT_S
-}
-
-/**
- * `fetch` with the STT deadline. A slow or wedged endpoint otherwise keeps the
- * dictation UI in "transcribing" forever — the browser applies no timeout of
- * its own to a POST that never answers.
- */
-async function sttFetch(stt: DirectSttConfig, url: string, init: RequestInit): Promise<Response> {
-  const seconds = sttTimeoutSeconds(stt)
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), seconds * 1000)
-
-  try {
-    return await fetch(url, { ...init, signal: controller.signal })
-  } catch (error) {
-    if (controller.signal.aborted) {
-      throw new Error(`Transcription timed out after ${seconds}s (${stt.provider} did not answer)`)
-    }
-
-    throw error
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
-/**
- * Transcribe provider-direct. Returns the transcript ('' = silence), or null
- * when the profile's provider isn't client-callable — the caller relays.
- * Provider REJECTIONS throw: the configured provider said no, and silently
- * re-running the same request through the gateway would just fail again
- * slower and hide the real error.
- */
-export async function transcribeAudioClientDirect(audio: Blob): Promise<null | string> {
-  const config = await fetchVoiceClientConfig()
-  const stt = config?.stt
-
-  if (!stt || stt.mode !== 'direct') {
-    return null
-  }
-
-  if (stt.wire === 'openai-multipart') {
-    const form = new FormData()
-    form.set('file', audio, sttFileName(audio))
-
-    if (stt.model) {
-      form.set('model', stt.model)
-    }
-
-    form.set('response_format', 'text')
-
-    if (stt.language) {
-      form.set('language', stt.language)
-    }
-
-    const response = await sttFetch(stt, `${stt.base_url.replace(/\/+$/, '')}/audio/transcriptions`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${stt.api_key}` },
-      body: form,
-      signal: AbortSignal.timeout(STT_REQUEST_TIMEOUT_MS)
-    })
-
-    if (!response.ok) {
-      throw new Error(`${stt.provider} STT error (HTTP ${response.status}): ${await providerErrorText(response)}`)
-    }
-
-    return transcriptFromOpenAiMultipartBody(await response.text())
-  }
-
-  if (stt.wire === 'xai-stt') {
-    const form = new FormData()
-    form.set('file', audio, sttFileName(audio))
-    form.set('format', 'true')
-
-    if (stt.language) {
-      form.set('language', stt.language)
-    }
-
-    const response = await sttFetch(stt, `${stt.base_url.replace(/\/+$/, '')}/stt`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${stt.api_key}` },
-      body: form,
-      signal: AbortSignal.timeout(STT_REQUEST_TIMEOUT_MS)
-    })
-
-    if (!response.ok) {
-      throw new Error(`xAI STT error (HTTP ${response.status}): ${await providerErrorText(response)}`)
-    }
-
-    const result = (await response.json()) as { text?: string }
-
-    return (result.text || '').trim()
-  }
-
-  if (stt.wire === 'elevenlabs-stt') {
-    const form = new FormData()
-    form.set('file', audio, sttFileName(audio))
-
-    if (stt.model) {
-      form.set('model_id', stt.model)
-    }
-
-    if (stt.language) {
-      form.set('language_code', stt.language)
-    }
-
-    const response = await sttFetch(stt, `${stt.base_url.replace(/\/+$/, '')}/speech-to-text`, {
-      method: 'POST',
-      headers: { 'xi-api-key': stt.api_key },
-      body: form,
-      signal: AbortSignal.timeout(STT_REQUEST_TIMEOUT_MS)
-    })
-
-    if (!response.ok) {
-      throw new Error(`ElevenLabs STT error (HTTP ${response.status}): ${await providerErrorText(response)}`)
-    }
-
-    const result = (await response.json()) as { text?: string }
-
-    return (result.text || '').trim()
-  }
-
-  return null
 }
 
 // ---------------------------------------------------------------------------

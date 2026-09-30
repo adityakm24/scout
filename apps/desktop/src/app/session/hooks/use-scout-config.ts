@@ -1,4 +1,4 @@
-import { type MutableRefObject, useCallback, useRef, useState } from 'react'
+import { type MutableRefObject, useCallback, useRef } from 'react'
 
 import { setTerminalFontFamilyFromConfig } from '@/app/right-sidebar/terminal/terminal-font'
 import { BUILTIN_PERSONALITIES, normalizePersonalityValue, personalityNamesFromConfig } from '@/lib/chat-runtime'
@@ -18,22 +18,10 @@ import {
   setIntroPersonality
 } from '@/store/session'
 import { setShowToolActivityFromConfig } from '@/store/tool-activity'
-import { refreshVoiceLiveStatus } from '@/store/voice-live'
-import {
-  applyAutoSpeakFromConfig,
-  applyBargeInThresholdFromConfig,
-  applyThinkingSoundFromConfig,
-  applyVoiceSilenceMsFromConfig,
-  applyVoiceStopPhraseFromConfig
-} from '@/store/voice-prefs'
+import { applyAutoSpeakFromConfig } from '@/store/voice-prefs'
 import { setChatFontFamilyFromConfig } from '@/themes/chat-font'
 
-const DEFAULT_VOICE_SECONDS = 120
 const FAST_TIERS = new Set(['fast', 'priority', 'on'])
-
-function recordingLimit(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : DEFAULT_VOICE_SECONDS
-}
 
 /** config.yaml hands back whatever the user wrote — `reasoning_effort: false`
  *  (or `off`/`no`, which YAML also parses to boolean false) means thinking
@@ -57,8 +45,6 @@ interface ScoutConfigOptions {
 }
 
 export function useScoutConfig({ activeSessionIdRef }: ScoutConfigOptions) {
-  const [voiceMaxRecordingSeconds, setVoiceMaxRecordingSeconds] = useState(DEFAULT_VOICE_SECONDS)
-  const [sttEnabled, setSttEnabled] = useState(true)
   const profileRefreshEpochRef = useRef(0)
 
   const refreshScoutConfig = useCallback(
@@ -136,13 +122,6 @@ export function useScoutConfig({ activeSessionIdRef }: ScoutConfigOptions) {
           return
         }
 
-        setVoiceMaxRecordingSeconds(recordingLimit(config.voice?.max_recording_seconds))
-        setSttEnabled(config.stt?.enabled !== false)
-
-        if (!canPublish()) {
-          return
-        }
-
         setDisplayTimestampsFromConfig(config.display?.timestamps)
         setShowReasoningFromConfig(config.display?.show_reasoning)
         setShowToolActivityFromConfig(config.display?.tool_progress)
@@ -154,12 +133,6 @@ export function useScoutConfig({ activeSessionIdRef }: ScoutConfigOptions) {
         }
 
         applyAutoSpeakFromConfig(config)
-        applyVoiceStopPhraseFromConfig(config, defaults)
-        applyBargeInThresholdFromConfig(config)
-        applyThinkingSoundFromConfig(config)
-        applyVoiceSilenceMsFromConfig(config, defaults)
-        // Resolved server-side (mode + whether a key resolves); non-critical.
-        void refreshVoiceLiveStatus().catch(() => undefined)
       } catch {
         // Config is nice-to-have; chat still works without it.
       }
@@ -167,5 +140,5 @@ export function useScoutConfig({ activeSessionIdRef }: ScoutConfigOptions) {
     [activeSessionIdRef]
   )
 
-  return { refreshScoutConfig, sttEnabled, voiceMaxRecordingSeconds }
+  return { refreshScoutConfig }
 }

@@ -86,16 +86,8 @@ export const KEYBIND_ACTIONS: readonly KeybindActionMeta[] = [
   // Open WebUI, and Cherry Studio all ship the same chord). Opens the pill's
   // live dropdown on the pane under the pointer, else the active composer.
   { id: 'composer.modelPicker', category: 'composer', defaults: ['mod+shift+m'] },
-  // Voice conversation toggle. On macOS that's literally ⌃B — distinct from
-  // the ⌘B sidebar toggle. Off macOS `ctrl` folds to `mod`, so ⌃B IS the
-  // sidebar chord. Ship ⌃⌥V there ("v" for voice) instead of stealing mod+b
-  // or leaving the action unbound.
-  { id: 'composer.voice', category: 'composer', defaults: isMacPlatform() ? ['ctrl+b'] : ['mod+alt+v'] },
-  // Dictation is intentionally unbound: it is available for users who prefer
-  // a keyboard trigger without claiming a chord from text entry by default.
-  { id: 'composer.dictate', category: 'composer', defaults: [] },
   // Reasoning level up/down — one notch through off → minimal → … → xhigh,
-  // clamped at the ends (#71627). Unbound like dictate: the chords a user
+  // clamped at the ends (#71627). Unbound: the chords a user
   // picks (Alt+., Ctrl+Alt+↑, Numpad +/- …) are too personal to claim by
   // default. `editableTargetPolicy` lets a MODIFIED combo fire while the
   // composer has focus; bare/shift-only rebinds stay typing-safe.

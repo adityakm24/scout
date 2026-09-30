@@ -5,7 +5,6 @@ Recognition uses OS-reported CPU identity without environment-variable input.
 
 from __future__ import annotations
 
-from scout_platform.host import facts
 
 # Match the CPU string because the chassis vendor does not identify the SoC.
 _NVIDIA_SOC_VENDOR = "NVIDIA"
@@ -21,7 +20,3 @@ def looks_like_nvidia_arm_soc(*, native_arch: str, cpu_model: str, cpu_vendor: s
     return vendor_match and any(marker in model for marker in _NVIDIA_SOC_MODEL_MARKERS)
 
 
-def is_nvidia_arm_soc() -> bool:
-    """Return whether this host has an NVIDIA ARM SoC."""
-    return looks_like_nvidia_arm_soc(
-        native_arch=facts.native_arch(), cpu_model=facts.cpu_model(), cpu_vendor=facts.cpu_vendor())

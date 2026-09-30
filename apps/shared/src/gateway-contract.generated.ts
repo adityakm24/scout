@@ -1844,9 +1844,8 @@ export interface PlannerTodosParams {
   priority?: string | null
   status?: string | null
   include_done?: boolean | null
-  ids?: string[] | null
 }
-export type PlannerTodoAction = 'list' | 'add' | 'update' | 'delete' | 'clear_completed' | 'reorder'
+export type PlannerTodoAction = 'list' | 'add' | 'update' | 'delete' | 'clear_completed'
 export interface PlannerTodosResult {
   success: boolean
   error?: string | null
@@ -5188,7 +5187,7 @@ export interface RpcMethods {
   ping: { params: PingParams; result: PingResult }
   /** List/add/update/delete the user's reminders (reminder-kind cron jobs). */
   'planner.reminders': { params: PlannerRemindersParams; result: PlannerRemindersResult }
-  /** List/add/update/delete/reorder the user's to-dos (shared with the agent's planner tool). */
+  /** List/add/update/delete the user's to-dos (shared with the agent's planner tool). */
   'planner.todos': { params: PlannerTodosParams; result: PlannerTodosResult }
   /** Loaded plugin manager entries (legacy flat view); the Plugins Hub uses plugins.manage list. */
   'plugins.list': { params: PluginsListParams; result: PluginsListResult }

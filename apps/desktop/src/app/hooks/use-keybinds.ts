@@ -89,10 +89,8 @@ import { openNewWindow } from '@/store/windows'
 import { useTheme } from '@/themes/context'
 
 import {
-  requestComposerDictation,
   requestComposerFocus,
   requestModelMenuToggle,
-  requestVoiceToggle
 } from '../chat/composer/focus'
 import { handleComposerFocusChord } from '../chat/composer/focus-chord'
 import { handleWindowPaste } from '../chat/composer/paste-to-focus'
@@ -281,8 +279,6 @@ export function useKeybinds(deps: KeybindRuntimeDeps): void {
         setModelPickerOpen(true)
       }
     },
-    'composer.voice': requestVoiceToggle,
-    'composer.dictate': requestComposerDictation,
     'composer.reasoningUp': () => stepSessionReasoning(1),
     'composer.reasoningDown': () => stepSessionReasoning(-1),
 

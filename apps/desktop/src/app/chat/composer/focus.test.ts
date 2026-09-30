@@ -8,13 +8,11 @@ import {
   focusComposerInput,
   getActiveComposer,
   markActiveComposer,
-  onComposerDictationRequest,
   onComposerDraftRequests,
   onComposerFocusRequest,
   onComposerInsertRequest,
   onComposerModelMenuRequest,
   releaseActiveComposer,
-  requestComposerDictation,
   requestComposerFocus,
   requestComposerGetDraft,
   requestComposerInsert,
@@ -324,22 +322,6 @@ describe('requestModelMenuToggle', () => {
     // Settings/profiles routes: no [data-composer-target] anywhere.
     expect(requestModelMenuToggle()).toBe(false)
     expect(await collectModelMenuTargets()).toEqual([])
-  })
-})
-
-describe('requestComposerDictation', () => {
-  it('delivers the request only to the active visible composer', async () => {
-    mountSurface('main', true)
-    mountSurface('tile:front')
-    markActiveComposer('tile:front')
-    const targets: string[] = []
-    const off = onComposerDictationRequest(target => targets.push(target))
-
-    requestComposerDictation('active')
-    await new Promise(resolve => window.setTimeout(resolve, 0))
-    off()
-
-    expect(targets).toEqual(['tile:front'])
   })
 })
 

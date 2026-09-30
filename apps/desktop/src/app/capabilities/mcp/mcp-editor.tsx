@@ -97,14 +97,3 @@ export function McpLogPane({ server }: McpLogPaneProps) {
     </DetailPane>
   )
 }
-
-export function McpEditorPane({ controller }: { controller: McpServersController }) {
-  const saved = controller.selected !== null && controller.servers[controller.selected] !== undefined
-
-  return (
-    <main className="flex min-h-0 flex-col overflow-hidden">
-      <McpJsonEditor controller={controller} />
-      <McpLogPane server={saved ? controller.selected : null} />
-    </main>
-  )
-}

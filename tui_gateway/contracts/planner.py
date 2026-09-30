@@ -22,7 +22,6 @@ class PlannerTodoAction(WireEnum):
     update = "update"
     delete = "delete"
     clear_completed = "clear_completed"
-    reorder = "reorder"
 
 
 class PlannerTodosParams(ProfileParams):
@@ -35,7 +34,6 @@ class PlannerTodosParams(ProfileParams):
     priority: str | None = None
     status: str | None = None
     include_done: bool | None = None
-    ids: list[str] | None = None
 
 
 class PlannerTodo(OpenModel):
@@ -102,6 +100,6 @@ class PlannerRemindersResult(OpenModel):
 
 
 method("planner.todos", params=PlannerTodosParams, result=PlannerTodosResult,
-       doc="List/add/update/delete/reorder the user's to-dos (shared with the agent's planner tool).")
+       doc="List/add/update/delete the user's to-dos (shared with the agent's planner tool).")
 method("planner.reminders", params=PlannerRemindersParams, result=PlannerRemindersResult,
        doc="List/add/update/delete the user's reminders (reminder-kind cron jobs).")

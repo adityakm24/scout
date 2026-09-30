@@ -1,4 +1,4 @@
-import { atom, computed } from 'nanostores'
+import { atom } from 'nanostores'
 
 import { readKey, writeKey } from '@/lib/storage'
 import { $currentCwd } from '@/store/session'
@@ -148,11 +148,6 @@ export const $activeTerminalId = atom<string | null>(restored.activeTerminalId)
 
 $terminals.subscribe(list => persistTerminals(list, $activeTerminalId.get()))
 $activeTerminalId.subscribe(active => persistTerminals($terminals.get(), active))
-
-export const $activeTerminal = computed(
-  [$terminals, $activeTerminalId],
-  (list, id) => list.find(term => term.id === id) ?? null
-)
 
 const newId = () =>
   globalThis.crypto?.randomUUID?.() ?? `term-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`

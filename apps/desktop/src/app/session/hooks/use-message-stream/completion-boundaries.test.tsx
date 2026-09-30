@@ -74,7 +74,6 @@ function mount(rpc = requestGateway) {
       runtimeIdByStoredSessionIdRef: cache.runtimeIdByStoredSessionIdRef,
       selectedStoredSessionIdRef: cache.selectedStoredSessionIdRef,
       startFreshSessionDraft: () => undefined,
-      sttEnabled: false,
       updateSessionState: cache.updateSessionState
     })
 

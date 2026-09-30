@@ -91,7 +91,6 @@ function Harness() {
     runtimeIdByStoredSessionIdRef,
     selectedStoredSessionIdRef,
     startFreshSessionDraft: () => undefined,
-    sttEnabled: false,
     updateSessionState
   })
 

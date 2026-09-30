@@ -50,10 +50,6 @@ def exec_prefix(env: BaseEnvironment, *, user: Optional[str] = None, interactive
     return None
 
 
-def supports_streams(env: BaseEnvironment) -> bool:
-    return exec_prefix(env, interactive=True) is not None
-
-
 def remote_argv(prefix: Sequence[str], argv: Sequence[str], *, env: Optional[dict] = None,
                 shell_joined: bool = False) -> list[str]:
     """``prefix`` + a ``bash -c`` that exports ``env`` and execs ``argv``.

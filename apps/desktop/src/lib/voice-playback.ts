@@ -528,52 +528,6 @@ function openSpeechStream(wsUrl: string, options: VoicePlaybackOptions): SpeechS
   }
 }
 
-/**
- * Live-speak an in-progress reply: open a session, then `append` deltas and
- * `finish` when generation completes. Ladder: client-direct synthesis with
- * the profile's own TTS (lowest hops — reply text is already streaming here,
- * audio goes provider → speaker without touching the gateway link) → the
- * gateway speak-stream WS relay → null (caller falls back to whole-text
- * `playSpeechText`).
- */
-export async function startSpeechStream(options: VoicePlaybackOptions): Promise<null | SpeechStreamSession> {
-  const direct = await directTtsConfig(options).catch(() => null)
-
-  if (direct) {
-    stopVoicePlayback()
-    setVoicePlaybackState(currentState('preparing', options))
-
-    const session = openClientDirectSpeechSession(direct, options)
-
-    void session.done.then(outcome => {
-      if (outcome === 'done') {
-        setVoicePlaybackState(currentState('idle'))
-      }
-    })
-
-    return session
-  }
-
-  const wsUrl = await resolveSpeakStreamUrl(options)
-
-  if (!wsUrl) {
-    return null
-  }
-
-  stopVoicePlayback()
-  setVoicePlaybackState(currentState('preparing', options))
-
-  const session = openSpeechStream(wsUrl, options)
-
-  void session.done.then(outcome => {
-    if (outcome === 'done') {
-      setVoicePlaybackState(currentState('idle'))
-    }
-  })
-
-  return session
-}
-
 /** One-shot playback of complete text over the streaming WS. */
 function playSpeechStream(wsUrl: string, text: string, options: VoicePlaybackOptions): Promise<'fallback' | 'played'> {
   const session = openSpeechStream(wsUrl, options)

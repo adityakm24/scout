@@ -2,7 +2,6 @@ import type { ConnectionState } from '@scout/shared'
 import { atom, computed } from 'nanostores'
 
 import { setApiRequestLocalMode } from '@/api/client'
-import { lastVisibleMessageIsUser } from '@/app/chat/thread-loading'
 import type { ContextSuggestion } from '@/app/types'
 import type { ScoutConnection } from '@/global'
 import type { ChatMessage } from '@/lib/chat-messages'
@@ -1137,7 +1136,6 @@ export const $messages = atom<ChatMessage[]>([])
 // $messages so per-token flushes don't re-render them — nanostores' `computed`
 // only notifies when the derived VALUE changes.
 export const $messagesEmpty = computed($messages, messages => messages.length === 0)
-export const $lastVisibleMessageIsUser = computed($messages, lastVisibleMessageIsUser)
 
 export const $freshDraftReady = atom(false)
 export const $busy = atom(false)

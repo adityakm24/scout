@@ -10,7 +10,6 @@ import {
   saveMemoryProviderConfig,
   setApiRequestProfile,
   speakText,
-  transcribeAudio,
   updateScout
 } from './scout'
 
@@ -70,11 +69,10 @@ describe('backend action helpers are profile-scoped', () => {
   it('forwards the active profile to audio endpoints', () => {
     setApiRequestProfile('jarvis')
 
-    void transcribeAudio('data:audio/webm;base64,AAAA', 'audio/webm')
     void speakText('hello')
     void getElevenLabsVoices()
 
-    expect(api.mock.calls).toHaveLength(3)
+    expect(api.mock.calls).toHaveLength(2)
 
     for (const call of api.mock.calls) {
       expect(call[0].profile).toBe('jarvis')

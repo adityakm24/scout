@@ -68,16 +68,7 @@ const CONFIG_SUBPAGE_DEFINITIONS: Record<string, ConfigSubpageDefinition[]> = {
       prefixes: ['context.', 'compression.', 'auxiliary.compression.']
     }
   ],
-  voice: [
-    {
-      id: 'conversation',
-      labelKey: 'voiceConversation',
-      fields: ['voice.voice_chat_mode', 'voice.max_recording_seconds', 'voice.client_direct'],
-      prefixes: ['voice.gpt_live.']
-    },
-    { id: 'transcription', labelKey: 'voiceTranscription', prefixes: ['stt.'] },
-    { id: 'speech', labelKey: 'voiceSpeech', fields: ['voice.auto_tts'], prefixes: ['tts.'] }
-  ],
+  voice: [{ id: 'speech', labelKey: 'voiceSpeech', fields: ['voice.auto_tts', 'voice.client_direct'], prefixes: ['tts.'] }],
   advanced: [
     { id: 'desktop', labelKey: 'advancedDesktop', prefixes: ['updates.'] },
     {

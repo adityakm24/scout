@@ -120,30 +120,6 @@ async def update_skills_hub(
         log_msg="Failed to spawn skills update", prefix="Failed to update skills")
 
 
-@hub_router.get("/api/skills/hub/official")
-async def list_official_skills(profile: Optional[str] = None):
-    """The ENTIRE optional-skills catalog (local scan), marked installed for ``profile``."""
-
-    def _run():
-        from tools.skills_hub_official import OptionalSkillSource
-
-        installed = _installed_hub_identifiers(profile)
-        out = []
-        for m in OptionalSkillSource().list_local():
-            payload = _skill_meta_to_payload(m)
-            ident = payload.get("identifier") or ""
-            # identifier format: official/<category>/<skill> — surface the
-            # category for row subtitles.
-            rel = ident.split("/", 1)[-1] if "/" in ident else ident
-            payload["category"] = rel.split("/", 1)[0] if "/" in rel else "general"
-            payload["installed"] = ident in installed
-            out.append(payload)
-        return {"skills": out}
-
-    with http_failure("official skills catalog listing failed", 502, "Official catalog failed"):
-        return await asyncio.to_thread(_run)
-
-
 @hub_router.get("/api/skills/hub/sources")
 async def list_skills_hub_sources(profile: Optional[str] = None):
     """Configured skill-hub sources + installed-skill provenance (scoped to

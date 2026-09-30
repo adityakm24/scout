@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { queryClient } from '@/lib/query-client'
 import type * as ScoutApi from '@/scout'
-import type * as HubActions from '@/store/hub-actions'
 
 import { $catalogCardView } from './catalog/store'
 
@@ -20,7 +19,6 @@ const selectToolsetProvider = vi.fn()
 const getUsageAnalytics = vi.fn()
 const getProfiles = vi.fn()
 const getSkillContent = vi.fn()
-const getOfficialSkills = vi.fn()
 const createSkill = vi.fn()
 const deleteLearningNode = vi.fn()
 
@@ -40,7 +38,6 @@ vi.mock('@/scout', async importOriginal => ({
   getUsageAnalytics: (days: number, profile?: null | string) => getUsageAnalytics(days, profile),
   getProfiles: () => getProfiles(),
   getSkillContent: (name: string, profile?: null | string) => getSkillContent(name, profile),
-  getOfficialSkills: (profile?: null | string) => getOfficialSkills(profile),
   createSkill: (name: string, content: string, profile?: unknown) => createSkill(name, content, profile),
   deleteLearningNode: (id: string, profile?: unknown) => deleteLearningNode(id, profile)
 }))
@@ -49,14 +46,6 @@ vi.mock('@/scout', async importOriginal => ({
 vi.mock('@/store/notifications', () => ({
   notify: vi.fn(),
   notifyError: vi.fn()
-}))
-
-// The catalog Install button routes through the hub action pipeline — stub the
-// action entrypoint (real module kept: CapabilitiesView reads $hubActions and the
-// query keys from it).
-vi.mock('@/store/hub-actions', async importOriginal => ({
-  ...(await importOriginal<typeof HubActions>()),
-  installHubSkill: vi.fn().mockResolvedValue(undefined)
 }))
 
 // The vision detail navigates to Settings → Models via useNavigate; spy on it
@@ -109,7 +98,6 @@ beforeEach(() => {
   setToolsetEnabled.mockResolvedValue({ ok: true, name: 'web', enabled: false })
   getToolsetConfig.mockResolvedValue({ has_category: true, active_provider: null, providers: [] })
   getUsageAnalytics.mockResolvedValue({ tools: [] })
-  getOfficialSkills.mockResolvedValue({ skills: [] })
   getSkillContent.mockResolvedValue({
     name: 'web-research',
     path: '/skills/web-research/SKILL.md',
@@ -234,9 +222,6 @@ describe('CapabilitiesView', { timeout: 60_000 }, () => {
     getSkills.mockResolvedValue([
       { name: 'web-research', description: 'Research', enabled: true, category: 'research', provenance: 'bundled' }
     ])
-    getOfficialSkills.mockResolvedValue({
-      skills: [{ name: 'gif-search', description: 'GIFs', identifier: 'official/gifs/gif-search', installed: false }]
-    })
 
     try {
       render(
@@ -252,7 +237,6 @@ describe('CapabilitiesView', { timeout: 60_000 }, () => {
       expect(screen.queryByRole('switch', { name: /^Add / })).toBeNull()
       expect(screen.getAllByRole('textbox', { name: 'Search skills' })).toHaveLength(1)
       expect(fetch).not.toHaveBeenCalled()
-      expect(getOfficialSkills).not.toHaveBeenCalled()
     } finally {
       vi.unstubAllGlobals()
     }

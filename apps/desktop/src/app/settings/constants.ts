@@ -7,11 +7,11 @@ import {
   type IconComponent,
   Lock,
   MessageCircle,
-  Mic,
   Monitor,
   Moon,
   Palette,
   Sun,
+  Volume2,
   Wrench
 } from '@/lib/icons'
 import type { ThemeMode } from '@/themes/context'
@@ -252,25 +252,6 @@ export const ENUM_OPTIONS: Record<string, string[]> = {
   // Speech-to-text backends — kept in sync with the stt block in
   // scout_cli/config.py (local/groq/openai/mistral/elevenlabs).
   'stt.provider': ['local', 'groq', 'openai', 'mistral', 'xai', 'elevenlabs'],
-  // How the desktop voice conversation is wired — tools/voice_live.py owns the
-  // gpt-live branch (one full-duplex voice model delegating to Scout).
-  'voice.voice_chat_mode': ['chained', 'gpt-live'],
-  'voice.gpt_live.voice': [
-    'marin',
-    'cedar',
-    'quartz',
-    'ripple',
-    'vesper',
-    'willow',
-    'stone',
-    'gleam',
-    'meridian',
-    'bossa',
-    'tempo',
-    'beacon',
-    'delta',
-    'cinder'
-  ],
   // OpenAI TTS voices — the union across models (per the OpenAI TTS API
   // docs). Model-specific narrowing happens in enumOptionsFor():
   // tts-1 / tts-1-hd support 9 voices; gpt-4o-mini-tts supports all 13.
@@ -376,6 +357,21 @@ export const ENUM_OPTIONS: Record<string, string[]> = {
   'updates.non_interactive_local_changes': ['stash', 'discard']
 }
 
+// Per-provider speech-to-text fields. Not a Settings page (the desktop has no
+// dictation); Bot Mode's toolset config still edits them for a bot's `stt`
+// toolset through VoiceProviderFields.
+export const STT_PROVIDER_KEYS = [
+  'stt.local.model',
+  'stt.local.language',
+  'stt.openai.model',
+  'stt.groq.model',
+  'stt.mistral.model',
+  'stt.elevenlabs.model_id',
+  'stt.elevenlabs.language_code',
+  'stt.elevenlabs.tag_audio_events',
+  'stt.elevenlabs.diarize'
+] as const
+
 // Voice/model name fields render as a free-input combobox (Input + datalist)
 // instead of a closed Select: providers accept custom voice IDs (ElevenLabs
 // cloned voices, xAI custom voices, Edge's 400+ catalog) and ship new model
@@ -383,7 +379,6 @@ export const ENUM_OPTIONS: Record<string, string[]> = {
 // suggestions rather than a gate for these keys.
 export const FREE_INPUT_KEYS = new Set([
   'tts.edge.voice',
-  'voice.gpt_live.voice',
   'tts.openai.model',
   'tts.openai.voice',
   'tts.elevenlabs.voice_id',
@@ -760,15 +755,9 @@ export const SECTIONS: DesktopConfigSection[] = [
   {
     id: 'voice',
     label: 'Voice',
-    icon: Mic,
+    icon: Volume2,
     keys: [
-      'voice.voice_chat_mode',
-      'voice.gpt_live.voice',
-      'voice.gpt_live.instructions',
       'tts.provider',
-      'stt.enabled',
-      'stt.echo_transcripts',
-      'stt.provider',
       'voice.auto_tts',
       'tts.edge.voice',
       'tts.openai.model',
@@ -795,16 +784,6 @@ export const SECTIONS: DesktopConfigSection[] = [
       'tts.piper.voice',
       'tts.deepinfra.model',
       'tts.deepinfra.voice',
-      'stt.local.model',
-      'stt.local.language',
-      'stt.openai.model',
-      'stt.groq.model',
-      'stt.mistral.model',
-      'stt.elevenlabs.model_id',
-      'stt.elevenlabs.language_code',
-      'stt.elevenlabs.tag_audio_events',
-      'stt.elevenlabs.diarize',
-      'voice.max_recording_seconds',
       'voice.client_direct'
     ]
   },

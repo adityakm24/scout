@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { FREE_INPUT_KEYS, SECTIONS } from './constants'
+import { FREE_INPUT_KEYS, SECTIONS, STT_PROVIDER_KEYS } from './constants'
 import { voiceProviderKeys } from './voice-provider-fields'
 
-const voiceKeys = SECTIONS.find(s => s.id === 'voice')?.keys ?? []
+const voiceKeys: readonly string[] = [...(SECTIONS.find(s => s.id === 'voice')?.keys ?? []), ...STT_PROVIDER_KEYS]
 
 describe('voiceProviderKeys', () => {
   it('covers every built-in TTS provider the Capabilities picker offers', () => {
@@ -33,7 +33,7 @@ describe('voiceProviderKeys', () => {
 })
 
 describe('voice field option coverage', () => {
-  it('every free-input voice key that lives in the Voice section has suggestions or is intentionally bare', () => {
+  it('every free-input voice key is a Voice-section or STT provider field', () => {
     // Free-input keys don't *require* ENUM_OPTIONS (an empty datalist is
     // fine), but any that do declare options must be actual Voice-section
     // fields — a typo'd key here would silently do nothing.

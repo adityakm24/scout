@@ -19,10 +19,6 @@ const DESKTOP_HIDDEN_TOOLSETS = new Set([
   'moa'
 ])
 
-export function isDesktopToolsetVisible(name: string): boolean {
-  return !DESKTOP_HIDDEN_TOOLSETS.has(name)
-}
-
 /** Desktop plugin id → the agent toolset carrying the same feature's
  *  agent-side tools. The Plugins page's Desktop switch toggles this app's UI
  *  panel; for these entries it also flips the toolset opt-in through the same

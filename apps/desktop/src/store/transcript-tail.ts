@@ -294,27 +294,3 @@ export function clearTranscriptTailPaging(): void {
   transcriptTailOrder = []
   $transcriptTailBySessionId.set({})
 }
-
-export function clearTranscriptTail(storedSessionId: string, profile?: TranscriptProfileScope): void {
-  const current = $transcriptTailBySessionId.get()
-
-  const keys =
-    profile === undefined
-      ? matchingTailEntries(storedSessionId).map(([key]) => key)
-      : [transcriptTailKey(storedSessionId, profile)]
-
-  if (keys.length === 0) {
-    return
-  }
-
-  const next = { ...current }
-
-  for (const key of keys) {
-    delete next[key]
-  }
-
-  const removed = new Set(keys)
-  transcriptTailOrder = transcriptTailOrder.filter(key => !removed.has(key))
-
-  $transcriptTailBySessionId.set(next)
-}

@@ -58,8 +58,6 @@ export type LayoutNode = SplitNode | GroupNode
 /** Where a dragged pane lands relative to a target group. */
 export type DropPosition = 'center' | 'left' | 'right' | 'top' | 'bottom'
 
-export type RootEdge = 'left' | 'right' | 'top' | 'bottom'
-
 let seq = 0
 export const nodeId = (kind: string) => `${kind}-${Date.now().toString(36)}-${(seq++).toString(36)}`
 

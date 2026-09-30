@@ -30,11 +30,6 @@ import { $connectionsRegistry, hasRegistryTopology } from '@/store/connection-re
 
 const attemptedScopes = new Set<string>()
 
-/** Test seam: forget which scopes were already backfilled this renderer. */
-export function resetLegacyOwnerBackfillAttempts(): void {
-  attemptedScopes.clear()
-}
-
 function scopeKey(connectionId: null | string, profile: null | string): string {
   return `${connectionId ?? 'local'}::${profile ?? ''}`
 }

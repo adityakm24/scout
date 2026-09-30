@@ -1,4 +1,4 @@
-import { Profiler, type ProfilerOnRenderCallback, type ReactNode } from 'react'
+import { type ProfilerOnRenderCallback } from 'react'
 
 import { $terminalTakeover, setTerminalTakeover } from '@/app/right-sidebar/store'
 import { writeAgentTerminalChunk } from '@/app/right-sidebar/terminal/agent-terminal-stream'
@@ -453,12 +453,4 @@ if (typeof window !== 'undefined' && !window.__PERF_DRIVE__) {
 
   // Suppress dead-import warning.
   void stop
-}
-
-export function PerfProbe({ id, children }: { id: string; children: ReactNode }) {
-  return (
-    <Profiler id={id} onRender={onRender}>
-      {children}
-    </Profiler>
-  )
 }

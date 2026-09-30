@@ -24,7 +24,7 @@ import { arraysEqual, insertUniqueId, readKey } from '@/lib/storage'
 import { modeBound, modeLayout } from '@/store/interface-mode'
 
 import { trackArea } from './desktop-metrics'
-import { $paneStates, ensurePaneRegistered, setPaneOpen, setPaneWidthOverride } from './panes'
+import { $paneStates, ensurePaneRegistered, setPaneOpen } from './panes'
 import { $showAllProfiles, setShowAllProfiles } from './profile'
 import type { PullRequestBucket } from './pull-requests'
 import type { SessionStatusBucket } from './session-dot-state'
@@ -72,9 +72,6 @@ const RIGHT_RAIL_ACTIVE_TAB_STORAGE_KEY = 'scout.desktop.rightRailActiveTab'
 
 export const CHAT_SIDEBAR_PANE_ID = 'chat-sidebar'
 export const FILE_BROWSER_PANE_ID = 'file-browser'
-/** The file tree's id in the LAYOUT TREE — distinct from the pane-state id
- *  above, which keys its open/width record. Toggles need both. */
-export const FILES_PANE_ID = 'files'
 
 /** Every rail tab is a preview of something, namespaced by what backs it: a
  *  path on disk, a live URL, or an id into the in-memory artifact registry. */
@@ -105,12 +102,6 @@ export const $fileBrowserOpen = modeBound('fileBrowserOpen', $fileBrowserOpenPre
 export const $rightRailActiveTabId = persistentAtom<RightRailTabId | null>(RIGHT_RAIL_ACTIVE_TAB_STORAGE_KEY, null, {
   decode: raw => (raw ? (raw as RightRailTabId) : null),
   encode: tabId => tabId ?? ''
-})
-
-export const $sidebarWidth: ReadableAtom<number> = computed($paneStates, states => {
-  const override = states[CHAT_SIDEBAR_PANE_ID]?.widthOverride
-
-  return typeof override === 'number' ? override : SIDEBAR_DEFAULT_WIDTH
 })
 
 // Pins and the manual session order are CONNECTION-scoped, not global: they
@@ -442,7 +433,6 @@ export const $sidebarViewCustomized: ReadableAtom<boolean> = computed(
 // When true, the sessions sidebar moves to the right and the file browser +
 // preview rail move to the left — a mirror of the default layout.
 export const $panesFlipped = modeLayout.atom(LAYOUT_KEYS.flipped, () => false, Codecs.bool)
-export const $isSidebarResizing = atom(false)
 export const $sessionsLimit = atom(SIDEBAR_SESSIONS_PAGE_SIZE)
 
 // Live date/status divider ids (`list-group:yesterday`, …) currently in the
@@ -532,11 +522,6 @@ export function restoreWorktree(id: string): void {
   if (current.includes(id)) {
     $dismissedWorktreeIds.set(current.filter(worktreeId => worktreeId !== id))
   }
-}
-
-export function setSidebarWidth(width: number) {
-  const bounded = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_DEFAULT_WIDTH, width))
-  setPaneWidthOverride(CHAT_SIDEBAR_PANE_ID, bounded)
 }
 
 // Below the collapse breakpoint a collapsible rail leaves the grid and lives as
@@ -728,7 +713,6 @@ export function setSidebarRecentsOpen(open: boolean) {
   $sidebarRecentsOpen.set(open)
 }
 
-
 export function toggleSidebarMessagingOpen(sourceId: string) {
   const current = $sidebarMessagingOpenIds.get()
 
@@ -882,10 +866,6 @@ export function setSidebarWorkspaceParentOrderIds(ids: string[]) {
 
 export function setSidebarProjectOrderIds(ids: string[]) {
   setOrderIds($sidebarProjectOrderIds, ids)
-}
-
-export function setSidebarResizing(resizing: boolean) {
-  $isSidebarResizing.set(resizing)
 }
 
 export function pinSession(sessionId: string, index?: number) {

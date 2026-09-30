@@ -36,11 +36,6 @@ class RequestMiddlewareResult:
     trace: List[Dict[str, Any]] = field(default_factory=list)
 
 
-def observer_payload(**kwargs: Any) -> Dict[str, Any]:
-    kwargs.setdefault("telemetry_schema_version", OBSERVER_SCHEMA_VERSION)
-    return kwargs
-
-
 def middleware_payload(**kwargs: Any) -> Dict[str, Any]:
     kwargs.setdefault("telemetry_schema_version", OBSERVER_SCHEMA_VERSION)
     kwargs.setdefault("middleware_schema_version", MIDDLEWARE_SCHEMA_VERSION)
