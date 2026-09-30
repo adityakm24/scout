@@ -519,14 +519,37 @@ glass surface keeps a fill that stands alone when reduced-transparency drops
 the blur. Don't hand-roll `backdrop-blur-*` at call sites.
 
 - **Radius** scales from `--radius-scalar: 1` (Apple-soft): `rounded-md` 10px,
-  `rounded-xl` 16px, `rounded-2xl` 24px. Horizontal `PaneTab`s are capsules
-  (active = lit glass pill); badges are capsules.
-- **Type.** SF (system) with grayscale smoothing. Labels are **sentence case** —
-  no `uppercase` + wide tracking section headers (`SidebarPanelLabel`,
-  `dropdownMenuSectionLabel`, badges). Display text tracks tight (≈ -0.035em).
+  `rounded-xl` 16px, `rounded-2xl` 24px; the Scout skin runs it at 1.2.
+  Horizontal `PaneTab`s are capsules; badges are capsules.
+- **Type.** Labels are **sentence case** — no `uppercase` + wide tracking
+  section headers (`SidebarPanelLabel`, `dropdownMenuSectionLabel`, badges).
+  Display text tracks tight (≈ -0.035em). The Scout skin sets the interface in
+  Plus Jakarta Sans and display lettering (greeting, page titles, `Wordmark`)
+  in Sora; other skins keep the system face.
 - **Welcome.** `Intro` = `ScoutOrb` + time-of-day greeting (`intro.greeting.*`)
-  + rotating body copy over the `.scout-horizon` dawn. Bots title their empty
-  chat with `Wordmark` in Instrument Serif.
+  + rotating body copy over the `.scout-horizon` dawn.
+
+### The Scout skin (`src/scout-skin.css`)
+
+Scout's identity is "Nebula" by night and "Daybreak" by day: an indigo-black
+(or lavender) field with an electric-violet accent and teal / rose aurora
+partners. The palette is `THEME_PRESET_PALETTES.spaceshipresearch` in
+`@scout/shared`; `scout-skin.css` adds what a palette can't, scoped to
+`:root[data-scout-theme='spaceshipresearch']` so other skins are untouched:
+
+- **The field.** `<body>` paints the aurora (radial washes + two slow-drifting
+  clouds on `body::before/::after`, compositor-only, paused with renderer
+  animations and under reduced motion). With sidebar-scoped window glass the
+  content column stays solid, as in `styles.css`.
+- **Gradient identity, used sparingly.** Only surfaces that speak for the user
+  or the brand wear `--scout-aurora`: the active tab chip, primary buttons and
+  the send button, the user's own message bubbles, and display type. The
+  composer gets an aurora rim, not a fill.
+- **Destination tiles.** Sidebar navigation rows render their icon as a
+  coloured tile (one hue per destination, keyed by `data-tour`), System
+  Settings style.
+- **Glass panels** (sidebar slab, dashboard panels, catalog cards) share
+  `--scout-plate` + a violet hairline (`--scout-plate-edge`).
 
 ## Direct manipulation & performance
 

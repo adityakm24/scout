@@ -1,0 +1,304 @@
+/* Scout skin — "Nebula" by night, "Daybreak" by day.
+ *
+ * Everything here is scoped to the Scout theme (`data-scout-theme` on <html>,
+ * set by themes/context.tsx), so other skins keep their own look. The palette
+ * itself (surfaces, ink, the violet accent) lives in @scout/shared's
+ * THEME_PRESET_PALETTES; this layer adds what a flat palette can't: the
+ * aurora the app floats on, and the gradient identity on the few surfaces
+ * that carry the brand (active tabs, the composer, the user's own messages,
+ * primary actions, display type).
+ *
+ * Motion is compositor-only (transform/opacity) and stops when the renderer
+ * pauses animations or the user asks for reduced motion.
+ */
+
+:root[data-scout-theme='spaceshipresearch'] {
+  --scout-violet: #5a45f5;
+  --scout-violet-soft: #8a7bff;
+  --scout-teal: #0fb3a0;
+  --scout-rose: #e0449b;
+  --scout-ink-on-accent: #ffffff;
+  --scout-aurora: linear-gradient(120deg, var(--scout-violet) 0%, #7a5cff 40%, var(--scout-rose) 100%);
+  --scout-aurora-cool: linear-gradient(120deg, var(--scout-violet) 0%, var(--scout-teal) 100%);
+  --scout-field: #f7f6ff;
+  --scout-glow: color-mix(in srgb, var(--scout-violet) 28%, transparent);
+  --scout-plate: color-mix(in srgb, #ffffff 64%, transparent);
+  --scout-plate-edge: color-mix(in srgb, var(--scout-violet) 16%, transparent);
+  --radius-scalar: 1.2;
+}
+
+:root[data-scout-theme='spaceshipresearch'].dark {
+  --scout-violet: #8f7fff;
+  --scout-violet-soft: #b7adff;
+  --scout-teal: #3ee6c1;
+  --scout-rose: #ff6ec7;
+  --scout-ink-on-accent: #0d0a22;
+  --scout-aurora: linear-gradient(120deg, #a497ff 0%, #7c6cff 45%, #ff6ec7 100%);
+  --scout-aurora-cool: linear-gradient(120deg, #a497ff 0%, #3ee6c1 100%);
+  --scout-field: #0c0a1d;
+  --scout-glow: color-mix(in srgb, #7c6cff 45%, transparent);
+  --scout-plate: color-mix(in srgb, #17133a 58%, transparent);
+  --scout-plate-edge: color-mix(in srgb, #a497ff 22%, transparent);
+}
+
+/* ── The field: an aurora the whole app floats on ───────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] body {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(60rem 40rem at -10% -15%, color-mix(in srgb, var(--scout-violet) 22%, transparent), transparent 60%),
+    radial-gradient(50rem 36rem at 110% 115%, color-mix(in srgb, var(--scout-teal) 16%, transparent), transparent 62%),
+    radial-gradient(40rem 30rem at 85% 5%, color-mix(in srgb, var(--scout-rose) 12%, transparent), transparent 60%),
+    color-mix(in srgb, var(--scout-field) var(--translucency-glass-keep, 100%), transparent) !important;
+}
+
+/* Sidebar-scoped window glass: only the rail is see-through (the OS material
+   sits behind it); the content column stays solid, as in styles.css. */
+:root[data-scout-theme='spaceshipresearch'][data-scout-glass][data-scout-glass-scope='sidebar'] body {
+  background:
+    radial-gradient(60rem 40rem at -10% -15%, color-mix(in srgb, var(--scout-violet) 22%, transparent), transparent 60%),
+    radial-gradient(50rem 36rem at 110% 115%, color-mix(in srgb, var(--scout-teal) 16%, transparent), transparent 62%),
+    radial-gradient(40rem 30rem at 85% 5%, color-mix(in srgb, var(--scout-rose) 12%, transparent), transparent 60%),
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--scout-field) var(--translucency-glass-keep, 100%), transparent) var(--glass-rail-edge, 0px),
+      var(--scout-field) var(--glass-rail-edge, 0px)
+    ) !important;
+}
+
+/* Two slow-drifting light clouds over the field (behind all content). */
+:root[data-scout-theme='spaceshipresearch'] body::before,
+:root[data-scout-theme='spaceshipresearch'] body::after {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(80px);
+  opacity: 0.55;
+  will-change: transform;
+}
+:root[data-scout-theme='spaceshipresearch'] body::before {
+  top: -35vmax;
+  left: -20vmax;
+  background: radial-gradient(circle, color-mix(in srgb, var(--scout-violet) 38%, transparent), transparent 65%);
+  animation: scout-drift-a 38s ease-in-out infinite alternate;
+}
+:root[data-scout-theme='spaceshipresearch'] body::after {
+  right: -25vmax;
+  bottom: -40vmax;
+  background: radial-gradient(circle, color-mix(in srgb, var(--scout-teal) 30%, transparent), transparent 65%);
+  animation: scout-drift-b 46s ease-in-out infinite alternate;
+}
+:root[data-scout-theme='spaceshipresearch'].dark body::before {
+  opacity: 0.7;
+}
+
+@keyframes scout-drift-a {
+  to {
+    transform: translate3d(18vmax, 12vmax, 0) scale(1.15);
+  }
+}
+@keyframes scout-drift-b {
+  to {
+    transform: translate3d(-16vmax, -10vmax, 0) scale(0.9);
+  }
+}
+
+:root[data-scout-theme='spaceshipresearch'][data-renderer-animations-paused] body::before,
+:root[data-scout-theme='spaceshipresearch'][data-renderer-animations-paused] body::after {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-scout-theme='spaceshipresearch'] body::before,
+  :root[data-scout-theme='spaceshipresearch'] body::after {
+    animation: none;
+  }
+}
+
+/* ── Sidebar: a floating glass slab with a lit violet rim ─────────────────── */
+:root[data-scout-theme='spaceshipresearch'] [data-tree-group]:has([data-slot='sidebar']) [data-zone-body] > div::before {
+  inset: 0.25rem 0.5rem 0.625rem;
+  border-radius: 1.5rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #fff 6%, transparent), transparent 22%),
+    var(--scout-plate);
+  backdrop-filter: blur(30px) saturate(1.6);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent),
+    0 0 0 1px var(--scout-plate-edge),
+    0 1.25rem 3rem -1.5rem color-mix(in srgb, #000 45%, transparent);
+}
+
+/* Nav + session rows: roomier capsules; the active row is lit, not greyed. */
+:root[data-scout-theme='spaceshipresearch']
+  [data-slot='sidebar']
+  :is([data-sidebar='menu-button'], [data-slot='sidebar-menu-button'], [data-slot='row-button']) {
+  border-radius: 0.875rem;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+:root[data-scout-theme='spaceshipresearch']
+  [data-slot='sidebar']
+  :is([data-sidebar='menu-button'], [data-slot='sidebar-menu-button'], [data-slot='row-button']):is(
+    [data-active='true'],
+    [aria-current='page']
+  ) {
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--scout-violet) 26%, transparent),
+    color-mix(in srgb, var(--scout-teal) 10%, transparent)
+  ) !important;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--scout-violet) 30%, transparent),
+    0 0.5rem 1.25rem -0.75rem var(--scout-glow);
+}
+/* Primary nav: each destination gets its own lit tile, System Settings style. */
+:root[data-scout-theme='spaceshipresearch'] [data-slot='sidebar'] [data-sidebar='menu-button']:has([data-tour^='sidebar-nav-']) {
+  gap: 0.75rem;
+  height: 2.5rem;
+  font-weight: 550;
+}
+:root[data-scout-theme='spaceshipresearch'] [data-slot='sidebar'] [data-sidebar='menu-button']:has([data-tour^='sidebar-nav-']) > i.codicon {
+  display: grid;
+  place-items: center;
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  border-radius: 0.625rem;
+  font-size: 0.95rem !important;
+  color: #fff !important;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--tile, #7c5cff) 78%, #fff), var(--tile, #7c5cff));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent),
+    0 0.25rem 0.625rem -0.25rem color-mix(in srgb, var(--tile, #7c5cff) 70%, transparent);
+}
+:root[data-scout-theme='spaceshipresearch'] [data-sidebar='menu-button']:has([data-tour='sidebar-nav-new-session']) {
+  --tile: #7c5cff;
+}
+:root[data-scout-theme='spaceshipresearch'] [data-sidebar='menu-button']:has([data-tour='sidebar-nav-capabilities']) {
+  --tile: #14b8a6;
+}
+:root[data-scout-theme='spaceshipresearch'] [data-sidebar='menu-button']:has([data-tour='sidebar-nav-messaging']) {
+  --tile: #ec4899;
+}
+:root[data-scout-theme='spaceshipresearch'] [data-sidebar='menu-button']:has([data-tour='sidebar-nav-artifacts']) {
+  --tile: #f59e0b;
+}
+:root[data-scout-theme='spaceshipresearch'] [data-sidebar='menu-button']:has([data-tour='sidebar-nav-cron']) {
+  --tile: #3b82f6;
+}
+
+/* ── Tabs: the active tab is a lit aurora chip ───────────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] [data-slot='pane-tab'][data-active='true']:not([data-vertical]) {
+  background: var(--scout-aurora) !important;
+  color: var(--scout-ink-on-accent) !important;
+  box-shadow: 0 0.375rem 1rem -0.375rem var(--scout-glow);
+  font-weight: 600;
+}
+:root[data-scout-theme='spaceshipresearch'] [data-slot='pane-tab'][data-active='true']:not([data-vertical]) * {
+  color: inherit;
+}
+:root[data-scout-theme='spaceshipresearch'] [data-slot='pane-tab'] {
+  border-radius: 999px;
+}
+:root[data-scout-theme='spaceshipresearch'] [data-slot='tabs-trigger'][data-state='active'] {
+  background: var(--scout-aurora);
+  color: var(--scout-ink-on-accent);
+}
+
+/* ── Composer: a capsule with a live aurora rim ──────────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] [data-slot='composer-surface'] {
+  border: 1.5px solid transparent !important;
+  border-radius: 1.75rem !important;
+  background:
+    linear-gradient(var(--scout-plate), var(--scout-plate)) padding-box,
+    linear-gradient(120deg, var(--scout-violet), var(--scout-teal), var(--scout-rose)) border-box !important;
+  backdrop-filter: blur(28px) saturate(1.7);
+  box-shadow:
+    0 1.25rem 3rem -1.5rem var(--scout-glow),
+    0 0.25rem 0.75rem -0.25rem color-mix(in srgb, #000 25%, transparent) !important;
+}
+:root[data-scout-theme='spaceshipresearch'] [data-slot='composer-surface']:focus-within {
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--scout-violet) 18%, transparent),
+    0 1.5rem 3.5rem -1.25rem var(--scout-glow) !important;
+}
+
+/* Send / primary buttons wear the aurora. */
+:root[data-scout-theme='spaceshipresearch'] [data-slot='button'][data-variant='default']:not(:disabled),
+:root[data-scout-theme='spaceshipresearch'] [data-slot='composer-root'] button[type='submit']:not(:disabled) {
+  background: var(--scout-aurora) !important;
+  color: var(--scout-ink-on-accent) !important;
+  border: none;
+  box-shadow: 0 0.5rem 1.25rem -0.5rem var(--scout-glow);
+}
+:root[data-scout-theme='spaceshipresearch'] [data-slot='button'][data-variant='default']:not(:disabled):hover,
+:root[data-scout-theme='spaceshipresearch'] [data-slot='composer-root'] button[type='submit']:not(:disabled):hover {
+  filter: brightness(1.08) saturate(1.1);
+}
+
+/* ── Your messages: aurora bubbles ───────────────────────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] .composer-human-message {
+  border: none !important;
+  border-radius: 1.375rem 1.375rem 0.5rem 1.375rem !important;
+  background: var(--scout-aurora) !important;
+  color: var(--scout-ink-on-accent);
+  box-shadow: 0 0.75rem 1.75rem -1rem var(--scout-glow) !important;
+}
+:root[data-scout-theme='spaceshipresearch'] .composer-human-message :is(p, span, li, strong, em, a) {
+  color: inherit;
+}
+:root[data-scout-theme='spaceshipresearch'] .composer-human-message :is(code, pre) {
+  background: color-mix(in srgb, #000 16%, transparent);
+  color: inherit;
+}
+
+/* ── Display type: Sora, lit with the aurora ─────────────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] :is(.scout-greeting, .wordmark, h1) {
+  font-family: 'Sora', var(--dt-font-sans);
+  letter-spacing: -0.035em;
+}
+:root[data-scout-theme='spaceshipresearch'] .scout-greeting {
+  font-weight: 700;
+  background: var(--scout-aurora);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+:root[data-scout-theme='spaceshipresearch'] .wordmark {
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ── Chrome: the titlebar tools and statusbar sit on glass pills ─────────── */
+:root[data-scout-theme='spaceshipresearch'] [data-titlebar-cluster='right'] {
+  border-radius: 999px;
+  padding-inline: 0.25rem;
+  background: var(--scout-plate);
+  box-shadow: 0 0 0 1px var(--scout-plate-edge);
+  backdrop-filter: blur(20px);
+}
+:root[data-scout-theme='spaceshipresearch'] [data-slot='statusbar'] {
+  background: transparent !important;
+  border-top-color: transparent !important;
+}
+
+/* ── Cards & panels: glass with a violet hairline ────────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] :is(.scout-panel, [data-catalog-card]) {
+  background: var(--scout-plate) !important;
+  backdrop-filter: blur(24px) saturate(1.5);
+  border-color: var(--scout-plate-edge) !important;
+  border-radius: 1.5rem !important;
+}
+
+/* ── Details ─────────────────────────────────────────────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] ::selection {
+  background-color: color-mix(in srgb, var(--scout-violet) 36%, transparent);
+}
+:root[data-scout-theme='spaceshipresearch'] *::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--scout-violet) 32%, transparent);
+  border-radius: 999px;
+}

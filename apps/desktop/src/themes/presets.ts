@@ -46,12 +46,13 @@ const SYSTEM_MONO =
 export const DEFAULT_TYPOGRAPHY: DesktopThemeTypography = { fontSans: SYSTEM_SANS, fontMono: SYSTEM_MONO }
 
 /**
- * Display serif for hero lettering (the empty-chat wordmark). Instrument Serif
- * loads through the theme's `fontUrl`; offline it falls to `ui-serif`, which is
- * New York on macOS, so the lettering stays a serif either way.
+ * Scout's type: Plus Jakarta Sans for the interface, Sora for display lettering
+ * (the greeting, page titles). Instrument Serif rides along for the other skins'
+ * wordmark. All load through the theme's `fontUrl`; offline they fall back to
+ * the system faces.
  */
 export const SCOUT_DISPLAY_FONT_URL =
-  'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap'
+  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&family=Sora:wght@500..800&family=Instrument+Serif:ital@0;1&display=swap'
 
 /**
  * GitHub — the upstream palette, unmodified (GitHub Light / Dark Default).
@@ -111,19 +112,19 @@ export const githubTheme: DesktopTheme = {
 /**
  * Scout — the canonical desktop identity of Spaceship Research.
  *
- * "Paper" by day: warm off-white surfaces and near-black ink, in the manner of
- * Dia and Arc. "Deep Orbit" by night: a blue-black navy with the same ink
- * inverted. One accent, Ignition — a launch-plume orange, `#ae380a` in light
- * (5.5:1 on the paper sidebar) and `#f06a32` in dark (6.5:1 on the orbit
- * sidebar). The palette itself lives in `@scout/shared`'s THEME_PRESET_PALETTES.
+ * "Daybreak" by day: lavender paper and deep-indigo ink. "Nebula" by night: an
+ * indigo-black sky. One accent family, electric violet — `#5a45f5` in light
+ * (white text 6:1) and `#9888ff` in dark (dark ink 6.5:1) — with teal and rose
+ * aurora partners in the desktop's Scout layer. The palette itself lives in
+ * `@scout/shared`'s THEME_PRESET_PALETTES.
  */
 export const scoutTheme: DesktopTheme = {
   name: 'spaceshipresearch',
   label: 'Scout',
-  description: 'Paper by day, Deep Orbit by night, Ignition accent',
+  description: 'Daybreak by day, Nebula by night, violet aurora accent',
   ...THEME_PRESET_PALETTES.spaceshipresearch,
   typography: {
-    fontSans: SYSTEM_SANS,
+    fontSans: `"Plus Jakarta Sans", ${SYSTEM_SANS}`,
     fontMono: SYSTEM_MONO,
     fontUrl: SCOUT_DISPLAY_FONT_URL
   },
