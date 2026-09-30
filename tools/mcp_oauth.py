@@ -1047,10 +1047,11 @@ def _configure_callback_port(cfg: dict, storage: "ScoutTokenStorage | None" = No
     """
     global _oauth_port
     dashboard_flow = get_dashboard_oauth_flow()
-    # A pre-registered client with a pinned ``redirect_port`` (no DCR; the vendor matches the registered
-    # loopback URI exactly) keeps its loopback listener even under the dashboard/Desktop flow: the
-    # dashboard's own callback URL was never registered with the vendor, so that flow could not complete.
-    pinned_loopback = bool(cfg.get("client_id") and cfg.get("redirect_port"))
+    # A pinned ``redirect_port`` keeps its loopback listener even under the dashboard/Desktop flow: the pin
+    # says the vendor only accepts that loopback URI — a pre-registered client (no DCR) matched exactly, or
+    # a DCR vendor that allowlists loopback ``/callback`` redirects (Swiggy, Zepto). The dashboard's own
+    # callback URL is registered with neither, so that flow could not complete.
+    pinned_loopback = bool(cfg.get("redirect_port"))
     if dashboard_flow is not None and not pinned_loopback:
         cfg["_resolved_port"] = 0
         cfg["redirect_uri"] = cfg.get("redirect_uri") or dashboard_flow.redirect_uri

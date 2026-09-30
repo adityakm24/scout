@@ -226,6 +226,27 @@ def test_preregistered_pinned_redirect_port_keeps_loopback_listener_under_dashbo
     assert (result.code, result.state) == ("code-5", "state-5")
 
 
+def test_dcr_vendor_with_pinned_loopback_registers_the_loopback_uri_under_dashboard_flow(tmp_path, monkeypatch):
+    """A DCR vendor that allowlists loopback ``/callback`` redirects (the Swiggy/Zepto manifests pin
+    ``redirect_host`` + ``redirect_port``, no ``client_id``) must register that loopback URI from the
+    Desktop too — never the dashboard's callback URL, which the vendor rejects."""
+    import socket
+
+    from tools.mcp_dashboard_oauth import DashboardOAuthFlow, dashboard_oauth_flow
+    from tools.mcp_oauth import ScoutTokenStorage, _build_client_metadata, _configure_callback_port
+
+    monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    flow = DashboardOAuthFlow(flow_id="flow-6", server_name="zepto", profile=None, scout_home=str(tmp_path),
+                              redirect_uri="http://127.0.0.1:9119/api/mcp/oauth/callback/zepto")
+    cfg = {"redirect_host": "localhost", "redirect_port": port}
+    with dashboard_oauth_flow(flow):
+        assert _configure_callback_port(cfg, ScoutTokenStorage("zepto")) == port
+        assert str(_build_client_metadata(cfg).redirect_uris[0]) == f"http://localhost:{port}/callback"
+
+
 @pytest.mark.no_isolate
 @pytest.mark.parametrize("ended_by", ["approved", "error"])
 def test_server_task_does_not_park_on_an_ended_dashboard_flow(

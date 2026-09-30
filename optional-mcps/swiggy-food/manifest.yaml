@@ -1,0 +1,43 @@
+# SpaceshipResearch-approved MCP catalog entry.
+# Presence in this directory = approval. Merged via PR review.
+manifest_version: 1
+
+name: swiggy-food
+description: 'Swiggy Food: search restaurants and menus, order delivery.'
+source: https://github.com/Swiggy/swiggy-mcp-server-manifest
+
+# Official vendor-hosted remote MCP (URL-only). OAuth 2.1 + Dynamic Client
+# Registration (verified live: AS metadata at
+# https://mcp.swiggy.com/.well-known/oauth-authorization-server). Swiggy
+# allowlists redirect URIs and accepts only loopback `/callback` ones
+# (http://localhost/callback, http://127.0.0.1/callback) besides its named
+# partner apps, so the loopback listener is pinned — the Desktop's own
+# callback URL would be rejected (tools/mcp_oauth._configure_callback_port).
+
+transport:
+  type: http
+  url: https://mcp.swiggy.com/food
+
+auth:
+  type: oauth
+  oauth:
+    redirect_host: localhost
+    redirect_port: 27891
+
+# Composer-suggestion triggers (desktop brand pills).
+suggest:
+  keywords:
+    - swiggy
+    - food delivery
+    - order food
+    - restaurant
+  hosts:
+    - swiggy.com
+
+post_install: |
+  On first connection Scout opens a browser to sign in to Swiggy with your
+  Indian mobile number (or run `scout mcp login swiggy-food`). The sign-in
+  returns to http://localhost:27891/callback, so the browser must run on
+  the same machine as Scout. Restart the session so tools load.
+
+  Orders are placed on your real Swiggy account (cash on delivery).

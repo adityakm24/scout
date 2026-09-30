@@ -1,0 +1,43 @@
+# SpaceshipResearch-approved MCP catalog entry.
+# Presence in this directory = approval. Merged via PR review.
+manifest_version: 1
+
+name: zepto
+description: 'Zepto: search groceries and essentials, manage cart, place orders.'
+source: https://github.com/zeptonow/mcp
+
+# Official vendor-hosted remote MCP (URL-only). OAuth 2.1 + Dynamic Client
+# Registration via https://auth.zepto.co.in (verified live: RFC 9728
+# protected-resource metadata -> AS metadata with registration_endpoint).
+# Zepto's edge rejects a literal 127.0.0.1 redirect (403 at registration)
+# and allowlists loopback `/callback` URIs, so the listener is pinned to
+# http://localhost:<port>/callback — also under the Desktop flow.
+
+transport:
+  type: http
+  url: https://mcp.zepto.co.in/mcp
+
+auth:
+  type: oauth
+  oauth:
+    redirect_host: localhost
+    redirect_port: 27894
+
+# Composer-suggestion triggers (desktop brand pills).
+suggest:
+  keywords:
+    - zepto
+    - groceries
+    - quick commerce
+  hosts:
+    - zepto.com
+    - zeptonow.com
+
+post_install: |
+  On first connection Scout opens a browser to sign in to Zepto with your
+  Indian mobile number and an OTP (or run `scout mcp login zepto`). The
+  sign-in returns to http://localhost:27894/callback, so the browser must
+  run on the same machine as Scout. Restart the session so tools load.
+
+  Orders are placed on your real Zepto account and can be paid by COD,
+  UPI, card or Zepto Cash.
