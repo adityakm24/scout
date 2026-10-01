@@ -214,6 +214,7 @@ const sidebars: SidebarsConfig = {
                   collapsed: true,
                   items: [
                     'user-guide/skills/bundled/email/email-email-inbox-triage',
+                    'user-guide/skills/bundled/email/email-gmail',
                     'user-guide/skills/bundled/email/email-himalaya',
                   ],
                 },
