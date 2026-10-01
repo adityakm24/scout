@@ -291,7 +291,6 @@ export const UserMessage: FC<{
   const clampInnerRef = useRef<HTMLDivElement | null>(null)
   const [bodyClamped, setBodyClamped] = useState(false)
   const lastClampHeightRef = useRef(-1)
-  const lineHeightRef = useRef(0)
 
   // Watch windows spectate a subagent run driven elsewhere — prompts can't be
   // edited, restored, or stopped from here. The bubble stays a button that
@@ -321,15 +320,11 @@ export const UserMessage: FC<{
 
     lastClampHeightRef.current = fullHeight
 
-    // Line-height is stable for the life of the bubble (font settings don't
-    // change under it) — resolve the computed style once.
-    if (!lineHeightRef.current) {
-      const styles = getComputedStyle(inner)
-      lineHeightRef.current = parseFloat(styles.lineHeight) || 1.5 * parseFloat(styles.fontSize) || 20
-    }
-
     outer.style.setProperty('--human-msg-full', `${fullHeight}px`)
-    setBodyClamped(fullHeight > lineHeightRef.current * 2 + 1)
+    // Clamped = text actually cut off by the CSS max-height (the fade marks hidden text). A
+    // fixed 2-line threshold faded 3- and 4-line prompts that were fully visible.
+    const maxHeight = parseFloat(getComputedStyle(outer).maxHeight)
+    setBodyClamped(Number.isFinite(maxHeight) && fullHeight > maxHeight + 1)
   }, [])
 
   useResizeObserver(measureClamp, clampInnerRef)

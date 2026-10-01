@@ -23,17 +23,21 @@ describe('parseReplyChoices', () => {
     ])
   })
 
-  it('offers a short list that closes the reply even without a question', () => {
-    expect(parseReplyChoices('1. Dark chocolate-covered strawberries\n2. Spiced roasted chickpeas')).toEqual([
-      'Dark chocolate-covered strawberries',
-      'Spiced roasted chickpeas'
-    ])
+  it('offers a bare closing list when the user asked to choose', () => {
+    const reply = '1. Dark chocolate-covered strawberries\n2. Spiced roasted chickpeas'
+
+    expect(
+      parseReplyChoices(reply, { userMessage: 'list two snack options and ask me which one I would like' })
+    ).toEqual(['Dark chocolate-covered strawberries', 'Spiced roasted chickpeas'])
+    // The same list answering a plain question is information, not a choice.
+    expect(parseReplyChoices(reply, { userMessage: 'what snacks are healthy?' })).toBeNull()
   })
 
   it.each([
     ['a list of facts followed by an open offer', '- Lays is ₹20\n- Kurkure is ₹20\n\nAnything else?'],
     ['a recap of work done', 'Done:\n1. Added Lays\n2. Added Kurkure'],
     ['a recap with no lead-in', '- Added Lays to the cart\n- Removed Kurkure'],
+    ['a bare list with no ask anywhere', '- Gordon Beach\n- Frishman Beach'],
     ['a single item', 'Would you like this one?\n- Lays Classic'],
     ['a list inside a code block', 'Which command?\n```\n- npm i\n- npm ci\n```']
   ])('leaves %s as plain text', (_case, reply) => {

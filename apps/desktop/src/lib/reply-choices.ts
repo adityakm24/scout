@@ -4,9 +4,9 @@
  * ask, but models often write the list instead; this recovers the same affordance from the text.
  *
  * Only the reply's LAST list, with short items, and only where that list is what the reply ends
- * on: either followed by a question asking the user to choose, or closing the reply outright (a
- * bare list of options) — unless it is a recap of work done ("Done:", "Added…"). A list of facts
- * followed by "Anything else?" stays text.
+ * on: followed by a question asking the user to choose, or closing the reply outright when the
+ * user's own message asked for a choice ("which one would I like", "give me options") — and never
+ * a recap of work done ("Done:", "Added…"). A list of facts stays text.
  */
 
 const ITEM_RE = /^\s{0,3}(?:\d{1,2}[.)]|[-*•])\s+(.+?)\s*$/
@@ -45,7 +45,15 @@ function asksToChoose(text: string): boolean {
   )
 }
 
-export function parseReplyChoices(markdown: string): null | string[] {
+// The user's message asked to be offered a choice.
+const CHOICE_REQUEST_RE = /\b(which|choose|pick|option|options|prefer|would like|suggest|recommend|alternatives)\b/i
+
+export interface ReplyChoiceContext {
+  /** The user message this reply answers. */
+  userMessage?: string
+}
+
+export function parseReplyChoices(markdown: string, context: ReplyChoiceContext = {}): null | string[] {
   if (markdown.includes('```')) {
     return null
   }
@@ -99,6 +107,7 @@ export function parseReplyChoices(markdown: string): null | string[] {
   }
 
   const bareOptions =
+    CHOICE_REQUEST_RE.test(context.userMessage ?? '') &&
     !RECAP_RE.test(before) &&
     items.length <= MAX_BARE_CHOICES &&
     items.every(item => item.length <= MAX_BARE_CHOICE_CHARS && !RECAP_RE.test(item.split(' ')[0] ?? ''))

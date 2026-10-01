@@ -48,27 +48,27 @@ function Harness({ messages }: { messages: ThreadMessage[] }) {
 }
 
 describe('reply choices', () => {
-  it('turns the options a finished reply offers into buttons that answer through the composer', async () => {
+  it('offers the options as a card that answers through the composer, standing in for the list', async () => {
     render(<Harness messages={[message('u1', 'user', 'add kurkure'), message('a1', 'assistant', OFFER)]} />)
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Single Pack (78.9g) – ₹20' }))
+    fireEvent.click(await screen.findByRole('button', { name: /Single Pack \(78\.9g\) – ₹20/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
 
     expect($composerSendRequest.get()).toMatchObject({ target: 'main', text: 'Single Pack (78.9g) – ₹20' })
+    // The reply's own list is hidden while the card shows it, so nothing reads twice.
+    expect(document.querySelector('.aui-md ol')?.hasAttribute('hidden')).toBe(true)
   })
 
-  it('lets the user answer in their own words from the last button', async () => {
+  it("takes an answer in the user's own words from the last row", async () => {
     render(<Harness messages={[message('u1', 'user', 'add kurkure'), message('a1', 'assistant', OFFER)]} />)
 
-    fireEvent.click(await screen.findByRole('button', { name: /Something else/ }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Type your own answer…' }), {
-      target: { value: 'the masala munch one instead' }
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    fireEvent.change(await screen.findByPlaceholderText(/Other/), { target: { value: 'the masala munch one instead' } })
+    fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
 
     expect($composerSendRequest.get()).toMatchObject({ target: 'main', text: 'the masala munch one instead' })
   })
 
-  it('retires the buttons once the user has answered', async () => {
+  it('retires the card once the user has answered', async () => {
     render(
       <Harness
         messages={[
@@ -81,6 +81,6 @@ describe('reply choices', () => {
 
     await screen.findByText('single one')
 
-    expect(screen.queryByRole('group', { name: 'Reply options' })).toBeNull()
+    expect(screen.queryByRole('form', { name: 'Choose one' })).toBeNull()
   })
 })

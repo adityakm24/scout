@@ -1,121 +1,207 @@
 import { useAuiState } from '@assistant-ui/react'
-import { type FC, type FormEvent, useMemo, useState } from 'react'
+import { type FC, type FormEvent, type KeyboardEvent, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useComposerScope } from '@/app/chat/composer/scope'
-import { Codicon } from '@/components/ui/codicon'
+import {
+  ChoiceButton,
+  CLARIFY_TEXTAREA_CLASS,
+  ClarifyShell,
+  KeyBadge,
+  letterFor,
+  OPTION_ROW_CLASS
+} from '@/components/assistant-ui/clarify-tool'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
+import { MessageQuestion } from '@/lib/icons'
 import { parseReplyChoices } from '@/lib/reply-choices'
 import { cn } from '@/lib/utils'
 import { requestComposerSend } from '@/store/composer-send'
 
-const CHIP =
-  'scout-stagger rounded-full border px-3.5 py-1.5 text-left text-[0.8125rem] leading-snug transition-[background-color,border-color,translate] duration-200'
+// One string so the selector stays a primitive: stable across the token stream.
+const SEP = '\u0000'
 
-/** The options a finished reply offered, as buttons, plus a last one that opens a field for an
- *  answer in the user's own words. Only on the conversation's last message, so answering retires
- *  them. Every answer goes through the composer, exactly like a typed message. */
+/**
+ * The options a finished reply offered, as the same card the `clarify` tool shows: lettered rows,
+ * a last row to answer in your own words, Skip and Continue. The list in the reply text hides
+ * while the card stands in for it. Only on the conversation's last message, so answering retires
+ * it; every answer goes through the composer exactly like a typed message.
+ */
 export const ReplyChoices: FC = () => {
   const { t } = useI18n()
-  const copy = t.replyChoices
+  const copy = t.assistant.clarify
   const scope = useComposerScope()
-  const [picked, setPicked] = useState<null | string>(null)
-  const [custom, setCustom] = useState<null | string>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+  const [selected, setSelected] = useState<null | number>(null)
+  const [draft, setDraft] = useState('')
+  const [skipped, setSkipped] = useState(false)
+  const [sent, setSent] = useState(false)
 
-  // '' while streaming or once a newer message exists: stable across the token stream, so this
-  // leaf doesn't re-render per delta (the AssistantMessageBody perf contract).
-  const text = useAuiState(s => {
-    const last = s.thread.messages.at(-1)?.id === s.message.id
+  // '' while streaming or once a newer message exists, so this leaf doesn't re-render per delta.
+  const snapshot = useAuiState(s => {
+    const messages = s.thread.messages
+    const last = messages.at(-1)?.id === s.message.id
     const settled = s.message.status?.type !== 'running' && !s.thread.isRunning
 
-    return last && settled ? s.message.content.map(part => (part.type === 'text' ? part.text : '')).join('\n') : ''
+    if (!last || !settled) {
+      return ''
+    }
+
+    const textOf = (content: readonly { text?: string; type: string }[]) =>
+      content.map(part => (part.type === 'text' ? (part.text ?? '') : '')).join('\n')
+
+    const userMessage = messages.findLast(message => message.role === 'user')
+
+    return `${userMessage ? textOf(userMessage.content) : ''}${SEP}${textOf(s.message.content)}`
   })
 
-  const choices = useMemo(() => (text ? parseReplyChoices(text) : null), [text])
+  const choices = useMemo(() => {
+    if (!snapshot) {
+      return null
+    }
 
-  if (!choices) {
+    const [userMessage, reply] = snapshot.split(SEP)
+
+    return parseReplyChoices(reply ?? '', { userMessage })
+  }, [snapshot])
+
+  const showing = Boolean(choices) && !skipped
+
+  // The card replaces the reply's own list while it shows; Skip (or answering) brings it back.
+  useLayoutEffect(() => {
+    const content = formRef.current?.closest('[data-slot="aui_assistant-message-content"]')
+    const lists = content?.querySelectorAll<HTMLElement>('.aui-md ol, .aui-md ul')
+    const source = lists?.[lists.length - 1]
+
+    if (!showing || !source) {
+      return
+    }
+
+    source.hidden = true
+
+    return () => {
+      source.hidden = false
+    }
+  }, [showing])
+
+  if (!choices || !showing) {
     return null
   }
 
-  const send = (answer: string) => {
-    const value = answer.trim()
+  const otherIndex = choices.length
+  const answer = selected === otherIndex ? draft.trim() : selected === null ? '' : choices[selected]
 
-    if (!value || picked !== null) {
+  const send = () => {
+    if (!answer || sent) {
       return
     }
 
     triggerHaptic('submit')
-    setPicked(value)
-    requestComposerSend(scope.target, value)
+    setSent(true)
+    requestComposerSend(scope.target, answer)
   }
 
-  const submitCustom = (event: FormEvent) => {
+  const onSubmit = (event: FormEvent) => {
     event.preventDefault()
-    send(custom ?? '')
+    send()
+  }
+
+  // Keys act only while the card has focus: letters pick, arrows move, Enter sends, Esc skips.
+  const onKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
+    const typing = event.target instanceof HTMLTextAreaElement
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      setSkipped(true)
+    } else if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      send()
+    } else if (!typing && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault()
+      const step = event.key === 'ArrowDown' ? 1 : -1
+      setSelected(current => ((current ?? -step) + step + otherIndex + 1) % (otherIndex + 1))
+    } else if (!typing && /^[a-z]$/i.test(event.key)) {
+      const index = event.key.toUpperCase().charCodeAt(0) - 65
+
+      if (index >= 0 && index <= otherIndex) {
+        event.preventDefault()
+        setSelected(index)
+
+        if (index === otherIndex) {
+          formRef.current?.querySelector('textarea')?.focus()
+        }
+      }
+    }
   }
 
   return (
-    <div aria-label={copy.label} className="mt-3 flex flex-wrap gap-2" data-slot="reply-choices" role="group">
-      {choices.map((choice, index) => (
-        <button
-          className={cn(
-            CHIP,
-            picked === choice
-              ? 'border-transparent bg-(--dt-primary-solid) text-(--dt-primary-solid-foreground)'
-              : 'border-[color-mix(in_srgb,var(--theme-primary)_40%,transparent)] bg-[color-mix(in_srgb,var(--theme-primary)_8%,transparent)] text-foreground hover:-translate-y-px hover:bg-[color-mix(in_srgb,var(--theme-primary)_16%,transparent)]'
-          )}
-          disabled={picked !== null}
-          key={`${index}:${choice}`}
-          onClick={() => send(choice)}
-          type="button"
-        >
-          {choice}
-        </button>
-      ))}
-
-      {custom === null ? (
-        <button
-          className={cn(
-            CHIP,
-            'flex items-center gap-1.5 border-dashed border-(--ui-stroke-tertiary) text-(--ui-text-secondary) hover:border-(--ui-stroke-secondary) hover:text-foreground'
-          )}
-          disabled={picked !== null}
-          onClick={() => setCustom('')}
-          type="button"
-        >
-          <Codicon name="edit" size="0.75rem" />
-          {copy.other}
-        </button>
-      ) : (
-        <form
-          className="scout-pop-in flex min-w-60 flex-1 basis-full items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--theme-primary)_45%,transparent)] bg-(--ui-bg-elevated) py-1 pl-3.5 pr-1 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--theme-primary)_15%,transparent)]"
-          data-slot="reply-choices-custom"
-          onSubmit={submitCustom}
-        >
-          <input
-            aria-label={copy.placeholder}
-            autoFocus
-            className="min-w-0 flex-1 bg-transparent text-[0.8125rem] text-foreground outline-none placeholder:text-(--ui-text-tertiary)"
-            disabled={picked !== null}
-            onChange={event => setCustom(event.target.value)}
-            onKeyDown={event => {
-              if (event.key === 'Escape') {
-                setCustom(null)
-              }
-            }}
-            placeholder={copy.placeholder}
-            value={custom}
-          />
-          <button
-            aria-label={copy.send}
-            className="grid size-7 shrink-0 place-items-center rounded-full bg-(--dt-primary-solid) text-(--dt-primary-solid-foreground) transition-opacity disabled:opacity-40"
-            disabled={!custom.trim() || picked !== null}
-            type="submit"
+    <form
+      aria-label={t.replyChoices.label}
+      className="scout-pop-in mt-3 grid gap-2"
+      data-slot="reply-choices"
+      onKeyDown={onKeyDown}
+      onSubmit={onSubmit}
+      ref={formRef}
+    >
+      <ClarifyShell className="grid gap-2">
+        <div className="flex items-start gap-2">
+          <span className="flex-1 font-medium leading-(--conversation-line-height)">{t.replyChoices.label}</span>
+          <MessageQuestion aria-hidden className="mt-px size-4 shrink-0 text-(--ui-text-tertiary)" />
+        </div>
+        <div className="grid gap-px" role="group">
+          {choices.map((choice, index) => (
+            <ChoiceButton
+              active={selected === index}
+              char={letterFor(index)}
+              choice={choice}
+              disabled={sent}
+              key={`${index}:${choice}`}
+              keyShortcuts={letterFor(index)}
+              onClick={() => setSelected(index)}
+              selected={selected === index}
+            />
+          ))}
+          <label
+            className={cn(OPTION_ROW_CLASS, 'items-center', selected === otherIndex && 'bg-(--chrome-action-hover)')}
           >
-            <Codicon name="arrow-up" size="0.8rem" />
-          </button>
-        </form>
-      )}
-    </div>
+            <KeyBadge
+              char={letterFor(otherIndex)}
+              disabled={sent}
+              preview={selected === otherIndex}
+              selected={selected === otherIndex && Boolean(draft.trim())}
+            />
+            <Textarea
+              aria-keyshortcuts={letterFor(otherIndex)}
+              className={CLARIFY_TEXTAREA_CLASS}
+              disabled={sent}
+              onChange={event => {
+                setDraft(event.target.value)
+                setSelected(otherIndex)
+              }}
+              onFocus={() => setSelected(otherIndex)}
+              placeholder={copy.other}
+              rows={1}
+              size="sm"
+              value={draft}
+            />
+          </label>
+        </div>
+      </ClarifyShell>
+      <div className="flex items-center justify-end gap-1">
+        <Button disabled={sent} onClick={() => setSkipped(true)} size="xs" type="button" variant="text">
+          {copy.skip}
+          <span aria-hidden className="ml-0.5 text-[0.625rem] opacity-70">
+            Esc
+          </span>
+        </Button>
+        <Button disabled={sent || !answer} size="xs" type="submit">
+          {copy.continueLabel}
+          <span aria-hidden className="ml-0.5 text-[0.625rem] opacity-70">
+            ⏎
+          </span>
+        </Button>
+      </div>
+    </form>
   )
 }

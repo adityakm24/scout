@@ -98,6 +98,11 @@
   color: inherit;
 }
 
+/* iMessage-narrow bubbles wrap sooner, so a sticky prompt keeps more lines before it clamps. */
+:root[data-scout-theme='spaceshipresearch'] .sticky-human-clamp {
+  max-height: calc(8 * var(--human-msg-line-height) * var(--conversation-text-font-size) + 0.15rem);
+}
+
 /* ── Display type: Sora, lit with the Signal gradient ────────────────────── */
 :root[data-scout-theme='spaceshipresearch'] :is(.scout-greeting, .scout-page-title, h1) {
   font-family: 'Sora', var(--dt-font-sans);
