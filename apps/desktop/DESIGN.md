@@ -560,6 +560,18 @@ accent retints it too:
   directly under the greeting; the first message sends it gliding to its dock
   (`motion.css`, keyed on `[data-slot='aui_intro']`).
 
+- **The agent has a face.** Like an iMessage contact, the chat shows the agent's photo
+  and name centred in a frosted bar over the thread (`app/chat/agent-identity-header.tsx`).
+  Clicking it, or the titlebar's right-panel button, opens the **agent panel**
+  (`app/agent-panel/`), its own right-side pane:
+  - **Persona:** rename the agent, change its photo, and edit SOUL.md, MEMORY.md and USER.md.
+    Memory rows show how full their budget is.
+  - **Permissions:** the approval mode.
+  - **Requests:** pending command approvals and messaging pairing requests.
+
+  A rename reaches open chats as a one-time note on the next message; the system prompt never
+  changes mid-chat.
+
 ### Choreography (`src/motion.css`)
 
 Collections cascade in, each item delayed by `sibling-index()` (capped at 14),

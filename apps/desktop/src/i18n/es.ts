@@ -41,6 +41,55 @@ export const esOverrides = {
     stripChoices: { share: 'Enviar a SpaceshipResearch', local: 'Solo local', off: 'No, gracias' },
     stripDetails: 'Detalles'
   },
+  agentPanel: {
+    title: 'Agente',
+    connected: 'Conectado',
+    offline: 'Sin conexión',
+    openPanel: name => `Abrir los detalles de ${name}`,
+    rename: 'Renombrar',
+    namePlaceholder: 'Ponle nombre a tu agente',
+    renameHint: 'Los chats abiertos usarán el nuevo nombre con tu próximo mensaje.',
+    changePhoto: 'Cambiar foto',
+    removePhoto: 'Quitar foto',
+    photoTooLarge: 'La imagen es demasiado grande. Elige una de menos de 2 MB.',
+    saveFailed: 'No se pudo guardar. Inténtalo de nuevo.',
+    tabs: { persona: 'Persona', permissions: 'Permisos', requests: 'Solicitudes' },
+    persona: {
+      soul: 'Alma',
+      soulCaption: 'Personalidad y voz',
+      memory: 'Memoria',
+      memoryCaption: 'Lo que recuerda',
+      user: 'Sobre ti',
+      userCaption: 'Lo que sabe de ti',
+      edited: date => `Editado ${date}`,
+      entries: count => (count === 1 ? '1 entrada' : `${count} entradas`),
+      never: 'Vacío',
+      appliesToNewChats: 'Los cambios se aplican a los chats nuevos.',
+      addEntry: 'Añadir entrada',
+      entryPlaceholder: 'Algo que vale la pena recordar…',
+      removeEntry: 'Quitar entrada',
+      budget: (used, limit) => `${used.toLocaleString()} / ${limit.toLocaleString()} caracteres`,
+      overBudget: 'Supera el límite. Acorta o quita una entrada para guardar.',
+      save: 'Guardar',
+      cancel: 'Cancelar',
+      saved: 'Guardado'
+    },
+    permissions: {
+      title: 'Ejecutar comandos',
+      body: 'Elige cuándo pregunta el agente antes de ejecutar un comando en este equipo.',
+      more: 'Más ajustes de seguridad'
+    },
+    requests: {
+      approvals: 'Esperando tu respuesta',
+      noApprovals: 'No hay nada esperando tu aprobación.',
+      allow: 'Permitir una vez',
+      deny: 'Denegar',
+      pairing: 'Personas que quieren escribirle',
+      noPairing: 'Nadie está esperando aprobación.',
+      approve: 'Aprobar',
+      waiting: minutes => (minutes < 1 ? 'ahora mismo' : `hace ${minutes} min`)
+    }
+  },
   dashboard: {
     title: 'Panel',
     subtitle: 'Tus tareas y recordatorios, compartidos con Scout en tiempo real.',

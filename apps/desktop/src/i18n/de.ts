@@ -40,6 +40,55 @@ export const deOverrides = {
     stripChoices: { share: 'A SpaceshipResearch senden', local: 'Nur lokal', off: 'Nein danke' },
     stripDetails: 'Details'
   },
+  agentPanel: {
+    title: 'Agent',
+    connected: 'Verbunden',
+    offline: 'Offline',
+    openPanel: name => `Details zu ${name} öffnen`,
+    rename: 'Umbenennen',
+    namePlaceholder: 'Gib deinem Agenten einen Namen',
+    renameHint: 'Offene Chats übernehmen den neuen Namen mit deiner nächsten Nachricht.',
+    changePhoto: 'Foto ändern',
+    removePhoto: 'Foto entfernen',
+    photoTooLarge: 'Das Bild ist zu groß. Wähle eines unter 2 MB.',
+    saveFailed: 'Speichern fehlgeschlagen. Versuch es noch einmal.',
+    tabs: { persona: 'Persona', permissions: 'Berechtigungen', requests: 'Anfragen' },
+    persona: {
+      soul: 'Seele',
+      soulCaption: 'Persönlichkeit und Ton',
+      memory: 'Gedächtnis',
+      memoryCaption: 'Was er sich merkt',
+      user: 'Über dich',
+      userCaption: 'Was er über dich weiß',
+      edited: date => `Bearbeitet ${date}`,
+      entries: count => (count === 1 ? '1 Eintrag' : `${count} Einträge`),
+      never: 'Leer',
+      appliesToNewChats: 'Änderungen gelten für neue Chats.',
+      addEntry: 'Eintrag hinzufügen',
+      entryPlaceholder: 'Etwas, das man sich merken sollte…',
+      removeEntry: 'Eintrag entfernen',
+      budget: (used, limit) => `${used.toLocaleString()} / ${limit.toLocaleString()} Zeichen`,
+      overBudget: 'Über dem Limit. Kürze oder entferne einen Eintrag, um zu speichern.',
+      save: 'Speichern',
+      cancel: 'Abbrechen',
+      saved: 'Gespeichert'
+    },
+    permissions: {
+      title: 'Befehle ausführen',
+      body: 'Lege fest, wann der Agent fragt, bevor er einen Befehl auf diesem Computer ausführt.',
+      more: 'Weitere Sicherheitseinstellungen'
+    },
+    requests: {
+      approvals: 'Wartet auf dich',
+      noApprovals: 'Nichts wartet auf deine Freigabe.',
+      allow: 'Einmal erlauben',
+      deny: 'Ablehnen',
+      pairing: 'Personen, die ihm schreiben möchten',
+      noPairing: 'Niemand wartet auf Freigabe.',
+      approve: 'Freigeben',
+      waiting: minutes => (minutes < 1 ? 'gerade eben' : `vor ${minutes} Min.`)
+    }
+  },
   dashboard: {
     title: 'Dashboard',
     subtitle: 'Deine To-dos und Erinnerungen – live mit Scout geteilt.',

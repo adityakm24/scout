@@ -3,6 +3,7 @@ import { compactNumber } from '@scout/shared'
 import { type ComponentProps, type MouseEvent, type ReactNode, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
+import { toggleAgentPanel } from '@/app/agent-panel/open'
 import { hudTargetSessionId } from '@/app/hud/handoff'
 import { toggleLayoutEditMode } from '@/components/pane-shell/edit-mode'
 import { resetLayoutTree } from '@/components/pane-shell/tree/store'
@@ -200,7 +201,11 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
     label: `${rightLabel}${panesFlipped ? unreadHint : ''}`,
     onSelect: () => {
       triggerHaptic('tap')
-      rightEdge.toggle()
+
+      // The right panel is the agent's own panel; layouts without one keep the positional toggle.
+      if (!toggleAgentPanel()) {
+        rightEdge.toggle()
+      }
     },
     tour: 'right-pane-toggle'
   }

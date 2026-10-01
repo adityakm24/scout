@@ -106,6 +106,55 @@ export interface Translations {
       message: string
     }
   }
+  agentPanel: {
+    title: string
+    connected: string
+    offline: string
+    openPanel: (name: string) => string
+    rename: string
+    namePlaceholder: string
+    renameHint: string
+    changePhoto: string
+    removePhoto: string
+    photoTooLarge: string
+    saveFailed: string
+    tabs: Record<'persona' | 'permissions' | 'requests', string>
+    persona: {
+      soul: string
+      soulCaption: string
+      memory: string
+      memoryCaption: string
+      user: string
+      userCaption: string
+      edited: (date: string) => string
+      entries: (count: number) => string
+      never: string
+      appliesToNewChats: string
+      addEntry: string
+      entryPlaceholder: string
+      removeEntry: string
+      budget: (used: number, limit: number) => string
+      overBudget: string
+      save: string
+      cancel: string
+      saved: string
+    }
+    permissions: {
+      title: string
+      body: string
+      more: string
+    }
+    requests: {
+      approvals: string
+      noApprovals: string
+      allow: string
+      deny: string
+      pairing: string
+      noPairing: string
+      approve: string
+      waiting: (minutes: number) => string
+    }
+  }
   dashboard: {
     title: string
     subtitle: string

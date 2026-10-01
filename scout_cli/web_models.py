@@ -387,6 +387,9 @@ class MemoryProviderSelect(BaseModel):
 class MemoryReset(BaseModel):
     target: str = "all"  # "all" | "memory" | "user"
 
+class MemoryEntriesWrite(BaseModel):
+    entries: List[str]  # the file's full entry list, in order
+
 class BackupRequest(BaseModel):
     output: Optional[str] = None  # defaults to a timestamped zip in the home dir
 

@@ -38,6 +38,12 @@ export const DEFAULT_TREE = split(
   'spl-root'
 )
 
+// Where a re-adopted terminal lands: its own zone UNDER the chat. Without it, a
+// layout that lost the terminal's slot (a preset, or a close that collapsed the
+// zone) re-adopted it as a TAB stacked onto whatever zone came first — the chat,
+// or the sessions sidebar beside Bots and Dashboard.
+export const TERMINAL_DOCK = { pane: 'workspace', pos: 'bottom' } as const
+
 // Focus is one column of attention: files and review are tabs BEHIND the chat,
 // the terminal a collapsed rail under it — opening the terminal must never
 // cover the conversation, which a terminal tab did.

@@ -99,6 +99,8 @@ import { watchUnreadWriteGuard } from '@/store/session-unread-remote'
 import { $statusbarVisible } from '@/store/statusbar-prefs'
 import { isBrowserWindow, isHudWindow } from '@/store/windows'
 
+import { AgentPanel } from '../agent-panel'
+import { AGENT_PANEL_ID } from '../agent-panel/open'
 import { BrowserPopoutShell } from '../chat/browser-popout-shell'
 import type { SessionDragPayload } from '../chat/composer/inline-refs'
 import { watchPreviewTiles } from '../chat/preview-tile'
@@ -119,7 +121,7 @@ import { $terminalTakeover, setTerminalTakeover } from '../right-sidebar/store'
 import { terminalPaletteToggle } from '../right-sidebar/terminal/reveal-focus'
 import { $workspaceIsPage, WORKSPACE_PAGE_HEADER_AREA } from '../routes'
 
-import { BASIC_TREE, DEFAULT_TREE, registerLayoutPresets } from './layout-presets'
+import { BASIC_TREE, DEFAULT_TREE, registerLayoutPresets, TERMINAL_DOCK } from './layout-presets'
 import { bindLayoutSides } from './layout-sides'
 import { FilesPane, LogsPane, ReviewPaneContent } from './panes'
 import { ContribWiring, WiredPane } from './wiring'
@@ -244,6 +246,7 @@ registry.registerMany([
     // its rail there). A real floor left a sliver of unusable terminal.
     data: {
       placement: 'bottom',
+      dock: TERMINAL_DOCK,
       height: '20vh',
       maxHeight: '80vh',
       lifecycleKeepAlive: true,
@@ -287,6 +290,25 @@ registry.registerMany([
       tabTitleText: () => translateNow('sidebar.review')
     },
     render: () => idle(<ReviewPaneContent />)
+  },
+  {
+    id: AGENT_PANEL_ID,
+    area: 'panes',
+    title: translateNow('agentPanel.title'),
+    // Beside the chat on the right, arriving folded to its rail: it opens from the chat's
+    // centred agent name or the titlebar's right-panel toggle.
+    data: {
+      placement: 'right',
+      collapsible: true,
+      defaultCollapsed: true,
+      dock: { pane: 'workspace', pos: 'right' },
+      width: '352px',
+      minWidth: '300px',
+      maxWidth: '480px',
+      tabTitle: () => <LocalizedTabTitle select={t => t.agentPanel.title} />,
+      tabTitleText: () => translateNow('agentPanel.title')
+    },
+    render: () => idle(<AgentPanel />)
   }
 ])
 

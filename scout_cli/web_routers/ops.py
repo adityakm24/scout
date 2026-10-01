@@ -26,8 +26,8 @@ from scout_cli.web_server_files import _path_is_under
 from scout_cli.web_server_gateway import _restart_gateway_after
 from scout_cli.web_server_memory import _normalize_memory_provider_name, _require_memory_provider_ready
 from scout_cli.web_models import (
-    BackupRequest, CredentialPoolAdd, HookCreate, HookDelete, ImportRequest, MemoryProviderSelect,
-    MemoryReset, PairingApprove, PairingRevoke, WebhookCreate, WebhookEnabledToggle,
+    BackupRequest, CredentialPoolAdd, HookCreate, HookDelete, ImportRequest, MemoryEntriesWrite,
+    MemoryProviderSelect, MemoryReset, PairingApprove, PairingRevoke, WebhookCreate, WebhookEnabledToggle,
 )
 from scout_cli.web_routers._common import (
     config_scoped_to_thread, config_write_scope, destructive_profile, http_failure,
@@ -513,6 +513,59 @@ async def set_memory_provider(body: MemoryProviderSelect, profile: Optional[str]
         return {"ok": True, "active": provider}
 
     return await asyncio.to_thread(_run)
+
+
+def _memory_char_limits() -> Dict[str, int]:
+    """The built-in memory budgets the agent's memory tool enforces (config ``memory.*``)."""
+    mem = load_config().get("memory")
+    mem = mem if isinstance(mem, dict) else {}
+    return {"memory": int(mem.get("memory_char_limit") or 2200), "user": int(mem.get("user_char_limit") or 1375)}
+
+
+@router.get("/api/memory/files")
+async def get_memory_files(profile: Optional[str] = None):
+    """MEMORY.md / USER.md as entry lists with their budgets, for the desktop agent panel."""
+    def _run():
+        from tools.memory_tool_store import MemoryStore
+        limits, mem_dir = _memory_char_limits(), get_scout_home() / "memories"
+        out = {}
+        for fname, key in _MEMORY_FILES:
+            path = mem_dir / fname
+            out[key] = {"entries": MemoryStore._read_file(path), "limit": limits[key],
+                        "updated_at": path.stat().st_mtime if path.exists() else None}
+        return out
+
+    return await config_scoped_to_thread(profile, _run)
+
+
+@router.put("/api/memory/files/{target}")
+async def put_memory_file(target: str, body: MemoryEntriesWrite, profile: Optional[str] = None):
+    """Replace one built-in memory file's entries. Written as a clean entry list within the same
+    budget the memory tool enforces, under its file lock — so a running agent's next memory write
+    neither races this one nor reads it as external drift. Open chats keep the snapshot they
+    started with; new chats see the edit."""
+    fname = {key: name for name, key in _MEMORY_FILES}.get(target)
+    if fname is None:
+        raise HTTPException(status_code=400, detail="target must be memory or user")
+    profile = destructive_profile(profile, "PUT /api/memory/files/{target}")
+
+    def _run():
+        from scout_constants import mkdir_under_scout_home
+        from tools.memory_tool_store import ENTRY_DELIMITER, MemoryStore
+        entries = list(dict.fromkeys(e.strip() for e in body.entries if e and e.strip()))
+        if any(ENTRY_DELIMITER.strip() in e.splitlines() for e in entries):
+            raise HTTPException(status_code=400, detail="an entry cannot contain a line with only §")
+        limit = _memory_char_limits()[target]
+        used = len(ENTRY_DELIMITER.join(entries))
+        if used > limit:
+            raise HTTPException(status_code=400, detail=f"{used} characters is over the {limit}-character budget")
+        path = get_scout_home() / "memories" / fname
+        mkdir_under_scout_home(path.parent)
+        with MemoryStore._file_lock(path):
+            MemoryStore._write_file(path, entries)
+        return {"ok": True, "entries": entries, "limit": limit, "updated_at": path.stat().st_mtime}
+
+    return await config_scoped_to_thread(profile, _run)
 
 
 @router.post("/api/memory/reset")

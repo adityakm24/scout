@@ -382,3 +382,14 @@
 [data-chat-surface] [data-slot='aui_intro'] {
   translate: 0 -2.625rem;
 }
+
+/* Tab switches inside a panel fade up into place. */
+.scout-page-enter {
+  animation: scout-page-in 420ms var(--ease-out-expo) both;
+}
+
+/* The chat's centred agent name (app/chat/agent-identity-header.tsx) floats over the top of the
+   thread; the thread starts below it only while it is shown. */
+[data-chat-surface]:has(> [data-slot='agent-identity-header']) {
+  --thread-identity-clearance: 4.75rem;
+}

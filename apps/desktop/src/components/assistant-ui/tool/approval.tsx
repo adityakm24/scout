@@ -166,7 +166,8 @@ function ApprovalActivity({ floating, visible }: { floating: boolean; visible: b
   )
 }
 
-async function sendApproval(request: ApprovalRequest, choice: ApprovalChoice) {
+/** Answer one queued approval and advance its session's queue — shared with the agent panel. */
+export async function sendApproval(request: ApprovalRequest, choice: ApprovalChoice) {
   const gateway = $gateway.get()
 
   if (!gateway) {

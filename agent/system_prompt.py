@@ -553,8 +553,15 @@ def _identity_parts(agent: Any, ctx_len: Optional[int]) -> Tuple[List[str], bool
     instructions, scoped to the agent's OWN home) or the default identity.
     Returns ``(parts, soul_loaded)``."""
     wants_soul = agent.load_soul_identity or not agent.skip_context_files
-    _soul_content = _pb.load_soul_md(ctx_len, home_override=_agent_home(agent)) if wants_soul else None
-    return ([_soul_content], True) if _soul_content else ([DEFAULT_AGENT_IDENTITY], False)
+    home = _agent_home(agent)
+    _soul_content = _pb.load_soul_md(ctx_len, home_override=home) if wants_soul else None
+    parts, soul_loaded = ([_soul_content], True) if _soul_content else ([DEFAULT_AGENT_IDENTITY], False)
+    # The user-chosen name; recorded so a later rename reaches this session as a one-time note.
+    from agent.identity import identity_name_line, profile_display_name
+    agent._identity_name = profile_display_name(home or get_scout_home())
+    if agent._identity_name:
+        parts.append(identity_name_line(agent._identity_name))
+    return parts, soul_loaded
 
 
 def _guidance_parts(agent: Any) -> List[str]:

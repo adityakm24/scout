@@ -721,7 +721,7 @@ const ThreadMessageListInner: FC<ThreadMessageListProps> = ({
 
   const threadContentTopPad = secondaryWindow
     ? 'pt-[calc(var(--titlebar-height)+0.75rem)]'
-    : 'pt-[calc(var(--titlebar-height)-0.5rem)]'
+    : 'pt-[calc(var(--titlebar-height)-0.5rem+var(--thread-identity-clearance,0px))]'
 
   const surfaceId = useComposerSurfaceId()
   const scrollSessionId = sessionId ?? surfaceId

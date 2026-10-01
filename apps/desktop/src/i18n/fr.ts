@@ -41,6 +41,55 @@ export const frOverrides = {
     stripChoices: { share: 'Envoyer à SpaceshipResearch', local: 'Local uniquement', off: 'Non merci' },
     stripDetails: 'Détails'
   },
+  agentPanel: {
+    title: 'Agent',
+    connected: 'Connecté',
+    offline: 'Hors ligne',
+    openPanel: name => `Ouvrir les détails de ${name}`,
+    rename: 'Renommer',
+    namePlaceholder: 'Donne un nom à ton agent',
+    renameHint: 'Les discussions ouvertes adoptent le nouveau nom avec ton prochain message.',
+    changePhoto: 'Changer la photo',
+    removePhoto: 'Retirer la photo',
+    photoTooLarge: 'Image trop lourde. Choisis-en une de moins de 2 Mo.',
+    saveFailed: "Impossible d'enregistrer. Réessaie.",
+    tabs: { persona: 'Persona', permissions: 'Autorisations', requests: 'Demandes' },
+    persona: {
+      soul: 'Âme',
+      soulCaption: 'Personnalité et ton',
+      memory: 'Mémoire',
+      memoryCaption: 'Ce dont il se souvient',
+      user: 'À propos de toi',
+      userCaption: "Ce qu'il sait de toi",
+      edited: date => `Modifié ${date}`,
+      entries: count => (count === 1 ? '1 entrée' : `${count} entrées`),
+      never: 'Vide',
+      appliesToNewChats: "Les modifications s'appliquent aux nouvelles discussions.",
+      addEntry: 'Ajouter une entrée',
+      entryPlaceholder: 'Quelque chose à retenir…',
+      removeEntry: "Supprimer l'entrée",
+      budget: (used, limit) => `${used.toLocaleString()} / ${limit.toLocaleString()} caractères`,
+      overBudget: 'Limite dépassée. Raccourcis ou supprime une entrée pour enregistrer.',
+      save: 'Enregistrer',
+      cancel: 'Annuler',
+      saved: 'Enregistré'
+    },
+    permissions: {
+      title: 'Exécuter des commandes',
+      body: "Choisis quand l'agent demande avant d'exécuter une commande sur cet ordinateur.",
+      more: 'Plus de réglages de sécurité'
+    },
+    requests: {
+      approvals: 'En attente de toi',
+      noApprovals: "Rien n'attend ton approbation.",
+      allow: 'Autoriser une fois',
+      deny: 'Refuser',
+      pairing: 'Personnes qui veulent lui écrire',
+      noPairing: "Personne n'attend d'approbation.",
+      approve: 'Approuver',
+      waiting: minutes => (minutes < 1 ? "à l'instant" : `il y a ${minutes} min`)
+    }
+  },
   dashboard: {
     title: 'Tableau de bord',
     subtitle: 'Vos tâches et rappels, partagés en direct avec Scout.',

@@ -55,6 +55,7 @@ import { isAuxiliaryWindow, isWatchWindow } from '@/store/windows'
 import { primaryRouteSelectedSessionId, routeSessionId } from '../routes'
 import { titlebarHeaderBaseClass, titlebarHeaderShadowClass, titlebarHeaderTitleClass } from '../shell/titlebar'
 
+import { AgentIdentityHeader } from './agent-identity-header'
 import { ChatDropOverlay } from './chat-drop-overlay'
 import { ChatSwapOverlay, ChatSyncBadge } from './chat-swap-overlay'
 import { ChatBar, ChatBarFallback } from './composer'
@@ -797,6 +798,7 @@ const ChatViewContent = memo(function ChatViewContent({
       data-session-anchor={sessionAnchor}
     >
       <Backdrop />
+      {isPrimary && <AgentIdentityHeader />}
       {/* Tiles get their chrome from the layout zone (chip strip); the modal
           prompt overlays stay active-session-scoped in the primary surface. */}
       {isPrimary && (

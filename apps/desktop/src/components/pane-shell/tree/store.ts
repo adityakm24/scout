@@ -1346,20 +1346,24 @@ export const $sessionTileEdgeHover = computed(
 
 /**
  * Adopt panes present in `source` but missing from `target`: each joins the
- * group its source siblings map to in the target (first group as a last
- * resort). Layout changes never lose panes.
+ * group its source siblings map to in the target. A pane the user closed stays
+ * closed, and a pane alone in its source zone (the terminal's own slot) has no
+ * sibling to follow — it is left to `adoptContributedPanes`, whose dock hints
+ * place it. Defaulting those into the FIRST group stacked the terminal onto the
+ * sessions sidebar on every boot.
  */
 function adoptMissingPanes(target: LayoutNode, source: LayoutNode): LayoutNode {
   const have = new Set(allPaneIds(target))
+  const dismissed = $dismissedPanes.get()
   let next = target
 
   for (const paneId of allPaneIds(source)) {
-    if (have.has(paneId)) {
+    if (have.has(paneId) || dismissed.has(paneId)) {
       continue
     }
 
     const sibling = findGroupOfPane(source, paneId)?.panes.find(p => have.has(p))
-    const targetId = (sibling ? findGroupOfPane(next, sibling)?.id : undefined) ?? groupLeafIds(next)[0]
+    const targetId = sibling ? findGroupOfPane(next, sibling)?.id : undefined
 
     if (targetId) {
       // Silent adoption: don't steal the target zone's active tab (logs).
@@ -1388,7 +1392,17 @@ export function declareDefaultTree(tree: LayoutNode, simpleTree: LayoutNode = tr
     return
   }
 
-  const next = adoptMissingPanes(current, defaultTree)
+  // A closed pane is out of the tree by definition (dismissTreePane removes it); one found
+  // in a saved tree was stacked back in by the old first-group adoption. Take it out again.
+  let next = current
+
+  for (const paneId of $dismissedPanes.get()) {
+    if (findGroupOfPane(next, paneId)) {
+      next = removePane(next, paneId) ?? next
+    }
+  }
+
+  next = adoptMissingPanes(next, defaultTree)
 
   if (next !== current) {
     commit(next)

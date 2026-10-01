@@ -244,6 +244,25 @@ class TestMemoryEndpoints:
             "/api/memory/reset", json={"target": "bogus"}
         ).status_code == 400
 
+    def test_memory_files_round_trip_without_tripping_the_memory_tool(self):
+        """An edit from the agent panel lands as a clean entry list within budget: it reads back,
+        and the memory tool's drift guard treats it as its own (no refusal on the next write)."""
+        from scout_constants import get_scout_home
+        from tools.memory_tool_store import MemoryStore
+
+        r = self.client.put("/api/memory/files/user", json={"entries": ["Prefers tea", "  ", "Lives in Pune"]})
+        assert r.status_code == 200
+        assert self.client.get("/api/memory/files").json()["user"]["entries"] == ["Prefers tea", "Lives in Pune"]
+
+        store = MemoryStore()
+        raw = (get_scout_home() / "memories" / "USER.md").read_text(encoding="utf-8")
+        assert store._detect_external_drift("user", raw) is None
+
+        limit = self.client.get("/api/memory/files").json()["memory"]["limit"]
+        over = self.client.put("/api/memory/files/memory", json={"entries": ["x" * (limit + 1)]})
+        assert over.status_code == 400
+        assert self.client.put("/api/memory/files/bogus", json={"entries": []}).status_code == 400
+
     _SCOPEDPROV_INIT = """
 from agent.memory_provider import MemoryProvider
 from agent.secret_scope import get_secret

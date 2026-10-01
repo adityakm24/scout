@@ -49,6 +49,55 @@ export const en: Translations = {
     stripDetails: 'Details'
   },
   // English editorial copy stays in the shipped JSONL; other locales override it.
+  agentPanel: {
+    title: 'Agent',
+    connected: 'Connected',
+    offline: 'Offline',
+    openPanel: name => `Open ${name}'s details`,
+    rename: 'Rename',
+    namePlaceholder: 'Name your agent',
+    renameHint: 'Open chats pick up the new name with your next message.',
+    changePhoto: 'Change photo',
+    removePhoto: 'Remove photo',
+    photoTooLarge: 'That image is too large. Pick one under 2 MB.',
+    saveFailed: 'Could not save. Try again.',
+    tabs: { persona: 'Persona', permissions: 'Permissions', requests: 'Requests' },
+    persona: {
+      soul: 'Soul',
+      soulCaption: 'Personality and voice',
+      memory: 'Memory',
+      memoryCaption: 'What it remembers',
+      user: 'About you',
+      userCaption: 'What it knows about you',
+      edited: date => `Edited ${date}`,
+      entries: count => (count === 1 ? '1 entry' : `${count} entries`),
+      never: 'Empty',
+      appliesToNewChats: 'Changes apply to new chats.',
+      addEntry: 'Add entry',
+      entryPlaceholder: 'Something worth remembering…',
+      removeEntry: 'Remove entry',
+      budget: (used, limit) => `${used.toLocaleString()} / ${limit.toLocaleString()} characters`,
+      overBudget: 'Over the limit. Shorten or remove an entry to save.',
+      save: 'Save',
+      cancel: 'Cancel',
+      saved: 'Saved'
+    },
+    permissions: {
+      title: 'Running commands',
+      body: 'Choose when the agent asks before it runs a command on this computer.',
+      more: 'More safety settings'
+    },
+    requests: {
+      approvals: 'Waiting for you',
+      noApprovals: 'Nothing is waiting for your approval.',
+      allow: 'Allow once',
+      deny: 'Deny',
+      pairing: 'People asking to message it',
+      noPairing: 'No one is waiting to be approved.',
+      approve: 'Approve',
+      waiting: minutes => (minutes < 1 ? 'just now' : `${minutes} min ago`)
+    }
+  },
   dashboard: {
     title: 'Dashboard',
     subtitle: 'Your to-dos and reminders — shared with Scout, live.',
