@@ -526,3 +526,8 @@
 :root[data-renderer-animations-paused] :is(.scout-activity__glyph, .scout-activity__cursor) {
   animation-play-state: paused;
 }
+
+/* An inline field that opens in place of the button that asked for it. */
+.scout-pop-in {
+  animation: scout-pop-in 320ms var(--ease-spring) both;
+}

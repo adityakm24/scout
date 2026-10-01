@@ -3,8 +3,10 @@
  * you like?"), so the reply can show them as buttons. The `clarify` tool is the structured way to
  * ask, but models often write the list instead; this recovers the same affordance from the text.
  *
- * Deliberately narrow: only the reply's LAST list, only when the reply asks the user to choose,
- * and only short items. A list of facts followed by "Anything else?" stays text.
+ * Only the reply's LAST list, with short items, and only where that list is what the reply ends
+ * on: either followed by a question asking the user to choose, or closing the reply outright (a
+ * bare list of options) — unless it is a recap of work done ("Done:", "Added…"). A list of facts
+ * followed by "Anything else?" stays text.
  */
 
 const ITEM_RE = /^\s{0,3}(?:\d{1,2}[.)]|[-*•])\s+(.+?)\s*$/
@@ -16,6 +18,12 @@ const MIN_CHOICES = 2
 const MAX_CHOICES = 8
 const MAX_CHOICE_CHARS = 120
 const MAX_QUESTION_CHARS = 240
+// A list that closes the reply with no question is only read as options when it is short.
+const MAX_BARE_CHOICES = 6
+const MAX_BARE_CHOICE_CHARS = 80
+
+const RECAP_RE =
+  /\b(done|added|created|updated|removed|deleted|completed|finished|fixed|changed|changes|summary|steps|here'?s what)\b/i
 
 /** Markdown emphasis, inline code and links reduced to their visible text. */
 function plain(text: string): string {
@@ -82,5 +90,18 @@ export function parseReplyChoices(markdown: string): null | string[] {
   const after = lines.slice(end + 1).join(' ')
   const before = lines.slice(0, start).findLast(line => line.trim()) ?? ''
 
-  return asksToChoose(after.trim() ? after : before) ? items : null
+  if (after.trim()) {
+    return asksToChoose(after) ? items : null
+  }
+
+  if (asksToChoose(before)) {
+    return items
+  }
+
+  const bareOptions =
+    !RECAP_RE.test(before) &&
+    items.length <= MAX_BARE_CHOICES &&
+    items.every(item => item.length <= MAX_BARE_CHOICE_CHARS && !RECAP_RE.test(item.split(' ')[0] ?? ''))
+
+  return bareOptions ? items : null
 }

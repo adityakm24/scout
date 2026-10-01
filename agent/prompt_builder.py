@@ -264,6 +264,13 @@ SKILLS_GUIDANCE = (
     "remaining `[SKILL_PRUNED]` markers for that same skill; they are historical artifacts of earlier compactions."
 )
 
+# Options written into a reply are dead prose the user can't pick; `clarify` renders them as
+# pickable rows with a free-text "Other" row. Only reaches sessions that load clarify (interactive).
+CLARIFY_GUIDANCE = (
+    "When you ask the user to choose between options (product variants, plans, times), call `clarify` with the "
+    "options in `choices` instead of writing them as a list in your reply."
+)
+
 KANBAN_GUIDANCE = (
     "# Kanban task execution protocol\n"
     "You have been assigned ONE task from the shared board at `~/.scout/kanban.db`. Your task id is in "

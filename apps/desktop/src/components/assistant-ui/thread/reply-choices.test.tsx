@@ -54,7 +54,18 @@ describe('reply choices', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Single Pack (78.9g) – ₹20' }))
 
     expect($composerSendRequest.get()).toMatchObject({ target: 'main', text: 'Single Pack (78.9g) – ₹20' })
-    expect(screen.getByRole('button', { name: /Something else/ })).toBeTruthy()
+  })
+
+  it('lets the user answer in their own words from the last button', async () => {
+    render(<Harness messages={[message('u1', 'user', 'add kurkure'), message('a1', 'assistant', OFFER)]} />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /Something else/ }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Type your own answer…' }), {
+      target: { value: 'the masala munch one instead' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect($composerSendRequest.get()).toMatchObject({ target: 'main', text: 'the masala munch one instead' })
   })
 
   it('retires the buttons once the user has answered', async () => {

@@ -41,7 +41,12 @@ export const esOverrides = {
     stripChoices: { share: 'Enviar a SpaceshipResearch', local: 'Solo local', off: 'No, gracias' },
     stripDetails: 'Detalles'
   },
-  replyChoices: { label: 'Opciones de respuesta', other: 'Otra cosa…' },
+  replyChoices: {
+    label: 'Opciones de respuesta',
+    other: 'Otra cosa…',
+    placeholder: 'Escribe tu propia respuesta…',
+    send: 'Enviar'
+  },
   agentPanel: {
     title: 'Agente',
     connected: 'Conectado',

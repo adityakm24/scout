@@ -109,6 +109,8 @@ export interface Translations {
   replyChoices: {
     label: string
     other: string
+    placeholder: string
+    send: string
   }
   agentPanel: {
     title: string
