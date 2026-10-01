@@ -56,6 +56,8 @@ export interface McpServersController extends McpDraft, PublishedProbes {
   servers: McpServers
   setServerEnabled: (name: string, enabled: boolean) => Promise<void>
   setServerTools: (name: string, disabled: string[], discovered: string[]) => Promise<boolean>
+  /** Re-check one server and, when it answers again, reconnect it in the live session. */
+  reloadServer: (name: string) => Promise<void>
   statuses: Record<string, ServerStatus>
   toggleTool: (name: string, toolName: string) => Promise<void>
 }
@@ -154,6 +156,13 @@ export function useMcpServers({ gateway, profile }: UseMcpServersOptions): McpSe
       await gateway.request('reload.mcp', { confirm: true, session_id: activeSessionId ?? undefined })
     } catch (err) {
       notifyError(err, m.reloadFailed)
+    }
+  }
+
+  // A failed server that answers again rejoins the live session too, not just this page.
+  const reloadServer = async (serverName: string) => {
+    if (await fleet.runProbe(serverName)) {
+      await silentReload()
     }
   }
 
@@ -413,6 +422,7 @@ export function useMcpServers({ gateway, profile }: UseMcpServersOptions): McpSe
     probes: fleet.probes,
     profilePending,
     refetchConfig: () => void refetchConfigQuery(),
+    reloadServer,
     removeServer,
     runProbe: fleet.runProbe,
     saveDoc,

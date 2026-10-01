@@ -71,6 +71,25 @@ class NonMcpEndpointError(ConnectionError):
     so broad catches still see a connection problem."""
 
 
+class McpAccessRefusedError(ConnectionError):
+    """The server answered and then refused the session with 403. Not a transport mismatch (an SSE
+    retry gets the same answer) and not transient: it parks until the user fixes access and reloads."""
+
+
+def access_refused_message(server_name: str, detail: str, url: str) -> str:
+    """The refusal in the user's terms. Google's MCP servers answer ``initialize`` and then 403
+    every call while their API is disabled in the Cloud project that owns the OAuth client — the
+    sign-in itself succeeds, so the enable link is the one thing the user needs."""
+    from urllib.parse import urlsplit
+    host = urlsplit(url).hostname or ""
+    message = f"MCP server '{server_name}' refused access ({detail})."
+    if host.endswith(".googleapis.com"):
+        message += (f" Google refuses MCP calls until the {host} API is enabled in the Cloud project that owns "
+                    f"your OAuth client: https://console.cloud.google.com/apis/library/{host} — enable it, "
+                    "wait a minute, then reload the server.")
+    return message
+
+
 # Streamable-HTTP rejection statuses an SSE-only server (or its load balancer) produces for the
 # chunked ``initialize`` POST: Bad Request, Method Not Allowed, Not Acceptable, Length Required.
 _STREAMABLE_REJECT_STATUSES = (400, 405, 406, 411)
@@ -160,7 +179,8 @@ def _classify_mcp_failure(exc: BaseException) -> str:
     Node) or ``'transient'`` (backoff retry)."""
     root = _unwrap_exception_group(exc)
     permanent = (_is_auth_error(root)
-                 or isinstance(root, (NonMcpEndpointError, InvalidMcpUrlError, FileNotFoundError, NodeAbiMismatchError))
+                 or isinstance(root, (NonMcpEndpointError, McpAccessRefusedError, InvalidMcpUrlError, FileNotFoundError,
+                                      NodeAbiMismatchError))
                  or (isinstance(root, OSError) and getattr(root, "errno", None) == errno.ENOENT)
                  # 401/403 HTTPStatusError that _is_auth_error's type-gate missed (auth types not importable here)
                  or getattr(getattr(root, "response", None), "status_code", None) in (401, 403))

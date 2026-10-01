@@ -281,6 +281,7 @@ export const en: Translations = {
       open: (name: string) => `Open ${name}`,
       turnServerOn: (name: string) => `Turn ${name} on`,
       turnServerOff: (name: string) => `Turn ${name} off`,
+      reload: (name: string) => `Reload ${name}`,
       state: {
         accessExpired: 'Access expired',
         available: 'Available',

@@ -24,6 +24,7 @@ export interface ConnectorsDirectoryProps {
   onFilterChange: (next: ConnectorsFilter) => void
   onOpen: (card: ConnectorCardModel) => void
   onPrefetch?: (card: ConnectorCardModel) => void
+  onReload?: (card: ConnectorCardModel) => void
   onRetryHosted?: () => void
   onServerToggle?: (card: ConnectorCardModel, next: boolean) => void
   onVerb?: (card: ConnectorCardModel) => void
@@ -41,6 +42,7 @@ export function ConnectorsDirectory({
   onFilterChange,
   onOpen,
   onPrefetch,
+  onReload,
   onRetryHosted,
   onServerToggle,
   onVerb,
@@ -133,6 +135,7 @@ export function ConnectorsDirectory({
               key={group.id}
               onOpen={onOpen}
               onPrefetch={onPrefetch}
+              onReload={onReload}
               onServerToggle={onServerToggle}
               onVerb={onVerb}
               selectedKey={selectedKey}
@@ -168,6 +171,7 @@ function Group({
   group,
   onOpen,
   onPrefetch,
+  onReload,
   onServerToggle,
   onVerb,
   selectedKey,
@@ -177,6 +181,7 @@ function Group({
   group: ConnectorGroupModel
   onOpen: (card: ConnectorCardModel) => void
   onPrefetch?: (card: ConnectorCardModel) => void
+  onReload?: (card: ConnectorCardModel) => void
   onServerToggle?: (card: ConnectorCardModel, next: boolean) => void
   onVerb?: (card: ConnectorCardModel) => void
   selectedKey: null | string
@@ -208,6 +213,7 @@ function Group({
               key={key}
               onOpen={() => onOpen(card)}
               onPrefetch={onPrefetch ? () => onPrefetch(card) : undefined}
+              onReload={onReload ? () => onReload(card) : undefined}
               onServerToggle={onServerToggle ? next => onServerToggle(card, next) : undefined}
               onVerb={onVerb ? () => onVerb(card) : undefined}
               selected={selectedKey === key}

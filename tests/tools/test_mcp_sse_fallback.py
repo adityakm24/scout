@@ -142,3 +142,20 @@ def test_opaque_rejection_without_fallback_surfaces_the_status(monkeypatch):
     with pytest.raises(ConnectionError, match=r"HTTP 503 from POST http://127\.0\.0\.1:1/mcp: upstream down"):
         asyncio.run(task._run_http(dict(_CONFIG)))
     assert "SSE" not in calls
+
+
+def test_403_after_the_handshake_is_a_final_refusal_not_a_transport_mismatch(monkeypatch):
+    """Google's Gmail MCP answers ``initialize`` and then 403s every call while its API is disabled in
+    the user's Cloud project. That is not an SSE-only server: no SSE retry, the failure parks at once
+    instead of burning the retry ladder, and the message carries the link that fixes it."""
+    from tools.mcp_tool_errors import _classify_mcp_failure
+
+    task, calls = _task(monkeypatch, ExceptionGroup("g", [_SdkInternalError()]))
+    url = "https://gmailmcp.googleapis.com/mcp/v1"
+    monkeypatch.setattr(MCPServerTask, "_streamable_http_transport", lambda self, *a, **k: self._http_rejection.update(
+        status=403, method="POST", url=url, body='{"result":{"tools":[]}}') or object())
+    with pytest.raises(ConnectionError) as info:
+        asyncio.run(task._run_http({"url": url, "connect_timeout": 1}))
+    assert "SSE" not in calls
+    assert _classify_mcp_failure(info.value) == "permanent"
+    assert "https://console.cloud.google.com/apis/library/gmailmcp.googleapis.com" in str(info.value)

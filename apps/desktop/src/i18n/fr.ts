@@ -210,6 +210,7 @@ export const frOverrides = {
       open: (name: string) => `Ouvrir ${name}`,
       turnServerOn: (name: string) => `Activer ${name}`,
       turnServerOff: (name: string) => `Désactiver ${name}`,
+      reload: (name: string) => `Recharger ${name}`,
       state: {
         accessExpired: 'Accès expiré',
         available: 'Disponible',

@@ -339,6 +339,7 @@ export interface Translations {
       open: (name: string) => string
       turnServerOn: (name: string) => string
       turnServerOff: (name: string) => string
+      reload: (name: string) => string
       state: {
         accessExpired: string
         available: string

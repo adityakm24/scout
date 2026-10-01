@@ -247,6 +247,13 @@ export function ConnectorsTab({ gateway, profile }: ConnectorsTabProps) {
             prefetchConnectorTools(profile, card.slug)
           }
         }}
+        onReload={card => {
+          if (card.ways.local?.installed && card.plugin === undefined) {
+            void mcp.reloadServer(localServerName(card))
+          } else {
+            runVerb(card)
+          }
+        }}
         onRetryHosted={hosted.refetch}
         onServerToggle={(card, next) => {
           if (card.plugin === undefined) {

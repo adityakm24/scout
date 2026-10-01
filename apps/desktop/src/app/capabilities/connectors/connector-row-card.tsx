@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Codicon } from '@/components/ui/codicon'
 import { ConnectorLogo } from '@/components/ui/connector-logo'
 import { Switch } from '@/components/ui/switch'
 import { useI18n } from '@/i18n'
@@ -53,6 +54,8 @@ export interface ConnectorRowCardProps {
   card: ConnectorCardModel
   onOpen: () => void
   onPrefetch?: () => void
+  /** Offered only while the card is in trouble: re-check the server and bring it back. */
+  onReload?: () => void
   onServerToggle?: (next: boolean) => void
   onVerb?: () => void
   selected?: boolean
@@ -63,6 +66,7 @@ export function ConnectorRowCard({
   card,
   onOpen,
   onPrefetch,
+  onReload,
   onServerToggle,
   onVerb,
   selected = false
@@ -100,6 +104,7 @@ export function ConnectorRowCard({
         <CardLane
           busy={busy}
           card={card}
+          onReload={card.state === 'broken' || card.state === 'expired' ? onReload : undefined}
           onServerToggle={local && card.plugin === undefined ? onServerToggle : undefined}
           onVerb={onVerb}
           stateLabel={stateLabel}
@@ -138,6 +143,7 @@ export function ConnectorRowCard({
 function CardLane({
   busy,
   card,
+  onReload,
   onServerToggle,
   onVerb,
   stateLabel,
@@ -145,6 +151,7 @@ function CardLane({
 }: {
   busy: boolean
   card: ConnectorCardModel
+  onReload?: () => void
   onServerToggle?: (next: boolean) => void
   onVerb?: () => void
   stateLabel: string
@@ -162,6 +169,18 @@ function CardLane({
           <span aria-hidden className={cn('size-[5px] shrink-0 rounded-full', STATE_DOT[card.state])} />
         ) : null}
         <span className="truncate">{stateLabel}</span>
+        {onReload ? (
+          <button
+            aria-label={copy.reload(card.name)}
+            className="-my-1 -mr-1 grid size-5 shrink-0 place-items-center rounded-full text-(--ui-text-secondary) outline-none transition-[background-color,color,rotate] duration-300 ease-(--ease-spring) hover:rotate-180 hover:bg-(--chrome-action-hover) hover:text-(--ui-text-primary) focus-visible:ring-[0.1875rem] focus-visible:ring-ring/50 disabled:opacity-40"
+            disabled={busy}
+            onClick={onReload}
+            title={copy.reload(card.name)}
+            type="button"
+          >
+            <Codicon name="refresh" size="0.75rem" />
+          </button>
+        ) : null}
       </span>
 
       {server?.installed === true && onServerToggle ? (

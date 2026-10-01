@@ -209,6 +209,7 @@ export const deOverrides = {
       open: (name: string) => `${name} öffnen`,
       turnServerOn: (name: string) => `${name} einschalten`,
       turnServerOff: (name: string) => `${name} ausschalten`,
+      reload: (name: string) => `${name} neu laden`,
       state: {
         accessExpired: 'Zugriff abgelaufen',
         available: 'Verfügbar',

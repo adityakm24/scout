@@ -12,7 +12,8 @@ export interface McpProbes {
   probes: Record<string, Probe>
   resetForProfileSwitch: () => void
   retainProbes: (entries: McpServers, prevServers: McpServers) => void
-  runProbe: (name: string) => Promise<void>
+  /** Re-checks one server; resolves whether it answered (false when a profile switch overtook it). */
+  runProbe: (name: string) => Promise<boolean>
   setProbe: (name: string, value: Probe) => void
   toolCounts: Record<string, { on: number; total: number }>
   usageByServer: Record<string, number>
@@ -43,7 +44,7 @@ export function useMcpProbes({
     setProbes(current => ({ ...current, [serverName]: value }))
   }
 
-  const runProbe = async (serverName: string) => {
+  const runProbe = async (serverName: string): Promise<boolean> => {
     const epoch = profileEpoch.current
     const key = probeKey(serverName, servers[serverName], scopeProfileKey)
     setProbes(current => ({ ...current, [serverName]: 'probing' }))
@@ -52,19 +53,23 @@ export function useMcpProbes({
       const result = await testMcpServer(serverName, profile ?? undefined)
 
       if (profileEpoch.current !== epoch) {
-        return
+        return false
       }
 
       probeCache.set(key, { at: Date.now(), result })
       setProbes(current => ({ ...current, [serverName]: result }))
+
+      return result.ok
     } catch (err) {
       if (profileEpoch.current !== epoch) {
-        return
+        return false
       }
 
       const result = { ok: false, error: err instanceof Error ? err.message : String(err), tools: [] }
       probeCache.set(key, { at: Date.now(), result })
       setProbes(current => ({ ...current, [serverName]: result }))
+
+      return false
     }
   }
 

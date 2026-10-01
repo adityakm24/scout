@@ -12,7 +12,7 @@ from typing import Dict, Optional, Set
 from utils import normalize_proxy_url
 from agent.proxy_bypass import is_loopback_host, should_bypass_proxy
 from agent import runtime_cwd as _runtime_cwd
-from tools.mcp_tool_errors import NonMcpEndpointError, _apply_identity_header, _describe_http_failure, _handshake_answered_with_unsupported_version, _handshake_rejected_as_modern, _is_streamable_http_rejection, _make_http_rejection_recorder, _make_mcp_body_cap_transport, _make_redirect_header_stripper, _resolve_client_cert, _unwrap_exception_group
+from tools.mcp_tool_errors import McpAccessRefusedError, NonMcpEndpointError, access_refused_message, _apply_identity_header, _describe_http_failure, _handshake_answered_with_unsupported_version, _handshake_rejected_as_modern, _is_streamable_http_rejection, _make_http_rejection_recorder, _make_mcp_body_cap_transport, _make_redirect_header_stripper, _resolve_client_cert, _unwrap_exception_group
 from tools.mcp_tool_lifecycle import _filter_mcp_children, _orphan_stdio_pid_servers, _orphan_stdio_pids, _stdio_pgids, _stdio_pids
 from tools.mcp_tool_common import _core
 from tools.mcp_tool_node_abi import node_abi_error
@@ -612,6 +612,10 @@ class MCPServerTransportMixin:
             # The SDK folds a non-2xx it cannot parse into ``-32603 Server returned an error response``;
             # the recorder hook kept the status/URL/body the server actually sent (#114350, #113359).
             http_detail = _describe_http_failure(exc, self._http_rejection)
+            if self._http_rejection.get("status") == 403:
+                refused = self._http_rejection
+                raise McpAccessRefusedError(access_refused_message(
+                    self.name, f"HTTP 403 from {refused['method']} {refused['url']}", url)) from exc
             # SSE-only servers (or their load balancers) reject the Streamable HTTP chunked
             # ``initialize`` POST — with a 400-family status or an opaque SDK INTERNAL_ERROR —
             # previously a permanent failure with 0 active tools unless the user set

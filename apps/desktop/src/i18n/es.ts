@@ -210,6 +210,7 @@ export const esOverrides = {
       open: (name: string) => `Abrir ${name}`,
       turnServerOn: (name: string) => `Activar ${name}`,
       turnServerOff: (name: string) => `Desactivar ${name}`,
+      reload: (name: string) => `Recargar ${name}`,
       state: {
         accessExpired: 'Acceso caducado',
         available: 'Disponible',
