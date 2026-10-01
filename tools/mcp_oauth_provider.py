@@ -87,9 +87,12 @@ class ScoutProviderMixin:
 
     _scout_logger: logging.Logger = logger
 
-    def __init__(self, *args: Any, token_user_agent: str | None = None, oauth_flow: str = "browser", **kwargs: Any):
+    def __init__(self, *args: Any, token_user_agent: str | None = None, oauth_flow: str = "browser",
+                 challenge_unchallenged: bool = False, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._scout_oauth_flow = oauth_flow
+        # Pre-registered clients only: see _scout_unchallenged_401.
+        self._scout_challenge_unchallenged = challenge_unchallenged
         # oauth.user_agent — stamped onto token-endpoint requests only; some authorization servers/WAFs
         # reject httpx's default (#75576).
         self._scout_token_user_agent = token_user_agent
@@ -242,6 +245,7 @@ class ScoutProviderMixin:
         while True:
             inner = super().async_auth_flow(request)
             discovery_failures: list[str] = []
+            challenged = False
             try:
                 sent, thrown = None, None
                 while True:
@@ -275,6 +279,10 @@ class ScoutProviderMixin:
                     except BaseException as exc:
                         sent, thrown = None, exc
                     else:
+                        if out is request and not challenged and self._scout_needs_challenge(sent):
+                            challenged = True
+                            sent = self._scout_unchallenged_401(sent, request)
+                            continue
                         failure = _asm_discovery_failure(sent)
                         if failure:
                             discovery_failures.append(failure)
@@ -282,6 +290,24 @@ class ScoutProviderMixin:
                             sent = await self._scout_accept_origin_issued_metadata(sent)
             finally:
                 await self._scout_release_refresh_fence()
+
+    def _scout_needs_challenge(self, response) -> bool:
+        """A pre-registered client's request went through WITHOUT a token: the server never
+        challenged (Google's Gmail MCP answers initialize and tools/list anonymously and 401s only
+        on tools/call), so the SDK — which authorizes only on a 401 — would never sign in and every
+        login would end with "no OAuth token was obtained"."""
+        return (getattr(self, "_scout_challenge_unchallenged", False)
+                and getattr(response, "status_code", 500) < 400
+                and not self.context.is_token_valid())
+
+    def _scout_unchallenged_401(self, response, request):
+        """Stand-in for the 401 the server didn't send, so the SDK runs its normal discovery +
+        authorization and then retries this request with the token. It names the configured
+        scope, which the SDK otherwise replaces with every scope the resource advertises (Gmail's
+        include full mailbox access and send) — scopes the user's consent screen may not allow."""
+        scope = getattr(self.context.client_metadata, "scope", None)
+        headers = {"WWW-Authenticate": f'Bearer scope="{scope}"'} if scope else {}
+        return type(response)(401, headers=headers, request=request)
 
     async def _refresh_token(self):
         """Take the refresh fence, then build the request from the token we own.
@@ -535,20 +561,28 @@ def metadata_issued_by_origin(metadata: Any, auth_server_url: str | None, respon
     actually read from (the final request after any followed redirect), so a redirected document never
     matches. Whoever can publish that document already
     controls the origin's well-known tree, so accepting it grants a path-controlling attacker nothing.
-    Strava's MCP connector publishes exactly this pair (#116233). Anything else (another origin, a
-    different path, the root or OIDC fallback documents, a redirect target) still goes through the
+    Strava's MCP connector publishes exactly this pair (#116233).
+
+    An origin-only identifier differing from the issuer by a trailing slash is the same server spelled
+    two ways: Google's Gmail MCP advertises ``https://accounts.google.com/`` while its root OIDC document
+    names ``https://accounts.google.com``. For that shape the root documents of the same origin qualify.
+    Anything else (another origin, a different path, a redirect target) still goes through the
     exact-string check."""
     from urllib.parse import urlsplit
     if not auth_server_url:
         return False
     parts = urlsplit(auth_server_url)
     path = parts.path.rstrip("/")
-    if (not path or ".." in path.split("/") or parts.username is not None or parts.query or parts.fragment
+    if (".." in path.split("/") or parts.username is not None or parts.query or parts.fragment
             or response.status_code != 200):
         return False
     origin = f"{parts.scheme}://{parts.netloc}"
-    derived = f"{origin}/.well-known/oauth-authorization-server{path}"
-    return str(response.url) == derived and str(metadata.issuer).rstrip("/") == origin
+    if str(metadata.issuer).rstrip("/") != origin:
+        return False
+    if not path:
+        return str(response.url) in {f"{origin}/.well-known/oauth-authorization-server",
+                                     f"{origin}/.well-known/openid-configuration"}
+    return str(response.url) == f"{origin}/.well-known/oauth-authorization-server{path}"
 
 
 def google_offline_access_params(context: Any) -> dict[str, str]:
@@ -632,4 +666,7 @@ def build_provider_kwargs(cfg: dict, storage: "ScoutTokenStorage", *, ssh_proxy_
         "callback_handler": mo._make_callback_waiter(port, cfg.get("_cimd_url"), timeout=float(cfg.get("timeout", 300))),
         "token_user_agent": mo.token_request_user_agent(cfg),
         "oauth_flow": cfg.get("flow", "browser"),
+        # A pre-registered client means the user set OAuth up for this server on purpose, so sign
+        # in even when the server answers without challenging (see _scout_needs_challenge).
+        "challenge_unchallenged": bool(cfg.get("client_id")),
         **mo.cimd_provider_kwargs(cfg)}
