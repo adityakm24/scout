@@ -295,8 +295,28 @@ def _tool_guidance_block(agent: Any) -> Optional[str]:
         SKILLS_GUIDANCE if "skill_manage" in names else None,
         _pb.CLARIFY_GUIDANCE if "clarify" in names else None,
         _kanban_guidance,
+        _failing_connectors_note(),
     ]
     return " ".join(g for g in tool_guidance if g) or None
+
+
+def _failing_connectors_note() -> Optional[str]:
+    """Connectors the user set up that had failed when this prompt was built. Without it a signed-in
+    Gmail whose server refuses access reads to the model as "no email access at all", so it tells the
+    user it can't see their mail instead of what is wrong and how to fix it. Frozen with the prompt."""
+    try:
+        from tools.mcp_tool_common import _sanitize_error
+        from tools.mcp_tool_discovery import get_mcp_status
+        failed = [s for s in get_mcp_status() if s.get("status") == "failed"]
+    except Exception:
+        return None
+    if not failed:
+        return None
+    reasons = "; ".join(f"{s['name']}: {_sanitize_error(str(s.get('error') or 'could not connect'))[:400]}"
+                        for s in failed)
+    return (f"These connectors are set up but failed to connect, so their tools are missing: {reasons}. "
+            "When a request needs one, tell the user it is set up but not working, with the reason and the fix "
+            "above — never that you have no access to that service.")
 
 
 def _skills_prompt(agent: Any) -> str:
