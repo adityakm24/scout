@@ -391,7 +391,7 @@
 /* The chat's centred agent name (app/chat/agent-identity-header.tsx) floats over the top of the
    thread; the thread starts below it only while it is shown. */
 [data-chat-surface]:has(> [data-slot='agent-identity-header']) {
-  --thread-identity-clearance: 4.75rem;
+  --thread-identity-clearance: 5.5rem;
 }
 
 /* ── Activity glyphs (components/chat/activity-icon.tsx) ───────────────────

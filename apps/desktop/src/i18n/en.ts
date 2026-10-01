@@ -49,8 +49,9 @@ export const en: Translations = {
     stripDetails: 'Details'
   },
   // English editorial copy stays in the shipped JSONL; other locales override it.
-  replyChoices: { label: 'Choose one', other: 'Something else…', send: 'Send' },
+  replyChoices: { label: 'Choose one', other: 'Add your own answer', placeholder: 'Type your answer…', send: 'Send' },
   agentPanel: {
+    thinking: 'Thinking…',
     title: 'Agent',
     connected: 'Connected',
     offline: 'Offline',

@@ -61,7 +61,8 @@ describe('reply choices', () => {
   it("takes an answer in the user's own words from the last row", async () => {
     render(<Harness messages={[message('u1', 'user', 'add kurkure'), message('a1', 'assistant', OFFER)]} />)
 
-    fireEvent.change(await screen.findByRole('textbox', { name: 'Something else…' }), {
+    fireEvent.click(await screen.findByRole('button', { name: 'Add your own answer' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Type your answer…' }), {
       target: { value: 'the masala munch one instead' }
     })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))

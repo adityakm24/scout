@@ -1,13 +1,18 @@
 import { useStore } from '@nanostores/react'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { openAgentPanel } from '@/app/agent-panel/open'
+import { useSessionView } from '@/app/chat/session-view'
+import { toolIconName } from '@/components/assistant-ui/tool/fallback-model'
+import { toolPresentVerb } from '@/components/assistant-ui/tool/run-summary'
+import { ActivityIcon, activityKindFor } from '@/components/chat/activity-icon'
 import { AgentAvatar } from '@/components/chat/agent-avatar'
 import { Codicon } from '@/components/ui/codicon'
 import { useI18n } from '@/i18n'
 import { $agentIdentity, agentDisplayName, ensureAgentIdentity } from '@/store/agent-identity'
 import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
 import { $gatewayState, $selectedStoredSessionId, $sessions, sessionMatchesStoredId } from '@/store/session'
+import { sessionDraftingTool } from '@/store/tool-drafting'
 
 /** iMessage-style contact header: the agent's photo and name centred over the conversation.
  *  Clicking it opens the agent panel. The thread clears it through `--thread-identity-clearance`
@@ -25,6 +30,14 @@ export function AgentIdentityHeader() {
   const gatewayOpen = useStore($gatewayState) === 'open'
 
   useEffect(ensureAgentIdentity, [profile, gatewayOpen])
+
+  // What the agent is doing right now, under its name (a contact's live status): the tool it is
+  // calling, or thinking. The line keeps its height when idle so the thread never jumps.
+  const view = useSessionView()
+  const busy = useStore(view.$busy)
+  const runtimeId = useStore(view.$runtimeId)
+  const drafting = useStore(useMemo(() => sessionDraftingTool(runtimeId), [runtimeId]))
+  const status = busy ? (drafting?.name ? toolPresentVerb(drafting.name) : t.agentPanel.thinking) : ''
 
   // A chat owned by another profile (a Bot Chat) belongs to a different agent: don't label it
   // with this one's name.
@@ -50,6 +63,17 @@ export function AgentIdentityHeader() {
         <span className="flex items-center gap-0.5 text-[0.6875rem] font-medium text-(--ui-text-secondary) group-hover:text-foreground">
           {name}
           <Codicon className="opacity-60" name="chevron-right" size="0.7rem" />
+        </span>
+        <span aria-live="polite" className="flex h-3.5 items-center gap-1 text-[0.625rem] text-(--ui-text-tertiary)">
+          {status && (
+            <span className="scout-pop-in flex items-center gap-1" key={status}>
+              <ActivityIcon
+                kind={activityKindFor(drafting?.name, drafting?.name ? toolIconName(drafting.name) : undefined)}
+                size="0.65rem"
+              />
+              {status}
+            </span>
+          )}
         </span>
       </button>
     </div>

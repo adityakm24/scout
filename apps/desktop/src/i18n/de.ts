@@ -40,8 +40,9 @@ export const deOverrides = {
     stripChoices: { share: 'A SpaceshipResearch senden', local: 'Nur lokal', off: 'Nein danke' },
     stripDetails: 'Details'
   },
-  replyChoices: { label: 'Wähle eine Option', other: 'Etwas anderes…', send: 'Senden' },
+  replyChoices: { label: 'Wähle eine Option', other: 'Eigene Antwort hinzufügen', placeholder: 'Antwort eingeben…', send: 'Senden' },
   agentPanel: {
+    thinking: 'Denkt nach…',
     title: 'Agent',
     connected: 'Verbunden',
     offline: 'Offline',
