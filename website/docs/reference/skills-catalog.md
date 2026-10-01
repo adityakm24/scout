@@ -87,6 +87,15 @@ If a skill is missing from this list but present in the repo, the catalog is reg
 | [`competitor-news-monitor`](../user-guide/skills/bundled/research/research-competitor-news-monitor.md) | Watch named companies for material news; cited digests. | `research/competitor-news-monitor` |
 | [`grounded-citations`](../user-guide/skills/bundled/research/research-grounded-citations.md) | Ground answers and documents in cited, verifiable sources. | `research/grounded-citations` |
 
+## shopping
+
+| Skill | Description | Path |
+|-------|-------------|------|
+| [`swiggy-dineout`](../user-guide/skills/bundled/shopping/shopping-swiggy-dineout.md) | Find restaurants and book tables on Swiggy Dineout. | `shopping/swiggy-dineout` |
+| [`swiggy-food`](../user-guide/skills/bundled/shopping/shopping-swiggy-food.md) | Order restaurant food delivery through Swiggy. | `shopping/swiggy-food` |
+| [`swiggy-instamart`](../user-guide/skills/bundled/shopping/shopping-swiggy-instamart.md) | Order groceries on Swiggy Instamart, cart to checkout. | `shopping/swiggy-instamart` |
+| [`zepto`](../user-guide/skills/bundled/shopping/shopping-zepto.md) | Order groceries on Zepto: address, cart, checkout. | `shopping/zepto` |
+
 ## software-development
 
 | Skill | Description | Path |

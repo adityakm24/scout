@@ -977,6 +977,39 @@ class TestBuildSystemPrompt:
         assert mock_skills.call_args.kwargs["available_toolsets"] == {"web", "skills"}
 
 
+    def test_skills_prompt_counts_tools_deferred_behind_tool_search(self):
+        """A connector's tools sit behind the tool_search bridge, yet stay callable — so a
+        skill gated on them (`requires_tools: [mcp__zepto__update_cart]`) must still be listed."""
+        tools = _make_tool_defs("tool_search", "skills_list", "skill_view", "skill_manage")
+        toolset_map = {
+            "tool_search": "tool_search",
+            "skills_list": "skills",
+            "skill_view": "skills",
+            "skill_manage": "skills",
+            "mcp__zepto__update_cart": "mcp-zepto",
+        }
+
+        with (
+            patch("model_tools.get_tool_definitions", return_value=tools),
+            patch("model_tools.get_toolset_for_tool", create=True, side_effect=toolset_map.get),
+            patch("agent.tool_executor._tool_search_scoped_names",
+                  return_value=frozenset({"mcp__zepto__update_cart"})),
+            patch("agent.prompt_builder.build_skills_system_prompt", return_value="SKILLS_PROMPT") as mock_skills,
+            patch("agent.process_bootstrap.OpenAI"),
+        ):
+            agent = AIAgent(
+                api_key="test-k...7890",
+                base_url="https://openrouter.ai/api/v1",
+                quiet_mode=True,
+                skip_context_files=True,
+                skip_memory=True,
+            )
+            agent._build_system_prompt()
+
+        assert "mcp__zepto__update_cart" in mock_skills.call_args.kwargs["available_tools"]
+        assert "mcp-zepto" in mock_skills.call_args.kwargs["available_toolsets"]
+
+
 class TestToolUseEnforcementConfig:
     """Tests for the agent.tool_use_enforcement config option."""
 

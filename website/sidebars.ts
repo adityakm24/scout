@@ -266,6 +266,18 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'category',
+                  label: 'shopping',
+                  key: 'skills-bundled-shopping',
+                  collapsed: true,
+                  items: [
+                    'user-guide/skills/bundled/shopping/shopping-swiggy-dineout',
+                    'user-guide/skills/bundled/shopping/shopping-swiggy-food',
+                    'user-guide/skills/bundled/shopping/shopping-swiggy-instamart',
+                    'user-guide/skills/bundled/shopping/shopping-zepto',
+                  ],
+                },
+                {
+                  type: 'category',
                   label: 'software-development',
                   key: 'skills-bundled-software-development',
                   collapsed: true,

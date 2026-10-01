@@ -304,13 +304,20 @@ def _skills_prompt(agent: Any) -> str:
     if not any(name in agent.valid_tool_names for name in ['skills_list', 'skill_view', 'skill_manage']):
         return ""
     import model_tools
-    avail_toolsets = {model_tools.get_toolset_for_tool(tool_name) for tool_name in agent.valid_tool_names} - {None, ""}
+    from tools.tool_search import is_bridge_tool
+    # Tools deferred behind tool_search (MCP servers, plugins) are still callable, so a skill's
+    # `requires_tools` / `fallback_for_*` gate must see them — valid_tool_names only holds the bridge.
+    available = set(agent.valid_tool_names)
+    if any(is_bridge_tool(name) for name in available):
+        from agent.tool_executor import _tool_search_scoped_names
+        available |= _tool_search_scoped_names(agent)
+    avail_toolsets = {model_tools.get_toolset_for_tool(tool_name) for tool_name in available} - {None, ""}
     try:
         from agent.coding_context import coding_compact_skill_categories
         _compact_cats = coding_compact_skill_categories(platform=agent.platform, cwd=resolve_context_cwd())
     except Exception:
         _compact_cats = frozenset()
-    return _pb.build_skills_system_prompt(available_tools=agent.valid_tool_names, available_toolsets=avail_toolsets,
+    return _pb.build_skills_system_prompt(available_tools=available, available_toolsets=avail_toolsets,
                                          compact_categories=_compact_cats or None, skills_dir_override=_agent_skills_dir(agent))
 
 
