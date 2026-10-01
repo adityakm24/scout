@@ -11,6 +11,8 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 
 SKILL_MD = (
     Path(__file__).resolve().parents[2]
@@ -58,3 +60,25 @@ class TestGoogleWorkspaceCredentialFiles:
         finally:
             clear_credential_files()
 
+
+
+@pytest.mark.platforms("posix")
+def test_stored_client_secret_is_readable_only_by_the_user(tmp_path):
+    """``setup.py --client-secret`` copies the OAuth client secret into SCOUT_HOME; under the usual 022
+    umask a plain write left it (and the tokens written the same way) readable by every local account."""
+    import json
+    import stat
+    import subprocess
+    import sys
+
+    scout_home = tmp_path / ".scout"
+    scout_home.mkdir()
+    source = tmp_path / "client.json"
+    source.write_text(json.dumps({"installed": {"client_id": "id", "client_secret": "s"}}))
+    script = SKILL_MD.parent / "scripts/setup.py"
+
+    subprocess.run([sys.executable, str(script), "--client-secret", str(source)], check=True,
+                   capture_output=True, env={**os.environ, "SCOUT_HOME": str(scout_home)})
+
+    mode = stat.S_IMODE((scout_home / "google_client_secret.json").stat().st_mode)
+    assert mode & 0o077 == 0, oct(mode)

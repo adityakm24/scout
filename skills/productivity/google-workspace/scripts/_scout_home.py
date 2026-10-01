@@ -40,3 +40,12 @@ except (ModuleNotFoundError, ImportError):
             return "~/" + home.relative_to(Path.home()).as_posix()
         except ValueError:
             return str(home)
+
+
+def write_private(path: Path, text: str) -> None:
+    """Write a credential file (OAuth client secret, tokens) readable only by this user: a plain
+    ``write_text`` leaves it world-readable under the usual 022 umask."""
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)  # an existing file keeps its old mode through O_CREAT
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(text)
