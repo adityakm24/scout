@@ -393,3 +393,136 @@
 [data-chat-surface]:has(> [data-slot='agent-identity-header']) {
   --thread-identity-clearance: 4.75rem;
 }
+
+/* ── Activity glyphs (components/chat/activity-icon.tsx) ───────────────────
+   One motion per kind of work, so a glance says what the agent is doing:
+   the bulb glows while it thinks, the magnifier sweeps while it searches, a
+   cursor blinks beside the terminal, the pencil writes, the globe turns. */
+.scout-activity {
+  color: var(--theme-primary, currentColor);
+}
+.scout-activity__glyph {
+  transform-origin: 50% 60%;
+  will-change: transform, opacity;
+}
+
+@keyframes scout-act-think {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--theme-primary, #fff) 70%, transparent));
+  }
+}
+@keyframes scout-act-search {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(1.5px, -1.5px) rotate(-8deg);
+  }
+  50% {
+    transform: translate(3px, 0) rotate(0deg);
+  }
+  75% {
+    transform: translate(1.5px, 1.5px) rotate(8deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+@keyframes scout-act-write {
+  0%,
+  100% {
+    transform: translate(-1px, 0) rotate(-10deg);
+  }
+  50% {
+    transform: translate(1.5px, 1px) rotate(6deg);
+  }
+}
+@keyframes scout-act-read {
+  0%,
+  100% {
+    transform: translateY(0) scaleY(1);
+  }
+  50% {
+    transform: translateY(-1.5px) scaleY(0.92);
+  }
+}
+@keyframes scout-act-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes scout-act-beat {
+  0%,
+  100% {
+    transform: scale(0.94);
+  }
+  30% {
+    transform: scale(1.1);
+  }
+  60% {
+    transform: scale(0.98);
+  }
+}
+@keyframes scout-act-wobble {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-14deg);
+  }
+  75% {
+    transform: rotate(14deg);
+  }
+}
+@keyframes scout-act-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+[data-activity='thinking'] .scout-activity__glyph {
+  animation: scout-act-think 1.6s var(--ease-in-out-quint) infinite;
+}
+[data-activity='search'] .scout-activity__glyph {
+  animation: scout-act-search 1.4s ease-in-out infinite;
+}
+[data-activity='edit'] .scout-activity__glyph {
+  animation: scout-act-write 0.7s ease-in-out infinite;
+}
+[data-activity='read'] .scout-activity__glyph {
+  animation: scout-act-read 1.1s ease-in-out infinite;
+}
+[data-activity='web'] .scout-activity__glyph,
+[data-activity='wait'] .scout-activity__glyph {
+  animation: scout-act-turn 2.4s linear infinite;
+  transform-origin: 50% 50%;
+}
+[data-activity='memory'] .scout-activity__glyph {
+  animation: scout-act-beat 1.2s var(--ease-out-quint) infinite;
+}
+[data-activity='tool'] .scout-activity__glyph {
+  animation: scout-act-wobble 1.3s ease-in-out infinite;
+}
+.scout-activity__cursor {
+  position: absolute;
+  right: -0.2em;
+  bottom: 0.05em;
+  width: 0.32em;
+  height: 0.12em;
+  border-radius: 1px;
+  background: currentColor;
+  animation: scout-act-blink 0.9s steps(1) infinite;
+}
+
+:root[data-renderer-animations-paused] :is(.scout-activity__glyph, .scout-activity__cursor) {
+  animation-play-state: paused;
+}

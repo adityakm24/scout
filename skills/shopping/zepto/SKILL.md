@@ -50,7 +50,7 @@ on disk, so never use `search_files` or `terminal` to look for them.
    which one. Then call `select_saved_address`; that also picks the store that serves it. Use
    `get_location_serviceability` only with coordinates the user gave you.
 2. **Find the item.** Search with the user's words. When results differ in size, flavour or price,
-   show the top three (name, pack size, price) and ask, unless the user was specific.
+   ask with `clarify`, passing the top three (name, pack size, price) as `choices` so the user can tap one, unless they were specific.
 3. **Add to cart.** Call `update_cart` with the `productVariantId` and `storeProductId` from the
    search result, the quantity, `replaceCart: false`, and `deviceId: "scout"`.
 4. **Report honestly.** This cart lives in the user's Zepto session for Scout. It may not appear

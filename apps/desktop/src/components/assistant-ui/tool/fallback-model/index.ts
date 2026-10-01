@@ -278,6 +278,10 @@ function toolMeta(name: string): ToolMeta {
   }
 }
 
+/** The icon name a tool's row shows (`TOOL_META` / prefix rules), or undefined for tools
+ *  with none (MCP and plugin tools). */
+export const toolIconName = (name: string): string | undefined => toolMeta(name).icon
+
 const COUNT_FIELD_KEYS = [
   'count',
   'total',

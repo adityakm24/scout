@@ -66,7 +66,7 @@ codebase or on disk, so never use `search_files` or `terminal` to look for them.
 1. **Address first.** Call `get_addresses`. With several, ask which one. Never guess an address
    or create one the user did not give you.
 2. **Find the item.** Search with the user's words, or start from `your_go_to_items` for "my
-   usual". When results differ in size or price, show the top three and ask.
+   usual". When results differ in size or price, ask with `clarify`, passing the top three as `choices`.
 3. **Build the cart** with `update_cart`, then read it back with `get_cart`.
 4. **Report honestly.** The cart belongs to the user's Swiggy session for Scout. Say it is ready
    to order, and do not claim it is visible in the Swiggy app.

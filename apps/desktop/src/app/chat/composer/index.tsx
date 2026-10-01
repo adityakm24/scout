@@ -30,6 +30,7 @@ import { sessionCompacting } from '@/store/compaction'
 import { browseBackward, browseForward, deriveUserHistory, isBrowsingHistory } from '@/store/composer-input-history'
 import { POPOUT_WIDTH_REM } from '@/store/composer-popout'
 import { parkQueuedPrompts, removeQueuedPrompt, unparkQueuedPrompts } from '@/store/composer-queue'
+import { $composerSendRequest, takeComposerSendRequest } from '@/store/composer-send'
 import { $hudMode } from '@/store/hud'
 import { $showsAdvancedChrome } from '@/store/interface-mode'
 import { sessionBlockingPrompt } from '@/store/prompts'
@@ -163,6 +164,19 @@ export function ChatBar({
   // Which live composer this instance IS (main | tile) — its attachment set,
   // focus-bus key, and awaiting-input edge. Main scope = the legacy globals.
   const scope = useComposerScope()
+
+  // A reply's option buttons send through this composer, the same path as a typed message.
+  useEffect(
+    () =>
+      $composerSendRequest.listen(() => {
+        const request = takeComposerSendRequest(scope.target)
+
+        if (request) {
+          void onSubmit(request.text)
+        }
+      }),
+    [onSubmit, scope.target]
+  )
   const attachments = useStore(scope.attachments.$attachments)
   const compacting = useStore(useMemo(() => sessionCompacting(sessionId ?? null), [sessionId]))
   const surfaceId = useComposerSurfaceId()

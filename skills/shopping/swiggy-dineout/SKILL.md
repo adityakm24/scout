@@ -40,7 +40,8 @@ Never use `search_files` or `terminal` to look for them.
 1. **Gather the details:** area or restaurant, date, time and number of guests. Ask for whatever
    the user has not said. Never assume a city or location.
 2. **Search** for restaurants and show a few with cuisine, rating and price for two.
-3. **Check slots** for the chosen restaurant on that date and offer the closest times.
+3. **Check slots** for the chosen restaurant on that date and offer the closest times as `clarify`
+   `choices`.
 4. **Confirm before booking.** Show the restaurant, date, time and party size. Booking is free
    only; if the slot needs a paid deal or deposit, say that it cannot be booked here. Wait for an
    explicit yes.

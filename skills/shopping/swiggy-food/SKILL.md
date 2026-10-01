@@ -39,8 +39,8 @@ and invoke with `tool_call`. Never use `search_files` or `terminal` to look for 
 
 1. **Address first.** List the user's saved addresses and ask which one when there are several.
    Never guess a location.
-2. **Choose the restaurant.** Search by dish or cuisine, then show a few options with rating,
-   delivery time and price range. Let the user pick unless they named one.
+2. **Choose the restaurant.** Search by dish or cuisine, then ask with `clarify`, passing a few options (name, rating,
+   delivery time, price range) as `choices`, unless the user named one.
 3. **Choose dishes** from that restaurant's menu, including size and customisations. Ask when a
    dish has required options.
 4. **Build the cart** and read it back.

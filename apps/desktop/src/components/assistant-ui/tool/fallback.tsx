@@ -21,6 +21,7 @@ import { useSessionView } from '@/app/chat/session-view'
 import { AnsiText } from '@/components/assistant-ui/ansi-text'
 import { MarkdownImage } from '@/components/assistant-ui/markdown-text'
 import { TimelineTimestamp } from '@/components/assistant-ui/thread/timeline-timestamp'
+import { ActivityIcon, activityKindForIcon } from '@/components/chat/activity-icon'
 import { useElapsedSeconds } from '@/components/chat/activity-timer'
 import { ActivityTimerText } from '@/components/chat/activity-timer-text'
 import { CompactMarkdown } from '@/components/chat/compact-markdown'
@@ -38,7 +39,6 @@ import { CopyButton } from '@/components/ui/copy-button'
 import { DisclosureCaret } from '@/components/ui/disclosure-caret'
 import { FadeText } from '@/components/ui/fade-text'
 import { FileTypeIcon } from '@/components/ui/file-type-icon'
-import { GlyphSpinner } from '@/components/ui/glyph-spinner'
 import { ToolIcon } from '@/components/ui/tool-icon'
 import { useI18n } from '@/i18n'
 import { connectorCalls, mcpTargets } from '@/lib/connector-tools'
@@ -196,17 +196,8 @@ export function technicalTrace(args: unknown, result: unknown): string {
   return clampForDisplay(parts.join('\n\n'))
 }
 
+// Settled outcomes only: a running row shows its animated activity glyph (ToolGlyph).
 function statusGlyph(status: ToolStatus, copy: ToolStatusCopy): ReactNode {
-  if (status === 'running') {
-    return (
-      <GlyphSpinner
-        ariaLabel={copy.statusRunning}
-        className="size-3.5 shrink-0 text-[0.95rem] text-(--ui-text-tertiary)"
-        spinner="breathe"
-      />
-    )
-  }
-
   if (status === 'error') {
     return <AlertCircle aria-label={copy.statusError} className="size-3.5 shrink-0 text-destructive" />
   }
@@ -242,17 +233,25 @@ function ToolGlyph({
   legendary?: boolean
   status?: ToolStatus
 }) {
-  const node = status ? (
-    statusGlyph(status, copy)
-  ) : filePath ? (
-    <FileTypeIcon className="text-(--ui-text-tertiary)" path={filePath} size="0.875rem" />
-  ) : icon ? (
-    <ToolIcon
-      className={legendary ? 'text-(--tool-memory-legendary-icon)' : 'text-(--ui-text-tertiary)'}
-      name={icon}
-      size="0.875rem"
-    />
-  ) : null
+  // Running: the tool's own glyph, moving the way its work moves (activity-icon.tsx).
+  const node =
+    status === 'running' ? (
+      <ActivityIcon
+        icon={filePath ? 'edit' : icon}
+        kind={filePath ? 'edit' : activityKindForIcon(icon)}
+        label={copy.statusRunning}
+      />
+    ) : status ? (
+      statusGlyph(status, copy)
+    ) : filePath ? (
+      <FileTypeIcon className="text-(--ui-text-tertiary)" path={filePath} size="0.875rem" />
+    ) : icon ? (
+      <ToolIcon
+        className={legendary ? 'text-(--tool-memory-legendary-icon)' : 'text-(--ui-text-tertiary)'}
+        name={icon}
+        size="0.875rem"
+      />
+    ) : null
 
   return node ? (
     <span className={cn(TOOL_HEADER_GLYPH_WRAP_CLASS, legendary && 'tool-memory-legendary-glyph')}>{node}</span>

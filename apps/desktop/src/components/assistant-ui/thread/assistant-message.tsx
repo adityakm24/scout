@@ -77,6 +77,8 @@ import { sessionTileDelegate } from '@/store/session-states'
 import { notifyThreadEditOpen } from '@/store/thread-scroll'
 import { $voicePlayback } from '@/store/voice-playback'
 
+import { ReplyChoices } from './reply-choices'
+
 // Stable empty identity for the settled-parts selector — a fresh [] per render
 // would re-derive the changed-files card on every message re-render.
 const EMPTY_PARTS: readonly unknown[] = []
@@ -309,6 +311,7 @@ const AssistantMessageBody: FC<AssistantMessageProps & { collapsedNotice?: null 
             {MESSAGE_PARTS}
             <AssistantStatusSlot />
             <AssistantPreviewEmbeds />
+            {!isInterim && <ReplyChoices />}
             <MessagePrimitive.Error>
               <ErrorPrimitive.Root
                 className="mt-1.5 flex flex-col gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--dt-destructive)_35%,transparent)] bg-[color-mix(in_srgb,var(--dt-destructive)_7%,transparent)] px-3 py-2 text-[0.78rem] leading-5 text-[color-mix(in_srgb,var(--dt-destructive)_78%,var(--ui-text-secondary))]"

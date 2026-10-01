@@ -4,13 +4,14 @@ import { type FC, type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import { useSessionView } from '@/app/chat/session-view'
 import { activitySignature, toolNarratesWait, TURN_QUIET_S } from '@/components/assistant-ui/thread/turn-activity'
+import { toolIconName } from '@/components/assistant-ui/tool/fallback-model'
 import { toolPresentVerb } from '@/components/assistant-ui/tool/run-summary'
+import { ActivityIcon, type ActivityKind, activityKindFor } from '@/components/chat/activity-icon'
 import { useElapsedSeconds } from '@/components/chat/activity-timer'
 import { ActivityTimerText } from '@/components/chat/activity-timer-text'
 import { SCAFFOLD_LABEL_CLASS } from '@/components/chat/scaffold-row'
 import { Codicon } from '@/components/ui/codicon'
 import { Loader } from '@/components/ui/loader'
-import { StatusPulse } from '@/components/ui/status-pulse'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { getLocalModelsStatus } from '@/scout'
@@ -219,6 +220,15 @@ function useStatusHint(compacting: boolean, drafting: DraftingTool | null, provi
   return revealed && name ? toolPresentVerb(name) : ''
 }
 
+/** The glyph for a working row: the tool being drafted, a provider wait, or plain thinking. */
+function statusActivityKind(drafting: DraftingTool | null | undefined, providerWait: unknown): ActivityKind {
+  if (drafting?.name) {
+    return activityKindFor(drafting.name, toolIconName(drafting.name))
+  }
+
+  return providerWait ? 'wait' : 'thinking'
+}
+
 export const CenteredThreadSpinner: FC = () => {
   const { t } = useI18n()
 
@@ -252,11 +262,7 @@ export const ResponseLoadingIndicator: FC = () => {
 
   return (
     <StatusRow data-slot="aui_response-loading" label={hint || t.assistant.thread.loadingResponse}>
-      <StatusPulse
-        aria-hidden="true"
-        className="dither inline-block size-3 rounded-[2px] text-midground/80"
-        kind="opacity"
-      />
+      <ActivityIcon kind={statusActivityKind(drafting, providerWait)} />
       {hint ? (
         <WaitHint hint={hint} />
       ) : localLoad ? (
@@ -383,11 +389,7 @@ export const TurnActivityIndicator: FC = () => {
     >
       {active && (
         <>
-          <StatusPulse
-            aria-hidden="true"
-            className="dither inline-block size-3 rounded-[2px] text-midground/80"
-            kind="opacity"
-          />
+          <ActivityIcon kind={statusActivityKind(drafting, providerWait)} />
           {hint ? (
             <WaitHint hint={hint} />
           ) : localLoad ? (

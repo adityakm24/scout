@@ -106,6 +106,10 @@ export interface Translations {
       message: string
     }
   }
+  replyChoices: {
+    label: string
+    other: string
+  }
   agentPanel: {
     title: string
     connected: string
