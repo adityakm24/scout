@@ -309,6 +309,30 @@ export interface Translations {
     required: string
   }
   connectorsPage: {
+    googleWorkspace: {
+      blurb: string
+      cancel: string
+      clientBody: string
+      clientId: string
+      clientSaveFailed: string
+      clientSecret: string
+      clientTitle: string
+      connected: string
+      notConnected: string
+      notGranted: string
+      openConsole: string
+      save: string
+      services: Record<'calendar' | 'contacts' | 'docs' | 'drive' | 'gmail' | 'sheets', string>
+      signedInAs: (account: string) => string
+      signedInMessage: (account: null | string) => string
+      signedInTitle: string
+      connect: string
+      signInFailed: string
+      disconnect: string
+      signOutFailed: string
+      title: string
+      waiting: string
+    }
     title: string
     searchPlaceholder: (count: number) => string
     filterCategory: string

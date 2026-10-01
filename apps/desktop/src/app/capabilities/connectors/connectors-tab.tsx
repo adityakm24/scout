@@ -29,6 +29,7 @@ import {
   hostedCardKey,
   localServerName
 } from './derive'
+import { GOOGLE_WORKSPACE_TERMS, GoogleWorkspaceCard } from './google-workspace-card'
 import { HostedConnectorDialog } from './hosted-dialog'
 import { LocalConnectorDialog } from './local-dialog'
 import { RemoveServerConfirm } from './local-slots'
@@ -236,6 +237,11 @@ export function ConnectorsTab({ gateway, profile }: ConnectorsTabProps) {
         }
         busyKey={busyKey}
         cards={cards}
+        featured={
+          GOOGLE_WORKSPACE_TERMS.some(term => term.includes(filter.query.trim().toLowerCase())) ? (
+            <GoogleWorkspaceCard profile={profile} />
+          ) : null
+        }
         filter={filter}
         hostedFailed={hosted.phase === 'failed'}
         loading={(hosted.phase === 'loading' || mcp.configLoading || mcp.catalogLoading) && cards.length === 0}

@@ -390,6 +390,18 @@ class MemoryReset(BaseModel):
 class MemoryEntriesWrite(BaseModel):
     entries: List[str]  # the file's full entry list, in order
 
+class GoogleWorkspaceClient(BaseModel):
+    client_id: str
+    client_secret: str
+
+class GoogleWorkspaceSignIn(BaseModel):
+    client_redirect_uri: Optional[str] = None  # the desktop's own loopback listener, when it has one
+
+class GoogleWorkspaceCallback(BaseModel):
+    code: Optional[str] = None
+    state: Optional[str] = None
+    error: Optional[str] = None
+
 class BackupRequest(BaseModel):
     output: Optional[str] = None  # defaults to a timestamped zip in the home dir
 

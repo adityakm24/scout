@@ -17,6 +17,8 @@ export interface ConnectorsDirectoryProps {
   addYourOwn?: ReactNode
   busyKey?: null | string
   cards: ConnectorCardModel[]
+  /** An account card shown above the groups (Google Workspace), when it matches the search. */
+  featured?: ReactNode
   filter: ConnectorsFilter
   hostedFailed?: boolean
   loading?: boolean
@@ -35,6 +37,7 @@ export function ConnectorsDirectory({
   addYourOwn,
   busyKey = null,
   cards,
+  featured,
   filter,
   hostedFailed = false,
   loading = false,
@@ -128,6 +131,7 @@ export function ConnectorsDirectory({
         <ToolsWash label={copy.page.loading} rows={10} />
       ) : groups.length > 0 ? (
         <div className="grid min-h-0 flex-1 content-start gap-6 overflow-y-auto overscroll-contain pb-4">
+          {featured}
           {groups.map(group => (
             <Group
               busyKey={busyKey}
@@ -143,6 +147,8 @@ export function ConnectorsDirectory({
             />
           ))}
         </div>
+      ) : featured ? (
+        <div className="grid min-h-0 flex-1 content-start overflow-y-auto pb-4">{featured}</div>
       ) : cards.length === 0 ? (
         hostedFailed ? null : (
           <PanelEmpty action={addYourOwn} icon="plug" title={copy.page.emptyTitle} />
