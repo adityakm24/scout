@@ -108,6 +108,8 @@ export interface Translations {
   }
   replyChoices: {
     label: string
+    other: string
+    send: string
   }
   agentPanel: {
     title: string

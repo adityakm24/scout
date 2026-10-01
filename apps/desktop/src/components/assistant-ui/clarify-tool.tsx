@@ -166,7 +166,7 @@ export function readClarifyResult(result: unknown): ClarifyResult {
   }
 }
 
-export const letterFor = (index: number): string => String.fromCharCode(65 + index)
+const letterFor = (index: number): string => String.fromCharCode(65 + index)
 
 // The backend tags the agent's preferred option (`mark_recommended`); the card
 // renders the label in tertiary text so the option itself still reads first.
@@ -184,17 +184,17 @@ function ChoiceLabel({ choice }: { choice: string }) {
   )
 }
 
-export const OPTION_ROW_CLASS =
+const OPTION_ROW_CLASS =
   'flex w-full items-start gap-2 rounded-[0.25rem] px-1.5 py-1 text-left disabled:cursor-not-allowed disabled:opacity-50'
 
 // field-sizing on top of Textarea's shared chrome; kill min-h-16 for one-liners.
-export const CLARIFY_TEXTAREA_CLASS = 'field-sizing-content max-h-40 min-h-0 resize-none'
+const CLARIFY_TEXTAREA_CLASS = 'field-sizing-content max-h-40 min-h-0 resize-none'
 
 const CLARIFY_SHELL_CLASS = `${WIDGET_SHELL_CLASS} text-[length:var(--conversation-text-font-size)] text-(--ui-text-primary)`
 
 const CLARIFY_ICON_CLASS = 'mt-px size-4 shrink-0 text-(--ui-text-tertiary)'
 
-export function ClarifyShell({ children, className, ...props }: ComponentProps<'div'>) {
+function ClarifyShell({ children, className, ...props }: ComponentProps<'div'>) {
   return (
     <div className={cn(CLARIFY_SHELL_CLASS, className)} data-slot="clarify-inline" {...props}>
       {children}
@@ -216,7 +216,7 @@ function ClarifyLine({
   )
 }
 
-export function KeyBadge({
+function KeyBadge({
   char,
   disabled,
   preview,
@@ -247,7 +247,7 @@ export function KeyBadge({
 /** A letter-badged option row. Shared by the live pending card (where a click
  * selects an answer) and the settled skip card (where a click drafts a
  * follow-up), so both stay visually identical. */
-export function ChoiceButton({
+function ChoiceButton({
   active = false,
   char,
   choice,

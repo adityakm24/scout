@@ -48,11 +48,10 @@ function Harness({ messages }: { messages: ThreadMessage[] }) {
 }
 
 describe('reply choices', () => {
-  it('offers the options as a card that answers through the composer, standing in for the list', async () => {
+  it("answers with one tap, standing in for the reply's own list", async () => {
     render(<Harness messages={[message('u1', 'user', 'add kurkure'), message('a1', 'assistant', OFFER)]} />)
 
     fireEvent.click(await screen.findByRole('button', { name: /Single Pack \(78\.9g\) – ₹20/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
 
     expect($composerSendRequest.get()).toMatchObject({ target: 'main', text: 'Single Pack (78.9g) – ₹20' })
     // The reply's own list is hidden while the card shows it, so nothing reads twice.
@@ -62,8 +61,10 @@ describe('reply choices', () => {
   it("takes an answer in the user's own words from the last row", async () => {
     render(<Harness messages={[message('u1', 'user', 'add kurkure'), message('a1', 'assistant', OFFER)]} />)
 
-    fireEvent.change(await screen.findByPlaceholderText(/Other/), { target: { value: 'the masala munch one instead' } })
-    fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Something else…' }), {
+      target: { value: 'the masala munch one instead' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
 
     expect($composerSendRequest.get()).toMatchObject({ target: 'main', text: 'the masala munch one instead' })
   })
@@ -81,6 +82,6 @@ describe('reply choices', () => {
 
     await screen.findByText('single one')
 
-    expect(screen.queryByRole('form', { name: 'Choose one' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Choose one' })).toBeNull()
   })
 })
