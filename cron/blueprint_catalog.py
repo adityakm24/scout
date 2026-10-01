@@ -149,7 +149,7 @@ CATALOG: List[AutomationBlueprint] = [
             ),
             _DELIVER,
         ],
-        skills=("email-inbox-triage",),
+        skills=("google-workspace",),
         tags=("email", "monitor"),
     ),
     AutomationBlueprint(

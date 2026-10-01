@@ -21,7 +21,7 @@ Weekly reset: commitments, stalled work, next-week plan.
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `Weekly-Review`, `Planning`, `Tasks`, `Calendar`, `Productivity` |
-| Related skills | [`obsidian`](../../bundled/note-taking/note-taking-obsidian.md), [`notion`](../../bundled/productivity/productivity-notion.md), [`airtable`](../../optional/productivity/productivity-airtable.md), [`google-workspace`](../../bundled/productivity/productivity-google-workspace.md), [`email-inbox-triage`](../../bundled/email/email-email-inbox-triage.md) |
+| Related skills | [`obsidian`](../../bundled/note-taking/note-taking-obsidian.md), [`notion`](../../bundled/productivity/productivity-notion.md), [`airtable`](../../optional/productivity/productivity-airtable.md), [`google-workspace`](../../bundled/productivity/productivity-google-workspace.md) |
 
 ## Reference: full SKILL.md
 
@@ -41,7 +41,7 @@ Run a bounded weekly reset across the user's chosen systems. This is a concrete 
 - "Find stale projects and waiting items."
 - A cron tick fires for a scheduled weekly review.
 
-Don't use for: daily briefs (see the `google-workspace` daily-brief reference) or single-inbox triage (`email-inbox-triage`).
+Don't use for: daily briefs (see the `google-workspace` daily-brief reference) or single-inbox triage (`google-workspace` or `himalaya` directly).
 
 ## Procedure
 
@@ -55,7 +55,7 @@ Load `google-workspace` or the relevant calendar connector. Inspect the complete
 
 ### 3. Clear capture inboxes
 
-Review the task inbox, notes (`obsidian`, `notion`), flagged email (`email-inbox-triage` owns thread-level triage), and other declared capture points. Convert each item to next action, project, waiting, scheduled, someday, reference, archive, or delete proposal. Do not mutate until scope is approved. Done when remaining unprocessed items are counted and stated.
+Review the task inbox, notes (`obsidian`, `notion`), flagged email (via `google-workspace` or `himalaya`), and other declared capture points. Convert each item to next action, project, waiting, scheduled, someday, reference, archive, or delete proposal. Do not mutate until scope is approved. Done when remaining unprocessed items are counted and stated.
 
 ### 4. Reconcile active projects
 

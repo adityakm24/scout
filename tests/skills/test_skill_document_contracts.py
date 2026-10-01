@@ -16,7 +16,6 @@ QUESTIONNAIRE = "optional-skills/productivity/decision-questionnaire"
 ACTUAL = "optional-skills/devops/actual-setup"
 DARWINIAN = "optional-skills/research/darwinian-evolver"
 PINECONE = "optional-skills/research/pinecone-research"
-EMAIL = "skills/email/email-inbox-triage"
 MEETING = "skills/productivity/meeting-action-items"
 PRICE = "skills/productivity/product-price-monitor"
 WEEKLY = "skills/productivity/weekly-review-planning"
@@ -30,7 +29,7 @@ def _document(skill):
 
 @pytest.mark.parametrize("skill,contributor", [
     (GITHUB, "benbarclay"), (MEETING, "benbarclay"), (PRICE, "benbarclay"),
-    (WEEKLY, "benbarclay"), (EMAIL, "benbarclay"), (SOCIAL, "benbarclay"),
+    (WEEKLY, "benbarclay"), (SOCIAL, "benbarclay"),
     (ACTUAL, "shl0ms"), (DARWINIAN, "Bihruze"),
     (QUESTIONNAIRE, "mattpocock"), (PINECONE, None), (MCP, None),
 ])
@@ -64,9 +63,6 @@ def test_required_references_are_present_and_routed(skill, references):
     (PRICE, ("Setup (foreground, once)", "Tick (each scheduled run)", "cronjob(action=",
              "Do not schedule until one foreground fetch works",
              "never overwrite the last good observation", "fingerprint"), ("flight-research",)),
-    (EMAIL, ("read + draft", "does not imply permission", "Calibrate the user's voice",
-             "sent replies", "fall back to matching the incoming thread's register",
-             "generic-professional"), ()),
     (SOCIAL, (), ("image-generation-workflow",)),
 ])
 def test_document_obligations(skill, required, forbidden):
@@ -81,7 +77,7 @@ def test_document_obligations(skill, required, forbidden):
 
 @pytest.mark.parametrize("relative", [
     f"{GITHUB}/references/issue-to-pr.md",
-    *(f"{skill}/SKILL.md" for skill in (MEETING, PRICE, WEEKLY, EMAIL, SOCIAL)),
+    *(f"{skill}/SKILL.md" for skill in (MEETING, PRICE, WEEKLY, SOCIAL)),
 ])
 def test_procedure_steps_have_completion_criteria(relative):
     body = (REPO / relative).read_text(encoding="utf-8")

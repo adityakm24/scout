@@ -9,7 +9,7 @@ metadata:
   scout:
     tags: [dashboards, monitoring, status, automation, reporting]
     category: productivity
-    related_skills: [product-price-monitor, competitor-news-monitor, email-inbox-triage, google-workspace]
+    related_skills: [product-price-monitor, competitor-news-monitor, google-workspace]
     blueprint:
       schedule: "0 8 * * *"
       prompt: "Load the live-dashboard skill and run the refresh tick for every dashboard.json under the Scout home directory's dashboards/ folder. Mark failed reads stale without overwriting last-known-good values, regenerate each index.html from its state file, and deliver a short summary ONLY on material change or new needs-attention items — otherwise respond with [SILENT]."

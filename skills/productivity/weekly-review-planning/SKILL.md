@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   scout:
     tags: [Weekly-Review, Planning, Tasks, Calendar, Productivity]
-    related_skills: [obsidian, notion, airtable, google-workspace, email-inbox-triage]
+    related_skills: [obsidian, notion, airtable, google-workspace]
 ---
 
 # Weekly Review and Planning
@@ -23,7 +23,7 @@ Run a bounded weekly reset across the user's chosen systems. This is a concrete 
 - "Find stale projects and waiting items."
 - A cron tick fires for a scheduled weekly review.
 
-Don't use for: daily briefs (see the `google-workspace` daily-brief reference) or single-inbox triage (`email-inbox-triage`).
+Don't use for: daily briefs (see the `google-workspace` daily-brief reference) or single-inbox triage (`google-workspace` or `himalaya` directly).
 
 ## Procedure
 
@@ -37,7 +37,7 @@ Load `google-workspace` or the relevant calendar connector. Inspect the complete
 
 ### 3. Clear capture inboxes
 
-Review the task inbox, notes (`obsidian`, `notion`), flagged email (`email-inbox-triage` owns thread-level triage), and other declared capture points. Convert each item to next action, project, waiting, scheduled, someday, reference, archive, or delete proposal. Do not mutate until scope is approved. Done when remaining unprocessed items are counted and stated.
+Review the task inbox, notes (`obsidian`, `notion`), flagged email (via `google-workspace` or `himalaya`), and other declared capture points. Convert each item to next action, project, waiting, scheduled, someday, reference, archive, or delete proposal. Do not mutate until scope is approved. Done when remaining unprocessed items are counted and stated.
 
 ### 4. Reconcile active projects
 

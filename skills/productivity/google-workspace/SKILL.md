@@ -1,6 +1,6 @@
 ---
 name: google-workspace
-description: "Gmail, Calendar, Drive, Docs, Sheets via gws CLI or Python."
+description: "Read the user's Gmail, Calendar, Drive, Docs, Sheets."
 version: 1.2.0
 author: SpaceshipResearch
 license: MIT

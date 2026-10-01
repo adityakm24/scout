@@ -49,7 +49,6 @@ If a skill is missing from this list but present in the repo, the catalog is reg
 
 | Skill | Description | Path |
 |-------|-------------|------|
-| [`email-inbox-triage`](../user-guide/skills/bundled/email/email-email-inbox-triage.md) | Triage an inbox: prioritize threads, draft replies safely. | `email/email-inbox-triage` |
 | [`himalaya`](../user-guide/skills/bundled/email/email-himalaya.md) | Himalaya CLI: IMAP/SMTP email from terminal. | `email/himalaya` |
 
 ## media
@@ -70,7 +69,7 @@ If a skill is missing from this list but present in the repo, the catalog is reg
 |-------|-------------|------|
 | [`document-to-action-items`](../user-guide/skills/bundled/productivity/productivity-document-to-action-items.md) | Extract cited obligations, deadlines, tasks from documents. | `productivity/document-to-action-items` |
 | [`docx`](../user-guide/skills/bundled/productivity/productivity-docx.md) | Create, read, edit, template, and review Word .docx files. | `productivity/docx` |
-| [`google-workspace`](../user-guide/skills/bundled/productivity/productivity-google-workspace.md) | Gmail, Calendar, Drive, Docs, Sheets via gws CLI or Python. | `productivity/google-workspace` |
+| [`google-workspace`](../user-guide/skills/bundled/productivity/productivity-google-workspace.md) | Read the user's Gmail, Calendar, Drive, Docs, Sheets. | `productivity/google-workspace` |
 | [`maps`](../user-guide/skills/bundled/productivity/productivity-maps.md) | Geocode, POIs, routes, timezones via OpenStreetMap/OSRM. | `productivity/maps` |
 | [`meeting-action-items`](../user-guide/skills/bundled/productivity/productivity-meeting-action-items.md) | Turn meeting notes into cited decisions, owners, tickets. | `productivity/meeting-action-items` |
 | [`notion`](../user-guide/skills/bundled/productivity/productivity-notion.md) | Notion API + ntn CLI: pages, databases, markdown, Workers. | `productivity/notion` |

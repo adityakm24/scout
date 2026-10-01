@@ -21,7 +21,7 @@ Build self-updating dashboards from live sources.
 | License | MIT |
 | Platforms | linux, macos, windows |
 | Tags | `dashboards`, `monitoring`, `status`, `automation`, `reporting` |
-| Related skills | [`product-price-monitor`](../../bundled/productivity/productivity-product-price-monitor.md), [`competitor-news-monitor`](../../bundled/research/research-competitor-news-monitor.md), [`email-inbox-triage`](../../bundled/email/email-email-inbox-triage.md), [`google-workspace`](../../bundled/productivity/productivity-google-workspace.md) |
+| Related skills | [`product-price-monitor`](../../bundled/productivity/productivity-product-price-monitor.md), [`competitor-news-monitor`](../../bundled/research/research-competitor-news-monitor.md), [`google-workspace`](../../bundled/productivity/productivity-google-workspace.md) |
 
 ## Reference: full SKILL.md
 
