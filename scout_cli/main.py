@@ -400,6 +400,7 @@ from scout_cli.subcommands.checkpoints import build_checkpoints_parser
 from scout_cli.subcommands.bundles import build_bundles_parser
 from scout_cli.subcommands.curator import build_curator_parser
 from scout_cli.subcommands.pets import build_pets_parser
+from scout_cli.subcommands.google import build_google_parser
 from scout_cli.subcommands.journey import build_journey_parser
 from scout_cli.subcommands.computer_use import build_computer_use_parser
 from scout_cli.subcommands.sessions import build_sessions_parser
@@ -2891,7 +2892,7 @@ _BUILTIN_SUBCOMMANDS = frozenset(
         "dump", "egress", "fallback", "gateway", "hooks", "import", "import-agent", "insights",
         "gui", "desktop", "kanban", "login", "logout", "logs", "lsp", "mcp", "memory", "migrate", "moa",
         "journey", "memory-graph", "learning",
-        "model", "monitoring", "pairing", "pause", "peer", "pets", "plugins", "portal", "profile",
+        "google", "model", "monitoring", "pairing", "pause", "peer", "pets", "plugins", "portal", "profile",
         "project", "proxy",
         "prompt-size",
         "resume",
@@ -3523,6 +3524,7 @@ def _build_cli_parser():
 
     build_curator_parser(subparsers)
     build_pets_parser(subparsers)
+    build_google_parser(subparsers)
     build_journey_parser(subparsers)
     build_memory_parser(subparsers, cmd_memory=cmd_memory)
     build_tools_parser(subparsers, cmd_tools=cmd_tools)

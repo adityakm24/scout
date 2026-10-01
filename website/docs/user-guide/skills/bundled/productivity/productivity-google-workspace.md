@@ -40,8 +40,10 @@ Gmail, Calendar, Drive, Contacts, Sheets, and Docs — through Scout-managed OAu
 
 ## Scripts
 
-- `scripts/setup.py` — OAuth2 setup (run once to authorize)
-- `scripts/google_api.py` — compatibility wrapper CLI. It prefers `gws` for operations when available, while preserving Scout's existing JSON output contract.
+Both run through `scout google` (never by path).
+
+- `scripts/setup.py` — OAuth2 setup (`scout google setup`, `scout google status`)
+- `scripts/google_api.py` — the API CLI behind `scout google SERVICE ACTION`. It prefers `gws` for operations when available, while preserving Scout's existing JSON output contract.
 
 ## First-Time Setup
 
@@ -53,19 +55,18 @@ system Python. `--install-deps` syncs Scout's declared Google extra through PM;
 after syncing, restart Scout and rerun the OAuth command. If Scout is not
 importable, use `scout setup` first rather than installing packages with pip.
 
-Define a shorthand first:
-
-```bash
-GSETUP="python ${SCOUT_HOME:-$HOME/.scout}/skills/productivity/google-workspace/scripts/setup.py"
-```
+Every command below is `scout google ...` run in the terminal: it finds the skill's scripts
+itself, so never write out a script path. `scout google setup ARGS` runs the OAuth helper.
 
 ### Step 0: Check if already set up
 
 ```bash
-$GSETUP --check
+scout google status
 ```
 
-If it prints `AUTHENTICATED`, skip to Usage — setup is already done.
+If it prints `AUTHENTICATED`, skip to Usage — setup is already done. If not, and the user is in
+the Scout desktop app, the quickest path is **Capabilities → Connectors → Google Workspace →
+Connect**; continue below only for other surfaces.
 
 ### Step 1: Triage — ask the user what they need
 
@@ -118,7 +119,7 @@ Tell the user:
 Once they provide the path:
 
 ```bash
-$GSETUP --client-secret /path/to/client_secret.json
+scout google setup --client-secret /path/to/client_secret.json
 ```
 
 If they paste the raw client ID / client secret values instead of a file path,
@@ -129,7 +130,7 @@ explicit (for example `~/Downloads/scout-google-client-secret.json`), then run
 ### Step 3: Get authorization URL
 
 ```bash
-$GSETUP --auth-url
+scout google setup --auth-url
 ```
 
 This prints the authorization URL.
@@ -148,17 +149,17 @@ pending OAuth session locally so `--auth-code` can complete the PKCE exchange
 later, even on headless systems:
 
 ```bash
-$GSETUP --auth-code "THE_URL_OR_CODE_THE_USER_PASTED"
+scout google setup --auth-code "THE_URL_OR_CODE_THE_USER_PASTED"
 ```
 
 If `--auth-code` fails because the code expired, was already used, or came from
-an older browser tab, run `$GSETUP --auth-url` again, send the new URL, and have
+an older browser tab, run `scout google setup --auth-url` again, send the new URL, and have
 the user retry with the newest browser redirect only.
 
 ### Step 5: Verify
 
 ```bash
-$GSETUP --check
+scout google setup --check
 ```
 
 Should print `AUTHENTICATED`. Setup is complete — token refreshes automatically from now on.
@@ -168,130 +169,127 @@ Should print `AUTHENTICATED`. Setup is complete — token refreshes automaticall
 - Token is stored at `~/.scout/google_token.json` and auto-refreshes.
 - Pending OAuth session state/verifier are stored temporarily at `~/.scout/google_oauth_pending.json` until exchange completes.
 - If `gws` is installed, `google_api.py` points it at the same `~/.scout/google_token.json` credentials file. Users do not need to run a separate `gws auth login` flow.
-- To revoke: `$GSETUP --revoke`
+- To revoke: `scout google setup --revoke`
 
 ## Usage
 
-All commands go through the API script. Set `GAPI` as a shorthand:
-
-```bash
-GAPI="python ${SCOUT_HOME:-$HOME/.scout}/skills/productivity/google-workspace/scripts/google_api.py"
-```
+Run `scout google SERVICE ACTION ...` in the terminal. `scout google gmail --help` lists a
+service's actions.
 
 ### Gmail
 
 ```bash
 # Search (returns JSON array with id, from, subject, date, snippet)
-$GAPI gmail search "is:unread" --max 10
-$GAPI gmail search "from:boss@company.com newer_than:1d"
-$GAPI gmail search "has:attachment filename:pdf newer_than:7d"
+scout google gmail search "is:unread" --max 10
+scout google gmail search "from:boss@company.com newer_than:1d"
+scout google gmail search "has:attachment filename:pdf newer_than:7d"
 
 # Read full message (returns JSON with body text)
-$GAPI gmail get MESSAGE_ID
+scout google gmail get MESSAGE_ID
 
 # Send
-$GAPI gmail send --to user@example.com --subject "Hello" --body "Message text"
-$GAPI gmail send --to user@example.com --subject "Report" --body "<h1>Q4</h1><p>Details...</p>" --html
-$GAPI gmail send --to user@example.com --subject "Hello" --from '"Research Agent" <user@example.com>' --body "Message text"
+scout google gmail send --to user@example.com --subject "Hello" --body "Message text"
+scout google gmail send --to user@example.com --subject "Report" --body "<h1>Q4</h1><p>Details...</p>" --html
+scout google gmail send --to user@example.com --subject "Hello" --from '"Research Agent" <user@example.com>' --body "Message text"
 
 # Reply (automatically threads and sets In-Reply-To)
-$GAPI gmail reply MESSAGE_ID --body "Thanks, that works for me."
-$GAPI gmail reply MESSAGE_ID --from '"Support Bot" <user@example.com>' --body "Thanks"
+scout google gmail reply MESSAGE_ID --body "Thanks, that works for me."
+scout google gmail reply MESSAGE_ID --from '"Support Bot" <user@example.com>' --body "Thanks"
 
 # Labels
-$GAPI gmail labels
-$GAPI gmail modify MESSAGE_ID --add-labels LABEL_ID
-$GAPI gmail modify MESSAGE_ID --remove-labels UNREAD
+scout google gmail labels
+scout google gmail modify MESSAGE_ID --add-labels LABEL_ID
+scout google gmail modify MESSAGE_ID --remove-labels UNREAD
 ```
 
 ### Calendar
 
 ```bash
 # List events (defaults to next 7 days)
-$GAPI calendar list
-$GAPI calendar list --start 2026-03-01T00:00:00Z --end 2026-03-07T23:59:59Z
+scout google calendar list
+scout google calendar list --start 2026-03-01T00:00:00Z --end 2026-03-07T23:59:59Z
 
 # Create event (ISO 8601 with timezone required)
-$GAPI calendar create --summary "Team Standup" --start 2026-03-01T10:00:00-06:00 --end 2026-03-01T10:30:00-06:00
-$GAPI calendar create --summary "Lunch" --start 2026-03-01T12:00:00Z --end 2026-03-01T13:00:00Z --location "Cafe"
-$GAPI calendar create --summary "Review" --start 2026-03-01T14:00:00Z --end 2026-03-01T15:00:00Z --attendees "alice@co.com,bob@co.com"
+scout google calendar create --summary "Team Standup" --start 2026-03-01T10:00:00-06:00 --end 2026-03-01T10:30:00-06:00
+scout google calendar create --summary "Lunch" --start 2026-03-01T12:00:00Z --end 2026-03-01T13:00:00Z --location "Cafe"
+scout google calendar create --summary "Review" --start 2026-03-01T14:00:00Z --end 2026-03-01T15:00:00Z --attendees "alice@co.com,bob@co.com"
 
 # Delete event
-$GAPI calendar delete EVENT_ID
+scout google calendar delete EVENT_ID
 ```
 
 ### Drive
 
 ```bash
 # Search existing files
-$GAPI drive search "quarterly report" --max 10
-$GAPI drive search "mimeType='application/pdf'" --raw-query --max 5
+scout google drive search "quarterly report" --max 10
+scout google drive search "mimeType='application/pdf'" --raw-query --max 5
 
 # Get metadata for a single file
-$GAPI drive get FILE_ID
+scout google drive get FILE_ID
 
 # Upload a local file (auto-detects MIME type)
-$GAPI drive upload /path/to/report.pdf
-$GAPI drive upload /path/to/image.png --name "Logo.png" --parent FOLDER_ID
+scout google drive upload /path/to/report.pdf
+scout google drive upload /path/to/image.png --name "Logo.png" --parent FOLDER_ID
 
 # Download (binary files download as-is; Google-native files export to a
 # sensible default — Docs→pdf, Sheets→csv, Slides→pdf, Drawings→png)
-$GAPI drive download FILE_ID
-$GAPI drive download DOC_ID --output ~/doc.pdf
-$GAPI drive download DOC_ID --export-mime text/plain --output ~/doc.txt
+scout google drive download FILE_ID
+scout google drive download DOC_ID --output ~/doc.pdf
+scout google drive download DOC_ID --export-mime text/plain --output ~/doc.txt
 
 # Create a folder
-$GAPI drive create-folder "Reports"
-$GAPI drive create-folder "Q4" --parent FOLDER_ID
+scout google drive create-folder "Reports"
+scout google drive create-folder "Q4" --parent FOLDER_ID
 
 # Share
-$GAPI drive share FILE_ID --email alice@example.com --role reader
-$GAPI drive share FILE_ID --email alice@example.com --role writer --notify
-$GAPI drive share FILE_ID --type anyone --role reader        # anyone with link
-$GAPI drive share FILE_ID --type domain --domain example.com --role reader
+scout google drive share FILE_ID --email alice@example.com --role reader
+scout google drive share FILE_ID --email alice@example.com --role writer --notify
+scout google drive share FILE_ID --type anyone --role reader        # anyone with link
+scout google drive share FILE_ID --type domain --domain example.com --role reader
 
 # Delete — defaults to trash (reversible). Use --permanent to skip the trash.
-$GAPI drive delete FILE_ID
-$GAPI drive delete FILE_ID --permanent
+scout google drive delete FILE_ID
+scout google drive delete FILE_ID --permanent
 ```
 
 ### Contacts
 
 ```bash
-$GAPI contacts list --max 20
+scout google contacts list --max 20
 ```
 
 ### Sheets
 
 ```bash
 # Create a new spreadsheet
-$GAPI sheets create --title "Q4 Budget"
-$GAPI sheets create --title "Inventory" --sheet-name "Stock"
+scout google sheets create --title "Q4 Budget"
+scout google sheets create --title "Inventory" --sheet-name "Stock"
 
 # Read
-$GAPI sheets get SHEET_ID "Sheet1!A1:D10"
+scout google sheets get SHEET_ID "Sheet1!A1:D10"
 
 # Write
-$GAPI sheets update SHEET_ID "Sheet1!A1:B2" --values '[["Name","Score"],["Alice","95"]]'
+scout google sheets update SHEET_ID "Sheet1!A1:B2" --values '[["Name","Score"],["Alice","95"]]'
 
 # Append rows
-$GAPI sheets append SHEET_ID "Sheet1!A:C" --values '[["new","row","data"]]'
+scout google sheets append SHEET_ID "Sheet1!A:C" --values '[["new","row","data"]]'
 ```
 
 ### Docs
 
 ```bash
 # Read (a tabbed Doc returns a "tabs" array; single-tab and legacy Docs also return "body")
-$GAPI docs get DOC_ID
-$GAPI docs get DOC_ID --tab TAB_ID     # read one tab of a tabbed Doc
+scout google docs get DOC_ID
+scout google docs get DOC_ID --tab TAB_ID     # read one tab of a tabbed Doc
 
 # Create a new Doc (optionally seeded with body text)
-$GAPI docs create --title "Meeting Notes"
-$GAPI docs create --title "Draft" --body "First paragraph..."
+scout google docs create --title "Meeting Notes"
+scout google docs create --title "Draft" --body "First paragraph..."
 
 # Append text to the end of an existing Doc
-$GAPI docs append DOC_ID --text "Additional content to append"
-$GAPI docs append DOC_ID --tab TAB_ID --text "..."   # --tab required when the Doc has multiple tabs
+scout google docs append DOC_ID --text "Additional content to append"
+scout google docs append DOC_ID --tab TAB_ID --text "..."   # --tab required when the Doc has multiple tabs
 ```
 
 ## Output Format
@@ -319,7 +317,7 @@ All commands return JSON. Parse with `jq` or read directly. Key fields:
 ## Rules
 
 1. **Never send email, create/delete calendar events, delete Drive files, share files, or modify Docs/Sheets without confirming with the user first.** Show what will be done (recipients, file IDs, content, share role) and ask for approval. For `drive delete`, prefer the default trash (reversible) over `--permanent`.
-2. **Check auth before first use** — run `setup.py --check`. If it fails, guide the user through setup.
+2. **Check auth before first use** — run `scout google status`. If it fails, guide the user through setup.
 3. **Use the Gmail search syntax reference** for complex queries — load it with `skill_view("google-workspace", file_path="references/gmail-search-syntax.md")`.
 4. **Calendar times must include timezone** — always use ISO 8601 with offset (e.g., `2026-03-01T10:00:00-06:00`) or UTC (`Z`).
 5. **Respect rate limits** — avoid rapid-fire sequential API calls. Batch reads when possible.
@@ -330,14 +328,14 @@ All commands return JSON. Parse with `jq` or read directly. Key fields:
 |---------|-----|
 | `NOT_AUTHENTICATED` | Run setup Steps 2-5 above |
 | `REFRESH_FAILED` | Token revoked or expired — redo Steps 3-5 |
-| `HttpError 403: Insufficient Permission` | Missing API scope — `$GSETUP --revoke` then redo Steps 3-5 |
-| `AUTHENTICATED (partial)` or "Token missing scopes" | New write capabilities (Drive write/delete, Docs create/edit) require re-authorization. `$GSETUP --revoke` then redo Steps 3-5 to grant the upgraded scopes. |
+| `HttpError 403: Insufficient Permission` | Missing API scope — `scout google setup --revoke` then redo Steps 3-5 |
+| `AUTHENTICATED (partial)` or "Token missing scopes" | New write capabilities (Drive write/delete, Docs create/edit) require re-authorization. `scout google setup --revoke` then redo Steps 3-5 to grant the upgraded scopes. |
 | `HttpError 403: Access Not Configured` | API not enabled — user needs to enable it in Google Cloud Console |
-| `ModuleNotFoundError` | Run `$GSETUP --install-deps` |
+| `ModuleNotFoundError` | Run `scout google setup --install-deps` |
 | Advanced Protection blocks auth | Workspace admin must allowlist the OAuth client ID |
 
 ## Revoking Access
 
 ```bash
-$GSETUP --revoke
+scout google setup --revoke
 ```
