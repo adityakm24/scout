@@ -296,8 +296,29 @@ def _tool_guidance_block(agent: Any) -> Optional[str]:
         _pb.CLARIFY_GUIDANCE if "clarify" in names else None,
         _kanban_guidance,
         _failing_connectors_note(),
+        _google_account_note(agent) if "terminal" in names else None,
     ]
     return " ".join(g for g in tool_guidance if g) or None
+
+
+def _google_account_note(agent: Any) -> Optional[str]:
+    """Say so when the user has signed in to Google Workspace, with the command that reaches it.
+    The account works through a skill + ``scout google``, which a small model does not connect with
+    "check my Gmail" on its own: it web-searched ``site:mail.google.com`` and told a signed-in user it
+    had no access. Read from the profile's token at prompt build, so it is frozen with the prompt."""
+    home = _agent_home(agent) or get_scout_home()
+    try:
+        token = json.loads((home / "google_token.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(token, dict) or not token.get("refresh_token"):
+        return None
+    account = f" as {token['account']}" if token.get("account") else ""
+    return (f"The user has connected their Google account{account}: you CAN read and search their Gmail, "
+            "Calendar, Drive, Docs, Sheets and Contacts. Run `scout google ...` in the terminal, e.g. "
+            "`scout google gmail search \"from:dbs\" --max 5` then `scout google gmail get MESSAGE_ID`, "
+            "`scout google calendar list`; load the google-workspace skill for the full command list. "
+            "Never web-search for the user's own mail or say you cannot access it.")
 
 
 def _failing_connectors_note() -> Optional[str]:
