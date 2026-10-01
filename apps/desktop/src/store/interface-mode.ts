@@ -7,7 +7,8 @@ import type { ToolViewMode } from '@/store/tool-view'
 import { isBrowserWindow, isHudWindow, isSecondaryWindow } from '@/store/windows'
 
 // Interface mode: does this window show the machinery, or just the
-// conversation? Two answers. ADVANCED is the app as it has always been — every
+// conversation? Two answers. SIMPLE is the default: Scout is a personal
+// assistant first. ADVANCED is the full workbench — every
 // preference the user set, honoured. SIMPLE is chat-first: the standing
 // developer instrumentation (statusbar, profile rail, terminal / files / review
 // panes, technical tool payloads, the artifacts / scheduled-jobs rows) rests
@@ -39,14 +40,14 @@ export type InterfaceMode = 'advanced' | 'simple'
 /** Picker order — the quiet option first. */
 export const INTERFACE_MODES: readonly InterfaceMode[] = ['simple', 'advanced']
 
-export const DEFAULT_INTERFACE_MODE: InterfaceMode = 'advanced'
+export const DEFAULT_INTERFACE_MODE: InterfaceMode = 'simple'
 
 const INTERFACE_MODE_STORAGE_KEY = 'scout.desktop.interfaceMode.v1'
 
-// Advanced is the ABSENCE of a mode: encoded as "no key" so a user who never
-// touched the picker never gains a record, and clearing the key means Advanced.
+// The default is the ABSENCE of a choice: encoded as "no key" so a user who never
+// touched the picker never gains a record, and clearing the key means the default.
 const modeCodec: Codec<InterfaceMode> = {
-  decode: raw => (raw === 'simple' ? 'simple' : DEFAULT_INTERFACE_MODE),
+  decode: raw => (raw === 'simple' || raw === 'advanced' ? raw : DEFAULT_INTERFACE_MODE),
   encode: mode => (mode === DEFAULT_INTERFACE_MODE ? null : mode)
 }
 

@@ -4,6 +4,7 @@ import type { LayoutNode } from './model'
 
 beforeEach(() => {
   window.localStorage.clear()
+  window.localStorage.setItem('scout.desktop.interfaceMode.v1', 'advanced') // these suites cover the workbench
   vi.resetModules()
 })
 
@@ -165,9 +166,7 @@ it.each(['advanced', 'simple'] as const)(
     window.localStorage.setItem('scout.desktop.layoutPreset.active', 'custom')
     window.localStorage.setItem('scout.desktop.hiddenStripTabs.v1', '["bots"]')
 
-    if (initialMode === 'simple') {
-      window.localStorage.setItem('scout.desktop.interfaceMode.v1', 'simple')
-    }
+    window.localStorage.setItem('scout.desktop.interfaceMode.v1', initialMode)
 
     const { mode, tree, panes, layout } = await boot()
     expect(mode.$interfaceMode.get()).toBe(initialMode)

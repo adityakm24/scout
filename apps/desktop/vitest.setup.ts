@@ -1,4 +1,5 @@
 import { configure } from '@testing-library/react'
+import { beforeEach } from 'vitest'
 
 import { InertResizeObserver } from './src/test/jsdom'
 
@@ -36,6 +37,13 @@ if (typeof (globalThis as any).localStorage === 'undefined') {
     })
   }
 }
+
+// The app defaults to Simple mode; most suites exercise the full workbench, so tests start in
+// Advanced. A test about Simple (or the default itself) sets or clears the key explicitly.
+const INTERFACE_MODE_KEY = 'scout.desktop.interfaceMode.v1'
+
+localStorage.setItem(INTERFACE_MODE_KEY, 'advanced')
+beforeEach(() => localStorage.setItem(INTERFACE_MODE_KEY, 'advanced'))
 
 // jsdom has no layout or intersection delivery. Tests of observer behavior
 // supply their own callbacks; ordinary component tests only need the lifecycle.

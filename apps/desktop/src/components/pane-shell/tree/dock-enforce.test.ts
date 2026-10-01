@@ -44,6 +44,7 @@ describe('enforced dock (stacked Bots pane → sessions-zone tab, every boot)', 
 
   beforeEach(() => {
     window.localStorage.clear()
+    window.localStorage.setItem('scout.desktop.interfaceMode.v1', 'advanced') // these suites cover the workbench
     vi.resetModules()
   })
 

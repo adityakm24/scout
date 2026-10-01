@@ -7,7 +7,6 @@ vi.mock('@/scout', () => ({
 
 import { saveScoutConfig } from '@/scout'
 
-
 it('keeps the desktop toggle local across config refreshes', async () => {
   for (const fails of [false, true]) {
     for (const enabled of [false, true]) {

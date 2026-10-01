@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 describe('$layoutEditRevealsHidden', () => {
   beforeEach(() => {
     window.localStorage.clear()
+    window.localStorage.setItem('scout.desktop.interfaceMode.v1', 'advanced') // these suites cover the workbench
     vi.resetModules()
   })
 

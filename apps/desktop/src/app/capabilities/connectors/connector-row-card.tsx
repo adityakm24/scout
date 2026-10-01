@@ -175,7 +175,6 @@ function CardLane({
             className="-my-1 -mr-1 grid size-5 shrink-0 place-items-center rounded-full text-(--ui-text-secondary) outline-none transition-[background-color,color,rotate] duration-300 ease-(--ease-spring) hover:rotate-180 hover:bg-(--chrome-action-hover) hover:text-(--ui-text-primary) focus-visible:ring-[0.1875rem] focus-visible:ring-ring/50 disabled:opacity-40"
             disabled={busy}
             onClick={onReload}
-            title={copy.reload(card.name)}
             type="button"
           >
             <Codicon name="refresh" size="0.75rem" />

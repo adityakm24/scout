@@ -47,7 +47,9 @@ test('clearBillingBlock with no arg clears any active block', () => {
 })
 
 test('runBillingRecovery routes SpaceshipResearch to in-app Settings, never an external link', () => {
-  runBillingRecovery(makeBlock({ is_spaceshipresearch: true, provider: 'spaceshipresearch', provider_label: 'Scout Portal' }))
+  runBillingRecovery(
+    makeBlock({ is_spaceshipresearch: true, provider: 'spaceshipresearch', provider_label: 'Scout Portal' })
+  )
   expect($billingSettingsRequest.get()).toBe(1)
   expect(openExternalLink).not.toHaveBeenCalled()
 })

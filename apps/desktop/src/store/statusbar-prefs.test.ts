@@ -7,6 +7,7 @@ const loadStore = () => import('./statusbar-prefs')
 describe('statusbar whole-bar visibility', () => {
   beforeEach(() => {
     window.localStorage.clear()
+    window.localStorage.setItem('scout.desktop.interfaceMode.v1', 'advanced') // the bar is workbench chrome
     vi.resetModules()
   })
 
@@ -34,6 +35,7 @@ describe('statusbar whole-bar visibility', () => {
 describe('statusbar hidden items', () => {
   beforeEach(() => {
     window.localStorage.clear()
+    window.localStorage.setItem('scout.desktop.interfaceMode.v1', 'advanced') // the bar is workbench chrome
     vi.resetModules()
   })
 

@@ -57,7 +57,10 @@ describe('model visibility', () => {
       modelVisibilityKey('spaceshipresearch', 'scout-4')
     ])
 
-    const providers = [provider('claude-sub', ['sonnet', 'haiku', 'opus']), provider('spaceshipresearch', ['scout-4', 'scout-5'])]
+    const providers = [
+      provider('claude-sub', ['sonnet', 'haiku', 'opus']),
+      provider('spaceshipresearch', ['scout-4', 'scout-5'])
+    ]
     const visible = effectiveVisibleKeys(stored, providers, known)
 
     expect(visible.has(modelVisibilityKey('claude-sub', 'opus'))).toBe(true)
@@ -153,7 +156,10 @@ describe('toggleModelVisibility', () => {
   })
 
   it('clears only the toggled provider sentinel when a model is re-enabled', () => {
-    let stored: Set<string> | null = new Set([emptyProviderSentinelKey('openai'), emptyProviderSentinelKey('spaceshipresearch')])
+    let stored: Set<string> | null = new Set([
+      emptyProviderSentinelKey('openai'),
+      emptyProviderSentinelKey('spaceshipresearch')
+    ])
 
     stored = apply(stored, 'openai', 'gpt-a')
 

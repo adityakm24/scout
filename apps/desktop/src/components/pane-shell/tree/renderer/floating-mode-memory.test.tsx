@@ -5,6 +5,7 @@ afterEach(cleanup)
 
 it.each([false, true])('restores floating geometry and collapse with keep-alive=%s', async keepAlive => {
   window.localStorage.clear()
+  window.localStorage.setItem('scout.desktop.interfaceMode.v1', 'advanced') // these suites cover the workbench
   vi.resetModules()
   window.localStorage.setItem('scout.desktop.floatingPanes.v1', JSON.stringify({ card: { x: 37, y: 71 } }))
   const { registry } = await import('@/contrib/registry')
