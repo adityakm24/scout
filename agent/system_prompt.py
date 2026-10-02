@@ -315,9 +315,9 @@ def _google_account_note(agent: Any) -> Optional[str]:
         return None
     account = f" as {token['account']}" if token.get("account") else ""
     return (f"The user has connected their Google account{account}: you CAN read and search their Gmail, "
-            "Calendar, Drive, Docs, Sheets and Contacts. Run `scout google ...` in the terminal, e.g. "
-            "`scout google gmail search \"from:dbs\" --max 5` then `scout google gmail get MESSAGE_ID`, "
-            "`scout google calendar list`; load the google-workspace skill for the full command list. "
+            "Calendar, Drive, Docs, Sheets and Contacts by calling the terminal tool (never by writing the "
+            "command in your reply): `scout google gmail search \"from:dbs\"`, then `scout google gmail get "
+            "MESSAGE_ID`; `scout google calendar list`. Use only flags `scout google SERVICE --help` lists. "
             "Never web-search for the user's own mail or say you cannot access it.")
 
 
