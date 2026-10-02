@@ -512,6 +512,7 @@
     "boot.failure.hideRecentLogs",
     "boot.failure.identityProvider",
     "boot.failure.openLogs",
+    "boot.failure.reconnecting",
     "boot.failure.reinstallApp",
     "boot.failure.remoteDescription",
     "boot.failure.remoteFailureHint",

@@ -3,6 +3,8 @@ import { atom } from 'nanostores'
 import type { DesktopBootProgress } from '@/global'
 import { translateNow } from '@/i18n'
 
+import { endQuietRecovery } from './boot-quiet'
+
 export interface DesktopBootState extends DesktopBootProgress {
   visible: boolean
 }
@@ -88,6 +90,7 @@ export function resumeDesktopBootForRetry(message: string) {
 }
 
 export function completeDesktopBoot(message = translateNow('boot.ready')) {
+  endQuietRecovery()
   const current = $desktopBoot.get()
   $desktopBoot.set({
     ...current,

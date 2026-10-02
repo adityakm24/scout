@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
-import { type ComponentProps, lazy, type ReactNode, Suspense, useEffect, useState } from 'react'
+import { type ComponentProps, lazy, type ReactNode, Suspense, useCallback, useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { DialogCloseButton } from '@/components/ui/dialog'
@@ -23,10 +23,12 @@ import type { RemoteReauth } from './boot-failure-reauth'
 import {
   deriveProviderShape,
   isRemoteConfig,
+  isRemoteReauthError,
   isRemoteReauthFailure,
   signInLabel,
   sshFailureMessage
 } from './boot-failure-reauth'
+import { useQuietRecovery } from './boot-quiet-recovery'
 
 // The recovery "Gateway settings" view embeds the real Settings → Gateway panel
 // (identical URL/auth/test/save controls — no parallel form to drift). Lazy so
@@ -220,14 +222,40 @@ export function BootFailureOverlay() {
     }
   }, [boot.error, visible])
 
+  // A dropped backend usually comes back on its own: reconnect quietly first, and bring up this
+  // screen only when it stays down. A remote that needs signing in again can't heal that way.
+  const restart = useCallback(async () => {
+    await window.scoutDesktop?.resetBootstrap().catch(() => undefined)
+    window.location.reload()
+  }, [])
+
+  const { quiet } = useQuietRecovery(
+    Boolean(boot.error) && !boot.running && !suppressed && !remoteReauth && !isRemoteReauthError(boot.error),
+    restart
+  )
+
   if (!visible || suppressed) {
     return null
   }
 
+  if (quiet) {
+    return (
+      <div
+        aria-live="polite"
+        className="pointer-events-none fixed inset-x-0 bottom-6 z-[1300] flex justify-center"
+        data-slot="boot-reconnecting"
+      >
+        <span className="scout-pop-in flex items-center gap-2 rounded-full bg-(--ui-bg-elevated) px-3.5 py-1.5 text-xs text-(--ui-text-secondary) shadow-lg ring-1 ring-(--ui-stroke-tertiary)">
+          <Loader2 className="size-3.5 animate-spin" />
+          {t.boot.failure.reconnecting}
+        </span>
+      </div>
+    )
+  }
+
   const retry = async () => {
     setBusy('retry')
-    await window.scoutDesktop?.resetBootstrap().catch(() => undefined)
-    window.location.reload()
+    await restart()
   }
 
   const repair = async (): Promise<void> => {

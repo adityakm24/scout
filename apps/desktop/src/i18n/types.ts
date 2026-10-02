@@ -688,6 +688,7 @@ export interface Translations {
       installMissing: string
     }
     failure: {
+      reconnecting: string
       title: string
       description: string
       details: string

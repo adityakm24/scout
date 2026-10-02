@@ -66,6 +66,8 @@ const remoteToken = {
 }
 
 beforeEach(() => {
+  // These cover the recovery screen itself, which appears once an outage outlasts the quiet window.
+  window.sessionStorage.setItem('scout.boot.quietSince', '1')
   $desktopOnboarding.set({
     configured: true,
     flow: { status: 'idle' },
@@ -136,6 +138,8 @@ describe('BootFailureOverlay', () => {
 
     $desktopBoot.set({ ...$desktopBoot.get(), error: null, running: false })
     rerender(<BootFailureOverlay />)
+    // A failure that outlasts the quiet reconnect window brings the screen back.
+    window.sessionStorage.setItem('scout.boot.quietSince', '1')
     $desktopBoot.set({ ...$desktopBoot.get(), error, running: false })
     rerender(<BootFailureOverlay />)
 
@@ -249,7 +253,9 @@ describe('BootFailureOverlay', () => {
     const gatewayUrl = 'https://agent-1.agents.spaceshipresearch.com'
     const logout = vi.fn().mockResolvedValue({ ok: true, connected: false })
     const nativeLogin = vi.fn().mockResolvedValue({ ok: true, connected: false })
-    const cloudStatus = vi.fn().mockResolvedValue({ portalBaseUrl: 'https://portal.spaceshipresearch.com', signedIn: false })
+    const cloudStatus = vi
+      .fn()
+      .mockResolvedValue({ portalBaseUrl: 'https://portal.spaceshipresearch.com', signedIn: false })
 
     const cloudLogin = vi.fn().mockResolvedValue({
       ok: true,
@@ -294,7 +300,8 @@ describe('BootFailureOverlay', () => {
   it('shows the SpaceshipResearch Cloud down recovery when the backend flags isCloudBackendDown', async () => {
     const restore = stubDesktop(remoteToken)
     $desktopBoot.set({
-      error: 'SpaceshipResearch Cloud agent ares-3009.agents.spaceshipresearch.com is down (HTTP 503: server-side fault).',
+      error:
+        'SpaceshipResearch Cloud agent ares-3009.agents.spaceshipresearch.com is down (HTTP 503: server-side fault).',
       fakeMode: false,
       isCloudBackendDown: true,
       message: 'boot failed',

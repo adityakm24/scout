@@ -607,6 +607,7 @@ export const deOverrides = {
         'Ein Teil der Scout-Installation fehlt. Wählen Sie „Installation reparieren“, um sie wiederherzustellen.'
     },
     failure: {
+      reconnecting: 'Verbindung zu Scout wird wiederhergestellt…',
       title: 'Scout konnte nicht gestartet werden',
       description:
         'Das Hintergrund-Gateway ist nicht gestartet. Probieren Sie einen der Wiederherstellungsschritte unten. Keiner davon löscht Ihre Chats oder Einstellungen.',

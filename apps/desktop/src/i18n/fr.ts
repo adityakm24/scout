@@ -609,6 +609,7 @@ export const frOverrides = {
         "Une partie de l'installation de Scout est manquante. Choisissez Réparer l'installation pour la restaurer."
     },
     failure: {
+      reconnecting: 'Reconnexion à Scout…',
       title: "Scout n'a pas pu démarrer",
       description:
         "Le gateway en arrière-plan n'a pas pu se lancer. Essayez l'une des étapes de récupération ci-dessous. Rien ici ne supprime vos conversations ou paramètres.",

@@ -652,6 +652,7 @@ export const en: Translations = {
       installMissing: "Part of Scout's installation is missing. Choose Repair install to put it back."
     },
     failure: {
+      reconnecting: 'Reconnecting to Scout…',
       title: "Scout couldn't start",
       description:
         "Scout' background service didn't come up. Try one of the recovery steps below. Nothing here deletes your chats or settings.",

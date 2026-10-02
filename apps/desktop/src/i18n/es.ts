@@ -610,6 +610,7 @@ export const esOverrides = {
       installMissing: 'Falta parte de la instalación de Scout. Elige Reparar instalación para restaurarla.'
     },
     failure: {
+      reconnecting: 'Reconectando con Scout…',
       title: 'Scout no pudo iniciarse',
       description:
         'El servicio en segundo plano de Scout no arrancó. Prueba uno de los pasos de recuperación de abajo. Nada de esto elimina tus chats ni tus ajustes.',
