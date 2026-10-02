@@ -188,7 +188,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
           dist = desktop / 'scout-desktop/dist'
           launcher = desktop / 'icons/hicolor/1024x1024/apps/scout.png'
           for path in [launcher, dist / 'apple-touch-icon.png',
-                       dist / 'scout-girl.png', dist / 'scout-girl-dark.png',
+                       dist / 'scout-mark.png', dist / 'scout-mark-dark.png',
                        Path('${self'.packages.web}/favicon.ico')]:
               with Image.open(path) as image:
                   image.load()

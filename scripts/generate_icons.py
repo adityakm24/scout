@@ -1,40 +1,31 @@
 #!/usr/bin/env python3
-"""Generate every app icon in the repo from the scout-girl art + platform backgrounds.
+"""Generate every app icon in the repo from the Scout mark + platform backgrounds.
 
 Usage (from repo root):
     node scripts/generate-icons.mjs           # write
     node scripts/generate-icons.mjs --check   # verify structure
 
 Sources of truth — two axes, composed per target:
-  Girl art (vector):  assets/scout-girl-black.svg  (black positive space)
-                      assets/scout-girl-white.svg  (white positive space)
-                      straight from the SpaceshipResearch brand kit (Inkscape exports,
-                      5487^2 viewBox, one path each).
+  Mark (vector):      assets/scout-mark.svg — a speech bubble holding a north star, drawn on the
+                      1024 tile. Three paths by id: `bubble`, `star`, `spark`.
 
-  Backgrounds (per platform surface, light/dark):
-                      assets/backgrounds/squircle-light.svg   white rounded
-                      assets/backgrounds/squircle-dark.svg    #0d1117 rounded
+  Backgrounds (per platform surface, light/dark) give the tile geometry:
+                      assets/backgrounds/squircle-light.svg   full-bleed rounded tile
+                      assets/backgrounds/squircle-dark.svg
                       assets/backgrounds/squircle-mac-light.svg   mac HIG grid
                       assets/backgrounds/squircle-mac-dark.svg    mac HIG grid
 
-  The master SVGs (assets/icon-master.svg light, assets/icon-master-dark.svg
-  dark) are GENERATED artifacts — squircle background + scaled girl artwork.
-  The light master drives every squircle target;
-  the dark master drives the dark-appearance targets. macOS is the exception:
-  its icns targets render from an in-memory mac master that puts the same
-  squircle on Apple's 824x824 (r=185.4) grid — centered in 1024 with 100px
-  margins — so the icon matches the size of Apple-template neighbors.
+  The tile is iMessage blue (light) or deep orbit navy (dark), the bubble near-white, and the star
+  and spark are cut-outs filled with the tile itself. The master SVGs (assets/icon-master.svg
+  light, assets/icon-master-dark.svg dark) are GENERATED artifacts. macOS icns targets render from
+  an in-memory master that puts the tile on Apple's 824x824 (r=185.4) grid, centered in 1024 with
+  100px margins, with the mark scaled to match.
 
 Desktop build identity comes from SCOUT_PAYLOAD_TAG / SCOUT_BUILD_COMMIT:
-Canary uses yellow/dark-yellow backgrounds. Commit builds use red/dark-red
-and a seven-character SHA badge. The girl and tile geometry do not change.
-Only apps/desktop outputs use this identity. Website, bootstrap, dashboard,
-and the shared master SVGs retain the default brand.
-
-The girl's position and uniform scale are registered to the reference artwork.
-She renders in front of the border, clipped only to the outer rounded silhouette.
-Only nodes near her bottom edge extend to the border; the fitted face and hair stay fixed.
-Standalone wordmarks remain centered and have no border.
+Canary uses yellow/dark-yellow tiles. Commit builds use red/dark-red and a seven-character SHA
+badge. The mark and tile geometry do not change, and because the star is a cut-out the flavor
+colour shows through it. Only apps/desktop outputs use this identity. Website, bootstrap,
+dashboard, and the shared master SVGs retain the default brand.
 
 GENERATED OUTPUTS ARE COMMITTED. Regular builds and installs consume them and
 never render; flavored release bundles (canary/commit) render to a product dir.
@@ -62,16 +53,16 @@ Outputs (30 files):
   apps/desktop/assets/appx/Square150x150Logo.png      150x150 squircle
   apps/desktop/assets/appx/*-dark.png                 dark-appearance logos
   apps/desktop/public/apple-touch-icon.png            1024x1024 squircle
-  apps/desktop/public/scout-girl.png                   256x256 squircle, black girl (light mark)
-  apps/desktop/public/scout-girl-dark.png              256x256 squircle, white girl (dark mark)
+  apps/desktop/public/scout-mark.png                   256x256 tile (light, BrandMark)
+  apps/desktop/public/scout-mark-dark.png              256x256 tile (dark, BrandMark)
   apps/bootstrap-installer/src-tauri/icons/32x32.png       32x32
   apps/bootstrap-installer/src-tauri/icons/128x128.png     128x128
   apps/bootstrap-installer/src-tauri/icons/128x128@2x.png  256x256
   apps/bootstrap-installer/src-tauri/icons/icon.ico        16,32,64,128,256
   apps/bootstrap-installer/src-tauri/icons/icon.icns       16..1024
-  apps/bootstrap-installer/public/scout-girl.png   256x256 squircle mark (light)
-  website/static/img/logo.png                     1772x1799 girl alone, transparent (light)
-  website/static/img/logo-dark.png                1772x1799 girl alone, transparent (dark)
+  apps/bootstrap-installer/public/scout-mark.png   256x256 tile (light)
+  website/static/img/logo.png                     1772x1799 mark alone, transparent (light)
+  website/static/img/logo-dark.png                1772x1799 mark alone, transparent (dark)
   website/static/img/spaceshipresearch-logo.png                150x150 on white (opaque)
   website/static/img/spaceshipresearch-logo-dark.png           150x150 on #0d1117 (opaque)
   website/static/img/favicon-16x16.png            16x16
@@ -113,21 +104,12 @@ _CANARY_TAG_RE = re.compile(
 # The spaceshipresearch dark background (#0d1117) — fixed dark tile/background everywhere.
 DARK_HEX = "#0d1117"
 DARK_RGB = (13, 17, 23)
-BORDER_FRACTION = 0.0407747197
-
-# Portrait boxes fitted to the reference at equal visible tile width, with
-# uniform scaling about the tile center followed by an up-left translation.
-# Keep their y coordinate: bottom anchoring would undo the registration.
-GIRL_BOXES = {
-    "squircle-light.svg": (72.149433, 104.703674, 872.767801, 872.767801),
-    "squircle-dark.svg": (72.149433, 104.703674, 872.767801, 872.767801),
-    # Mac: the girl scaled 1.12x about the plate center; the plate stays on the
-    # 824 grid, but a white tile with a ring reads small beside full-color peers.
-    "squircle-mac-light.svg": (122.43, 144.84, 786.83, 786.83),
-    "squircle-mac-dark.svg": (122.43, 144.84, 786.83, 786.83),
-}
-# The brand-kit SVG canvas (both girl svgs share this viewBox).
-GIRL_VIEWBOX = 5487.0615
+# Tile gradients (top-left -> bottom-right) and the bubble colour, per appearance.
+TILE_STOPS = {"light": ("#5cbcff", "#0060d6"), "dark": ("#1b335f", "#070b14")}
+BUBBLE = {"light": "#ffffff", "dark": "#eaf3ff"}
+# The standalone logo (no tile): a blue bubble with a white star, on any navbar.
+LOGO_STOPS = ("#4fb2ff", "#0062cc")
+MARK_SIZE = 1024.0
 
 # Target sizes for --check's structural verification: relpath -> (format, size)
 CHECK_SIZES: dict[str, tuple[str, tuple[int, int]]] = {
@@ -142,12 +124,12 @@ CHECK_SIZES: dict[str, tuple[str, tuple[int, int]]] = {
     "apps/desktop/assets/appx/Square150x150Logo.png": ("PNG", (150, 150)),
     "apps/desktop/assets/appx/Square150x150Logo-dark.png": ("PNG", (150, 150)),
     "apps/desktop/public/apple-touch-icon.png": ("PNG", (1024, 1024)),
-    "apps/desktop/public/scout-girl.png": ("PNG", (256, 256)),
-    "apps/desktop/public/scout-girl-dark.png": ("PNG", (256, 256)),
+    "apps/desktop/public/scout-mark.png": ("PNG", (256, 256)),
+    "apps/desktop/public/scout-mark-dark.png": ("PNG", (256, 256)),
     "apps/bootstrap-installer/src-tauri/icons/32x32.png": ("PNG", (32, 32)),
     "apps/bootstrap-installer/src-tauri/icons/128x128.png": ("PNG", (128, 128)),
     "apps/bootstrap-installer/src-tauri/icons/128x128@2x.png": ("PNG", (256, 256)),
-    "apps/bootstrap-installer/public/scout-girl.png": ("PNG", (256, 256)),
+    "apps/bootstrap-installer/public/scout-mark.png": ("PNG", (256, 256)),
     "website/static/img/logo.png": ("PNG", (1772, 1799)),
     "website/static/img/logo-dark.png": ("PNG", (1772, 1799)),
     "website/static/img/spaceshipresearch-logo.png": ("PNG", (150, 150)),
@@ -178,14 +160,14 @@ TARGETS: list[tuple[str, str, object]] = [
     ("apps/desktop/public/apple-touch-icon.png", "png", 1024),
     # The dev-run Dock icon (app.dock.setIcon): same mac grid as the icns.
     ("apps/desktop/assets/icon-mac.png", "png_mac", 1024),
-    ("apps/desktop/public/scout-girl.png", "girl_light", 256),
-    ("apps/desktop/public/scout-girl-dark.png", "girl_dark", 256),
+    ("apps/desktop/public/scout-mark.png", "png", 256),
+    ("apps/desktop/public/scout-mark-dark.png", "png_dark", 256),
     ("apps/bootstrap-installer/src-tauri/icons/32x32.png", "png", 32),
     ("apps/bootstrap-installer/src-tauri/icons/128x128.png", "png", 128),
     ("apps/bootstrap-installer/src-tauri/icons/128x128@2x.png", "png", 256),
     ("apps/bootstrap-installer/src-tauri/icons/icon.ico", "ico", [16, 32, 64, 128, 256]),
     ("apps/bootstrap-installer/src-tauri/icons/icon.icns", "icns", None),
-    ("apps/bootstrap-installer/public/scout-girl.png", "girl_light", 256),
+    ("apps/bootstrap-installer/public/scout-mark.png", "png", 256),
     ("website/static/img/logo.png", "logo", None),
     ("website/static/img/logo-dark.png", "logo_dark", None),
     ("website/static/img/spaceshipresearch-logo.png", "png_white", 150),
@@ -198,7 +180,7 @@ TARGETS: list[tuple[str, str, object]] = [
     ("web/public/favicon.ico", "ico", [16, 32, 48]),
 ]
 
-# ─── girl art extraction ────────────────────────────────────────────────────
+# ─── mark art ───────────────────────────────────────────────────────────────
 
 class IconArt:
     """One generation's rendering inputs and caches; never writes to source."""
@@ -207,56 +189,31 @@ class IconArt:
         assets = source / "assets"
         self.colors = colors
         self.commit = commit
-        self.girls = {color: assets / f"scout-girl-{color}.svg" for color in ("black", "white")}
+        self.mark = assets / "scout-mark.svg"
         self.backgrounds = assets / "backgrounds"
         self.paths: dict[str, str] = {}
-        self.bboxes: dict[str, tuple[float, float, float, float]] = {}
-        self.master = compose_svg(self, "black", "squircle-light.svg")
-        self.master_dark = compose_svg(self, "white", "squircle-dark.svg")
+        self.master = compose_svg(self, "light", "squircle-light.svg")
+        self.master_dark = compose_svg(self, "dark", "squircle-dark.svg")
         # macOS icons sit on Apple's 824-on-1024 grid, not the full-bleed
         # squircle: same art, mac-grid backgrounds, icns targets only.
-        self.master_mac = compose_svg(self, "black", "squircle-mac-light.svg")
-        self.master_mac_dark = compose_svg(self, "white", "squircle-mac-dark.svg")
+        self.master_mac = compose_svg(self, "light", "squircle-mac-light.svg")
+        self.master_mac_dark = compose_svg(self, "dark", "squircle-mac-dark.svg")
 
 
-def girl_path(art: IconArt, girl: str) -> str:
-    """The girl `<path>` element with editor metadata stripped (resvg rejects
-    undeclared inkscape/sodipodi prefixes)."""
-    if girl not in art.paths:
-        src = art.girls[girl].read_text(encoding="utf-8-sig")
-        m = re.search(r"<path\b.*?/>", src, re.S)
-        assert m, f"no <path> found in {art.girls[girl].name}"
-        path = re.sub(r'\s+(inkscape|sodipodi):[a-zA-Z-]+="[^"]*"', "", m.group(0))
-        art.paths[girl] = path
-    return art.paths[girl]
+def mark_path(art: IconArt, name: str) -> str:
+    """The `d` of one mark path (`bubble`, `star`, `spark`) from assets/scout-mark.svg."""
+    if not art.paths:
+        src = art.mark.read_text(encoding="utf-8-sig")
+        art.paths = {m.group(1): " ".join(m.group(2).split())
+                     for m in re.finditer(r'<path\s+id="(\w+)"[^>]*?\sd="([^"]+)"', src)}
+    assert name in art.paths, f"no <path id={name!r}> in {art.mark.name}"
+    return art.paths[name]
 
 
-def girl_bbox(art: IconArt, girl: str) -> tuple[float, float, float, float]:
-    """Art bounding box in the girl SVG's coordinate space, measured by
-    rendering once and taking the alpha bbox (robust to art changes)."""
-    if girl not in art.bboxes:
-        data = resvg_py.svg_to_bytes(svg_path=str(art.girls[girl]), width=512, height=512)
-        im = Image.open(io.BytesIO(data))
-        bx, by, bx2, by2 = im.getchannel("A").point(lambda v: 255 if v > 0 else 0).getbbox()
-        s = GIRL_VIEWBOX / 512.0
-        art.bboxes[girl] = (bx * s, by * s, (bx2 - bx) * s, (by2 - by) * s)
-    return art.bboxes[girl]
-
-
-def girl_layer(
-    art: IconArt, girl: str, box: tuple[float, float, float, float],
-    *, align: str = "xMidYMid",
-) -> str:
-    """Nested-svg layer: girl art (bbox as viewBox) placed into `box` — the
-    box's aspect is preserved via 'meet', so the girl never distorts."""
-    bx, by, bw, bh = girl_bbox(art, girl)
-    x, y, w, h = box
-    return (
-        f'<svg x="{x}" y="{y}" width="{w}" height="{h}" viewBox="{bx} {by} {bw} {bh}" '
-        f'preserveAspectRatio="{align} meet">\n'
-        f"    {girl_path(art, girl)}\n"
-        "  </svg>"
-    )
+def gradient(gid: str, stops: tuple[str, str], x: float, y: float, size: float) -> str:
+    return (f'<linearGradient id="{gid}" x1="{x}" y1="{y}" x2="{x + size}" y2="{y + size}" '
+            f'gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="{stops[0]}"/>'
+            f'<stop offset="1" stop-color="{stops[1]}"/></linearGradient>')
 
 
 def background_inner(art: IconArt, name: str) -> tuple[str, int, int]:
@@ -313,80 +270,37 @@ def commit_layer(commit: str, bg: str) -> str:
     )
 
 
-def drag_bottom_nodes(path: ET.Element, *, cutoff: float, band: float, distance: float) -> None:
-    """Drag lower nodes and curve handles, tapering to zero above the bottom band."""
-    y_scale, y_offset = 1.0, 0.0
-    transform = path.get("transform")
-    if transform:
-        matrix = re.fullmatch(r"matrix\(([^)]+)\)", transform)
-        if matrix is None:
-            raise ValueError("bottom node edits require an axis-aligned matrix")
-        _, b, c, y_scale, _, y_offset = map(float, re.split(r"[\s,]+", matrix[1].strip()))
-        if b != 0 or c != 0 or y_scale <= 0:
-            raise ValueError("bottom node edits require an upright axis-aligned matrix")
-
-    # The brand exports use explicit absolute M/L/C commands. Reject other
-    # commands rather than silently corrupting relative coordinates or arcs.
-    tokens = re.findall(r"[A-Za-z]|[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?", path.attrib["d"])
-    counts = {"M": 2, "L": 2, "C": 6, "z": 0, "Z": 0}
-    index = 0
-    while index < len(tokens):
-        command = tokens[index]
-        if command not in counts:
-            raise ValueError("bottom node edits require explicit absolute M/L/C commands")
-        count = counts[command]
-        if index + count >= len(tokens):
-            raise ValueError("incomplete SVG path command")
-        for offset in range(2, count + 1, 2):
-            token_index = index + offset
-            raw_y = float(tokens[token_index])
-            amount = min(1.0, max(0.0, (raw_y * y_scale + y_offset - cutoff) / band))
-            if amount:
-                weight = amount * amount * (3 - 2 * amount)
-                tokens[token_index] = f"{raw_y + distance * weight / y_scale:.12g}"
-        index += count + 1
-    path.set("d", " ".join(tokens))
-
-
-def compose_svg(art: IconArt, girl: str, bg: str) -> str:
-    """Full svg text: background + girl layer, in the background's native
-    coordinate space (resvg scales to whatever output size is requested, so
-    the composition is size-agnostic — no manual box scaling)."""
+def compose_svg(art: IconArt, appearance: str, bg: str) -> str:
+    """Full svg text: tile + mark, in the background's native coordinate space (resvg scales to
+    whatever output size is requested, so the composition is size-agnostic). A build flavor
+    replaces the tile gradient with its flat colour; the star cut-outs follow the tile."""
     inner, w, h = background_inner(art, bg)
     background = ET.fromstring(f"<g>{inner}</g>")
     tile = background.find("{http://www.w3.org/2000/svg}rect")
     assert tile is not None, f"no background rectangle in {bg}"
-    geometry = {key: float(tile.attrib[key]) for key in ("x", "y", "width", "height", "rx")}
-    thickness = geometry["width"] * BORDER_FRACTION
-    # An inward stroke keeps the outer platform geometry unchanged. Subtracting
-    # the same inset from rx (not scaling rx) keeps the corner thickness uniform.
-    inset = {"x": 1, "y": 1, "width": -2, "height": -2, "rx": -1}
-    silhouette = ET.Element("rect", {key: str(value) for key, value in geometry.items()})
-    for key, value in geometry.items():
-        tile.set(key, str(value + inset[key] * thickness / 2))
-    tile.set("stroke", "#000000" if girl == "black" else "#ffffff")
-    tile.set("stroke-width", str(thickness))
-    inner = "".join(ET.tostring(child, encoding="unicode") for child in background)
-    clip = ET.tostring(silhouette, encoding="unicode")
-    box = GIRL_BOXES[bg]
-    portrait = ET.fromstring(girl_layer(art, girl, box, align="xMidYMax"))
-    _, y, portrait_width, portrait_height = box
-    _, by, bw, bh = girl_bbox(art, girl)
-    scale = min(portrait_width / bw, portrait_height / bh)
-    join_bottom = geometry["y"] + geometry["height"] - thickness + 10
-    drag_bottom_nodes(
-        portrait[0], cutoff=by + bh * 0.97, band=bh * 0.02,
-        distance=max(0.0, join_bottom - (y + portrait_height)) / scale,
-    )
-    # Keep the fitted viewBox fixed, but let edited nodes reach into the border.
-    portrait.set("overflow", "visible")
+    x, y, size = (float(tile.attrib[key]) for key in ("x", "y", "width"))
+    scale = size / MARK_SIZE
+    if art.colors:
+        flat = art.colors[0] if appearance == "light" else art.colors[1]
+        defs, tile_fill, cut_fill = "", flat, flat
+    else:
+        stops = TILE_STOPS[appearance]
+        # One gradient in tile space for the tile, the same one in mark space for the cut-outs,
+        # so the star reads as a hole straight through to the tile.
+        defs = gradient("tile", stops, x, y, size) + gradient("cut", stops, 0, 0, MARK_SIZE)
+        tile_fill, cut_fill = "url(#tile)", "url(#cut)"
+    tile.set("fill", tile_fill)
+    tile_svg = ET.tostring(tile, encoding="unicode")
     badge = f"  {commit_layer(art.commit, bg)}\n" if art.commit else ""
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}">\n'
-        f'  <defs><clipPath id="icon-silhouette">{clip}</clipPath></defs>\n'
-        f"  {inner.strip()}\n"
+        f"  <defs>{defs}</defs>\n"
+        f"  {tile_svg}\n"
         f"{badge}"
-        f'  <g clip-path="url(#icon-silhouette)">{ET.tostring(portrait, encoding="unicode")}</g>\n'
+        f'  <g transform="translate({x} {y}) scale({scale})">'
+        f'<path fill="{BUBBLE[appearance]}" d="{mark_path(art, "bubble")}"/>'
+        f'<path fill="{cut_fill}" d="{mark_path(art, "star")}"/>'
+        f'<path fill="{cut_fill}" d="{mark_path(art, "spark")}"/></g>\n'
         "</svg>\n"
     )
 
@@ -430,23 +344,21 @@ def save_png(img: Image.Image, buf: io.BytesIO) -> None:
         img.save(buf, "PNG", optimize=True)
 
 
-def girl_mark(art: IconArt, kind: str, size: int) -> Image.Image:
-    """The girl in the app-icon squircle (BrandMark asset) — the mark IS the
-    icon shape. girl_light: black girl on white squircle.  girl_dark: white
-    girl on #0d1117 squircle."""
-    if kind == "girl_light":
-        girl, bg = "black", "squircle-light.svg"
-    else:
-        girl, bg = "white", "squircle-dark.svg"
-    return render_svg(compose_svg(art, girl, bg), size)
-
-
 def build_logo_image(art: IconArt, dark: bool = False) -> Image.Image:
-    """1772x1799 wordmark: the girl alone on transparency (no frame), centered.
-    Light = black girl, dark = white girl — the consuming surface's background
-    (navbar light/dark) shows through."""
+    """1772x1799 wordmark: the mark alone on transparency (no tile), centered — a blue bubble
+    with a white star, legible on light and dark navbars alike (`dark` kept for the target table)."""
     W, H = 1772, 1799
-    svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}">\n  {girl_layer(art, "white" if dark else "black", (0, 0, W, H))}\n</svg>\n'
+    bx, by, bw, bh = 186, 196, 652, 624  # the bubble (with its tail) plus a hair of margin
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}">\n'
+        f"  <defs>{gradient('logo', LOGO_STOPS, 0, 0, MARK_SIZE)}</defs>\n"
+        f'  <svg x="0" y="0" width="{W}" height="{H}" viewBox="{bx} {by} {bw} {bh}" '
+        f'preserveAspectRatio="xMidYMid meet">'
+        f'<path fill="url(#logo)" d="{mark_path(art, "bubble")}"/>'
+        f'<path fill="#ffffff" d="{mark_path(art, "star")}"/>'
+        f'<path fill="#ffffff" d="{mark_path(art, "spark")}"/></svg>\n'
+        "</svg>\n"
+    )
     return render_svg(svg, (W, H))
 
 
@@ -470,8 +382,6 @@ def target_bytes(art: IconArt, kind: str, arg: object) -> bytes:
         render(art.master, arg, background="#ffffff").convert("RGB").save(buf, "PNG", optimize=True)
     elif kind == "png_dark_white":
         render(art.master_dark, arg, background=DARK_HEX).convert("RGB").save(buf, "PNG", optimize=True)
-    elif kind in ("girl_light", "girl_dark"):
-        save_png(girl_mark(art, kind, arg), buf)
     elif kind == "ico":
         img = render(art.master, max(arg))
         img.save(buf, format="ICO", sizes=[(s, s) for s in arg])
@@ -598,8 +508,8 @@ def cmd_check(source: Path, out: Path) -> int:
     for rel in (
         "apps/desktop/assets/icon.png",
         "apps/desktop/assets/icon-dark.png",
-        "apps/desktop/public/scout-girl.png",
-        "apps/desktop/public/scout-girl-dark.png",
+        "apps/desktop/public/scout-mark.png",
+        "apps/desktop/public/scout-mark-dark.png",
         "apps/desktop/public/apple-touch-icon.png",
     ):
         path = out / rel

@@ -93,8 +93,7 @@ website/
 assets/
 !assets/
 assets/*
-!assets/scout-girl-black.svg
-!assets/scout-girl-white.svg
+!assets/scout-mark.svg
 !assets/backgrounds/
 !assets/backgrounds/**
 infographic/
