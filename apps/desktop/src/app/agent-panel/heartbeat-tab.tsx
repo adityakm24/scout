@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react'
-import { useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 
 import { getGoogleWorkspace } from '@/api/google-workspace'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,16 @@ import { useI18n } from '@/i18n'
 import { relativeTime } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { CronJob } from '@/scout'
-import { $heartbeat, addEmailCheck, type HeartbeatItem, refreshHeartbeat, setHeartbeatEnabled } from '@/store/heartbeat'
+import {
+  $heartbeat,
+  addEmailCheck,
+  headline,
+  type HeartbeatItem,
+  plain,
+  refreshHeartbeat,
+  setHeartbeatEnabled,
+  setHeartbeatRules
+} from '@/store/heartbeat'
 import { notifyError } from '@/store/notifications'
 
 // The "New email check" template runs this pre-check (cron/scripts/gmail_watch.py).
@@ -85,6 +94,7 @@ function HeartbeatRow({ item }: { item: HeartbeatItem }) {
   const copy = t.agentPanel.heartbeat
   const { job, latest } = item
   const failed = Boolean(job.last_error) && job.enabled
+  const [expanded, setExpanded] = useState(false)
 
   const toggle = (next: boolean) =>
     void setHeartbeatEnabled(job.id, next).catch(error => notifyError(error, copy.toggleFailed))
@@ -119,18 +129,108 @@ function HeartbeatRow({ item }: { item: HeartbeatItem }) {
       {failed ? (
         <p className="m-0 line-clamp-2 text-xs text-(--ui-red)">{job.last_error}</p>
       ) : latest.text ? (
-        <div className="flex flex-col gap-1 rounded-xl bg-(--ui-bg-tertiary) px-2.5 py-2">
-          {latest.at != null && (
-            <span className="text-[0.6875rem] text-(--ui-text-tertiary)">
-              {copy.lastUpdate(relativeTime(latest.at * 1000))}
+        <button
+          aria-expanded={expanded}
+          className="flex flex-col gap-1 rounded-xl bg-(--ui-bg-tertiary) px-2.5 py-2 text-left transition-colors duration-200 hover:bg-(--chrome-action-hover)"
+          onClick={() => setExpanded(open => !open)}
+          type="button"
+        >
+          <span className={cn('text-xs leading-relaxed text-(--ui-text-secondary)', !expanded && 'line-clamp-2')}>
+            {headline(latest.text)}
+          </span>
+          {expanded && (
+            <span className="scout-pop-in flex flex-col gap-0.5 text-xs leading-relaxed text-(--ui-text-tertiary)">
+              {latest.text
+                .split('\n')
+                .slice(1)
+                .map(line => plain(line))
+                .filter(Boolean)
+                .map((line, index) => (
+                  <span key={index}>{line}</span>
+                ))}
             </span>
           )}
-          <p className="m-0 line-clamp-4 whitespace-pre-line text-xs leading-relaxed text-(--ui-text-secondary)">
-            {latest.text}
-          </p>
-        </div>
+          {latest.at != null && (
+            <span className="text-[0.6875rem] text-(--ui-text-quaternary)">{relativeTime(latest.at * 1000)}</span>
+          )}
+        </button>
       ) : (
         <p className="m-0 text-xs text-(--ui-text-tertiary)">{job.enabled ? copy.nothingYet : copy.paused}</p>
+      )}
+
+      <Rules jobId={job.id} rules={job.rules ?? []} />
+    </div>
+  )
+}
+
+/** The user's standing rules for one job, as removable chips plus a field to add one. */
+function Rules({ jobId, rules }: { jobId: string; rules: string[] }) {
+  const { t } = useI18n()
+  const copy = t.agentPanel.heartbeat
+  const [draft, setDraft] = useState('')
+  const [adding, setAdding] = useState(false)
+
+  const save = (next: string[]) =>
+    void setHeartbeatRules(jobId, next).catch(error => notifyError(error, copy.rulesFailed))
+
+  const add = (event: FormEvent) => {
+    event.preventDefault()
+    const rule = draft.trim()
+
+    if (rule) {
+      save([...rules, rule])
+    }
+
+    setDraft('')
+    setAdding(false)
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" data-slot="heartbeat-rules">
+      {rules.map((rule, index) => (
+        <span
+          className="flex max-w-full items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--theme-primary)_12%,transparent)] py-0.5 pl-2.5 pr-1 text-[0.6875rem] text-(--ui-text-secondary)"
+          key={`${index}:${rule}`}
+        >
+          <span className="truncate">{rule}</span>
+          <button
+            aria-label={copy.removeRule(rule)}
+            className="grid size-4 shrink-0 place-items-center rounded-full hover:bg-(--chrome-action-hover) hover:text-foreground"
+            onClick={() => save(rules.filter((_, i) => i !== index))}
+            type="button"
+          >
+            <Codicon name="close" size="0.6rem" />
+          </button>
+        </span>
+      ))}
+
+      {adding ? (
+        <form className="flex min-w-0 flex-1" onSubmit={add}>
+          <input
+            aria-label={copy.addRule}
+            autoFocus
+            className="min-w-0 flex-1 rounded-full bg-(--ui-bg-tertiary) px-2.5 py-1 text-[0.6875rem] outline-none ring-1 ring-(--ui-stroke-tertiary) focus:ring-(--theme-primary)"
+            onBlur={add}
+            onChange={event => setDraft(event.target.value)}
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                setDraft('')
+                setAdding(false)
+              }
+            }}
+            placeholder={copy.rulePlaceholder}
+            value={draft}
+          />
+        </form>
+      ) : (
+        <button
+          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground"
+          onClick={() => setAdding(true)}
+          type="button"
+        >
+          <Codicon name="add" size="0.65rem" />
+          {copy.addRule}
+        </button>
       )}
     </div>
   )

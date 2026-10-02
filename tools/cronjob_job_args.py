@@ -434,6 +434,7 @@ def _format_job(job: Dict[str, Any]) -> Dict[str, Any]:
         "name": name,
         "skill": skills[0] if skills else None,
         "skills": skills,
+        "rules": list(job.get("rules") or []),
         "prompt_preview": prompt[:100] + "..." if len(prompt) > 100 else prompt,
         "model": job.get("model"),
         "provider": job.get("provider"),

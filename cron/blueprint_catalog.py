@@ -131,9 +131,10 @@ CATALOG: List[AutomationBlueprint] = [
         schedule_template="every {interval_min}m",
         prompt_template=(
             "The pre-check above lists email that arrived in the user's inbox since the last check "
-            "(the `new_emails` JSON). Tell the user about it: one short line per email — who it's "
-            "from, what it's about, and whether it looks like it needs a reply or action. Lead with "
-            "anything that {criteria}. Do not open, reply to, or change any email; this is a "
+            "(the `new_emails` JSON). Tell the user about it. First line: a plain one-sentence "
+            "headline with no formatting, e.g. \"3 new emails — 1 needs a reply (Priya, Saturday "
+            "plans)\". Then one short line per email — who it's from, what it's about, and whether it "
+            "needs a reply or action. Lead with anything that {criteria}. Do not open, reply to, or change any email; this is a "
             "heads-up only. The pre-check runs you only when there is new mail, so always reply "
             "with the summary."
         ),

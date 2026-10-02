@@ -1750,8 +1750,10 @@ _CREATE_FIELD_NORMALIZERS: Dict[str, Callable[[Any], Any]] = {
     "context_from": _normalize_context_from,
     "failure_deliver": _normalize_failure_deliver,
     "interpreter": _normalize_job_optional_text,
+    "rules": lambda v: _normalize_str_list(v) if v else None,
 }
 _UPDATE_FIELD_NORMALIZERS: Dict[str, Callable[[Any], Any]] = {
+    "rules": lambda v: _normalize_str_list(v) if v else [],
     "workdir": lambda v: None if v in {None, "", False} else _normalize_workdir(v),
     "monitor_script": _normalize_job_optional_text,
     "monitor_url": _normalize_job_optional_text,
@@ -1833,6 +1835,7 @@ def create_job(
     interpreter: Optional[str] = None,
     reminder: Optional[str] = None,
     reminder_by: Optional[str] = None,
+    rules: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Create a new cron job and return the stored record.
 
@@ -1937,6 +1940,7 @@ def create_job(
         ("attach_to_session", normalized_attach), ("reasoning_effort", normalized_reasoning_effort),
         ("failure_deliver", f["failure_deliver"]), ("interpreter", f["interpreter"]),
         ("reminder", reminder_text), ("reminder_by", _coerce_job_text(reminder_by).strip() or None),
+        ("rules", f["rules"]),
     ):
         if value is not None:
             job[key] = value

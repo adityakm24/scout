@@ -7,7 +7,8 @@ import {
   getCronJobs,
   instantiateAutomationBlueprint,
   pauseCronJob,
-  resumeCronJob
+  resumeCronJob,
+  updateCronJob
 } from '@/scout'
 
 import { $cronChangeTick } from './live-sync'
@@ -74,7 +75,7 @@ function announce(profile: string, items: HeartbeatItem[]) {
       dispatchNativeNotification({
         kind: 'heartbeat',
         title: job.name || translateNow('agentPanel.heartbeat.untitled'),
-        body: latest.text.split('\n').filter(Boolean).slice(0, 3).join('\n'),
+        body: headline(latest.text),
         global: true,
         tag: `heartbeat:${job.id}`
       })
@@ -128,6 +129,39 @@ export async function setHeartbeatEnabled(jobId: string, enabled: boolean): Prom
   } finally {
     refreshQuietly()
   }
+}
+
+/** Replace a job's standing rules; optimistic, rolled back if the backend refuses. */
+export async function setHeartbeatRules(jobId: string, rules: string[]): Promise<void> {
+  const before = $heartbeat.get()
+  $heartbeat.set({
+    ...before,
+    items: before.items.map(item => (item.job.id === jobId ? { ...item, job: { ...item.job, rules } } : item))
+  })
+
+  try {
+    await updateCronJob(jobId, { rules })
+  } catch (error) {
+    $heartbeat.set(before)
+
+    throw error
+  }
+}
+
+/** The first line of a finding, without markdown: what a row and a notification show. */
+export function headline(text: string): string {
+  const first = text.split('\n').find(line => line.trim()) ?? ''
+
+  return plain(first)
+}
+
+/** Markdown decoration stripped, for text shown outside a rendered message. */
+export function plain(text: string): string {
+  return text
+    .replace(/^\s*(?:[-*+]|\d+\.)\s+/, '')
+    .replace(/[*_`~]+/g, '')
+    .replace(/^#+\s*/, '')
+    .trim()
 }
 
 /** Turn on the "New email check" (every 30 minutes, results shown here and as notifications). */

@@ -323,7 +323,10 @@ def _google_account_note(agent: Any) -> Optional[str]:
             "complete email (greeting, clear short paragraphs, a concrete ask, a sign-off with the user's "
             "name) and show it. Send only when the user says send, or save it with `scout google gmail draft`. "
             "For regular email checks, don't schedule your own job: point the user to the agent panel's "
-            "Heartbeat tab → New email check (one tap; it costs nothing while the inbox is quiet).")
+            "Heartbeat tab → New email check (one tap; it costs nothing while the inbox is quiet). When the "
+            "user gives a standing instruction about those updates (\"ignore transaction emails\"), add it as a "
+            "rule on that job: `cronjob(action='list')` to find it, then `cronjob(action='update', job_id=…, "
+            "rules=[…its existing rules, the new one])`, and confirm.")
 
 
 def _failing_connectors_note() -> Optional[str]:

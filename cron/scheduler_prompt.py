@@ -251,6 +251,22 @@ _CRON_HINT = (
 )
 
 
+def _rules_section(job: dict) -> str:
+    """The user's standing rules for this job ("ignore transaction emails"). They override the
+    job's own instructions, and a run they leave with nothing to say stays silent."""
+    rules = [str(r).strip() for r in job.get("rules") or [] if str(r).strip()]
+    if not rules:
+        return ""
+    listed = "\n".join(f"- {rule}" for rule in rules)
+    return (
+        "\n\n## The user's rules for this job\n"
+        f"{listed}\n"
+        "Follow these rules strictly; they override the instructions above. Leave out — do not even "
+        "mention — anything a rule excludes. If nothing is left to report once they are applied, "
+        "reply with exactly [SILENT] on its own and nothing else."
+    )
+
+
 def _build_job_prompt(
     job: dict, prerun_script: Optional[tuple] = None, extra_prompt: Optional[str] = None,
     runtime_data_prompt: Optional[str] = None,
@@ -265,7 +281,7 @@ def _build_job_prompt(
     omitted, the script (if any) runs inline as before. extra_prompt: Optional per-run context (from
     ``cronjob(action='run')``, 57331 — salvaged from #57342 by @liuhao1024).
     """
-    user_prompt = str(job.get("prompt") or "")
+    user_prompt = str(job.get("prompt") or "") + _rules_section(job)
     if extra_prompt:
         user_prompt = f"{user_prompt}\n\n## Run Context\n{extra_prompt}"
     prompt = user_prompt

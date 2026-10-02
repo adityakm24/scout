@@ -52,6 +52,10 @@ export const en: Translations = {
   replyChoices: { label: 'Choose one', other: 'Add your own answer', placeholder: 'Type your answer…', send: 'Send' },
   agentPanel: {
     heartbeat: {
+      addRule: '+ Rule',
+      removeRule: (rule: string) => `Remove rule: ${rule}`,
+      rulePlaceholder: 'e.g. ignore transaction emails',
+      rulesFailed: 'Could not save the rule',
       addFailed: 'Could not turn on the email check',
       emailCheckDescription:
         'Every 30 minutes, Scout looks for new Gmail and tells you what arrived. Quiet checks cost nothing.',

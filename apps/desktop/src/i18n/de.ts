@@ -48,6 +48,10 @@ export const deOverrides = {
   },
   agentPanel: {
     heartbeat: {
+      addRule: '+ Regel',
+      removeRule: (rule: string) => `Regel entfernen: ${rule}`,
+      rulePlaceholder: 'z. B. Transaktions-E-Mails ignorieren',
+      rulesFailed: 'Regel konnte nicht gespeichert werden',
       addFailed: 'E-Mail-Prüfung konnte nicht eingeschaltet werden',
       emailCheckDescription:
         'Alle 30 Minuten sucht Scout nach neuen Gmail-Nachrichten und sagt dir, was angekommen ist. Ruhige Prüfungen kosten nichts.',

@@ -115,6 +115,10 @@ export interface Translations {
   agentPanel: {
     heartbeat: {
       addFailed: string
+      addRule: string
+      removeRule: (rule: string) => string
+      rulePlaceholder: string
+      rulesFailed: string
       emailCheckDescription: string
       emailCheckNeedsGoogle: string
       emailCheckTitle: string

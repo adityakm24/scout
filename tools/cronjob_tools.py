@@ -687,7 +687,7 @@ def _action_create(a: Dict[str, Any]) -> str:
             monitor_script=_normalize_optional_job_value(a["monitor_script"]),
             monitor_url=_normalize_optional_job_value(a["monitor_url"]),
             # CLI-only lane: absent from CRONJOB_SCHEMA and the model dispatch (models don't pick models).
-            reasoning_effort=a["reasoning_effort"], interpreter=a["interpreter"],
+            reasoning_effort=a["reasoning_effort"], interpreter=a["interpreter"], rules=a["rules"],
             pinned=bool(a["pinned"]),
             failure_deliver=_resolve_cron_context_deliver(_normalize_deliver_param(a["failure_deliver"])),
             **({"paused": a["paused"], "paused_reason": a["paused_reason"]}
@@ -832,6 +832,8 @@ def _update_core_fields(job: Dict[str, Any], a: Dict[str, Any], updates: Dict[st
                 return bot_chat_error
             _norm_fd = _resolve_cron_context_deliver(_norm_fd)
         updates["failure_deliver"] = _norm_fd
+    if a["rules"] is not None:
+        updates["rules"] = a["rules"]
     if skills is not None or skill is not None:
         canonical_skills = _canonical_skills(skill, skills)
         updates["skills"] = canonical_skills
@@ -1005,7 +1007,8 @@ def cronjob(
     paused: bool = False,
     paused_reason: Optional[str] = None,
     pinned: Optional[bool] = None,
-    interpreter: Optional[str] = None) -> str:
+    interpreter: Optional[str] = None,
+    rules: Optional[List[str]] = None) -> str:
     """Unified cron job management tool."""
     a = dict(locals())
     del a["task_id"]  # unused but kept for handler signature compatibility
@@ -1102,6 +1105,11 @@ Jobs run in a fresh session with no current-chat context, so prompts must be sel
                 "type": "string",
                 "description": _script_description("the profile SCOUT_HOME")
             },
+            "rules": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Standing rules the user gave for this job, e.g. 'ignore transaction emails' or 'only mention mail from family'. Applied every run; a run they leave empty stays silent. On update, the full list (send existing rules too); [] clears."
+            },
             "monitor": {
                 "type": "string",
                 "description": "Optional change-detector that gates the agent: an http(s) URL (fetched each tick) or a script path (same rules as `script`, run each tick) — cheap, no LLM. Output identical to the previous tick skips the agent run entirely; changed output wakes the agent with a diff injected into the prompt. First tick always runs (baseline). Output must be deterministic (no timestamps) or every tick looks changed. Incompatible with no_agent. On update, '' clears."
@@ -1161,7 +1169,7 @@ def check_cronjob_requirements() -> bool:
 _HANDLER_FORWARDED_ARGS = (
     "job_id", "prompt", "schedule", "name", "repeat", "deliver", "failure_deliver", "skill", "skills", "reason",
     "script", "context_from", "continuity", "enabled_toolsets", "workdir", "no_agent", "attach_to_session",
-    "paused_reason", "pinned")
+    "paused_reason", "pinned", "rules")
 
 
 def _cronjob_handler(args, **kw):

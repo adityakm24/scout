@@ -49,6 +49,10 @@ export const esOverrides = {
   },
   agentPanel: {
     heartbeat: {
+      addRule: '+ Regla',
+      removeRule: (rule: string) => `Quitar regla: ${rule}`,
+      rulePlaceholder: 'p. ej., ignora los correos de transacciones',
+      rulesFailed: 'No se pudo guardar la regla',
       addFailed: 'No se pudo activar la revisión de correo',
       emailCheckDescription:
         'Cada 30 minutos, Scout busca correo nuevo en Gmail y te cuenta lo que llegó. Las revisiones sin novedades no cuestan nada.',

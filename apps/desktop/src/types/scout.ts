@@ -996,6 +996,8 @@ export interface CronJob {
   no_agent?: boolean
   prompt?: null | string
   provider?: null | string
+  /** The user's standing rules for this job ("ignore transaction emails"). */
+  rules?: null | string[]
   schedule?: CronJobSchedule
   schedule_display?: null | string
   script?: null | string
@@ -1024,6 +1026,7 @@ export interface CronJobUpdates {
   name?: string
   prompt?: string
   provider?: null | string
+  rules?: string[]
   schedule?: string
 }
 
