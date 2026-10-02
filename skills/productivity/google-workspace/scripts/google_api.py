@@ -377,30 +377,8 @@ def gmail_get(args):
 
 
 
-def gmail_send(args):
-    if _gws_binary():
-        message = MIMEText(args.body, "html" if args.html else "plain")
-        message["To"] = args.to
-        message["Subject"] = args.subject
-        if args.cc:
-            message["Cc"] = args.cc
-        if args.from_header:
-            message["From"] = args.from_header
-
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        body = {"raw": raw}
-        if args.thread_id:
-            body["threadId"] = args.thread_id
-
-        result = _run_gws(
-            ["gmail", "users", "messages", "send"],
-            params={"userId": "me"},
-            body=body,
-        )
-        print(json.dumps({"status": "sent", "id": result["id"], "threadId": result.get("threadId", "")}, indent=2))
-        return
-
-    service = build_service("gmail", "v1")
+def _outgoing_message(args) -> dict:
+    """The Gmail API ``message`` resource for a new email (send and draft build the same one)."""
     message = MIMEText(args.body, "html" if args.html else "plain")
     message["To"] = args.to
     message["Subject"] = args.subject
@@ -408,15 +386,30 @@ def gmail_send(args):
         message["Cc"] = args.cc
     if args.from_header:
         message["From"] = args.from_header
-
-    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-    body = {"raw": raw}
-
+    body = {"raw": base64.urlsafe_b64encode(message.as_bytes()).decode()}
     if args.thread_id:
         body["threadId"] = args.thread_id
+    return body
 
-    result = service.users().messages().send(userId="me", body=body).execute()
+
+def gmail_send(args):
+    body = _outgoing_message(args)
+    if _gws_binary():
+        result = _run_gws(["gmail", "users", "messages", "send"], params={"userId": "me"}, body=body)
+    else:
+        result = build_service("gmail", "v1").users().messages().send(userId="me", body=body).execute()
     print(json.dumps({"status": "sent", "id": result["id"], "threadId": result.get("threadId", "")}, indent=2))
+
+
+def gmail_draft(args):
+    """Save the email in the user's Gmail Drafts, unsent, for them to review and send themselves."""
+    body = {"message": _outgoing_message(args)}
+    if _gws_binary():
+        result = _run_gws(["gmail", "users", "drafts", "create"], params={"userId": "me"}, body=body)
+    else:
+        result = build_service("gmail", "v1").users().drafts().create(userId="me", body=body).execute()
+    print(json.dumps({"status": "drafted", "draftId": result["id"],
+                      "messageId": result.get("message", {}).get("id", "")}, indent=2))
 
 
 
@@ -1171,6 +1164,16 @@ def main():
     p.add_argument("--html", action="store_true", help="Send body as HTML")
     p.add_argument("--thread-id", default="", help="Thread ID for threading")
     p.set_defaults(func=gmail_send)
+
+    p = gmail_sub.add_parser("draft", help="Save to Gmail Drafts without sending")
+    p.add_argument("--to", required=True)
+    p.add_argument("--subject", required=True)
+    p.add_argument("--body", required=True)
+    p.add_argument("--cc", default="")
+    p.add_argument("--from", dest="from_header", default="", help="Custom From header")
+    p.add_argument("--html", action="store_true", help="Body is HTML")
+    p.add_argument("--thread-id", default="", help="Thread ID to draft a reply in")
+    p.set_defaults(func=gmail_draft)
 
     p = gmail_sub.add_parser("reply")
     p.add_argument("message_id", help="Message ID to reply to")

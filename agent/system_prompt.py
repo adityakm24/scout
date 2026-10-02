@@ -318,7 +318,10 @@ def _google_account_note(agent: Any) -> Optional[str]:
             "Calendar, Drive, Docs, Sheets and Contacts by calling the terminal tool (never by writing the "
             "command in your reply): `scout google gmail search \"from:dbs\"`, then `scout google gmail get "
             "MESSAGE_ID`; `scout google calendar list`. Use only flags `scout google SERVICE --help` lists. "
-            "Never web-search for the user's own mail or say you cannot access it.")
+            "Never web-search for the user's own mail or say you cannot access it. To write an email, ask "
+            "(with clarify) for whatever is missing: the address, the purpose, the key details. Then write a "
+            "complete email (greeting, clear short paragraphs, a concrete ask, a sign-off with the user's "
+            "name) and show it. Send only when the user says send, or save it with `scout google gmail draft`.")
 
 
 def _failing_connectors_note() -> Optional[str]:

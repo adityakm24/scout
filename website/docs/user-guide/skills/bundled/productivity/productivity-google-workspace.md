@@ -187,6 +187,9 @@ scout google gmail search "has:attachment filename:pdf newer_than:7d"
 # Read full message (returns JSON with body text)
 scout google gmail get MESSAGE_ID
 
+# Save to Gmail Drafts without sending (the user reviews and sends it from Gmail)
+scout google gmail draft --to user@example.com --subject "Hello" --body "Message text"
+
 # Send
 scout google gmail send --to user@example.com --subject "Hello" --body "Message text"
 scout google gmail send --to user@example.com --subject "Report" --body "<h1>Q4</h1><p>Details...</p>" --html
@@ -201,6 +204,24 @@ scout google gmail labels
 scout google gmail modify MESSAGE_ID --add-labels LABEL_ID
 scout google gmail modify MESSAGE_ID --remove-labels UNREAD
 ```
+
+#### Writing an email
+
+A one-line note is not an email. Before any `draft`, `send` or `reply`:
+
+1. **Gather what is missing.** You need the recipient's address, why the user is writing, every
+   fact the reader needs (dates, times, places, amounts, names) and the tone (friendly, formal,
+   brief). Look up what you can first: search earlier threads with the person, and the user's
+   memory for their name and sign-off. Ask for the rest with `clarify`, one question at a time,
+   with likely answers as choices. Never invent an address, a date or a commitment.
+2. **Write it properly.** A specific subject line; a greeting by name; an opening line that says
+   why you are writing; the details, one idea per short paragraph; a clear ask or next step
+   ("Could you let me know by Thursday?"); a sign-off with the user's name. Match the register of
+   any thread being answered, and keep it as short as the purpose allows.
+3. **Show the whole draft** (to, cc, subject, body) and ask: send it, save it to Gmail Drafts, or
+   change something. Revise until the user is happy.
+4. **Then act.** `send` / `reply` only on an explicit "send". Scout also asks the user to approve
+   the command. Otherwise `draft`, and tell the user it is waiting in Gmail Drafts.
 
 ### Calendar
 
@@ -316,7 +337,7 @@ All commands return JSON. Parse with `jq` or read directly. Key fields:
 
 ## Rules
 
-1. **Never send email, create/delete calendar events, delete Drive files, share files, or modify Docs/Sheets without confirming with the user first.** Show what will be done (recipients, file IDs, content, share role) and ask for approval. For `drive delete`, prefer the default trash (reversible) over `--permanent`.
+1. **Write emails as described in "Writing an email" above.** **Never send email, create/delete calendar events, delete Drive files, share files, or modify Docs/Sheets without confirming with the user first.** Show what will be done (recipients, file IDs, content, share role) and ask for approval. For `drive delete`, prefer the default trash (reversible) over `--permanent`.
 2. **Check auth before first use** — run `scout google status`. If it fails, guide the user through setup.
 3. **Use the Gmail search syntax reference** for complex queries — load it with `skill_view("google-workspace", file_path="references/gmail-search-syntax.md")`.
 4. **Calendar times must include timezone** — always use ISO 8601 with offset (e.g., `2026-03-01T10:00:00-06:00`) or UTC (`Z`).
