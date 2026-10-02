@@ -101,7 +101,15 @@ export function completeDesktopBoot(message = translateNow('boot.ready')) {
   })
 }
 
+// The main process aborts in-flight requests with this while the app closes
+// (electron/local-backend-lifecycle.ts): a deliberate quit, never a failed start.
+const DESKTOP_QUITTING = 'Scout Desktop is quitting.'
+
 export function failDesktopBoot(message: string) {
+  if (message.includes(DESKTOP_QUITTING)) {
+    return
+  }
+
   const current = $desktopBoot.get()
   $desktopBoot.set({
     ...current,
