@@ -647,12 +647,15 @@ def _latest_cron_answer_sync(job_id: str, profile: Optional[str] = None):
         raise HTTPException(status_code=404, detail="Job not found")
     with _owner_home_scope(selected):
         try:
-            found = latest_archived_answer(_cron_output_runs_dir(selected, str(job["id"])))
+            found = latest_archived_answer(_cron_output_runs_dir(selected, str(job["id"])), skip_failures=True)
         except OSError:
             found = None
         if not found:
             return {"at": None, "text": None}
         path, answer = found
+        # Script/reminder runs store their delivery under a run header; show only what was delivered.
+        if answer.startswith("# Cron Job:") and "\n---\n" in answer:
+            answer = answer.split("\n---\n", 1)[1].strip()
         return {"at": _cron_output_run_timestamp(path), "text": answer[:4000]}
 
 

@@ -41,8 +41,31 @@ export const esOverrides = {
     stripChoices: { share: 'Enviar a SpaceshipResearch', local: 'Solo local', off: 'No, gracias' },
     stripDetails: 'Detalles'
   },
-  replyChoices: { label: 'Elige una opción', other: 'Añadir tu propia respuesta', placeholder: 'Escribe tu respuesta…', send: 'Enviar' },
+  replyChoices: {
+    label: 'Elige una opción',
+    other: 'Añadir tu propia respuesta',
+    placeholder: 'Escribe tu respuesta…',
+    send: 'Enviar'
+  },
   agentPanel: {
+    heartbeat: {
+      addFailed: 'No se pudo activar la revisión de correo',
+      emailCheckDescription:
+        'Cada 30 minutos, Scout busca correo nuevo en Gmail y te cuenta lo que llegó. Las revisiones sin novedades no cuestan nada.',
+      emailCheckNeedsGoogle: 'Primero conecta Google Workspace en Conectores.',
+      emailCheckTitle: 'Revisar correo nuevo',
+      empty: 'Aún no hay nada programado.',
+      intro:
+        'Lo que Scout revisa o hace por su cuenta, con un horario. Pídelo en el chat — «revisa mi correo cada 30 minutos» — o actívalo aquí, y desactívalo cuando quieras.',
+      lastUpdate: (when: string) => `Último · ${when}`,
+      nothingYet: 'Aún no hay novedades.',
+      paused: 'Desactivado',
+      toggleFailed: 'No se pudo cambiar esta revisión',
+      turnOffNamed: (name: string) => `Desactivar ${name}`,
+      turnOn: 'Activar',
+      turnOnNamed: (name: string) => `Activar ${name}`,
+      untitled: 'Revisión programada'
+    },
     close: 'Cerrar panel',
     thinking: 'Pensando…',
     title: 'Agente',
@@ -56,7 +79,7 @@ export const esOverrides = {
     removePhoto: 'Quitar foto',
     photoTooLarge: 'La imagen es demasiado grande. Elige una de menos de 2 MB.',
     saveFailed: 'No se pudo guardar. Inténtalo de nuevo.',
-    tabs: { persona: 'Persona', permissions: 'Permisos', requests: 'Solicitudes' },
+    tabs: { heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Permisos', requests: 'Solicitudes' },
     persona: {
       soul: 'Alma',
       soulCaption: 'Personalidad y voz',
@@ -98,7 +121,9 @@ export const esOverrides = {
     subtitle: 'Tus tareas y recordatorios, compartidos con Scout en tiempo real.',
     greetingLine: (open, upcoming) =>
       `${open === 0 ? 'Nada en tu lista' : `${open} ${open === 1 ? 'tarea pendiente' : 'tareas pendientes'}`} · ${
-        upcoming === 0 ? 'sin recordatorios próximos' : `${upcoming} ${upcoming === 1 ? 'recordatorio próximo' : 'recordatorios próximos'}`
+        upcoming === 0
+          ? 'sin recordatorios próximos'
+          : `${upcoming} ${upcoming === 1 ? 'recordatorio próximo' : 'recordatorios próximos'}`
       }`,
     unsupported: 'Este backend aún no tiene el planificador. Actualiza Scout para usar el Panel.',
     openDashboard: 'Abrir Panel',
@@ -184,7 +209,8 @@ export const esOverrides = {
     googleWorkspace: {
       blurb: 'Gmail, Calendar, Drive, Docs, Sheets y Contactos con un solo inicio de sesión de Google.',
       cancel: 'Cancelar',
-      clientBody: 'Scout inicia sesión con tu propio cliente OAuth de Google. En Google Cloud, crea un cliente OAuth de tipo «App de escritorio» y activa las API de Gmail, Calendar, Drive, Docs, Sheets y People en el mismo proyecto.',
+      clientBody:
+        'Scout inicia sesión con tu propio cliente OAuth de Google. En Google Cloud, crea un cliente OAuth de tipo «App de escritorio» y activa las API de Gmail, Calendar, Drive, Docs, Sheets y People en el mismo proyecto.',
       clientId: 'ID de cliente',
       clientSaveFailed: 'No se pudo guardar el cliente de Google',
       clientSecret: 'Secreto del cliente',
@@ -194,16 +220,24 @@ export const esOverrides = {
       notGranted: 'No se permitió al iniciar sesión. Cierra sesión y vuelve a entrar para permitirlo.',
       openConsole: 'Abrir credenciales de Google Cloud',
       save: 'Guardar e iniciar sesión',
-      services: {calendar: 'Calendar', contacts: 'Contactos', docs: 'Docs', drive: 'Drive', gmail: 'Gmail', sheets: 'Sheets'},
+      services: {
+        calendar: 'Calendar',
+        contacts: 'Contactos',
+        docs: 'Docs',
+        drive: 'Drive',
+        gmail: 'Gmail',
+        sheets: 'Sheets'
+      },
       signedInAs: (account: string) => `Conectado como ${account}`,
-      signedInMessage: (account: null | string) => (account ? `Scout ya puede usar el Google Workspace de ${account}.` : 'Scout ya puede usar tu Google Workspace.'),
+      signedInMessage: (account: null | string) =>
+        account ? `Scout ya puede usar el Google Workspace de ${account}.` : 'Scout ya puede usar tu Google Workspace.',
       signedInTitle: 'Sesión iniciada en Google',
       connect: 'Conectar',
       signInFailed: 'Falló el inicio de sesión de Google',
       disconnect: 'Desconectar',
       signOutFailed: 'No se pudo cerrar sesión en Google',
       title: 'Google Workspace',
-      waiting: 'Termina en tu navegador…',
+      waiting: 'Termina en tu navegador…'
     },
     title: 'Conectores',
     searchPlaceholder: (count: number) => `Buscar entre ${count} apps`,
@@ -708,7 +742,7 @@ export const esOverrides = {
       openMaintenance: 'Abrir Mantenimiento'
     },
     voice: {
-      unavailable: 'Voz no disponible',
+      unavailable: 'Voz no disponible'
     },
     native: {
       approvalTitle: 'Se necesita aprobación',
@@ -1188,6 +1222,10 @@ export const esOverrides = {
         plugin: {
           label: 'Notificaciones de complementos',
           description: 'Un complemento de escritorio envió una notificación mientras Scout estaba en segundo plano.'
+        },
+        heartbeat: {
+          label: 'Novedades de Heartbeat',
+          description: 'Una comprobación que activaste en Heartbeat encontró algo nuevo.'
         },
         reminder: {
           label: 'Recordatorios',
@@ -1969,8 +2007,7 @@ export const esOverrides = {
         'Un ajuste de inicio externo a la app eligió esta conexión, así que las opciones de abajo son de solo lectura. Reinicia Scout sin ese ajuste (o pregunta a quien lo configuró) para cambiarla aquí.',
       modeTitle: 'Modo de conexión',
       localTitle: 'Gateway local',
-      localDesc:
-        'Inicia un backend privado de Scout en localhost. Es el valor predeterminado y funciona sin conexión.',
+      localDesc: 'Inicia un backend privado de Scout en localhost. Es el valor predeterminado y funciona sin conexión.',
       remoteTitle: 'Gateway remoto',
       remoteDesc: 'Conecta esta shell de escritorio a un backend remoto de Scout.',
       remoteAuthHint:
@@ -2715,7 +2752,8 @@ export const esOverrides = {
       activeBackend: 'Activo',
       activeBackendHint: 'Este es tu backend activo',
       useBackend: 'Usar este backend',
-      spaceshipResearchIncluded: 'Incluido con una suscripción de SpaceshipResearch: inicia sesión con tu cuenta de SpaceshipResearch para activarlo.',
+      spaceshipResearchIncluded:
+        'Incluido con una suscripción de SpaceshipResearch: inicia sesión con tu cuenta de SpaceshipResearch para activarlo.',
       spaceshipResearchAuthNeededTitle: 'Inicia sesión con tu cuenta de SpaceshipResearch',
       spaceshipResearchAuthNeededMessage: (provider: string) =>
         `${provider} está guardado, pero solo funcionará cuando inicies sesión con tu cuenta de SpaceshipResearch.`,
@@ -2995,7 +3033,7 @@ export const esOverrides = {
       pickerHint: 'Pulsa "+ Añadir a este agente" en cualquier skill: se instala y aparece en la lista de arriba.',
       loadFailed: 'No se pudo cargar el hub de skills',
       previewFailed: 'No se pudo cargar la vista previa de la skill',
-      scanFailed: 'Falló el análisis de seguridad',
+      scanFailed: 'Falló el análisis de seguridad'
     }
   },
   starmap: {
@@ -4033,8 +4071,7 @@ export const esOverrides = {
       title: 'La base de datos de sesiones está dañada',
       body: (profiles: string) =>
         `Scout no puede leer todo el historial de sesiones de ${profiles}. Los chats que faltan en esta lista no se eliminaron; el archivo donde se guardan está dañado.`,
-      action:
-        'Sal de Scout en este perfil y luego inspecciona el archivo sin modificarlo, o restaura una instantánea:',
+      action: 'Sal de Scout en este perfil y luego inspecciona el archivo sin modificarlo, o restaura una instantánea:',
       guide: 'Guía de recuperación'
     },
     noFilterMatches: 'Ninguna sesión coincide con estos filtros',

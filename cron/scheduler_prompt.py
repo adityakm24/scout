@@ -84,12 +84,14 @@ def _archive_answer(archive: str) -> str | None:
     return answer
 
 
-def latest_archived_answer(job_output_dir: Path) -> tuple[Path, str] | None:
+def latest_archived_answer(job_output_dir: Path, *, skip_failures: bool = False) -> tuple[Path, str] | None:
     """The newest stored run of a job that actually said something: ``(file, answer)``.
 
     Skips audit records of runs that had nothing to say (a ``wakeAgent=false`` gate, a silent
     status) and blank or ``[SILENT]`` answers. Only the run header describes suppression; script
-    and agent payloads can quote these markers. ``OSError`` propagates to the caller.
+    and agent payloads can quote these markers. ``skip_failures`` also passes over runs the agent
+    declared failed (``[CRON_FAILURE]``), for callers showing findings rather than recovering.
+    ``OSError`` propagates to the caller.
     """
     output_files = sorted(job_output_dir.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
     for output_file in output_files:
@@ -103,8 +105,9 @@ def latest_archived_answer(job_output_dir: Path) -> tuple[Path, str] | None:
         if not candidate or silent_audit:
             continue
         answer = _archive_answer(candidate)
-        if answer is not None:
-            return output_file, answer
+        if answer is None or (skip_failures and answer.startswith(_sched.CRON_FAILURE_MARKER)):
+            continue
+        return output_file, answer
     return None
 
 

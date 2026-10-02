@@ -128,14 +128,14 @@ CATALOG: List[AutomationBlueprint] = [
         description="Check Gmail on a schedule and tell you about new mail — "
         "nothing is sent and no model runs when the inbox is quiet.",
         category="email",
-        schedule_template="*/{interval_min} * * * *",
+        schedule_template="every {interval_min}m",
         prompt_template=(
             "The pre-check above lists email that arrived in the user's inbox since the last check "
             "(the `new_emails` JSON). Tell the user about it: one short line per email — who it's "
             "from, what it's about, and whether it looks like it needs a reply or action. Lead with "
             "anything that {criteria}. Do not open, reply to, or change any email; this is a "
-            "heads-up only. If the list is empty or every email is plainly automated noise, "
-            "respond with [SILENT]."
+            "heads-up only. The pre-check runs you only when there is new mail, so always reply "
+            "with the summary."
         ),
         slots=[
             BlueprintSlot(

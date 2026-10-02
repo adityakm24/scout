@@ -113,6 +113,22 @@ export interface Translations {
     send: string
   }
   agentPanel: {
+    heartbeat: {
+      addFailed: string
+      emailCheckDescription: string
+      emailCheckNeedsGoogle: string
+      emailCheckTitle: string
+      empty: string
+      intro: string
+      lastUpdate: (when: string) => string
+      nothingYet: string
+      paused: string
+      toggleFailed: string
+      turnOffNamed: (name: string) => string
+      turnOn: string
+      turnOnNamed: (name: string) => string
+      untitled: string
+    }
     close: string
     thinking: string
     title: string
@@ -126,7 +142,7 @@ export interface Translations {
     removePhoto: string
     photoTooLarge: string
     saveFailed: string
-    tabs: Record<'persona' | 'permissions' | 'requests', string>
+    tabs: Record<'heartbeat' | 'permissions' | 'persona' | 'requests', string>
     persona: {
       soul: string
       soulCaption: string
@@ -1057,7 +1073,15 @@ export interface Translations {
       enableAllDesc: string
       focusedHint: string
       kinds: Record<
-        'approval' | 'backgroundDone' | 'credits' | 'input' | 'plugin' | 'reminder' | 'turnDone' | 'turnError',
+        | 'approval'
+        | 'backgroundDone'
+        | 'credits'
+        | 'heartbeat'
+        | 'input'
+        | 'plugin'
+        | 'reminder'
+        | 'turnDone'
+        | 'turnError',
         { label: string; description: string }
       >
       test: string

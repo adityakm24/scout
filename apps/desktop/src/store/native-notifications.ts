@@ -23,7 +23,7 @@ export type { ScoutOpenTarget }
 // Native OS notifications (Electron `Notification`), separate from the in-app
 // toast feed in `notifications.ts`. Each kind toggles independently.
 export type NativeNotificationKind =
-  'approval' | 'backgroundDone' | 'credits' | 'input' | 'plugin' | 'reminder' | 'turnDone' | 'turnError'
+  'approval' | 'backgroundDone' | 'credits' | 'heartbeat' | 'input' | 'plugin' | 'reminder' | 'turnDone' | 'turnError'
 
 export const NATIVE_NOTIFICATION_KINDS: readonly NativeNotificationKind[] = [
   'approval',
@@ -33,15 +33,17 @@ export const NATIVE_NOTIFICATION_KINDS: readonly NativeNotificationKind[] = [
   'backgroundDone',
   'credits',
   'plugin',
-  'reminder'
+  'reminder',
+  'heartbeat'
 ]
 
 // Blocking prompts — surface even while focused if they're for another session.
 const ATTENTION_KINDS = new Set<NativeNotificationKind>(['approval', 'input'])
 
 // Time-critical and asked for by the user — like a Reminders alert, these ring
-// whether or not Scout is in front.
-const ALWAYS_KINDS = new Set<NativeNotificationKind>(['reminder'])
+// whether or not Scout is in front. A heartbeat update (new email, a watched
+// check) is news the user set a job up to hear.
+const ALWAYS_KINDS = new Set<NativeNotificationKind>(['heartbeat', 'reminder'])
 
 export interface NativeNotificationPrefs {
   enabled: boolean
@@ -57,6 +59,7 @@ const DEFAULT_PREFS: NativeNotificationPrefs = {
     backgroundDone: true,
     credits: true,
     input: true,
+    heartbeat: true,
     plugin: true,
     reminder: true,
     turnDone: true,

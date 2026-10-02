@@ -51,6 +51,24 @@ export const en: Translations = {
   // English editorial copy stays in the shipped JSONL; other locales override it.
   replyChoices: { label: 'Choose one', other: 'Add your own answer', placeholder: 'Type your answer…', send: 'Send' },
   agentPanel: {
+    heartbeat: {
+      addFailed: 'Could not turn on the email check',
+      emailCheckDescription:
+        'Every 30 minutes, Scout looks for new Gmail and tells you what arrived. Quiet checks cost nothing.',
+      emailCheckNeedsGoogle: 'Connect Google Workspace in Connectors first.',
+      emailCheckTitle: 'New email check',
+      empty: 'Nothing scheduled yet.',
+      intro:
+        'Things Scout checks or does on its own, on a schedule. Ask in chat — “check my email every 30 minutes” — or turn one on here, and switch any of them off when you like.',
+      lastUpdate: (when: string) => `Latest · ${when}`,
+      nothingYet: 'Nothing new yet.',
+      paused: 'Off',
+      toggleFailed: 'Could not change this check',
+      turnOffNamed: (name: string) => `Turn off ${name}`,
+      turnOn: 'Turn on',
+      turnOnNamed: (name: string) => `Turn on ${name}`,
+      untitled: 'Scheduled check'
+    },
     close: 'Close panel',
     thinking: 'Thinking…',
     title: 'Agent',
@@ -64,7 +82,7 @@ export const en: Translations = {
     removePhoto: 'Remove photo',
     photoTooLarge: 'That image is too large. Pick one under 2 MB.',
     saveFailed: 'Could not save. Try again.',
-    tabs: { persona: 'Persona', permissions: 'Permissions', requests: 'Requests' },
+    tabs: { heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Permissions', requests: 'Requests' },
     persona: {
       soul: 'Soul',
       soulCaption: 'Personality and voice',
@@ -155,7 +173,11 @@ export const en: Translations = {
       quickAdd: 'Quick add to-do…'
     }
   },
-  intro: { stock: {}, custom: () => [], greeting: { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', night: 'Still up?' } },
+  intro: {
+    stock: {},
+    custom: () => [],
+    greeting: { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', night: 'Still up?' }
+  },
   catalog: {
     add: 'Add',
     added: 'Added',
@@ -251,7 +273,8 @@ export const en: Translations = {
     googleWorkspace: {
       blurb: 'Gmail, Calendar, Drive, Docs, Sheets and Contacts with one Google sign-in.',
       cancel: 'Cancel',
-      clientBody: 'Scout signs in with your own Google OAuth client. In Google Cloud, create an OAuth client of type “Desktop app”, then enable the Gmail, Calendar, Drive, Docs, Sheets and People APIs in the same project.',
+      clientBody:
+        'Scout signs in with your own Google OAuth client. In Google Cloud, create an OAuth client of type “Desktop app”, then enable the Gmail, Calendar, Drive, Docs, Sheets and People APIs in the same project.',
       clientId: 'Client ID',
       clientSaveFailed: 'Could not save the Google client',
       clientSecret: 'Client secret',
@@ -261,16 +284,24 @@ export const en: Translations = {
       notGranted: 'Not allowed at sign-in. Sign out and in again to allow it.',
       openConsole: 'Open Google Cloud credentials',
       save: 'Save and sign in',
-      services: {calendar: 'Calendar', contacts: 'Contacts', docs: 'Docs', drive: 'Drive', gmail: 'Gmail', sheets: 'Sheets'},
+      services: {
+        calendar: 'Calendar',
+        contacts: 'Contacts',
+        docs: 'Docs',
+        drive: 'Drive',
+        gmail: 'Gmail',
+        sheets: 'Sheets'
+      },
       signedInAs: (account: string) => `Connected as ${account}`,
-      signedInMessage: (account: null | string) => (account ? `Scout can now use ${account}'s Google Workspace.` : 'Scout can now use your Google Workspace.'),
+      signedInMessage: (account: null | string) =>
+        account ? `Scout can now use ${account}'s Google Workspace.` : 'Scout can now use your Google Workspace.',
       signedInTitle: 'Signed in to Google',
       connect: 'Connect',
       signInFailed: 'Google sign-in failed',
       disconnect: 'Disconnect',
       signOutFailed: 'Could not sign out of Google',
       title: 'Google Workspace',
-      waiting: 'Finish in your browser…',
+      waiting: 'Finish in your browser…'
     },
     title: 'Connectors',
     searchPlaceholder: (count: number) => `Search ${count} apps`,
@@ -756,7 +787,7 @@ export const en: Translations = {
       openMaintenance: 'Open Maintenance'
     },
     voice: {
-      unavailable: 'Voice unavailable',
+      unavailable: 'Voice unavailable'
     },
     native: {
       approvalTitle: 'Approval needed',
@@ -1229,6 +1260,10 @@ export const en: Translations = {
           label: 'Plugin notifications',
           description: 'A desktop plugin sent a notification while Scout was in the background.'
         },
+        heartbeat: {
+          label: 'Heartbeat updates',
+          description: 'A check you turned on in Heartbeat found something new.'
+        },
         reminder: {
           label: 'Reminders',
           description: 'A reminder you or Scout set went off.'
@@ -1700,8 +1735,7 @@ export const en: Translations = {
     gateway: {
       loading: 'Loading gateway settings...',
       unavailableTitle: 'Gateway settings unavailable',
-      unavailableDesc:
-        'Connection settings can only be changed from the Scout Desktop app on the computer running it.',
+      unavailableDesc: 'Connection settings can only be changed from the Scout Desktop app on the computer running it.',
       title: 'Gateway Connection',
       envOverride: 'env override',
       intro:
@@ -2425,7 +2459,8 @@ export const en: Translations = {
       activeBackend: 'Active',
       activeBackendHint: 'This is your active backend',
       useBackend: 'Use this backend',
-      spaceshipResearchIncluded: 'Included with a SpaceshipResearch subscription — sign in with your SpaceshipResearch account to activate.',
+      spaceshipResearchIncluded:
+        'Included with a SpaceshipResearch subscription — sign in with your SpaceshipResearch account to activate.',
       spaceshipResearchAuthNeededTitle: 'Sign in with your SpaceshipResearch account',
       spaceshipResearchAuthNeededMessage: provider =>
         `${provider} is saved but will only work once you sign in with your SpaceshipResearch account.`,
@@ -2698,7 +2733,7 @@ export const en: Translations = {
       pickerHint: 'Hit "+ Add to this Agent" on any skill — it installs and appears in the list above.',
       loadFailed: 'Skill hub failed to load',
       previewFailed: 'Skill preview failed',
-      scanFailed: 'Security scan failed',
+      scanFailed: 'Security scan failed'
     }
   },
 
@@ -4273,8 +4308,7 @@ export const en: Translations = {
     errorTitle: 'Update didn’t finish',
     errorBody: 'No worries — nothing was lost. You can try again now.',
     blockerTitle: 'Close local previews to update Scout?',
-    blockerBody:
-      'Scout needs to stop these local previews before updating. This will not modify or delete your files.',
+    blockerBody: 'Scout needs to stop these local previews before updating. This will not modify or delete your files.',
     foreignBlockerTitle: 'Close other processes to update Scout',
     foreignBlockerBody:
       'Scout can’t safely close these processes automatically. Close the app, terminal, or service that owns each one, then try the update again.',
@@ -4389,8 +4423,7 @@ export const en: Translations = {
     installTo: 'Will install to',
     retryAfterRun: 'I’ve run it -- retry',
     setupChoiceTitle: 'Set up Scout Desktop',
-    setupChoiceDesc:
-      'Connect this app to a Scout gateway you already run, or install Scout locally on this computer.',
+    setupChoiceDesc: 'Connect this app to a Scout gateway you already run, or install Scout locally on this computer.',
     setupChoiceDescLocal: 'Install Scout on this computer, or connect to a Scout gateway you already run.',
     connectExistingTitle: 'Connect to existing Scout',
     connectExistingShort: 'Connect existing',
@@ -4594,12 +4627,13 @@ export const en: Translations = {
         `Lots of people are getting started right now, so Scout will try again in ${wait}. Signing in is free and skips the wait.`,
       unreachable:
         "Scout couldn't reach the SpaceshipResearch service. Check your internet connection, then tap Try again. Or connect another provider for now.",
-      serverError: 'The SpaceshipResearch service had a hiccup. Tap Try again in a moment, or connect another provider for now.',
+      serverError:
+        'The SpaceshipResearch service had a hiccup. Tap Try again in a moment, or connect another provider for now.',
       powRequired:
         "The SpaceshipResearch server asked for a proof of work, but that isn't implemented in your Agent yet. Sign in or create a free SpaceshipResearch account to continue.",
-      locked: "This session can't continue without signing in. Sign in or create a free SpaceshipResearch account to keep going.",
-      generic:
-        "Scout couldn't set up free access without signing in. Signing in is free, or connect another provider.",
+      locked:
+        "This session can't continue without signing in. Sign in or create a free SpaceshipResearch account to keep going.",
+      generic: "Scout couldn't set up free access without signing in. Signing in is free, or connect another provider.",
       signInBelow: 'Signing in is free. Pick SpaceshipResearch below.',
       tryAgain: 'Try again',
       retrying: 'Trying again…'
@@ -5081,8 +5115,7 @@ export const en: Translations = {
         auth: 'The AI service rejected your sign-in. Check the credentials for this provider, then send your message again.',
         billing: 'Your account has no credits left for this provider. Top up or switch provider, then send again.',
         disk: 'Your disk is full, so Scout could not save this conversation. Free some space, then retry.',
-        endpoint:
-          "Scout can't reach your custom model server. Check that it is running, then send your message again.",
+        endpoint: "Scout can't reach your custom model server. Check that it is running, then send your message again.",
         gateway:
           'Scout hit an internal problem starting this reply. Send your message again; if it keeps happening, send diagnostics.',
         generic: 'Something went wrong while Scout was replying. Retry, or copy the details if it keeps happening.',

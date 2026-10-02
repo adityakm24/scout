@@ -40,7 +40,8 @@ class TestScheduleResolution:
             get_blueprint("important-mail"),
             {"interval_min": "15", "criteria": "x", "deliver": "origin"},
         )
-        assert spec["schedule"] == "*/15 * * * *"
+        from cron.jobs import parse_schedule
+        assert parse_schedule(spec["schedule"]).get("minutes") == 15
 
     def test_day_to_dow(self):
         spec = fill_blueprint(

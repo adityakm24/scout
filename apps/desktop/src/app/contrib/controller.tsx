@@ -48,6 +48,7 @@ import { isOnboardingEnabled } from '@/lib/onboarding-enabled'
 import { TRANSCRIPT_DIRECTIVE_AREA, type TranscriptDirectiveContribution } from '@/lib/transcript-directives'
 import { setYoloEnabled } from '@/lib/yolo-session'
 import { $connectionsRegistry } from '@/store/connection-registry-state'
+import { startHeartbeatWatch } from '@/store/heartbeat'
 import { $interfaceMode, $showsAdvancedChrome, setInterfaceMode, setModeContext } from '@/store/interface-mode'
 import {
   $fileBrowserOpen,
@@ -635,6 +636,8 @@ if ($interfaceMode.get() !== 'simple') {
   setInterfaceMode('simple')
 }
 
+// Heartbeat: scheduled checks the user turned on report back as notifications, panel open or not.
+startHeartbeatWatch()
 // Without the statusbar, the rail is the only way to switch profiles or gateways.
 $profiles.subscribe(profiles => setModeContext({ profileCount: profiles.length }))
 $connectionsRegistry.subscribe(registry => setModeContext({ connectionCount: registry?.connections.length ?? 0 }))

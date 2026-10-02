@@ -40,8 +40,31 @@ export const deOverrides = {
     stripChoices: { share: 'A SpaceshipResearch senden', local: 'Nur lokal', off: 'Nein danke' },
     stripDetails: 'Details'
   },
-  replyChoices: { label: 'Wähle eine Option', other: 'Eigene Antwort hinzufügen', placeholder: 'Antwort eingeben…', send: 'Senden' },
+  replyChoices: {
+    label: 'Wähle eine Option',
+    other: 'Eigene Antwort hinzufügen',
+    placeholder: 'Antwort eingeben…',
+    send: 'Senden'
+  },
   agentPanel: {
+    heartbeat: {
+      addFailed: 'E-Mail-Prüfung konnte nicht eingeschaltet werden',
+      emailCheckDescription:
+        'Alle 30 Minuten sucht Scout nach neuen Gmail-Nachrichten und sagt dir, was angekommen ist. Ruhige Prüfungen kosten nichts.',
+      emailCheckNeedsGoogle: 'Verbinde zuerst Google Workspace unter Connectors.',
+      emailCheckTitle: 'Neue E-Mails prüfen',
+      empty: 'Noch nichts geplant.',
+      intro:
+        'Was Scout selbstständig nach Zeitplan prüft oder erledigt. Bitte im Chat darum – „prüfe alle 30 Minuten meine E-Mails“ – oder schalte es hier ein, und schalte es jederzeit wieder aus.',
+      lastUpdate: (when: string) => `Zuletzt · ${when}`,
+      nothingYet: 'Noch nichts Neues.',
+      paused: 'Aus',
+      toggleFailed: 'Diese Prüfung konnte nicht geändert werden',
+      turnOffNamed: (name: string) => `${name} ausschalten`,
+      turnOn: 'Einschalten',
+      turnOnNamed: (name: string) => `${name} einschalten`,
+      untitled: 'Geplante Prüfung'
+    },
     close: 'Seitenleiste schließen',
     thinking: 'Denkt nach…',
     title: 'Agent',
@@ -55,7 +78,7 @@ export const deOverrides = {
     removePhoto: 'Foto entfernen',
     photoTooLarge: 'Das Bild ist zu groß. Wähle eines unter 2 MB.',
     saveFailed: 'Speichern fehlgeschlagen. Versuch es noch einmal.',
-    tabs: { persona: 'Persona', permissions: 'Berechtigungen', requests: 'Anfragen' },
+    tabs: { heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Berechtigungen', requests: 'Anfragen' },
     persona: {
       soul: 'Seele',
       soulCaption: 'Persönlichkeit und Ton',
@@ -97,7 +120,9 @@ export const deOverrides = {
     subtitle: 'Deine To-dos und Erinnerungen – live mit Scout geteilt.',
     greetingLine: (open, upcoming) =>
       `${open === 0 ? 'Nichts auf deiner Liste' : `${open} offen`} · ${
-        upcoming === 0 ? 'keine anstehenden Erinnerungen' : `${upcoming} ${upcoming === 1 ? 'Erinnerung' : 'Erinnerungen'} geplant`
+        upcoming === 0
+          ? 'keine anstehenden Erinnerungen'
+          : `${upcoming} ${upcoming === 1 ? 'Erinnerung' : 'Erinnerungen'} geplant`
       }`,
     unsupported: 'Dieses Backend kennt den Planer noch nicht. Aktualisiere Scout, um das Dashboard zu nutzen.',
     openDashboard: 'Dashboard öffnen',
@@ -183,7 +208,8 @@ export const deOverrides = {
     googleWorkspace: {
       blurb: 'Gmail, Kalender, Drive, Docs, Tabellen und Kontakte mit einer Google-Anmeldung.',
       cancel: 'Abbrechen',
-      clientBody: 'Scout meldet sich mit deinem eigenen Google-OAuth-Client an. Erstelle in Google Cloud einen OAuth-Client vom Typ „Desktop-App“ und aktiviere im selben Projekt die Gmail-, Calendar-, Drive-, Docs-, Sheets- und People-APIs.',
+      clientBody:
+        'Scout meldet sich mit deinem eigenen Google-OAuth-Client an. Erstelle in Google Cloud einen OAuth-Client vom Typ „Desktop-App“ und aktiviere im selben Projekt die Gmail-, Calendar-, Drive-, Docs-, Sheets- und People-APIs.',
       clientId: 'Client-ID',
       clientSaveFailed: 'Google-Client konnte nicht gespeichert werden',
       clientSecret: 'Client-Secret',
@@ -193,16 +219,26 @@ export const deOverrides = {
       notGranted: 'Bei der Anmeldung nicht erlaubt. Ab- und wieder anmelden, um es zu erlauben.',
       openConsole: 'Google-Cloud-Anmeldedaten öffnen',
       save: 'Speichern und anmelden',
-      services: {calendar: 'Kalender', contacts: 'Kontakte', docs: 'Docs', drive: 'Drive', gmail: 'Gmail', sheets: 'Tabellen'},
+      services: {
+        calendar: 'Kalender',
+        contacts: 'Kontakte',
+        docs: 'Docs',
+        drive: 'Drive',
+        gmail: 'Gmail',
+        sheets: 'Tabellen'
+      },
       signedInAs: (account: string) => `Verbunden als ${account}`,
-      signedInMessage: (account: null | string) => (account ? `Scout kann jetzt den Google Workspace von ${account} nutzen.` : 'Scout kann jetzt deinen Google Workspace nutzen.'),
+      signedInMessage: (account: null | string) =>
+        account
+          ? `Scout kann jetzt den Google Workspace von ${account} nutzen.`
+          : 'Scout kann jetzt deinen Google Workspace nutzen.',
       signedInTitle: 'Bei Google angemeldet',
       connect: 'Verbinden',
       signInFailed: 'Google-Anmeldung fehlgeschlagen',
       disconnect: 'Trennen',
       signOutFailed: 'Abmelden bei Google fehlgeschlagen',
       title: 'Google Workspace',
-      waiting: 'Im Browser abschließen…',
+      waiting: 'Im Browser abschließen…'
     },
     title: 'Konnektoren',
     searchPlaceholder: (count: number) => `${count} Apps durchsuchen`,
@@ -707,7 +743,7 @@ export const deOverrides = {
       openMaintenance: 'Wartung öffnen'
     },
     voice: {
-      unavailable: 'Sprache nicht verfügbar',
+      unavailable: 'Sprache nicht verfügbar'
     },
     native: {
       approvalTitle: 'Genehmigung erforderlich',
@@ -1187,6 +1223,10 @@ export const deOverrides = {
         plugin: {
           label: 'Plugin-Benachrichtigungen',
           description: 'Ein Desktop-Plugin hat eine Benachrichtigung gesendet, während Scout im Hintergrund war.'
+        },
+        heartbeat: {
+          label: 'Heartbeat-Updates',
+          description: 'Eine Prüfung, die du unter Heartbeat aktiviert hast, hat etwas Neues gefunden.'
         },
         reminder: {
           label: 'Erinnerungen',
@@ -1702,8 +1742,7 @@ export const deOverrides = {
           title: 'Oberfläche + Agent deinstallieren, Daten behalten',
           description:
             'Entfernt die App und den Scout-Agent, behält aber Konfiguration, Chats und Geheimnisse für eine spätere Neuinstallation.',
-          consequence:
-            'die Chat-Oberfläche und den Scout-Agent (Konfiguration, Chats und Geheimnisse bleiben erhalten)'
+          consequence: 'die Chat-Oberfläche und den Scout-Agent (Konfiguration, Chats und Geheimnisse bleiben erhalten)'
         },
         full: {
           title: 'Alles deinstallieren',
@@ -2476,7 +2515,8 @@ export const deOverrides = {
         notice: {
           loggedOut: {
             title: 'SpaceshipResearch-Konto verbinden',
-            message: 'Melden Sie sich mit Ihrem SpaceshipResearch-Konto an, um hier Guthaben, Tarif und Nutzung zu sehen.',
+            message:
+              'Melden Sie sich mit Ihrem SpaceshipResearch-Konto an, um hier Guthaben, Tarif und Nutzung zu sehen.',
             action: 'Anmelden'
           },
           openPortal: 'Portal öffnen ↗',
@@ -2728,7 +2768,8 @@ export const deOverrides = {
       activeBackend: 'Aktiv',
       activeBackendHint: 'Das ist Ihr aktives Backend',
       useBackend: 'Dieses Backend verwenden',
-      spaceshipResearchIncluded: 'In einem SpaceshipResearch-Abo enthalten – melden Sie sich im Scout Portal an, um es zu aktivieren.',
+      spaceshipResearchIncluded:
+        'In einem SpaceshipResearch-Abo enthalten – melden Sie sich im Scout Portal an, um es zu aktivieren.',
       spaceshipResearchAuthNeededTitle: 'Im Scout Portal anmelden',
       spaceshipResearchAuthNeededMessage: provider =>
         `${provider} ist gespeichert, wird aber erst aktiviert, wenn Sie sich im Scout Portal anmelden.`,
@@ -2859,7 +2900,8 @@ export const deOverrides = {
     newSkill: 'Neuer Skill',
     create: {
       title: 'Neuer Skill',
-      blurb: 'Bring Scout bei, wie du etwas erledigt haben möchtest. Scout nutzt den Skill, wann immer die Anfrage passt.',
+      blurb:
+        'Bring Scout bei, wie du etwas erledigt haben möchtest. Scout nutzt den Skill, wann immer die Anfrage passt.',
       name: 'Name',
       nameHint: 'Kleinbuchstaben, Ziffern und Bindestriche.',
       namePlaceholder: 'wochenbericht',
@@ -3003,7 +3045,7 @@ export const deOverrides = {
         'Klicken Sie bei einem beliebigen Skill auf „+ Zu diesem Agenten hinzufügen“ – er wird installiert und erscheint in der Liste oben.',
       loadFailed: 'Skill-Hub konnte nicht geladen werden',
       previewFailed: 'Skill-Vorschau fehlgeschlagen',
-      scanFailed: 'Sicherheitsscan fehlgeschlagen',
+      scanFailed: 'Sicherheitsscan fehlgeschlagen'
     }
   },
   starmap: {
@@ -4947,7 +4989,8 @@ export const deOverrides = {
     signInInstead: 'Stattdessen mit einem SpaceshipResearch-Konto anmelden',
     otherProviders: 'Andere Anbieter',
     stripTitle: 'Kostenlose SpaceshipResearch-Inferenz und Verbindungen sind jetzt verfügbar.',
-    stripBody: 'Öffnen Sie die Modellauswahl, um sie auszuprobieren, oder melden Sie sich mit einem SpaceshipResearch-Konto an.',
+    stripBody:
+      'Öffnen Sie die Modellauswahl, um sie auszuprobieren, oder melden Sie sich mit einem SpaceshipResearch-Konto an.',
     dismiss: 'Ausblenden',
     providerName: 'SpaceshipResearch',
     statusLabel: model => `SpaceshipResearch · ${model}`,

@@ -12,13 +12,14 @@ import { $activeGatewayProfile } from '@/store/profile'
 import { $approvalRequests } from '@/store/prompts'
 import { $gatewayState } from '@/store/session'
 
+import { HeartbeatTab } from './heartbeat-tab'
 import { IdentityCard } from './identity-card'
 import { closeAgentPanel } from './open'
 import { PermissionsTab } from './permissions-tab'
 import { PersonaTab } from './persona-tab'
 import { RequestsTab } from './requests-tab'
 
-type AgentPanelTab = 'permissions' | 'persona' | 'requests'
+type AgentPanelTab = 'heartbeat' | 'permissions' | 'persona' | 'requests'
 
 /** The right-side panel about the agent itself: who it is (name, photo, soul, memories), what
  *  it may do (permissions) and what is waiting on the user (requests). Opened from the chat's
@@ -38,6 +39,7 @@ export function AgentPanel() {
 
   const content: Record<AgentPanelTab, () => ReactNode> = {
     persona: () => <PersonaTab key={profile} />,
+    heartbeat: () => <HeartbeatTab key={profile} />,
     permissions: () => <PermissionsTab onOpenSettings={() => navigate(SETTINGS_ROUTE)} />,
     requests: () => <RequestsTab key={profile} />
   }
@@ -63,6 +65,7 @@ export function AgentPanel() {
           onChange={id => setTab(id as AgentPanelTab)}
           tabs={[
             { id: 'persona', label: copy.tabs.persona },
+            { id: 'heartbeat', label: copy.tabs.heartbeat },
             { id: 'permissions', label: copy.tabs.permissions },
             {
               id: 'requests',

@@ -41,8 +41,31 @@ export const frOverrides = {
     stripChoices: { share: 'Envoyer à SpaceshipResearch', local: 'Local uniquement', off: 'Non merci' },
     stripDetails: 'Détails'
   },
-  replyChoices: { label: 'Choisis une option', other: 'Ajouter ta propre réponse', placeholder: 'Écris ta réponse…', send: 'Envoyer' },
+  replyChoices: {
+    label: 'Choisis une option',
+    other: 'Ajouter ta propre réponse',
+    placeholder: 'Écris ta réponse…',
+    send: 'Envoyer'
+  },
   agentPanel: {
+    heartbeat: {
+      addFailed: "Impossible d'activer la vérification des e-mails",
+      emailCheckDescription:
+        'Toutes les 30 minutes, Scout cherche les nouveaux e-mails Gmail et vous dit ce qui est arrivé. Les vérifications sans nouveauté ne coûtent rien.',
+      emailCheckNeedsGoogle: "Connectez d'abord Google Workspace dans Connecteurs.",
+      emailCheckTitle: 'Vérifier les nouveaux e-mails',
+      empty: "Rien de planifié pour l'instant.",
+      intro:
+        'Ce que Scout vérifie ou fait seul, selon un horaire. Demandez-le dans le chat — « vérifie mes e-mails toutes les 30 minutes » — ou activez-le ici, et désactivez-le quand vous voulez.',
+      lastUpdate: (when: string) => `Dernier · ${when}`,
+      nothingYet: 'Rien de nouveau pour le moment.',
+      paused: 'Désactivé',
+      toggleFailed: 'Impossible de modifier cette vérification',
+      turnOffNamed: (name: string) => `Désactiver ${name}`,
+      turnOn: 'Activer',
+      turnOnNamed: (name: string) => `Activer ${name}`,
+      untitled: 'Vérification planifiée'
+    },
     close: 'Fermer le panneau',
     thinking: 'Réflexion…',
     title: 'Agent',
@@ -56,7 +79,7 @@ export const frOverrides = {
     removePhoto: 'Retirer la photo',
     photoTooLarge: 'Image trop lourde. Choisis-en une de moins de 2 Mo.',
     saveFailed: "Impossible d'enregistrer. Réessaie.",
-    tabs: { persona: 'Persona', permissions: 'Autorisations', requests: 'Demandes' },
+    tabs: { heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Autorisations', requests: 'Demandes' },
     persona: {
       soul: 'Âme',
       soulCaption: 'Personnalité et ton',
@@ -184,26 +207,37 @@ export const frOverrides = {
     googleWorkspace: {
       blurb: 'Gmail, Agenda, Drive, Docs, Sheets et Contacts avec une seule connexion Google.',
       cancel: 'Annuler',
-      clientBody: 'Scout se connecte avec votre propre client OAuth Google. Dans Google Cloud, créez un client OAuth de type « Application de bureau », puis activez les API Gmail, Calendar, Drive, Docs, Sheets et People dans le même projet.',
+      clientBody:
+        'Scout se connecte avec votre propre client OAuth Google. Dans Google Cloud, créez un client OAuth de type « Application de bureau », puis activez les API Gmail, Calendar, Drive, Docs, Sheets et People dans le même projet.',
       clientId: 'ID client',
-      clientSaveFailed: 'Impossible d\'enregistrer le client Google',
+      clientSaveFailed: "Impossible d'enregistrer le client Google",
       clientSecret: 'Code secret du client',
       clientTitle: 'Connectez votre client OAuth Google',
       connected: 'Connecté',
       notConnected: 'Non connecté',
-      notGranted: 'Non autorisé à la connexion. Déconnectez-vous puis reconnectez-vous pour l\'autoriser.',
+      notGranted: "Non autorisé à la connexion. Déconnectez-vous puis reconnectez-vous pour l'autoriser.",
       openConsole: 'Ouvrir les identifiants Google Cloud',
       save: 'Enregistrer et se connecter',
-      services: {calendar: 'Agenda', contacts: 'Contacts', docs: 'Docs', drive: 'Drive', gmail: 'Gmail', sheets: 'Sheets'},
+      services: {
+        calendar: 'Agenda',
+        contacts: 'Contacts',
+        docs: 'Docs',
+        drive: 'Drive',
+        gmail: 'Gmail',
+        sheets: 'Sheets'
+      },
       signedInAs: (account: string) => `Connecté en tant que ${account}`,
-      signedInMessage: (account: null | string) => (account ? `Scout peut maintenant utiliser le Google Workspace de ${account}.` : 'Scout peut maintenant utiliser votre Google Workspace.'),
+      signedInMessage: (account: null | string) =>
+        account
+          ? `Scout peut maintenant utiliser le Google Workspace de ${account}.`
+          : 'Scout peut maintenant utiliser votre Google Workspace.',
       signedInTitle: 'Connecté à Google',
       connect: 'Connecter',
       signInFailed: 'Échec de la connexion Google',
       disconnect: 'Déconnecter',
       signOutFailed: 'Impossible de se déconnecter de Google',
       title: 'Google Workspace',
-      waiting: 'Terminez dans votre navigateur…',
+      waiting: 'Terminez dans votre navigateur…'
     },
     title: 'Connecteurs',
     searchPlaceholder: (count: number) => `Rechercher parmi ${count} applications`,
@@ -707,7 +741,7 @@ export const frOverrides = {
       openMaintenance: 'Ouvrir Maintenance'
     },
     voice: {
-      unavailable: 'Voix indisponible',
+      unavailable: 'Voix indisponible'
     },
     native: {
       approvalTitle: 'Approbation requise',
@@ -1189,6 +1223,10 @@ export const frOverrides = {
         plugin: {
           label: 'Notifications des plugins',
           description: 'Un plugin desktop a envoyé une notification pendant que Scout était en arrière-plan.'
+        },
+        heartbeat: {
+          label: 'Mises à jour Heartbeat',
+          description: 'Une vérification activée dans Heartbeat a trouvé du nouveau.'
         },
         reminder: {
           label: 'Rappels',
@@ -2734,7 +2772,8 @@ export const frOverrides = {
       activeBackend: 'Actif',
       activeBackendHint: "Il s'agit de votre backend actif",
       useBackend: 'Utiliser ce backend',
-      spaceshipResearchIncluded: 'Inclus avec un abonnement SpaceshipResearch — connectez-vous au portail SpaceshipResearch pour activer.',
+      spaceshipResearchIncluded:
+        'Inclus avec un abonnement SpaceshipResearch — connectez-vous au portail SpaceshipResearch pour activer.',
       spaceshipResearchAuthNeededTitle: 'Se connecter au portail SpaceshipResearch',
       spaceshipResearchAuthNeededMessage: provider =>
         `${provider} est enregistré mais ne s'activera pas tant que vous ne vous serez pas connecté au portail SpaceshipResearch.`,
@@ -2868,7 +2907,8 @@ export const frOverrides = {
     newSkill: 'Nouvelle compétence',
     create: {
       title: 'Nouvelle compétence',
-      blurb: 'Apprenez à Scout comment vous aimez que les choses soient faites. Il l’utilise dès que la demande s’y prête.',
+      blurb:
+        'Apprenez à Scout comment vous aimez que les choses soient faites. Il l’utilise dès que la demande s’y prête.',
       name: 'Nom',
       nameHint: 'Minuscules, chiffres et tirets.',
       namePlaceholder: 'rapport-hebdo',
@@ -3012,7 +3052,7 @@ export const frOverrides = {
         'Cliquez sur « + Ajouter à cet agent » pour installer un skill : il apparaîtra ensuite dans la liste ci-dessus.',
       loadFailed: 'Échec du chargement du hub de skills',
       previewFailed: "Échec de l'aperçu du skill",
-      scanFailed: 'Échec du scan de sécurité',
+      scanFailed: 'Échec du scan de sécurité'
     }
   },
   starmap: {
@@ -4703,8 +4743,7 @@ export const frOverrides = {
     manualBody:
       "Vous avez installé Scout depuis la ligne de commande, les mises à jour s'y effectuent donc aussi. Collez ceci dans votre terminal :",
     manualPickedUp: 'Scout prendra en compte la nouvelle version au prochain lancement.',
-    manualBodyBackend:
-      'Le backend Scout est géré en dehors de cette app. Exécutez ceci sur le serveur qui l’héberge :',
+    manualBodyBackend: 'Le backend Scout est géré en dehors de cette app. Exécutez ceci sur le serveur qui l’héberge :',
     manualPickedUpBackend: 'Le backend chargera la nouvelle version une fois la mise à jour terminée.',
     guiSkewTitle: "Mettre à jour l'application de bureau",
     guiSkewBody:
@@ -4854,8 +4893,7 @@ export const frOverrides = {
     headerTitle: 'Configurons Scout Agent pour vous',
     headerDesc:
       'Connectez un fournisseur de modèles pour commencer à discuter. La plupart des options nécessitent un clic.',
-    preparingInstall:
-      "Scout finalise l'installation. Cela prend généralement moins d'une minute au premier lancement.",
+    preparingInstall: "Scout finalise l'installation. Cela prend généralement moins d'une minute au premier lancement.",
     starting: 'Démarrage de Scout…',
     lookingUpProviders: 'Recherche des fournisseurs...',
     collapse: 'Réduire',
@@ -4937,7 +4975,8 @@ export const frOverrides = {
     externalPending: provider =>
       `${provider} se connecte via sa propre CLI. Exécutez cette commande dans un terminal, puis revenez et choisissez « Je me suis connecté » :`,
     signedIn: 'Je me suis connecté',
-    deviceCodeOpened: provider => `SpaceshipResearch avons ouvert ${provider} dans votre navigateur. Entrez ce code là-bas :`,
+    deviceCodeOpened: provider =>
+      `SpaceshipResearch avons ouvert ${provider} dans votre navigateur. Entrez ce code là-bas :`,
     reopenVerification: 'Rouvrir la page de vérification',
     copy: 'Copier',
     defaultModel: 'Modèle par défaut',

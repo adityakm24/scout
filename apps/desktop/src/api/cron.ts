@@ -155,6 +155,17 @@ export function getAutomationBlueprints(): Promise<{ blueprints: AutomationBluep
   })
 }
 
+/** The job's newest run that said something (quiet checks skipped); nulls when it never has. */
+export function getCronJobLatest(jobId: string, profile?: string): Promise<{ at: null | number; text: null | string }> {
+  const suffix = profile ? `?profile=${encodeURIComponent(profile)}` : ''
+
+  return scoutApi({
+    ...profileScoped(),
+    ...connectionScoped(),
+    path: `/api/cron/jobs/${encodeURIComponent(jobId)}/latest${suffix}`
+  })
+}
+
 export function instantiateAutomationBlueprint(
   body: { blueprint: string; values: Record<string, string> },
   profile: string
