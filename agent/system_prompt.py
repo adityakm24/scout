@@ -325,8 +325,8 @@ def _google_account_note(agent: Any) -> Optional[str]:
             "For regular email checks, don't schedule your own job: point the user to the agent panel's "
             "Heartbeat tab → New email check (one tap; it costs nothing while the inbox is quiet). When the "
             "user gives a standing instruction about those updates (\"ignore transaction emails\"), add it as a "
-            "rule on that job: `cronjob(action='list')` to find it, then `cronjob(action='update', job_id=…, "
-            "rules=[…its existing rules, the new one])`, and confirm.")
+            "rule on that job — run `scout cron rules \"New email check\" add \"ignore transaction emails\"` in "
+            "the terminal (not a reminder) — and confirm.")
 
 
 def _failing_connectors_note() -> Optional[str]:

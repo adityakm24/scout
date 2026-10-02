@@ -39,3 +39,25 @@ def test_the_agent_can_give_a_job_rules(tmp_path, monkeypatch):
 
     assert result.get("success") is not False, result
     assert jobs.get_job(job["id"])["rules"] == ["ignore transaction emails"]
+
+
+def test_rules_can_be_managed_from_the_terminal(tmp_path, monkeypatch, capsys):
+    """The terminal path the agent always has: `scout cron rules <job> add|remove|clear`."""
+    from types import SimpleNamespace
+
+    from scout_cli.cron import cron_rules
+
+    monkeypatch.setattr(jobs, "CRON_DIR", tmp_path)
+    monkeypatch.setattr(jobs, "JOBS_FILE", tmp_path / "jobs.json")
+    monkeypatch.setattr(jobs, "OUTPUT_DIR", tmp_path / "output")
+    job = jobs.create_job(prompt="Summarise new email.", schedule="every 30m", name="New email check")
+
+    def run(action, value=None):
+        return cron_rules(SimpleNamespace(job_id="New email check", rules_action=action, value=value))
+
+    assert run("add", "ignore transaction emails") == 0
+    assert run("add", "only family on weekends") == 0
+    assert run("remove", "1") == 0
+    assert jobs.get_job(job["id"])["rules"] == ["only family on weekends"]
+    assert run("remove", "5") == 1
+    assert run("clear") == 0 and not jobs.get_job(job["id"]).get("rules")

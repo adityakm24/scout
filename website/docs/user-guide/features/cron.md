@@ -539,6 +539,23 @@ Doctor never mutates jobs or state — it only reports. Pair it with
 `scout cron incidents` (durable failure records) and `scout cron runs`
 (attempt ledger) when digging into a flagged job.
 
+## Rules: standing instructions for a job
+
+A job can carry rules — instructions the user gives once, like "ignore transaction emails" or
+"only mention mail from family". Every run receives them ahead of the job's own instructions,
+leaves out whatever they exclude, and stays silent (no delivery, no notification) when nothing is
+left to report.
+
+```bash
+scout cron rules "New email check"                                  # list
+scout cron rules "New email check" add "ignore transaction emails"
+scout cron rules "New email check" remove 1
+scout cron rules "New email check" clear
+```
+
+The agent's `cronjob` tool takes the same list as `rules` (an update replaces it), and the desktop
+agent panel's **Heartbeat** tab shows each job's rules as chips you can add or remove.
+
 ## Delivery options
 
 When scheduling jobs, you specify where the output goes:

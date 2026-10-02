@@ -913,6 +913,44 @@ def cron_notepad(args) -> int:
         return 1
 
 
+def cron_rules(args) -> int:
+    """List or change a job's standing rules; each run follows them (cron/scheduler_prompt.py)."""
+    from cron.jobs import AmbiguousJobReference, resolve_job_ref, update_job
+
+    try:
+        job = resolve_job_ref(args.job_id)
+    except AmbiguousJobReference as exc:
+        print(color(str(exc), Colors.RED))
+        return 1
+    if job is None:
+        print(color(f"No job '{args.job_id}'. See `scout cron list`.", Colors.RED))
+        return 1
+    rules = list(job.get("rules") or [])
+    action, value = args.rules_action, (args.value or "").strip()
+    if action == "add":
+        if not value:
+            print(color("Give the rule text: scout cron rules <job> add \"ignore transaction emails\"", Colors.RED))
+            return 1
+        rules.append(value)
+    elif action == "remove":
+        if not value.isdigit() or not 1 <= int(value) <= len(rules):
+            print(color(f"Give the rule's number (1-{len(rules)}) from `scout cron rules {args.job_id}`.", Colors.RED))
+            return 1
+        rules.pop(int(value) - 1)
+    elif action == "clear":
+        rules = []
+    if action != "list":
+        update_job(job["id"], {"rules": rules})
+    name = job.get("name") or job["id"]
+    if not rules:
+        print(f"No rules on '{name}'.")
+    else:
+        print(f"Rules on '{name}':")
+        for number, rule in enumerate(rules, 1):
+            print(f"  {number}. {rule}")
+    return 0
+
+
 # Late-bound lambdas keep module-level monkeypatching working; list/status/runs return None -> 0.
 _CRON_SUBCOMMANDS = {
     "list": lambda a: cron_list(getattr(a, "all", False)) or 0,
@@ -922,6 +960,7 @@ _CRON_SUBCOMMANDS = {
     "runs": lambda a: cron_runs(getattr(a, "job_id", None), getattr(a, "limit", 20)) or 0,
     "incidents": lambda a: cron_incidents(a),
     "notepad": lambda a: cron_notepad(a),
+    "rules": lambda a: cron_rules(a),
     "create": lambda a: cron_create(a),
     "edit": lambda a: cron_edit(a),
     "pause": lambda a: _job_action("pause", a.job_id, "Paused"),
