@@ -79,6 +79,7 @@ class AutomationBlueprint:
     slots: List[BlueprintSlot] = field(default_factory=list)
     deliver_default: str = "origin"
     skills: tuple = ()        # skills the job loads before running
+    script: str = ""          # bundled pre-run script (cron/scripts/), installed by the instantiator
     tags: tuple = ()
 
 
@@ -123,17 +124,18 @@ CATALOG: List[AutomationBlueprint] = [
     ),
     AutomationBlueprint(
         key="important-mail",
-        title="Important-mail monitor",
-        description="Check your inbox periodically and ping you ONLY about mail "
-        "that actually needs attention.",
+        title="New email check",
+        description="Check Gmail on a schedule and tell you about new mail — "
+        "nothing is sent and no model runs when the inbox is quiet.",
         category="email",
         schedule_template="*/{interval_min} * * * *",
         prompt_template=(
-            "Check the user's inbox for new messages since the last run. Surface "
-            "ONLY mail matching: {criteria}. Score candidates with the urgency "
-            "classifier and deliver only what clears the bar; if nothing does, "
-            "respond with [SILENT]. Requires a connected mail source; if none is "
-            "configured, explain how to connect one and stop."
+            "The pre-check above lists email that arrived in the user's inbox since the last check "
+            "(the `new_emails` JSON). Tell the user about it: one short line per email — who it's "
+            "from, what it's about, and whether it looks like it needs a reply or action. Lead with "
+            "anything that {criteria}. Do not open, reply to, or change any email; this is a "
+            "heads-up only. If the list is empty or every email is plainly automated noise, "
+            "respond with [SILENT]."
         ),
         slots=[
             BlueprintSlot(
@@ -143,13 +145,13 @@ CATALOG: List[AutomationBlueprint] = [
             ),
             BlueprintSlot(
                 name="criteria", type="text",
-                label="Only notify me if the mail…",
-                default="needs a reply today, is from my manager or family, "
-                "or mentions a deadline",
+                label="Flag first if the mail…",
+                default="needs a reply today, is from family or work, or mentions a deadline or payment",
             ),
             _DELIVER,
         ],
         skills=("google-workspace",),
+        script="gmail_watch.py",
         tags=("email", "monitor"),
     ),
     AutomationBlueprint(
@@ -765,6 +767,8 @@ def fill_blueprint(
     }
     if blueprint.skills:
         spec["skills"] = list(blueprint.skills)
+    if blueprint.script:
+        spec["script"] = blueprint.script
     if origin is not None:
         spec["origin"] = origin
     return spec

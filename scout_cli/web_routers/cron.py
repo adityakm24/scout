@@ -637,6 +637,30 @@ async def list_cron_job_runs(job_id: str, profile: Optional[str] = None, limit: 
     return await _run_cron_dashboard_io(_list_cron_job_runs_sync, job_id, profile, limit)
 
 
+def _latest_cron_answer_sync(job_id: str, profile: Optional[str] = None):
+    """The job's newest run that said something, for the desktop Heartbeat (quiet checks skipped)."""
+    from cron.scheduler_prompt import latest_archived_answer
+
+    selected = _job_owner_profile(job_id, profile)
+    job = _call_cron_for_profile(selected, "get_job", job_id) if selected else None
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    with _owner_home_scope(selected):
+        try:
+            found = latest_archived_answer(_cron_output_runs_dir(selected, str(job["id"])))
+        except OSError:
+            found = None
+        if not found:
+            return {"at": None, "text": None}
+        path, answer = found
+        return {"at": _cron_output_run_timestamp(path), "text": answer[:4000]}
+
+
+@router.get("/api/cron/jobs/{job_id}/latest")
+async def latest_cron_answer(job_id: str, profile: Optional[str] = None):
+    return await _run_cron_dashboard_io(_latest_cron_answer_sync, job_id, profile)
+
+
 @router.post("/api/cron/jobs")
 async def create_cron_job(body: CronJobCreate, profile: Optional[str] = None):
     return await _run_cron_dashboard_io(_create_cron_job_sync, body, profile)
@@ -835,6 +859,10 @@ async def instantiate_blueprint(body: AutomationBlueprintInstantiate, profile: s
         # Blueprint jobs deliver to the dashboard's configured target by default;
         # the form's deliver slot overrides via spec["deliver"].
         spec.pop("origin", None)
+        if spec.get("script"):  # a job may only run scripts from its own profile's scripts dir
+            from cron.bundled_scripts import install_bundled_script
+            _, owner_home = _cron_profile_home(profile)
+            await _run_cron_dashboard_io(install_bundled_script, spec["script"], owner_home)
         # Off-loop like the siblings; partial keeps **spec keys from colliding
         # with the wrapper's own parameters.
         _create = functools.partial(_call_cron_for_profile, profile, "create_job", **spec)

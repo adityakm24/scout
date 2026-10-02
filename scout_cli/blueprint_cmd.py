@@ -222,6 +222,10 @@ def handle_blueprint_command(
 
     try:
         from cron.scheduler import CronSchedulerRegistrationError, create_job_with_scheduler_registration
+        if spec.get("script"):  # a job may only run scripts from its own profile's scripts dir
+            from cron.bundled_scripts import install_bundled_script
+            from scout_constants import get_scout_home
+            install_bundled_script(spec["script"], get_scout_home())
         job = create_job_with_scheduler_registration(**spec)
     except CronSchedulerRegistrationError as e:
         return BlueprintCommandResult(e.user_message())

@@ -23,6 +23,7 @@ Usage:
 import argparse
 import base64
 import json
+import time
 import os
 import shutil
 import subprocess
@@ -273,57 +274,11 @@ def build_service(api, version):
 # =========================================================================
 
 
-def gmail_search(args):
-    if _gws_binary():
-        results = _run_gws(
-            ["gmail", "users", "messages", "list"],
-            params={"userId": "me", "q": args.query, "maxResults": args.max},
-        )
-        messages = results.get("messages", [])
-        output = []
-        for msg_meta in messages:
-            msg = _run_gws(
-                ["gmail", "users", "messages", "get"],
-                params={
-                    "userId": "me",
-                    "id": msg_meta["id"],
-                    "format": "metadata",
-                    "metadataHeaders": ["From", "To", "Subject", "Date"],
-                },
-            )
-            headers = _headers_dict(msg)
-            output.append(
-                {
-                    "id": msg["id"],
-                    "threadId": msg["threadId"],
-                    "from": headers.get("from", ""),
-                    "to": headers.get("to", ""),
-                    "subject": headers.get("subject", ""),
-                    "date": headers.get("date", ""),
-                    "snippet": msg.get("snippet", ""),
-                    "labels": msg.get("labelIds", []),
-                }
-            )
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-        return
-
-    service = build_service("gmail", "v1")
-    results = service.users().messages().list(
-        userId="me", q=args.query, maxResults=args.max
-    ).execute()
-    messages = results.get("messages", [])
-    if not messages:
-        print("No messages found.")
-        return
-
-    output = []
-    for msg_meta in messages:
-        msg = service.users().messages().get(
-            userId="me", id=msg_meta["id"], format="metadata",
-            metadataHeaders=["From", "To", "Subject", "Date"],
-        ).execute()
+def _message_summaries(query: str, max_results: int) -> list[dict]:
+    """Search Gmail and return one metadata summary per message, newest first."""
+    def summary(msg: dict) -> dict:
         headers = _headers_dict(msg)
-        output.append({
+        return {
             "id": msg["id"],
             "threadId": msg["threadId"],
             "from": headers.get("from", ""),
@@ -332,8 +287,68 @@ def gmail_search(args):
             "date": headers.get("date", ""),
             "snippet": msg.get("snippet", ""),
             "labels": msg.get("labelIds", []),
-        })
+            "internalDate": int(msg.get("internalDate") or 0),
+        }
+
+    get_params = {"format": "metadata", "metadataHeaders": ["From", "To", "Subject", "Date"]}
+    if _gws_binary():
+        listing = _run_gws(["gmail", "users", "messages", "list"],
+                           params={"userId": "me", "q": query, "maxResults": max_results})
+        return [summary(_run_gws(["gmail", "users", "messages", "get"],
+                                 params={"userId": "me", "id": meta["id"], **get_params}))
+                for meta in listing.get("messages", [])]
+    service = build_service("gmail", "v1")
+    listing = service.users().messages().list(userId="me", q=query, maxResults=max_results).execute()
+    return [summary(service.users().messages().get(userId="me", id=meta["id"], **get_params).execute())
+            for meta in listing.get("messages", [])]
+
+
+def gmail_search(args):
+    output = _message_summaries(args.query, args.max)
+    if not output and not _gws_binary():
+        print("No messages found.")
+        return
     print(json.dumps(output, indent=2, ensure_ascii=False))
+
+
+WATCH_STATE_PATH = SCOUT_HOME / "google_gmail_watch.json"
+# Inbox mail a person would want to hear about: not promotions or social notifications.
+WATCH_QUERY = "in:inbox -category:promotions -category:social"
+_WATCH_MARGIN_MS = 5 * 60 * 1000  # mail can land with an internalDate slightly in the past
+_WATCH_SEEN_KEEP = 300
+
+
+def gmail_watch(args):
+    """Pre-check for a scheduled "new email" job: print what arrived since the previous check,
+    then the scheduler's gate line. Nothing new -> ``{"wakeAgent": false}`` so the job costs no
+    model call. The first run only arms the watermark (no backlog of old mail)."""
+    now_ms = int(time.time() * 1000)
+    try:
+        state = json.loads(WATCH_STATE_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        state = None
+    if not isinstance(state, dict) or not state.get("since"):
+        write_private(WATCH_STATE_PATH, json.dumps({"since": now_ms, "seen": []}))
+        print(json.dumps({"wakeAgent": False}))
+        return
+    since = int(state["since"])
+    seen_order = [str(i) for i in state.get("seen") or []]
+    seen = set(seen_order)
+    after_s = (since - _WATCH_MARGIN_MS) // 1000
+    candidates = _message_summaries(f"{WATCH_QUERY} after:{after_s}", args.max)
+    new = [m for m in candidates if m["id"] not in seen and m["internalDate"] > since - _WATCH_MARGIN_MS]
+    new.sort(key=lambda m: m["internalDate"])
+    write_private(WATCH_STATE_PATH, json.dumps({
+        "since": max([since, *(m["internalDate"] for m in new)]),
+        "seen": (seen_order + [m["id"] for m in new])[-_WATCH_SEEN_KEEP:],
+    }))
+    if not new:
+        print(json.dumps({"wakeAgent": False}))
+        return
+    for message in new:
+        message.pop("labels", None)
+    print(json.dumps({"new_emails": new}, indent=2, ensure_ascii=False))
+    print(json.dumps({"wakeAgent": True}))
 
 
 
@@ -1150,6 +1165,10 @@ def main():
     p.add_argument("query", help="Gmail search query (e.g. 'is:unread')")
     p.add_argument("--max", type=int, default=10)
     p.set_defaults(func=gmail_search)
+
+    p = gmail_sub.add_parser("watch", help="New inbox mail since the last watch (scheduled-job pre-check)")
+    p.add_argument("--max", type=int, default=20)
+    p.set_defaults(func=gmail_watch)
 
     p = gmail_sub.add_parser("get")
     p.add_argument("message_id")

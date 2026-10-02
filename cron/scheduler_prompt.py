@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from scout_time import now as _scout_now
 from typing import Optional
 
@@ -83,6 +84,30 @@ def _archive_answer(archive: str) -> str | None:
     return answer
 
 
+def latest_archived_answer(job_output_dir: Path) -> tuple[Path, str] | None:
+    """The newest stored run of a job that actually said something: ``(file, answer)``.
+
+    Skips audit records of runs that had nothing to say (a ``wakeAgent=false`` gate, a silent
+    status) and blank or ``[SILENT]`` answers. Only the run header describes suppression; script
+    and agent payloads can quote these markers. ``OSError`` propagates to the caller.
+    """
+    output_files = sorted(job_output_dir.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
+    for output_file in output_files:
+        candidate = output_file.read_text(encoding="utf-8-sig").strip()
+        header = candidate.split("\n---\n", 1)[0].split("\n## Prompt", 1)[0]
+        silent_audit = candidate.startswith("# Cron Job:") and any(
+            line.startswith(("**Status:** no_change", "**Status:** silent",
+                             "Script gate returned `wakeAgent=false`"))
+            for line in header.splitlines()
+        )
+        if not candidate or silent_audit:
+            continue
+        answer = _archive_answer(candidate)
+        if answer is not None:
+            return output_file, answer
+    return None
+
+
 def _clip_to_context_budget(text: str) -> str:
     """Clip oversized context head+tail; conclusions and summaries sit at the end."""
     if len(text) <= _MAX_CONTEXT_CHARS:
@@ -116,28 +141,8 @@ def _inject_context_from(job: dict, prompt: str) -> tuple[str, bool]:
             )
             continue
         try:
-            output_files = sorted(
-                (output_dir / source_job_id).glob("*.md"), key=lambda f: f.stat().st_mtime,
-                reverse=True,
-            )
-            latest_output = ""
-            for output_file in output_files:
-                candidate = output_file.read_text(encoding="utf-8-sig").strip()
-                # Only the run header describes suppression; script/agent payloads can
-                # quote these markers. Keep error documents useful for recovery context.
-                header = candidate.split("\n---\n", 1)[0].split("\n## Prompt", 1)[0]
-                silent_audit = candidate.startswith("# Cron Job:") and any(
-                    line.startswith(("**Status:** no_change", "**Status:** silent",
-                                     "Script gate returned `wakeAgent=false`"))
-                    for line in header.splitlines()
-                )
-                if not candidate or silent_audit:
-                    continue
-                answer = _archive_answer(candidate)
-                if answer is None:
-                    continue  # [SILENT]/blank response — try an older archive
-                latest_output = answer
-                break
+            found = latest_archived_answer(output_dir / source_job_id)
+            latest_output = found[1] if found else ""
             if not latest_output:
                 continue  # silent skip — no archive with a usable answer
             latest_output = _clip_to_context_budget(latest_output)

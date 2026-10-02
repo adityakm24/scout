@@ -288,3 +288,34 @@ def test_gmail_draft_saves_to_drafts_and_never_sends(api_module, monkeypatch, ca
     sent = message_from_bytes(base64.urlsafe_b64decode(kw["body"]["message"]["raw"]))
     assert sent["To"] == "sam@example.com" and sent["Subject"] == "Saturday plans"
     assert json.loads(capsys.readouterr().out)["status"] == "drafted"
+
+
+def test_gmail_watch_wakes_the_agent_only_for_mail_it_has_not_reported(api_module, monkeypatch, capsys, tmp_path):
+    """The scheduled new-mail check: the first run only arms (no backlog), a new message wakes the
+    agent with that message, and a quiet inbox — or a message already reported — costs no model call."""
+    monkeypatch.setattr(api_module, "WATCH_STATE_PATH", tmp_path / "watch.json")
+    inbox = []
+
+    def gws(command, params=None, **_kw):
+        if command[-1] == "list":
+            return {"messages": [{"id": m["id"]} for m in inbox]}
+        return next(m for m in inbox if m["id"] == params["id"])
+
+    monkeypatch.setattr(api_module, "_run_gws", gws)
+    args = types.SimpleNamespace(max=20)
+
+    def gate():
+        api_module.gmail_watch(args)
+        lines = capsys.readouterr().out.strip().splitlines()
+        return json.loads(lines[-1])["wakeAgent"], "\n".join(lines[:-1])
+
+    assert gate() == (False, "")  # arms the watermark
+
+    sent_at = int(datetime.now(timezone.utc).timestamp() * 1000) + 1000
+    inbox.append({"id": "m1", "threadId": "t1", "internalDate": str(sent_at), "snippet": "Your card",
+                  "payload": {"headers": [{"name": "From", "value": "DBS <care@dbs.com>"},
+                                          {"name": "Subject", "value": "Statement ready"}]}})
+    woke, listing = gate()
+    assert woke is True and json.loads(listing)["new_emails"][0]["subject"] == "Statement ready"
+
+    assert gate()[0] is False  # already reported
