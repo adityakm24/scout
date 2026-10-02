@@ -130,21 +130,33 @@ class MemoryStore:
             "memory calls — leave memory unchanged for now and continue with your reply to the user. "
             "The fact can be saved in a later turn.")}
 
+    @staticmethod
+    def _sanitize_for_prompt(entry: str, filename: str) -> str:
+        """An entry as it may enter a prompt: a threat hit becomes a ``[BLOCKED: …]`` placeholder."""
+        from tools.threat_patterns import scan_for_threats
+        # Strict scope, same as writes; empty / already-blocked entries pass through.
+        findings = scan_for_threats(entry, scope="strict") if entry and not entry.startswith("[BLOCKED:") else None
+        if not findings:
+            return entry
+        logger.warning("Memory entry from %s blocked at load time: %s", filename, ", ".join(findings))
+        return (f"[BLOCKED: {filename} entry contained threat pattern(s): {', '.join(findings)}. "
+                f"Removed from system prompt; use memory(action=remove) to delete the original.]")
+
+    def current_prompt_block(self, target: str) -> str:
+        """The block ``target`` would get in a prompt built NOW, read from disk (other writers —
+        the background review, the desktop panel — update the file, not this store's snapshot).
+        Rendered and sanitized exactly like the load-time snapshot, so the two compare equal when
+        nothing changed."""
+        path = self._path_for(target)
+        entries = list(dict.fromkeys(self._read_file(path)))
+        return self._render_block(target, [self._sanitize_for_prompt(e, path.name) for e in entries])
+
     def load_from_disk(self):
         """Load MEMORY.md / USER.md and capture the frozen system-prompt snapshot.
         Threat hits are replaced by a ``[BLOCKED: …]`` placeholder in the SNAPSHOT only;
         live lists keep the raw text so the user can see and remove poisoned entries
         (dropping them silently would hide the attack)."""
-        from tools.threat_patterns import scan_for_threats
-
-        def _sanitize(entry, filename):
-            # Strict scope, same as writes; empty / already-blocked entries pass through.
-            findings = scan_for_threats(entry, scope="strict") if entry and not entry.startswith("[BLOCKED:") else None
-            if not findings:
-                return entry
-            logger.warning("Memory entry from %s blocked at load time: %s", filename, ", ".join(findings))
-            return (f"[BLOCKED: {filename} entry contained threat pattern(s): {', '.join(findings)}. "
-                    f"Removed from system prompt; use memory(action=remove) to delete the original.]")
+        _sanitize = self._sanitize_for_prompt
 
         for target in ("memory", "user"):
             path = self._path_for(target)

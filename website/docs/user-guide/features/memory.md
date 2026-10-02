@@ -60,7 +60,7 @@ The format includes:
 
 The whole memory system is built around the moment a session **ends**: `MEMORY.md` and `USER.md` carry the essentials into the next session, and `session_search` fills the gaps once the old context is gone. Inside a single session none of that machinery has a reason to run — everything important is still in the live context, so the agent rarely consults `session_search` and mostly compacts memory entries instead of curating them.
 
-This matters on messaging platforms (Telegram, Discord, etc.), where a chat is deliberately [one continuous session](../sessions.md#session-continuity) that survives restarts, gateway crashes, and machine reboots. Shutting the machine down overnight does **not** end the session — the next message picks it up exactly where it left off. If you never reset, a chat can run for weeks as a single session: convenient, but it grows expensive (compaction runs repeatedly over an ever-longer history) and the learning loop of *forget → recall from memory → search past sessions* almost never gets to fire. Fresh memory entries also stay invisible to the running session because of the frozen snapshot above.
+This matters on messaging platforms (Telegram, Discord, etc.), where a chat is deliberately [one continuous session](../sessions.md#session-continuity) that survives restarts, gateway crashes, and machine reboots. Shutting the machine down overnight does **not** end the session — the next message picks it up exactly where it left off. If you never reset, a chat can run for weeks as a single session: convenient, but it grows expensive (compaction runs repeatedly over an ever-longer history) and the learning loop of *forget → recall from memory → search past sessions* almost never gets to fire. In the desktop app and TUI, an entry saved mid-chat — by the background review, the agent, or you in the agent panel — reaches the running chat once, as a note on your next message; elsewhere it stays invisible to the running session because of the frozen snapshot above.
 
 **Practice:** run `/new` at natural boundaries — a finished task, a change of topic, the start of a day. Each boundary is when memory pays off: the agent re-reads the updated `MEMORY.md`/`USER.md` snapshot, starts from a cheap short context, and reaches for `session_search` when it actually needs history. On the CLI this mostly takes care of itself (every invocation is a new session); on gateways the boundary is yours to create.
 
@@ -86,6 +86,18 @@ The most common report looks like this: you tell the agent where something lives
 5. **Remember the snapshot is frozen at session start.** A fact saved in the current session is visible to the *next* session, not to another session that was already running. Start a new session (`/new`, or a fresh CLI invocation) after the write.
 
 Two things that do **not** make the agent remember: variables in `.env` (those are credentials and settings, not memory) and facts mentioned in passing without asking for them to be saved. For a location the agent needs on every run of a recurring task, a [skill](./skills.md) is often the better home than a memory entry — it loads only when relevant and does not compete for the 2,200-character budget.
+
+## When the background review saves
+
+A background review looks over the conversation and saves anything worth keeping. It runs every
+`memory.nudge_interval` user messages (default 10), and also right after a message that reads like
+something worth remembering — who you are, people in your life, preferences, standing instructions
+("I'm vegetarian", "my sister lives in Pune", "from now on keep replies short"). A review that comes
+due but can't run (that reply was interrupted, or another review is still busy) stays due until one
+does. The review decides for itself whether anything is worth saving.
+
+The soul (`SOUL.md`) is read the same way, but it is yours to edit (agent panel → Persona → Soul):
+the agent's file tools refuse to write it, and a shell command that would change it asks you first.
 
 ## Memory Tool Actions
 

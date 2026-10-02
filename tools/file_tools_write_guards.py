@@ -170,6 +170,13 @@ def _check_sensitive_path(filepath: str, task_id: str = "default") -> str | None
             f"Refusing to write to Scout config file: {filepath}\n"
             "Agent cannot modify security-sensitive configuration. "
             "Edit ~/.scout/config.yaml directly or use 'scout config' instead.")
+    # The soul is the user's description of who the agent is: the agent reads it, never rewrites it.
+    souls = {os.path.join(home, "SOUL.md") for home in _scout_exempt_homes()}
+    if souls and any(os.path.realpath(c) in souls for c in candidates):
+        return (
+            f"Refusing to write to the agent's soul: {filepath}\n"
+            "SOUL.md is the user's description of who you are, and only they edit it (agent panel → "
+            "Persona → Soul). Suggest the change to them instead.")
     return None
 
 

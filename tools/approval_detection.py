@@ -26,6 +26,10 @@ _SCOUT_ENV_PATH = (
 _SCOUT_CONFIG_PATH = (
     r'(?:~\/\.scout/|(?:\$home|\$\{home\})/\.scout/|(?:\$scout_home|\$\{scout_home\})/)' r'config\.yaml\b'
 )
+# The agent's soul (who the user says it is) is the user's to edit; a shell write asks them first.
+_SCOUT_SOUL_PATH = (
+    r'(?:~\/\.scout/|(?:\$home|\$\{home\})/\.scout/|(?:\$scout_home|\$\{scout_home\})/)' r'soul\.md\b'
+)
 _PROJECT_ENV_PATH = r'(?:(?:/|\.{1,2}/)?(?:[^\s/"\'`]+/)*\.env(?:\.[^/\s"\'`]+)*)'
 _PROJECT_CONFIG_PATH = r'(?:(?:/|\.{1,2}/)?(?:[^\s/"\'`]+/)*config\.yaml)'
 _SHELL_RC_FILES = r'(?:~|\$home|\$\{home\})/\.' r'(?:bashrc|zshrc|profile|bash_profile|zprofile)\b'
@@ -35,7 +39,7 @@ _CREDENTIAL_FILES = r'(?:~|\$home|\$\{home\})/\.' r'(?:netrc|pgpass|npmrc|pypirc
 _MACOS_PRIVATE_SYSTEM_PATH = r'/private/(?:etc|var|tmp|home)/'
 _SYSTEM_CONFIG_PATH = rf'(?:/etc/|{_MACOS_PRIVATE_SYSTEM_PATH})'
 _SENSITIVE_WRITE_TARGET = (
-    rf'(?:{_SYSTEM_CONFIG_PATH}|/dev/sd|{_SSH_SENSITIVE_PATH}|{_SCOUT_ENV_PATH}|{_SCOUT_CONFIG_PATH}|'
+    rf'(?:{_SYSTEM_CONFIG_PATH}|/dev/sd|{_SSH_SENSITIVE_PATH}|{_SCOUT_ENV_PATH}|{_SCOUT_CONFIG_PATH}|{_SCOUT_SOUL_PATH}|'
     rf'{_SHELL_RC_FILES}|{_CREDENTIAL_FILES})'
 )
 _USER_SENSITIVE_WRITE_TARGET = rf'(?:{_SSH_SENSITIVE_PATH}|{_SHELL_RC_FILES}|{_CREDENTIAL_FILES})'
@@ -414,6 +418,9 @@ DANGEROUS_PATTERNS = [
     # script-execution pattern above (which targets code evaluation, not file mutation). Pairs the sed -i
     # coverage from #14639.
     (rf'\b(?:perl|ruby)\b.*(?:^|\s)-[^\s]*i\b.*(?:{_SCOUT_CONFIG_PATH}|{_SCOUT_ENV_PATH})', "in-place edit of Scout config/env (perl/ruby)"),
+    # The agent's soul: in-place edits bypass the redirection/tee/cp rules the same way.
+    (rf'\bsed\s+(?:-[^\s]*i|--in-place\b).*{_SCOUT_SOUL_PATH}', "in-place edit of the agent's soul (SOUL.md)"),
+    (rf'\b(?:perl|ruby)\b.*(?:^|\s)-[^\s]*i\b.*{_SCOUT_SOUL_PATH}', "in-place edit of the agent's soul (SOUL.md, perl/ruby)"),
     # Interpreter heredocs are handled by _execution_flag_findings(); only shell heredocs stay
     # regex-based. `bash <<'EOF'` runs arbitrary commands without triggering the `bash -c` path.
     (rf'\b(?:{_SHELL_NAMES_RE})\s+<<', "shell execution via heredoc"),

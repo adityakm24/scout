@@ -668,7 +668,9 @@ def _prepare_turn_input(sid: str, session: dict, st: _TurnRun, text: Any, images
         run_message = _prepend_note(run_message, SPEECH_INTERRUPTED_NOTE)
     run_message = _prepend_note(run_message, _pending_reaction_notes(session))
     from agent.identity import take_rename_note
+    from agent.memory_note import take_memory_update_note
     run_message = _prepend_note(run_message, take_rename_note(agent))
+    run_message = _prepend_note(run_message, take_memory_update_note(agent))
     return prompt, _prepend_note(run_message, _hud_surface_note(session)), cols, streamer
 
 

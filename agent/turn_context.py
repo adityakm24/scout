@@ -9,6 +9,7 @@ returns a ``TurnContext`` with only the locals the loop reads back.
 from __future__ import annotations
 
 import logging
+import re
 import sys
 import threading
 import time
@@ -711,18 +712,46 @@ def _hydrate_from_history(agent: Any, conversation_history: Optional[List[Any]])
                 agent._turns_since_memory = prior_user_turns % agent._memory_nudge_interval
 
 
-def _tick_memory_nudge(agent: Any) -> bool:
+# A message that tells the agent something durable about the user — who they are, people in
+# their life, preferences, standing instructions. Recall over precision: a false hit costs one
+# background review that answers "Nothing to save."; a miss leaves the fact to the interval.
+_MEMORY_WORTHY = re.compile(
+    r"(?i)\b(?:my name\b|call me\b|i(?:'m| am) (?:a|an|from|based|working|studying|allergic|vegetarian|vegan)\b"
+    r"|i (?:live|work|study|prefer|like|love|hate|usually|always|never|want|need)\b"
+    r"|i (?:don'?t|do not) (?:like|want|care|eat|drink|use)\b"
+    r"|my (?:\w+ )?(?:wife|husband|partner|girlfriend|boyfriend|mom|mum|mother|dad|father|son|daughter"
+    r"|brother|sister|friend|boss|manager|team|birthday|address|email|phone|number|job|company|city|home)\b"
+    r"|remember (?:that|this|to)\b|from now on\b|going forward\b|in (?:the )?future\b|next time\b"
+    r"|(?:please )?(?:always|never|stop|don'?t) (?:send|tell|show|mention|use|do|ask|call)\b)")
+
+
+def _message_text(message: Any) -> str:
+    if isinstance(message, str):
+        return message
+    if isinstance(message, list):
+        return " ".join(str(part.get("text", "")) for part in message if isinstance(part, dict))
+    return ""
+
+
+def _tick_memory_nudge(agent: Any, user_message: Any = None) -> bool:
     """Advance the turn-based memory nudge counter; ``True`` when the review should fire.
 
     A due review stays due (``_memory_review_pending``) until one actually starts: the turn it
     came due on may end interrupted or without a reply, or another review may still be running,
     and dropping it then meant a whole interval more before memory was looked at again — in
     practice, never. Cleared by ``_spawn_background_review_now`` and by the agent's own memory write.
+
+    Besides the interval, a message that reads like something worth remembering ("I'm vegetarian",
+    "from now on…", "my sister…") makes the review due on this very turn.
     """
     if (agent._memory_nudge_interval > 0
             and "memory" in agent.valid_tool_names
             and agent._memory_store):
         if getattr(agent, "_memory_review_pending", False):
+            return True
+        if _MEMORY_WORTHY.search(_message_text(user_message)):
+            agent._turns_since_memory = 0
+            agent._memory_review_pending = True
             return True
         agent._turns_since_memory += 1
         if agent._turns_since_memory >= agent._memory_nudge_interval:
@@ -1086,7 +1115,7 @@ def build_turn_context(
 
     # Preserve the original user message (no nudge injection).
     original_user_message = persist_user_message if persist_user_message is not None else user_message
-    should_review_memory = _tick_memory_nudge(agent)
+    should_review_memory = _tick_memory_nudge(agent, original_user_message)
     _emit_reaction(agent, original_user_message)
 
     if not agent.quiet_mode:
