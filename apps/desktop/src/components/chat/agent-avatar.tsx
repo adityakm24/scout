@@ -15,7 +15,11 @@ export function AgentAvatar({ className, identity, ...props }: AgentAvatarProps)
     <span
       aria-hidden="true"
       className={cn(
-        'grid shrink-0 select-none place-items-center overflow-hidden rounded-full bg-[linear-gradient(145deg,color-mix(in_srgb,var(--theme-primary)_70%,white),var(--theme-primary))] font-semibold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]',
+        'grid shrink-0 select-none place-items-center overflow-hidden rounded-full font-semibold text-white',
+        // A photo is the avatar itself: a gradient behind it shows through transparent margins
+        // as a lopsided ring.
+        !identity.avatar &&
+          'bg-[linear-gradient(145deg,color-mix(in_srgb,var(--theme-primary)_70%,white),var(--theme-primary))] shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]',
         className
       )}
       data-slot="agent-avatar"

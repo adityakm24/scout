@@ -24,6 +24,16 @@ export function agentPanelShown(): boolean {
   )
 }
 
+/** Fold the agent panel back to its rail (its close button). */
+export function closeAgentPanel() {
+  const tree = $layoutTree.get()
+  const group = tree ? findGroupOfPane(tree, AGENT_PANEL_ID) : null
+
+  if (group) {
+    setTreeGroupMinimized(group.id, true)
+  }
+}
+
 /** The titlebar's right-panel button: open the agent panel, or fold it back to its rail.
  *  False when the layout has no agent panel (a preset dropped it), so the caller falls back. */
 export function toggleAgentPanel(): boolean {
@@ -35,7 +45,7 @@ export function toggleAgentPanel(): boolean {
   }
 
   if (agentPanelShown()) {
-    setTreeGroupMinimized(group.id, true)
+    closeAgentPanel()
   } else {
     openAgentPanel()
   }

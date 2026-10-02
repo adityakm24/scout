@@ -42,6 +42,7 @@ export const deOverrides = {
   },
   replyChoices: { label: 'Wähle eine Option', other: 'Eigene Antwort hinzufügen', placeholder: 'Antwort eingeben…', send: 'Senden' },
   agentPanel: {
+    close: 'Seitenleiste schließen',
     thinking: 'Denkt nach…',
     title: 'Agent',
     connected: 'Verbunden',

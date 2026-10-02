@@ -52,7 +52,7 @@ export function AgentIdentityHeader() {
     >
       <button
         aria-label={t.agentPanel.openPanel(name)}
-        className="group pointer-events-auto flex flex-col items-center gap-0 rounded-2xl px-3 py-0.5 [-webkit-app-region:no-drag]"
+        className="group pointer-events-auto flex flex-col items-center gap-1 rounded-2xl px-3 py-0.5 [-webkit-app-region:no-drag]"
         onClick={openAgentPanel}
         type="button"
       >
@@ -60,9 +60,9 @@ export function AgentIdentityHeader() {
           className="size-8 text-[1.15rem] transition-transform duration-300 ease-(--ease-spring) group-hover:scale-105"
           identity={identity}
         />
-        <span className="flex items-center gap-0.5 text-[0.6875rem] font-medium text-(--ui-text-secondary) group-hover:text-foreground">
+        <span className="flex items-center gap-0.5 rounded-full bg-(--ui-bg-tertiary) py-0.5 pl-2.5 pr-1.5 text-[0.6875rem] font-medium text-(--ui-text-secondary) ring-1 ring-(--ui-stroke-quaternary) transition-colors duration-200 group-hover:bg-(--chrome-action-hover) group-hover:text-foreground">
           {name}
-          <Codicon className="opacity-60" name="chevron-right" size="0.7rem" />
+          <Codicon className="opacity-60" name="chevron-right" size="0.65rem" />
         </span>
         <span aria-live="polite" className="flex h-3.5 items-center gap-1 text-[0.625rem] text-(--ui-text-tertiary)">
           {status && (

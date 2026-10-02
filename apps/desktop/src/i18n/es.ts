@@ -43,6 +43,7 @@ export const esOverrides = {
   },
   replyChoices: { label: 'Elige una opción', other: 'Añadir tu propia respuesta', placeholder: 'Escribe tu respuesta…', send: 'Enviar' },
   agentPanel: {
+    close: 'Cerrar panel',
     thinking: 'Pensando…',
     title: 'Agente',
     connected: 'Conectado',

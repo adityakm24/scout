@@ -43,6 +43,7 @@ export const frOverrides = {
   },
   replyChoices: { label: 'Choisis une option', other: 'Ajouter ta propre réponse', placeholder: 'Écris ta réponse…', send: 'Envoyer' },
   agentPanel: {
+    close: 'Fermer le panneau',
     thinking: 'Réflexion…',
     title: 'Agent',
     connected: 'Connecté',

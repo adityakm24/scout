@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import { SETTINGS_ROUTE } from '@/app/routes'
+import { Codicon } from '@/components/ui/codicon'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { TextTabMeta } from '@/components/ui/text-tab'
 import { useI18n } from '@/i18n'
@@ -12,6 +13,7 @@ import { $approvalRequests } from '@/store/prompts'
 import { $gatewayState } from '@/store/session'
 
 import { IdentityCard } from './identity-card'
+import { closeAgentPanel } from './open'
 import { PermissionsTab } from './permissions-tab'
 import { PersonaTab } from './persona-tab'
 import { RequestsTab } from './requests-tab'
@@ -43,12 +45,21 @@ export function AgentPanel() {
   return (
     <aside
       aria-label={copy.title}
-      className="flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden bg-(--ui-sidebar-surface-background)"
+      className="relative flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden bg-(--ui-sidebar-surface-background)"
       data-slot="agent-panel"
     >
+      <button
+        aria-label={copy.close}
+        className="absolute right-2 top-2 z-10 grid size-7 place-items-center rounded-full text-(--ui-text-tertiary) transition-colors duration-200 hover:bg-(--chrome-action-hover) hover:text-foreground"
+        onClick={closeAgentPanel}
+        type="button"
+      >
+        <Codicon name="close" size="0.875rem" />
+      </button>
       <IdentityCard />
-      <div className="flex justify-center px-4">
+      <div className="px-4">
         <SegmentedTabs
+          fill
           onChange={id => setTab(id as AgentPanelTab)}
           tabs={[
             { id: 'persona', label: copy.tabs.persona },

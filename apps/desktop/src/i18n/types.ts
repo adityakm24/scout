@@ -113,6 +113,7 @@ export interface Translations {
     send: string
   }
   agentPanel: {
+    close: string
     thinking: string
     title: string
     connected: string

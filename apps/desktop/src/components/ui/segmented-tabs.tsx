@@ -18,11 +18,14 @@ interface GliderBox {
  *  late-loading counts keep it sized to its option. */
 export function SegmentedTabs({
   className,
+  fill = false,
   onChange,
   tabs,
   value
 }: {
   className?: string
+  /** Share the well's width equally (narrow panels), truncating labels instead of overflowing. */
+  fill?: boolean
   onChange: (id: string) => void
   tabs: SegmentedTab[]
   value: string
@@ -59,6 +62,7 @@ export function SegmentedTabs({
     <div
       className={cn(
         'relative inline-flex min-w-0 items-center gap-0.5 rounded-full bg-(--ui-bg-tertiary) p-1',
+        fill && 'flex w-full',
         className
       )}
       data-slot="segmented-tabs"
@@ -81,6 +85,7 @@ export function SegmentedTabs({
             aria-selected={active}
             className={cn(
               'relative z-10 inline-flex h-7 items-center gap-1.5 rounded-full px-3.5 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-200 [-webkit-app-region:no-drag] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
+              fill && 'min-w-0 flex-1 justify-center px-2 [&>span:first-child]:truncate',
               active ? 'text-foreground' : 'text-(--ui-text-tertiary) hover:text-foreground'
             )}
             data-active={active}

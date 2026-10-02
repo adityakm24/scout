@@ -2,6 +2,7 @@
   "surface": "desktop",
   "keys": [
     "agentPanel.changePhoto",
+    "agentPanel.close",
     "agentPanel.connected",
     "agentPanel.namePlaceholder",
     "agentPanel.offline",
