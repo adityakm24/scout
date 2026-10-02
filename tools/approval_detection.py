@@ -205,8 +205,17 @@ def detect_hardline_command(command: str) -> tuple:
     return (False, None)
 
 
+# Acting on the user's own accounts as them — sending mail, changing their calendar or files — is
+# not a system risk the guardian LLM is asked to judge (it APPROVEs "benign script execution"), and a
+# small model ignored the skill's "confirm first" rule and sent mail unasked. Always a human's call.
+GOOGLE_ACCOUNT_ACTION = "acts on the user's Google account (sends email or changes Calendar, Drive, Docs or Sheets)"
+HUMAN_ONLY_DESCRIPTIONS = frozenset({GOOGLE_ACCOUNT_ACTION})
+
 # ---- Dangerous command patterns -----------------------------------------------------------
 DANGEROUS_PATTERNS = [
+    (r'(?:\bscout\s+google|google_api\.py["\']?)\s+(?:gmail\s+(?:send|reply|modify)'
+     r'|calendar\s+(?:create|delete)|drive\s+(?:upload|delete|share|create-folder)'
+     r'|sheets\s+(?:create|update|append)|docs\s+(?:create|append))\b', GOOGLE_ACCOUNT_ACTION),
     (r'\brm\s+(-[^\s]*\s+)*/', "delete in root path"),
     (r'\brm\s+-[^\s]*r', "recursive delete"),
     (r'\brm\s+--recursive\b', "recursive delete (long flag)"),

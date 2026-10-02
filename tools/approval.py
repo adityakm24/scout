@@ -29,7 +29,8 @@ from tools.approval_context import (
     _tirith_fail_open, get_current_session_key,
 )
 from tools.approval_detection import (
-    _approval_key_aliases, _check_sudo_stdin_guard, detect_dangerous_command, detect_hardline_command,
+    HUMAN_ONLY_DESCRIPTIONS, _approval_key_aliases, _check_sudo_stdin_guard, detect_dangerous_command,
+    detect_hardline_command,
 )
 from tools.approval_floors import (
     _command_matches_permanent_allowlist, _hardline_block_result, _match_user_deny_rule, _sudo_stdin_block_result,
@@ -806,7 +807,7 @@ def _human_decision(spec: _GateSpec, *, command: str, description: str,
     from agent.redact import redact_sensitive_text
 
     smart_denied = False
-    if smart:
+    if smart and description not in HUMAN_ONLY_DESCRIPTIONS:
         result, smart_denied = _smart_gate(spec, command, description, pattern_key, pattern_keys,
                                            session_key, human_present=is_cli or is_gateway or is_ask)
         if result is not None:
