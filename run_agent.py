@@ -838,6 +838,8 @@ class AIAgent(
                 self, messages_snapshot, review_memory=review_memory, review_skills=review_skills,
                 focus=focus, task_cfg=task_cfg, review_run=review_run, explicit=explicit,
             )
+            if review_memory:
+                self._memory_review_pending = False  # this review covers the one that came due
 
             def _target_with_requeue() -> None:
                 target()

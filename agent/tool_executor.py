@@ -738,6 +738,7 @@ def _dispatch_authorized_once(
 
     if ref.name == "memory":
         agent._turns_since_memory = 0
+        agent._memory_review_pending = False
     elif ref.name == "skill_manage":
         agent._iters_since_skill = 0
 

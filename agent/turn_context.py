@@ -712,13 +712,22 @@ def _hydrate_from_history(agent: Any, conversation_history: Optional[List[Any]])
 
 
 def _tick_memory_nudge(agent: Any) -> bool:
-    """Advance the turn-based memory nudge counter; ``True`` when the review should fire."""
+    """Advance the turn-based memory nudge counter; ``True`` when the review should fire.
+
+    A due review stays due (``_memory_review_pending``) until one actually starts: the turn it
+    came due on may end interrupted or without a reply, or another review may still be running,
+    and dropping it then meant a whole interval more before memory was looked at again — in
+    practice, never. Cleared by ``_spawn_background_review_now`` and by the agent's own memory write.
+    """
     if (agent._memory_nudge_interval > 0
             and "memory" in agent.valid_tool_names
             and agent._memory_store):
+        if getattr(agent, "_memory_review_pending", False):
+            return True
         agent._turns_since_memory += 1
         if agent._turns_since_memory >= agent._memory_nudge_interval:
             agent._turns_since_memory = 0
+            agent._memory_review_pending = True
             return True
     return False
 

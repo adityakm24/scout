@@ -1314,6 +1314,7 @@ def _init_memory(agent, _agent_cfg, skip_memory, platform, memory_manager=None):
     agent._user_profile_enabled = False
     agent._memory_nudge_interval = 10
     agent._turns_since_memory = 0
+    agent._memory_review_pending = False
     agent._iters_since_skill = 0
     # skip_memory skips the external *provider*; enabled_toolsets=["memory"] still gets the
     # built-in store so the memory tool never sees store=None.
