@@ -19,13 +19,7 @@ import type { Contribution } from '@/contrib/types'
 import { useI18n } from '@/i18n'
 import { selectableCardClass } from '@/lib/selectable-card'
 import { cn } from '@/lib/utils'
-import {
-  $interfaceMode,
-  INTERFACE_MODES,
-  type InterfaceMode,
-  setInterfaceMode,
-  shownInMode
-} from '@/store/interface-mode'
+import { $interfaceMode, shownInMode } from '@/store/interface-mode'
 
 import type { LayoutNode } from '../model'
 import { isLayoutNode } from '../model'
@@ -80,11 +74,7 @@ function TreeThumbnail({ node, resting }: { node: LayoutNode; resting: ReadonlyS
 
 /** Small-caps section heading — the app's SidebarPanelLabel voice. */
 function PickerSectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <span className="text-[0.6rem] font-semibold text-(--ui-text-quaternary)">
-      {children}
-    </span>
-  )
+  return <span className="text-[0.6rem] font-semibold text-(--ui-text-quaternary)">{children}</span>
 }
 
 function PresetCard({ preset }: { preset: Contribution }) {
@@ -131,33 +121,6 @@ function PresetCard({ preset }: { preset: Contribution }) {
   )
 }
 
-// No thumbnail on purpose: the grey-block miniature is the templates' language
-// for ARRANGEMENT, and a mode is not an arrangement — it is what rests on top
-// of whichever one is picked. Words carry it; the card chrome ties the rows.
-function ModeCard({ mode }: { mode: InterfaceMode }) {
-  const { t } = useI18n()
-  const current = useStore($interfaceMode)
-  const active = mode === current
-  const copy = t.interfaceMode[mode]
-
-  return (
-    <button
-      aria-pressed={active}
-      className={cn(
-        selectableCardClass({ active, prominent: true }),
-        'flex w-full flex-col gap-0.5 px-2.5 py-2 text-left'
-      )}
-      onClick={() => setInterfaceMode(mode)}
-      type="button"
-    >
-      <span className={cn('text-[0.68rem] font-medium', active ? 'text-foreground' : 'text-muted-foreground/80')}>
-        {copy.label}
-      </span>
-      <span className="text-[0.62rem] leading-snug text-(--ui-text-tertiary)">{copy.description}</span>
-    </button>
-  )
-}
-
 export function LayoutPicker() {
   const { t } = useI18n()
   const presets = useContributions(LAYOUTS_AREA)
@@ -186,16 +149,6 @@ export function LayoutPicker() {
 
   return (
     <div className="flex flex-col gap-4">
-      <section className="flex flex-col gap-2">
-        <PickerSectionLabel>{t.interfaceMode.title}</PickerSectionLabel>
-        <div className="grid grid-cols-2 gap-2">
-          {INTERFACE_MODES.map(mode => (
-            <ModeCard key={mode} mode={mode} />
-          ))}
-        </div>
-        <p className="text-[0.62rem] text-(--ui-text-quaternary)">{t.interfaceMode.hint}</p>
-      </section>
-
       <section className="flex flex-col gap-2">
         <PickerSectionLabel>{t.zones.templates}</PickerSectionLabel>
         <div className="grid grid-cols-4 gap-2">

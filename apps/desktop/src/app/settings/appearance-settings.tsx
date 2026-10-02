@@ -18,13 +18,7 @@ import { saveScoutConfig } from '@/scout'
 import { $backdrop, setBackdrop } from '@/store/backdrop'
 import { $composerPopoutGesturesEnabled, setComposerPopoutGesturesEnabled } from '@/store/composer-popout'
 import { $embedAllowed, $embedMode, clearEmbedAllowed, type EmbedMode, setEmbedMode } from '@/store/embed-consent'
-import {
-  $interfaceMode,
-  $modeShadowed,
-  INTERFACE_MODES,
-  type InterfaceMode,
-  setInterfaceMode
-} from '@/store/interface-mode'
+import { $interfaceMode, $modeShadowed, INTERFACE_MODES, type InterfaceMode } from '@/store/interface-mode'
 import { $introSplash, setIntroSplash } from '@/store/intro-splash'
 import { $fileBrowserOpen, setFileBrowserOpen } from '@/store/layout'
 import { $showModelPricing, setShowModelPricing } from '@/store/model-pricing'
@@ -692,24 +686,6 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
                 <TerminalFontSetting />
               </div>
             </>
-          )}
-
-          {show('window-layout') && (
-            <ListRow
-              action={
-                <SegmentedControl
-                  onChange={id => {
-                    triggerHaptic('selection')
-                    setInterfaceMode(id)
-                  }}
-                  options={interfaceModeOptions}
-                  value={interfaceMode}
-                />
-              }
-              description={t.interfaceMode.hint}
-              id={settingElementId(ids.interfaceMode)}
-              title={t.interfaceMode.title}
-            />
           )}
 
           {show('window-layout') && (

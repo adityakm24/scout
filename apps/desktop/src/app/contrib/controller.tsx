@@ -42,23 +42,13 @@ import { registry } from '@/contrib/registry'
 import { discoverRuntimePlugins } from '@/contrib/runtime-loader'
 import { LocalizedTabTitle, translateNow } from '@/i18n'
 import { NEW_SESSION_TITLE, sessionTitle as storedSessionTitle } from '@/lib/chat-runtime'
-import {
-  Download,
-  FileText,
-  LayoutDashboard,
-  PanelBottom,
-  PanelTop,
-  SlidersHorizontal,
-  Upload,
-  Users,
-  Zap
-} from '@/lib/icons'
+import { Download, FileText, LayoutDashboard, PanelBottom, PanelTop, Upload, Users, Zap } from '@/lib/icons'
 import { type KeybindContribution, KEYBINDS_AREA } from '@/lib/keybinds/actions'
 import { isOnboardingEnabled } from '@/lib/onboarding-enabled'
 import { TRANSCRIPT_DIRECTIVE_AREA, type TranscriptDirectiveContribution } from '@/lib/transcript-directives'
 import { setYoloEnabled } from '@/lib/yolo-session'
 import { $connectionsRegistry } from '@/store/connection-registry-state'
-import { $interfaceMode, $showsAdvancedChrome, setModeContext, toggleSimpleMode } from '@/store/interface-mode'
+import { $interfaceMode, $showsAdvancedChrome, setInterfaceMode, setModeContext } from '@/store/interface-mode'
 import {
   $fileBrowserOpen,
   $sidebarOpen,
@@ -426,17 +416,6 @@ registry.registerMany([
     get: () => $profileRailVisible.get(),
     set: enabled => $profileRailVisible.set(enabled)
   }),
-  // Simple hides most of the chrome that would offer the way back, so ⌘K is a
-  // guaranteed door (alongside the layout editor and Settings → Appearance).
-  paletteToggle({
-    id: 'view.simpleMode',
-    label: 'Simple mode',
-    action: 'view.toggleSimpleMode',
-    icon: SlidersHorizontal,
-    keywords: ['simple', 'advanced', 'mode', 'interface', 'chrome', 'minimal', 'focus', 'distraction'],
-    get: () => $interfaceMode.get() === 'simple',
-    set: toggleSimpleMode
-  }),
   paletteToggle({
     id: 'view.toggleTabStrip',
     label: 'Toggle tabs',
@@ -649,6 +628,13 @@ bindToolPaneCollapse(
   () => setTerminalTakeover(true),
   $showsAdvancedChrome
 )
+
+// Scout is a personal assistant: Simple is the only interface offered (no mode picker), so an
+// install that chose Advanced before the picker went away comes back to it.
+if ($interfaceMode.get() !== 'simple') {
+  setInterfaceMode('simple')
+}
+
 // Without the statusbar, the rail is the only way to switch profiles or gateways.
 $profiles.subscribe(profiles => setModeContext({ profileCount: profiles.length }))
 $connectionsRegistry.subscribe(registry => setModeContext({ connectionCount: registry?.connections.length ?? 0 }))

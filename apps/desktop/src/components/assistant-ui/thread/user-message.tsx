@@ -359,11 +359,11 @@ export const UserMessage: FC<{
   const hasBody = messageText.trim().length > 0
   const chipOnlyTurn = !hasBody && attachmentRefs.length > 0 && attachmentRefs.every(isAttachmentRef)
   const isLatestUser = messageId === latestUserId
-  const showStop = !readOnly && isLatestUser && threadRunning && Boolean(onCancel)
-  // Restore (re-run this exact prompt) is available everywhere the Stop button
-  // isn't — including mid-stream on older prompts, since the action interrupts
-  // the live turn before rewinding.
-  const showRestore = !readOnly && !showStop && Boolean(onRequestRestoreConfirm) && hasBody
+  // Stopping is the composer's job; the bubble of the prompt being answered carries no control.
+  // Restore (re-run this exact prompt) is available on every other prompt — including
+  // mid-stream on older ones, since the action interrupts the live turn before rewinding.
+  const answering = isLatestUser && threadRunning
+  const showRestore = !readOnly && !answering && Boolean(onRequestRestoreConfirm) && hasBody
 
   const bubbleClassName = cn(
     USER_BUBBLE_BASE_CLASS,
@@ -497,45 +497,30 @@ export const UserMessage: FC<{
                     </button>
                   </ActionBarPrimitive.Edit>
                 )}
-                {(showStop || showRestore) && (
+                {showRestore && (
                   <div className="pointer-events-none absolute right-2 bottom-2 z-10 flex items-center justify-center opacity-0 transition-opacity group-hover/user-message:opacity-100 group-focus-within/user-message:opacity-100">
-                    {showStop ? (
+                    <Tip label={copy.restoreFromHere}>
                       <button
-                        aria-label={copy.stop}
-                        className={cn('pointer-events-auto size-5', USER_ACTION_ICON_BUTTON_CLASS)}
+                        aria-label={copy.restoreCheckpoint}
+                        className={cn('pointer-events-auto size-6', USER_ACTION_ICON_BUTTON_CLASS)}
                         onClick={event => {
                           event.preventDefault()
                           event.stopPropagation()
-                          void onCancel?.()
+                          triggerHaptic('selection')
+                          onRequestRestoreConfirm?.(messageId, {
+                            text: messageText,
+                            userOrdinal: runtimeUserOrdinal
+                          })
+                        }}
+                        onPointerDown={event => {
+                          event.preventDefault()
+                          event.stopPropagation()
                         }}
                         type="button"
                       >
-                        {StopGlyph}
+                        <Codicon name="discard" size="0.875rem" />
                       </button>
-                    ) : (
-                      <Tip label={copy.restoreFromHere}>
-                        <button
-                          aria-label={copy.restoreCheckpoint}
-                          className={cn('pointer-events-auto size-6', USER_ACTION_ICON_BUTTON_CLASS)}
-                          onClick={event => {
-                            event.preventDefault()
-                            event.stopPropagation()
-                            triggerHaptic('selection')
-                            onRequestRestoreConfirm?.(messageId, {
-                              text: messageText,
-                              userOrdinal: runtimeUserOrdinal
-                            })
-                          }}
-                          onPointerDown={event => {
-                            event.preventDefault()
-                            event.stopPropagation()
-                          }}
-                          type="button"
-                        >
-                          <Codicon name="discard" size="0.875rem" />
-                        </button>
-                      </Tip>
-                    )}
+                    </Tip>
                   </div>
                 )}
               </div>

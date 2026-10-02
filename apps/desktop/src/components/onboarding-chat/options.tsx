@@ -103,8 +103,6 @@ export function AccentSwatch({
 
 export type MiniNode = 1 | { dir: 'column' | 'row'; children: MiniNode[]; weights: number[] }
 
-export const ELITE_LAYOUT_ID = 'terminal-deck'
-
 export const LAYOUTS: Array<{ description: string; id: string; mode: InterfaceMode; name: string; tree: MiniNode }> = [
   {
     description: 'For talking to Scout.',
@@ -112,17 +110,6 @@ export const LAYOUTS: Array<{ description: string; id: string; mode: InterfaceMo
     mode: 'simple',
     name: 'Basic',
     tree: { children: [1, 1], dir: 'row', weights: [1, 4.6] }
-  },
-  {
-    description: 'For developers: terminal, files, diffs.',
-    id: ELITE_LAYOUT_ID,
-    mode: 'advanced',
-    name: 'Elite',
-    tree: {
-      children: [{ children: [1, 1, 1], dir: 'row', weights: [1, 3.2, 1.2] }, 1],
-      dir: 'column',
-      weights: [3, 1]
-    }
   }
 ]
 
