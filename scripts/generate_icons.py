@@ -6,8 +6,9 @@ Usage (from repo root):
     node scripts/generate-icons.mjs --check   # verify structure
 
 Sources of truth — two axes, composed per target:
-  Mark (vector):      assets/scout-mark.svg — a speech bubble holding a north star, drawn on the
-                      1024 tile. Three paths by id: `bubble`, `star`, `spark`.
+  Mark (vector):      assets/scout-mark.svg — the agent's face: the tile is the violet face and
+                      the mark is its eyes, drawn on the 1024 tile. Paths by id: `eye-left`,
+                      `eye-right`, `glint-left`, `glint-right`.
 
   Backgrounds (per platform surface, light/dark) give the tile geometry:
                       assets/backgrounds/squircle-light.svg   full-bleed rounded tile
@@ -15,16 +16,15 @@ Sources of truth — two axes, composed per target:
                       assets/backgrounds/squircle-mac-light.svg   mac HIG grid
                       assets/backgrounds/squircle-mac-dark.svg    mac HIG grid
 
-  The tile is iMessage blue (light) or deep orbit navy (dark), the bubble near-white, and the star
-  and spark are cut-outs filled with the tile itself. The master SVGs (assets/icon-master.svg
+  The tile is the violet face (a touch deeper for the dark appearance) and the eyes sit on it. The
+  master SVGs (assets/icon-master.svg
   light, assets/icon-master-dark.svg dark) are GENERATED artifacts. macOS icns targets render from
   an in-memory master that puts the tile on Apple's 824x824 (r=185.4) grid, centered in 1024 with
   100px margins, with the mark scaled to match.
 
 Desktop build identity comes from SCOUT_PAYLOAD_TAG / SCOUT_BUILD_COMMIT:
 Canary uses yellow/dark-yellow tiles. Commit builds use red/dark-red and a seven-character SHA
-badge. The mark and tile geometry do not change, and because the star is a cut-out the flavor
-colour shows through it. Only apps/desktop outputs use this identity. Website, bootstrap,
+badge. The eyes and tile geometry do not change. Only apps/desktop outputs use this identity. Website, bootstrap,
 dashboard, and the shared master SVGs retain the default brand.
 
 GENERATED OUTPUTS ARE COMMITTED. Regular builds and installs consume them and
@@ -104,11 +104,12 @@ _CANARY_TAG_RE = re.compile(
 # The spaceshipresearch dark background (#0d1117) — fixed dark tile/background everywhere.
 DARK_HEX = "#0d1117"
 DARK_RGB = (13, 17, 23)
-# Tile gradients (top-left -> bottom-right) and the bubble colour, per appearance.
-TILE_STOPS = {"light": ("#5cbcff", "#0060d6"), "dark": ("#1b335f", "#070b14")}
-BUBBLE = {"light": "#ffffff", "dark": "#eaf3ff"}
-# The standalone logo (no tile): a blue bubble with a white star, on any navbar.
-LOGO_STOPS = ("#4fb2ff", "#0062cc")
+# The face (tile) gradient, top-left -> bottom-right, per appearance: the avatar violet #8b5cf6
+# with a soft light from the top-left. Eyes and their glints are the same in both.
+TILE_STOPS = {"light": ("#9d74ff", "#7a49ec"), "dark": ("#8a5ef6", "#6233d4")}
+EYE, GLINT = "#150e25", "#ece9f3"
+EYE_PATHS = ("eye-left", "eye-right")
+GLINT_PATHS = ("glint-left", "glint-right")
 MARK_SIZE = 1024.0
 
 # Target sizes for --check's structural verification: relpath -> (format, size)
@@ -201,11 +202,11 @@ class IconArt:
 
 
 def mark_path(art: IconArt, name: str) -> str:
-    """The `d` of one mark path (`bubble`, `star`, `spark`) from assets/scout-mark.svg."""
+    """The `d` of one mark path (an eye or a glint) from assets/scout-mark.svg."""
     if not art.paths:
         src = art.mark.read_text(encoding="utf-8-sig")
         art.paths = {m.group(1): " ".join(m.group(2).split())
-                     for m in re.finditer(r'<path\s+id="(\w+)"[^>]*?\sd="([^"]+)"', src)}
+                     for m in re.finditer(r'<path\s+id="([\w-]+)"[^>]*?\sd="([^"]+)"', src)}
     assert name in art.paths, f"no <path id={name!r}> in {art.mark.name}"
     return art.paths[name]
 
@@ -270,25 +271,25 @@ def commit_layer(commit: str, bg: str) -> str:
     )
 
 
+def eyes(art: IconArt) -> str:
+    """The face's eyes and glints, in mark (1024 tile) coordinates."""
+    return "".join([f'<path fill="{EYE}" d="{mark_path(art, name)}"/>' for name in EYE_PATHS]
+                   + [f'<path fill="{GLINT}" d="{mark_path(art, name)}"/>' for name in GLINT_PATHS])
+
+
 def compose_svg(art: IconArt, appearance: str, bg: str) -> str:
-    """Full svg text: tile + mark, in the background's native coordinate space (resvg scales to
-    whatever output size is requested, so the composition is size-agnostic). A build flavor
-    replaces the tile gradient with its flat colour; the star cut-outs follow the tile."""
+    """Full svg text: the face tile + its eyes, in the background's native coordinate space (resvg
+    scales to whatever output size is requested, so the composition is size-agnostic). A build
+    flavor replaces the face gradient with its flat colour; the eyes never change."""
     inner, w, h = background_inner(art, bg)
     background = ET.fromstring(f"<g>{inner}</g>")
     tile = background.find("{http://www.w3.org/2000/svg}rect")
     assert tile is not None, f"no background rectangle in {bg}"
     x, y, size = (float(tile.attrib[key]) for key in ("x", "y", "width"))
-    scale = size / MARK_SIZE
     if art.colors:
-        flat = art.colors[0] if appearance == "light" else art.colors[1]
-        defs, tile_fill, cut_fill = "", flat, flat
+        defs, tile_fill = "", art.colors[0] if appearance == "light" else art.colors[1]
     else:
-        stops = TILE_STOPS[appearance]
-        # One gradient in tile space for the tile, the same one in mark space for the cut-outs,
-        # so the star reads as a hole straight through to the tile.
-        defs = gradient("tile", stops, x, y, size) + gradient("cut", stops, 0, 0, MARK_SIZE)
-        tile_fill, cut_fill = "url(#tile)", "url(#cut)"
+        defs, tile_fill = gradient("face", TILE_STOPS[appearance], x, y, size), "url(#face)"
     tile.set("fill", tile_fill)
     tile_svg = ET.tostring(tile, encoding="unicode")
     badge = f"  {commit_layer(art.commit, bg)}\n" if art.commit else ""
@@ -297,10 +298,7 @@ def compose_svg(art: IconArt, appearance: str, bg: str) -> str:
         f"  <defs>{defs}</defs>\n"
         f"  {tile_svg}\n"
         f"{badge}"
-        f'  <g transform="translate({x} {y}) scale({scale})">'
-        f'<path fill="{BUBBLE[appearance]}" d="{mark_path(art, "bubble")}"/>'
-        f'<path fill="{cut_fill}" d="{mark_path(art, "star")}"/>'
-        f'<path fill="{cut_fill}" d="{mark_path(art, "spark")}"/></g>\n'
+        f'  <g transform="translate({x} {y}) scale({size / MARK_SIZE})">{eyes(art)}</g>\n'
         "</svg>\n"
     )
 
@@ -345,18 +343,16 @@ def save_png(img: Image.Image, buf: io.BytesIO) -> None:
 
 
 def build_logo_image(art: IconArt, dark: bool = False) -> Image.Image:
-    """1772x1799 wordmark: the mark alone on transparency (no tile), centered — a blue bubble
-    with a white star, legible on light and dark navbars alike (`dark` kept for the target table)."""
+    """1772x1799 wordmark: the face alone on transparency, centered — the same violet face on
+    light and dark navbars (`dark` picks the dark-appearance violet)."""
     W, H = 1772, 1799
-    bx, by, bw, bh = 186, 196, 652, 624  # the bubble (with its tail) plus a hair of margin
+    stops = TILE_STOPS["dark" if dark else "light"]
     svg = (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}">\n'
-        f"  <defs>{gradient('logo', LOGO_STOPS, 0, 0, MARK_SIZE)}</defs>\n"
-        f'  <svg x="0" y="0" width="{W}" height="{H}" viewBox="{bx} {by} {bw} {bh}" '
+        f"  <defs>{gradient('face', stops, 0, 0, MARK_SIZE)}</defs>\n"
+        f'  <svg x="0" y="0" width="{W}" height="{H}" viewBox="0 0 {MARK_SIZE} {MARK_SIZE}" '
         f'preserveAspectRatio="xMidYMid meet">'
-        f'<path fill="url(#logo)" d="{mark_path(art, "bubble")}"/>'
-        f'<path fill="#ffffff" d="{mark_path(art, "star")}"/>'
-        f'<path fill="#ffffff" d="{mark_path(art, "spark")}"/></svg>\n'
+        f'<rect width="{MARK_SIZE}" height="{MARK_SIZE}" rx="245" fill="url(#face)"/>{eyes(art)}</svg>\n'
         "</svg>\n"
     )
     return render_svg(svg, (W, H))

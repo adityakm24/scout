@@ -91,9 +91,9 @@ def test_write_status_includes_every_target(tmp_path, monkeypatch, capsys, failu
 @pytest.mark.parametrize("platform", ["", "mac-"])
 @pytest.mark.parametrize("appearance", ["light", "dark"])
 @pytest.mark.parametrize("colors", [None, ("#f5cc32", "#443808"), ("#e34850", "#4a1117")])
-def test_mark_sits_on_the_platform_tile_with_the_star_cut_through_to_it(monkeypatch, platform, appearance, colors):
-    """The tile keeps each platform's geometry, the 1024 mark is scaled onto it, and the star is a
-    cut-out: it is filled with the tile itself, so a canary or commit flavor shows through it too."""
+def test_face_tile_keeps_platform_geometry_with_its_eyes_scaled_onto_it(monkeypatch, platform, appearance, colors):
+    """The tile is the agent's face and keeps each platform's geometry; the 1024 eyes are scaled
+    onto it unchanged in every flavor, and a canary/commit flavor recolours only the face."""
     monkeypatch.setitem(sys.modules, "resvg_py", ModuleType("resvg_py"))
     source = Path(__file__).resolve().parents[2]
     spec = importlib.util.spec_from_file_location("icon_geometry_under_test", source / "scripts/generate_icons.py")
@@ -111,16 +111,12 @@ def test_mark_sits_on_the_platform_tile_with_the_star_cut_through_to_it(monkeypa
     keys = ("x", "y", "width", "height", "rx")
     assert [tile.attrib[k] for k in keys] == [original.attrib[k] for k in keys]
 
-    mark = result[-1]
+    face = result[-1]
     x, y, width = (float(original.attrib[k]) for k in ("x", "y", "width"))
-    assert mark.get("transform") == f"translate({x} {y}) scale({width / 1024})"
-    bubble, star, spark = mark.findall("svg:path", ns)
-    assert bubble.get("fill") == module.BUBBLE[appearance]
+    assert face.get("transform") == f"translate({x} {y}) scale({width / 1024})"
+    assert [p.get("fill") for p in face.findall("svg:path", ns)] == [module.EYE] * 2 + [module.GLINT] * 2
     if colors:
-        flat = colors[appearance == "dark"]
-        assert tile.get("fill") == star.get("fill") == spark.get("fill") == flat
+        assert tile.get("fill") == colors[appearance == "dark"]
     else:
-        stops = {gradient.get("id"): [stop.get("stop-color") for stop in gradient]
-                 for gradient in result.findall("svg:defs/svg:linearGradient", ns)}
-        assert tile.get("fill") == "url(#tile)" and star.get("fill") == spark.get("fill") == "url(#cut)"
-        assert stops["tile"] == stops["cut"] == list(module.TILE_STOPS[appearance])
+        stops = [stop.get("stop-color") for stop in result.find("svg:defs/svg:linearGradient", ns)]
+        assert tile.get("fill") == "url(#face)" and stops == list(module.TILE_STOPS[appearance])

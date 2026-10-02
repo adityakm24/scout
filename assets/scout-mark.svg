@@ -1,29 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <!--
-    The Scout mark, drawn on the 1024 app-icon tile. A speech bubble (Scout is someone you talk
-    to) holding a north star (a scout goes ahead, finds the way and reports back). The star is a
-    cut-out: the generator fills it with whatever the tile is, so build flavors recolor it too.
-    scripts/generate_icons.py reads the three paths by id; their fills here are only a preview.
+    The Scout mark: the agent's own face. The app-icon tile IS the face (a violet rounded square,
+    supplied by the generator from the platform backgrounds); these are its two eyes and their
+    glints, drawn on the 1024 tile. Proportions follow the default agent avatar.
+    scripts/generate_icons.py reads the paths by id; their fills here are only a preview.
   -->
-  <path id="bubble" fill="#ffffff" d="
-    M 512 204
-    C 686.5 204 828 326.7 828 478
-    C 828 629.3 686.5 752 512 752
-    C 465 752 420.3 743.1 380.1 727.2
-    C 336 772 266 806 194 812
-    C 236 776 262 728 270 676
-    C 220.6 621.4 196 552.3 196 478
-    C 196 326.7 337.5 204 512 204 Z" />
-  <path id="star" fill="#0a84ff" d="
-    M 512 262
-    Q 549 441 682 478
-    Q 549 515 512 676
-    Q 475 515 342 478
-    Q 475 441 512 262 Z" />
-  <path id="spark" fill="#0a84ff" d="
-    M 664 284
-    Q 672 316 700 324
-    Q 672 332 664 364
-    Q 656 332 628 324
-    Q 656 316 664 284 Z" />
+  <path id="eye-left" fill="#150e25" d="M 368 364 A 66 66 0 1 1 368 496 A 66 66 0 1 1 368 364 Z" />
+  <path id="eye-right" fill="#150e25" d="M 656 364 A 66 66 0 1 1 656 496 A 66 66 0 1 1 656 364 Z" />
+  <path id="glint-left" fill="#ece9f3" d="M 349 384 A 21 21 0 1 1 349 426 A 21 21 0 1 1 349 384 Z" />
+  <path id="glint-right" fill="#ece9f3" d="M 637 384 A 21 21 0 1 1 637 426 A 21 21 0 1 1 637 384 Z" />
 </svg>
