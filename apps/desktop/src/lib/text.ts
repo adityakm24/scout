@@ -14,6 +14,39 @@ export const normalize = (v: unknown): string => asText(v).trim().toLowerCase()
  *  `s.charAt(0).toUpperCase() + s.slice(1)` idiom (empty-safe). */
 export const capitalize = (v: string): string => (v ? v.charAt(0).toUpperCase() + v.slice(1) : v)
 
+const ACRONYMS = new Set([
+  'ai',
+  'api',
+  'cli',
+  'csv',
+  'gif',
+  'gpu',
+  'json',
+  'llm',
+  'mcp',
+  'ocr',
+  'pdf',
+  'rss',
+  'sms',
+  'sql',
+  'ssh',
+  'svg',
+  'tts',
+  'ui',
+  'url'
+])
+
+/** A multi-word catalog id as a name people read: "apple-notes" → "Apple Notes", "pdf_tools" →
+ *  "PDF Tools". Anything else (capitals, spaces, a single word) is a chosen title, left alone. */
+export const displayName = (v: string): string =>
+  /[A-Z\s]/.test(v) || !/[-_]/.test(v)
+    ? v
+    : v
+        .split(/[-_]+/)
+        .filter(Boolean)
+        .map(word => (ACRONYMS.has(word) ? word.toUpperCase() : capitalize(word)))
+        .join(' ')
+
 /** First non-empty string among `keys`, trimmed. For reading tool args and
  *  results, where the key carrying the interesting value varies by tool. */
 export const firstStringField = (record: Record<string, unknown>, keys: readonly string[]): string => {

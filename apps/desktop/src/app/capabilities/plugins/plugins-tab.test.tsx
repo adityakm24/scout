@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { $pluginDecisions, $pluginRecords, dropPlugin, patchPlugin, publishPlugin } from '@/contrib/plugins-store'
 import { queryClient } from '@/lib/query-client'
+import { displayName } from '@/lib/text'
 import { $agentPlugins, $agentPluginsStatus, type AgentPluginRow } from '@/store/agent-plugins'
 import { $confirmRequest, settleConfirm } from '@/store/confirm'
 import { $notifications } from '@/store/notifications'
@@ -55,7 +56,8 @@ function seedCatalog(entries = [weatherEntry]) {
   queryClient.setQueryData(['public-catalog', 'plugins'], parseCatalog('plugins', entries))
 }
 
-async function selectCatalogEntry(name: string) {
+async function selectCatalogEntry(id: string) {
+  const name = displayName(id)
   fireEvent.click((await screen.findAllByRole('button', { name }))[0])
   expect(screen.getAllByRole('heading', { name }).length).toBeGreaterThan(0)
 }
@@ -325,7 +327,7 @@ describe('PluginsTab', () => {
 
     await selectCatalogEntry(weatherEntry.name)
     expect($pluginInstallRequest.get()).toBeNull()
-    fireEvent.click(screen.getByRole('switch', { name: `Add ${weatherEntry.name}` }))
+    fireEvent.click(screen.getByRole('switch', { name: `Add ${displayName(weatherEntry.name)}` }))
 
     expect($pluginInstallRequest.get()).toMatchObject({
       catalogName: weatherEntry.name,
@@ -418,7 +420,7 @@ describe('PluginsTab', () => {
     renderPlugins({ profile: null })
 
     await selectCatalogEntry(entry.name)
-    fireEvent.click(screen.getByRole('switch', { name: `Add ${entry.name}` }))
+    fireEvent.click(screen.getByRole('switch', { name: `Add ${displayName(entry.name)}` }))
 
     expect($pluginInstallRequest.get()).toMatchObject({
       catalogName: entry.name,
@@ -707,10 +709,10 @@ describe('PluginsTab catalog UX', () => {
     const search = screen.getByRole<HTMLInputElement>('textbox', { name: 'Search plugins' })
 
     fireEvent.change(search, { target: { value: 'weather' } })
-    expect(await screen.findByRole('heading', { name: weatherEntry.name })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'garden-plugin' })).toBeNull()
+    expect(await screen.findByRole('heading', { name: 'Weather Plugin' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Garden Plugin' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Installed', pressed: false }))
-    expect(screen.queryByRole('heading', { name: weatherEntry.name })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Weather Plugin' })).toBeNull()
     expect(search.value).toBe('weather')
     fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' })[0])
     expect(search.value).toBe('')
@@ -743,7 +745,7 @@ describe('PluginsTab catalog UX', () => {
     expect(screen.getByText('Catalog HTTP 503')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
 
-    expect(await screen.findByRole('heading', { name: weatherEntry.name })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Weather Plugin' })).toBeTruthy()
     expect(fetchCatalog).toHaveBeenCalledTimes(2)
   })
 
@@ -905,7 +907,7 @@ describe('PluginsTab catalog UX', () => {
 
     const card = screen
       .getAllByRole('article')
-      .find(article => within(article).queryByRole('button', { name: 'demo-weather' }))!
+      .find(article => within(article).queryByRole('button', { name: 'Demo Weather' }))!
 
     const toggle = within(card).getByRole('switch', { name: 'demo-weather' })
     expect(toggle.getAttribute('aria-checked')).toBe('true')

@@ -11,6 +11,7 @@ import { invalidateSlashCompletions } from '@/lib/slash-completion-cache'
 import { editLearningNode, getLearningNode, type ProfileScope, profileScopeKey, setSkillEnabled } from '@/scout'
 import { notify, notifyError } from '@/store/notifications'
 import type { SkillInfo } from '@/types/scout'
+import { displayName } from '@/lib/text'
 
 import { DetailPane, ListStripMenu, type ListStripMenuToggle } from '../../master-detail'
 import { CatalogAlert } from '../catalog/catalog-alert'
@@ -258,7 +259,7 @@ function ScopedSkillsTab({
         query={query}
         renderAction={skill => (
           <Switch
-            aria-label={skill.name}
+            aria-label={displayName(skill.name)}
             checked={skill.enabled}
             disabled={controlsDisabled}
             onCheckedChange={enabled => void applyEnabled([skill], enabled)}

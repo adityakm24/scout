@@ -9,6 +9,7 @@ import { Reel } from '@/components/ui/reel'
 import { RowButton } from '@/components/ui/row-button'
 import { useI18n } from '@/i18n'
 import { ExternalLink } from '@/lib/external-link'
+import { displayName } from '@/lib/text'
 import { cn } from '@/lib/utils'
 
 import { catalogIcon, CatalogImage } from './catalog-card'
@@ -77,7 +78,9 @@ export function CatalogDetail({
         <div className="flex min-w-0 items-start gap-3">
           <div className="min-w-0 flex-1">
             <div className={cn('flex min-w-0 items-center gap-2', dialog && !entry.imageUrl && 'pr-7')}>
-              <Title className="min-w-0 flex-1 break-words text-lg font-semibold tracking-tight">{entry.name}</Title>
+              <Title className="min-w-0 flex-1 break-words text-lg font-semibold tracking-tight">
+                {displayName(entry.name)}
+              </Title>
               {action && <span className="shrink-0">{action}</span>}
             </div>
             <div className="mt-1 flex min-w-0 items-center gap-2 text-xs text-(--ui-text-tertiary)">

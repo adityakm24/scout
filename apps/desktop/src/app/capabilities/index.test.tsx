@@ -101,7 +101,8 @@ beforeEach(() => {
   getSkillContent.mockResolvedValue({
     name: 'web-research',
     path: '/skills/web-research/SKILL.md',
-    content: '---\nname: web-research\nversion: 1.2.0\nauthor: SpaceshipResearch\n---\n\n# Web Research\n\nDeep research steps.'
+    content:
+      '---\nname: web-research\nversion: 1.2.0\nauthor: SpaceshipResearch\n---\n\n# Web Research\n\nDeep research steps.'
   })
   // Single profile by default → the scope selector stays hidden (>1 gate),
   // so existing tests see unchanged single-profile behavior.
@@ -177,7 +178,7 @@ describe('CapabilitiesView', { timeout: 60_000 }, () => {
     await waitFor(() => expect(getSkills).toHaveBeenCalledWith('researcher'))
 
     // ...and a toggle routes its write to that profile as well.
-    const sw = await screen.findByRole('switch', { name: 'web-research' })
+    const sw = await screen.findByRole('switch', { name: 'Web Research' })
     await act(async () => {
       fireEvent.click(sw)
     })
@@ -207,7 +208,7 @@ describe('CapabilitiesView', { timeout: 60_000 }, () => {
     })
 
     await act(async () => {
-      fireEvent.click(await screen.findByRole('button', { name: 'web-research' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Web Research' }))
     })
 
     await waitFor(() => expect(getSkillContent).toHaveBeenCalled())
@@ -216,7 +217,7 @@ describe('CapabilitiesView', { timeout: 60_000 }, () => {
     expect(screen.queryByText(/version: 1\.2\.0/)).toBeNull()
   })
 
-  it('lists only the profile\'s own skills — no public library, no install switches', async () => {
+  it("lists only the profile's own skills — no public library, no install switches", async () => {
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)
     getSkills.mockResolvedValue([
@@ -232,7 +233,7 @@ describe('CapabilitiesView', { timeout: 60_000 }, () => {
         </QueryClientProvider>
       )
 
-      await screen.findByRole('switch', { name: 'web-research' })
+      await screen.findByRole('switch', { name: 'Web Research' })
       expect(screen.queryByRole('button', { name: 'gif-search' })).toBeNull()
       expect(screen.queryByRole('switch', { name: /^Add / })).toBeNull()
       expect(screen.getAllByRole('textbox', { name: 'Search skills' })).toHaveLength(1)
@@ -257,7 +258,9 @@ describe('CapabilitiesView', { timeout: 60_000 }, () => {
     const dialog = await screen.findByRole('dialog')
 
     const file = new File(
-      ['---\nname: Trip Planner\ndescription: Plan trips day by day.\nversion: 0.1.0\n---\n# Trip planner\n\nAsk for dates.\n'],
+      [
+        '---\nname: Trip Planner\ndescription: Plan trips day by day.\nversion: 0.1.0\n---\n# Trip planner\n\nAsk for dates.\n'
+      ],
       'SKILL.md',
       { type: 'text/markdown' }
     )

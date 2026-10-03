@@ -4,6 +4,7 @@ import { type ReactNode, useState } from 'react'
 
 import { Codicon } from '@/components/ui/codicon'
 import { RowButton } from '@/components/ui/row-button'
+import { displayName } from '@/lib/text'
 import { cn } from '@/lib/utils'
 
 import { type CatalogEntry, catalogLabel } from './catalog-data'
@@ -102,11 +103,11 @@ export function CatalogCard({ entry, action, accentIndex, onOpen, onCategory, on
               detail; real controls sit above it (`relative`). One focus stop per card. */}
           <RowButton
             aria-haspopup="dialog"
-            aria-label={entry.name}
+            aria-label={displayName(entry.name)}
             className="min-w-0 text-left font-semibold leading-snug after:absolute after:inset-0 after:rounded-[inherit] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-primary focus-visible:after:-outline-offset-2"
             onClick={() => onOpen(entry)}
           >
-            <span className="line-clamp-1 min-w-0 break-all text-[0.95rem]">{entry.name}</span>
+            <span className="line-clamp-1 min-w-0 break-words text-[0.95rem]">{displayName(entry.name)}</span>
           </RowButton>
           <span className="flex w-full items-center gap-2 text-[length:var(--conversation-caption-font-size)] text-(--ui-text-tertiary)">
             <span className="min-w-0 flex-1 truncate">{entry.author || catalogLabel(entry.source)}</span>

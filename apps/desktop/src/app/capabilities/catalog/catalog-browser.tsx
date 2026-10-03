@@ -12,6 +12,7 @@ import { SearchField } from '@/components/ui/search-field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tip } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n'
+import { displayName } from '@/lib/text'
 import { cn } from '@/lib/utils'
 
 import { DetailColumn, ListColumn, MasterDetail } from '../../master-detail'
@@ -217,7 +218,7 @@ export const CatalogBrowser = memo(function CatalogBrowser({
         disabled={Boolean(installedPending) || installed || (kind === 'skills' && !entry.installIdentifier)}
         installed={installed}
         installing={isInstalling?.(entry) ?? false}
-        name={entry.name}
+        name={displayName(entry.name)}
         onInstall={() => {
           if (kind === 'plugins') {
             setDetailOpen(false)

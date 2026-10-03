@@ -32,8 +32,7 @@
   --catalog-tint: 10%;
   --catalog-edge: 20%;
   border-color: color-mix(in srgb, var(--catalog-accent) var(--catalog-edge), var(--ui-stroke-tertiary));
-  background:
-    radial-gradient(
+  background: radial-gradient(
       140% 100% at calc(var(--catalog-rest-x) + (var(--catalog-x) - var(--catalog-rest-x)) * var(--catalog-follow))
         calc(var(--catalog-rest-y) + (var(--catalog-y) - var(--catalog-rest-y)) * var(--catalog-follow)),
       color-mix(in srgb, var(--catalog-accent) var(--catalog-tint), transparent),
@@ -82,6 +81,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   [data-catalog-card] {
-    transition: border-color 0.1s ease, box-shadow 0.1s ease, opacity 0.15s ease, filter 0.15s ease;
+    transition:
+      border-color 0.1s ease,
+      box-shadow 0.1s ease,
+      opacity 0.15s ease,
+      filter 0.15s ease;
   }
 }
