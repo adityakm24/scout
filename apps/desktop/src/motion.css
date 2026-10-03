@@ -393,6 +393,16 @@
 [data-chat-surface]:has(> [data-slot='agent-identity-header']) {
   --thread-identity-clearance: 5.5rem;
 }
+/* Messages scrolled up under the name fade out into the page instead of showing through a
+   frosted bar: blurred, a blue user bubble smeared into a band with a hard bottom edge, and no
+   painted colour matches the sky behind the chat. Fully visible again from the clearance down. */
+[data-chat-surface]:has(> [data-slot='agent-identity-header']) [data-slot='aui_thread-viewport'] {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent calc(var(--thread-identity-clearance) - 1.25rem),
+    black var(--thread-identity-clearance)
+  );
+}
 
 /* ── Activity glyphs (components/chat/activity-icon.tsx) ───────────────────
    One motion per kind of work, so a glance says what the agent is doing:

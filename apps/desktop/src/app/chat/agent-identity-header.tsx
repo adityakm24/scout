@@ -47,7 +47,7 @@ export function AgentIdentityHeader() {
 
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center bg-[color-mix(in_srgb,var(--ui-chat-surface-background)_80%,transparent)] pb-1 pt-1 shadow-[0_1px_0_var(--ui-stroke-quaternary)] backdrop-blur-xl"
+      className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center pb-1 pt-1"
       data-slot="agent-identity-header"
     >
       <button
