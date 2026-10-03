@@ -32,11 +32,13 @@ export function DashboardPage() {
   return (
     <section
       aria-label={t.dashboard.title}
-      className="relative isolate flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden"
+      // Columns follow the room the page has, not the window: beside the sidebar and the agent
+      // panel a wide window leaves a narrow page, and two columns there squeezed every row.
+      className="@container/dash relative isolate flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden"
       data-slot="dashboard-page"
     >
       <div aria-hidden="true" className="scout-sky -z-10" />
-      <div className="mx-auto flex w-full max-w-6xl min-h-0 flex-1 flex-col px-6 pb-8 pt-10 sm:px-10">
+      <div className="mx-auto flex w-full max-w-6xl min-h-0 flex-1 flex-col px-6 pb-8 pt-10 @[40rem]/dash:px-10">
         <header className="scout-rise mb-7" style={{ '--rise-index': 0 } as CSSProperties}>
           <p className="m-0 text-[0.8125rem] font-semibold text-(--dt-midground)">{fmtToday.format(new Date())}</p>
           <h1 className="scout-greeting scout-greeting--page m-0 mt-1">{t.intro.greeting[part]}</h1>
@@ -46,7 +48,7 @@ export function DashboardPage() {
         </header>
 
         {status !== 'unsupported' && (
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-2 [&>section]:min-h-[26rem]">
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 @[52rem]/dash:grid-cols-2 [&>section]:min-h-[26rem]">
             <TodoPanel />
             <ReminderPanel />
           </div>

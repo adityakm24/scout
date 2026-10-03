@@ -438,7 +438,10 @@ export const CatalogBrowser = memo(function CatalogBrowser({
               </>
             ) : (
               <div
-                className={cn('h-full min-h-0', detailOpen ? '[&_aside]:max-sm:hidden' : '[&_main]:max-sm:hidden')}
+                className={cn(
+                  'h-full min-h-0',
+                  detailOpen ? '[&_aside]:@max-[40rem]/md:hidden' : '[&_main]:@max-[40rem]/md:hidden'
+                )}
                 data-catalog-list={kind}
               >
                 <MasterDetail resizeId="capabilities-split" split="wide">

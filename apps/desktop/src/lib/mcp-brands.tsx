@@ -94,7 +94,7 @@ export const MCP_BRAND_ICONS: Record<string, McpBrand> = {
   // simple-icons dropped Slack's mark on a trademark request and the site's
   // favicon is a flat purple square that reads as a blank disc at chip size.
   // Tabler's outline pinwheel is the one recognisable Slack we can ship.
-  slack: { Icon: IconBrandSlack as ComponentType<SVGProps<SVGSVGElement>>, color: '#4A154B' },
+  slack: { Icon: IconBrandSlack as ComponentType<SVGProps<SVGSVGElement>>, color: '#4A154B', monochrome: true },
   spotify: { Icon: SiSpotify, color: '#1DB954' },
   square: { Icon: SiSquare, color: '#3E4348', monochrome: true },
   strava: { Icon: SiStrava, color: '#FC4C02' },

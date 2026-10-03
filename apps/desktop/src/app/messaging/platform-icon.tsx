@@ -12,6 +12,7 @@ import {
   SiWechat,
   SiWhatsapp
 } from '@icons-pack/react-simple-icons'
+import { IconBrandSlack } from '@tabler/icons-react'
 import type { ComponentPropsWithoutRef, ComponentType, SVGProps } from 'react'
 import { forwardRef, memo } from 'react'
 
@@ -48,16 +49,23 @@ interface PlatformIconSpec {
   Icon?: ComponentType<SVGProps<SVGSVGElement>>
   color: string
   kind: IconKind
+  monochrome?: boolean
   monogram?: string
 }
 
 const PLATFORM_ICONS: Record<string, PlatformIconSpec> = {
   telegram: { Icon: SiTelegram, color: '#26A5E4', kind: 'brand' },
   discord: { Icon: SiDiscord, color: '#5865F2', kind: 'brand' },
-  // Slack removed from Simple Icons by Salesforce request — letter monogram.
-  slack: { color: '#4A154B', kind: 'brand', monogram: 'S' },
+  // Slack left Simple Icons at Salesforce's request; the Tabler mark stands in. Its aubergine
+  // and Matrix's black vanish on a dark theme, so both draw in the text color over their tint.
+  slack: {
+    Icon: IconBrandSlack as ComponentType<SVGProps<SVGSVGElement>>,
+    color: '#4A154B',
+    kind: 'brand',
+    monochrome: true
+  },
   mattermost: { Icon: SiMattermost, color: '#0058CC', kind: 'brand' },
-  matrix: { Icon: SiMatrix, color: '#000000', kind: 'brand' },
+  matrix: { Icon: SiMatrix, color: '#000000', kind: 'brand', monochrome: true },
   signal: { Icon: SiSignal, color: '#3A76F0', kind: 'brand' },
   whatsapp: { Icon: SiWhatsapp, color: '#25D366', kind: 'brand' },
   bluebubbles: { Icon: SiApple, color: '#0BD318', kind: 'brand' },
