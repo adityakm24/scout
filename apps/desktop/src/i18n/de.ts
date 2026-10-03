@@ -4245,7 +4245,7 @@ export const deOverrides = {
     placeholderReconnecting: 'Verbindung zu Scout wird wiederhergestellt…',
     placeholderFollowUp: 'Folge senden',
     newSessionPlaceholders: [
-      'Was bauen wir?',
+      'Wobei kann ich helfen?',
       'Geben Sie Scout eine Aufgabe',
       'Was ist Ihnen wichtig?',
       'Beschreiben Sie, was Sie brauchen',

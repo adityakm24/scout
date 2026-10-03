@@ -3857,7 +3857,7 @@ export const en: Translations = {
     placeholderReconnecting: 'Reconnecting to Scout…',
     placeholderFollowUp: 'Send follow-up',
     newSessionPlaceholders: [
-      'What are we building?',
+      'What can I help with?',
       'Give Scout a task',
       "What's on your mind?",
       'Describe what you need',

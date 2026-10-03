@@ -2812,7 +2812,7 @@ export const zhHant = defineLocale({
     placeholderReconnecting: '正在重新連線至 Scout…',
     placeholderFollowUp: '傳送後續訊息',
     newSessionPlaceholders: [
-      '我們要建立什麼？',
+      '有什麼可以幫您？',
       '給 Scout 一個任務',
       '您在想什麼？',
       '描述您需要什麼',

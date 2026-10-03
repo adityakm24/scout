@@ -3432,7 +3432,7 @@ export const zh = defineLocale({
     placeholderReconnecting: '正在重新连接 Scout…',
     placeholderFollowUp: '发送后续消息',
     newSessionPlaceholders: [
-      '我们要构建什么？',
+      '有什么可以帮你？',
       '给 Scout 一个任务',
       '你在想什么？',
       '描述你需要什么',

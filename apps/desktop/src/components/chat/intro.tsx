@@ -1,4 +1,4 @@
-import { type CSSProperties, useState } from 'react'
+import { type CSSProperties, useRef, useState } from 'react'
 
 import { useI18n } from '@/i18n'
 import type { Translations } from '@/i18n/types'
@@ -6,6 +6,7 @@ import { capitalize, normalize } from '@/lib/text'
 
 import introCopyJsonl from './intro-copy.jsonl?raw'
 import { ScoutOrb } from './scout-orb'
+import { useIntroClearsComposer } from './use-intro-clearance'
 
 type IntroCopy = {
   headline: string
@@ -26,7 +27,7 @@ const NEUTRAL_PERSONALITIES = new Set(['', 'default', 'none', 'neutral'])
 const FALLBACK_COPY: IntroCopy[] = [
   {
     headline: 'What are we moving today?',
-    body: "Send a bug, branch, plan, or rough idea. I'll inspect the repo and turn it into the next concrete step."
+    body: "Send a question, an errand, or a rough plan. I'll look into it and turn it into the next concrete step."
   },
   {
     headline: "What's on your mind?",
@@ -121,20 +122,20 @@ function fallbackCopyForPersonality(personalityKey: string): IntroCopy[] {
 
   return [
     {
-      headline: `${label} mode is on. What should we work on?`,
-      body: "Send the task, file, or rough idea. I'll use your configured voice and keep the work grounded in this repo."
+      headline: `${label} mode is on. What can I help with?`,
+      body: "Send the task, the question, or a rough idea. I'll answer in the voice you've set."
     },
     {
       headline: `What does ${label} Scout need to see?`,
-      body: "Bring the context or the stuck part. I'll adapt to your configured personality."
+      body: "Bring the context or the part you're stuck on. I'll adapt to the personality you've set."
     },
     {
       headline: `${label} mode is ready.`,
-      body: "Send the problem, file, or idea. I'll follow the personality you've configured."
+      body: "Send the errand, the question, or the idea. I'll follow the personality you've set."
     },
     {
       headline: `What should ${label} Scout tackle?`,
-      body: "Drop the task here. I'll keep the work grounded in the repo."
+      body: "Drop the task here. I'll check with you before anything is sent or bought."
     },
     {
       headline: 'Where should we begin?',
@@ -190,6 +191,8 @@ export function Intro({ personality, seed }: IntroProps) {
     t.intro.stock[key] ?? (NEUTRAL_PERSONALITIES.has(key) ? t.intro.stock.none : t.intro.custom(personality || ''))
 
   const body = bodies?.[Math.abs(rotationSeed) % bodies.length] ?? copy.body
+  const contentRef = useRef<HTMLDivElement>(null)
+  useIntroClearsComposer(contentRef)
 
   return (
     <div
@@ -197,7 +200,10 @@ export function Intro({ personality, seed }: IntroProps) {
       data-slot="aui_intro"
     >
       <div aria-hidden="true" className="scout-horizon" />
-      <div className="relative flex w-full min-w-0 flex-col items-center">
+      <div
+        className="relative flex w-full min-w-0 origin-bottom flex-col items-center transition-[translate,scale] duration-300 ease-out"
+        ref={contentRef}
+      >
         <ScoutOrb className="scout-rise mb-8" style={rise(0)} />
         <h1 className="scout-greeting scout-rise m-0" style={rise(1)}>
           {t.intro.greeting[part]}

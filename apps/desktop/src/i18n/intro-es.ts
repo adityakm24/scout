@@ -5,116 +5,116 @@ export const introEs: Translations['intro'] = {
   greeting: { morning: 'Buenos días', afternoon: 'Buenas tardes', evening: 'Buenas noches', night: '¿Trasnochando?' },
   stock: {
     helpful: [
-      'Pídeme que abra un repositorio, ejecute las pruebas, corrija un bug o redacte un PR. Te acompaño paso a paso.',
-      'Indícame un archivo, pega un error o describe lo que estás construyendo. Yo me encargo desde ahí.',
-      'Prueba: revisa mi diff, ejecuta la suite de pruebas o explica esta función. Pregunta lo que quieras sobre tu código.',
-      'Puedo editar archivos, ejecutar comandos, buscar en la web y ayudarte con bugs complicados. Solo describe la tarea.',
-      'Comparte la ruta de un repositorio o una pregunta para empezar. Respondo con claridad y enlazo los archivos que toco.'
+      'Pídeme que revise tu correo, planifique tu día o pida la compra. Te pregunto antes de enviar o comprar nada.',
+      'Cuéntame qué tienes pendiente: un correo que responder, un recordatorio, algo que buscar. Yo me encargo.',
+      'Prueba: qué tengo mañana en el calendario, resume mis correos sin leer o recuérdame llamar a mamá a las 6.',
+      'Leo y redacto correos, gestiono tu calendario y tus tareas, busco en la web y vigilo lo importante por ti.',
+      'Pregúntame lo que sea para empezar. Respondo claro y recuerdo lo que te importa.'
     ],
     concise: [
-      'Describe la tarea. Yo la hago.',
-      'Pega código, errores o un objetivo. Respuestas cortas, cambios rápidos.',
-      'Pregunta. Leo archivos, ejecuto pruebas, entrego parches. Sin relleno.',
+      'Di lo que necesitas. Lo hago.',
+      'Una pregunta, una tarea, un recordatorio. Respuestas cortas, sin rodeos.',
+      'Correo, calendario, compra, búsqueda. Pide. Sin relleno.',
       'Una línea basta. Solo me extiendo cuando importa.',
-      'Comando, pregunta o ruta de archivo. Yo me encargo del resto.'
+      'Pregunta, recado o recordatorio. Yo me encargo del resto.'
     ],
     technical: [
-      'Indica la ruta del repositorio, la prueba que falla o el stack trace. Herramientas: fs, git, exec, search, patch, http.',
-      'Envía un prompt para lanzar llamadas a herramientas. Admite ediciones en varios archivos, ejecución de pruebas, operaciones de git y consultas web.',
-      'Introduce la tarea. Planifico, llamo a herramientas y verifico la salida. Los registros se muestran en línea; los diffs se devuelven antes de aplicarse.',
-      'Acepta lenguaje natural o comandos estructurados. Flujo típico: leer -> planificar -> parchear -> probar -> informar.',
-      'sistema de archivos, terminal, git, navegador, búsqueda. Describe el cambio; devuelvo diffs y la salida de las pruebas.'
+      'Conectado: Gmail, Calendar, Drive, tareas, búsqueda web. Indica una tarea; planifico, actúo e informo.',
+      'Envía una petición para activar herramientas. Las lecturas van libres; envíos, reservas y pedidos esperan tu aprobación.',
+      'Escribe una tarea. Reúno contexto, actúo y verifico el resultado. Cada acción saliente se muestra antes de ejecutarse.',
+      'Lenguaje natural de entrada, resultados de salida. Flujo típico: entender -> buscar -> redactar -> confirmar -> hacer.',
+      'correo, calendario, drive, tareas, búsqueda, compras. Describe el resultado; lo entrego con fuentes.'
     ],
     creative: [
-      '¿Qué construimos? Pega una idea, una función medio rota o un sueño. Le daré forma.',
-      'Dame una chispa (una función, una refactorización, un prototipo loco) y la convertiré en código que funcione.',
-      'Describe lo que todavía no existe. Reuniré pruebas, archivos y API en un borrador funcional.',
-      'Trae una intención, no una especificación. Prototipamos rápido, pulimos después y reescribimos el mundo en los márgenes.',
-      'Cuéntame qué persigues. Remezclo ejemplos, adapto fragmentos y dejo un commit ordenado.'
+      '¿Qué hacemos con el día de hoy? Lánzame un plan, una idea a medias o un deseo. Yo le doy forma.',
+      'Dame una chispa – un viaje, una cena, una idea de regalo – y la convierto en un plan que puedas seguir.',
+      'Describe el día que quieres. Junto tu calendario, tu correo y tus tareas en un borrador que funcione.',
+      'Trae una intención, no un horario. Bocetamos rápido, refinamos después y dejamos sitio a las sorpresas.',
+      'Cuéntame qué persigues. Reúno ideas, redacto las palabras y ato los cabos sueltos.'
     ],
     teacher: [
-      'Pregunta por cualquier archivo, concepto o error. Te explico el porqué, no solo la solución, y muestro un ejemplo resuelto.',
-      'Pega código para revisar, un bug para depurar o un concepto para desgranar. Te guío paso a paso.',
-      'Comparte el problema. Lo divido en partes, explico cada una y te dejo listo para resolver el siguiente por tu cuenta.',
-      'Leeremos el código juntos, encontraremos la causa raíz y construiremos un modelo mental que puedas reutilizar.',
-      'Di el tema o pega el fragmento. Habrá explicaciones, diagramas en prosa y ejercicios de práctica.'
+      'Pregunta sobre lo que te despierte curiosidad. Explico el porqué, no solo la respuesta, con un ejemplo.',
+      'Nombra un tema, una palabra o una pregunta que te ronde. Te guío paso a paso.',
+      'Comparte el problema. Lo divido en partes, explico cada una y podrás resolver el siguiente solo.',
+      'Lo miramos juntos, encontramos el fondo y construimos un entendimiento que puedas reutilizar.',
+      'Nombra el tema. Espera explicaciones claras, ejemplos y alguna pregunta para comprobar.'
     ],
     kawaii: [
-      'pega un bug o una ruta de archivo y lo arreglo con muchísimo cuidado. pruebas, diffs, PR, ¡todo con cariño extra! *brillitos*',
-      '¡cuéntame qué estás haciendo! me encantan las refactorizaciones, las utilidades pequeñitas y los repos grandes y aterradores (>w<)',
-      'suelta un error, un objetivo o una carpeta entera. ¡lo ordeno con mucho amor y un mensaje de commit bien limpio!',
-      '¡una tarea a la vez, bien hecha! puedo ejecutar pruebas, parchear archivos y hacer que tu repo vuelva a ser acogedor <3',
-      '¡saluda o pega un stack trace! ninguna tarea es demasiado pequeña ni ningún repo demasiado enredado. ¡lo desenredamos juntos!'
+      '¡dime qué necesitas y me encargo con mucho cariño! correos, recordatorios, meriendas – ¡todo con amor extra! *brillitos*',
+      '¡cuéntame tu día! me encantan los recordatorios pequeñitos, los buzones ordenados y los planes grandes (>w<)',
+      'dame una tarea, un deseo o toda una lista. ¡lo ordeno con mucho amor y te pregunto antes!',
+      '¡una tarea cada vez, bien hecha! respondo tus correos, planifico tu semana y pido tu compra <3',
+      '¡saluda o pregúntame lo que sea! ninguna tarea es pequeña, ningún buzón es un desastre. ¡lo ordenamos juntos!'
     ],
     catgirl: [
-      'pega un archivo, dale un zarpazo a un bug o lánzame un repo. salto sobre las pruebas que fallan y dejo diffs limpios, nyan~',
-      'describe la tarea. parcheo, pruebo y ronroneo sobre tu PR. ¡cuidado, que mordisqueo los imports sin usar!',
-      'dame un objetivo y lo persigo por todo el código. lecturas, ediciones, ejecuciones, con la cola inquieta.',
-      'pega un error o un plan. depuro como cazo: en silencio, a fondo y con algún arrebato de carreras.',
-      'di la palabra y leo tus archivos, ejecuto tus pruebas y me acurruco en tu rama con un commit ordenado.'
+      'lánzame una tarea, toca tu buzón con la patita o pide un snack. salto encima y te aviso, nyan~',
+      'dime la tarea. reviso tu calendario y ronroneo sobre tus planes. ¡cuidado – muerdo las tareas atrasadas!',
+      'dame un objetivo y lo persigo. leer, redactar, recordar – con la colita moviéndose.',
+      'pregúntame lo que sea. busco respuestas como cazo: en silencio, a fondo, con algún sprint de vez en cuando.',
+      'di la palabra y ordeno tu buzón, pongo tus recordatorios y me hago una bolita cuando todo esté listo.'
     ],
     pirate: [
-      'Nombra tu presa (un bug, una función, una prueba maldita) y la daré caza, grumete. Diffs como botín.',
-      'Enséñame las cartas (el código) y remendaré el casco, dispararé los cañones (las pruebas) e izaré un PR limpio.',
-      'Pega un error o un plan, perro sarnoso. Navegaré el stack trace y volveré con el tesoro: pruebas en verde.',
-      'Dime dónde marca la X. Leo, edito y hago commit con la disciplina de una tripulación de verdad, arrr.',
-      'Lánzame un bug, la ruta de un repo o una idea loca. Saquearé la documentación y volveré con código que funciona.'
+      'Nombra tu presa – un correo, un recado, una tarea maldita – y la cazo, grumete.',
+      'Enséñame la carta náutica (tu calendario) y trazo el rumbo, disparo las respuestas y te mantengo a tiempo.',
+      'Da tus órdenes, marinero de agua dulce. Navego por el buzón y traigo el tesoro: respuestas.',
+      'Dime dónde la X marca el sitio. Busco, redacto y consulto al capitán antes de que nada salga del puerto, arrr.',
+      'Lánzame una pregunta, un recado o una idea loca. Saqueo la web y vuelvo con el botín.'
     ],
     shakespeare: [
-      'Declara tu bug, tu archivo, tu fatigada prueba, y yo lo sanaré con mano erudita y diff honesto.',
-      'Nombra el código que te aflige. Leeré, revisaré y entregaré un parche de lo más bello y limpio.',
-      'Presenta tu stack trace o tu sueño. Recorreré archivos, ejecutaré pruebas y daré cuenta en el más llano verso.',
-      'Describe tu propósito, noble dama o caballero. Tus ramas serán podadas y tus bugs desterrados del reino.',
-      'Una línea de intención basta. Leo, edito, hago commit, y dejo tu historial sin mácula.'
+      'Di tu encargo, tu carta, tu lista cansada, y la atenderé con mano de erudito.',
+      'Nombra el asunto que te aflige. Leo, sopeso y doy consejo de lo más justo.',
+      'Presenta tus cartas o tus sueños. Leeré tu correo, cuidaré tus días e informaré en verso llano.',
+      'Describe tu meta, noble señor o señora. Tus horas serán ordenadas, tus cuitas desterradas del reino.',
+      'Una línea de intención basta. Leo, redacto, pido tu venia – y dejo tus asuntos en orden.'
     ],
     surfer: [
-      'Suelta un archivo, un bug, un stack trace bien bravo: lo surfeo. Diffs limpios, pruebas en verde, cero revolcones.',
-      'Pega la ruta de tu repo o el bug que te tiene de bajón. Remamos, lo arreglamos y salimos. Tranqui.',
-      'Dime el rollo: función, refactorización, hotfix. Ejecuto las pruebas, entrego el parche y todo en calma, tío.',
-      '¿Bug grande? ¿Errata pequeña? ¿Reescritura completa? Solo señala. Yo me encargo del código; tú disfruta de los commits.',
-      'Di la tarea y allá vamos. Leo, edito, pruebo y dejo un commit más suave que una sesión al amanecer.'
+      'Suelta una tarea, un correo, una lista bestial – la surfeo. Días tranquilos, cero revolcones.',
+      'Dime qué te tiene bajón. Remamos, lo arreglamos, volvemos. Fácil.',
+      'Dime el rollo: recados, planes, una pregunta rápida. Me encargo y me lo tomo con calma, bro.',
+      '¿Plan grande? ¿Recordatorio pequeño? ¿Semana entera por ordenar? Solo señala. Yo lo hago; tú relájate.',
+      'Di la tarea y nos vamos. Reviso, redacto y ordeno todo más suave que una sesión al amanecer.'
     ],
     noir: [
-      'Dime qué está roto. Leeré los archivos, buscaré huellas y dejaré un diff en el escritorio antes del amanecer.',
-      'Tú tienes un bug. Yo tengo paciencia y un terminal. Dime el caso y lo trabajaré hasta que hable.',
-      'Pega el stack trace, el archivo sospechoso, la coartada. Leo entre líneas y vuelvo con la verdad.',
-      'Todo bug deja un rastro. Dame el repo y una pista: la seguiré, lo parchearé y cerraré el expediente.',
-      'Una errata, un segfault, toda una arquitectura podrida: dame las llaves. Volveré con pruebas limpias.'
+      'Dime qué hay que hacer. Leo el correo, busco pistas y dejo un resumen en el escritorio antes del amanecer.',
+      'Tienes cabos sueltos. Yo tengo paciencia y una libreta. Nombra el caso y lo trabajo.',
+      'Dame la pregunta, el nombre, la fecha. Leo entre líneas y vuelvo con la verdad.',
+      'Cada recado deja un rastro. Dame una pista: la sigo, lo cierro y archivo el caso.',
+      'Un recordatorio, una respuesta, toda una semana revuelta – dame las llaves. Traigo orden.'
     ],
     uwu: [
-      'pega un awchivo con bugs o un objetivo~ weo, pawcheo y pwuebo, con huewwitas en ew diff owo',
-      'dime wa tawea, aunque sea pequeñita~ te pwometo commits wimpios y wefactowizaciones suaves, nyuu~',
-      '¡suewta aquí tu mensaje de ewwow! encuentwo aw cuwpabwe, wo awweglo y dejo una suite de pwuebas feliz owo',
-      'dame wa wuta de un wepo o un bug y me encawgo uwu. gww aw código mawo, amabwe contigo~',
-      'puedo ejecutaw pwuebas, editaw awchivos y abwiw PW de po-favow-míwawo. sowo di wa pawabwa, amiguito uwu'
+      'dime qué necesitas~ weviso tu cowweo, pongo wecowdatowios y wo dejo todo owdenado owo',
+      'dime wa tawea, aunque sea pequeñita~ pwometo pweguntar antes de enviaw nada, nyuu~',
+      '¡suewta tu pwegunta aquí! encuentwo wa wespuesta y wa twaigo con un wesumen feliz owo',
+      'dame un wecado o un pwan y me encawgo uwu. dulce contigo, sevewo con tu buzón~',
+      'puedo weew cowweos, pwanificaw tu día y pediw tu compwa. solo di wa pawabwa, amigo uwu'
     ],
     philosopher: [
-      '¿Qué problema tienes delante? Descríbelo y examinaremos su forma, su causa y su solución.',
-      'Todo bug es una pregunta disfrazada. Comparte la tuya; leeré, razonaré y devolveré una respuesta, y un parche.',
-      '¿Qué deseas construir o comprender? Razonaré desde los primeros principios, editaré y lo verificaré con pruebas.',
-      'Describe el fin que buscas. Lo persigo a través de archivos, pruebas y documentación, e informo de lo que encuentro por el camino.',
-      'Comparte una ruta, un enigma o un principio. Seguiré la lógica, propondré un cambio y justificaré cada edición.'
+      '¿Qué asunto tienes delante? Descríbelo y examinaremos su forma, su causa y su remedio.',
+      'Cada recado es una pregunta disfrazada. Comparte el tuyo; lo razono y vuelvo con una respuesta.',
+      '¿Qué deseas hacer o entender? Razono desde los principios y actúo solo con tu consentimiento.',
+      'Describe el fin que buscas. Lo persigo por el correo, el calendario y la web, e informo de lo que encuentro.',
+      'Comparte una pregunta, un acertijo o un plan. Sigo la lógica, propongo un camino y justifico cada paso.'
     ],
     hype: [
-      'Pega ese bug, ese repo, esa idea de función loquísima: ESTOY A TOPE. Diffs limpios. Pruebas en verde. YA MISMO.',
-      'Suelta tu tarea y mírame darlo todo. Archivos leídos, pruebas ejecutadas, PR abiertos: hoy NO perdemos, amigo.',
-      'Trae el bug más retorcido que tengas. Leo, parcheo, pruebo y hago commit como si me fuera la vida en ello. VAMOS.',
-      'Describe la tarea. Arraso con los archivos, aplasto las pruebas que fallan y dejo un commit que LO PETA. Venga, venga, venga.',
-      'Errata diminuta o refactorización enorme, da igual. Hoy entrego código limpio. Di la tarea y a TRABAJAR.'
+      'Suelta el buzón, el recado, el plan loco – ESTOY A TOPE. Bien hecho. YA MISMO.',
+      'Suelta tu tarea y mírame cocinar. Correos respondidos, planes hechos, compra pedida – hoy NO perdemos.',
+      'Trae la lista de tareas más grande que tengas. La ordeno como si me fuera la vida. ¡VAMOS!',
+      'Describe la tarea. Arraso el buzón, aplasto las tareas y te dejo un día que LA ROMPE.',
+      'Recordatorio pequeño o plan enorme – da igual. Hoy se hace. Dilo y a TRABAJAR.'
     ],
     none: [
-      'Haz una pregunta, pega un error o indícame un repositorio. Puedo leer código, usar herramientas y ayudarte a entregar.',
-      'Describe la tarea con tus palabras. Elegiré las herramientas adecuadas, explicaré mi plan y te consultaré antes de los pasos arriesgados.',
-      'Suelta una ruta de archivo, un traceback o una idea en bruto. Investigaré, sugeriré los siguientes pasos y lo mantendré todo reversible.',
-      'Busca en el repositorio, edita archivos, ejecuta pruebas, abre PR. Dime el objetivo y yo me ocupo de la parte mecánica.',
-      'Escribe una tarea, una pregunta o un fragmento. Recuerdo la sesión, cito mis fuentes y me detengo a preguntar cuando tengo dudas.'
+      'Haz una pregunta, encárgame un recado o cuéntame qué tienes en mente. Yo me ocupo de los detalles.',
+      'Descríbelo con tus palabras. Busco lo que necesito, te explico mi plan y te pregunto antes de enviar o comprar nada.',
+      'Un correo que responder, un día que planificar, una compra que pedir. Busco y te propongo el siguiente paso.',
+      'Leer y redactar correos, gestionar tu calendario y tus tareas, buscar en la web. Dime el objetivo y me encargo del trabajo pesado.',
+      'Escribe una tarea o una pregunta. Recuerdo lo que te importa, cito mis fuentes y pregunto cuando tengo dudas.'
     ]
   },
   custom: label => [
-    'Envía la tarea, el archivo o la idea en bruto. Usaré la voz que configuraste y mantendré el trabajo ligado a este repositorio.',
-    'Trae el contexto o la parte en la que te atascaste. Me adaptaré a la personalidad que configuraste.',
-    'Envía el problema, el archivo o la idea. Seguiré la personalidad que configuraste.',
-    'Deja la tarea aquí. Mantendré el trabajo ligado al repositorio.',
+    'Envía la tarea, la pregunta o una idea en bruto. Respondo con la voz que elegiste.',
+    'Trae el contexto o la parte en la que te atascaste. Me adapto a la personalidad que elegiste.',
+    'Envía el recado, la pregunta o la idea. Sigo la personalidad que elegiste.',
+    'Deja la tarea aquí. Te pregunto antes de enviar o comprar nada.',
     `Dame el contexto y responderé en modo ${label}.`
   ]
 }

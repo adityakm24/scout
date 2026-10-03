@@ -4230,7 +4230,7 @@ export const esOverrides = {
     placeholderReconnecting: 'Reconectando con Scout…',
     placeholderFollowUp: 'Enviar seguimiento',
     newSessionPlaceholders: [
-      '¿Qué vamos a construir?',
+      '¿En qué te ayudo?',
       'Dale una tarea a Scout',
       '¿Qué tienes en mente?',
       'Describe lo que necesitas',

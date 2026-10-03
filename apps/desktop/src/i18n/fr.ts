@@ -4251,7 +4251,7 @@ export const frOverrides = {
     placeholderReconnecting: 'Reconnexion à Scout…',
     placeholderFollowUp: 'Envoyer un suivi',
     newSessionPlaceholders: [
-      'Sur quoi travaillons-spaceshipresearch ?',
+      'Sur quoi travaillons-nous ?',
       'Donnez une tâche à Scout',
       "Qu'avez-vous en tête ?",
       'Décrivez ce dont vous avez besoin',
@@ -4814,7 +4814,7 @@ export const frOverrides = {
       'Passez au profil de configuration et ouvrez Bienvenue dans Scout lorsque vous avez besoin d’aide. La conversation y reste disponible.'
   },
   guidedGreeting: {
-    line: "Salut, entrez ! Je suis Scout. Donnez-moi deux minutes pour préparer les lieux à votre façon, puis spaceshipresearch spaceshipresearch attaquerons à quelque chose que vous voulez vraiment accomplir.\n\nMais d'abord, comment dois-je vous appeler ?",
+    line: "Salut, entrez ! Je suis Scout. Donnez-moi deux minutes pour préparer les lieux à votre façon, puis nous nous attaquerons à quelque chose que vous voulez vraiment accomplir.\n\nMais d'abord, comment dois-je vous appeler ?",
     nameSuggestion: name => `(Je peux aussi simplement vous appeler ${name}, si vous préférez.)`
   },
   install: {

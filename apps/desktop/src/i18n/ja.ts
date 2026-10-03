@@ -2598,7 +2598,7 @@ export const ja = defineLocale({
     placeholderReconnecting: 'Scout に再接続中…',
     placeholderFollowUp: 'フォローアップを送信',
     newSessionPlaceholders: [
-      '何を作りますか？',
+      'どんなお手伝いをしましょう？',
       'Scout にタスクを与える',
       '何か考えていることはありますか？',
       '必要なことを説明してください',
