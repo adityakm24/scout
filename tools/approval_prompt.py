@@ -283,12 +283,15 @@ def _consent(choice, unresolved: str) -> str:
 
 def request_elicitation_consent(message: str, description: str, *,
                                 timeout_seconds: int | None = None,
-                                surface: str = "mcp-elicitation", title: str = "Confirm this action?") -> str:
+                                surface: str = "mcp-elicitation", title: str = "Confirm this action?",
+                                payload_extra: dict | None = None) -> str:
     """Route an MCP elicitation request to the surface owning the active session:
     gateway sessions through ``_await_gateway_decision``, CLI/TUI through
     ``prompt_dangerous_approval``. Always fails closed: a missing notify_cb in a
     gateway session, timeouts, and exceptions map to ``"decline"`` so a server
     treats them as "user did not approve" rather than retrying or hanging.
+    ``payload_extra`` rides along to a gateway client's card (the order card's ``order`` summary
+    and its ``choices``); the CLI prompt shows *message* only.
     Returns ``"accept" | "decline" | "cancel"``."""
     from tools import approval as _a
     try:
@@ -316,7 +319,8 @@ def request_elicitation_consent(message: str, description: str, *,
             decision = _gw._await_gateway_decision(
                 session_key, notify_cb, {"command": message, "description": description,
                                          "pattern_key": "mcp_elicitation",
-                                         "pattern_keys": ["mcp_elicitation"]}, surface=surface)
+                                         "pattern_keys": ["mcp_elicitation"], **(payload_extra or {})},
+                surface=surface)
         except Exception as exc:
             logger.error("Elicitation gateway dispatch failed: %s", exc, exc_info=True)
             return "decline"

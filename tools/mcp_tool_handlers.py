@@ -557,8 +557,12 @@ def _make_tool_handler(server_name: str, tool_name: str, tool_timeout: float):
     op = f"tools/call {tool_name}"
 
     def _handler(args: dict, **kwargs) -> str:
-        # Security boundary: untrusted-server write tools need approval before ANY transport work (incl. lazy spawn).
-        error = _trust_gate_check(server_name, tool_name) or _check_circuit_breaker(server_name)
+        # Security boundary: untrusted-server write tools need approval before ANY transport work (incl. lazy spawn);
+        # a call that spends the user's money waits for them to approve that order (tools/mcp_tool_spending.py).
+        from tools.mcp_tool_spending import spending_gate_check  # lazy: it builds the card through this module
+
+        error = (_trust_gate_check(server_name, tool_name) or _check_circuit_breaker(server_name)
+                 or spending_gate_check(server_name, tool_name, args, tool_timeout))
         if error is not None:
             return error
         server, error = _acquire_call_server(server_name, tool_timeout)

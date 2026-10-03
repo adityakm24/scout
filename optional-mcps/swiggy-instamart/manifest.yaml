@@ -40,3 +40,10 @@ post_install: |
   the same machine as Scout. Restart the session so tools load.
 
   Orders are placed on your real Swiggy account (cash on delivery).
+
+# checkout places the order and charges the user (confirm_order only completes an order already paid
+# by UPI). Each checkout stops at an order card the user approves, filled from get_cart.
+spending:
+  tools:
+    checkout: null
+  preview: get_cart

@@ -10,6 +10,7 @@ import { readActiveTerminal } from '@/app/right-sidebar/terminal/buffer'
 import { pendingClarifyToolPayload } from '@/app/session/hooks/use-session-actions/restore-pending-clarify'
 import { translateNow } from '@/i18n'
 import { restorePendingClarifyToolCall } from '@/lib/chat-messages'
+import { parseOrderSummary } from '@/lib/order-summary'
 import type { PreviewActAction } from '@/lib/preview-act/act-in-page'
 import type { TourAction, TourStep } from '@/lib/tour'
 import { normalizeChoices, normalizeQuestions, setClarifyRequest, warnDroppedChoices } from '@/store/clarify'
@@ -323,6 +324,7 @@ const approval: Handler = ctx => {
       : undefined,
     command,
     description,
+    order: parseOrderSummary(p.order),
     // The approval queue's own id — `approval.pending` / `approval.received` / `approval.respond` key on it.
     requestId: str(p.request_id) || undefined,
     serverRequestId: request.id,

@@ -91,6 +91,29 @@ class ToolsSpec:
 
 
 @dataclass
+class SpendingSpec:
+    """Tools that spend the user's money or commit them (an order, a booking). Every call to one
+    stops at an order card the user approves (tools/mcp_tool_spending.py), whatever the approval
+    mode, and is refused in unattended runs.
+
+    ``tools`` maps tool name -> how the user pays ("Cash on delivery"; "" when the call says).
+    ``commit_flag``: a call commits only when this argument is true; others are free previews
+    (Zepto's ``confirmOrder``). ``preview``: a read-only tool whose result fills the card
+    (``view_cart``). ``price_unit``: ``paise`` when the preview's prices are minor units.
+    ``label``: the approve button ("Approve & Pay", "Book table"). ``merchant``: the name on the
+    card (default: the manifest description's lead, "Zepto"). The same block may sit under a
+    server in ``mcp_servers`` for a merchant MCP that is not in the catalog.
+    """
+
+    tools: Dict[str, str]
+    commit_flag: Optional[str] = None
+    preview: Optional[str] = None
+    price_unit: str = "rupees"
+    label: str = "Approve & Pay"
+    merchant: Optional[str] = None
+
+
+@dataclass
 class SuggestSpec:
     """Composer-suggestion metadata (desktop "brand pill" triggers).
 
@@ -117,6 +140,7 @@ class CatalogEntry:
     install: Optional[InstallSpec] = None
     post_install: str = ""
     suggest: Optional[SuggestSpec] = None
+    spending: Optional[SpendingSpec] = None
     manifest_path: Path = field(default_factory=Path)
 
 
@@ -231,6 +255,30 @@ def _parse_tools(path: Path, raw: Any) -> ToolsSpec:
     return ToolsSpec(default_enabled=default_enabled, default_excluded=default_excluded)
 
 
+def parse_spending(path: Any, raw: Any) -> Optional[SpendingSpec]:
+    """A ``spending:`` block (manifest or ``mcp_servers.<name>``); CatalogError when malformed."""
+    return _parse_spending(Path(str(path)), raw)
+
+
+def _parse_spending(path: Path, raw: Any) -> Optional[SpendingSpec]:
+    if raw is None:
+        return None
+    spending = _require_mapping(path, "spending", raw)
+    tools = _require_mapping(path, "spending.tools", spending.get("tools"))
+    if not tools or not all(isinstance(k, str) and isinstance(v, (str, type(None))) for k, v in tools.items()):
+        raise CatalogError(f"{path}: spending.tools must map tool names to a payment label (or null)")
+    price_unit = spending.get("price_unit", "rupees")
+    if price_unit not in ("rupees", "paise"):
+        raise CatalogError(f"{path}: spending.price_unit must be 'rupees' or 'paise'")
+    for key in ("commit_flag", "preview", "label", "merchant"):
+        if spending.get(key) is not None and not isinstance(spending.get(key), str):
+            raise CatalogError(f"{path}: spending.{key} must be a string")
+    return SpendingSpec(
+        tools={name: str(how or "") for name, how in tools.items()}, commit_flag=spending.get("commit_flag"),
+        preview=spending.get("preview"), price_unit=price_unit, label=spending.get("label") or "Approve & Pay",
+        merchant=spending.get("merchant"))
+
+
 def _parse_suggest(path: Path, suggest_raw: Any) -> Optional[SuggestSpec]:
     if suggest_raw is None:
         return None
@@ -313,10 +361,11 @@ def _parse_manifest(path: Path) -> CatalogEntry:
     suggest = _parse_suggest(path, data.get("suggest"))
     connector_slug = _parse_connector_slug(path, data.get("connector_slug"))
     install = _parse_install(path, data.get("install"))
+    spending = _parse_spending(path, data.get("spending"))
     return CatalogEntry(
         name=name, description=description, source=str(data.get("source") or "").strip(),
         transport=transport, auth=auth, connector_slug=connector_slug, tools=tools, install=install,
-        post_install=str(data.get("post_install") or ""), suggest=suggest, manifest_path=path,
+        post_install=str(data.get("post_install") or ""), suggest=suggest, spending=spending, manifest_path=path,
     )
 
 

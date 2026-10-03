@@ -303,6 +303,33 @@ rejected), and Scout's bundled `github/*` skills driving the `gh` CLI are a
 more capable integration. On Desktop, GitHub mentions instead offer the
 `github-auth` skill when `gh` isn't signed in yet.
 
+### Order cards for tools that spend money (`spending:`)
+
+A manifest can name the tools that spend the user's money or commit them — placing an order,
+booking a table. Every call to one stops before it reaches the server: Scout reads the basket with
+a read-only `preview` tool and shows the user an **order card** (items, total, payment, the call's
+own details) with one **Approve & Pay** button. The order goes through only if they press it.
+This holds in every approval mode (the smart approver never decides it), nothing is remembered
+between orders, and a cron or other unattended run cannot place an order at all.
+
+```yaml
+spending:
+  tools:                          # tool name -> how the user pays (null when the call says)
+    create_order: Cash on delivery
+    create_online_payment_order: Online payment
+  commit_flag: confirmOrder       # optional: only calls with this argument true commit;
+                                  # calls without it are the vendor's own free previews
+  preview: view_cart              # optional: read-only tool whose result fills the card
+  price_unit: paise               # rupees (default) | paise
+  label: Approve & Pay            # the button ("Book table" for a reservation)
+```
+
+Zepto, Swiggy Instamart, Swiggy Food and Swiggy Dineout ship with these blocks. A merchant MCP
+that is not in the catalog can carry the same block under its own entry in `mcp_servers`
+(`mcp_servers.<name>.spending`), with an optional `merchant:` name for the card. In the desktop
+app, the card's pay button deliberately does not respond to the Enter shortcut that runs
+commands; Escape cancels.
+
 ## Two kinds of MCP servers
 
 ### Stdio servers

@@ -32,8 +32,8 @@ The following is the complete skill definition that Scout loads when this skill 
 # Swiggy Instamart Skill
 
 Search Instamart, build a cart and place real grocery orders on the user's Swiggy account through
-the `swiggy-instamart` MCP connector. Swiggy orders cannot be cancelled once placed, so the
-address, items and total are always confirmed first.
+the `swiggy-instamart` MCP connector. Swiggy orders cannot be cancelled once placed, so Scout
+shows the user each order on a card they must approve before it is placed.
 
 ## When to Use
 
@@ -70,17 +70,19 @@ codebase or on disk, so never use `search_files` or `terminal` to look for them.
 3. **Build the cart** with `update_cart`, then read it back with `get_cart`.
 4. **Report honestly.** The cart belongs to the user's Swiggy session for Scout. Say it is ready
    to order, and do not claim it is visible in the Swiggy app.
-5. **Confirm before ordering.** Show the items, total, delivery address and payment option from
-   `get_payment_options` (Swiggy currently supports cash on delivery only). Remind the user that
-   the order cannot be cancelled. Wait for an explicit yes.
-6. **Place the order** with `checkout` and `confirm_order`, then report the order and ETA from
-   `track_order`.
+5. **Choose how to pay** with `get_payment_options` (Swiggy currently supports cash on delivery
+   only), and remind the user the order cannot be cancelled.
+6. **Place the order** with `checkout`. Scout stops that call and shows the user an order card
+   built from `get_cart` (the basket, the bill, the payment); the order is placed only if they
+   press Approve & Pay. Do not also ask for a yes in chat — the card is the confirmation. If the
+   result says they did not approve, nothing was ordered; don't retry unless they ask. After a
+   UPI payment, finish with `confirm_order`. Report the order and ETA from `track_order`.
 
 ## Pitfalls
 
 - Swiggy asks users not to have the Swiggy app open while ordering through the connector; the
   two sessions can conflict. Mention it if an order step fails unexpectedly.
-- Never place an order, or retry a failed one, without a fresh confirmation.
+- Never retry an order the user cancelled on the order card, or one that failed, unless they ask.
 - If a tool keeps failing, use `report_error` and tell the user, rather than looping.
 
 ## Verification

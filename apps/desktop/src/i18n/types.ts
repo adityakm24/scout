@@ -4453,6 +4453,15 @@ export interface Translations {
       alwaysTitle: string
       alwaysDescription: (pattern: string) => string
       alwaysAllow: string
+      order: {
+        title: (merchant: string) => string
+        subtitle: string
+        total: string
+        itemsTotal: string
+        feesNote: string
+        basketNotLoaded: string
+        cancel: string
+      }
     }
     clarify: {
       notReady: string

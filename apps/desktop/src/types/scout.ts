@@ -774,6 +774,8 @@ export interface SessionResumeResult {
     description?: string
     request_id?: string
     smart_denied?: boolean
+    // The order card's summary when the approval is a purchase (lib/order-summary.ts).
+    order?: unknown
   }
   // Server→client requests still unanswered for this session (clarify, sudo,
   // vault prompts, …). The shared channel re-delivers them to the request

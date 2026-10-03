@@ -23,6 +23,7 @@ import {
 import { markReasoningEffortPending } from '@/lib/chat-runtime'
 import { isMissingRpcMethod } from '@/lib/gateway-rpc'
 import { recoverInFlightTurnJournal } from '@/lib/inflight-turn-journal'
+import { parseOrderSummary } from '@/lib/order-summary'
 import { latestSessionTodoSnapshot } from '@/lib/todos'
 import { setSessionYolo } from '@/lib/yolo-session'
 import {
@@ -441,6 +442,7 @@ function restorePendingApproval(response: SessionResumeResult, sessionId: string
     choices: pending.choices,
     command: pending.command ?? '',
     description: pending.description ?? 'dangerous command',
+    order: parseOrderSummary(pending.order),
     requestId: typeof pending.request_id === 'string' ? pending.request_id : undefined,
     sessionId,
     smartDenied: pending.smart_denied === true

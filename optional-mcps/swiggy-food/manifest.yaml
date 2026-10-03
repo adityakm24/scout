@@ -41,3 +41,10 @@ post_install: |
   the same machine as Scout. Restart the session so tools load.
 
   Orders are placed on your real Swiggy account (cash on delivery).
+
+# place_food_order places the order (confirm_order only completes one already paid by UPI). Each
+# call stops at an order card the user approves, filled from get_food_cart.
+spending:
+  tools:
+    place_food_order: null
+  preview: get_food_cart

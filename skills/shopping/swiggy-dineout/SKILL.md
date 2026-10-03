@@ -16,7 +16,7 @@ metadata:
 
 Find restaurants, check open slots and book tables on the user's Swiggy account through the
 `swiggy-dineout` MCP connector. The connector supports free bookings only. A booking is a real
-reservation, so the restaurant, date, time and party size are confirmed first.
+reservation, so Scout shows the user each booking on a card they must approve before it is made.
 
 ## When to Use
 
@@ -42,16 +42,18 @@ Never use `search_files` or `terminal` to look for them.
 2. **Search** for restaurants and show a few with cuisine, rating and price for two.
 3. **Check slots** for the chosen restaurant on that date and offer the closest times as `clarify`
    `choices`.
-4. **Confirm before booking.** Show the restaurant, date, time and party size. Booking is free
-   only; if the slot needs a paid deal or deposit, say that it cannot be booked here. Wait for an
-   explicit yes.
-5. **Book** and report the confirmation details.
+4. **Check the slot.** Booking is free only; if the slot needs a paid deal or deposit, say that it
+   cannot be booked here.
+5. **Book** with `book_table`. Scout stops that call and shows the user a booking card (restaurant,
+   date, time, party size); the table is booked only if they press Book table. Do not also ask for
+   a yes in chat. If the result says they did not approve, nothing was booked. Report the
+   confirmation details.
 
 ## Pitfalls
 
 - Dates are in the restaurant's local time. Resolve "tomorrow" and "tonight" against today's date
   and repeat the actual date back to the user.
-- Never book, or retry a failed booking, without a fresh confirmation.
+- Never retry a booking the user cancelled on the card, or one that failed, unless they ask.
 
 ## Verification
 

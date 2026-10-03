@@ -5731,7 +5731,16 @@ export const esOverrides = {
       alwaysTitle: '¿Permitir siempre este comando?',
       alwaysDescription: pattern =>
         `Esto añade el patrón “${pattern}” a tu allowlist permanente (~/.scout/config.yaml). Scout no volverá a preguntar por comandos como este, ni en esta sesión ni en futuras.`,
-      alwaysAllow: 'Permitir siempre'
+      alwaysAllow: 'Permitir siempre',
+      order: {
+        title: merchant => `Pedido de ${merchant}`,
+        subtitle: 'No se pide nada hasta que lo apruebes.',
+        total: 'Total',
+        itemsTotal: 'Total de artículos',
+        feesNote: 'El envío y otras tarifas se añaden al pagar.',
+        basketNotLoaded: 'No se pudo cargar la cesta. Revisa el pedido en el chat antes de aprobarlo.',
+        cancel: 'Cancelar'
+      }
     },
     clarify: {
       notReady: 'La solicitud de aclaración aún no está lista',

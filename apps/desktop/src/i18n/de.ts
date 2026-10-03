@@ -5745,7 +5745,16 @@ export const deOverrides = {
       alwaysTitle: 'Diesen Befehl immer erlauben?',
       alwaysDescription: pattern =>
         `Dies fügt das Muster „${pattern}“ Ihrer dauerhaften Zulassungsliste hinzu (~/.scout/config.yaml). Scout fragt bei solchen Befehlen nicht mehr nach – weder in dieser noch in zukünftigen Sessions.`,
-      alwaysAllow: 'Immer erlauben'
+      alwaysAllow: 'Immer erlauben',
+      order: {
+        title: merchant => `${merchant}-Bestellung`,
+        subtitle: 'Nichts wird bestellt, bevor Sie zustimmen.',
+        total: 'Gesamt',
+        itemsTotal: 'Summe der Artikel',
+        feesNote: 'Liefer- und weitere Gebühren kommen an der Kasse hinzu.',
+        basketNotLoaded: 'Der Warenkorb konnte nicht geladen werden. Prüfen Sie die Bestellung im Chat, bevor Sie zustimmen.',
+        cancel: 'Abbrechen'
+      }
     },
     clarify: {
       notReady: 'Klärungsanfrage ist noch nicht bereit',

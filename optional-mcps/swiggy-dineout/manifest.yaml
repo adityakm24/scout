@@ -41,3 +41,9 @@ post_install: |
   the same machine as Scout. Restart the session so tools load.
 
   Only free table reservations are supported.
+
+# book_table commits the user to a reservation; the card shows the booking it would make.
+spending:
+  tools:
+    book_table: null
+  label: Book table

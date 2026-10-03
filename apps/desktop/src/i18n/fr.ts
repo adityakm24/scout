@@ -5752,7 +5752,16 @@ export const frOverrides = {
       alwaysTitle: 'Toujours autoriser cette commande ?',
       alwaysDescription: pattern =>
         `Cela ajoute le motif « ${pattern} » à votre liste d'autorisation permanente (~/.scout/config.yaml). Scout ne redemandera plus pour ce type de commande — que ce soit dans cette session ou dans une session future.`,
-      alwaysAllow: 'Toujours autoriser'
+      alwaysAllow: 'Toujours autoriser',
+      order: {
+        title: merchant => `Commande ${merchant}`,
+        subtitle: 'Rien n’est commandé avant votre accord.',
+        total: 'Total',
+        itemsTotal: 'Total des articles',
+        feesNote: 'La livraison et les autres frais s’ajoutent au paiement.',
+        basketNotLoaded: 'Impossible de charger le panier. Vérifiez la commande dans le chat avant d’approuver.',
+        cancel: 'Annuler'
+      }
     },
     clarify: {
       notReady: "La demande de clarification n'est pas encore prête",

@@ -5335,7 +5335,16 @@ export const en: Translations = {
       alwaysTitle: 'Always allow this command?',
       alwaysDescription: pattern =>
         `This adds the “${pattern}” pattern to your permanent allowlist (~/.scout/config.yaml). Scout won’t ask again for commands like this — in this session or any future one.`,
-      alwaysAllow: 'Always allow'
+      alwaysAllow: 'Always allow',
+      order: {
+        title: merchant => `${merchant} order`,
+        subtitle: 'Nothing is ordered until you approve.',
+        total: 'Total',
+        itemsTotal: 'Items total',
+        feesNote: 'Delivery and other fees are added at checkout.',
+        basketNotLoaded: 'Couldn’t load the basket. Check the order in the chat before you approve.',
+        cancel: 'Cancel'
+      }
     },
     clarify: {
       notReady: 'Clarify request is not ready yet',

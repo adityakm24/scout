@@ -16,7 +16,7 @@ metadata:
 
 Find restaurants and dishes and place real food delivery orders on the user's Swiggy account
 through the `swiggy-food` MCP connector. Orders cannot be cancelled once placed and are cash on
-delivery, so the restaurant, dishes, address and total are always confirmed first.
+delivery, so Scout shows the user each order on a card they must approve before it is placed.
 
 ## When to Use
 
@@ -44,9 +44,12 @@ and invoke with `tool_call`. Never use `search_files` or `terminal` to look for 
 3. **Choose dishes** from that restaurant's menu, including size and customisations. Ask when a
    dish has required options.
 4. **Build the cart** and read it back.
-5. **Confirm before ordering.** Show the restaurant, dishes, total with fees, address and payment
-   (cash on delivery). Remind the user it cannot be cancelled. Wait for an explicit yes.
-6. **Place the order** and report the order id and ETA. Use the tracking tool when asked.
+5. **Place the order** with `place_food_order`, reminding the user it cannot be cancelled. Scout
+   stops that call and shows them an order card built from `get_food_cart` (dishes, bill, cash on
+   delivery); it is placed only if they press Approve & Pay. Do not also ask for a yes in chat —
+   the card is the confirmation. If the result says they did not approve, nothing was ordered;
+   don't retry unless they ask.
+6. **Report** the order id and ETA. Use the tracking tool when asked.
 
 ## Pitfalls
 
@@ -54,7 +57,7 @@ and invoke with `tool_call`. Never use `search_files` or `terminal` to look for 
   tell the user first.
 - Do not claim the cart is visible in the Swiggy app; it belongs to the Scout session.
 - Swiggy asks users not to have the Swiggy app open while ordering through the connector.
-- Never place an order, or retry a failed one, without a fresh confirmation.
+- Never retry an order the user cancelled on the order card, or one that failed, unless they ask.
 
 ## Verification
 

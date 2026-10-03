@@ -1,5 +1,7 @@
 import { atom, computed, type ReadableAtom } from 'nanostores'
 
+import { type OrderSummary, parseOrderSummary } from '@/lib/order-summary'
+
 import { $clarifyRequest, $clarifyRequests } from './clarify'
 import { isSessionGone, isSessionGoneForBackgroundPolling, markSessionGone } from './runtime-gone'
 import { respondToServerRequest } from './server-requests'
@@ -87,6 +89,8 @@ export interface ApprovalRequest extends KeyedPrompt {
   choices?: string[]
   command: string
   description: string
+  // Present when the approval is a purchase: the card shows the basket and "Approve & Pay".
+  order?: OrderSummary
   requestId?: string
   serverRequestId?: string
   smartDenied?: boolean
@@ -101,6 +105,7 @@ interface PendingApprovalPayload {
   choices?: unknown
   command?: unknown
   description?: unknown
+  order?: unknown
   request_id?: unknown
   smart_denied?: boolean
 }
@@ -329,6 +334,7 @@ export async function replayPendingApproval(gateway: ApprovalGateway | null, ses
           : undefined,
         command: typeof pending.command === 'string' ? pending.command : '',
         description: typeof pending.description === 'string' ? pending.description : 'dangerous command',
+        order: parseOrderSummary(pending.order),
         requestId: pending.request_id,
         sessionId,
         smartDenied: pending.smart_denied === true
