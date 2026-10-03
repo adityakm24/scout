@@ -975,6 +975,13 @@ class TestClassifyApiError:
         assert result.reason == FailoverReason.reasoning_mandatory
         assert result.retryable is True and result.should_fallback is False
 
+    def test_mistral_reasoning_effort_not_enabled_is_a_reasoning_field_rejection(self):
+        """Mistral's 400 for ``reasoning_effort`` on a chat-only model (ministral) must take the
+        retry-without-reasoning rung; otherwise every auxiliary call (titles) fails on that model."""
+        body = {"object": "error", "message": "reasoning_effort is not enabled for this model",
+                "type": "invalid_request_invalid_args", "param": None, "code": "3051", "raw_status_code": 400}
+        assert is_reasoning_field_rejection(f"Error code: 400 - {body}")
+
     # ── Provider-specific: llama.cpp grammar-parse ──
 
     def test_llama_cpp_unable_to_generate_parser_template(self):
