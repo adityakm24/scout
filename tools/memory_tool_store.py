@@ -5,6 +5,7 @@ in ``tools.memory_tool`` and is read lazily."""
 
 import logging
 import os
+import re
 import time
 from contextlib import contextmanager, suppress
 from pathlib import Path
@@ -67,6 +68,59 @@ def _find_unique_match(entries: List[str], old_text: str) -> Tuple[Optional[int]
     if len({entries[i] for i in matches}) > 1:
         return None, True
     return (matches[0] if matches else None), False
+
+
+# Words too common in profile entries to say two entries are about the same thing.
+_FILLER_WORDS = frozenset({"user", "users", "their", "they", "that", "this", "with", "from", "about",
+                           "when", "what", "have", "into", "also", "uses", "likes", "prefer"})
+
+
+def _content_words(text: str) -> set:
+    """Distinctive words of an entry, with possessives and plural/verb -s folded. Short tokens
+    are dropped unless they name something ("server A", "9am", "v2") — those tell entries apart."""
+    words = re.findall(r"[A-Za-z0-9]+", re.sub(r"'s\b", "", text))
+    ids = {w.lower() for w in words if len(w) < 4 and (w.isupper() or any(c.isdigit() for c in w))}
+    words = [w.lower() for w in words if len(w) >= 4]
+    return ({w[:-1] if len(w) > 4 and w.endswith("s") else w for w in words} - _FILLER_WORDS) | ids
+
+
+def _clauses(text: str, *, conjunctions: bool = False) -> List[str]:
+    """Sentence parts of *text*; with *conjunctions*, also split at and/but/plus — for the NEW
+    entry only, where "X and <known fact>" glues a repeat onto something new. Saved clauses stay
+    whole ("Zepto and Swiggy Instamart for groceries" is one preference)."""
+    pattern = r"[.;:!?,]+(?:\s|$)" + (r"|\s(?:and|but|plus)\s" if conjunctions else "")
+    return [c.strip() for c in re.split(pattern, text, flags=re.IGNORECASE) if c.strip()]
+
+
+def _restated_entry(entries: List[str], content: str) -> Optional[Tuple[str, Optional[str]]]:
+    """``(existing entry, repeated clause or None)`` when *content* repeats a saved entry.
+    Small models re-save known facts alongside a new one ("Name: X. Prefers concise replies,
+    ...", "Vegetarian; Zepto is the go-to for groceries") instead of adding only the new part,
+    so the profile fills with near-copies. Caught either wholesale (most of the entry repeats)
+    or per clause (every distinctive word of a new clause is already in one saved clause)."""
+    new = _content_words(content)
+    for entry in entries:
+        old = _content_words(entry)
+        shared = new & old
+        if len(shared) >= 4 and len(shared) >= 0.75 * min(len(new), len(old)):
+            return entry, None
+    for clause in _clauses(content, conjunctions=True):
+        words = _content_words(clause)
+        if len(words) < 3:
+            continue
+        for entry in entries:
+            if any(words <= _content_words(saved) for saved in _clauses(entry)):
+                return entry, clause
+    return None
+
+
+def _restated_message(found: Tuple[str, Optional[str]], elsewhere: Optional[str] = None) -> str:
+    entry, clause = found
+    where = (f" in {elsewhere} (target='{'user' if elsewhere == 'USER.md' else 'memory'}'), which is "
+             f"where this belongs" if elsewhere else "")
+    what = f"'{clause}' repeats" if clause else "this repeats"
+    return (f"Not added: {what} an existing entry{where}: '{entry}'. That is already saved. Add "
+            f"only the part that is new, as its own short entry, or nothing if nothing is new.")
 
 
 def _pinned_index(entries: List[str], matched_entry: str) -> Optional[int]:
@@ -296,6 +350,8 @@ class MemoryStore:
         def _add(entries, limit):
             if content in entries:
                 return self._success_response(target, "Entry already exists (no duplicate added).")
+            if restated := self._restated(target, entries, content):
+                return self._consolidation_failure(_error(restated))
             if len(ENTRY_DELIMITER.join(entries + [content])) > limit:
                 return self._failure_with_entries(target, (
                     f"Memory at {self._char_count(target):,}/{limit:,} chars. Adding this entry "
@@ -372,8 +428,17 @@ class MemoryStore:
             return replaced, "Entry replaced.", {"replaced_entry": entries[idx]}
         return self._mutate(target, _apply)
 
-    @staticmethod
-    def _apply_batch_op(working: List[str], act: str, content: str, old_text: str,
+    def _restated(self, target: str, entries: List[str], content: str) -> Optional[str]:
+        """Refusal for *content* that repeats an entry in this store or the other one: a fact
+        already in USER.md re-saved into MEMORY.md is still a copy (and a misrouted one)."""
+        if found := _restated_entry(entries, content):
+            return _restated_message(found)
+        other = "memory" if target == "user" else "user"
+        if self.target_enabled(other) and (found := _restated_entry(self._entries_for(other), content)):
+            return _restated_message(found, self._path_for(other).name)
+        return None
+
+    def _apply_batch_op(self, target: str, working: List[str], act: str, content: str, old_text: str,
                         pos: str, matched_entry: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:
         """Apply one batch op to *working*; return ``(error message, previous content)``.
         Previous content is captured before each replace/remove, under the store lock.
@@ -383,8 +448,11 @@ class MemoryStore:
         if act == "add":
             if not content:
                 return f"{pos}: content is required.", None
-            if content not in working:  # idempotent -- skip duplicate, don't fail the batch
-                working.append(content)
+            if content in working:  # idempotent -- skip duplicate, don't fail the batch
+                return None, None
+            if restated := self._restated(target, working, content):
+                return f"{pos}: {restated}", None
+            working.append(content)
             return None, None
         if act not in ("replace", "remove"):
             return f"{pos}: unknown action. Use add, replace, or remove.", None
@@ -436,7 +504,7 @@ class MemoryStore:
             for i, op in enumerate(ops):
                 act = op.get("action")
                 msg, previous_content = self._apply_batch_op(
-                    working, act, (op.get("content") or op.get("new_text") or "").strip(),
+                    target, working, act, (op.get("content") or op.get("new_text") or "").strip(),
                     (op.get("old_text") or "").strip(), f"Operation {i + 1} ({act or 'unknown'})",
                     op.get("matched_entry"))
                 if msg:
