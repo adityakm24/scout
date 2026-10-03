@@ -252,8 +252,10 @@ _CRON_HINT = (
 
 
 def _rules_section(job: dict) -> str:
-    """The user's standing rules for this job ("ignore transaction emails"). They override the
-    job's own instructions, and a run they leave with nothing to say stays silent."""
+    """The user's standing rules for this job ("ignore transaction emails"). The agent writes with
+    them in mind, but filtering and silence belong to the post-run check
+    (``cron.scheduler_rules``): told to go silent "if nothing is left", a small model silenced a
+    report whose other items the user wanted."""
     rules = [str(r).strip() for r in job.get("rules") or [] if str(r).strip()]
     if not rules:
         return ""
@@ -261,9 +263,8 @@ def _rules_section(job: dict) -> str:
     return (
         "\n\n## The user's rules for this job\n"
         f"{listed}\n"
-        "Follow these rules strictly; they override the instructions above. Leave out — do not even "
-        "mention — anything a rule excludes. If nothing is left to report once they are applied, "
-        "reply with exactly [SILENT] on its own and nothing else."
+        "Write the report with these in mind: leave out what a rule excludes and never say that you "
+        "left anything out. Report everything else in full, as usual."
     )
 
 

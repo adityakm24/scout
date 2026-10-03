@@ -21,7 +21,9 @@ def test_rules_set_on_a_job_reach_its_runs_until_cleared(tmp_path, monkeypatch):
     stored = jobs.get_job(job["id"])
     assert stored["rules"] == ["ignore transaction emails"]
     prompt = _build_job_prompt(stored)
-    assert "- ignore transaction emails" in prompt and "[SILENT]" in prompt
+    assert "- ignore transaction emails" in prompt
+    # Silence is decided after the run (cron.scheduler_rules), never by the agent on a rule's say-so.
+    assert "[SILENT]" not in prompt.split("rules for this job", 1)[1]
 
     jobs.update_job(job["id"], {"rules": []})
     assert "rules for this job" not in _build_job_prompt(jobs.get_job(job["id"]))
