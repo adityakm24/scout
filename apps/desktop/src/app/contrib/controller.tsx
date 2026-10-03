@@ -91,7 +91,7 @@ import { $statusbarVisible } from '@/store/statusbar-prefs'
 import { isBrowserWindow, isHudWindow } from '@/store/windows'
 
 import { AgentPanel } from '../agent-panel'
-import { AGENT_PANEL_ID } from '../agent-panel/open'
+import { AGENT_PANEL_ID, startAgentPanelRoomWatch } from '../agent-panel/open'
 import { BrowserPopoutShell } from '../chat/browser-popout-shell'
 import type { SessionDragPayload } from '../chat/composer/inline-refs'
 import { watchPreviewTiles } from '../chat/preview-tile'
@@ -638,6 +638,7 @@ if ($interfaceMode.get() !== 'simple') {
 
 // Heartbeat: scheduled checks the user turned on report back as notifications, panel open or not.
 startHeartbeatWatch()
+startAgentPanelRoomWatch()
 // Without the statusbar, the rail is the only way to switch profiles or gateways.
 $profiles.subscribe(profiles => setModeContext({ profileCount: profiles.length }))
 $connectionsRegistry.subscribe(registry => setModeContext({ connectionCount: registry?.connections.length ?? 0 }))

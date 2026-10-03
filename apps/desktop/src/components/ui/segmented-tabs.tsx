@@ -85,7 +85,7 @@ export function SegmentedTabs({
             aria-selected={active}
             className={cn(
               'relative z-10 inline-flex h-7 items-center gap-1.5 rounded-full px-3.5 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-200 [-webkit-app-region:no-drag] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
-              fill && 'min-w-0 flex-1 justify-center px-2 [&>span:first-child]:truncate',
+              fill && 'min-w-0 flex-1 justify-center px-2',
               active ? 'text-foreground' : 'text-(--ui-text-tertiary) hover:text-foreground'
             )}
             data-active={active}
@@ -95,7 +95,9 @@ export function SegmentedTabs({
             role="tab"
             type="button"
           >
-            {tab.label}
+            {/* Its own box so a filled, narrow well truncates the label instead of letting a
+                bare text label run into the next tab. */}
+            <span className={cn(fill && 'min-w-0 truncate')}>{tab.label}</span>
             {tab.meta}
           </button>
         )

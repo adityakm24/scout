@@ -47,7 +47,7 @@ export function AgentPanel() {
   return (
     <aside
       aria-label={copy.title}
-      className="relative flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden bg-(--ui-sidebar-surface-background)"
+      className="@container/agent relative flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden bg-(--ui-sidebar-surface-background)"
       data-slot="agent-panel"
     >
       <button
@@ -59,7 +59,8 @@ export function AgentPanel() {
         <Codicon name="close" size="0.875rem" />
       </button>
       <IdentityCard />
-      <div className="px-4">
+      {/* At the panel's narrowest the four labels only fit one size down. */}
+      <div className="px-4 @max-[22rem]/agent:[&_[role=tab]]:px-1.5 @max-[22rem]/agent:[&_[role=tab]]:text-[0.75rem]">
         <SegmentedTabs
           fill
           onChange={id => setTab(id as AgentPanelTab)}

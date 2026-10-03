@@ -52,3 +52,40 @@ export function toggleAgentPanel(): boolean {
 
   return true
 }
+
+// Below this the chat stops being readable (a few words a line, a clipped composer).
+const MIN_CHAT_PX = 320
+
+function chatWidth(): number {
+  return Math.max(0, ...[...document.querySelectorAll<HTMLElement>('[data-chat-surface]')].map(el => el.clientWidth))
+}
+
+let roomWatchStarted = false
+
+/** Keep the chat usable on a narrow window: when the agent panel leaves the chat less than
+ *  MIN_CHAT_PX, fold the panel to its rail. Checked at launch (a panel restored open into a small
+ *  window) and as the window shrinks, never when the user opens the panel themselves. */
+export function startAgentPanelRoomWatch() {
+  if (roomWatchStarted) {
+    return
+  }
+
+  roomWatchStarted = true
+
+  let frame = 0
+
+  const check = () => {
+    cancelAnimationFrame(frame)
+    frame = requestAnimationFrame(() => {
+      const width = chatWidth()
+
+      if (width > 0 && width < MIN_CHAT_PX && agentPanelShown()) {
+        closeAgentPanel()
+      }
+    })
+  }
+
+  window.addEventListener('resize', check)
+  // The layout restores after the first paint; check once it has settled.
+  window.setTimeout(check, 1500)
+}
