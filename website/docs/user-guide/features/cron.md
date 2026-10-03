@@ -542,9 +542,11 @@ Doctor never mutates jobs or state — it only reports. Pair it with
 ## Rules: standing instructions for a job
 
 A job can carry rules — instructions the user gives once, like "ignore transaction emails" or
-"only mention mail from family". Every run receives them ahead of the job's own instructions,
-leaves out whatever they exclude, and stays silent (no delivery, no notification) when nothing is
-left to report.
+"only mention mail from family". Every run sees them while it writes its report, and the finished
+report is then checked line by line against them (one call to the `auxiliary.monitor` model): lines
+a rule covers are removed, a headline that mentions them is rewritten, and a run with nothing left
+stays silent (no delivery, no notification). If that check fails, the report is delivered as
+written, so a rule never costs you a message you wanted.
 
 ```bash
 scout cron rules "New email check"                                  # list
