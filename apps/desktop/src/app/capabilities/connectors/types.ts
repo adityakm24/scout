@@ -41,6 +41,8 @@ export interface BundledEntryInput {
   description?: string
   name: string
   needsEnv: boolean
+  /** The remote endpoint, for a hosted MCP; it names the vendor for the card's logo. */
+  url?: string
 }
 
 export interface ToolInput {

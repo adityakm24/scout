@@ -60,6 +60,14 @@ interface CatalogBrowserProps {
 const PAGE_SIZE = 60
 // The skills hub carries ~10k distinct tags; the rail is for browsing, search covers the tail.
 const TAG_LIMIT = 16
+// The browser's own wording for an unreachable host ("Failed to fetch", "NetworkError when
+// attempting to fetch resource.", "Load failed") is not for people.
+const NETWORK_ERROR_RE = /failed to fetch|networkerror|load failed|network request failed/i
+
+function loadErrorText(error: Error, offline: string) {
+  return NETWORK_ERROR_RE.test(error.message) ? offline : error.message
+}
+
 // Discovery shelves preview a category; "See all" opens the full list. Every
 // rendered card is restyled whenever a modal locks the page.
 const SHELF_SIZE = 6
@@ -257,13 +265,16 @@ export const CatalogBrowser = memo(function CatalogBrowser({
     name: c.alphabetical
   }
 
-  const sortControl = (
+  const sortOptions = catalogSortOptions(entries, kind, sortLabels)
+
+  // Nothing to choose between (an offline plugins catalog has no stars or dates): no dropdown.
+  const sortControl = sortOptions.length > 1 && (
     <Select onValueChange={value => filters.setSort(value as CatalogSort)} value={sort}>
       <SelectTrigger aria-label={c.sortBy} className="w-full" size="sm">
         <SelectValue placeholder={c.sortBy} />
       </SelectTrigger>
       <SelectContent>
-        {catalogSortOptions(entries, kind, sortLabels).map(({ value, label }) => (
+        {sortOptions.map(({ value, label }) => (
           <SelectItem key={value} value={value}>
             {label}
           </SelectItem>
@@ -329,7 +340,7 @@ export const CatalogBrowser = memo(function CatalogBrowser({
           {notice}
           {error && entries.length > 0 && (
             <CatalogAlert onRetry={() => void refetch()} retryLabel={c.retry} title={c.loadFailed}>
-              {error.message}
+              {loadErrorText(error, c.loadFailedOffline)}
             </CatalogAlert>
           )}
           <div className="min-h-0 flex-1">
@@ -337,7 +348,7 @@ export const CatalogBrowser = memo(function CatalogBrowser({
               <PageLoader label={t.skills.loading} />
             ) : error && !entries.length ? (
               <div className="grid h-full place-items-center p-5">
-                <ErrorState description={error.message} title={c.loadFailed}>
+                <ErrorState description={loadErrorText(error, c.loadFailedOffline)} title={c.loadFailed}>
                   <Button onClick={() => void refetch()} size="sm" variant="secondary">
                     {c.retry}
                   </Button>

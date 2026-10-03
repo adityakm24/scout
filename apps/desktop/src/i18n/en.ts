@@ -55,6 +55,10 @@ export const en: Translations = {
       addRule: 'Rule',
       removeRule: (rule: string) => `Remove rule: ${rule}`,
       rulePlaceholder: 'e.g. ignore transaction emails',
+      every: (count, unit) =>
+        count === 1
+          ? `Every ${unit}`
+          : `Every ${count} ${unit === 'minute' ? 'minutes' : unit === 'hour' ? 'hours' : 'days'}`,
       rulesFailed: 'Could not save the rule',
       addFailed: 'Could not turn on the email check',
       emailCheckDescription:
@@ -108,8 +112,8 @@ export const en: Translations = {
       saved: 'Saved'
     },
     permissions: {
-      title: 'Running commands',
-      body: 'Choose when the agent asks before it runs a command on this computer.',
+      title: 'When to ask you first',
+      body: 'Choose when the agent checks with you before it acts. Sending email, placing orders and touching your secrets always need your OK.',
       more: 'More safety settings'
     },
     requests: {
@@ -117,7 +121,7 @@ export const en: Translations = {
       noApprovals: 'Nothing is waiting for your approval.',
       allow: 'Allow once',
       deny: 'Deny',
-      pairing: 'People asking to message it',
+      pairing: 'People asking to chat with your agent',
       noPairing: 'No one is waiting to be approved.',
       approve: 'Approve',
       waiting: minutes => (minutes < 1 ? 'just now' : `${minutes} min ago`)
@@ -231,6 +235,7 @@ export const en: Translations = {
     clearFilters: 'Clear filters',
     filters: 'Filters',
     loadFailed: 'Could not load the catalog',
+    loadFailedOffline: 'Couldn’t reach the catalog. Check your internet connection, then try again.',
     retry: 'Try again',
     more: 'Show more',
     pinned: 'Reviewed commit',
@@ -397,7 +402,6 @@ export const en: Translations = {
       freeTierNote: 'Connections stay on this computer until you sign in.',
       signInLine: 'Sign in to SpaceshipResearch to use managed apps.',
       signIn: 'Sign in',
-      managedUnavailable: 'Managed apps are not available for this account yet.',
       writeFailed: 'That change was not saved.',
       refreshFailed: 'The tool list was not refreshed.',
       disconnectNoAccount: 'Scout has no account to disconnect here. Refresh the page and try again.',

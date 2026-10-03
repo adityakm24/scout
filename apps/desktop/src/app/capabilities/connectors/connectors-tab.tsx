@@ -362,11 +362,11 @@ function HostedNotice({ hasGuest, phase }: { hasGuest: boolean; phase: HostedPha
     )
   }
 
-  if (phase === 'unavailable') {
-    return <p className="shrink-0 text-[0.7rem] text-(--ui-text-tertiary)">{copy.managedUnavailable}</p>
-  }
-
-  return hasGuest ? <p className="shrink-0 text-[0.7rem] text-(--ui-text-tertiary)">{copy.freeTierNote}</p> : null
+  // `unavailable` (no hosted apps for this account) is a standing fact, not news: the catalog
+  // connectors below install locally either way, so it gets no line.
+  return phase !== 'unavailable' && hasGuest ? (
+    <p className="shrink-0 text-[0.7rem] text-(--ui-text-tertiary)">{copy.freeTierNote}</p>
+  ) : null
 }
 
 function useOpenFromRoute(cards: readonly ConnectorCardModel[], open: (key: string) => void): void {

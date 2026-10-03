@@ -52,6 +52,14 @@ export const esOverrides = {
       addRule: 'Regla',
       removeRule: (rule: string) => `Quitar regla: ${rule}`,
       rulePlaceholder: 'p. ej., ignora los correos de transacciones',
+      every: (count, unit) => {
+        const [one, many] = { minute: ['minuto', 'minutos'], hour: ['hora', 'horas'] }[unit as string] ?? [
+          'día',
+          'días'
+        ]
+
+        return count === 1 ? `Cada ${one}` : `Cada ${count} ${many}`
+      },
       rulesFailed: 'No se pudo guardar la regla',
       addFailed: 'No se pudo activar la revisión de correo',
       emailCheckDescription:
@@ -105,8 +113,8 @@ export const esOverrides = {
       saved: 'Guardado'
     },
     permissions: {
-      title: 'Ejecutar comandos',
-      body: 'Elige cuándo pregunta el agente antes de ejecutar un comando en este equipo.',
+      title: 'Cuándo preguntarte primero',
+      body: 'Elige cuándo te consulta el agente antes de actuar. Enviar correos, hacer pedidos o tocar tus secretos siempre requiere tu confirmación.',
       more: 'Más ajustes de seguridad'
     },
     requests: {
@@ -329,7 +337,6 @@ export const esOverrides = {
       freeTierNote: 'Las conexiones se quedan en este equipo hasta que inicies sesión.',
       signInLine: 'Inicia sesión en SpaceshipResearch para usar las apps administradas.',
       signIn: 'Iniciar sesión',
-      managedUnavailable: 'Las apps administradas aún no están disponibles para esta cuenta.',
       writeFailed: 'No se guardó ese cambio.',
       refreshFailed: 'No se actualizó la lista de herramientas.',
       disconnectNoAccount:

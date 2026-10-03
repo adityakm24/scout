@@ -113,7 +113,7 @@ export function CatalogFilters({
         )}
       </div>
 
-      <div className="pb-2">{sortControl}</div>
+      {sortControl && <div className="pb-2">{sortControl}</div>}
       <Facet
         active={facets.sources}
         all={c.allSources}

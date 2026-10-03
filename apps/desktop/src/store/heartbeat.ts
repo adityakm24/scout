@@ -1,6 +1,7 @@
 import { atom } from 'nanostores'
 
 import { translateNow } from '@/i18n'
+import type { Translations } from '@/i18n/types'
 import {
   type CronJob,
   getCronJobLatest,
@@ -152,7 +153,8 @@ export async function setHeartbeatRules(jobId: string, rules: string[]): Promise
 export function headline(text: string): string {
   const first = text.split('\n').find(line => line.trim()) ?? ''
 
-  return plain(first)
+  // A leading emoji ("⏰ Reminder: …") doubles the row's own icon and crowds the text.
+  return plain(first).replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, '')
 }
 
 /** Markdown decoration stripped, for text shown outside a rendered message. */
@@ -195,4 +197,18 @@ export function startHeartbeatWatch() {
     }
   })
   window.setInterval(refreshQuietly, FALLBACK_POLL_MS)
+}
+
+const UNITS = { d: 'day', h: 'hour', m: 'minute' } as const
+
+/** The backend's schedule text ("every 30m", "every day at 3pm") as a sentence: interval
+ *  shorthand spelled out, first letter capitalised. */
+export function scheduleLabel(raw: string, every: Translations['agentPanel']['heartbeat']['every']): string {
+  const interval = /^every\s+(\d+)\s*([mhd])$/i.exec(raw.trim())
+
+  if (interval) {
+    return every(Number(interval[1]), UNITS[interval[2].toLowerCase() as keyof typeof UNITS])
+  }
+
+  return raw.charAt(0).toUpperCase() + raw.slice(1)
 }

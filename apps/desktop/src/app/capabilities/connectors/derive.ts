@@ -164,6 +164,7 @@ export function bundledWay(entry: BundledEntryInput): ConnectorWayLocal {
     installed: false,
     needsEnv: entry.needsEnv,
     state: 'available',
+    target: entry.url,
     verb: 'install'
   }
 }

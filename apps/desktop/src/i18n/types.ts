@@ -119,6 +119,7 @@ export interface Translations {
       removeRule: (rule: string) => string
       rulePlaceholder: string
       rulesFailed: string
+      every: (count: number, unit: 'minute' | 'hour' | 'day') => string
       emailCheckDescription: string
       emailCheckNeedsGoogle: string
       emailCheckTitle: string
@@ -289,6 +290,7 @@ export interface Translations {
     clearFilters: string
     filters: string
     loadFailed: string
+    loadFailedOffline: string
     retry: string
     more: string
     pinned: string
@@ -439,7 +441,6 @@ export interface Translations {
       freeTierNote: string
       signInLine: string
       signIn: string
-      managedUnavailable: string
       writeFailed: string
       refreshFailed: string
       disconnectNoAccount: string

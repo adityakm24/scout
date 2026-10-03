@@ -99,7 +99,13 @@ export function ConnectorRowCard({
       <div className="flex items-start justify-between gap-3">
         <ConnectorLogo
           className="size-11 shrink-0 rounded-xl"
-          connector={{ iconUrl: local ? undefined : connectorIconUrl(card.slug), name: card.slug, title: card.name }}
+          connector={{
+            iconUrl: local ? undefined : connectorIconUrl(card.slug),
+            name: card.slug,
+            title: card.name,
+            // A remote server's endpoint names its vendor (mcp.zepto.co.in is Zepto); a command line names nothing.
+            url: local && /^https?:\/\//.test(card.ways.local?.target ?? '') ? card.ways.local?.target : undefined
+          }}
         />
         <CardLane
           busy={busy}

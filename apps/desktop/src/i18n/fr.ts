@@ -52,6 +52,15 @@ export const frOverrides = {
       addRule: 'Règle',
       removeRule: (rule: string) => `Retirer la règle : ${rule}`,
       rulePlaceholder: 'ex. ignorer les e-mails de transactions',
+      every: (count, unit) => {
+        const many = { minute: 'minutes', hour: 'heures' }[unit as string] ?? 'jours'
+
+        if (count === 1) {
+          return unit === 'day' ? 'Tous les jours' : `Toutes les ${many}`
+        }
+
+        return `${unit === 'day' ? 'Tous les' : 'Toutes les'} ${count} ${many}`
+      },
       rulesFailed: "Impossible d'enregistrer la règle",
       addFailed: "Impossible d'activer la vérification des e-mails",
       emailCheckDescription:
@@ -105,8 +114,8 @@ export const frOverrides = {
       saved: 'Enregistré'
     },
     permissions: {
-      title: 'Exécuter des commandes',
-      body: "Choisis quand l'agent demande avant d'exécuter une commande sur cet ordinateur.",
+      title: 'Quand vous demander d’abord',
+      body: "Choisissez quand l'agent vous consulte avant d'agir. Envoyer un e-mail, passer une commande ou toucher à vos secrets demande toujours votre accord.",
       more: 'Plus de réglages de sécurité'
     },
     requests: {
@@ -330,7 +339,6 @@ export const frOverrides = {
       freeTierNote: 'Les connexions restent sur cet ordinateur jusqu’à ce que vous vous connectiez.',
       signInLine: 'Connectez-vous à SpaceshipResearch pour utiliser les applications gérées.',
       signIn: 'Se connecter',
-      managedUnavailable: 'Les applications gérées ne sont pas encore disponibles pour ce compte.',
       writeFailed: 'Cette modification n’a pas été enregistrée.',
       refreshFailed: 'La liste des outils n’a pas été actualisée.',
       disconnectNoAccount: 'Scout n’a aucun compte à déconnecter ici. Actualisez la page et réessayez.',

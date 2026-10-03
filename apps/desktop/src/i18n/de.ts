@@ -51,6 +51,14 @@ export const deOverrides = {
       addRule: 'Regel',
       removeRule: (rule: string) => `Regel entfernen: ${rule}`,
       rulePlaceholder: 'z. B. Transaktions-E-Mails ignorieren',
+      every: (count, unit) => {
+        const [one, many] = { minute: ['Minute', 'Minuten'], hour: ['Stunde', 'Stunden'] }[unit as string] ?? [
+          'Tag',
+          'Tage'
+        ]
+
+        return count === 1 ? `${unit === 'day' ? 'Jeden' : 'Jede'} ${one}` : `Alle ${count} ${many}`
+      },
       rulesFailed: 'Regel konnte nicht gespeichert werden',
       addFailed: 'E-Mail-Prüfung konnte nicht eingeschaltet werden',
       emailCheckDescription:
@@ -104,8 +112,8 @@ export const deOverrides = {
       saved: 'Gespeichert'
     },
     permissions: {
-      title: 'Befehle ausführen',
-      body: 'Lege fest, wann der Agent fragt, bevor er einen Befehl auf diesem Computer ausführt.',
+      title: 'Wann zuerst gefragt wird',
+      body: 'Legen Sie fest, wann der Agent nachfragt, bevor er handelt. Für E-Mails, Bestellungen und Ihre Geheimnisse fragt er immer.',
       more: 'Weitere Sicherheitseinstellungen'
     },
     requests: {
@@ -330,7 +338,6 @@ export const deOverrides = {
       freeTierNote: 'Verbindungen bleiben auf diesem Computer, bis Sie sich anmelden.',
       signInLine: 'Melden Sie sich bei SpaceshipResearch an, um verwaltete Apps zu nutzen.',
       signIn: 'Anmelden',
-      managedUnavailable: 'Verwaltete Apps sind für dieses Konto noch nicht verfügbar.',
       writeFailed: 'Diese Änderung wurde nicht gespeichert.',
       refreshFailed: 'Die Tool-Liste wurde nicht aktualisiert.',
       disconnectNoAccount:
@@ -5752,7 +5759,8 @@ export const deOverrides = {
         total: 'Gesamt',
         itemsTotal: 'Summe der Artikel',
         feesNote: 'Liefer- und weitere Gebühren kommen an der Kasse hinzu.',
-        basketNotLoaded: 'Der Warenkorb konnte nicht geladen werden. Prüfen Sie die Bestellung im Chat, bevor Sie zustimmen.',
+        basketNotLoaded:
+          'Der Warenkorb konnte nicht geladen werden. Prüfen Sie die Bestellung im Chat, bevor Sie zustimmen.',
         cancel: 'Abbrechen'
       }
     },

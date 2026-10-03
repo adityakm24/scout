@@ -16,6 +16,7 @@ import {
   type HeartbeatItem,
   plain,
   refreshHeartbeat,
+  scheduleLabel,
   setHeartbeatEnabled,
   setHeartbeatRules
 } from '@/store/heartbeat'
@@ -114,7 +115,7 @@ function HeartbeatRow({ item }: { item: HeartbeatItem }) {
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-[0.8125rem] font-medium">{job.name || copy.untitled}</span>
           <span className="truncate text-xs text-(--ui-text-tertiary)">
-            {job.schedule_display || job.schedule?.display || ''}
+            {scheduleLabel(job.schedule_display || job.schedule?.display || '', copy.every)}
           </span>
         </span>
         <Switch

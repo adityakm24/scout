@@ -131,18 +131,27 @@ export function SidebarDateDivider({
   label: string
   toggle?: { ariaLabel: string; onToggle: () => void; open: boolean }
 }) {
-  const caption = (
-    <span className="shrink-0 text-[0.6875rem] font-semibold text-(--ui-text-quaternary)">
-      {label}
-    </span>
-  )
+  const caption = <span className="shrink-0 text-[0.6875rem] font-semibold text-(--ui-text-quaternary)">{label}</span>
 
-  const rule = <span aria-hidden="true" className="h-px min-w-4 flex-1 bg-(--ui-stroke-tertiary)" />
+  // The hover "+" floats over the rule's end instead of reserving its width, so at rest the rule
+  // runs to the same right edge as the session times below it; it makes room when the "+" shows.
+  const rule = (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'h-px min-w-4 flex-1 bg-(--ui-stroke-tertiary)',
+        action && 'transition-[margin] group-focus-within/workspace:mr-6 group-hover/workspace:mr-6'
+      )}
+    />
+  )
 
   return (
     // group/workspace: a divider heads a group the same way a repo header does,
     // so it borrows the header's hover-revealed "+" verbatim.
-    <div className={cn('group/workspace flex select-none items-center gap-2 px-2 pb-0.5 pt-2', className)} {...props}>
+    <div
+      className={cn('group/workspace relative flex select-none items-center gap-2 px-2 pb-0.5 pt-2', className)}
+      {...props}
+    >
       {toggle ? (
         <button
           aria-expanded={toggle.open}
@@ -164,7 +173,7 @@ export function SidebarDateDivider({
           {rule}
         </>
       )}
-      {action}
+      {action && <div className="absolute bottom-0.5 right-2 top-2 flex items-center">{action}</div>}
     </div>
   )
 }

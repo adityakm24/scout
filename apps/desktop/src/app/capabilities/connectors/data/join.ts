@@ -263,7 +263,8 @@ export function joinBundledEntries(catalog: readonly McpCatalogEntry[]): Bundled
     connectorSlug: text(entry.connector_slug),
     description: text(entry.description),
     name: entry.name,
-    needsEnv: entry.required_env.some(field => field.required)
+    needsEnv: entry.required_env.some(field => field.required),
+    url: entry.url ?? undefined
   }))
 }
 
