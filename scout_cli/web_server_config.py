@@ -67,7 +67,7 @@ _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
         "IANA timezone (e.g. America/New_York). Blank uses the system timezone.",
         *_timezone_options(), searchable=True, clearable=True,
     ),
-    "memory.provider": _select("Memory provider plugin", *_memory_provider_options()),
+    "memory.provider": _select("Where memories are kept. Built-in keeps them in files on this computer.", *_memory_provider_options()),
     "model": {
         "type": "string",
         "description": "Default model (e.g. anthropic/claude-sonnet-4.6)",

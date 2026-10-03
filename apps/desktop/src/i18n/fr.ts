@@ -1836,7 +1836,7 @@ export const frOverrides = {
       noneParen: '(aucun)',
       builtinOnly: 'Intégré uniquement',
       notSet: 'Non défini',
-      commaSeparated: 'valeurs séparées par des virgules',
+      commaSeparated: 'Séparés par virgules',
       searchPlaceholder: 'Rechercher…',
       noResults: 'Aucun résultat trouvé',
       systemDefault: 'Par défaut du système',

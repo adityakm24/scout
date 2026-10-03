@@ -1829,7 +1829,7 @@ export const esOverrides = {
       noneParen: '(ninguno)',
       builtinOnly: 'Solo integradas',
       notSet: 'Sin definir',
-      commaSeparated: 'valores separados por comas',
+      commaSeparated: 'Separados por comas',
       searchPlaceholder: 'Buscar…',
       noResults: 'No se encontraron resultados',
       systemDefault: 'Valor del sistema',

@@ -1829,7 +1829,7 @@ export const deOverrides = {
       noneParen: '(keine)',
       builtinOnly: 'Nur eingebaut',
       notSet: 'Nicht festgelegt',
-      commaSeparated: 'durch Komma getrennte Werte',
+      commaSeparated: 'Durch Komma getrennt',
       searchPlaceholder: 'Suchen…',
       noResults: 'Keine Ergebnisse gefunden',
       systemDefault: 'Systemstandard',

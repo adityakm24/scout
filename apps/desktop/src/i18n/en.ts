@@ -1566,7 +1566,7 @@ export const en: Translations = {
       noneParen: '(none)',
       builtinOnly: 'Built-in only',
       notSet: 'Not set',
-      commaSeparated: 'comma-separated values',
+      commaSeparated: 'Comma-separated',
       searchPlaceholder: 'Search…',
       noResults: 'No results found',
       systemDefault: 'System default',

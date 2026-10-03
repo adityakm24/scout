@@ -584,14 +584,14 @@ export const FIELD_DESCRIPTIONS: Record<string, string> = defineFieldCopy({
   fallbackProviders: 'Backup provider:model entries to try if the default model fails.',
   display: {
     personality: 'Default assistant style for new sessions.',
-    showReasoning: 'Show reasoning sections when the backend provides them.'
+    showReasoning: 'Show the model’s thinking when it shares it.'
   },
   desktop: {
     repoScanEnabled: 'Scan local folders for Git repositories to show in Projects.',
     repoScanRoots: 'Folders to scan. Leave empty to scan your home directory.',
     repoScanExcludePaths: 'Folders and their descendants to skip during repository discovery.'
   },
-  timezone: 'IANA timezone identifier. Blank uses the system timezone.',
+  timezone: 'Your time zone, like Asia/Kolkata. Leave blank to use this computer’s.',
   browser: {
     useRealProfile:
       "Local browsing uses your real logins. Scout copies your default browser's profile (cookies, logins, preferences) into a managed snapshot and drives it with its packaged Chromium — your live profile is never opened directly, and the copy is refreshed from it on each run. Also lets the agent open a local real-profile session on request even when a cloud browser backend is configured. Only Chromium browsers (Chrome, Edge, Brave, Brave Origin, Chromium) are supported; a non-Chromium default fails with a clear message. Off by default."
@@ -614,9 +614,11 @@ export const FIELD_DESCRIPTIONS: Record<string, string> = defineFieldCopy({
   },
   fileReadMaxChars: 'Maximum characters Scout can read from one file request.',
   approvals: {
-    mode: 'How Scout handles commands that need explicit approval.',
-    timeout: 'How long approval prompts wait before timing out.'
+    mode: 'When Scout asks before acting. Sending email, placing orders and touching your secrets always ask.',
+    timeout: 'Seconds an approval waits for your answer before it is declined.',
+    mcpReloadConfirm: 'Ask before reloading connectors (the next message then costs a full resend).'
   },
+  commandAllowlist: 'Command patterns you chose “Always allow” for. Remove one to be asked again.',
   security: {
     redactSecrets: 'Hide detected secrets from model-visible content when possible.'
   },
@@ -624,8 +626,10 @@ export const FIELD_DESCRIPTIONS: Record<string, string> = defineFieldCopy({
     enabled: 'Create rollback snapshots before file edits.'
   },
   memory: {
-    memoryEnabled: 'Save durable memories that can help future sessions.',
-    userProfileEnabled: 'Maintain a compact profile of user preferences.'
+    memoryEnabled: 'Let Scout keep notes that help in later chats.',
+    userProfileEnabled: 'Let Scout keep notes about you: your name, preferences and habits.',
+    memoryCharLimit: 'Characters Scout’s own notes can use. More room is sent with every message.',
+    userCharLimit: 'Characters the notes about you can use.'
   },
   context: {
     engine: 'Strategy for managing long conversations near the context limit.'
