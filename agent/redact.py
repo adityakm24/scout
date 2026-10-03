@@ -156,6 +156,10 @@ _PREFIX_PATTERNS = [
     r"xapp-\d+-[A-Za-z0-9-]{10,}",      # Slack app-Level token
     r"xox[baprs]-[A-Za-z0-9-]{10,}",    # Slack bot/app/user tokens
     r"AIza[A-Za-z0-9_-]{30,}",          # Google API keys
+    r"GOCSPX-[A-Za-z0-9_-]{10,}",       # Google OAuth client secret (google_client_secret.json)
+    # Composio API key: ``ak_`` + an opaque alphanumeric body; the no-``_`` body and length floor keep
+    # identifiers like ``ak_example_value`` out (same shape argument as AgentMail's ``am_`` below).
+    r"ak_[A-Za-z0-9]{20,}",
     r"pplx-[A-Za-z0-9]{10,}",           # Perplexity
     r"fal_[A-Za-z0-9_-]{10,}",          # Fal.ai
     r"fc-[A-Za-z0-9]{10,}",             # Firecrawl

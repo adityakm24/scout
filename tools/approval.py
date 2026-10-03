@@ -29,8 +29,8 @@ from tools.approval_context import (
     _tirith_fail_open, get_current_session_key,
 )
 from tools.approval_detection import (
-    HUMAN_ONLY_DESCRIPTIONS, _approval_key_aliases, _check_sudo_stdin_guard, detect_dangerous_command,
-    detect_hardline_command,
+    HUMAN_ONLY_DESCRIPTIONS, ONCE_ONLY_DESCRIPTIONS, _approval_key_aliases, _check_sudo_stdin_guard,
+    detect_dangerous_command, detect_hardline_command, detect_human_only,
 )
 from tools.approval_floors import (
     _command_matches_permanent_allowlist, _hardline_block_result, _match_user_deny_rule, _sudo_stdin_block_result,
@@ -546,7 +546,7 @@ def _gateway_notify_cb(session_key: str):
 
 def _pending_result(spec, session_key: str, *, command: str, description: str,
                     pattern_key: str, pattern_keys: list[str], body: str | None,
-                    smart_denied: bool) -> dict:
+                    smart_denied: bool, one_shot: bool = False) -> dict:
     """Queue an approval nobody can answer right now (no gateway notifier, no CLI panel) for
     ``/approve`` / ``/deny`` review. Command/code gates return the backward-compatible
     ``pending_approval`` shape (``pattern_keys`` + STOP text); the action gate ``approval_required``."""
@@ -556,6 +556,8 @@ def _pending_result(spec, session_key: str, *, command: str, description: str,
     pending["description"] = description
     if smart_denied:
         pending.update(smart_denied=True, allow_permanent=False)
+    elif one_shot:
+        pending.update(allow_session=False, allow_permanent=False)
     submit_pending(session_key, pending)
     if not spec.pending_keys:
         return {
@@ -806,14 +808,19 @@ def _human_decision(spec: _GateSpec, *, command: str, description: str,
     """
     from agent.redact import redact_sensitive_text
 
+    # Per finding, not the joined description: a Tirith warning beside a Gmail send made the
+    # combined text miss the set and handed the send to the guardian.
+    findings = {description, *(desc for _, desc, _ in warnings)}
     smart_denied = False
-    if smart and description not in HUMAN_ONLY_DESCRIPTIONS:
+    if smart and not findings & HUMAN_ONLY_DESCRIPTIONS:
         result, smart_denied = _smart_gate(spec, command, description, pattern_key, pattern_keys,
                                            session_key, human_present=is_cli or is_gateway or is_ask)
         if result is not None:
             return result
     pending_body = pending_body() if pending_body else None
-    allow_permanent = permanent_capable and not smart_denied
+    # Once/deny only, nothing persisted: a Smart-DENY override, or a finding asked every time.
+    one_shot = smart_denied or bool(findings & ONCE_ONLY_DESCRIPTIONS)
+    allow_permanent = permanent_capable and not one_shot
 
     def deny(template: str, outcome: str, **fmt) -> dict:
         breaker = ""
@@ -826,8 +833,8 @@ def _human_decision(spec: _GateSpec, *, command: str, description: str,
                        outcome=outcome, noun=spec.noun, **extra)
 
     def grant(choice: str) -> dict:
-        # A smart-DENY owner override is always one operation, even if an older client returns "session" or "always".
-        if not smart_denied:
+        # A one-shot grant is always one operation, even if an older client returns "session" or "always".
+        if not one_shot:
             _persist_choice(session_key, choice, warnings)
         if spec.user_approved:
             return _user_approved(session_key, description)
@@ -837,7 +844,7 @@ def _human_decision(spec: _GateSpec, *, command: str, description: str,
         attempt = _present_with_selected_transport(
             command=command, description=description, pattern_key=pattern_key, pattern_keys=pattern_keys,
             session_key=session_key, surface="gateway" if (is_gateway or is_ask) else "cli",
-            allow_session=not smart_denied, allow_permanent=allow_permanent,
+            allow_session=not one_shot, allow_permanent=allow_permanent,
         )
         choice, denied = _transport_choice(attempt, pattern_key=pattern_key, description=description)
         if denied is not None:
@@ -863,8 +870,8 @@ def _human_decision(spec: _GateSpec, *, command: str, description: str,
             data = {
                 "command": display_command, "pattern_key": pattern_key,
                 "pattern_keys": pattern_keys, "description": display_description,
-                "allow_permanent": permanent_capable and not smart_denied,
-                "allow_session": not smart_denied,
+                "allow_permanent": allow_permanent,
+                "allow_session": not one_shot,
             }
             if smart_denied:
                 data["smart_denied"] = True
@@ -902,7 +909,7 @@ def _human_decision(spec: _GateSpec, *, command: str, description: str,
                 display_command, display_description = command, description
             return _pending_result(
                 spec, session_key, command=display_command, description=display_description, pattern_key=pattern_key,
-                pattern_keys=pattern_keys, body=pending_body, smart_denied=smart_denied,
+                pattern_keys=pattern_keys, body=pending_body, smart_denied=smart_denied, one_shot=one_shot,
             )
 
     # CLI interactive: single combined prompt, wrapped in the pre/post plugin hooks.
@@ -914,7 +921,8 @@ def _human_decision(spec: _GateSpec, *, command: str, description: str,
                        pattern_keys=list(pattern_keys), session_key=session_key, surface="cli")
     approval_context._fire_approval_hook("pre_approval_request", **hook_kwargs)
     choice = prompt_dangerous_approval(prompt_command, prompt_description, allow_permanent=allow_permanent,
-                                       smart_denied=smart_denied, approval_callback=approval_callback)
+                                       allow_session=not one_shot, smart_denied=smart_denied,
+                                       approval_callback=approval_callback)
     approval_context._fire_approval_hook("post_approval_response", **hook_kwargs, choice=choice)
     if choice == "timeout":
         return deny(spec.cli_timeout, "timeout")
@@ -1215,6 +1223,11 @@ def check_all_command_guards(command: str, env_type: str,
             warnings.append((tirith_key, _format_tirith_description(tirith_result), True))
     if is_dangerous and not is_approved(session_key, pattern_key):
         warnings.append((pattern_key, description, False))
+    # A human-only finding (secrets file, Google account action) reaches the gate even when another
+    # pattern named the prompt; its own key is what an earlier one-time grant would have stored.
+    human_only = detect_human_only(command)
+    if human_only and human_only != description and not is_approved(session_key, human_only):
+        warnings.append((human_only, human_only, False))
     if not warnings:
         return _approved()
 
@@ -1285,12 +1298,24 @@ def check_execute_code_guard(code: str, env_type: str, has_host_access: bool = F
     # on every execute_code call. Ask-mode still takes this path even with INTERACTIVE set (how gateway/smart tests
     # and messaging ask-mode drive whole-script approval); when that leaks into a CLI with no notify callback, the
     # engine falls through to the CLI Dangerous Command panel instead of a silent pending_approval.
-    if not is_gateway and not is_ask:
+    # A script that opens a secrets file or drives the Google account needs the user for this run
+    # whatever was granted to earlier scripts: Python's open('.env') never passes terminal().
+    human_only = detect_human_only(code)
+    if not is_gateway and not is_ask and not human_only:
         return _approved()
 
     session_key = get_current_session_key()
     # Built only past the early-return gates so common paths don't copy a potentially-large script into this string.
     command = f"execute_code <<'PY'\n{code}\nPY"
+    from agent.redact import redact_sensitive_text
+
+    if human_only:
+        return _human_decision(
+            _EXECUTE_CODE_GATE, command=command, description=human_only, pattern_key=human_only,
+            pattern_keys=[human_only], warnings=[(human_only, human_only, False)], session_key=session_key,
+            approval_callback=approval_callback, is_cli=is_cli, is_gateway=is_gateway, is_ask=is_ask,
+            pending_body=lambda: f"**Code:**\n```python\n{redact_sensitive_text(code)}\n```",
+        )
 
     # Without this, "Approve session" / "Always" choices are stored but never
     # consulted, so every execute_code call re-prompts (#39275).
@@ -1300,7 +1325,6 @@ def check_execute_code_guard(code: str, env_type: str, has_host_access: bool = F
     # Smart mode: an APPROVE only suppresses the redundant whole-script prompt; the per-call terminal() guards still
     # run independently. The gateway renders the pending payload to Discord/Slack, so the script body is redacted for
     # display; the raw code is what gets assessed and run.
-    from agent.redact import redact_sensitive_text
     return _human_decision(
         _EXECUTE_CODE_GATE, command=command, description=description, pattern_key=pattern_key,
         pattern_keys=[pattern_key], warnings=[(pattern_key, None, False)], session_key=session_key,

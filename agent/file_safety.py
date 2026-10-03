@@ -343,6 +343,8 @@ _DID_SUFFIX = (
 _CREDENTIAL_FILE_NAMES = (
     "auth.json", "auth.lock", ".anthropic_oauth.json", ".env", "webhook_subscriptions.json",
     os.path.join("auth", "google_oauth.json"), os.path.join("cache", "bws_cache.json"),
+    # Google Workspace sign-in (scout_cli/google_workspace_auth.py): refresh token and OAuth client.
+    "google_token.json", "google_client_secret.json",
 )
 
 # Directory-prefix read denies under SCOUT_HOME / <root>: (subdir, message for

