@@ -185,6 +185,30 @@ os.environ["SCOUT_DISABLE_LAZY_INSTALLS"] = "1"
 #: even with this block removed.
 SCOUT_HOME_AT_CONFTEST_IMPORT = os.environ.get("SCOUT_HOME", "")
 
+# ── The checkout's own .env stays out of tests ──────────────────────────────
+# Entry modules (run_agent, cli, gateway.run, scout_cli.main/doctor, tui_gateway.server) load
+# `<checkout>/.env` at import as a dev fallback. Under the runner that put the developer's real keys
+# back into a process scrubbed of credentials, and crashed 11 files whose tests stub `dotenv` (the
+# load reaches `dotenv.main`) — green in CI, red on any machine with a local .env. Patched before
+# any test module imports those callers, so they bind this wrapper; a test of the loader that passes
+# its own project .env (a tmp path) is unaffected.
+import functools as _functools
+
+import scout_cli.env_loader as _env_loader
+
+_CHECKOUT_DOTENV = (Path(__file__).resolve().parents[1] / ".env").resolve()
+_real_load_scout_dotenv = _env_loader.load_scout_dotenv
+
+
+@_functools.wraps(_real_load_scout_dotenv)
+def _load_scout_dotenv_without_checkout_env(*, project_env=None, **kwargs):
+    if project_env is not None and Path(project_env).resolve() == _CHECKOUT_DOTENV:
+        project_env = None
+    return _real_load_scout_dotenv(project_env=project_env, **kwargs)
+
+
+_env_loader.load_scout_dotenv = _load_scout_dotenv_without_checkout_env
+
 # ── Host-rendezvous isolation ───────────────────────────────────────────────
 # ``gateway/host_rendezvous.py`` publishes ONE record per role per OS USER, in
 # ``$SCOUT_GATEWAY_LOCK_DIR`` else ``$XDG_STATE_HOME/scout/gateway-locks`` —
