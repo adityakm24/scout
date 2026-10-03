@@ -48,7 +48,7 @@ export const deOverrides = {
   },
   agentPanel: {
     heartbeat: {
-      addRule: '+ Regel',
+      addRule: 'Regel',
       removeRule: (rule: string) => `Regel entfernen: ${rule}`,
       rulePlaceholder: 'z. B. Transaktions-E-Mails ignorieren',
       rulesFailed: 'Regel konnte nicht gespeichert werden',

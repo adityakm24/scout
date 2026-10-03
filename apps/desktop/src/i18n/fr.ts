@@ -49,7 +49,7 @@ export const frOverrides = {
   },
   agentPanel: {
     heartbeat: {
-      addRule: '+ Règle',
+      addRule: 'Règle',
       removeRule: (rule: string) => `Retirer la règle : ${rule}`,
       rulePlaceholder: 'ex. ignorer les e-mails de transactions',
       rulesFailed: "Impossible d'enregistrer la règle",
