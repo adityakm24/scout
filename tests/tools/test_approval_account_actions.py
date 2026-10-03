@@ -24,6 +24,12 @@ SEND = 'scout google gmail send --to a@example.com --subject "Saturday" --body "
     ('scout google gmail search "from:dbs"', False),
     ("scout google gmail get MSG", False),
     ("scout google calendar list", False),
+    # Usage text sends nothing; asking for it teaches the user to click "Run" without reading.
+    ("scout google gmail send --help", False),
+    ("scout google calendar create -h 2>&1 | head", False),
+    # ...but "--help" inside a quoted argument, or a real send after a help call, still asks.
+    ('scout google gmail send --to a@example.com --body "try --help please"', True),
+    ("scout google gmail send --help; " + SEND, True),
 ])
 def test_changes_to_the_account_need_approval_and_reads_do_not(command, gated):
     assert detect_dangerous_command(command)[0] is gated

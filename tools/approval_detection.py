@@ -219,7 +219,10 @@ HUMAN_ONLY_DESCRIPTIONS = frozenset({GOOGLE_ACCOUNT_ACTION})
 DANGEROUS_PATTERNS = [
     (r'(?:\bscout\s+google|google_api\.py["\']?)\s+(?:gmail\s+(?:send|reply|modify)'
      r'|calendar\s+(?:create|delete)|drive\s+(?:upload|delete|share|create-folder)'
-     r'|sheets\s+(?:create|update|append)|docs\s+(?:create|append))\b', GOOGLE_ACCOUNT_ACTION),
+     r'|sheets\s+(?:create|update|append)|docs\s+(?:create|append))\b'
+     # `... gmail send --help` only prints usage; asking for it teaches the user to click through.
+     # A quoted argument is skipped whole, so `--body "try --help"` still asks.
+     r'(?!(?:[^\n;|&"\']|"[^"\n]*"|\'[^\'\n]*\')*\s(?:--help|-h)(?=\s|$))', GOOGLE_ACCOUNT_ACTION),
     (r'\brm\s+(-[^\s]*\s+)*/', "delete in root path"),
     (r'\brm\s+-[^\s]*r', "recursive delete"),
     (r'\brm\s+--recursive\b', "recursive delete (long flag)"),
