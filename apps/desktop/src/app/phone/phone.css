@@ -23,8 +23,9 @@
   display: none !important;
 }
 
-/* Room for the tab bar under the top-level screens. */
+/* Top-level screens clear the notch above and the tab bar below. */
 :root[data-phone]:has([data-slot='phone-tab-bar']) [data-slot='sidebar-wrapper'] {
+  padding-top: env(safe-area-inset-top);
   padding-bottom: var(--phone-tab-bar-height);
 }
 
@@ -327,7 +328,7 @@
 }
 
 :root[data-phone] [data-slot='dashboard-page'] > div {
-  padding-top: calc(env(safe-area-inset-top) + 1.5rem);
+  padding-top: 1.5rem;
   padding-inline: 1rem;
 }
 

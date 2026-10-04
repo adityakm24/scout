@@ -113,8 +113,11 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
   }
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
+    // Edge to edge: the page pads itself with the safe-area insets (apps/desktop/src/app/phone),
+    // so its tab bar and headers blur under the home bar and notch like a native app's.
+    <View style={styles.screen}>
       <WebView
+        contentInsetAdjustmentBehavior="never"
         allowsBackForwardNavigationGestures={false}
         bounces={false}
         injectedJavaScriptBeforeContentLoaded={bootstrap}
@@ -127,7 +130,7 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
         source={{ uri: pairing.baseUrl }}
         style={styles.web}
       />
-    </SafeAreaView>
+    </View>
   )
 }
 
