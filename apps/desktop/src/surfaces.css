@@ -250,7 +250,6 @@ body {
 .scout-panel {
   position: relative;
   display: flex;
-  min-height: 0;
   flex-direction: column;
   border-radius: 1.5rem;
   background-color: color-mix(in srgb, var(--dt-card) 70%, transparent);

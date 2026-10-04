@@ -74,7 +74,7 @@ export function ReminderPanel() {
     <section aria-label={c.title} className="scout-panel scout-rise" style={{ '--rise-index': 2 } as React.CSSProperties}>
       <PanelHeader count={upcoming.length} icon={<Bell className="size-4" />} title={c.title} />
       <ReminderComposer />
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 @max-[52rem]/dash:overflow-visible">
         {reminders.length === 0 ? (
           <EmptyState body={c.empty} title={c.emptyTitle} />
         ) : (
@@ -211,7 +211,12 @@ function ReminderComposer() {
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button disabled={!text.trim() || busy} onClick={() => void submit()} size="xs">
+        <Button
+          className="h-7 rounded-full px-3.5 text-[0.75rem]"
+          disabled={!text.trim() || busy}
+          onClick={() => void submit()}
+          size="xs"
+        >
           {c.add}
         </Button>
       </div>

@@ -48,7 +48,7 @@ export function DashboardPage() {
         </header>
 
         {status !== 'unsupported' && (
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 @[52rem]/dash:grid-cols-2 [&>section]:min-h-[26rem]">
+          <div className="grid min-h-0 flex-none grid-cols-1 gap-5 @[52rem]/dash:flex-1 @[52rem]/dash:grid-cols-2 [&>section]:min-h-[26rem]">
             <TodoPanel />
             <ReminderPanel />
           </div>

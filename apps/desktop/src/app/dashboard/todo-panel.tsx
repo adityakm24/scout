@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { useI18n } from '@/i18n'
-import { Check, ChevronDown, MoreHorizontal, Plus, Trash2 } from '@/lib/icons'
+import { Check, ChevronDown, Flag, FlagFilled, MoreHorizontal, Plus, Trash2 } from '@/lib/icons'
 import { fmtDate } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import {
@@ -32,6 +32,13 @@ import {
 import { dueInputValue, dueKind, parseLocalDateTime } from './time'
 
 const PRIORITIES: readonly PlannerPriority[] = ['high', 'medium', 'low', 'none']
+
+const PRIORITY_FLAG: Record<PlannerPriority, string> = {
+  high: 'text-[#ff453a]',
+  medium: 'text-[#ff9f0a]',
+  low: 'text-[#0a84ff]',
+  none: 'text-(--ui-text-tertiary)'
+}
 
 const PRIORITY_DOT: Record<PlannerPriority, string> = {
   high: 'bg-[#ff453a]',
@@ -52,7 +59,7 @@ export function TodoPanel() {
     <section aria-label={c.title} className="scout-panel scout-rise" style={{ '--rise-index': 1 } as React.CSSProperties}>
       <PanelHeader count={open.length} icon={<Check className="size-4" />} title={c.title} />
       <TodoComposer />
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 @max-[52rem]/dash:overflow-visible">
         {open.length === 0 ? (
           <EmptyState body={c.empty} title={c.emptyTitle} />
         ) : (
@@ -155,7 +162,7 @@ function TodoComposer() {
       />
       <DueField onChange={setDue} value={due} />
       <PriorityMenu onChange={setPriority} value={priority} />
-      <Button disabled={!title.trim()} onClick={submit} size="xs">
+      <Button className="h-7 rounded-full px-3.5 text-[0.75rem]" disabled={!title.trim()} onClick={submit} size="xs">
         {c.add}
       </Button>
     </div>
@@ -193,10 +200,14 @@ function PriorityMenu({ onChange, value }: { onChange: (value: PlannerPriority) 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label={c.priority}
-        className="grid size-7 shrink-0 place-items-center rounded-full hover:bg-(--chrome-action-hover)"
+        aria-label={value === 'none' ? c.priority : `${c.priority}: ${c.priorities[value]}`}
+        className={cn(
+          'grid size-7 shrink-0 place-items-center rounded-full hover:bg-(--chrome-action-hover)',
+          PRIORITY_FLAG[value]
+        )}
+        title={value === 'none' ? c.priority : `${c.priority}: ${c.priorities[value]}`}
       >
-        <span className={cn('size-2.5 rounded-full', PRIORITY_DOT[value])} />
+        {value === 'none' ? <Flag className="size-4" /> : <FlagFilled className="size-4" />}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>{c.priority}</DropdownMenuLabel>

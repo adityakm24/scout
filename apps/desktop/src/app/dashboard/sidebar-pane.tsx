@@ -25,7 +25,7 @@ export function DashboardSidebarPane() {
       <SummaryTiles />
       <QuickAdd />
       <OpenTodos />
-      <Button className="mt-auto" onClick={openDashboard} variant="secondary">
+      <Button className="mt-auto h-9 rounded-full text-[0.8125rem]" onClick={openDashboard} variant="secondary">
         <LayoutDashboard className="size-4" />
         {t.dashboard.openDashboard}
       </Button>
