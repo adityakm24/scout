@@ -1208,6 +1208,10 @@ export const deOverrides = {
       enableAllDesc: 'Aus schaltet jede Benachrichtigung unten stumm.',
       focusedHint: 'Abschluss-Alerts feuern nur, während Scout im Hintergrund ist.',
       kinds: {
+        activity: {
+          label: 'Was Scout gerade tut',
+          description: 'Eine stille Benachrichtigung, die jedem Schritt folgt, während Scout im Hintergrund arbeitet.'
+        },
         approval: {
           label: 'Genehmigung nötig',
           description: 'Ein Befehl wartet darauf, dass Sie ihn genehmigen oder ablehnen.'
@@ -6216,6 +6220,13 @@ export const deOverrides = {
     sendDiagnostics: 'Diagnosedaten senden',
     reloadWindow: 'Fenster neu laden',
     openLogs: 'Logs öffnen'
+  },
+  activity: {
+    approveOrder: merchant => `Bestätige deine ${merchant}-Bestellung`,
+    done: 'Fertig',
+    question: 'Hat eine Frage an dich',
+    thinking: 'Denkt nach',
+    waitingApproval: 'Wartet auf dein OK'
   },
   phone: {
     back: 'Chats',

@@ -1,6 +1,7 @@
 import { atom } from 'nanostores'
 
 import { translateNow } from '@/i18n'
+import { notificationText } from '@/lib/notification-text'
 import { resolveScoutOpenPath, type ScoutOpenTarget } from '@/lib/scout-open-target'
 import { persistString, storedString } from '@/lib/storage'
 
@@ -23,11 +24,21 @@ export type { ScoutOpenTarget }
 // Native OS notifications (Electron `Notification`), separate from the in-app
 // toast feed in `notifications.ts`. Each kind toggles independently.
 export type NativeNotificationKind =
-  'approval' | 'backgroundDone' | 'credits' | 'heartbeat' | 'input' | 'plugin' | 'reminder' | 'turnDone' | 'turnError'
+  | 'activity'
+  | 'approval'
+  | 'backgroundDone'
+  | 'credits'
+  | 'heartbeat'
+  | 'input'
+  | 'plugin'
+  | 'reminder'
+  | 'turnDone'
+  | 'turnError'
 
 export const NATIVE_NOTIFICATION_KINDS: readonly NativeNotificationKind[] = [
   'approval',
   'input',
+  'activity',
   'turnDone',
   'turnError',
   'backgroundDone',
@@ -55,6 +66,7 @@ const STORAGE_KEY = 'scout:native-notifications'
 const DEFAULT_PREFS: NativeNotificationPrefs = {
   enabled: true,
   kinds: {
+    activity: true,
     approval: true,
     backgroundDone: true,
     credits: true,
@@ -154,6 +166,11 @@ function shouldFire(kind: NativeNotificationKind, sessionId?: null | string, glo
     return true
   }
 
+  // What Scout is doing: news only while the user is away, whichever chat it is for.
+  if (kind === 'activity') {
+    return isBackgrounded()
+  }
+
   // Global notifications aren't tied to a chat session (e.g. pet generation,
   // which runs from the command center with no active conversation). They fire
   // whenever the user is away, with no session-match requirement — otherwise a
@@ -223,6 +240,8 @@ export interface NativeNotificationInput {
   tag?: string
   /** Absolute file path for the OS notification icon (Electron). */
   icon?: string
+  /** Replace the previous notification with the same `tag` instead of adding another. */
+  replace?: boolean
   /**
    * Resolved hash-router path to open on body click when there is no
    * `sessionId` (plugins). Same vocabulary as `scout://index-network/intent/1`.
@@ -262,11 +281,12 @@ export function dispatchNativeNotification(input: NativeNotificationInput): bool
   void window.scoutDesktop?.notify({
     actions: input.actions,
     activate: input.activate,
-    body: input.body,
+    body: input.body ? notificationText(input.body) : input.body,
     focusSessionId: input.sessionId ? (storedSessionIdForRuntimeId(input.sessionId) ?? undefined) : undefined,
     icon: input.icon,
     kind: input.kind,
     notifyId: input.notifyId,
+    replace: input.replace,
     sessionId: input.sessionId ?? undefined,
     silent: input.silent,
     tag: input.tag,

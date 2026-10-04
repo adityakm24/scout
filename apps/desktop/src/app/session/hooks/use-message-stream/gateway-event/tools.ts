@@ -2,6 +2,7 @@ import { isPreviewableTarget, toolPreviewOutcome } from '@/components/assistant-
 import { reportFirstBuildToolComplete } from '@/components/onboarding-chat/first-build'
 import { toolCallOwnerMessageId } from '@/lib/chat-messages'
 import { invalidateSlashCompletions } from '@/lib/slash-completion-cache'
+import { noteAgentActivity } from '@/store/agent-activity'
 import { refreshBackgroundProcesses } from '@/store/composer-status'
 import { flashPetActivity, setPetActivity } from '@/store/pet'
 import { recordPreviewArtifact, reofferPreviewArtifact } from '@/store/preview-status'
@@ -61,6 +62,10 @@ export function handleToolEvent(ctx: GatewayEventContext): boolean {
 
     flushQueuedDeltas(sessionId)
     upsertToolCall(sessionId, toTodoPayload(payload) ?? payload, 'running', event.type, occurredAt)
+
+    if (typeof payload?.activity === 'string' && !event.replayed) {
+      noteAgentActivity(sessionId, payload.activity)
+    }
 
     if (isActiveEvent) {
       setPetActivity({ reasoning: false, toolRunning: true })

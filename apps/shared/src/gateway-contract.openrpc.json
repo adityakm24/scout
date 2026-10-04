@@ -36574,6 +36574,18 @@
             ],
             "default": null,
             "title": "Labels"
+          },
+          "activity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Activity"
           }
         },
         "required": [

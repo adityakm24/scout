@@ -268,6 +268,8 @@ class ToolStartPayload(Payload):
     args_text: str | None = None
     preview: str | None = None
     labels: list[ToolLabel] | None = None
+    # What the agent is doing, for live surfaces ("Placing your Zepto order"); tools/tool_activity.py.
+    activity: str | None = None
 
 
 event("tool.start", ToolStartPayload, doc="A tool call began (stable id + full args).")

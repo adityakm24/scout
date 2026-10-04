@@ -1,10 +1,11 @@
 import * as Location from 'expo-location'
 import * as Notifications from 'expo-notifications'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 
+import { type ActivityUpdate, showActivity } from './activity'
 import type { Pairing } from './pairing'
 import { colors } from './theme'
 
@@ -23,6 +24,12 @@ Notifications.setNotificationHandler({
 export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairing: Pairing }) {
   const webview = useRef<WebView>(null)
   const [failed, setFailed] = useState('')
+
+  // Ask once, while the user is here: iOS cannot show its permission prompt from the background,
+  // which is exactly when Scout's replies and questions need to reach them.
+  useEffect(() => {
+    void Notifications.requestPermissionsAsync()
+  }, [])
 
   // Runs before the renderer's own scripts, so its web bridge finds the backend and token.
   const bootstrap = `
@@ -84,6 +91,12 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
   }
 
   const handle = async (kind: string, payload?: unknown): Promise<unknown> => {
+    if (kind === 'activity') {
+      await showActivity(payload as ActivityUpdate)
+
+      return true
+    }
+
     if (kind === 'notify') {
       const { body, title } = (payload ?? {}) as { body?: string; title?: string }
       const { granted } = await Notifications.requestPermissionsAsync()

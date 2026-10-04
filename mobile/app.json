@@ -40,7 +40,9 @@
         {
           "locationWhenInUsePermission": "Scout uses your location to time deliveries and plans around where you are."
         }
-      ]
+      ],
+      "expo-live-activity",
+      "./plugins/with-scene-lifecycle"
     ],
     "backgroundColor": "#0d0f14",
     "scheme": "scout"

@@ -293,6 +293,11 @@ def _on_tool_start(sid: str, tool_call_id: str, name: str, args: dict):
         payload: dict[str, object] = {"tool_id": tool_call_id, "name": name, "context": _tool_ctx(name, args)}
         if (labels := _tool_labels(name, args)) is not None:
             payload["labels"] = labels
+        with contextlib.suppress(Exception):  # a missing line only leaves the live surfaces unchanged
+            from tools.tool_activity import activity_for_tool
+
+            if activity := activity_for_tool(name, args):
+                payload["activity"] = activity
         # Full args (not just the 80-char `context` preview) so the desktop's expanded tool row is complete
         # while the tool runs. args.todos may be a partial merge — tool.complete is the truth.
         if args:

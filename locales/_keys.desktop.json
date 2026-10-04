@@ -1,6 +1,11 @@
 {
   "surface": "desktop",
   "keys": [
+    "activity.approveOrder",
+    "activity.done",
+    "activity.question",
+    "activity.thinking",
+    "activity.waitingApproval",
     "agentPanel.changePhoto",
     "agentPanel.close",
     "agentPanel.connected",
@@ -3568,6 +3573,8 @@
     "settings.notifications.enableAllDesc",
     "settings.notifications.focusedHint",
     "settings.notifications.intro",
+    "settings.notifications.kinds.activity.description",
+    "settings.notifications.kinds.activity.label",
     "settings.notifications.kinds.approval.description",
     "settings.notifications.kinds.approval.label",
     "settings.notifications.kinds.backgroundDone.description",

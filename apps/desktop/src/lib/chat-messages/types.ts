@@ -97,6 +97,8 @@ export type GatewayEventPayload = {
   context?: string
   input?: unknown
   labels?: ToolLabel[]
+  /** tool.start: what the agent is doing, in the user's words (tools/tool_activity.py). */
+  activity?: string
   preview?: string
   result?: unknown
   summary?: string

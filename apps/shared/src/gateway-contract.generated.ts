@@ -4692,6 +4692,7 @@ export interface ToolStartPayload {
   args_text?: string | null
   preview?: string | null
   labels?: ToolLabel[] | null
+  activity?: string | null
 }
 /** ``tool_progress._on_tool_complete``; ``todos``/``revision`` merged in for the todo tools. */
 export interface ToolCompletePayload {

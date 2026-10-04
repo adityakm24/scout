@@ -1241,6 +1241,10 @@ export const en: Translations = {
       enableAllDesc: 'Off silences every notification below.',
       focusedHint: 'Completion alerts only fire while Scout is in the background.',
       kinds: {
+        activity: {
+          label: 'What Scout is doing',
+          description: 'One quiet notification that follows each step while Scout works in the background.'
+        },
         approval: {
           label: 'Approval needed',
           description: 'A command is waiting for you to approve or reject it.'
@@ -5714,6 +5718,13 @@ export const en: Translations = {
     openLogs: 'Open logs'
   },
 
+  activity: {
+    approveOrder: merchant => `Approve your ${merchant} order`,
+    done: 'Done',
+    question: 'Has a question for you',
+    thinking: 'Thinking',
+    waitingApproval: 'Waiting for your OK'
+  },
   phone: {
     back: 'Chats',
     backToChat: 'Chat',

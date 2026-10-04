@@ -36,6 +36,7 @@ import {
   SunFilled
 } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { startPhoneActivity } from '@/platform/phone-activity'
 import { $agentIdentity } from '@/store/agent-identity'
 import { $sessions } from '@/store/session'
 import type { SessionInfo } from '@/types/scout'
@@ -69,6 +70,8 @@ function activeTab(pathname: string, chatsOpen: boolean): null | TabId {
  *  screens, a back/compose header inside a conversation. Mounted instead of the titlebar. */
 export function PhoneShell() {
   const { pathname } = useLocation()
+
+  useEffect(startPhoneActivity, [])
   const chatsOpen = useStore($phoneChatsOpen)
   const inChat = !chatsOpen && appViewForPath(pathname) === 'chat'
   const inSettings = !chatsOpen && routePathname(pathname) === SETTINGS_ROUTE

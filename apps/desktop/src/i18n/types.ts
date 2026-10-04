@@ -1079,6 +1079,7 @@ export interface Translations {
       enableAllDesc: string
       focusedHint: string
       kinds: Record<
+        | 'activity'
         | 'approval'
         | 'backgroundDone'
         | 'credits'
@@ -4738,6 +4739,13 @@ export interface Translations {
     openLogs: string
   }
 
+  activity: {
+    approveOrder: (merchant: string) => string
+    done: string
+    question: string
+    thinking: string
+    waitingApproval: string
+  }
   phone: {
     back: string
     backToChat: string

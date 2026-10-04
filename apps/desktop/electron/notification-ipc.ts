@@ -23,6 +23,9 @@ export function registerNativeNotifications({
   const linux = platform === 'linux' ? createLinuxNotifications() : undefined
   const notifications = createNotificationRegistry({ releaseOnClose: Boolean(linux) })
 
+  // The live notification per tag, closed when its next step arrives.
+  const replaced = new Map<string, { close: () => void }>()
+
   ipcMain.handle('scout:notify', async (event, payload: ScoutNotification) => {
     // The source renderer owns runtime bindings and plugin callbacks.
     const sourceWindow = BrowserWindow.fromWebContents(event.sender)
@@ -32,8 +35,9 @@ export function registerNativeNotifications({
       return false
     }
 
-    // Peer renderers share one OS notification for the same event.
-    const key = `${payload?.kind ?? ''}:${payload?.sessionId ?? payload?.tag ?? ''}`
+    // Peer renderers share one OS notification for the same event. A replacing notification is a
+    // new step of the same story, so its text is part of what makes it the same event.
+    const key = `${payload?.kind ?? ''}:${payload?.sessionId ?? payload?.tag ?? ''}${payload?.replace ? `:${payload.title}` : ''}`
 
     if (isDuplicateNotification(key)) {
       return deliveries.get(key) ?? false
@@ -108,6 +112,11 @@ export function registerNativeNotifications({
       })
     })
     notifications.retain(notification)
+
+    if (payload?.replace && payload.tag) {
+      replaced.get(payload.tag)?.close()
+      replaced.set(payload.tag, notification)
+    }
 
     // Peers share the actual outcome, including pending/failed Linux delivery.
     const delivery = Promise.resolve(notification.show()).then(result => result !== false)

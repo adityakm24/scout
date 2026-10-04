@@ -1207,6 +1207,10 @@ export const esOverrides = {
       enableAllDesc: 'Desactivado silencia todas las notificaciones siguientes.',
       focusedHint: 'Los avisos de finalización solo se activan cuando Scout está en segundo plano.',
       kinds: {
+        activity: {
+          label: 'Lo que está haciendo Scout',
+          description: 'Una notificación silenciosa que sigue cada paso mientras Scout trabaja en segundo plano.'
+        },
         approval: {
           label: 'Se necesita aprobación',
           description: 'Un comando espera que lo apruebes o rechaces.'
@@ -6199,6 +6203,13 @@ export const esOverrides = {
     sendDiagnostics: 'Enviar diagnóstico',
     reloadWindow: 'Recargar ventana',
     openLogs: 'Abrir registros'
+  },
+  activity: {
+    approveOrder: merchant => `Aprueba tu pedido de ${merchant}`,
+    done: 'Listo',
+    question: 'Tiene una pregunta para ti',
+    thinking: 'Pensando',
+    waitingApproval: 'Esperando tu visto bueno'
   },
   phone: {
     back: 'Chats',

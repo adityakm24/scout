@@ -1209,6 +1209,10 @@ export const frOverrides = {
       enableAllDesc: 'Désactivé coupe toutes les notifications ci-dessous.',
       focusedHint: 'Les alertes de fin ne se déclenchent que quand Scout est en arrière-plan.',
       kinds: {
+        activity: {
+          label: 'Ce que fait Scout',
+          description: 'Une notification discrète qui suit chaque étape pendant que Scout travaille en arrière-plan.'
+        },
         approval: {
           label: 'Approbation requise',
           description: "Une commande attend que vous l'approuviez ou la rejetiez."
@@ -6222,6 +6226,13 @@ export const frOverrides = {
     sendDiagnostics: 'Envoyer les diagnostics',
     reloadWindow: 'Recharger la fenêtre',
     openLogs: 'Ouvrir les journaux'
+  },
+  activity: {
+    approveOrder: merchant => `Validez votre commande ${merchant}`,
+    done: 'Terminé',
+    question: 'A une question pour vous',
+    thinking: 'Réfléchit',
+    waitingApproval: 'Attend votre accord'
   },
   phone: {
     back: 'Chats',

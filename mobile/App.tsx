@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Linking, View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
+import { prepareActivityChannels } from './src/activity'
 import { forgetPairing, loadPairing, type Pairing, pairingFromDeepLink, savePairing } from './src/pairing'
 import { PairScreen } from './src/PairScreen'
 import { ScoutScreen } from './src/ScoutScreen'
@@ -16,6 +17,10 @@ export default function App() {
     setPairing(next)
     void savePairing(next)
   }
+
+  useEffect(() => {
+    void prepareActivityChannels()
+  }, [])
 
   useEffect(() => {
     // A pairing deep link (a QR scanned with the Camera app) pairs on open, else the saved one.

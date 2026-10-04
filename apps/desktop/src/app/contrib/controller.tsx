@@ -47,6 +47,8 @@ import { type KeybindContribution, KEYBINDS_AREA } from '@/lib/keybinds/actions'
 import { isOnboardingEnabled } from '@/lib/onboarding-enabled'
 import { TRANSCRIPT_DIRECTIVE_AREA, type TranscriptDirectiveContribution } from '@/lib/transcript-directives'
 import { setYoloEnabled } from '@/lib/yolo-session'
+import { IS_PHONE } from '@/platform/phone'
+import { startDesktopActivityNotifications } from '@/store/agent-activity'
 import { $connectionsRegistry } from '@/store/connection-registry-state'
 import { startHeartbeatWatch } from '@/store/heartbeat'
 import { $interfaceMode, $showsAdvancedChrome, setInterfaceMode, setModeContext } from '@/store/interface-mode'
@@ -63,6 +65,7 @@ import {
   SIDEBAR_MAX_WIDTH,
   sidebarSide
 } from '@/store/layout'
+import { dispatchNativeNotification } from '@/store/native-notifications'
 import { $profiles } from '@/store/profile'
 import { $profileRailVisible } from '@/store/profile-rail-prefs'
 import { runExportProfileFlow, runImportProfileFlow } from '@/store/profile-share'
@@ -639,6 +642,15 @@ if ($interfaceMode.get() !== 'simple') {
 // Heartbeat: scheduled checks the user turned on report back as notifications, panel open or not.
 startHeartbeatWatch()
 startAgentPanelRoomWatch()
+
+// What Scout is doing, step by step, while it works in the background. A phone shows the same line
+// as a Live Activity / ongoing notification instead (platform/phone-activity.ts).
+if (!IS_PHONE) {
+  startDesktopActivityNotifications(({ body, sessionId, title }) =>
+    dispatchNativeNotification({ body, global: true, kind: 'activity', replace: true, sessionId, silent: true, tag: 'scout-activity', title })
+  )
+}
+
 // Without the statusbar, the rail is the only way to switch profiles or gateways.
 $profiles.subscribe(profiles => setModeContext({ profileCount: profiles.length }))
 $connectionsRegistry.subscribe(registry => setModeContext({ connectionCount: registry?.connections.length ?? 0 }))

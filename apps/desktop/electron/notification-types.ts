@@ -8,6 +8,8 @@ export interface ScoutNotification {
   focusSessionId?: string
   /** Dedupe discriminator for session-less notifications (e.g. plugin id). */
   tag?: string
+  /** Close the previous notification with this `tag` and show this one in its place. */
+  replace?: boolean
   /** Absolute icon path for Electron `Notification`. */
   icon?: string
   /** Resolved hash-router path opened on body click (plugin / deeplink-compatible). */

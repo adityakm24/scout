@@ -5,6 +5,8 @@
   "dependencies": {
     "expo": "~57.0.26",
     "expo-camera": "~57.0.6",
+    "expo-dev-client": "~57.0.19",
+    "expo-live-activity": "^0.4.2",
     "expo-location": "~57.0.20",
     "expo-notifications": "~57.0.21",
     "expo-secure-store": "~57.0.4",
@@ -20,8 +22,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "private": true
