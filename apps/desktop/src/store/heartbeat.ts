@@ -2,6 +2,7 @@ import { atom } from 'nanostores'
 
 import { translateNow } from '@/i18n'
 import type { Translations } from '@/i18n/types'
+import { displayName } from '@/lib/text'
 import {
   type CronJob,
   getCronJobLatest,
@@ -164,6 +165,25 @@ export function plain(text: string): string {
     .replace(/[*_`~]+/g, '')
     .replace(/^#+\s*/, '')
     .trim()
+}
+
+const SKILL_NOT_READY = /attached skill '([^']+)' is not ready/
+
+/** A failed run's error as the user should read it: what to fix, never the scheduler's
+ *  status marker ("[blocked_config:silent]") or its developer instructions. */
+export function failureText(error: string, copy: Translations['agentPanel']['heartbeat']): string {
+  const skill = SKILL_NOT_READY.exec(error)?.[1]
+
+  if (skill) {
+    return skill.startsWith('google') ? copy.emailCheckNeedsGoogle : copy.failedSkill(displayName(skill))
+  }
+
+  const text = error
+    .replace(/^(?:\s*\[[a-z_:]+\])+\s*/i, '')
+    .replace(/\s*Provide the missing prerequisites.*$/s, '')
+    .trim()
+
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
 /** Turn on the "New email check" (every 30 minutes, results shown here and as notifications). */

@@ -66,6 +66,7 @@ export const frOverrides = {
       emailCheckDescription:
         'Toutes les 30 minutes, Scout cherche les nouveaux e-mails Gmail et vous dit ce qui est arrivé. Les vérifications sans nouveauté ne coûtent rien.',
       emailCheckNeedsGoogle: "Connectez d'abord Google Workspace dans Connecteurs.",
+      failedSkill: skill => `${skill} n’est pas encore configuré, cette vérification ne peut donc pas s’exécuter. Configurez-le dans Capacités.`,
       emailCheckTitle: 'Vérifier les nouveaux e-mails',
       empty: "Rien de planifié pour l'instant.",
       intro:

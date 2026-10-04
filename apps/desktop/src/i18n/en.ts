@@ -64,6 +64,7 @@ export const en: Translations = {
       emailCheckDescription:
         'Every 30 minutes, Scout looks for new Gmail and tells you what arrived. Quiet checks cost nothing.',
       emailCheckNeedsGoogle: 'Connect Google Workspace in Connectors first.',
+      failedSkill: skill => `${skill} isn’t set up yet, so this check can’t run. Set it up in Capabilities.`,
       emailCheckTitle: 'New email check',
       empty: 'Nothing scheduled yet.',
       intro:

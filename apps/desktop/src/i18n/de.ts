@@ -64,6 +64,7 @@ export const deOverrides = {
       emailCheckDescription:
         'Alle 30 Minuten sucht Scout nach neuen Gmail-Nachrichten und sagt dir, was angekommen ist. Ruhige Prüfungen kosten nichts.',
       emailCheckNeedsGoogle: 'Verbinde zuerst Google Workspace unter Connectors.',
+      failedSkill: skill => `${skill} ist noch nicht eingerichtet, daher kann diese Prüfung nicht laufen. Richte es unter Fähigkeiten ein.`,
       emailCheckTitle: 'Neue E-Mails prüfen',
       empty: 'Noch nichts geplant.',
       intro:

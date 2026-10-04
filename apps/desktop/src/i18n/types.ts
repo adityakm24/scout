@@ -122,6 +122,7 @@ export interface Translations {
       every: (count: number, unit: 'minute' | 'hour' | 'day') => string
       emailCheckDescription: string
       emailCheckNeedsGoogle: string
+      failedSkill: (skill: string) => string
       emailCheckTitle: string
       empty: string
       intro: string

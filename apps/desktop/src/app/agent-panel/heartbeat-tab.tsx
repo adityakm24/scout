@@ -12,6 +12,7 @@ import type { CronJob } from '@/scout'
 import {
   $heartbeat,
   addEmailCheck,
+  failureText,
   headline,
   type HeartbeatItem,
   plain,
@@ -128,7 +129,7 @@ function HeartbeatRow({ item }: { item: HeartbeatItem }) {
       </div>
 
       {failed ? (
-        <p className="m-0 line-clamp-2 text-xs text-(--ui-red)">{job.last_error}</p>
+        <p className="m-0 line-clamp-2 text-xs text-(--ui-red)">{failureText(job.last_error ?? '', copy)}</p>
       ) : latest.text ? (
         <button
           aria-expanded={expanded}
