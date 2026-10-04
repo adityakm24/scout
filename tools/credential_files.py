@@ -20,9 +20,9 @@ from scout_constants import get_scout_dir, get_scout_home
 from agent.skill_utils import EXCLUDED_SKILL_DIRS
 
 try:  # pragma: no cover - exercised via the fail-closed test below
-    from agent.file_safety import get_read_block_error
+    from agent.file_safety import get_read_block_error, is_skill_service_token
 except ImportError:  # noqa: F401 - sentinel consumed in register_credential_file
-    get_read_block_error = None  # type: ignore[assignment]
+    get_read_block_error = is_skill_service_token = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ def register_credential_file(relative_path: str, container_base: str = "/root/.s
     except Exception:
         logger.exception("credential_files: refusing %r — read guard raised", relative_path)
         return False
-    if denied:
+    if denied and not is_skill_service_token(str(resolved)):
         logger.warning("credential_files: refused %r — it is a credential store the agent "
                        "is denied from reading; a skill may mount its own service token, "
                        "not the master key files", relative_path)

@@ -343,9 +343,18 @@ _DID_SUFFIX = (
 _CREDENTIAL_FILE_NAMES = (
     "auth.json", "auth.lock", ".anthropic_oauth.json", ".env", "webhook_subscriptions.json",
     os.path.join("auth", "google_oauth.json"), os.path.join("cache", "bws_cache.json"),
+) + (_SKILL_SERVICE_TOKEN_NAMES := (
     # Google Workspace sign-in (scout_cli/google_workspace_auth.py): refresh token and OAuth client.
+    # Read-denied like the rest, but a skill's own service token, so its declared
+    # required_credential_files may still mount it (tools/credential_files.py).
     "google_token.json", "google_client_secret.json",
-)
+))
+
+
+def is_skill_service_token(path: str) -> bool:
+    """True for a read-denied file that is one skill's own service token, not a master store."""
+    resolved = Path(path).expanduser().resolve()
+    return any(resolved in _resolve_each(hd / name for hd in _scout_dirs()) for name in _SKILL_SERVICE_TOKEN_NAMES)
 
 # Directory-prefix read denies under SCOUT_HOME / <root>: (subdir, message for
 # the directory itself, message for a file inside). browser-profile/ is a copy

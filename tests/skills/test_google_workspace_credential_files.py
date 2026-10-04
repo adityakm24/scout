@@ -57,6 +57,13 @@ class TestGoogleWorkspaceCredentialFiles:
             container_paths = {m["container_path"] for m in mounts}
             assert "/root/.scout/google_token.json" in container_paths
             assert "/root/.scout/google_client_secret.json" in container_paths
+            # Mountable for the skill, still never readable by the agent.
+            from agent.file_safety import get_read_block_error
+
+            with patch.dict(os.environ, {"SCOUT_HOME": str(scout_home)}):
+                assert get_read_block_error(str(scout_home / "google_token.json"))
+                (scout_home / "auth.json").write_text("{}")  # a master store stays unmountable
+                assert register_credential_files(["auth.json"]) == ["auth.json"]
         finally:
             clear_credential_files()
 
