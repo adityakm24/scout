@@ -474,3 +474,13 @@
 :root[data-phone] [data-overlay-rail] :has(> [data-overlay-nav-item]) {
   align-items: center;
 }
+
+/* Scout's details sheet: its back button sits below the status bar, where a thumb finds it. */
+.phone-sheet-back {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  align-self: flex-start;
+  margin: 0;
+  padding: 0 0.5rem;
+}

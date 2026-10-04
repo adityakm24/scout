@@ -6202,6 +6202,7 @@ export const esOverrides = {
   },
   phone: {
     back: 'Chats',
+    backToChat: 'Chat',
     capabilities: 'Habilidades',
     chats: 'Chats',
     dashboard: 'Hoy',

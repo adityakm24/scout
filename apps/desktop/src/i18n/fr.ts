@@ -6225,6 +6225,7 @@ export const frOverrides = {
   },
   phone: {
     back: 'Chats',
+    backToChat: 'Discussion',
     capabilities: 'Compétences',
     chats: 'Chats',
     dashboard: 'Aujourd’hui',

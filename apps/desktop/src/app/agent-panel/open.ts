@@ -37,8 +37,15 @@ export function agentPanelShown(): boolean {
   )
 }
 
-/** Fold the agent panel back to its rail (its close button). */
+/** Fold the agent panel back to its rail (its close button); on a narrow window, dismiss the
+ *  edge overlay that shows it instead. */
 export function closeAgentPanel() {
+  if ($narrowViewport.get()) {
+    window.dispatchEvent(new CustomEvent(PANE_TOGGLE_REVEAL_EVENT, { detail: { id: AGENT_PANEL_ID, mode: 'close' } }))
+
+    return
+  }
+
   const tree = $layoutTree.get()
   const group = tree ? findGroupOfPane(tree, AGENT_PANEL_ID) : null
 

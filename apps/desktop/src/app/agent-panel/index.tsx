@@ -7,6 +7,8 @@ import { Codicon } from '@/components/ui/codicon'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { TextTabMeta } from '@/components/ui/text-tab'
 import { useI18n } from '@/i18n'
+import { ChevronLeft } from '@/lib/icons'
+import { IS_PHONE } from '@/platform/phone'
 import { ensureAgentIdentity } from '@/store/agent-identity'
 import { $activeGatewayProfile } from '@/store/profile'
 import { $approvalRequests } from '@/store/prompts'
@@ -50,14 +52,22 @@ export function AgentPanel() {
       className="@container/agent relative flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden bg-(--ui-sidebar-surface-background)"
       data-slot="agent-panel"
     >
-      <button
-        aria-label={copy.close}
-        className="absolute right-2 top-2 z-10 grid size-7 place-items-center rounded-full text-(--ui-text-tertiary) transition-colors duration-200 hover:bg-(--chrome-action-hover) hover:text-foreground"
-        onClick={closeAgentPanel}
-        type="button"
-      >
-        <Codicon name="close" size="0.875rem" />
-      </button>
+      {IS_PHONE ? (
+        // A phone sheet goes back to the conversation from the top left, below the status bar.
+        <button className="phone-back phone-sheet-back" onClick={closeAgentPanel} type="button">
+          <ChevronLeft className="size-7" stroke={2.25} />
+          <span>{t.phone.backToChat}</span>
+        </button>
+      ) : (
+        <button
+          aria-label={copy.close}
+          className="absolute right-2 top-2 z-10 grid size-7 place-items-center rounded-full text-(--ui-text-tertiary) transition-colors duration-200 hover:bg-(--chrome-action-hover) hover:text-foreground"
+          onClick={closeAgentPanel}
+          type="button"
+        >
+          <Codicon name="close" size="0.875rem" />
+        </button>
+      )}
       <IdentityCard />
       {/* At the panel's narrowest the four labels only fit one size down. */}
       <div className="px-4 @max-[22rem]/agent:[&_[role=tab]]:px-1.5 @max-[22rem]/agent:[&_[role=tab]]:text-[0.75rem]">

@@ -5716,6 +5716,7 @@ export const en: Translations = {
 
   phone: {
     back: 'Chats',
+    backToChat: 'Chat',
     capabilities: 'Skills',
     chats: 'Chats',
     dashboard: 'Today',

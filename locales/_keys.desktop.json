@@ -2207,6 +2207,7 @@
     "onboarding.verifyingCode",
     "onboarding.waitingAuthorize",
     "phone.back",
+    "phone.backToChat",
     "phone.capabilities",
     "phone.chats",
     "phone.dashboard",

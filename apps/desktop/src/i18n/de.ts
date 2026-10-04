@@ -6219,6 +6219,7 @@ export const deOverrides = {
   },
   phone: {
     back: 'Chats',
+    backToChat: 'Chat',
     capabilities: 'Skills',
     chats: 'Chats',
     dashboard: 'Heute',

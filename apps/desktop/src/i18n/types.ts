@@ -4740,6 +4740,7 @@ export interface Translations {
 
   phone: {
     back: string
+    backToChat: string
     capabilities: string
     chats: string
     dashboard: string
