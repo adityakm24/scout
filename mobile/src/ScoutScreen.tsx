@@ -121,9 +121,20 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
         allowsBackForwardNavigationGestures={false}
         bounces={false}
         injectedJavaScriptBeforeContentLoaded={bootstrap}
-        keyboardDisplayRequiresUserAction={false}
+        // The page scrolls inside its own panes; letting the web view scroll too makes iOS shove
+        // the whole app up when the keyboard opens. And a page script never raises the keyboard
+        // by itself (a chat opening must not), only a tap does.
+        keyboardDisplayRequiresUserAction
+        scrollEnabled={false}
+        // No web form bar (previous/next/done) over the keyboard: native apps don't have one.
+        hideKeyboardAccessoryView
         onError={({ nativeEvent }) => setFailed(nativeEvent.description || 'error')}
         onLoadEnd={() => console.log(`[scout page] loaded ${pairing.baseUrl}`)}
+        // iOS may stop a backgrounded or memory-heavy web content process; bring the page back.
+        onContentProcessDidTerminate={() => {
+          console.warn('[scout page] web content process ended; reloading')
+          webview.current?.reload()
+        }}
         onMessage={onMessage}
         originWhitelist={[pairing.baseUrl]}
         ref={webview}

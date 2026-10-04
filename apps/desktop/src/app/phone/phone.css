@@ -6,15 +6,23 @@
   --phone-header-height: calc(3.25rem + env(safe-area-inset-top));
   --phone-hairline: color-mix(in srgb, var(--ui-text-primary) 14%, transparent);
   --phone-fill: color-mix(in srgb, var(--ui-text-primary) 9%, transparent);
-  --phone-bar: color-mix(in srgb, var(--ui-bg-primary, var(--background)) 82%, transparent);
+  --phone-bar: color-mix(in srgb, var(--ui-editor-surface-background, var(--background)) 78%, transparent);
 
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
   overscroll-behavior: none;
 }
 
+:root[data-phone],
 :root[data-phone] body {
   overscroll-behavior: none;
+  overflow: hidden;
+}
+
+/* The app is exactly the visible area (src/platform/phone.ts shrinks it above the keyboard). */
+:root[data-phone] :is(body, #root, [data-slot='sidebar-wrapper']) {
+  height: var(--phone-viewport-height, 100dvh) !important;
+  min-height: 0 !important;
 }
 
 /* The desktop's window chrome has no place on a phone: the titlebar clusters, the pane tab
@@ -35,8 +43,17 @@
   padding-top: calc(env(safe-area-inset-top) + 0.25rem);
 }
 
+/* …and the thread starts (and fades) below the header plus that inset (motion.css). */
+:root[data-phone] [data-chat-surface]:has(> [data-slot='agent-identity-header']) {
+  --thread-identity-clearance: calc(5.5rem + env(safe-area-inset-top));
+}
+
 :root[data-phone] [data-slot='composer-dock'] {
   padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+
+:root[data-phone][data-phone-keyboard] [data-slot='composer-dock'] {
+  padding-bottom: 0.5rem;
 }
 
 :root[data-phone] [data-slot='composer-surface'] :is(textarea, [contenteditable='true']) {
@@ -48,7 +65,7 @@
   --conversation-text-font-size: 1.0625rem;
 }
 
-:root[data-phone] .thread-timeline {
+:root[data-phone] :is(.thread-timeline, .thread-timeline-ticks) {
   display: none !important;
 }
 

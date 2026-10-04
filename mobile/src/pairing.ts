@@ -25,6 +25,17 @@ export function parsePairingLink(text: string): Pairing | null {
   }
 }
 
+/** `scout://pair?link=<pairing link>` (or Expo Go's `exp://…/--/pair?link=…` in development). */
+export function pairingFromDeepLink(url: string): Pairing | null {
+  try {
+    const link = new URL(url).searchParams.get('link')
+
+    return link ? parsePairingLink(link) : null
+  } catch {
+    return null
+  }
+}
+
 export async function loadPairing(): Promise<Pairing | null> {
   const saved = await SecureStore.getItemAsync(KEY)
 

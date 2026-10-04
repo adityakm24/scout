@@ -40,4 +40,27 @@ if (IS_PHONE) {
   document
     .querySelector('meta[name="viewport"]')
     ?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover')
+  trackVisibleViewport()
+}
+
+/** Size the app to what is visible: above the keyboard while it is open, so the composer rides
+ *  on top of it and the headers stay put (iOS otherwise scrolls the whole page under the notch). */
+function trackVisibleViewport() {
+  const viewport = window.visualViewport
+
+  if (!viewport) {
+    return
+  }
+
+  const fit = () => {
+    const root = document.documentElement
+    root.style.setProperty('--phone-viewport-height', `${Math.round(viewport.height)}px`)
+    // With the keyboard up the home bar is covered, so nothing needs to clear it.
+    root.toggleAttribute('data-phone-keyboard', window.innerHeight - viewport.height > 120)
+    window.scrollTo(0, 0)
+  }
+
+  viewport.addEventListener('resize', fit)
+  viewport.addEventListener('scroll', () => window.scrollTo(0, 0))
+  fit()
 }

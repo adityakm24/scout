@@ -42,6 +42,7 @@
         }
       ]
     ],
-    "backgroundColor": "#0d0f14"
+    "backgroundColor": "#0d0f14",
+    "scheme": "scout"
   }
 }
