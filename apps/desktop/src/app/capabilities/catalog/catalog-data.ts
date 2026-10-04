@@ -215,7 +215,16 @@ export function useCatalog(kind: CatalogKind) {
 
 /** Warm a catalog while the browser is idle so switching tabs doesn't pay the fetch + parse. */
 export function prefetchCatalogWhenIdle(kind: CatalogKind) {
-  const id = requestIdleCallback(() => void queryClient.prefetchQuery(catalogQuery(kind)), { timeout: 5_000 })
+  const prefetch = () => void queryClient.prefetchQuery(catalogQuery(kind))
+
+  // Safari/WebKit (the phone app's web view) has no requestIdleCallback.
+  if (typeof requestIdleCallback !== 'function') {
+    const timer = setTimeout(prefetch, 1_000)
+
+    return () => clearTimeout(timer)
+  }
+
+  const id = requestIdleCallback(prefetch, { timeout: 5_000 })
 
   return () => cancelIdleCallback(id)
 }
