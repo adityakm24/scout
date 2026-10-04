@@ -1,0 +1,126 @@
+import * as Location from 'expo-location'
+import { useRef, useState } from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { WebView, type WebViewMessageEvent } from 'react-native-webview'
+
+import type { Pairing } from './pairing'
+import { colors } from './theme'
+
+/** Scout itself: the desktop renderer, served by the paired computer, with the phone's own
+ *  abilities offered to it as `window.scoutNative`. */
+export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairing: Pairing }) {
+  const webview = useRef<WebView>(null)
+  const [failed, setFailed] = useState('')
+
+  // Runs before the renderer's own scripts, so its web bridge finds the backend and token.
+  const bootstrap = `
+    window.__SCOUT_REMOTE__ = ${JSON.stringify(pairing)};
+    (function () {
+      var pending = {}, next = 0;
+      window.__scoutNativeReply = function (id, result, error) {
+        var call = pending[id]; delete pending[id];
+        if (call) error ? call.reject(new Error(error)) : call.resolve(result);
+      };
+      window.scoutNative = {
+        platform: ${JSON.stringify(process.env.EXPO_OS ?? 'ios')},
+        request: function (kind, payload) {
+          return new Promise(function (resolve, reject) {
+            var id = ++next; pending[id] = { resolve: resolve, reject: reject };
+            window.ReactNativeWebView.postMessage(JSON.stringify({ id: id, kind: kind, payload: payload }));
+          });
+        }
+      };
+    })();
+    true;
+  `
+
+  const reply = (id: number, result: unknown, error?: string) =>
+    webview.current?.injectJavaScript(
+      `window.__scoutNativeReply(${id}, ${JSON.stringify(result ?? null)}, ${JSON.stringify(error ?? null)}); true;`
+    )
+
+  const onMessage = async (event: WebViewMessageEvent) => {
+    let call: { id: number; kind: string }
+
+    try {
+      call = JSON.parse(event.nativeEvent.data)
+    } catch {
+      return
+    }
+
+    try {
+      reply(call.id, await handle(call.kind))
+    } catch (error) {
+      reply(call.id, null, error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const handle = async (kind: string): Promise<unknown> => {
+    if (kind === 'location') {
+      const { granted } = await Location.requestForegroundPermissionsAsync()
+
+      if (!granted) {
+        throw new Error('Location permission was not given')
+      }
+
+      const { coords, timestamp } = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+
+      return { accuracy: coords.accuracy, latitude: coords.latitude, longitude: coords.longitude, timestamp }
+    }
+
+    if (kind === 'unpair') {
+      onUnpair()
+
+      return true
+    }
+
+    throw new Error(`Unknown request: ${kind}`)
+  }
+
+  if (failed) {
+    return (
+      <SafeAreaView style={[styles.screen, styles.center]}>
+        <Text style={styles.title}>Can’t reach Scout</Text>
+        <Text style={styles.body}>
+          {pairing.baseUrl} didn’t answer. Make sure Scout is running on your computer and this phone is on the same
+          network.
+        </Text>
+        <Pressable onPress={() => setFailed('')} style={styles.button}>
+          <Text style={styles.buttonText}>Try again</Text>
+        </Pressable>
+        <Pressable onPress={onUnpair}>
+          <Text style={styles.link}>Connect to a different Scout</Text>
+        </Pressable>
+      </SafeAreaView>
+    )
+  }
+
+  return (
+    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
+      <WebView
+        allowsBackForwardNavigationGestures={false}
+        bounces={false}
+        injectedJavaScriptBeforeContentLoaded={bootstrap}
+        keyboardDisplayRequiresUserAction={false}
+        onError={({ nativeEvent }) => setFailed(nativeEvent.description || 'error')}
+        onMessage={onMessage}
+        originWhitelist={[pairing.baseUrl]}
+        ref={webview}
+        source={{ uri: pairing.baseUrl }}
+        style={styles.web}
+      />
+    </SafeAreaView>
+  )
+}
+
+const styles = StyleSheet.create({
+  body: { color: colors.textSecondary, fontSize: 15, textAlign: 'center' },
+  button: { backgroundColor: colors.accent, borderRadius: 999, paddingHorizontal: 20, paddingVertical: 12 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  center: { alignItems: 'center', gap: 16, justifyContent: 'center', padding: 24 },
+  link: { color: colors.accent, fontSize: 15 },
+  screen: { backgroundColor: colors.background, flex: 1 },
+  title: { color: colors.text, fontSize: 22, fontWeight: '700' },
+  web: { backgroundColor: colors.background, flex: 1 }
+})

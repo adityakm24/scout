@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Scout",
+    "slug": "scout",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.spaceshipresearch.scout",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Scout uses your location to time deliveries and plans around where you are.",
+        "NSCameraUsageDescription": "Scout uses the camera to scan the pairing code from your computer."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0d0f14",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.spaceshipresearch.scout"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Scout uses the camera to scan the pairing code from your computer."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Scout uses your location to time deliveries and plans around where you are."
+        }
+      ]
+    ],
+    "backgroundColor": "#0d0f14"
+  }
+}
