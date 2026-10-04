@@ -284,19 +284,36 @@ def _repair_tool_call_arguments(raw_args: str, tool_name: str = "?") -> str:
     return "{}"
 
 
-def close_interrupted_tool_sequence(messages: list, final_response: Any = None) -> bool:
+def close_interrupted_tool_sequence(messages: list, final_response: Any = None, *, reason_only: bool = False) -> bool:
     """Append a synthetic assistant turn when an interrupted tail is a tool result: a transcript
     ending on a raw ``tool`` message makes the next user message land as ``tool → user``, an
     alternation violation strict providers (Gemini, Claude) answer by hallucinating a
-    continuation. Mutates in place; True if a closing turn was appended."""
+    continuation. Mutates in place; True if a closing turn was appended.
+
+    ``reason_only``: the text is why the turn stopped ("Operation interrupted: …"), not words for
+    the user. The model still replays it (``api_content``) but the row is hidden, so a reopened
+    chat does not paint the diagnostic as the agent's reply."""
     last = messages[-1] if messages else None
     if not isinstance(last, dict) or last.get("role") != "tool":
         return False
-    text = final_response if isinstance(final_response, str) else ""
+    text = (final_response if isinstance(final_response, str) else "").strip() or "Operation interrupted."
     from agent.message_metadata import append_message
 
-    append_message(messages, {"role": "assistant", "content": text.strip() or "Operation interrupted."})
+    if reason_only:
+        append_message(messages, {"role": "assistant", "content": "", "display_kind": "hidden", "api_content": text})
+    else:
+        append_message(messages, {"role": "assistant", "content": text})
     return True
+
+
+def is_untyped_interrupt_reason(message: Any) -> bool:
+    """A closing row ``close_interrupted_tool_sequence`` wrote before ``reason_only`` hid it: one line
+    of "Operation interrupted…" on an assistant row without tool calls. Read-side only."""
+    content = message.get("content") if isinstance(message, dict) else None
+    return (
+        message.get("role") == "assistant" and not message.get("tool_calls") and isinstance(content, str)
+        and content.strip().startswith("Operation interrupted") and "\n" not in content.strip()
+    )
 
 
 # finish_reason wire normalization. Some OpenAI-compatible gateways fronting

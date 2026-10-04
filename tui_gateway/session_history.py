@@ -203,6 +203,7 @@ def _history_to_messages(history: list[dict], *, profile_home=None, image_urls: 
     """``image_urls=False`` is the ``inline_images=false`` projection (#116511): image parts render ``[image]``
     so a remote client's history read stays kilobytes instead of re-transmitting every stored attachment."""
     from agent.history_commentary import project_history_commentary
+    from agent.message_sanitization import is_untyped_interrupt_reason
 
     messages = []
     tool_call_args = {}
@@ -217,7 +218,7 @@ def _history_to_messages(history: list[dict], *, profile_home=None, image_urls: 
         if role not in _HISTORY_ROLES or m.get("display_kind") == "hidden":
             continue
         content_text = _coerce_message_text(m.get("content"), image_urls=image_urls)
-        if _is_display_hidden_marker(role, content_text):
+        if _is_display_hidden_marker(role, content_text) or is_untyped_interrupt_reason(m):
             continue
         if role == "user":
             content_text = _DISCORD_TRIGGERING_NOTE_RE.sub(r"\1", content_text)

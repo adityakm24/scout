@@ -590,6 +590,7 @@ def _project_for_display(messages: list, *, home=None, inline_images: bool = Tru
     from agent.compaction_display import project_compaction_message_for_display
     from agent.context_compressor import is_compaction_summary_message
     from agent.history_commentary import project_history_commentary
+    from agent.message_sanitization import is_untyped_interrupt_reason
     from agent.turn_failure_copy import untyped_failed_turn_display_kind
 
     # inline_images=False (#116511): render content through the gateway's ``_coerce_message_text``
@@ -614,6 +615,8 @@ def _project_for_display(messages: list, *, home=None, inline_images: bool = Tru
             message.get("role"), message.get("content"))
         if failed_turn:
             message = {**message, "display_kind": failed_turn}
+        elif not message.get("display_kind") and is_untyped_interrupt_reason(message):
+            message = {**message, "display_kind": "hidden"}
         if not is_compaction_summary_message(message):
             projected_messages.append(message)
             continue

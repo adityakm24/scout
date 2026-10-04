@@ -265,5 +265,5 @@ def test_stop_during_empty_response_recovery_keeps_the_executed_tool_call_live(r
     assert real_loop.ledger.read_text() == "PAYMENT #1 SENT\n"
     assert result["interrupted"] is True
     _assert_saved_tool_pairs_stay_live(result, real_loop.db, real_loop.sid)
-    # The Stop owner strips the nudge scaffold itself and closes with its own reason.
-    assert result["messages"][-1]["content"] == result["final_response"]
+    # The Stop owner strips the nudge scaffold itself and closes with its own reason (replayed, not painted).
+    assert result["messages"][-1]["api_content"] == result["final_response"]

@@ -51,6 +51,30 @@ def test_closing_makes_next_user_message_alternation_safe():
     _assert_no_tool_then_user(follow_on)
 
 
+def test_interrupt_reason_is_replayed_but_never_painted():
+    """A stopped turn's reason ("Operation interrupted: waiting for model response (1.2s
+    elapsed).") reached the reopened chat as the agent's reply. The model still sees it; the
+    transcript does not."""
+    from tui_gateway.server import _history_to_messages  # server.py-bound
+
+    reason = "Operation interrupted: waiting for model response (1.2s elapsed)."
+    messages = _tool_tail()
+    close_interrupted_tool_sequence(messages, reason, reason_only=True)
+
+    assert messages[-1]["api_content"] == reason
+    painted = [m.get("text") or m.get("content") for m in _history_to_messages(messages)]
+    assert not any(reason in str(text) for text in painted)
+    # Rows persisted before the reason was hidden are not painted either, on either history read.
+    from scout_cli.web_routers.sessions import _project_for_display
+
+    legacy = _tool_tail() + [{"role": "assistant", "content": reason}]
+    assert not any(reason in str(m) for m in _history_to_messages(legacy))
+    assert _project_for_display(legacy)[-1]["display_kind"] == "hidden"
+    # A reply that merely mentions an interruption is still a reply.
+    reply = {"role": "assistant", "content": "Operation interrupted earlier, so I re-ran it.\nAll done."}
+    assert not _project_for_display([reply])[-1].get("display_kind")
+
+
 def test_assistant_tail_is_left_untouched():
     messages = [
         {"role": "user", "content": "hi"},

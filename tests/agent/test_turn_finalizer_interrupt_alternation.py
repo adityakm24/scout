@@ -153,9 +153,11 @@ def test_interrupt_after_tool_closes_sequence_with_placeholder():
 
     # Tail must now be an assistant message, not a raw tool result.
     assert messages[-1]["role"] == "assistant"
-    # Empty final_response falls back to the explicit placeholder rather
-    # than persisting an empty-content assistant turn.
-    assert messages[-1]["content"].strip()
+    # Empty final_response falls back to the explicit placeholder rather than
+    # replaying an empty assistant turn; the placeholder is for the model, so
+    # the transcript does not paint it as the agent's reply.
+    assert messages[-1]["api_content"].strip()
+    assert messages[-1]["display_kind"] == "hidden"
 
     # The persisted snapshot is alternation-safe: appending a new user
     # message would follow an assistant, not an orphan tool.
