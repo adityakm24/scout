@@ -268,6 +268,10 @@ INLINE_TOOL_EXECUTORS: Dict[str, InlineToolExecutor] = {
     "read_window_below": _callback_tool(
         "tools.read_window_tool", "read_window_below_tool", "read_window_below_callback",
     ),
+    "device_location": _callback_tool(
+        "tools.device_location_tool", "device_location_tool", "device_location_callback",
+        ("to_latitude", "to_latitude"), ("to_longitude", "to_longitude"),
+    ),
     "gui_tour": _callback_tool(
         "tools.tour_tool", "tour_tool", "tour_callback",
         ("action", "action", ""), ("surface", "surface"), ("selector", "selector"), ("title", "title"),

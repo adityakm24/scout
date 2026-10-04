@@ -6,7 +6,8 @@ Catalog manifests name these tools (``spending:`` in optional-mcps/<name>/manife
 read-only preview tool and shown to the user as an order card; only their "Approve & Pay" lets
 the call through. Skills telling the model to confirm first were not enough: a small model sent
 email the same way, unasked. The smart guardian never decides this, nothing is remembered between
-orders, and an unattended run (cron, ``-q``) cannot place one at all.
+orders, and an unattended run (cron, ``-q``) cannot place one, except an order the user approved
+earlier for that moment (``mcp_tool_spending_holds``) whose basket is still the one they saw.
 """
 
 from __future__ import annotations
@@ -136,10 +137,10 @@ def _details(entry, tool_name: str, args: dict) -> List[dict]:
         # Unset, zero and "no" say nothing about this order: a 0 rider tip is noise on the card.
         if key == spec.commit_flag or re.search(r"(?:^id|Id|_id|ID)$", key) or value in (None, "", [], {}, 0, False):
             continue
+        if isinstance(value, (dict, list)):
+            continue  # structured data reads as JSON on the card; the basket above already shows it
         if isinstance(value, bool):
             value = "Yes" if value else "No"
-        elif isinstance(value, (dict, list)):
-            value = json.dumps(value, ensure_ascii=False)[:120]
         rows.append({"label": _humanize(key), "value": str(value)})
     return rows
 
@@ -212,6 +213,20 @@ def spending_gate_check(server_name: str, tool_name: str, args: dict, tool_timeo
     from tools.approval import _unattended_contexts
 
     if _unattended_contexts():
+        # The one way through: an order the user approved earlier for now (schedule_order), still
+        # matching the basket as it is at this moment.
+        from tools.mcp_tool_spending_holds import claim_hold
+
+        hold, refused = claim_hold(server_name, tool_name, args,
+                                   order_summary(entry, server_name, tool_name, args, tool_timeout))
+        if hold is not None:
+            logger.info("Order card: placing %s/%s on hold %s", server_name, tool_name, hold["id"])
+            return None
+        if refused:
+            logger.info("Order card: hold for %s/%s no longer covers the order: %s", server_name, tool_name, refused)
+            return tool_error(
+                f"BLOCKED: the user approved this {merchant} order earlier, but {refused}. Nothing was ordered "
+                f"or charged. Tell the user, and do not retry.")
         logger.info("Order card: refused %s/%s in an unattended run", server_name, tool_name)
         return tool_error(
             f"BLOCKED: placing a {merchant} order needs the user to approve it, and nobody is present in "

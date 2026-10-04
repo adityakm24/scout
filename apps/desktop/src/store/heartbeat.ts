@@ -62,6 +62,17 @@ function writeSeen(profile: string, seen: Record<string, number>) {
 /** Recurring jobs only: a one-shot reminder isn't something to switch on and off. */
 const isRecurring = (job: CronJob) => job.schedule?.kind !== 'once'
 
+const DAY_MS = 86_400_000
+
+/** A task the user asked for once, for later ("order it at 6:06"), that has run: not a Heartbeat
+ *  row, but its result is news. Reminders (no prompt) announce themselves elsewhere. */
+export const isFinishedTask = (job: CronJob, now = Date.now()) =>
+  !isRecurring(job) &&
+  Boolean(job.prompt) &&
+  !job.no_agent &&
+  Boolean(job.last_run_at) &&
+  now - Date.parse(job.last_run_at ?? '') < DAY_MS
+
 /** Tell the user about results newer than the last ones they were told about. The first
  *  read on this machine only records what exists, so opening the app never replays history. */
 function announce(profile: string, items: HeartbeatItem[]) {
@@ -73,7 +84,8 @@ function announce(profile: string, items: HeartbeatItem[]) {
       continue
     }
 
-    if (seen && job.enabled && latest.at > (seen[job.id] ?? 0) && latest.text) {
+    // A finished one-shot task is switched off by then; its result still counts.
+    if (seen && (job.enabled || !isRecurring(job)) && latest.at > (seen[job.id] ?? 0) && latest.text) {
       dispatchNativeNotification({
         kind: 'heartbeat',
         title: job.name || translateNow('agentPanel.heartbeat.untitled'),
@@ -94,21 +106,27 @@ let generation = 0
 export async function refreshHeartbeat(): Promise<void> {
   const profile = normalizeProfileKey($activeGatewayProfile.get())
   const mine = ++generation
-  const jobs = (await getCronJobs(profile)).filter(isRecurring)
+  const all = await getCronJobs(profile)
 
-  const items = await Promise.all(
-    jobs.map(async job => ({
-      job,
-      latest: await getCronJobLatest(job.id, profile).catch(() => ({ at: null, text: null }))
-    }))
-  )
+  const withLatest = (jobs: CronJob[]) =>
+    Promise.all(
+      jobs.map(async job => ({
+        job,
+        latest: await getCronJobLatest(job.id, profile).catch(() => ({ at: null, text: null }))
+      }))
+    )
+
+  const [items, tasks] = await Promise.all([
+    withLatest(all.filter(isRecurring)),
+    withLatest(all.filter(job => isFinishedTask(job)))
+  ])
 
   // A profile switch or a newer refresh overtook this one.
   if (mine !== generation) {
     return
   }
 
-  announce(profile, items)
+  announce(profile, [...items, ...tasks])
   $heartbeat.set({ items, loaded: true, profile })
 }
 

@@ -1,4 +1,5 @@
 import * as Location from 'expo-location'
+import * as Notifications from 'expo-notifications'
 import { useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -6,6 +7,16 @@ import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 
 import type { Pairing } from './pairing'
 import { colors } from './theme'
+
+// Scout's own notices ("Ordered, arriving in 11 minutes") show as banners even while the app is open.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true
+  })
+})
 
 /** Scout itself: the desktop renderer, served by the paired computer, with the phone's own
  *  abilities offered to it as `window.scoutNative`. */
@@ -66,13 +77,26 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
     }
 
     try {
-      reply(call.id, await handle(call.kind))
+      reply(call.id, await handle(call.kind, call.payload))
     } catch (error) {
       reply(call.id, null, error instanceof Error ? error.message : String(error))
     }
   }
 
-  const handle = async (kind: string): Promise<unknown> => {
+  const handle = async (kind: string, payload?: unknown): Promise<unknown> => {
+    if (kind === 'notify') {
+      const { body, title } = (payload ?? {}) as { body?: string; title?: string }
+      const { granted } = await Notifications.requestPermissionsAsync()
+
+      if (!granted) {
+        return false
+      }
+
+      await Notifications.scheduleNotificationAsync({ content: { body, title: title || 'Scout' }, trigger: null })
+
+      return true
+    }
+
     if (kind === 'location') {
       const { granted } = await Location.requestForegroundPermissionsAsync()
 

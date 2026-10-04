@@ -10,6 +10,7 @@ import { readActiveTerminal } from '@/app/right-sidebar/terminal/buffer'
 import { pendingClarifyToolPayload } from '@/app/session/hooks/use-session-actions/restore-pending-clarify'
 import { translateNow } from '@/i18n'
 import { restorePendingClarifyToolCall } from '@/lib/chat-messages'
+import { readDeviceLocation } from '@/lib/device-location'
 import { parseOrderSummary } from '@/lib/order-summary'
 import type { PreviewActAction } from '@/lib/preview-act/act-in-page'
 import type { TourAction, TourStep } from '@/lib/tour'
@@ -77,7 +78,7 @@ type PreviewSessionRoute = 'ignore' | 'retry' | 'run'
  * would win the race, so the tool reports "no preview tab / no terminal" while
  * the owner's pane is open (#113348).
  */
-const WINDOW_OWNED_REQUESTS = new Set(['preview.act', 'preview.read', 'terminal.read', 'window.read', 'tour'])
+const WINDOW_OWNED_REQUESTS = new Set(['location.read', 'preview.act', 'preview.read', 'terminal.read', 'window.read', 'tour'])
 
 /**
  * A window not hosting the session declines instead of staying silent. The
@@ -527,6 +528,12 @@ const windowRead: Handler = ({ request }) => {
   )
 }
 
+const locationRead: Handler = ({ request }) => {
+  // device_location tool: the device showing this chat answers (WINDOW_OWNED_REQUESTS), from the
+  // phone's GPS or the computer's location services; a refusal is an {error}, never silence.
+  void readDeviceLocation().then(result => answerValue(request, result))
+}
+
 const tour: Handler = ({ isActiveSession, request }) => {
   // tour tool: one guided-tour action via driver.js, app DOM or preview guest
   // page. Active session only, same window-ownership rule as preview.act
@@ -573,6 +580,7 @@ export const SERVER_REQUEST_HANDLERS: Record<string, Handler> = {
   approval,
   clarify,
   'display.install.sudo': displayInstallSudo,
+  'location.read': locationRead,
   'preview.act': previewAct,
   'preview.read': previewRead,
   secret,

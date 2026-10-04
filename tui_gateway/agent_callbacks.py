@@ -170,6 +170,9 @@ def _agent_cbs(sid: str) -> dict:
         "drive_preview_callback": lambda payload: _ask("preview.act", sid, dict(payload), timeout=45),
         # read_window_below (desktop GUI): main process enumerates native windows.
         "read_window_below_callback": lambda: _ask("window.read", sid, {}, timeout=30),
+        # device_location (GUI): the phone shell's GPS or the computer's location services. A first
+        # use waits on the OS permission prompt, hence the longer budget.
+        "device_location_callback": lambda: _ask("location.read", sid, {}, timeout=60),
         # manage_connections card. Fire-and-forget: the tool thread waits on its own operation
         # (tools/connectors/run.py), and the card drives it through connection.respond by op_id.
         "connection_callback": lambda payload: _emit("connection.request", sid, dict(payload)) and None,

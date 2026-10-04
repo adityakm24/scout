@@ -41,6 +41,18 @@ if (IS_PHONE) {
     .querySelector('meta[name="viewport"]')
     ?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover')
   trackVisibleViewport()
+  // A long-press fires contextmenu, which would open the desktop's right-click menus (tab strip:
+  // Reload / Close others / Hide tabs). Text fields keep iOS's own Copy / Paste menu.
+  document.addEventListener(
+    'contextmenu',
+    event => {
+      if (!(event.target as Element | null)?.closest?.('input, textarea, [contenteditable="true"]')) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    },
+    true
+  )
 }
 
 /** Size the app to what is visible: above the keyboard while it is open, so the composer rides

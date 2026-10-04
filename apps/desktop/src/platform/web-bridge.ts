@@ -180,6 +180,11 @@ function webBridge(config: RemoteConfig) {
     }),
     getConnectionFor: ({ profile }: { profile?: null | string }) => connection(profile),
     notify: async ({ body, title }: { body?: string; title?: string }) => {
+      // In the phone app the OS posts it (mobile/src/ScoutScreen.tsx); web views have no Notification.
+      if (window.scoutNative) {
+        return window.scoutNative.request<boolean>('notify', { body, title }).catch(() => false)
+      }
+
       if (!('Notification' in window) || Notification.permission !== 'granted') {
         return false
       }
