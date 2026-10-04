@@ -6200,6 +6200,19 @@ export const esOverrides = {
     reloadWindow: 'Recargar ventana',
     openLogs: 'Abrir registros'
   },
+  phone: {
+    back: 'Chats',
+    capabilities: 'Habilidades',
+    chats: 'Chats',
+    dashboard: 'Hoy',
+    messaging: 'Mensajería',
+    newChat: 'Nuevo chat',
+    noChats: 'Aún no hay chats. Toca el lápiz para empezar uno.',
+    noMatches: 'Ningún chat coincide.',
+    openAgent: name => `Abrir los detalles de ${name}`,
+    searchChats: 'Buscar',
+    settings: 'Ajustes'
+  },
   ui: {
     search: {
       clear: 'Limpiar búsqueda'

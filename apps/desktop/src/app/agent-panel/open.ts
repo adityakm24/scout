@@ -1,17 +1,30 @@
+import { PANE_TOGGLE_REVEAL_EVENT } from '@/components/pane-shell'
 import { findGroupOfPane } from '@/components/pane-shell/tree/model'
 import {
   $collapsedTreeSides,
   $layoutTree,
+  $narrowViewport,
   paneRootSide,
   revealTreePane,
   setTreeGroupMinimized
 } from '@/components/pane-shell/tree/store'
+import { IS_PHONE } from '@/platform/phone'
 
 /** Pane id of the agent panel (registered in app/contrib/controller.tsx). */
 export const AGENT_PANEL_ID = 'agent'
 
-/** Show the agent panel: un-collapse its side, restore its zone and front its tab. */
-export const openAgentPanel = () => revealTreePane(AGENT_PANEL_ID)
+/** Show the agent panel: un-collapse its side, restore its zone and front its tab. On a narrow
+ *  window the side panes are unmounted and shown by the edge overlay instead, which opens on the
+ *  reveal event (components/pane-shell/tree/renderer/narrow-overlays.tsx). */
+export function openAgentPanel() {
+  if ($narrowViewport.get()) {
+    window.dispatchEvent(new CustomEvent(PANE_TOGGLE_REVEAL_EVENT, { detail: { id: AGENT_PANEL_ID, mode: 'open' } }))
+
+    return
+  }
+
+  revealTreePane(AGENT_PANEL_ID)
+}
 
 /** Is the agent panel on screen right now (its zone open, its tab in front, its side shown)? */
 export function agentPanelShown(): boolean {
@@ -66,7 +79,8 @@ let roomWatchStarted = false
  *  MIN_CHAT_PX, fold the panel to its rail. Checked at launch (a panel restored open into a small
  *  window) and as the window shrinks, never when the user opens the panel themselves. */
 export function startAgentPanelRoomWatch() {
-  if (roomWatchStarted) {
+  // On a phone the panel is a full screen sheet over the chat (app/phone/phone.css), never beside it.
+  if (roomWatchStarted || IS_PHONE) {
     return
   }
 

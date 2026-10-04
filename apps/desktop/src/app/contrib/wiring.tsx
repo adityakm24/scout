@@ -40,6 +40,7 @@ import { emitGatewayEvent } from '@/contrib/events'
 import { translateNow } from '@/i18n'
 import { type ChatMessage, chatMessageText } from '@/lib/chat-messages'
 import { isMessagingSource } from '@/lib/session-source'
+import { IS_PHONE } from '@/platform/phone'
 import { $billingSettingsRequest } from '@/store/billing-block'
 import { $desktopBoot } from '@/store/boot'
 import { $activeConnectionId } from '@/store/connections'
@@ -100,6 +101,7 @@ import { useKeybinds } from '../hooks/use-keybinds'
 import { useHudHandoff } from '../hud/handoff'
 import { mainChatOccupied, openSession, openSessionFromPicker } from '../open-session'
 import { PetGenerateOverlay } from '../pet-generate/pet-generate-overlay'
+import { PhoneShell } from '../phone/phone-shell'
 import { FileActionDialogs } from '../right-sidebar/file-actions'
 import { RemoteFolderPicker } from '../right-sidebar/files/remote-picker'
 import { resetProjectTreeState } from '../right-sidebar/files/use-project-tree'
@@ -1268,7 +1270,8 @@ export function ContribWiring({ children }: { children: ReactNode }) {
         {/* HUD and the popped-out Browser have no titlebar to hang these off —
             the clusters are `fixed`, so without this they'd float over the
             surface as orphaned buttons. */}
-        {!isHudWindow() && !isBrowserWindow() && (
+        {IS_PHONE && <PhoneShell />}
+        {!IS_PHONE && !isHudWindow() && !isBrowserWindow() && (
           <TitlebarControls
             leftTools={leftTitlebarTools}
             onOpenSettings={() => navigate(SETTINGS_ROUTE)}

@@ -5714,6 +5714,19 @@ export const en: Translations = {
     openLogs: 'Open logs'
   },
 
+  phone: {
+    back: 'Chats',
+    capabilities: 'Skills',
+    chats: 'Chats',
+    dashboard: 'Today',
+    messaging: 'Messaging',
+    newChat: 'New chat',
+    noChats: 'No chats yet. Tap the pencil to start one.',
+    noMatches: 'No chats match.',
+    openAgent: name => `Open ${name}’s details`,
+    searchChats: 'Search',
+    settings: 'Settings'
+  },
   ui: {
     search: {
       clear: 'Clear search'

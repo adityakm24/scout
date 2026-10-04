@@ -60,6 +60,7 @@ export function OverlaySplitLayout({ children, className }: OverlaySplitLayoutPr
         'grid h-full min-h-0 flex-1 grid-cols-[13.5rem_minmax(0,1fr)] overflow-hidden bg-transparent max-[47.5rem]:grid-cols-1 max-[47.5rem]:grid-rows-[auto_minmax(0,1fr)]',
         className
       )}
+      data-overlay-split=""
     >
       {children}
     </div>
@@ -81,6 +82,7 @@ export function OverlaySidebar({ children, className }: OverlaySidebarProps) {
       // Every overlay's left nav (settings, cron, profiles, agents) answers to
       // one name, so a tour can point at "the nav" without knowing which
       // overlay is open. See lib/tour.
+      data-overlay-rail=""
       data-tour="overlay-nav"
     >
       {children}
@@ -103,6 +105,7 @@ export function OverlayMain({ children, className }: OverlayMainProps) {
         PAGE_MAX_W,
         className
       )}
+      data-overlay-main=""
     >
       {children}
     </main>
@@ -135,6 +138,8 @@ export const OverlayNavItem = memo(function OverlayNavItem({
             ? 'border-(--ui-stroke-tertiary) bg-(--ui-row-active-background) text-foreground'
             : 'border-transparent bg-transparent text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) hover:text-foreground'
       )}
+      data-nested={nested ? '' : undefined}
+      data-overlay-nav-item=""
       // Names the row by its own id, so a tour can address one link
       // (`[data-tour="nav-models"]`) instead of guessing at nth-child.
       data-tour={id ? `nav-${id}` : undefined}
@@ -293,6 +298,7 @@ export function OverlayNav({ footer, groups }: { footer?: ReactNode; groups: Ove
           'pointer-events-none relative z-20 h-[calc(var(--titlebar-height)+0.1875rem)] items-center justify-between gap-2 pl-3 pr-[calc(var(--titlebar-tools-right,0.75rem)+2.25rem)]',
           BAR_HIDDEN
         )}
+        data-overlay-bar=""
       >
         <div className="pointer-events-auto min-w-0 [-webkit-app-region:no-drag]">
           <TabDropdown

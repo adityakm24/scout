@@ -1,5 +1,7 @@
 // Outside Electron (phone app, browser): stand in for the preload bridge before anything reads it.
 import './platform/web-bridge'
+// Phone app / phone browser: mark the document before the first paint (src/app/phone/).
+import './platform/phone'
 import './styles.css'
 // Side-effect: reports in-flight turns to the main process for the quit guard.
 import './store/active-work'

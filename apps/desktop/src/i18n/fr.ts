@@ -6223,6 +6223,19 @@ export const frOverrides = {
     reloadWindow: 'Recharger la fenêtre',
     openLogs: 'Ouvrir les journaux'
   },
+  phone: {
+    back: 'Chats',
+    capabilities: 'Compétences',
+    chats: 'Chats',
+    dashboard: 'Aujourd’hui',
+    messaging: 'Messagerie',
+    newChat: 'Nouveau chat',
+    noChats: 'Aucun chat pour l’instant. Touchez le crayon pour en commencer un.',
+    noMatches: 'Aucun chat ne correspond.',
+    openAgent: name => `Ouvrir les détails de ${name}`,
+    searchChats: 'Rechercher',
+    settings: 'Réglages'
+  },
   ui: {
     search: {
       clear: 'Effacer la recherche'

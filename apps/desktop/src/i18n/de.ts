@@ -6217,6 +6217,19 @@ export const deOverrides = {
     reloadWindow: 'Fenster neu laden',
     openLogs: 'Logs öffnen'
   },
+  phone: {
+    back: 'Chats',
+    capabilities: 'Skills',
+    chats: 'Chats',
+    dashboard: 'Heute',
+    messaging: 'Nachrichten',
+    newChat: 'Neuer Chat',
+    noChats: 'Noch keine Chats. Tippe auf den Stift, um einen zu beginnen.',
+    noMatches: 'Keine passenden Chats.',
+    openAgent: name => `Details von ${name} öffnen`,
+    searchChats: 'Suchen',
+    settings: 'Einstellungen'
+  },
   ui: {
     search: {
       clear: 'Suche löschen'

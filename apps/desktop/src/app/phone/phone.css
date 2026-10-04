@@ -1,0 +1,458 @@
+/* Phone mode (src/platform/phone.ts sets :root[data-phone]). Sizes follow iOS: 49pt tab bar,
+   34pt large title, 17pt row titles, 0.5px hairlines, 44pt minimum touch targets. */
+
+:root[data-phone] {
+  --phone-tab-bar-height: calc(3.0625rem + env(safe-area-inset-bottom));
+  --phone-header-height: calc(3.25rem + env(safe-area-inset-top));
+  --phone-hairline: color-mix(in srgb, var(--ui-text-primary) 14%, transparent);
+  --phone-fill: color-mix(in srgb, var(--ui-text-primary) 9%, transparent);
+  --phone-bar: color-mix(in srgb, var(--ui-bg-primary, var(--background)) 82%, transparent);
+
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+:root[data-phone] body {
+  overscroll-behavior: none;
+}
+
+/* The desktop's window chrome has no place on a phone: the titlebar clusters, the pane tab
+   strip and the sidebar (the Chats list replaces it). */
+:root[data-phone] :is([data-titlebar-cluster], [data-panel-header], [data-slot='sidebar']) {
+  display: none !important;
+}
+
+/* Room for the tab bar under the top-level screens. */
+:root[data-phone]:has([data-slot='phone-tab-bar']) [data-slot='sidebar-wrapper'] {
+  padding-bottom: var(--phone-tab-bar-height);
+}
+
+/* Inside a conversation: the contact header clears the notch, the composer clears the home bar
+   and reads at 16px so iOS never zooms into it. */
+:root[data-phone] [data-slot='agent-identity-header'] {
+  padding-top: calc(env(safe-area-inset-top) + 0.25rem);
+}
+
+:root[data-phone] [data-slot='composer-dock'] {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+
+:root[data-phone] [data-slot='composer-surface'] :is(textarea, [contenteditable='true']) {
+  font-size: 1.0625rem;
+}
+
+/* Messages read at iOS body size; the desktop's scroll-marker rail is a mouse affordance. */
+:root[data-phone] {
+  --conversation-text-font-size: 1.0625rem;
+}
+
+:root[data-phone] .thread-timeline {
+  display: none !important;
+}
+
+/* Scout's details (Persona, Heartbeat, Permissions, Requests) open as a full screen sheet. */
+:root[data-phone] [data-slot='agent-panel'] {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  width: 100% !important;
+  max-width: none !important;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  border-radius: 0;
+}
+
+/* ── Chrome ─────────────────────────────────────────────────────────────── */
+
+:root[data-phone] :is(.phone-tab-bar, .phone-chat-header, .phone-chats) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.phone-tab-bar {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 70;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: var(--phone-tab-bar-height);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--phone-bar);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow: inset 0 0.5px 0 var(--phone-hairline);
+}
+
+.phone-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  min-width: 0;
+  color: var(--ui-text-tertiary);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: color 160ms ease;
+}
+
+.phone-tab:active svg {
+  transform: scale(0.88);
+}
+
+.phone-tab svg {
+  transition: transform 220ms var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+.phone-tab-active {
+  color: var(--theme-primary);
+}
+
+.phone-chat-header {
+  pointer-events: none;
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 40;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  height: var(--phone-header-height);
+  padding: env(safe-area-inset-top) 0.5rem 0;
+}
+
+.phone-chat-header > * {
+  pointer-events: auto;
+}
+
+.phone-back {
+  display: flex;
+  align-items: center;
+  height: 2.75rem;
+  margin-left: -0.25rem;
+  color: var(--theme-primary);
+  font-size: 1.0625rem;
+}
+
+.phone-back:active,
+.phone-icon-button:active {
+  opacity: 0.4;
+}
+
+.phone-icon-button {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--theme-primary);
+}
+
+/* ── Chats ──────────────────────────────────────────────────────────────── */
+
+.phone-chats {
+  position: fixed;
+  inset: 0 0 var(--phone-tab-bar-height);
+  z-index: 60;
+  background: var(--ui-editor-surface-background, var(--background));
+  animation: phone-screen-in 260ms var(--ease-out-expo, ease-out) both;
+}
+
+@keyframes phone-screen-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8%);
+  }
+}
+
+.phone-chats-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: env(safe-area-inset-top);
+}
+
+.phone-chats-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  height: 2.75rem;
+  padding: 0 0.5rem;
+}
+
+.phone-large-title {
+  margin: 0;
+  padding: 0 1rem 0.5rem;
+  color: var(--ui-text-primary);
+  font-size: 2.125rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.phone-search {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  margin: 0 1rem 0.75rem;
+  padding: 0 0.5rem;
+  border-radius: 0.625rem;
+  background: var(--phone-fill);
+  color: var(--ui-text-tertiary);
+}
+
+.phone-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ui-text-primary);
+  font-size: 1.0625rem;
+  outline: none;
+}
+
+.phone-search input::placeholder {
+  color: var(--ui-text-tertiary);
+}
+
+.phone-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.phone-chat-list {
+  margin: 0;
+  padding: 0 0 1.5rem;
+  list-style: none;
+}
+
+.phone-chat-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 4.75rem;
+  padding: 0.625rem 1rem 0.625rem 0.375rem;
+  text-align: left;
+  transition: background-color 120ms ease;
+}
+
+.phone-chat-row:active,
+.phone-chat-row-active {
+  background: var(--phone-fill);
+}
+
+/* Separator inset past the avatar, as in Messages; none under the last row. */
+.phone-chat-list li:not(:last-child) .phone-chat-row::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 4.75rem;
+  height: 0.5px;
+  background: var(--phone-hairline);
+}
+
+.phone-chat-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.phone-chat-row-top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.phone-chat-row-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ui-text-primary);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-chat-row-time {
+  flex-shrink: 0;
+  color: var(--ui-text-tertiary);
+  font-size: 0.9375rem;
+}
+
+.phone-chat-row-preview {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ui-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.phone-empty {
+  margin: 3rem 2rem;
+  color: var(--ui-text-tertiary);
+  font-size: 1rem;
+  text-align: center;
+}
+
+/* The panel's own pane gives its width back: the sheet floats over the chat instead. */
+:root[data-phone] [data-tree-group]:has([data-slot='agent-panel']):not(:has([data-chat-surface])) {
+  flex: 0 0 0 !important;
+  width: 0 !important;
+  min-width: 0 !important;
+}
+
+/* Messages' unread dot, in the gutter before the avatar. */
+.phone-unread {
+  flex-shrink: 0;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-right: -0.375rem;
+  border-radius: 999px;
+}
+
+.phone-unread-on {
+  background: var(--theme-primary);
+}
+
+/* Today: cards hug their content (the desktop's equal-height columns leave a gap here) and the
+   page clears the notch. */
+:root[data-phone] [data-slot='dashboard-page'] .scout-panel {
+  min-height: 0 !important;
+}
+
+:root[data-phone] [data-slot='dashboard-page'] > div {
+  padding-top: calc(env(safe-area-inset-top) + 1.5rem);
+  padding-inline: 1rem;
+}
+
+/* Page overlays (Settings and the like) are full screens above the tab bar, not floating cards. */
+:root[data-phone] [data-slot='overlay-backdrop']:has([data-slot='overlay-card']) {
+  bottom: var(--phone-tab-bar-height);
+  padding: 0 !important;
+  background: var(--ui-editor-surface-background, var(--background));
+  backdrop-filter: none;
+}
+
+:root[data-phone] [data-slot='overlay-backdrop'] > :has(> [data-slot='overlay-card']) {
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  max-height: none !important;
+  margin: 0 !important;
+}
+
+:root[data-phone] [data-slot='overlay-card'] {
+  padding-top: env(safe-area-inset-top);
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* No keyboard on a phone: shortcut hints only add noise. */
+:root[data-phone] [data-slot='kbd-group'],
+:root[data-phone] [data-slot='kbd'] {
+  display: none !important;
+}
+
+/* Buttons are touch-sized capsules, like the rest of iOS, not the desktop's square chips. */
+:root[data-phone] button[data-slot='button'] {
+  border-radius: 999px;
+}
+
+/* ── Settings: a section list, then a section's page ───────────────────── */
+
+:root[data-phone] :is([data-overlay-header], [data-overlay-edge-badge], [data-overlay-bar]) {
+  display: none !important;
+}
+
+:root[data-phone] [data-overlay-split] {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+}
+
+:root[data-phone][data-phone-settings='list'] [data-overlay-main],
+:root[data-phone][data-phone-settings='page'] [data-overlay-rail] {
+  display: none !important;
+}
+
+:root[data-phone][data-phone-settings='list'] [data-overlay-rail] {
+  display: flex !important;
+  gap: 0;
+  padding: 3.25rem 1rem 2rem;
+  background: transparent;
+}
+
+:root[data-phone][data-phone-settings='page'] [data-overlay-main] {
+  padding-top: 3.75rem;
+}
+
+:root[data-phone] [data-overlay-rail] [data-overlay-nav-item] {
+  height: auto;
+  min-height: 2.875rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: var(--ui-text-primary);
+  font-size: 1.0625rem;
+}
+
+:root[data-phone] [data-overlay-rail] [data-overlay-nav-item][data-nested] {
+  min-height: 2.75rem;
+  padding-left: 2.75rem;
+  color: var(--ui-text-secondary);
+}
+
+:root[data-phone] [data-overlay-rail] [data-overlay-nav-item]:active {
+  background: var(--phone-fill);
+}
+
+/* A group starts a new card-like block, as in iOS Settings. */
+:root[data-phone] [data-overlay-rail] [data-overlay-nav-item]:not([data-nested]) {
+  margin-top: 0.75rem;
+  font-weight: 600;
+}
+
+.phone-settings-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--phone-header-height);
+  padding: env(safe-area-inset-top) 0.5rem 0;
+  background: var(--phone-bar);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow: inset 0 -0.5px 0 var(--phone-hairline);
+}
+
+.phone-settings-header .phone-back {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.25rem;
+}
+
+.phone-inline-title {
+  margin: 0;
+  color: var(--ui-text-primary);
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+:root[data-phone] [data-overlay-rail] [data-overlay-nav-item] svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* A group's expand chevron sits on its row's centre line. */
+:root[data-phone] [data-overlay-rail] :has(> [data-overlay-nav-item]) {
+  align-items: center;
+}

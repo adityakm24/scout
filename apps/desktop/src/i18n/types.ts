@@ -4738,6 +4738,19 @@ export interface Translations {
     openLogs: string
   }
 
+  phone: {
+    back: string
+    capabilities: string
+    chats: string
+    dashboard: string
+    messaging: string
+    newChat: string
+    noChats: string
+    noMatches: string
+    openAgent: (name: string) => string
+    searchChats: string
+    settings: string
+  }
   ui: {
     search: {
       clear: string
