@@ -249,6 +249,11 @@ export default defineConfig(({ command }) => ({
     strictPort: true,
     fs: {
       allow: fsAllow
+    },
+    // The renderer outside Electron (phone app, browser) reaches its backend at its own origin
+    // (src/platform/web-bridge.ts). Electron's renderer never uses this: its calls go over IPC.
+    proxy: {
+      '/api': { changeOrigin: true, target: process.env.WEB_BACKEND_URL || 'http://127.0.0.1:9119', ws: true }
     }
   },
   preview: {

@@ -1,3 +1,5 @@
+// Outside Electron (phone app, browser): stand in for the preload bridge before anything reads it.
+import './platform/web-bridge'
 import './styles.css'
 // Side-effect: reports in-flight turns to the main process for the quit guard.
 import './store/active-work'
