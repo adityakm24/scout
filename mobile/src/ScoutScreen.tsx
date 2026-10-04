@@ -17,6 +17,16 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
   const bootstrap = `
     window.__SCOUT_REMOTE__ = ${JSON.stringify(pairing)};
     (function () {
+      // The page's own failures land in the dev server log (Metro), not an invisible console.
+      function report(message) {
+        try { window.ReactNativeWebView.postMessage(JSON.stringify({ kind: 'log', payload: String(message).slice(0, 2000) })); } catch (e) {}
+      }
+      window.addEventListener('error', function (e) { report('error: ' + (e.error && e.error.stack || e.message) + ' @ ' + e.filename + ':' + e.lineno); });
+      window.addEventListener('unhandledrejection', function (e) { report('rejection: ' + (e.reason && e.reason.stack || e.reason)); });
+      var consoleError = console.error;
+      console.error = function () { report('console.error: ' + Array.prototype.join.call(arguments, ' ')); return consoleError.apply(console, arguments); };
+    })();
+    (function () {
       var pending = {}, next = 0;
       window.__scoutNativeReply = function (id, result, error) {
         var call = pending[id]; delete pending[id];
@@ -41,11 +51,17 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
     )
 
   const onMessage = async (event: WebViewMessageEvent) => {
-    let call: { id: number; kind: string }
+    let call: { id: number; kind: string; payload?: unknown }
 
     try {
       call = JSON.parse(event.nativeEvent.data)
     } catch {
+      return
+    }
+
+    if (call.kind === 'log') {
+      console.warn(`[scout page] ${String(call.payload)}`)
+
       return
     }
 
@@ -104,6 +120,7 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
         injectedJavaScriptBeforeContentLoaded={bootstrap}
         keyboardDisplayRequiresUserAction={false}
         onError={({ nativeEvent }) => setFailed(nativeEvent.description || 'error')}
+        onLoadEnd={() => console.log(`[scout page] loaded ${pairing.baseUrl}`)}
         onMessage={onMessage}
         originWhitelist={[pairing.baseUrl]}
         ref={webview}

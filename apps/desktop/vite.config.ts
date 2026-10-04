@@ -116,6 +116,8 @@ const emojibaseAssets = () => ({
   }
 })
 
+const webBackendUrl = process.env.WEB_BACKEND_URL || 'http://127.0.0.1:9119'
+
 export default defineConfig(({ command }) => ({
   base: './',
   plugins: [react(), babel({ presets: [compilerPreset()] }), tailwindcss(), emojibaseAssets()],
@@ -252,8 +254,26 @@ export default defineConfig(({ command }) => ({
     },
     // The renderer outside Electron (phone app, browser) reaches its backend at its own origin
     // (src/platform/web-bridge.ts). Electron's renderer never uses this: its calls go over IPC.
+    // The backend's DNS-rebinding guard refuses a Host or Origin that is not its own, so the proxy
+    // presents the backend's, as if the backend served the page; the session token still gates it.
     proxy: {
-      '/api': { changeOrigin: true, target: process.env.WEB_BACKEND_URL || 'http://127.0.0.1:9119', ws: true }
+      '/api': {
+        changeOrigin: true,
+        configure: proxy =>
+          void proxy
+            .on('proxyReqWs', request => {
+              // changeOrigin does not rewrite Host on a socket upgrade.
+              request.setHeader('host', new URL(webBackendUrl).host)
+              request.setHeader('origin', webBackendUrl)
+            })
+            .on('proxyReq', request => {
+              if (request.getHeader('origin')) {
+                request.setHeader('origin', webBackendUrl)
+              }
+            }),
+        target: webBackendUrl,
+        ws: true
+      }
     }
   },
   preview: {
