@@ -11,6 +11,7 @@
  */
 
 import { isElementInHiddenPane, queryAllVisible, queryVisible } from '@/components/pane-shell/pane-visibility'
+import { IS_PHONE } from '@/platform/phone'
 
 import { $floatingComposerOwner } from './floating-state'
 import type { InlineRefInput } from './inline-refs'
@@ -640,7 +641,9 @@ export const onComposerSubmitRequest = (handler: (detail: SubmitDetail) => void)
  *   - 0ms:  browser focus reclaim from a click target inside an external panel
  */
 export const focusComposerInput = (el: HTMLElement | null) => {
-  if (!el) {
+  // On a phone, focus raises the keyboard and pushes the conversation off screen: like a native
+  // app, the keyboard opens only when the user taps the box.
+  if (!el || IS_PHONE) {
     return
   }
 

@@ -38,6 +38,7 @@ import type { ErrorSurface } from '@/lib/error-surface'
 import { tileFocusStampOnFocusChange } from '@/lib/session-timer-since'
 import { stableArray } from '@/lib/stable-array'
 import { readJson, writeJson } from '@/lib/storage'
+import { IS_PHONE } from '@/platform/phone'
 import type { SessionInfo } from '@/types/scout'
 
 import { dropStatusDrawersForProfile, migrateStatusDrawersForProfile } from './composer-status-drawer'
@@ -1299,8 +1300,9 @@ export function setZoneParkedTiles(zoneKey: string, storedSessionIds: readonly s
   $parkedTileStoredIds.set(next)
 }
 
+// The phone shows one chat at a time (src/app/phone/): it holds no tiles, like a pop-out window.
 export const $sessionTiles = atom<SessionTile[]>(
-  isSecondaryWindow() || isBrowserWindow()
+  isSecondaryWindow() || isBrowserWindow() || IS_PHONE
     ? []
     : [...(tilesByProfile[visibleTileScope] ?? []), ...(tilesByProfile[BOTS_TILE_BUCKET] ?? [])]
 )
@@ -1308,7 +1310,7 @@ export const $sessionTiles = atom<SessionTile[]>(
 function persistTiles() {
   // Shares the origin's storage; a secondary / browser pop-out holds no tiles,
   // so a write back would only wipe the primary's set.
-  if (isSecondaryWindow() || isBrowserWindow()) {
+  if (isSecondaryWindow() || isBrowserWindow() || IS_PHONE) {
     return
   }
 

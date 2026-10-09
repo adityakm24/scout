@@ -15,6 +15,7 @@
  *     the bridge has no session-window support.
  */
 import type { WorkspaceMode } from '@/contrib/types'
+import { IS_PHONE } from '@/platform/phone'
 import { $activeSessionId, $selectedStoredSessionId, markSessionRead } from '@/store/session'
 import type { SessionProfileRoute } from '@/store/session-request-router'
 import {
@@ -115,7 +116,8 @@ export function openSession(
   setSessionTileWorkspaceScope(storedSessionId, workspaceScope)
   const botWorkspaceScope = workspaceScope.workspaceMode === 'bots' ? workspaceScope : undefined
 
-  let resolved: OpenSessionIntent = intent
+  // A phone has no tiles or windows: every open is the one chat on screen.
+  let resolved: OpenSessionIntent = IS_PHONE ? 'main' : intent
 
   if (resolved === 'window') {
     if (canOpenSessionWindow()) {
