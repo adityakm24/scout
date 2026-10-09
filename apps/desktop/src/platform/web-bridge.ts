@@ -10,6 +10,8 @@
 
 import type { ScoutApiRequest, ScoutConnection } from '@/global'
 
+import type { ScoutNotification } from '../../electron/notification-types'
+
 interface RemoteConfig {
   baseUrl: string
   token: string
@@ -23,6 +25,9 @@ declare global {
 }
 
 const TOKEN_KEY = 'scout.remote.token'
+
+/** Dispatched on `window` by the phone shell with a chat's stored id as `detail`. */
+export const FOCUS_SESSION_EVENT = 'scout:focus-session'
 
 function readToken(): string {
   const url = new URL(window.location.href)
@@ -137,7 +142,7 @@ const ABSENT = new Set(
     'agentPluginsRoot renamePath writeTextFile trashPath git reachPreviewUrl setActiveConnectionRoute ' +
     'onClosePreviewRequested onPreviewNav onOpenFolderRequested onOpenUpdatesRequested onDeepLink ' +
     'signalDeepLinkReady probePluginRepo installDesktopPlugin removeDesktopPlugin onWindowStateChanged ' +
-    'onFocusSession onNotificationAction onNotificationActivate onPoolBackendRetiring onConnectionApplied ' +
+    'onNotificationAction onNotificationActivate onPoolBackendRetiring onConnectionApplied ' +
     'onPowerResume getOnBattery onBatteryChanged probeLocalBackend recycleBackend getMachineProfile relaunchApp ' +
     'getRemoteDisplayReason desktopMetrics'
   ).split(' ')
@@ -179,10 +184,25 @@ function webBridge(config: RemoteConfig) {
       wsUrl: connectionFor(config, profile).wsUrl
     }),
     getConnectionFor: ({ profile }: { profile?: null | string }) => connection(profile),
-    notify: async ({ body, title }: { body?: string; title?: string }) => {
+    // The phone shell opens a chat when its notification is tapped (mobile/src/ScoutScreen.tsx),
+    // including the tap that launched the app before this page was listening.
+    onFocusSession: (callback: (sessionId: string) => void) => {
+      const open = (event: Event) => callback(String((event as CustomEvent<string>).detail ?? ''))
+
+      window.addEventListener(FOCUS_SESSION_EVENT, open)
+      void window.scoutNative
+        ?.request<null | string>('take-focus')
+        .then(sessionId => sessionId && callback(sessionId))
+        .catch(() => undefined)
+
+      return () => window.removeEventListener(FOCUS_SESSION_EVENT, open)
+    },
+    notify: async ({ body, focusSessionId, sessionId, title }: ScoutNotification) => {
       // In the phone app the OS posts it (mobile/src/ScoutScreen.tsx); web views have no Notification.
       if (window.scoutNative) {
-        return window.scoutNative.request<boolean>('notify', { body, title }).catch(() => false)
+        return window.scoutNative
+          .request<boolean>('notify', { body, sessionId: focusSessionId ?? sessionId, title })
+          .catch(() => false)
       }
 
       if (!('Notification' in window) || Notification.permission !== 'granted') {

@@ -1793,6 +1793,23 @@ DEFAULT_CONFIG = {
         "allow_lazy_installs": True,
     },
 
+    # Notifications on a paired phone while the Scout app is closed (scout_cli/push/). Nothing is
+    # sent until the phone app registers itself and the user allows notifications there.
+    "push": {
+        "enabled": True,
+        # Include what Scout said ("Ordered, arriving 7:41"); False sends only "Scout replied" etc.
+        # Notification text passes through Expo's and Apple's push servers.
+        "previews": True,
+        # Live Activity updates go straight to Apple (APNs). The key file is a secret and lives at
+        # <SCOUT_HOME>/push/apns-key.p8 (Apple Developer → Keys, with APNs enabled).
+        "apns": {
+            "team_id": "",  # Apple Developer team id
+            "key_id": "",  # The APNs key's id
+            "bundle_id": "com.spaceshipresearch.scout",
+            "environment": "development",  # "production" for TestFlight / App Store builds
+        },
+    },
+
     "cron": {
         "catch_up_missed": True,  # False skips recurring misses beyond the local grace window.
         # Let cron-spawned agents use the cronjob toolset (the "cron-librarian" pattern). Off by

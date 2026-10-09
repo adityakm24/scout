@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, SecretStr, StrictBool, field_validator
+from pydantic import BaseModel, Field, SecretStr, StrictBool, field_validator
 
 
 class ConfigUpdate(BaseModel):
@@ -396,6 +396,22 @@ class GoogleWorkspaceClient(BaseModel):
 
 class GoogleWorkspaceSignIn(BaseModel):
     client_redirect_uri: Optional[str] = None  # the desktop's own loopback listener, when it has one
+
+class PushDevice(BaseModel):
+    """A phone running the Scout app (mobile/), asking to hear from Scout while the app is closed."""
+    device_id: str = Field(min_length=1, max_length=128)
+    platform: Literal["ios", "android"]
+    name: str = ""
+    expo_token: Optional[str] = None  # Expo's push service: notifications on both platforms
+    push_to_start_token: Optional[str] = None  # Apple: start a Live Activity while the app is closed
+
+class PushPresence(BaseModel):
+    foreground: bool
+    watching: Optional[str] = None  # the chat on screen: its replies are pushed to this phone
+
+class PushLiveActivity(BaseModel):
+    session_id: str = Field(min_length=1)
+    token: Optional[str] = None  # None: the activity ended
 
 class GoogleWorkspaceCallback(BaseModel):
     code: Optional[str] = None

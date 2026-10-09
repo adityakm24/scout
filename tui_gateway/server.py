@@ -678,6 +678,8 @@ def _emit(event: str, sid: str, payload: dict | None = None) -> bool:
     from agent.notification_presentation import event_presentation_muted
     if event_presentation_muted(event, sid):
         return False
+    if event == "message.complete":
+        _push_turn_finished(sid, payload)
     return write_json(_event_frame(event, sid, payload))
 
 
@@ -685,7 +687,8 @@ from tui_gateway import server_requests as _server_requests  # noqa: E402
 
 _server_requests.bind_sinks(lambda frame: write_json(frame), lambda event, sid, payload: _emit(event, sid, payload),
                             lambda sid: _session_client_answers_requests(sid),
-                            lambda sid: _session_answering_clients(sid))
+                            lambda sid: _session_answering_clients(sid),
+                            lambda method, sid, params: _push_server_request(method, sid, params))
 
 
 # Live WS peer transports (maintained by tui_gateway.ws): the only route for session-less background
@@ -3493,7 +3496,7 @@ from . import (  # noqa: E402
     session_compression as _session_compression, model_switch as _model_switch,
     compute_host_bridge as _compute_host_bridge, session_workdir as _session_workdir,
     session_lifecycle as _session_lifecycle, session_reaper as _session_reaper,
-    session_transports as _session_transports,
+    session_transports as _session_transports, session_push as _session_push,
     methods_browser_control as _methods_browser_control, methods_bot_relay as _methods_bot_relay,
     methods_complete as _methods_complete, methods_config as _methods_config,
     methods_config_set as _methods_config_set, methods_images as _methods_images,
@@ -3508,8 +3511,8 @@ from . import (  # noqa: E402
     methods_shared_metrics as _methods_shared_metrics, methods_planner as _methods_planner)
 
 for _m in (
-    _session_transports, _session_reaper, _session_lifecycle, _session_workdir, _compute_host_bridge, _model_switch,
-    _session_compression, _change_watcher, _tool_progress, _session_notifications,
+    _session_transports, _session_push, _session_reaper, _session_lifecycle, _session_workdir, _compute_host_bridge,
+    _model_switch, _session_compression, _change_watcher, _tool_progress, _session_notifications,
     _prompt_attachments, _session_history, _agent_callbacks, _session_auto_continue, _plugin_inject, _rpc_dispatch,
     _methods_complete_helpers, _methods_slash, _methods_voice, _methods_browser,
     _methods_browser_control, _methods_session, _methods_prompt, _methods_config,

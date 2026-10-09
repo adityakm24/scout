@@ -1958,6 +1958,11 @@ def _deliver_result(
     job.pop("_bot_chat_delivery_receipts", None)
     job.pop("_notification_all_targets_suppressed", None)
     targets = _resolve_delivery_targets(job, for_failure=for_failure)
+    if not any(target["platform"] != BOT_CHAT_PLATFORM for target in targets):
+        # Only the app shows this result, so a phone whose Scout app is closed is told.
+        from scout_cli.push import notifier
+
+        notifier.task_result(str(job.get("id") or ""), str(job.get("name") or ""), content, ok=not for_failure)
     if not targets:
         _record_delivery_verification(job, [])
         return _unresolved_delivery_outcome(job, for_failure)

@@ -7,6 +7,7 @@ import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 
 import { type ActivityUpdate, showActivity } from './activity'
 import type { Pairing } from './pairing'
+import { notifyLocally, setWatching, startPush } from './push'
 import { colors } from './theme'
 
 // Scout's own notices ("Ordered, arriving in 11 minutes") show as banners even while the app is open.
@@ -25,10 +26,38 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
   const webview = useRef<WebView>(null)
   const [failed, setFailed] = useState('')
 
+  // A chat whose notification was tapped before the page could listen (the tap launched the app).
+  const pendingFocus = useRef<null | string>(null)
+
   // Ask once, while the user is here: iOS cannot show its permission prompt from the background,
-  // which is exactly when Scout's replies and questions need to reach them.
+  // which is exactly when Scout's replies and questions need to reach them. Then register this
+  // phone, so the paired Scout can still reach it once the app is closed.
   useEffect(() => {
-    void Notifications.requestPermissionsAsync()
+    let stop = () => undefined as void
+
+    void Notifications.requestPermissionsAsync().finally(() => {
+      stop = startPush(pairing)
+    })
+
+    return () => stop()
+  }, [pairing])
+
+  // A tapped notification opens its chat (the page's onFocusSession, src/platform/web-bridge.ts):
+  // at once when the page is running, or once it asks, when the tap launched the app.
+  useEffect(() => {
+    pendingFocus.current = tappedChat(Notifications.getLastNotificationResponse())
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const sessionId = tappedChat(response)
+
+      if (sessionId) {
+        webview.current?.injectJavaScript(
+          `window.dispatchEvent(new CustomEvent('scout:focus-session', { detail: ${JSON.stringify(sessionId)} })); true;`
+        )
+      }
+    })
+
+    return () => subscription.remove()
   }, [])
 
   // Runs before the renderer's own scripts, so its web bridge finds the backend and token.
@@ -98,16 +127,33 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
     }
 
     if (kind === 'notify') {
-      const { body, title } = (payload ?? {}) as { body?: string; title?: string }
+      const { body, sessionId, title } = (payload ?? {}) as { body?: string; sessionId?: string; title?: string }
       const { granted } = await Notifications.requestPermissionsAsync()
 
-      if (!granted) {
+      if (!granted || !notifyLocally()) {
         return false
       }
 
-      await Notifications.scheduleNotificationAsync({ content: { body, title: title || 'Scout' }, trigger: null })
+      await Notifications.scheduleNotificationAsync({
+        content: { body, data: sessionId ? { sessionId } : {}, title: title || 'Scout' },
+        trigger: null
+      })
 
       return true
+    }
+
+    if (kind === 'watch') {
+      setWatching(String((payload as { sessionId?: string } | undefined)?.sessionId ?? ''))
+
+      return true
+    }
+
+    // The page started listening for taps: hand it the one that launched the app, once.
+    if (kind === 'take-focus') {
+      const sessionId = pendingFocus.current
+      pendingFocus.current = null
+
+      return sessionId
     }
 
     if (kind === 'location') {
@@ -180,6 +226,12 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
       />
     </View>
   )
+}
+
+function tappedChat(response: Notifications.NotificationResponse | null): null | string {
+  const sessionId = response?.notification.request.content.data?.sessionId
+
+  return typeof sessionId === 'string' && sessionId ? sessionId : null
 }
 
 const styles = StyleSheet.create({

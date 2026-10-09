@@ -94,6 +94,9 @@ _answerable: Callable[[str], bool] = lambda sid: True  # noqa: E731
 # ``clients(sid)``: the attached client transports that answer server→client requests — the set whose
 # unanimous NOT_SHOWN_CODE decline settles a window-owned request (session_transports.py).
 _clients: Callable[[str], list] = lambda sid: []  # noqa: E731
+# ``opened(method, sid, params)``: a request was sent — a phone whose app is closed hears about an
+# approval or a question (session_push.py).
+_opened: Callable[[str, str, dict], Any] = lambda method, sid, params: None  # noqa: E731
 
 # Error code a client answers when none of its windows shows the request's session, and the refusal the
 # tool reports once every attached client said so. Mirrored in apps/desktop server-requests.ts.
@@ -107,11 +110,14 @@ _answering_clients: set = set()
 
 
 def bind_sinks(write_json: Callable[[dict], Any], emit: Callable[[str, str, dict], Any],
-               answerable: Callable[[str], bool], clients: Callable[[str], list] | None = None) -> None:
-    global _write, _emit, _answerable, _clients
+               answerable: Callable[[str], bool], clients: Callable[[str], list] | None = None,
+               opened: Callable[[str, str, dict], Any] | None = None) -> None:
+    global _write, _emit, _answerable, _clients, _opened
     _write, _emit, _answerable = write_json, emit, answerable
     if clients is not None:
         _clients = clients
+    if opened is not None:
+        _opened = opened
 
 
 def advertise(transport: Any, server_requests: bool) -> None:
@@ -158,6 +164,7 @@ def _register(req: ServerRequest) -> None:
     with _lock:
         _open[req.id] = req
     _write(req.frame())
+    _opened(req.method, req.sid, req.params)
 
 
 def send(method: str, sid: str, params: dict, *, timeout: float | None,

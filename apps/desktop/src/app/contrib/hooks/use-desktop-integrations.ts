@@ -5,11 +5,13 @@ import { resumeAccountConnect } from '@/app/capabilities/connectors/data/deep-li
 import { closeActiveTab } from '@/app/chat/close-tab'
 import { commandFocusedPreview } from '@/app/chat/right-rail/preview-nav'
 import { openSession } from '@/app/open-session'
+import { $phoneChatsOpen } from '@/app/phone/phone-shell'
 import { openConnectionDoneLink } from '@/components/assistant-ui/connector-tool'
 import { $diskPluginsScanPending } from '@/contrib/runtime-loader'
 import { resolveDeepLinkAction } from '@/lib/deeplink-routes'
 import { pathFromScoutDeepLink, resolveScoutOpenPath } from '@/lib/scout-open-target'
 import { storedSessionIdForNotification } from '@/lib/session-ids'
+import { IS_PHONE } from '@/platform/phone'
 import { getSession } from '@/scout'
 import { announceNewSessionDraftKey } from '@/store/composer'
 import { recordAction } from '@/store/desktop-metrics'
@@ -312,6 +314,11 @@ export function useDesktopIntegrations({
 
         if (isOverlayView(appViewForPath(locationPathname))) {
           navigate(sessionRoute($selectedStoredSessionId.get() ?? ''), { replace: true })
+        }
+
+        // The phone shows the chat itself, not its chats list (src/app/phone/).
+        if (IS_PHONE) {
+          $phoneChatsOpen.set(false)
         }
 
         openSession(

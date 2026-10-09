@@ -3,6 +3,7 @@ import * as LiveActivity from 'expo-live-activity'
 import * as Notifications from 'expo-notifications'
 import { AppState, Platform } from 'react-native'
 
+import { noteLiveActivity, notifyLocally } from './push'
 import { colors } from './theme'
 
 /** What Scout is doing, from the page (apps/desktop/src/platform/phone-activity.ts). */
@@ -82,6 +83,11 @@ function showLiveActivity(update: ActivityUpdate) {
           titleColor: colors.text
         }) ?? undefined
     }
+
+    // Once the app is suspended the backend keeps this activity current (src/push.ts).
+    if (liveId) {
+      noteLiveActivity(liveId, update.sessionId)
+    }
   } catch {
     // Live Activities switched off in Settings: the notifications below still reach the user.
     liveId = undefined
@@ -124,9 +130,9 @@ export async function showActivity(update: ActivityUpdate) {
   }
 
   // Waiting on the user is the moment to ring, once, when they are not looking at Scout.
-  if (entering && update.phase === 'waiting' && AppState.currentState !== 'active') {
+  if (entering && update.phase === 'waiting' && AppState.currentState !== 'active' && notifyLocally()) {
     await Notifications.scheduleNotificationAsync({
-      content: { body: update.title, sound: true, title: update.line },
+      content: { body: update.title, data: { sessionId: update.sessionId }, sound: true, title: update.line },
       trigger: Platform.OS === 'android' ? { channelId: ALERT_CHANNEL } : null
     })
   }

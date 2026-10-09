@@ -235,6 +235,9 @@ parallel-web = ["parallel-web==0.4.2"]
 ddgs = ["ddgs==9.16.0"]
 # Image generation backends
 fal = ["fal-client==0.13.1"]
+# Push to the phone: Apple's push service (Live Activity updates while the Scout app is closed)
+# speaks only HTTP/2. Prepared on first use (scout_cli/push/apns.py), so it stays out of [all].
+push = ["h2==4.4.1"]
 # Edge TTS — default TTS provider but still optional (users can pick
 # ElevenLabs / OpenAI / MiniMax instead).
 edge-tts = ["edge-tts==7.2.7"]

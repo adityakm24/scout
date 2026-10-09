@@ -2415,6 +2415,8 @@ def _resolve_cron_agent_setup(job: dict, job_id: str, job_name: str, jc) -> _Cro
 
 
 def _construct_cron_agent(AIAgent, job: dict, _cfg: dict, setup: _CronAgentSetup, *, workdir, session_id, session_db):
+    from scout_cli.push.notifier import task_steps_callback
+
     runtime = setup.runtime
     pr = _cfg.get("provider_routing") or {}
     return AIAgent(
@@ -2448,6 +2450,7 @@ def _construct_cron_agent(AIAgent, job: dict, _cfg: dict, setup: _CronAgentSetup
         platform="cron",
         session_id=session_id,
         session_db=session_db,
+        tool_start_callback=task_steps_callback(job),
     )
 
 

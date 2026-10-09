@@ -22,7 +22,13 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.spaceshipresearch.scout"
+      "package": "com.spaceshipresearch.scout",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -41,10 +47,40 @@
           "locationWhenInUsePermission": "Scout uses your location to time deliveries and plans around where you are."
         }
       ],
-      "expo-live-activity",
+      [
+        "expo-notifications",
+        {
+          "mode": "development"
+        }
+      ],
+      [
+        "expo-live-activity",
+        {
+          "enablePushNotifications": true
+        }
+      ],
       "./plugins/with-scene-lifecycle"
     ],
     "backgroundColor": "#0d0f14",
-    "scheme": "scout"
+    "scheme": "scout",
+    "extra": {
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "LiveActivity",
+                  "bundleIdentifier": "com.spaceshipresearch.scout.LiveActivity",
+                  "entitlements": {}
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "384b2735-74c8-4165-8f43-902f5fd1461c"
+      }
+    },
+    "owner": "adityakm24"
   }
 }
