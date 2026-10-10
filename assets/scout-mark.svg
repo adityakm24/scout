@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!--
+    The Scout mark: the agent's own face. The app-icon tile IS the face (a violet rounded square,
+    supplied by the generator from the platform backgrounds); these are its two eyes and their
+    glints, drawn on the 1024 tile. Proportions follow the default agent avatar.
+    scripts/generate_icons.py reads the paths by id; their fills here are only a preview.
+  -->
+  <path id="eye-left" fill="#150e25" d="M 368 364 A 66 66 0 1 1 368 496 A 66 66 0 1 1 368 364 Z" />
+  <path id="eye-right" fill="#150e25" d="M 656 364 A 66 66 0 1 1 656 496 A 66 66 0 1 1 656 364 Z" />
+  <path id="glint-left" fill="#ece9f3" d="M 349 384 A 21 21 0 1 1 349 426 A 21 21 0 1 1 349 384 Z" />
+  <path id="glint-right" fill="#ece9f3" d="M 637 384 A 21 21 0 1 1 637 426 A 21 21 0 1 1 637 384 Z" />
+</svg>

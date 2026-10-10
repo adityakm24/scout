@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="tile" x1="0.0" y1="0.0" x2="1024.0" y2="1024.0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5cbcff"/><stop offset="1" stop-color="#0060d6"/></linearGradient><linearGradient id="cut" x1="0" y1="0" x2="1024.0" y2="1024.0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5cbcff"/><stop offset="1" stop-color="#0060d6"/></linearGradient></defs>
+  <ns0:rect xmlns:ns0="http://www.w3.org/2000/svg" x="0" y="0" width="1024" height="1024" rx="245" fill="url(#tile)" />
+
+  <g transform="translate(0.0 0.0) scale(1.0)"><path fill="#ffffff" d="M 512 204 C 686.5 204 828 326.7 828 478 C 828 629.3 686.5 752 512 752 C 465 752 420.3 743.1 380.1 727.2 C 336 772 266 806 194 812 C 236 776 262 728 270 676 C 220.6 621.4 196 552.3 196 478 C 196 326.7 337.5 204 512 204 Z"/><path fill="url(#cut)" d="M 512 262 Q 549 441 682 478 Q 549 515 512 676 Q 475 515 342 478 Q 475 441 512 262 Z"/><path fill="url(#cut)" d="M 664 284 Q 672 316 700 324 Q 672 332 664 364 Q 656 332 628 324 Q 656 316 664 284 Z"/></g>
+</svg>

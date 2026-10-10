@@ -1,0 +1,411 @@
+// @vitest-environment jsdom
+import { QueryClientProvider } from '@tanstack/react-query'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
+import type * as ReactRouterDom from 'react-router'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { queryClient } from '@/lib/query-client'
+import type * as ScoutApi from '@/scout'
+
+import { $catalogCardView } from './catalog/store'
+
+const getSkills = vi.fn()
+const getToolsets = vi.fn()
+const setSkillEnabled = vi.fn()
+const setToolsetEnabled = vi.fn()
+const getToolsetConfig = vi.fn()
+const selectToolsetProvider = vi.fn()
+const getUsageAnalytics = vi.fn()
+const getProfiles = vi.fn()
+const getSkillContent = vi.fn()
+const createSkill = vi.fn()
+const deleteLearningNode = vi.fn()
+
+// Partial mock: keep the real module (CapabilitiesView pulls in @/store/profile,
+// whose import-time subscription calls setApiRequestProfile) and stub only the
+// calls we assert on. Args are forwarded so the per-profile scope arg is
+// observable.
+vi.mock('@/scout', async importOriginal => ({
+  ...(await importOriginal<typeof ScoutApi>()),
+  getSkills: (profile?: null | string) => getSkills(profile),
+  getToolsets: (profile?: null | string) => getToolsets(profile),
+  setSkillEnabled: (name: string, enabled: boolean, profile?: null | string) => setSkillEnabled(name, enabled, profile),
+  setToolsetEnabled: (name: string, enabled: boolean, profile?: null | string) =>
+    setToolsetEnabled(name, enabled, profile),
+  getToolsetConfig: (name: string, profile?: null | string) => getToolsetConfig(name, profile),
+  selectToolsetProvider: (toolset: string, provider: string) => selectToolsetProvider(toolset, provider),
+  getUsageAnalytics: (days: number, profile?: null | string) => getUsageAnalytics(days, profile),
+  getProfiles: () => getProfiles(),
+  getSkillContent: (name: string, profile?: null | string) => getSkillContent(name, profile),
+  createSkill: (name: string, content: string, profile?: unknown) => createSkill(name, content, profile),
+  deleteLearningNode: (id: string, profile?: unknown) => deleteLearningNode(id, profile)
+}))
+
+// Notifications hit nanostores/timers we don't care about here.
+vi.mock('@/store/notifications', () => ({
+  notify: vi.fn(),
+  notifyError: vi.fn()
+}))
+
+// The vision detail navigates to Settings → Models via useNavigate; spy on it
+// so the deep-link target is assertable.
+const navigateSpy = vi.fn()
+
+vi.mock('react-router', async importOriginal => ({
+  ...(await importOriginal<typeof ReactRouterDom>()),
+  useNavigate: () => navigateSpy
+}))
+
+// Import at module scope (after the hoisted vi.mock calls) so the heavy
+// component-tree transform is paid during collection, not billed against the
+// first test's testTimeout — same flake class as messaging/index.test.tsx.
+const { CapabilitiesView } = await import('./index')
+
+function toolset(overrides: Record<string, unknown> = {}) {
+  return {
+    name: 'web',
+    label: 'Web Search',
+    description: 'web_search, web_extract',
+    enabled: true,
+    available: true,
+    configured: true,
+    tools: ['web_search', 'web_extract'],
+    ...overrides
+  }
+}
+
+async function renderSkills() {
+  let result: ReturnType<typeof render>
+  await act(async () => {
+    result = render(
+      // CapabilitiesView reads skills/toolsets via useQuery, so it needs a provider.
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/capabilities?tab=toolsets']}>
+          <CapabilitiesView />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+  })
+
+  return result!
+}
+
+beforeEach(() => {
+  $catalogCardView.set(true)
+  getSkills.mockResolvedValue([])
+  getToolsets.mockResolvedValue([toolset()])
+  setToolsetEnabled.mockResolvedValue({ ok: true, name: 'web', enabled: false })
+  getToolsetConfig.mockResolvedValue({ has_category: true, active_provider: null, providers: [] })
+  getUsageAnalytics.mockResolvedValue({ tools: [] })
+  getSkillContent.mockResolvedValue({
+    name: 'web-research',
+    path: '/skills/web-research/SKILL.md',
+    content:
+      '---\nname: web-research\nversion: 1.2.0\nauthor: SpaceshipResearch\n---\n\n# Web Research\n\nDeep research steps.'
+  })
+  // Single profile by default → the scope selector stays hidden (>1 gate),
+  // so existing tests see unchanged single-profile behavior.
+  getProfiles.mockResolvedValue({ profiles: [{ name: 'default', is_default: true }] })
+  queryClient.setQueryData(['public-catalog', 'skills'], [])
+})
+
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+  // Shared singleton client — drop cached skills/toolsets so each test refetches.
+  queryClient.clear()
+})
+
+// CapabilitiesView is a heavy module (import cost now paid at module scope above,
+// during collection) but the file still legitimately runs ~14s on CI runners —
+// right against the global 15s per-test budget, so slow runners cascade-fail
+// all 11 tests (2× in a row on PR #93612, plus a main run the same hour).
+// Give this file headroom; the tests are not slow individually.
+describe('CapabilitiesView', { timeout: 60_000 }, () => {
+  it('has no Tools tab: an old ?tab=toolsets link lands on Skills', async () => {
+    await renderSkills()
+
+    expect(await screen.findByRole('button', { name: 'New skill' })).toBeTruthy()
+    const tabs = document.querySelector('[data-tour="page-tabs"]')?.textContent ?? ''
+    expect(tabs).toContain('Connectors')
+    expect(tabs).not.toMatch(/Tools/)
+    expect(getToolsets).not.toHaveBeenCalled()
+  })
+
+  it('scopes the Skills tab (and skill toggles) to the profile chosen in the selector', async () => {
+    // The selector is Capabilities-WIDE: picking a profile on the Skills tab
+    // must refetch the skill list scoped to it, and route toggles there too.
+    Element.prototype.scrollIntoView = vi.fn()
+    getProfiles.mockResolvedValue({
+      profiles: [
+        { name: 'default', is_default: true },
+        { name: 'researcher', is_default: false }
+      ]
+    })
+    getSkills.mockResolvedValue([
+      {
+        name: 'web-research',
+        description: 'Research the web',
+        category: 'research',
+        enabled: true,
+        usage: 3,
+        provenance: 'bundled'
+      }
+    ])
+
+    await act(async () => {
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/capabilities?tab=skills']}>
+            <CapabilitiesView />
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+    })
+
+    // The selector renders on the Skills tab too (Capabilities-wide).
+    const trigger = await screen.findByRole('combobox')
+    await act(async () => {
+      fireEvent.click(trigger)
+    })
+    const option = await screen.findByRole('option', { name: 'researcher' })
+    await act(async () => {
+      fireEvent.click(option)
+    })
+
+    // Skills refetch scoped to the picked profile...
+    await waitFor(() => expect(getSkills).toHaveBeenCalledWith('researcher'))
+
+    // ...and a toggle routes its write to that profile as well.
+    const sw = await screen.findByRole('switch', { name: 'Web Research' })
+    await act(async () => {
+      fireEvent.click(sw)
+    })
+    await waitFor(() => expect(setSkillEnabled).toHaveBeenCalledWith('web-research', false, 'researcher'))
+  })
+
+  it('shows the FULL skill body in the detail dialog, not just the description or raw frontmatter', async () => {
+    getSkills.mockResolvedValue([
+      {
+        name: 'web-research',
+        description: 'Research the web',
+        category: 'research',
+        enabled: true,
+        usage: 3,
+        provenance: 'bundled'
+      }
+    ])
+
+    await act(async () => {
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/capabilities?tab=skills']}>
+            <CapabilitiesView />
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+    })
+
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Web Research' }))
+    })
+
+    await waitFor(() => expect(getSkillContent).toHaveBeenCalled())
+    expect(getSkillContent.mock.calls[0][0]).toBe('web-research')
+    expect(await screen.findByText(/Deep research steps/)).toBeTruthy()
+    expect(screen.queryByText(/version: 1\.2\.0/)).toBeNull()
+  })
+
+  it("lists only the profile's own skills — no public library, no install switches", async () => {
+    const fetch = vi.fn()
+    vi.stubGlobal('fetch', fetch)
+    getSkills.mockResolvedValue([
+      { name: 'web-research', description: 'Research', enabled: true, category: 'research', provenance: 'bundled' }
+    ])
+
+    try {
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <CapabilitiesView embedded fixedConnection="homelab" fixedProfile="inbox-bot" />
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+
+      await screen.findByRole('switch', { name: 'Web Research' })
+      expect(screen.queryByRole('button', { name: 'gif-search' })).toBeNull()
+      expect(screen.queryByRole('switch', { name: /^Add / })).toBeNull()
+      expect(screen.getAllByRole('textbox', { name: 'Search skills' })).toHaveLength(1)
+      expect(fetch).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('creates an uploaded SKILL.md from just a name, keeping the file as written', async () => {
+    createSkill.mockResolvedValue({ success: true, message: 'ok', path: 'trip-planner' })
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <CapabilitiesView embedded fixedProfile="default" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'New skill' }))
+    const dialog = await screen.findByRole('dialog')
+
+    const file = new File(
+      [
+        '---\nname: Trip Planner\ndescription: Plan trips day by day.\nversion: 0.1.0\n---\n# Trip planner\n\nAsk for dates.\n'
+      ],
+      'SKILL.md',
+      { type: 'text/markdown' }
+    )
+
+    await act(async () => {
+      fireEvent.change(dialog.querySelector('input[type=file]')!, { target: { files: [file] } })
+    })
+
+    await waitFor(() => expect(within(dialog).getByLabelText<HTMLInputElement>('Name').value).toBe('trip-planner'))
+    expect(within(dialog).queryByLabelText('When should Scout use it?')).toBeNull()
+    expect(within(dialog).queryByLabelText('Instructions')).toBeNull()
+
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Create skill' }))
+    })
+
+    await waitFor(() => expect(createSkill).toHaveBeenCalledTimes(1))
+    const [name, content] = createSkill.mock.calls[0]
+    expect(name).toBe('trip-planner')
+    expect(content).toContain('version: 0.1.0')
+    expect(content).toContain('Ask for dates.')
+  })
+
+  it('deletes a built-in skill from its detail dialog', async () => {
+    deleteLearningNode.mockResolvedValue({ ok: true, message: 'archived' })
+    getSkills.mockResolvedValue([
+      { name: 'maps', description: 'Maps', enabled: true, category: 'productivity', provenance: 'bundled' }
+    ])
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <CapabilitiesView embedded fixedProfile="default" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'maps' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+    const confirm = (await screen.findByText('Delete maps?')).closest<HTMLElement>('[role=dialog], [role=alertdialog]')!
+    await act(async () => {
+      fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }))
+    })
+
+    await waitFor(() => expect(deleteLearningNode).toHaveBeenCalledWith('maps', 'default'))
+  })
+
+  it('writes a new custom skill into the scoped profile', async () => {
+    createSkill.mockResolvedValue({ success: true, message: 'ok', path: 'weekly-report' })
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <CapabilitiesView embedded fixedConnection="homelab" fixedProfile="inbox-bot" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'New skill' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Weekly Report' } })
+    fireEvent.change(within(dialog).getByLabelText('When should Scout use it?'), {
+      target: { value: 'Write my weekly status report.' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('Instructions'), { target: { value: 'Summarize the week.' } })
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Create skill' }))
+    })
+
+    await waitFor(() => expect(createSkill).toHaveBeenCalledTimes(1))
+    const [name, content, profile] = createSkill.mock.calls[0]
+    expect(name).toBe('weekly-report')
+    expect(content).toContain('Write my weekly status report.')
+    expect(content).toContain('Summarize the week.')
+    expect(profile).toEqual({ connectionId: 'homelab', profile: 'inbox-bot' })
+  })
+
+  it('fixedConnection pins every read to the target connection', async () => {
+    // Bot Mode's remote-target door: a bot on another registered gateway gets
+    // the live surface pointed at ITS backend — the reads must carry the
+    // (connection, profile) pin, not a bare profile name that would resolve
+    // against the ACTIVE gateway (the wrong-machine bug).
+    await act(async () => {
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/capabilities']}>
+            <CapabilitiesView embedded fixedConnection="homelab" fixedProfile="inbox-bot" />
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+    })
+
+    await waitFor(() => expect(getSkills).toHaveBeenCalled())
+    expect(getSkills.mock.calls[0][0]).toEqual({ connectionId: 'homelab', profile: 'inbox-bot' })
+    // Pinned scope → no roster/profiles fetch, selector hidden.
+    expect(getProfiles).not.toHaveBeenCalled()
+  })
+
+  it('offers (connection, profile) scope rows on multi-connection desktops', async () => {
+    // With a v2 registry holding >1 connection, the scope selector lists the
+    // union agent roster — profile + owning device — instead of the local
+    // profiles list, so a selection identifies WHICH gateway's capabilities
+    // are being configured.
+    const connections = {
+      list: vi.fn().mockResolvedValue({
+        version: 2,
+        primary: 'local',
+        secureTokenStorage: true,
+        connections: [
+          { id: 'local', kind: 'local', label: 'This device', tokenSet: false, tokenPreview: null },
+          { id: 'homelab', kind: 'remote', label: 'Homelab', tokenSet: true, tokenPreview: '…' }
+        ]
+      })
+    }
+
+    const getAgentRoster = vi.fn().mockResolvedValue({
+      agents: [
+        {
+          connectionId: 'local',
+          connectionKind: 'local',
+          connectionLabel: 'This device',
+          profile: 'default',
+          handle: 'default'
+        },
+        {
+          connectionId: 'homelab',
+          connectionKind: 'remote',
+          connectionLabel: 'Homelab',
+          profile: 'inbox-bot',
+          handle: 'inbox-bot-homelab'
+        }
+      ],
+      sources: []
+    })
+
+    ;(window as { scoutDesktop?: unknown }).scoutDesktop = { connections, getAgentRoster }
+
+    try {
+      await renderSkills()
+
+      await waitFor(() => expect(getAgentRoster).toHaveBeenCalled())
+      // The selector paints roster rows labeled profile — device.
+      expect(await screen.findByText('default — This device (current)')).toBeTruthy()
+    } finally {
+      delete (window as { scoutDesktop?: unknown }).scoutDesktop
+    }
+  })
+})

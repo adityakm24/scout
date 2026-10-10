@@ -1,0 +1,137 @@
+/* Scout skin — Paper by day, Deep Orbit by night, Signal (iMessage blue) accent.
+ *
+ * Everything here is scoped to the Scout theme (`data-scout-theme` on <html>,
+ * set by themes/context.tsx), so other skins keep their own look. Colour comes
+ * from the theme itself (`--theme-primary`, `--dt-primary-solid`, the surface
+ * seeds), so a custom accent retints this layer too; the only fixed hue is the
+ * light end of the display gradient. What it adds is shape: segmented controls, a capsule composer, launcher
+ * tiles, and the display type. Motion lives in motion.css.
+ */
+
+:root[data-scout-theme='spaceshipresearch'] {
+  --scout-accent: var(--theme-primary);
+  --scout-ember: color-mix(in oklab, var(--theme-primary) 55%, #5ac8fa);
+  --scout-flame: linear-gradient(115deg, var(--theme-primary) 0%, var(--scout-ember) 100%);
+  --scout-glow: color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  --scout-tint: color-mix(in srgb, var(--theme-primary) 12%, transparent);
+  --scout-edge: color-mix(in srgb, var(--theme-primary) 38%, transparent);
+  --scout-well: color-mix(in srgb, var(--ui-text-primary, currentColor) 6%, transparent);
+  --radius-scalar: 1.2;
+}
+
+/* ── Sidebar launcher: destination tiles with a lit icon well ─────────────── */
+:root[data-scout-theme='spaceshipresearch']
+  [data-slot='sidebar-launcher']
+  [data-sidebar='menu-button']:not(:has([data-tour='sidebar-nav-new-session']))
+  > :is(svg, i):first-child {
+  box-sizing: content-box;
+  padding: 0.4rem;
+  border-radius: 0.625rem;
+  color: var(--scout-accent);
+  background: var(--scout-tint);
+  transition:
+    transform var(--motion-base) var(--ease-spring),
+    background-color var(--motion-fast) ease;
+}
+:root[data-scout-theme='spaceshipresearch']
+  [data-slot='sidebar-launcher']
+  [data-sidebar='menu-button']:hover
+  > :is(svg, i):first-child {
+  transform: translateY(-1px) scale(1.08) rotate(-4deg);
+}
+:root[data-scout-theme='spaceshipresearch']
+  [data-slot='sidebar-launcher']
+  [data-sidebar='menu-button']:is([data-active='true'], [aria-current='page'])
+  > :is(svg, i):first-child {
+  color: var(--dt-primary-solid-foreground);
+  background: var(--scout-flame);
+}
+
+/* ── Segmented controls: sidebar pane tabs sit in one pill well ─────────── */
+:root[data-scout-theme='spaceshipresearch'] :has(> [data-slot='pane-tab']) {
+  gap: 0.125rem;
+}
+:root[data-scout-theme='spaceshipresearch'] [data-slot='pane-tab'] {
+  border-radius: 999px;
+  transition:
+    background-color var(--motion-base) var(--ease-out-quint),
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-base) var(--ease-out-quint);
+}
+:root[data-scout-theme='spaceshipresearch'] [data-slot='pane-tab'][data-active='true']:not([data-vertical]) {
+  background: var(--scout-tint) !important;
+  color: var(--ui-text-primary) !important;
+  box-shadow: inset 0 0 0 1px var(--scout-edge);
+  font-weight: 600;
+}
+
+/* ── Composer: a capsule that lights up when you type ─────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] [data-slot='composer-surface'] {
+  border-radius: 1.5rem !important;
+  transition:
+    box-shadow var(--motion-slow) var(--ease-out-quint),
+    border-color var(--motion-base) ease;
+}
+:root[data-scout-theme='spaceshipresearch'] [data-slot='composer-surface']:focus-within {
+  border-color: var(--scout-edge) !important;
+  box-shadow:
+    0 0 0 4px var(--scout-tint),
+    0 1.25rem 3rem -1.5rem var(--scout-glow) !important;
+}
+
+/* ── Your messages: iMessage bubbles — solid accent, white ink, tail toward you.
+   `--dt-primary-solid` is the accent deepened until white clears AA on it. */
+:root[data-scout-theme='spaceshipresearch'] .composer-human-message {
+  width: fit-content;
+  max-width: min(80%, 38rem);
+  margin-left: auto;
+  border: none !important;
+  border-radius: 1.25rem 1.25rem 0.375rem 1.25rem !important;
+  background: var(--dt-primary-solid) !important;
+  color: var(--dt-primary-solid-foreground);
+}
+:root[data-scout-theme='spaceshipresearch'] .composer-human-message :is(p, span, li, strong, em, a) {
+  color: inherit;
+}
+:root[data-scout-theme='spaceshipresearch'] .composer-human-message :is(code, pre) {
+  background: color-mix(in srgb, #000 18%, transparent);
+  color: inherit;
+}
+
+/* iMessage-narrow bubbles wrap sooner, so a sticky prompt keeps more lines before it clamps. */
+:root[data-scout-theme='spaceshipresearch'] .sticky-human-clamp {
+  max-height: calc(8 * var(--human-msg-line-height) * var(--conversation-text-font-size) + 0.15rem);
+}
+
+/* ── Display type: Sora, lit with the Signal gradient ────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] :is(.scout-greeting, .scout-page-title, h1) {
+  font-family: 'Sora', var(--dt-font-sans);
+  letter-spacing: -0.035em;
+}
+:root[data-scout-theme='spaceshipresearch'] .scout-greeting {
+  font-weight: 700;
+  background: var(--scout-flame);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Chrome: the titlebar tools sit on one pill ──────────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] [data-titlebar-cluster='right'] {
+  border-radius: 999px;
+  padding-inline: 0.25rem;
+  background: var(--scout-well);
+}
+
+/* ── Cards: rounder, and they lift toward the pointer ────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] :is([data-catalog-card], [data-slot='connector-row-card'], .scout-panel) {
+  border-radius: 1.25rem !important;
+}
+
+/* ── Details ─────────────────────────────────────────────────────────────── */
+:root[data-scout-theme='spaceshipresearch'] ::selection {
+  background-color: color-mix(in srgb, var(--theme-primary) 30%, transparent);
+}
+:root[data-scout-theme='spaceshipresearch'] *::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+}

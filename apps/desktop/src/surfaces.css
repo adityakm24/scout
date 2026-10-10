@@ -1,0 +1,384 @@
+/* Scout surfaces — the Liquid Glass layer.
+ *
+ * Apple's glass is three things stacked: a translucent fill that lets what is
+ * behind it through, a blur + saturation lift on that backdrop (so colour
+ * survives the frost instead of greying out), and light on the edge — a
+ * specular hairline along the top and a soft contact shadow below. Everything
+ * floating in Scout (sidebar plate, composer, dialogs, menus) is built from
+ * the same three tokens, so the material reads as one object family.
+ *
+ * Backdrop filters are gated off by the reduced-transparency rule in
+ * styles.css; every surface keeps a fill that stands alone without them.
+ */
+
+:root {
+  --glass-blur: 28px;
+  --glass-saturate: 1.8;
+  --glass-fill-strength: 72%;
+  --glass-edge: color-mix(in srgb, #fff 70%, transparent);
+  --glass-edge-soft: color-mix(in srgb, #fff 40%, transparent);
+  --glass-rim: color-mix(in srgb, #000 8%, transparent);
+  --glass-shadow:
+    0 0.0625rem 0.125rem color-mix(in srgb, #000 5%, transparent),
+    0 0.5rem 1.5rem -0.5rem color-mix(in srgb, #000 12%, transparent),
+    0 1.75rem 3.5rem -1.25rem color-mix(in srgb, #000 18%, transparent);
+}
+
+:root.dark {
+  --glass-edge: color-mix(in srgb, #fff 14%, transparent);
+  --glass-edge-soft: color-mix(in srgb, #fff 7%, transparent);
+  --glass-rim: color-mix(in srgb, #fff 7%, transparent);
+  --glass-shadow:
+    0 0.0625rem 0.125rem color-mix(in srgb, #000 30%, transparent),
+    0 0.75rem 2rem -0.5rem color-mix(in srgb, #000 45%, transparent),
+    0 2rem 4rem -1.5rem color-mix(in srgb, #000 55%, transparent);
+}
+
+/* Type: SF renders best with grayscale smoothing, and large text wants
+   slightly negative tracking the way Apple sets its display sizes. */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Composer: a floating glass capsule ─────────────────────────────────── */
+/* `:root` lifts these one notch above styles.css's own composer-fill ladder. */
+:root [data-slot='composer-root'] {
+  --composer-fill: color-mix(in srgb, var(--dt-card) var(--glass-fill-strength), transparent);
+}
+:root [data-slot='composer-root'][data-thread-scrolled-up] {
+  --composer-fill: color-mix(in srgb, var(--dt-card) 64%, transparent);
+}
+[data-slot='composer-surface'] {
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border-color: var(--glass-rim);
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge),
+    inset 0 -1px 0 color-mix(in srgb, #000 4%, transparent),
+    var(--glass-shadow);
+  transition:
+    box-shadow var(--motion-base) var(--ease-out-quint),
+    border-color var(--motion-base) var(--ease-out-quint);
+}
+[data-slot='composer-surface']:focus-within {
+  border-color: color-mix(in srgb, var(--dt-composer-ring) 28%, var(--glass-rim));
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge),
+    0 0 0 3px color-mix(in srgb, var(--dt-composer-ring) 8%, transparent),
+    var(--glass-shadow);
+}
+
+/* ── Dialogs: frosted sheets ────────────────────────────────────────────── */
+[data-slot='dialog-content'] {
+  background-color: color-mix(in srgb, var(--ui-chat-bubble-background) 82%, transparent);
+  backdrop-filter: blur(40px) saturate(var(--glass-saturate));
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge-soft),
+    0 0 0 0.5px var(--glass-rim),
+    var(--glass-shadow);
+}
+[data-slot='overlay-card'] {
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge-soft),
+    var(--glass-shadow);
+}
+:is([data-slot='dialog-overlay'], [data-slot='overlay-backdrop']) {
+  background-color: color-mix(in srgb, #000 18%, transparent);
+  backdrop-filter: blur(6px) saturate(1.2);
+}
+
+/* ── Menus & popovers: thin glass ───────────────────────────────────────── */
+:is(
+  [data-slot='dropdown-menu-content'],
+  [data-slot='dropdown-menu-sub-content'],
+  [data-slot='context-menu-content'],
+  [data-slot='context-menu-sub-content'],
+  [data-slot='popover-content'],
+  [data-slot='select-content']
+) {
+  background-color: color-mix(in srgb, var(--ui-bg-elevated) 76%, transparent);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border-color: var(--glass-rim);
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge-soft),
+    var(--glass-shadow);
+}
+
+[data-slot='tooltip-content'] {
+  backdrop-filter: blur(16px) saturate(var(--glass-saturate));
+}
+
+/* ── Sidebar: a floating glass plate ────────────────────────────────────── */
+/* The plate belongs to the ZONE that hosts the sessions sidebar, not to one
+   pane, so every tab in it (Sessions, Bots, Dashboard) sits on the same glass
+   and switching tabs never flattens the column. `:has()` finds that zone
+   wherever the user docked it. Painted inset behind the rows: nothing
+   reflows, and the insets leave an even 4px gutter around the content (rows
+   start 10px in via px-2.5; the profile rail ends 12px up via pb-3). */
+[data-slot='sidebar'] {
+  --sidebar-edge-border: transparent;
+}
+[data-tree-group]:has([data-slot='sidebar']) [data-zone-body] > div {
+  isolation: isolate;
+}
+[data-tree-group]:has([data-slot='sidebar']) [data-zone-body] > div::before {
+  content: '';
+  position: absolute;
+  inset: 0.125rem 0.375rem 0.5rem;
+  z-index: -1;
+  border-radius: 1.125rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--dt-foreground) 5%, transparent),
+    color-mix(in srgb, var(--dt-foreground) 2.5%, transparent)
+  );
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge-soft),
+    0 0 0 0.5px var(--glass-rim),
+    0 0.5rem 1.5rem -0.75rem color-mix(in srgb, #000 20%, transparent);
+  pointer-events: none;
+}
+
+/* Rows inside the plate are soft capsules, not full-bleed bars. */
+[data-slot='sidebar'] :is([data-slot='sidebar-menu-button'], [data-slot='row-button']) {
+  border-radius: 0.625rem;
+}
+
+/* Text selection wears the accent, softly. */
+::selection {
+  background-color: color-mix(in srgb, var(--dt-midground) 28%, transparent);
+}
+
+/* ── Welcome: orb + greeting ────────────────────────────────────────────── */
+@keyframes scout-orb-turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@keyframes scout-orb-breathe {
+  0%,
+  100% {
+    transform: scale(1) rotate(0turn);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.12) rotate(0.5turn);
+    opacity: 0.8;
+  }
+}
+
+.scout-orb {
+  --orb-size: 4.25rem;
+  --orb-spectrum: conic-gradient(
+    from 0deg,
+    var(--dt-primary),
+    #ffb35c,
+    #ff7eb3,
+    #8f7bff,
+    #4c8dff,
+    #5fd4ff,
+    var(--dt-primary)
+  );
+  position: relative;
+  display: grid;
+  width: var(--orb-size);
+  height: var(--orb-size);
+  isolation: isolate;
+}
+.scout-orb > span {
+  grid-area: 1 / 1;
+  border-radius: 9999px;
+}
+.scout-orb__glow {
+  margin: -22%;
+  background: var(--orb-spectrum);
+  filter: blur(22px);
+  z-index: -1;
+  animation: scout-orb-breathe 9s var(--ease-in-out-quint) infinite;
+}
+.scout-orb__core {
+  background: var(--orb-spectrum);
+  animation: scout-orb-turn 7s linear infinite;
+}
+.scout-orb__glass {
+  background:
+    radial-gradient(circle at 32% 24%, color-mix(in srgb, #fff 90%, transparent), transparent 34%),
+    radial-gradient(circle at 50% 50%, transparent 40%, color-mix(in srgb, #000 22%, transparent) 100%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #fff 38%, transparent),
+    inset 0 -0.6rem 1.1rem color-mix(in srgb, #000 22%, transparent),
+    inset 0 0.45rem 0.9rem color-mix(in srgb, #fff 30%, transparent),
+    0 0.75rem 2rem -0.5rem color-mix(in srgb, var(--dt-primary) 45%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.scout-greeting {
+  font-family:
+    'SF Pro Display',
+    -apple-system,
+    BlinkMacSystemFont,
+    var(--font-sans);
+  font-size: clamp(2.25rem, 4.4vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.038em;
+  color: var(--dt-foreground);
+  background: linear-gradient(
+    180deg,
+    var(--dt-foreground) 35%,
+    color-mix(in srgb, var(--dt-foreground) 58%, transparent)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── The sticky prompt: a glass header the transcript scrolls beneath ───── */
+.composer-human-message.standalone-glass {
+  background-color: color-mix(in srgb, var(--dt-user-bubble) 78%, transparent);
+  backdrop-filter: blur(20px) saturate(var(--glass-saturate));
+  border-color: var(--glass-rim);
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge-soft),
+    0 0.375rem 1.25rem -0.75rem color-mix(in srgb, #000 22%, transparent);
+}
+
+/* ── Dashboard ──────────────────────────────────────────────────────────── */
+/* A glass card on the page's own horizon: same material family as the
+   composer and dialogs, one step quieter so the content leads. */
+.scout-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 1.5rem;
+  background-color: color-mix(in srgb, var(--dt-card) 70%, transparent);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge-soft),
+    0 0 0 0.5px var(--glass-rim),
+    var(--glass-shadow);
+}
+
+/* The circular check: a ring tinted by priority, filling with the accent and
+   popping its tick on completion. Pressed feedback is instant (motion.css). */
+@keyframes scout-check-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+}
+
+.scout-check {
+  --check-ring: var(--ui-stroke-secondary);
+  display: grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+  place-items: center;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1.5px var(--check-ring);
+  color: var(--dt-midground-foreground);
+  transition:
+    background-color var(--motion-base) var(--ease-out-quint),
+    box-shadow var(--motion-base) var(--ease-out-quint),
+    scale var(--motion-base) var(--ease-spring);
+}
+.scout-check.scout-check--sm {
+  width: 1rem;
+  height: 1rem;
+}
+.scout-check:hover {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--check-ring) 60%, var(--dt-midground));
+}
+.scout-check:active {
+  scale: 0.88;
+  transition-duration: 0ms;
+}
+.scout-check[data-priority='high'] {
+  --check-ring: color-mix(in srgb, #ff453a 80%, transparent);
+}
+.scout-check[data-priority='medium'] {
+  --check-ring: color-mix(in srgb, #ff9f0a 80%, transparent);
+}
+.scout-check[data-priority='low'] {
+  --check-ring: color-mix(in srgb, #0a84ff 70%, transparent);
+}
+.scout-check[data-checked='true'] {
+  --check-ring: var(--dt-midground);
+  background-color: var(--dt-midground);
+}
+.scout-check[data-checked='true'] > svg {
+  animation: scout-check-pop 360ms var(--ease-spring) both;
+}
+
+/* A row that just arrived — from the composer, another window or the agent. */
+.scout-row-enter {
+  animation: scout-message-in var(--motion-slow) var(--ease-out-expo) both;
+}
+
+/* The Dashboard's sky: the welcome horizon's palette, lit from above instead —
+   a dawn glow behind the greeting that fades into the paper/orbit below. */
+.scout-sky {
+  position: absolute;
+  inset: -30% -15% auto;
+  height: 85%;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 55% at 22% 40%, color-mix(in oklab, #f5b041 22%, transparent), transparent 70%),
+    radial-gradient(42% 60% at 78% 35%, color-mix(in oklab, #7fa7ff 20%, transparent), transparent 72%),
+    radial-gradient(30% 40% at 52% 60%, color-mix(in oklab, var(--dt-primary) 16%, transparent), transparent 70%);
+  filter: blur(40px) saturate(1.1);
+  animation:
+    scout-rise 1.2s var(--ease-out-expo) both,
+    scout-horizon-drift 30s var(--ease-in-out-quint) 1.2s infinite;
+}
+:root.dark .scout-sky {
+  background:
+    radial-gradient(40% 55% at 25% 35%, color-mix(in oklab, #6c5cff 18%, transparent), transparent 70%),
+    radial-gradient(40% 60% at 75% 30%, color-mix(in oklab, #3a6dff 22%, transparent), transparent 72%),
+    radial-gradient(30% 40% at 50% 62%, color-mix(in oklab, var(--dt-primary) 20%, transparent), transparent 70%);
+}
+:root[data-renderer-animations-paused] .scout-sky {
+  animation-play-state: running, paused;
+}
+
+/* The empty chat's greeting scales with the chat column, not the window: with the
+   sidebar and the agent panel open the column is narrow, and a window-sized
+   greeting wrapped onto two lines and pushed the text under the composer. */
+[data-slot='aui_intro'] {
+  container-type: inline-size;
+}
+[data-slot='aui_intro'] .scout-greeting {
+  font-size: clamp(2rem, 11.5cqi, 3.5rem);
+  text-wrap: balance;
+}
+
+.scout-greeting.scout-greeting--page {
+  font-size: clamp(1.9rem, 3.2vw, 2.75rem);
+}
+
+/* Orb sizes. A badge-sized orb is a still, halo-less jewel: the glow and the
+   spin are for the welcome, not for every row that mentions Scout. */
+.scout-orb.scout-orb--sm {
+  --orb-size: 2.5rem;
+}
+.scout-orb.scout-orb--mini {
+  --orb-size: 0.625rem;
+  display: inline-grid;
+  vertical-align: middle;
+}
+.scout-orb--mini > .scout-orb__glow {
+  display: none;
+}
+.scout-orb--mini > .scout-orb__core {
+  animation: none;
+}
+.scout-orb--mini > .scout-orb__glass {
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, #fff 40%, transparent);
+  backdrop-filter: none;
+}

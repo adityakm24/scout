@@ -1,0 +1,1 @@
+# Scout plugins package

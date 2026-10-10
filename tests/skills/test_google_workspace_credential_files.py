@@ -1,0 +1,91 @@
+"""Regression test: google-workspace SKILL.md must declare required_credential_files.
+
+PR #9931 accidentally removed the required_credential_files header, which broke
+credential file mounting in Docker/Modal remote backends (#16452). This test
+prevents the regression from silently reappearing.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+
+SKILL_MD = (
+    Path(__file__).resolve().parents[2]
+    / "skills/productivity/google-workspace/SKILL.md"
+)
+
+_EXPECTED_PATHS = {"google_token.json", "google_client_secret.json"}
+
+
+def _parse_frontmatter(content: str) -> dict:
+    from agent.skill_utils import parse_frontmatter
+
+    fm, _ = parse_frontmatter(content)
+    return fm
+
+
+class TestGoogleWorkspaceCredentialFiles:
+
+    def test_entries_are_registered_when_files_exist(self, tmp_path):
+        scout_home = tmp_path / ".scout"
+        scout_home.mkdir()
+        (scout_home / "google_token.json").write_text("{}")
+        (scout_home / "google_client_secret.json").write_text("{}")
+
+        from tools.credential_files import (
+            clear_credential_files,
+            get_credential_file_mounts,
+            register_credential_files,
+        )
+
+        clear_credential_files()
+        try:
+            content = SKILL_MD.read_text(encoding="utf-8")
+            fm = _parse_frontmatter(content)
+            entries = fm.get("required_credential_files", [])
+
+            with patch.dict(os.environ, {"SCOUT_HOME": str(scout_home)}):
+                missing = register_credential_files(entries)
+
+            assert missing == [], f"Unexpected missing files: {missing}"
+            mounts = get_credential_file_mounts()
+            container_paths = {m["container_path"] for m in mounts}
+            assert "/root/.scout/google_token.json" in container_paths
+            assert "/root/.scout/google_client_secret.json" in container_paths
+            # Mountable for the skill, still never readable by the agent.
+            from agent.file_safety import get_read_block_error
+
+            with patch.dict(os.environ, {"SCOUT_HOME": str(scout_home)}):
+                assert get_read_block_error(str(scout_home / "google_token.json"))
+                (scout_home / "auth.json").write_text("{}")  # a master store stays unmountable
+                assert register_credential_files(["auth.json"]) == ["auth.json"]
+        finally:
+            clear_credential_files()
+
+
+
+@pytest.mark.platforms("posix")
+def test_stored_client_secret_is_readable_only_by_the_user(tmp_path):
+    """``setup.py --client-secret`` copies the OAuth client secret into SCOUT_HOME; under the usual 022
+    umask a plain write left it (and the tokens written the same way) readable by every local account."""
+    import json
+    import stat
+    import subprocess
+    import sys
+
+    scout_home = tmp_path / ".scout"
+    scout_home.mkdir()
+    source = tmp_path / "client.json"
+    source.write_text(json.dumps({"installed": {"client_id": "id", "client_secret": "s"}}))
+    script = SKILL_MD.parent / "scripts/setup.py"
+
+    subprocess.run([sys.executable, str(script), "--client-secret", str(source)], check=True,
+                   capture_output=True, env={**os.environ, "SCOUT_HOME": str(scout_home)})
+
+    mode = stat.S_IMODE((scout_home / "google_client_secret.json").stat().st_mode)
+    assert mode & 0o077 == 0, oct(mode)

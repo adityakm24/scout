@@ -1,0 +1,39 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { getToolsetModels, testMcpServer } from './scout'
+
+describe('Scout REST parity helpers (mcp / maintenance)', () => {
+  let api: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    api = vi.fn().mockResolvedValue({})
+    Object.defineProperty(window, 'scoutDesktop', {
+      configurable: true,
+      value: { api }
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    Reflect.deleteProperty(window, 'scoutDesktop')
+  })
+
+  it('tests an MCP server with an encoded name', async () => {
+    await testMcpServer('file system')
+
+    expect(api).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/mcp/servers/file%20system/test',
+        method: 'POST'
+      })
+    )
+  })
+
+  it('reads a backend model catalog scoped to a provider row', async () => {
+    await getToolsetModels('image_gen', 'FAL.ai')
+
+    expect(api).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '/api/tools/toolsets/image_gen/models?provider=FAL.ai' })
+    )
+  })
+})

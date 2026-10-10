@@ -1,0 +1,362 @@
+---
+title: "Google Workspace — Read the user's Gmail, Calendar, Drive, Docs, Sheets"
+sidebar_label: "Google Workspace"
+description: "Read the user's Gmail, Calendar, Drive, Docs, Sheets"
+---
+
+{/* This page is auto-generated from the skill's SKILL.md by website/scripts/generate-skill-docs.py. Edit the source SKILL.md, not this page. */}
+
+# Google Workspace
+
+Read the user's Gmail, Calendar, Drive, Docs, Sheets.
+
+## Skill metadata
+
+| | |
+|---|---|
+| Source | Bundled (installed by default) |
+| Path | `skills/productivity/google-workspace` |
+| Version | `1.2.0` |
+| Author | SpaceshipResearch |
+| License | MIT |
+| Platforms | linux, macos, windows |
+| Tags | `Google`, `Gmail`, `Calendar`, `Drive`, `Sheets`, `Docs`, `Contacts`, `Email`, `OAuth` |
+| Related skills | [`himalaya`](../../bundled/email/email-himalaya.md) |
+
+## Reference: full SKILL.md
+
+:::info
+The following is the complete skill definition that Scout loads when this skill is triggered. This is what the agent sees as instructions when the skill is active.
+:::
+
+# Google Workspace
+
+Gmail, Calendar, Drive, Contacts, Sheets, and Docs — through Scout-managed OAuth and a thin CLI wrapper. When `gws` is installed, the skill uses it as the execution backend for broader Google Workspace coverage; otherwise it falls back to the bundled Python client implementation.
+
+## References
+
+- `references/gmail-search-syntax.md` — Gmail search operators (is:unread, from:, newer_than:, etc.)
+- `references/daily-brief.md` — daily/morning brief procedure: schedule + conflicts + meeting prep + urgent mail from Gmail and Calendar. Load it when the user asks for a morning brief, meeting preparation, or "what's on my calendar and what email needs attention."
+
+## Scripts
+
+Both run through `scout google` (never by path).
+
+- `scripts/setup.py` — OAuth2 setup (`scout google setup`, `scout google status`)
+- `scripts/google_api.py` — the API CLI behind `scout google SERVICE ACTION`. It prefers `gws` for operations when available, while preserving Scout's existing JSON output contract.
+
+## First-Time Setup
+
+The setup is fully non-interactive — you drive it step by step so it works
+on CLI, Telegram, Discord, or any platform.
+
+Run the setup script with Python from the Scout environment, not an unrelated
+system Python. `--install-deps` syncs Scout's declared Google extra through PM;
+after syncing, restart Scout and rerun the OAuth command. If Scout is not
+importable, use `scout setup` first rather than installing packages with pip.
+
+Every command below is `scout google ...` run in the terminal: it finds the skill's scripts
+itself, so never write out a script path. `scout google setup ARGS` runs the OAuth helper.
+
+### Step 0: Check if already set up
+
+```bash
+scout google status
+```
+
+If it prints `AUTHENTICATED`, skip to Usage — setup is already done. If not, and the user is in
+the Scout desktop app, the quickest path is **Capabilities → Connectors → Google Workspace →
+Connect**; continue below only for other surfaces.
+
+### Step 1: Triage — ask the user what they need
+
+Before starting OAuth setup, ask the user TWO questions:
+
+**Question 1: "What Google services do you need? Just email, or also
+Calendar/Drive/Sheets/Docs?"**
+
+- **Email only** → They don't need this skill at all. Use the `himalaya` skill
+  instead — it works with a Gmail App Password (Settings → Security → App
+  Passwords) and takes 2 minutes to set up. No Google Cloud project needed.
+  Load the himalaya skill and follow its setup instructions.
+
+- **Anything beyond email** (Calendar, Drive, Sheets, Docs, Contacts) → Continue
+  with this skill. The consent screen asks for every Workspace service at once;
+  the user can untick any they don't want.
+
+**Question 2: "Does your Google account use Advanced Protection (hardware
+security keys required to sign in)? If you're not sure, you probably don't
+— it's something you would have explicitly enrolled in."**
+
+- **No / Not sure** → Normal setup. Continue below.
+- **Yes** → Their Workspace admin must add the OAuth client ID to the org's
+  allowed apps list before Step 4 will work. Let them know upfront.
+
+### Step 2: Create OAuth credentials (one-time, ~5 minutes)
+
+Tell the user:
+
+> You need a Google Cloud OAuth client. This is a one-time setup:
+>
+> 1. Create or select a project:
+>    https://console.cloud.google.com/projectselector2/home/dashboard
+> 2. Enable the required APIs from the API Library:
+>    https://console.cloud.google.com/apis/library
+>    Enable: Gmail API, Google Calendar API, Google Drive API,
+>    Google Sheets API, Google Docs API, People API
+> 3. Create the OAuth client here:
+>    https://console.cloud.google.com/apis/credentials
+>    Credentials → Create Credentials → OAuth 2.0 Client ID
+> 4. Application type: "Desktop app" → Create
+> 5. If the app is still in Testing, add the user's Google account as a test user here:
+>    https://console.cloud.google.com/auth/audience
+>    Audience → Test users → Add users
+> 6. Download the JSON file and tell me the file path
+>
+> Important Scout CLI note: if the file path starts with `/`, do NOT send only the bare path as its own message in the CLI, because it can be mistaken for a slash command. Send it in a sentence instead, like:
+> `The JSON file path is: ~/Downloads/client_secret_....json`
+
+Once they provide the path:
+
+```bash
+scout google setup --client-secret /path/to/client_secret.json
+```
+
+If they paste the raw client ID / client secret values instead of a file path,
+write a valid Desktop OAuth JSON file for them yourself, save it somewhere
+explicit (for example `~/Downloads/scout-google-client-secret.json`), then run
+`--client-secret` against that file.
+
+### Step 3: Get authorization URL
+
+```bash
+scout google setup --auth-url
+```
+
+This prints the authorization URL.
+
+Agent rules for this step:
+- Send that exact URL to the user as a single line.
+- Tell the user that the browser will likely fail on `http://localhost:1` after approval, and that this is expected.
+- Tell them to copy the ENTIRE redirected URL from the browser address bar.
+- If the user gets `Error 403: access_denied`, send them directly to `https://console.cloud.google.com/auth/audience` to add themselves as a test user.
+
+### Step 4: Exchange the code
+
+The user will paste back either a URL like `http://localhost:1/?code=4/0A...&scope=...`
+or just the code string. Either works. The `--auth-url` step stores a temporary
+pending OAuth session locally so `--auth-code` can complete the PKCE exchange
+later, even on headless systems:
+
+```bash
+scout google setup --auth-code "THE_URL_OR_CODE_THE_USER_PASTED"
+```
+
+If `--auth-code` fails because the code expired, was already used, or came from
+an older browser tab, run `scout google setup --auth-url` again, send the new URL, and have
+the user retry with the newest browser redirect only.
+
+### Step 5: Verify
+
+```bash
+scout google setup --check
+```
+
+Should print `AUTHENTICATED`. Setup is complete — token refreshes automatically from now on.
+
+### Notes
+
+- Token is stored at `~/.scout/google_token.json` and auto-refreshes.
+- Pending OAuth session state/verifier are stored temporarily at `~/.scout/google_oauth_pending.json` until exchange completes.
+- If `gws` is installed, `google_api.py` points it at the same `~/.scout/google_token.json` credentials file. Users do not need to run a separate `gws auth login` flow.
+- To revoke: `scout google setup --revoke`
+
+## Usage
+
+Run `scout google SERVICE ACTION ...` in the terminal. `scout google gmail --help` lists a
+service's actions.
+
+### Gmail
+
+```bash
+# Search (returns JSON array with id, from, subject, date, snippet)
+scout google gmail search "is:unread" --max 10
+scout google gmail search "from:boss@company.com newer_than:1d"
+scout google gmail search "has:attachment filename:pdf newer_than:7d"
+
+# Read full message (returns JSON with body text)
+scout google gmail get MESSAGE_ID
+
+# Save to Gmail Drafts without sending (the user reviews and sends it from Gmail)
+scout google gmail draft --to user@example.com --subject "Hello" --body "Message text"
+
+# Send
+scout google gmail send --to user@example.com --subject "Hello" --body "Message text"
+scout google gmail send --to user@example.com --subject "Report" --body "<h1>Q4</h1><p>Details...</p>" --html
+scout google gmail send --to user@example.com --subject "Hello" --from '"Research Agent" <user@example.com>' --body "Message text"
+
+# Reply (automatically threads and sets In-Reply-To)
+scout google gmail reply MESSAGE_ID --body "Thanks, that works for me."
+scout google gmail reply MESSAGE_ID --from '"Support Bot" <user@example.com>' --body "Thanks"
+
+# Labels
+scout google gmail labels
+scout google gmail modify MESSAGE_ID --add-labels LABEL_ID
+scout google gmail modify MESSAGE_ID --remove-labels UNREAD
+```
+
+#### Writing an email
+
+A one-line note is not an email. Before any `draft`, `send` or `reply`:
+
+1. **Gather what is missing.** You need the recipient's address, why the user is writing, every
+   fact the reader needs (dates, times, places, amounts, names) and the tone (friendly, formal,
+   brief). Look up what you can first: search earlier threads with the person, and the user's
+   memory for their name and sign-off. Ask for the rest with `clarify`, one question at a time,
+   with likely answers as choices. Never invent an address, a date or a commitment.
+2. **Write it properly.** A specific subject line; a greeting by name; an opening line that says
+   why you are writing; the details, one idea per short paragraph; a clear ask or next step
+   ("Could you let me know by Thursday?"); a sign-off with the user's name. Match the register of
+   any thread being answered, and keep it as short as the purpose allows.
+3. **Show the whole draft** (to, cc, subject, body) and ask: send it, save it to Gmail Drafts, or
+   change something. Revise until the user is happy.
+4. **Then act.** `send` / `reply` only on an explicit "send". Scout also asks the user to approve
+   the command. Otherwise `draft`, and tell the user it is waiting in Gmail Drafts.
+
+### Calendar
+
+```bash
+# List events (defaults to next 7 days)
+scout google calendar list
+scout google calendar list --start 2026-03-01T00:00:00Z --end 2026-03-07T23:59:59Z
+
+# Create event (ISO 8601 with timezone required)
+scout google calendar create --summary "Team Standup" --start 2026-03-01T10:00:00-06:00 --end 2026-03-01T10:30:00-06:00
+scout google calendar create --summary "Lunch" --start 2026-03-01T12:00:00Z --end 2026-03-01T13:00:00Z --location "Cafe"
+scout google calendar create --summary "Review" --start 2026-03-01T14:00:00Z --end 2026-03-01T15:00:00Z --attendees "alice@co.com,bob@co.com"
+
+# Delete event
+scout google calendar delete EVENT_ID
+```
+
+### Drive
+
+```bash
+# Search existing files
+scout google drive search "quarterly report" --max 10
+scout google drive search "mimeType='application/pdf'" --raw-query --max 5
+
+# Get metadata for a single file
+scout google drive get FILE_ID
+
+# Upload a local file (auto-detects MIME type)
+scout google drive upload /path/to/report.pdf
+scout google drive upload /path/to/image.png --name "Logo.png" --parent FOLDER_ID
+
+# Download (binary files download as-is; Google-native files export to a
+# sensible default — Docs→pdf, Sheets→csv, Slides→pdf, Drawings→png)
+scout google drive download FILE_ID
+scout google drive download DOC_ID --output ~/doc.pdf
+scout google drive download DOC_ID --export-mime text/plain --output ~/doc.txt
+
+# Create a folder
+scout google drive create-folder "Reports"
+scout google drive create-folder "Q4" --parent FOLDER_ID
+
+# Share
+scout google drive share FILE_ID --email alice@example.com --role reader
+scout google drive share FILE_ID --email alice@example.com --role writer --notify
+scout google drive share FILE_ID --type anyone --role reader        # anyone with link
+scout google drive share FILE_ID --type domain --domain example.com --role reader
+
+# Delete — defaults to trash (reversible). Use --permanent to skip the trash.
+scout google drive delete FILE_ID
+scout google drive delete FILE_ID --permanent
+```
+
+### Contacts
+
+```bash
+scout google contacts list --max 20
+```
+
+### Sheets
+
+```bash
+# Create a new spreadsheet
+scout google sheets create --title "Q4 Budget"
+scout google sheets create --title "Inventory" --sheet-name "Stock"
+
+# Read
+scout google sheets get SHEET_ID "Sheet1!A1:D10"
+
+# Write
+scout google sheets update SHEET_ID "Sheet1!A1:B2" --values '[["Name","Score"],["Alice","95"]]'
+
+# Append rows
+scout google sheets append SHEET_ID "Sheet1!A:C" --values '[["new","row","data"]]'
+```
+
+### Docs
+
+```bash
+# Read (a tabbed Doc returns a "tabs" array; single-tab and legacy Docs also return "body")
+scout google docs get DOC_ID
+scout google docs get DOC_ID --tab TAB_ID     # read one tab of a tabbed Doc
+
+# Create a new Doc (optionally seeded with body text)
+scout google docs create --title "Meeting Notes"
+scout google docs create --title "Draft" --body "First paragraph..."
+
+# Append text to the end of an existing Doc
+scout google docs append DOC_ID --text "Additional content to append"
+scout google docs append DOC_ID --tab TAB_ID --text "..."   # --tab required when the Doc has multiple tabs
+```
+
+## Output Format
+
+All commands return JSON. Parse with `jq` or read directly. Key fields:
+
+- **Gmail search**: `[{id, threadId, from, to, subject, date, snippet, labels}]`
+- **Gmail get**: `{id, threadId, from, to, subject, date, labels, body}`
+- **Gmail send/reply**: `{status: "sent", id, threadId}`
+- **Calendar list**: `[{id, summary, start, end, location, description, htmlLink}]`
+- **Calendar create**: `{status: "created", id, summary, htmlLink}`
+- **Drive search**: `[{id, name, mimeType, modifiedTime, webViewLink}]`
+- **Drive get**: `{id, name, mimeType, modifiedTime, size, webViewLink, parents, owners}`
+- **Drive upload**: `{status: "uploaded", id, name, mimeType, webViewLink}`
+- **Drive download**: `{status: "downloaded", id, name, path, mimeType}`
+- **Drive create-folder**: `{status: "created", id, name, webViewLink}`
+- **Drive share**: `{status: "shared", permissionId, fileId, role, type}`
+- **Drive delete**: `{status: "trashed" | "deleted", fileId, permanent}`
+- **Contacts list**: `[{name, emails: [...], phones: [...]}]`
+- **Sheets get**: `[[cell, cell, ...], ...]`
+- **Sheets create**: `{status: "created", spreadsheetId, title, spreadsheetUrl}`
+- **Docs create**: `{status: "created", documentId, title, url}`
+- **Docs append**: `{status: "appended", documentId, inserted_at, characters}`
+
+## Rules
+
+1. **Write emails as described in "Writing an email" above.** **Never send email, create/delete calendar events, delete Drive files, share files, or modify Docs/Sheets without confirming with the user first.** Show what will be done (recipients, file IDs, content, share role) and ask for approval. For `drive delete`, prefer the default trash (reversible) over `--permanent`.
+2. **Check auth before first use** — run `scout google status`. If it fails, guide the user through setup.
+3. **Use the Gmail search syntax reference** for complex queries — load it with `skill_view("google-workspace", file_path="references/gmail-search-syntax.md")`.
+4. **Calendar times must include timezone** — always use ISO 8601 with offset (e.g., `2026-03-01T10:00:00-06:00`) or UTC (`Z`).
+5. **Respect rate limits** — avoid rapid-fire sequential API calls. Batch reads when possible.
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `NOT_AUTHENTICATED` | Run setup Steps 2-5 above |
+| `REFRESH_FAILED` | Token revoked or expired — redo Steps 3-5 |
+| `HttpError 403: Insufficient Permission` | Missing API scope — `scout google setup --revoke` then redo Steps 3-5 |
+| `AUTHENTICATED (partial)` or "Token missing scopes" | New write capabilities (Drive write/delete, Docs create/edit) require re-authorization. `scout google setup --revoke` then redo Steps 3-5 to grant the upgraded scopes. |
+| `HttpError 403: Access Not Configured` | API not enabled — user needs to enable it in Google Cloud Console |
+| `ModuleNotFoundError` | Run `scout google setup --install-deps` |
+| Advanced Protection blocks auth | Workspace admin must allowlist the OAuth client ID |
+
+## Revoking Access
+
+```bash
+scout google setup --revoke
+```
