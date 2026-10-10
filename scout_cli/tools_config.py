@@ -908,31 +908,6 @@ def _toolset_enabled_for_reconfigure(ts_key: str, config: dict) -> bool:
 
 
 # --- Main Entry Point ---
-def _shared_metrics_state(config: dict) -> tuple[bool, bool]:
-    """Return (collection_enabled, send_enabled) from a config dict."""
-    telemetry = config.get("telemetry")
-    shared = telemetry.get("shared_metrics") if isinstance(telemetry, dict) else None
-    shared = shared if isinstance(shared, dict) else {}
-    return shared.get("enabled") is True, shared.get("send") is True
-
-
-def _shared_metrics_menu_label(config: dict) -> str:
-    """Menu row for shared metrics, showing both consent states."""
-    enabled, send = _shared_metrics_state(config)
-    state = "off" if not enabled else ("collecting + sending to SpaceshipResearch" if send else "collecting locally")
-    return f"Configure shared metrics  ({state})"
-
-
-def _configure_shared_metrics_interactive(config: dict) -> None:
-    """Toggle shared-metrics collection/sending via the setup wizard prompt (single home for the consent rules)."""
-    from scout_cli.setup import setup_telemetry
-
-    before = _shared_metrics_state(config)
-    setup_telemetry(config)
-    if _shared_metrics_state(config) != before:
-        save_config(config)
-
-
 def _print_toolset_diff(added: Set[str], removed: Set[str], *, indent: str = "  ") -> None:
     """Print ``+ label`` / ``- label`` lines for a checklist change."""
     for ts in sorted(added):
@@ -1092,7 +1067,6 @@ def tools_command(args=None, first_install: bool = False, config: dict = None):
 
     global_idx = _add_row("Configure all platforms (global)", len(platform_keys) > 1)
     reconfig_idx = _add_row("Reconfigure an existing tool's provider or API key")
-    metrics_idx = _add_row(_shared_metrics_menu_label(config))
     mcp_idx = _add_row("Configure MCP server tools", bool(config.get("mcp_servers")))
     done_idx = _add_row("Done")
 
@@ -1102,9 +1076,6 @@ def tools_command(args=None, first_install: bool = False, config: dict = None):
             break
         if idx == reconfig_idx:
             _reconfigure_tool(config, force_fresh=True)
-        elif idx == metrics_idx:
-            _configure_shared_metrics_interactive(config)
-            platform_choices[metrics_idx] = _shared_metrics_menu_label(config)
         elif idx == mcp_idx:
             _configure_mcp_tools_interactive(config)
         elif idx == global_idx:

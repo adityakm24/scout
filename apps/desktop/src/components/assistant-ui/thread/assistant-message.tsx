@@ -65,7 +65,6 @@ import { markAssistantIdSpoken } from '@/lib/spoken-reply'
 import { useEnterAnimation } from '@/lib/use-enter-animation'
 import { cn } from '@/lib/utils'
 import { playSpeechText, stopVoicePlayback } from '@/lib/voice-playback'
-import { DESKTOP_BUTTON_ACTIONS, recordAction } from '@/store/desktop-metrics'
 import { openFreeTierSignIn } from '@/store/free-tier-sign-in'
 import { notifyError } from '@/store/notifications'
 import { startManualProviderOAuth } from '@/store/onboarding'
@@ -667,7 +666,7 @@ const CompressConversationAction: FC<{ label: string }> = ({ label }) => {
 
     triggerHaptic('submit')
     // A button, not a typed command: kept out of the slash-command usage count.
-    void delegate.executeSlash('/compress', sessionId, { typed: false }).catch(error => {
+    void delegate.executeSlash('/compress', sessionId).catch(error => {
       notifyError(error, t.assistant.thread.errorCompressFailed)
     })
   }, [sessionId, t.assistant.thread.errorCompressFailed])
@@ -905,7 +904,6 @@ const ErrorRecoveryActions: FC = () => {
             className="aui-error-action"
             onClick={() => {
               triggerHaptic('submit')
-              recordAction(DESKTOP_BUTTON_ACTIONS.messageRetry, 'click')
             }}
             type="button"
           >
@@ -1000,7 +998,6 @@ const AssistantActionBar: FC<MessageActionProps & { durationS?: number }> = ({
           appearance="icon"
           buttonSize="icon"
           label={copy.copy}
-          onCopied={() => recordAction(DESKTOP_BUTTON_ACTIONS.messageCopy, 'click')}
           text={getMessageText}
         />
         {fullResponseAvailable && (
@@ -1016,7 +1013,6 @@ const AssistantActionBar: FC<MessageActionProps & { durationS?: number }> = ({
           <TooltipIconButton
             onClick={() => {
               triggerHaptic('submit')
-              recordAction(DESKTOP_BUTTON_ACTIONS.messageRetry, 'click')
             }}
             tooltip={copy.refresh}
           >

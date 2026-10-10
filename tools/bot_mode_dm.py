@@ -214,8 +214,6 @@ def message_agent_tool(target: str = "", message: str = "", task_id: Optional[st
                         "message_agent is unavailable. Do not retry.")
     except Exception as exc:  # pragma: no cover — defensive
         return _err(f"Bot Mode gate check failed: {exc}")
-    from scout_cli.observability.shared_metrics_signals import record_feature_used
-    record_feature_used("bot_mode", scout_home=home)
 
     root, me = _scout_root(Path(home)), _self_profile_name(Path(home))
     roster_homes = dict(_roster(root))

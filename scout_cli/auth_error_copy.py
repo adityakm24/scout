@@ -81,9 +81,6 @@ def sign_in_failure_lines(
     exc: BaseException, *, service_host: str = "portal.spaceshipresearch.com", retry_command: str = "scout portal",
 ) -> list:
     """Lines to print when a device-code / browser sign-in fails for any non-timeout reason."""
-    from scout_cli.observability.shared_metrics_setup import note_sign_in_failure
-
-    note_sign_in_failure(exc)
     if isinstance(exc, SignInCopyError):
         return str(exc).splitlines()
     rules: Sequence[_Rule] = (

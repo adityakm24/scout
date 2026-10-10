@@ -11,10 +11,10 @@ def build_setup_parser(subparsers, *, cmd_setup: Callable) -> None:
         "setup", help="Interactive setup wizard",
         description="Configure Scout Agent with an interactive wizard. "
         "Run a specific section: "
-        "scout setup model|tts|terminal|gateway|tools|telemetry|agent")
+        "scout setup model|tts|terminal|gateway|tools|agent")
     setup_parser.add_argument(
         "section", nargs="?",
-        choices=["model", "tts", "terminal", "gateway", "tools", "telemetry", "agent"],
+        choices=["model", "tts", "terminal", "gateway", "tools", "agent"],
         default=None, help="Run a specific setup section instead of the full wizard")
     setup_parser.add_argument(
         "--non-interactive", action="store_true",

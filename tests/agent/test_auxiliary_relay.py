@@ -5,9 +5,6 @@ import pytest
 pytest.importorskip("nemo_relay")
 
 from agent import auxiliary_client, relay_llm, relay_runtime
-from scout_cli.observability.shared_metrics import SharedMetricsStore
-from scout_cli.observability.shared_metrics_contract import MODEL_ROUTE_METRIC
-from scout_cli.observability.shared_metrics_subscriber import SharedMetricsSubscriber
 
 
 @pytest.fixture()
@@ -178,90 +175,6 @@ def test_auxiliary_provider_fallback_closes_one_real_logical_call(
             "provider": "openrouter",
         }
     ]
-
-
-def test_auxiliary_provider_fallback_records_one_terminal_model_route(
-    relay_turn,
-    tmp_path,
-):
-    relay, turn = relay_turn
-    store = SharedMetricsStore(
-        tmp_path / "metrics.sqlite3",
-        tmp_path / "outbox",
-    )
-    subscriber = SharedMetricsSubscriber(
-        store,
-        "test-version",
-        runtime_id=turn.lease.host.runtime_id,
-    )
-    subscriber_name = "test.auxiliary-model-route"
-    relay.subscribers.register(subscriber_name, subscriber)
-    turn.lease.host.retain_managed_execution(subscriber_name)
-    responses = iter([
-        SimpleNamespace(model="failed/model", choices=[]),
-        SimpleNamespace(
-            model="Accepted/Model",
-            choices=[SimpleNamespace(message=SimpleNamespace(content="recovered"))],
-        ),
-    ])
-    client = SimpleNamespace(
-        chat=SimpleNamespace(
-            completions=SimpleNamespace(
-                create=lambda **_kwargs: next(responses),
-            )
-        )
-    )
-
-    @auxiliary_client._relay_auxiliary_call
-    def run(task):
-        auxiliary_client._set_relay_auxiliary_route(
-            "nvidia",
-            "failed/configured-model",
-            "chat_completions",
-        )
-        with pytest.raises(RuntimeError, match="invalid response"):
-            auxiliary_client._validate_llm_response(
-                auxiliary_client._relay_sync_completion(
-                    client,
-                    {"model": "failed/configured-model", "messages": []},
-                ),
-                task,
-            )
-        auxiliary_client._set_relay_auxiliary_route(
-            "OpenRouter",
-            "fallback/configured-model",
-            "chat_completions",
-        )
-        return auxiliary_client._validate_llm_response(
-            auxiliary_client._relay_sync_completion(
-                client,
-                {"model": "fallback/configured-model", "messages": []},
-            ),
-            task,
-        )
-
-    try:
-        result = run("compression")
-        relay.subscribers.flush()
-    finally:
-        turn.lease.host.release_managed_execution(subscriber_name)
-        relay.subscribers.deregister(subscriber_name)
-
-    assert result.choices[0].message.content == "recovered"
-    snapshot = store.counter_snapshot()
-    assert len(snapshot) == 1
-    assert snapshot[0]["metric_name"] == MODEL_ROUTE_METRIC
-    assert snapshot[0]["resource"]["scout_version"] == "test-version"
-    assert snapshot[0]["dimensions"] == {
-        "call_role": "auxiliary",
-        "error_class": "none",
-        "model": "accepted/model",
-        "outcome": "success",
-        "provider": "openrouter",
-        "ttft_bucket": "unknown",
-    }
-    assert snapshot[0]["value"] == 1
-    assert snapshot[0]["packaged_value"] == 0
 
 
 @pytest.mark.asyncio

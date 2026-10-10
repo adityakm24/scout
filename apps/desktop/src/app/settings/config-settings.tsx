@@ -20,7 +20,6 @@ import {
   refreshDataUrlReadMaxMb,
   setDataUrlReadMaxMb
 } from '@/store/data-url-read-max'
-import { recordSettingsSaved } from '@/store/desktop-metrics'
 import { $disableF12, setDisableF12 } from '@/store/disable-f12'
 import { $alwaysExternalLinks, setAlwaysExternalLinks } from '@/store/external-links'
 import { $keepAwake, setKeepAwake } from '@/store/keep-awake'
@@ -54,7 +53,6 @@ import { EmptyState, ListRow, SettingsContent, SettingsSkeleton, ToggleRow } fro
 import { SettingsProfileScope } from './profile-scope'
 import { QuickEntrySettings } from './quick-entry-settings'
 import { SETTING_IDS, settingElementId } from './settings-manifest'
-import { SharedMetricsSettings } from './shared-metrics-settings'
 import { TerminalBackendPanel } from './terminal-backend-panel'
 import { useSettingDeepLink } from './use-setting-deep-link'
 
@@ -232,7 +230,6 @@ function ConfigSettingsInner({
           writeConfigCache(snapshot)
           const savedScope = writeScope ?? scopeProfile
 
-          recordSettingsSaved(patch, schema ?? {}, typeof savedScope === 'string' ? savedScope : savedScope?.profile)
 
           if (saveVersionRef.current === v) {
             // The repo-discovery scan reads the ACTIVE profile's workspace
@@ -299,7 +296,6 @@ function ConfigSettingsInner({
 
   const showDesktopSettings = activeSectionId === 'advanced' && (subpage === undefined || subpage === 'desktop')
   const showAttachments = activeSectionId === 'chat' && (subpage === undefined || subpage === 'attachments')
-  const showSharedMetrics = activeSectionId === 'safety' && subpage === 'privacy'
   // The Capabilities Tools tab is gone; its two stateful panels live beside the matching config fields.
   const showTerminalBackend = activeSectionId === 'advanced' && subpage === 'terminal'
   const showComputerUse = activeSectionId === 'advanced' && subpage === 'tools'
@@ -418,7 +414,6 @@ function ConfigSettingsInner({
       ? activeSectionId !== 'chat'
       : !showDesktopSettings &&
         !showAttachments &&
-        !showSharedMetrics &&
         !showTerminalBackend &&
         !showComputerUse)
 
@@ -457,9 +452,6 @@ function ConfigSettingsInner({
           where image-attachment behavior already lives, so this sits above the
           schema fields for that section. */}
       {showAttachments ? <AttachmentSizeSetting /> : null}
-      {/* Shared metrics are two coupled opt-ins with a consent side effect, so they
-          go through their own RPC rather than the generic field autosave. */}
-      {showSharedMetrics ? <SharedMetricsSettings /> : null}
       {/* Backend picker with live readiness probes (Docker, SSH, …) above the raw terminal.* fields. */}
       {showTerminalBackend ? <TerminalBackendPanel profile={scopeProfile} /> : null}
       {/* macOS permission grants + driver install for the computer_use toolset. */}

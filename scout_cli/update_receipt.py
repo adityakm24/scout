@@ -344,7 +344,6 @@ def finalize_update_receipt(outcome: str, fleet: list | None = None, stop_reason
         with suppress(Exception):  # stable pointer for the dashboard/desktop
             _atomic_bytes(directory / "latest.json", payload)
         _prune_old_receipts(directory)
-        _publish_shared_metrics(receipt.data)
         return path
     except Exception as exc:
         # Visible, not debug: a run that pulled code and left no receipt is exactly the run
@@ -352,69 +351,6 @@ def finalize_update_receipt(outcome: str, fleet: list | None = None, stop_reason
         logger.warning("Could not write update receipt (%s): %s", outcome, exc)
         print(f"  ⚠ Update receipt not written: {exc}")
         return None
-
-
-def _collection_enabled_now() -> Optional[bool]:
-    """Shared-metrics consent via the ALREADY-LOADED config module (never an import: this interpreter
-    predates the checkout swap). None when it cannot tell (not loaded, unreadable config)."""
-    reader = getattr(sys.modules.get("scout_cli.config"), "read_raw_config_readonly", None)
-    if reader is None:
-        return None
-    try:
-        config: Any = reader()
-    except Exception:
-        return None
-    if type(config) is not dict:  # FailedConfigRead: a fallback, not what the user chose
-        return None
-    for key in ("telemetry", "shared_metrics"):
-        config = config.get(key) if isinstance(config, dict) else None
-    return isinstance(config, dict) and config.get("enabled") is True
-
-
-def _metric_receipt(data: dict[str, Any]) -> dict[str, Any]:
-    """Only what shared_metrics_update.update_receipt_fields reads; never argv or step text."""
-    pre = data.get("pre_update") if isinstance(data.get("pre_update"), dict) else {}
-    return {
-        "update_id": data.get("update_id"), "started_at": data.get("started_at"),
-        "finished_at": data.get("finished_at"), "outcome": data.get("outcome"),
-        "initiator": "desktop" if data.get("initiator") == "desktop" else None,
-        "pre_update": {"commit_date": pre.get("commit_date")},
-        "stages": [
-            {key: mark[key] for key in ("name", "outcome", "at", "mode") if key in mark}
-            for mark in data.get("stages") or () if isinstance(mark, dict)
-        ],
-        "steps": [
-            {"name": "admission", "ok": bool(step.get("ok"))}
-            for step in data.get("steps") or () if isinstance(step, dict) and step.get("name") == "admission"
-        ],
-        "fleet": [{"state": row.get("state")} for row in data.get("fleet") or () if isinstance(row, dict)],
-    }
-
-
-def _publish_shared_metrics(data: dict[str, Any]) -> None:
-    """scout.update.run/stage from this FINAL receipt; must never fail or slow the update."""
-    with suppress(Exception):
-        pre, post = data.get("pre_update") or {}, data.get("post_update") or {}
-        if data.get("pid") == os.getpid() and not (pre.get("sha") and pre.get("sha") == post.get("sha")):
-            # This interpreter began the run before the checkout swap: importing now would load
-            # pulled code into it. Park the bounded fields (stdlib + loaded modules only); the next
-            # Scout start records them.
-            from scout_constants import get_scout_home
-            from scout_cli.runtime_state import _atomic_bytes
-
-            pending = get_scout_home() / "telemetry" / "shared_metrics" / "pending_updates"  # = PENDING_DIRNAME
-            enabled = _collection_enabled_now()
-            if enabled is False:
-                import shutil
-
-                shutil.rmtree(pending, ignore_errors=True)  # opted out: nothing parked may be counted later
-            elif enabled:
-                pending.mkdir(parents=True, exist_ok=True)
-                _atomic_bytes(pending / f"{data.get('update_id')}.json", json.dumps(_metric_receipt(data), default=str).encode())
-            return
-        from scout_cli.observability.shared_metrics_update import record_update_receipt
-
-        record_update_receipt(data)
 
 
 def finalize_pending_update_receipt(exit_code: Optional[int] = None, stop_reason: str = "") -> Optional[Path]:

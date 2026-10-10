@@ -1184,10 +1184,6 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
                 entry = (name, True)
         return entry
 
-    # Shared-metrics surface for user-typed commands; None where another process owns the count
-    # (the TUI slash worker: tui_gateway records the command it forwards).
-    _slash_metrics_surface: str | None = "cli"
-
     def process_command(self, command: str, *, redispatch: bool = False) -> bool:
         """Dispatch a slash command; returns False to exit the REPL. ``redispatch`` marks an internal
         re-entry (quick-command alias, prefix expansion) so the user's command is counted once."""
@@ -1199,9 +1195,6 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
         _base_word = cmd_lower.split()[0].lstrip("/")
         _cmd_def = _resolve_cmd(_base_word)
         canonical = _cmd_def.name if _cmd_def else _base_word
-        if not redispatch and self._slash_metrics_surface:
-            from scout_cli.observability.shared_metrics_events import record_slash_command
-            record_slash_command(command=canonical, surface=self._slash_metrics_surface)
 
         # Observer-only pre_command plugin hook (return values ignored; never raises).
         if _cmd_def is not None:
@@ -1423,8 +1416,6 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
         app = self._tui_build_application(layout, kb, style)
         _disable_prompt_toolkit_cpr_warning(app)
         app.after_render += self._pet_flush_kitty_frame
-        from scout_cli.observability.shared_metrics_startup import cli_prompt_ready_handler
-        app.after_render += cli_prompt_ready_handler()
         self._app = app
 
         # Ghost status-bar lines on resize: pt's renderer scrolls the terminal after each

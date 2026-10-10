@@ -303,7 +303,6 @@ contextBridge.exposeInMainWorld('scoutDesktop', {
   },
   api: request => ipcRenderer.invoke('scout:api', request),
   notify: payload => ipcRenderer.invoke('scout:notify', payload),
-  claimStartupLatency: () => ipcRenderer.invoke('scout:startup-latency:claim'),
   requestMicrophoneAccess: () => ipcRenderer.invoke('scout:requestMicrophoneAccess'),
   readWindowBelow: () => ipcRenderer.invoke('scout:window:readBelow'),
   readFileDataUrl: filePath => ipcRenderer.invoke('scout:readFileDataUrl', filePath),
@@ -621,19 +620,6 @@ contextBridge.exposeInMainWorld('scoutDesktop', {
 
       return () => ipcRenderer.removeListener('scout:updates:progress', listener)
     },
-    takePendingRun: () => ipcRenderer.invoke('scout:updates:metric:take'),
-    ackPendingRun: sent => ipcRenderer.invoke('scout:updates:metric:ack', sent),
-    onPendingRun: callback => {
-      const listener = () => callback()
-      ipcRenderer.on('scout:updates:metric:pending', listener)
-
-      return () => ipcRenderer.removeListener('scout:updates:metric:pending', listener)
-    }
-  },
-  desktopMetrics: {
-    setEnabled: (on, profile) => ipcRenderer.invoke('scout:desktop-metrics:set-enabled', on, profile),
-    takeRendererCrashes: () => ipcRenderer.invoke('scout:desktop-metrics:crash:take'),
-    ackRendererCrashes: sent => ipcRenderer.invoke('scout:desktop-metrics:crash:ack', sent)
   },
   themes: {
     fetchMarketplace: id => ipcRenderer.invoke('scout:vscode-theme:fetch', id),

@@ -2,8 +2,6 @@ import { atom } from 'nanostores'
 
 import { translateNow } from '@/i18n'
 import { isOutOfSyncRpcParams } from '@/lib/gateway-rpc'
-import { isTimeoutError } from '@/lib/with-timeout'
-import { type ErrorToastCategory, recordFriction } from '@/store/desktop-metrics'
 import { isLocalBackendSlotWaitTimeout, requestPoolLimitsSettings } from '@/store/pool-limits'
 import { requestBackendRestart, requestRoute } from '@/store/recovery-requests'
 
@@ -130,8 +128,6 @@ export const RECOVERY_ACTIONS = {
 const STORAGE_CODE_RE = /['"]code['"]\s*:\s*['"](storage_[a-z_]+|disk_full)['"]/i
 
 interface ErrorSummaryRule {
-  /** The toast's error category for friction telemetry (a closed code-defined set, never the text). */
-  category: ErrorToastCategory
   test: (msg: string) => boolean
   summarize: (msg: string) => string
   /** Recovery button attached to the toast when this rule matches. */
@@ -144,7 +140,6 @@ const ERROR_SUMMARIES: ErrorSummaryRule[] = [
     // bubbles "no space left" / SQLITE_FULL through notifyError. Match before
     // generic length truncation so the user gets a clear "free space" toast
     // instead of a silent send or a raw errno dump.
-    category: 'disk_full',
     test: isDiskFullErrorMessage,
     summarize: () => translateNow('notifications.errors.diskFull'),
     action: () => RECOVERY_ACTIONS.openMaintenance()
@@ -152,60 +147,50 @@ const ERROR_SUMMARIES: ErrorSummaryRule[] = [
   {
     // Any other classified storage failure (locked, corrupt, read-only …):
     // the Maintenance panel runs the doctor that names the fix.
-    category: 'storage_failure',
     test: msg => STORAGE_CODE_RE.test(msg),
     summarize: () => translateNow('notifications.errors.storageFailure'),
     action: () => RECOVERY_ACTIONS.openMaintenance()
   },
   {
-    category: 'gateway_auth_failed',
     test: msg => /['"]code['"]\s*:\s*['"]gateway_auth_failed['"]/i.test(msg),
     summarize: () => translateNow('notifications.errors.gatewayAuthFailed'),
     action: () => RECOVERY_ACTIONS.openGateways()
   },
   {
-    category: 'api_key_rejected',
     test: msg => /incorrect api key provided/i.test(msg) || /['"]code['"]\s*:\s*['"]invalid_api_key['"]/i.test(msg),
     summarize: () => translateNow('notifications.errors.openaiRejectedApiKey'),
     action: () => RECOVERY_ACTIONS.openKeys('OPENAI_API_KEY')
   },
   {
-    category: 'api_key_missing',
     test: msg => /neither voice_tools_openai_key nor openai_api_key is set/i.test(msg),
     summarize: () => translateNow('notifications.errors.openaiTtsNeedsKey'),
     action: () => RECOVERY_ACTIONS.openKeys('OPENAI_API_KEY')
   },
   {
-    category: 'api_key_missing',
     test: msg => /ELEVENLABS_API_KEY not set/i.test(msg),
     summarize: () => translateNow('notifications.errors.elevenLabsNeedsKey'),
     action: () => RECOVERY_ACTIONS.openKeys('ELEVENLABS_API_KEY')
   },
   {
-    category: 'api_key_rejected',
     test: msg => /ElevenLabs STT API error \(HTTP 401\)/i.test(msg),
     summarize: () => translateNow('notifications.errors.elevenLabsRejectedKey'),
     action: () => RECOVERY_ACTIONS.openKeys('ELEVENLABS_API_KEY')
   },
   {
-    category: 'method_not_allowed',
     test: msg => /method not allowed/i.test(msg),
     summarize: () => translateNow('notifications.errors.methodNotAllowed'),
     action: () => RECOVERY_ACTIONS.restartScout()
   },
   {
-    category: 'microphone_permission',
     test: msg => /microphone permission/i.test(msg),
     summarize: () => translateNow('notifications.errors.microphonePermission')
   },
   {
-    category: 'rpc_out_of_sync',
     test: msg => isOutOfSyncRpcParams(msg),
     summarize: () => translateNow('notifications.errors.rpcOutOfSync'),
     action: () => RECOVERY_ACTIONS.openUpdates()
   },
   {
-    category: 'restart_required',
     test: msg => /Restart required:/i.test(msg),
     summarize: () => translateNow('notifications.errors.codeSkewRestartRequired'),
     action: () => RECOVERY_ACTIONS.restartScout()
@@ -216,12 +201,11 @@ function summarizeErrorMessage(message: string, fallback: string) {
   const rule = ERROR_SUMMARIES.find(r => r.test(message))
 
   if (rule) {
-    return { action: rule.action?.(message), category: rule.category, message: rule.summarize(message) }
+    return { action: rule.action?.(message), message: rule.summarize(message) }
   }
 
   return {
     action: undefined,
-    category: 'unclassified' as const,
     message: message.length > 180 ? fallback : message || fallback
   }
 }
@@ -231,7 +215,7 @@ function summarizeErrorMessage(message: string, fallback: string) {
 export function readableError(
   error: unknown,
   fallback: string
-): { message: string; detail?: string; action?: NotificationAction; category: ErrorToastCategory } {
+): { message: string; detail?: string; action?: NotificationAction } {
   const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : fallback
   const unwrapped = raw.match(/Error invoking remote method '[^']+': Error: (.+)$/)?.[1] ?? raw
   const cleaned = cleanErrorText(unwrapped)
@@ -241,22 +225,12 @@ export function readableError(
   return {
     message: summary.message,
     detail: detail === summary.message ? undefined : detail,
-    action: summary.action,
-    category: summary.category
+    action: summary.action
   }
 }
 
 export function notify(input: NotificationInput): string {
-  return showNotification(input, input.kind === 'error' ? 'other' : null)
-}
-
-function showNotification(input: NotificationInput, errorCategory: ErrorToastCategory | null): string {
   const kind = input.kind ?? 'info'
-
-  if (errorCategory) {
-    recordFriction('error_toast', errorCategory)
-  }
-
   const id = input.id ?? `${Date.now()}-${notificationCounter++}`
 
   const notification: AppNotification = {
@@ -315,15 +289,8 @@ export function notifyError(
   const poolSlotTimeout = isLocalBackendSlotWaitTimeout(error)
   logErrorToDesktopLog(error, fallback)
 
-  const category: ErrorToastCategory = poolSlotTimeout
-    ? 'pool_slot_timeout'
-    : readable.category === 'unclassified' && isTimeoutError(error)
-      ? 'timeout'
-      : readable.category
-
-  return showNotification(
-    {
-      action: poolSlotTimeout
+  return notify({
+    action: poolSlotTimeout
         ? {
             label: translateNow('desktop.poolSlotTimeoutOpenSettings'),
             onClick: requestPoolLimitsSettings
@@ -335,9 +302,7 @@ export function notifyError(
       title: fallback,
       message: poolSlotTimeout ? translateNow('desktop.poolSlotTimeoutBody') : readable.message,
       detail: poolSlotTimeout ? readable.message : readable.detail
-    },
-    category
-  )
+  })
 }
 
 export function dismissNotification(id: string) {

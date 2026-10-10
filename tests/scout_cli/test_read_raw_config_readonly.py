@@ -1,7 +1,7 @@
 """Tests for read_raw_config_readonly() — the no-deepcopy raw config read.
 
 The readonly variant exists for per-turn policy checks (e.g. the
-shared-metrics gate) that were paying a full config deepcopy on every call.
+gates) that were paying a full config deepcopy on every call.
 Contract under test:
 
 1. identity invariant — repeat calls return the SAME cached object,

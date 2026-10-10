@@ -771,8 +771,7 @@ def _cmd_moa(rid, params, session, name, arg):
             try:  # persist_override=False: turn-scoped, never persist the MoA provider to config.yaml
                 _apply_model_switch(
                     params.get("session_id", ""), session, f"{preset} --provider moa",
-                    confirm_expensive_model=False, pin_session_override=True, persist_override=False,
-                    count_switch=False)
+                    confirm_expensive_model=False, pin_session_override=True, persist_override=False)
             except Exception:
                 session.pop("moa_one_shot_restore", None)
                 raise
@@ -829,15 +828,7 @@ def _cmd_retry(rid, params, session, name, arg):
         if err:
             return err
         content = cc.retryable_user_text(rewound[1].get("content"))
-    _tui_model_friction("retry", session)
     return _ok(rid, {"type": "send", "message": content})
-
-
-def _tui_model_friction(signal, session, turns=1):
-    from scout_cli.observability.shared_metrics_model import record_model_friction
-    record_model_friction(
-        signal, session_id=session.get("session_key"), agent=session.get("agent"),
-        scout_home=session.get("profile_home"), turns=turns)
 
 
 def _cmd_steer(rid, params, session, name, arg):
@@ -935,7 +926,6 @@ def _cmd_undo(rid, params, session, name, arg):
         ):
             with contextlib.suppress(Exception):
                 step()
-    _tui_model_friction("undo", session, turns_undone)
     turn_word = "turn" if turns_undone == 1 else "turns"
     notice = f"↶ Undid {turns_undone} {turn_word} ({rewound_count} message(s)). Edit and resubmit, or send a new message."
     return _ok(rid, {"type": "prefill", "message": target_text, "notice": notice})
@@ -1468,8 +1458,6 @@ def _(rid, params: dict) -> dict:
     if bearer_token := params.get("bearer_token"):
         server_config["headers"] = mc._save_bearer_auth_token(name, str(bearer_token))
     saved_ok = mc._save_mcp_server(name, server_config)
-    source = "catalog" if entry is not None else ("url" if server_config.get("url") else "local")
-    catalog.record_mcp_install(source, entry.name if entry else None, "success" if saved_ok else "failed")
     if not saved_ok:
         return _err(rid, 4001, f"server '{name}' rejected: suspicious command/args configuration")
     saved = mc._get_mcp_servers().get(name, server_config)

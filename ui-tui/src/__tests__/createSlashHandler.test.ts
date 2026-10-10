@@ -1126,11 +1126,8 @@ const buildComposer = () => ({
   setInput: vi.fn()
 })
 
-// Gateway traffic other than the fire-and-forget shared_metrics.slash_command every typed command reports.
 const gatewayWork = (ctx: { gateway: { gw: { request: unknown } } }) =>
-  vi
-    .mocked(ctx.gateway.gw.request as (method: string) => unknown)
-    .mock.calls.filter(([method]) => method !== 'shared_metrics.slash_command')
+  vi.mocked(ctx.gateway.gw.request as (method: string) => unknown).mock.calls
 
 const buildGateway = () => ({
   gw: {

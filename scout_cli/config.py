@@ -1317,10 +1317,7 @@ def _persist_migration(config: Dict[str, Any]) -> None:
     data. Every migration step MUST write through here (``save_config`` with default-stripping
     ON, no ``merge_existing``) so the invariant cannot regress one migration at a time. A migration
     is Scout's own write, never a user turning a feature off."""
-    from scout_cli.observability.shared_metrics_disabled import scout_applied_write
-
-    with scout_applied_write():
-        save_config(config)
+    save_config(config)
 
 
 def _prompt_and_save_env(name: str, info: Dict[str, Any], prompt: str, results: Dict[str, Any]) -> bool:
@@ -2491,8 +2488,6 @@ def save_config(
         _secure_file(config_path)
         _RAW_CONFIG_CACHE.pop(str(config_path), None)
         _LAST_EXPANDED_CONFIG_BY_PATH[str(config_path)] = copy.deepcopy(current_normalized)
-    from scout_cli.observability.shared_metrics_disabled import record_config_saved
-    record_config_saved(_raw_for_paths, current_normalized)
 
 
 def load_env() -> Dict[str, str]:
@@ -3520,8 +3515,7 @@ def _exit_invalid(msg: str) -> None:
 def _write_user_config(config_path: Path, user_config: Dict[str, Any]) -> None:
     """Write only the user's raw config back (never the merged defaults)."""
     ensure_scout_home()
-    from scout_cli.observability.shared_metrics_disabled import recording_raw_config_write
-    recording_raw_config_write(config_path, user_config, atomic_config_write)
+    atomic_config_write(config_path, user_config)
 
 
 def _print_unknown_key_notice(key: str, suggestion: Optional[str]) -> None:

@@ -5,7 +5,6 @@ import { notificationText } from '@/lib/notification-text'
 import { resolveScoutOpenPath, type ScoutOpenTarget } from '@/lib/scout-open-target'
 import { persistString, storedString } from '@/lib/storage'
 
-import { recordFeatureToggle } from './desktop-metrics'
 import { $gateway } from './gateway'
 import { withinNativeNotifyBaseline } from './notify-baseline'
 import {
@@ -115,13 +114,11 @@ function writePrefs(next: NativeNotificationPrefs) {
 }
 
 export function setNativeNotifyEnabled(enabled: boolean) {
-  recordFeatureToggle('native_notifications', $nativeNotifyPrefs.get().enabled, enabled)
   writePrefs({ ...$nativeNotifyPrefs.get(), enabled })
 }
 
 export function setNativeNotifyKind(kind: NativeNotificationKind, on: boolean) {
   const prev = $nativeNotifyPrefs.get()
-  recordFeatureToggle('notification_kind', prev.kinds[kind], on)
   writePrefs({ ...prev, kinds: { ...prev.kinds, [kind]: on } })
 }
 

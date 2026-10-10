@@ -59,8 +59,6 @@ _AGENT_PASSTHROUGH = (
     "base_url", "api_key", "ephemeral_system_prompt", "providers_allowed", "providers_ignored",
     "providers_order", "provider_sort", "openrouter_min_coding_score",
     "reasoning_config", "prefill_messages",
-    # Without this, every batch task run is attributed to the "unknown" execution
-    # surface in shared metrics even though "batch" is a first-class surface.
     "platform",
 )
 

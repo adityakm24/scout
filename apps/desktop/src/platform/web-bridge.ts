@@ -133,7 +133,7 @@ function inert(): unknown {
  *  lack them and the renderer already copes — so here they are simply absent. */
 const ABSENT = new Set(
   (
-    'getAgentRoster chatOnboarding hud screenshot hudModifier claimStartupLatency readWindowBelow ' +
+    'getAgentRoster chatOnboarding hud screenshot hudModifier readWindowBelow ' +
     'readFileDataUrlForAttach dataUrlReadMax readPluginSource selectSavePath saveGatewayFile contextMenuEdit ' +
     'contextMenuCopyImage contextMenuSpellcheck contextMenuGuestAddWord onContextMenuSpellcheck capturePreview ' +
     'watchDirectory setActiveWork setTitleBarTheme setNativeTheme setTranslucency setKeepAwake minimizeToTray ' +
@@ -144,7 +144,7 @@ const ABSENT = new Set(
     'signalDeepLinkReady probePluginRepo installDesktopPlugin removeDesktopPlugin onWindowStateChanged ' +
     'onNotificationAction onNotificationActivate onPoolBackendRetiring onConnectionApplied ' +
     'onPowerResume getOnBattery onBatteryChanged probeLocalBackend recycleBackend getMachineProfile relaunchApp ' +
-    'getRemoteDisplayReason desktopMetrics'
+    'getRemoteDisplayReason'
   ).split(' ')
 )
 

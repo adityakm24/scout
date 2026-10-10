@@ -356,11 +356,6 @@ class ScoutACPAgent(SlashCommandsMixin, acp.Agent):
         # working model instead of a model/agent mismatch that persists via save_session.
         state.agent, state.model = agent, new_model
         self.session_manager.save_session(state.session_id)
-        from scout_cli.observability.shared_metrics_events import record_model_switch
-
-        record_model_switch(
-            from_provider=current_provider, to_provider=target_provider, surface="acp", from_model=current_model,
-            session_id=state.session_id)
         return current_provider, target_provider, new_model
 
     @staticmethod

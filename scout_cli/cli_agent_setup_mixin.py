@@ -486,9 +486,7 @@ class CLIAgentSetupMixin:
             return False
         try:
             from scout_cli.main import select_provider_and_model
-            from scout_cli.observability.shared_metrics_setup import provider_setup_surface
-            with provider_setup_surface("cli_setup"):
-                select_provider_and_model()
+            select_provider_and_model()
         except (KeyboardInterrupt, EOFError, SystemExit):
             print()
             _cprint(f"  {t('cli.startup.first_run_cancelled')}")

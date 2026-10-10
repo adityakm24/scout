@@ -14,7 +14,6 @@ import { storedSessionIdForNotification } from '@/lib/session-ids'
 import { IS_PHONE } from '@/platform/phone'
 import { getSession } from '@/scout'
 import { announceNewSessionDraftKey } from '@/store/composer'
-import { recordAction } from '@/store/desktop-metrics'
 import { requestMcpInstallFromDeepLink } from '@/store/mcp-deeplink-install'
 import { startMcpHealthChecker, stopMcpHealthChecker } from '@/store/mcp-health'
 import {
@@ -503,7 +502,6 @@ export function useDesktopIntegrations({
   // File > Open Folder… — same open-folder-as-project upsert as the ⌘O keybind.
   useEffect(() => {
     const unsubscribe = window.scoutDesktop?.onOpenFolderRequested?.(() => {
-      recordAction('workspace.openFolder', 'menu')
       void openFolderAsProject()
     })
 

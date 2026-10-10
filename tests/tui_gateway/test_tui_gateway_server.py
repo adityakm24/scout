@@ -4272,7 +4272,6 @@ def test_config_sync_switches_unpinned_session(monkeypatch):
                 "confirm_expensive_model": True,
                 "pin_session_override": False,
                 "persist_override": False,
-                "count_switch": False,
             },
         )
     ]

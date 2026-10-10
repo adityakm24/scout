@@ -21,7 +21,6 @@ from typing import Any, Dict, Iterator, List, Optional
 from scout_constants import get_scout_home
 from scout_time import now as _scout_now
 from cron.constants import CLAIM_TTL_INACTIVITY_HEADROOM
-from scout_cli.observability.shared_metrics_gateway import record_cron_finish
 
 # Optional test override. Production resolves the path at transaction time so dashboard operations
 # that temporarily enter another profile cannot leak that profile's records into the import-time
@@ -304,7 +303,6 @@ def finish_execution(
         _prune_unlocked(conn)
         record = _fetch(conn, execution_id)
     _emit_execution_state(record, delivery_outcome=delivery_outcome)
-    record_cron_finish(record, delivery_outcome)
     return record
 
 

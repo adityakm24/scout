@@ -1497,9 +1497,6 @@ def _emit_compression_attempt_telemetry(
         logger.info(
             "context compression attempt telemetry: %s", json.dumps(payload, sort_keys=True, separators=(",", ":"))
         )
-        from scout_cli.observability.shared_metrics_events import finish_compression_attempt
-
-        finish_compression_attempt(commit_status, failure_class, getattr(agent.context_compressor, "context_length", None), agent=agent)
 
 
 def _existing_system_prompt(agent: Any, system_message: str) -> str:
@@ -1694,7 +1691,6 @@ def _adopt_live_compression_child(
         return None
     agent.session_id = child_session_id
     _rebind_session_context(child_session_id)
-    _hand_off_metrics_segment(parent_session_id, child_session_id)
     agent._session_db_created = True
     # The turn skips restore/rebuild while this slot is set, so it may hold only the child's own
     # prompt, and only when that prompt matches the current runtime (otherwise None -> rebuild).
@@ -2554,13 +2550,6 @@ def _stamp_scoped_twins(targets: list, source: dict, *, exact_counts_stamped: bo
 _PENDING_CONTEXT_ENGINE_NOTIFICATION = "_pending_context_engine_compression_notification"
 
 
-def _hand_off_metrics_segment(old_session_id: str, new_session_id: str) -> None:
-    """Shared metrics count one conversation across the rotation (a no-op when collection is off)."""
-    with _swallow('shared-metrics segment hand-off failed', exc_info=True):
-        from scout_cli.observability.relay_shared_metrics import rotate_segment
-        rotate_segment(old_session_id, new_session_id)
-
-
 def _notify_context_engine_compression_complete(agent: Any, *, new_session_id: str, old_session_id: str) -> bool:
     """Notify the active context engine after a durable compression commit."""
     # Opt-in relay session-span segmentation. Observer semantics — failure must
@@ -2570,7 +2559,6 @@ def _notify_context_engine_compression_complete(agent: Any, *, new_session_id: s
         relay_runtime.SESSION_COORDINATOR.notify_session_compacted(
             profile_key=relay_runtime.current_profile_key(), session_id=new_session_id, old_session_id=old_session_id
         )
-    _hand_off_metrics_segment(old_session_id, new_session_id)
     callback = getattr(agent.context_compressor, "on_session_start", None)
     if not callable(callback):
         return False
@@ -4015,9 +4003,6 @@ def _begin_compression_attempt(
     trigger = trigger or ("manual" if force else "auto")
     with contextlib.suppress(Exception):
         agent._compression_attempt_id = attempt_id
-        from scout_cli.observability.shared_metrics_events import begin_compression_attempt
-
-        begin_compression_attempt(trigger, approx_tokens or getattr(agent.context_compressor, "last_prompt_tokens", None))
         agent.context_compressor._compression_telemetry_seed = {
             "attempt_id": attempt_id, "session_id": agent.session_id or "", "trigger_source": trigger,
         }

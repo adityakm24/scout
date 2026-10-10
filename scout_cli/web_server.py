@@ -1618,10 +1618,6 @@ def start_server(
                 initial_profile=initial_profile,
                 start_mcp_discovery_after_bind=start_mcp_discovery_after_bind,
             )
-            if headless:
-                from scout_cli.observability.shared_metrics_startup import record_process_ready
-                record_process_ready("serve_boot", background=True)
-
             await server.main_loop()
             if server.started:
                 await server.shutdown()

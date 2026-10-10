@@ -292,6 +292,3 @@ def _save_model_choice(model_id: str) -> None:
     else:
         config["model"] = {"default": model_id}
     save_config(config)
-    from scout_cli.observability.shared_metrics_setup import note_provider_setup_saved
-
-    note_provider_setup_saved()

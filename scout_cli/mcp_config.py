@@ -641,19 +641,11 @@ def cmd_mcp_add(args):
         _info('  scout mcp add myserver --preset mypreset')
         return
 
-    # Overwriting an existing server is a re-add, not an install; cancels are not recorded either.
-    fresh = name not in _get_mcp_servers()
-    if not fresh and not _confirm(
+    if name in _get_mcp_servers() and not _confirm(
         f"Server '{name}' already exists. Overwrite?", default=False
     ):
         _info("Cancelled.")
         return
-
-    def _record(saved: bool) -> None:
-        if fresh:
-            from scout_cli.mcp_catalog import record_mcp_install
-
-            record_mcp_install("url" if url else "local", None, "success" if saved else "failed")
 
     if url:
         server_config["url"] = url
@@ -667,7 +659,6 @@ def cmd_mcp_add(args):
         server_config["connect_timeout"] = raw_connect_timeout
 
     if not _validate_or_warn(name, server_config):
-        _record(False)
         return
     if url and not _configure_http_auth(name, url, auth_type, server_config):
         return
@@ -686,15 +677,12 @@ def cmd_mcp_add(args):
             if saved:
                 _success(f"Saved '{name}' to config (disabled)")
                 _info("Fix the issue, then: scout mcp test " + name)
-        _record(saved)
         return
 
     if not tools:
         _warning("Server connected but reported no tools.")
         if _confirm("Save config anyway?", default=True):
-            saved = _save_mcp_server(name, server_config)
-            _record(saved)
-            if saved:
+            if _save_mcp_server(name, server_config):
                 _success(f"Saved '{name}' to config")
         return
 
@@ -703,7 +691,6 @@ def cmd_mcp_add(args):
         return
     server_config["enabled"] = True
     saved = _save_mcp_server(name, server_config)
-    _record(saved)
     if saved:
         print()
         _success(

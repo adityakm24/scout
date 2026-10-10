@@ -56,7 +56,7 @@ def _run_spaceshipresearch_flow(config: dict, *, context: str, cancel_exc: tuple
 
 def _run_portal_one_shot(config: dict) -> None:
     """One-shot Scout Portal setup (``scout setup --portal`` / ``scout portal``)."""
-    from scout_cli.setup import _info, _print_banner, _record_setup_completed, print_error, print_info, print_success
+    from scout_cli.setup import _info, _print_banner, print_error, print_info, print_success
     _print_banner("│     ✦ Scout Setup — Scout Portal (one-shot)             │")
     _info(None, "  One subscription, 300+ models, plus the Tool Gateway:",
           "    web search, image generation, TTS, browser automation",
@@ -82,7 +82,6 @@ def _run_portal_one_shot(config: dict) -> None:
     print()
     print_success("Portal setup complete.")
     _info("  Run `scout portal info` to inspect routing.", "  Run `scout` to start chatting.")
-    _record_setup_completed(config)
 
 
 def _run_first_time_quick_setup(config: dict, scout_home, is_existing: bool):

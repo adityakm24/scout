@@ -374,34 +374,11 @@ class GatewayModelCommandsMixin:
             lock = self.__dict__["_model_switch_lock_obj"] = asyncio.Lock()
         return lock
 
-    def _record_switch_metrics(self, result, ctx: _ModelSwitchContext, source) -> None:
-        """Slash dispatch does not install the routed profile's scope, so a multiplexed runner binds
-        the owning home for the switch row and its switch_away friction."""
-        from scout_cli.observability.shared_metrics_events import record_model_switch
-        from scout_constants import reset_scout_home_override, set_scout_home_override
-
-        home = None
-        if getattr(getattr(self, "config", None), "multiplex_profiles", False):
-            with contextlib.suppress(Exception):
-                home = self._resolve_profile_home_for_source(source)
-        session_id = None
-        with contextlib.suppress(Exception):
-            session_id = getattr(self._cached_agent_for(ctx.session_key), "session_id", None)
-        token = set_scout_home_override(str(home)) if home else None
-        try:
-            record_model_switch(
-                from_provider=ctx.route_provider, to_provider=result.target_provider, surface="gateway",
-                from_model=ctx.current_model, session_id=session_id)
-        finally:
-            if token is not None:
-                reset_scout_home_override(token)
-
     async def _commit_model_switch_locked(self, result, ctx: _ModelSwitchContext, *, source, picker: bool) -> str:
         one_turn = False if picker else ctx.one_turn
         error = self._switch_cached_agent_model(result, ctx, picker)
         if error is not None:
             return error
-        self._record_switch_metrics(result, ctx, source)
         global_error = await self._record_model_switch(result, ctx, source=source, one_turn=one_turn, picker=picker)
         reply = await self._model_switch_confirmation(
             result, ctx, one_turn=one_turn, picker=picker, global_error=global_error,

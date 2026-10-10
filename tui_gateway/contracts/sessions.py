@@ -422,21 +422,11 @@ method("session.branch_whole", params=SessionBranchWholeParams, result=SessionBr
        doc="session.branch of the whole history without echoing the copied transcript back.")
 
 
-class UndoIntent(WireEnum):
-    RETRY = "retry"
-    UNDO = "undo"
-
-
-class SessionUndoParams(SessionParams):
-    # ``retry``: the client resends the dropped turn (Ink /retry), so metrics count a retry, not an undo.
-    intent: UndoIntent | None = None
-
-
 class SessionUndoResult(Result):
     removed: int
 
 
-method("session.undo", params=SessionUndoParams, result=SessionUndoResult,
+method("session.undo", params=SessionParams, result=SessionUndoResult,
        doc="Drop the last user turn (and everything after it) from an idle session.")
 
 

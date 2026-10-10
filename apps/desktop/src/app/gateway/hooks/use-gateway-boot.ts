@@ -10,7 +10,6 @@ import {
 import { useEffect, useRef } from 'react'
 
 import { createGatewayEventDedupe } from '@/app/gateway/gateway-event-dedupe'
-import { reportStartupLatency } from '@/app/gateway/report-startup-latency'
 import { shouldApplyPostBootProgressError } from '@/components/boot-failure-reauth'
 import type { DesktopBootProgress, ScoutConnection, ScoutWindowState } from '@/global'
 import { translateNow } from '@/i18n'
@@ -32,7 +31,6 @@ import {
   setDesktopBootStep
 } from '@/store/boot'
 import { resetBackgroundPollingGuard } from '@/store/composer-status'
-import { noteBackendDrop, noteBackendExited } from '@/store/desktop-metrics'
 import {
   $gateway,
   activeGateway,
@@ -1074,11 +1072,6 @@ export function useGatewayBoot({
           resetReconnectBackoff()
         }
 
-        // The connected→disconnected edge after a healthy boot, not a switch or our own manual close.
-        if (openedAt !== null && bootCompleted && !$gatewaySwitching.get() && ownCloseReason !== 'manual') {
-          noteBackendDrop(ownCloseReason === 'timeout' ? 'timeout' : null)
-        }
-
         ownCloseReason = null
         openedAt = null
 
@@ -1384,7 +1377,6 @@ export function useGatewayBoot({
         return
       }
 
-      noteBackendExited()
 
       // While the boot overlay is up it already shows the failure with its own
       // Retry, and the reconnect handler below is a no-op before boot completes
@@ -1522,8 +1514,6 @@ export function useGatewayBoot({
         if (cancelled) {
           return
         }
-
-        void reportStartupLatency(desktop, (method, params) => gateway.request(method, params))
 
         // Profile adoption must land first: refreshSessions scopes its fetch by
         // $profileScope ← $activeGatewayProfile. The remaining three fetches

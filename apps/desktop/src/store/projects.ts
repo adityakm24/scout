@@ -47,7 +47,6 @@ import {
 } from '@/store/session-removal'
 import type { ProjectInfo, ProjectsPayload } from '@/types/scout'
 
-import { recordFeatureUse } from './desktop-metrics'
 
 // First-class, per-profile Projects (named, multi-folder workspaces). State is
 // served by the live gateway's `projects.*` JSON-RPC methods, which wrap the
@@ -95,7 +94,6 @@ export const $reposScanning = atom(false)
 // point). Never opens a session.
 export function enterProject(id: string): void {
   $projectScope.set(id)
-  recordFeatureUse('projects')
 
   // Only explicit, persisted projects (ids are `p_<hex>`) become active. Auto
   // projects (ids are filesystem paths) and the Home bucket have no durable row

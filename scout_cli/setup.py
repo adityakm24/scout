@@ -381,10 +381,8 @@ def setup_model_provider(config: dict, *, quick: bool = False):
     _info("Choose how to connect to your main chat model.",
           f"   Guide: {_DOCS_BASE}/integrations/providers", None)
     from scout_cli.main import select_provider_and_model
-    from scout_cli.observability.shared_metrics_setup import provider_setup_surface
     try:
-        with provider_setup_surface("cli_setup"):
-            select_provider_and_model()
+        select_provider_and_model()
     except (SystemExit, KeyboardInterrupt):
         _info(None, "Provider setup skipped.")
     except Exception as exc:
@@ -500,71 +498,6 @@ def setup_tools(config: dict, first_install: bool = False):
     tools_command(first_install=first_install, config=config)
 
 
-# ── Shared Metrics ──
-
-
-_SEND_CONSENT_EXPLAINER = (
-    "", "Sending uploads each daily package to the SpaceshipResearch telemetry",
-    "service. Packages carry your profile-scoped install ID, a",
-    "stable random UUID that identifies this profile across days",
-    "(it contains no personal information and is reset by deleting",
-    "the shared-metrics directory). Only packages whose entire",
-    "collection period falls inside a recorded consent window are",
-    "ever sent — data from before you opt in, or from any gap",
-    "while sending was off, stays on this machine. Sending can be", "turned off again at any time.",
-)
-
-
-def setup_telemetry(config: dict):
-    """Configure the local shared-metrics subscriber and optional sending."""
-    print_header("Shared Metrics")
-    _info("Shared metrics contain only bounded counters: activity, session length,",
-          "outcomes, error classes, model routes and token totals, built-in tool, command",
-          "and catalog names, bucketed setup counts, update results and timing, crashes,",
-          "startup and reply speed, messaging-platform health, how Scout gets used",
-          "(agent accuracy and efficiency, active time per surface, which features and",
-          "settings are used or switched off, provider setup outcomes), and coarse",
-          "machine facts (RAM range, GPU type, version age and channel, updates behind,",
-          "local model server yes/no). Never prompts, files, paths, setting values or",
-          "error text.",
-          "Collection is local. Sending them to SpaceshipResearch is a separate opt-in.")
-    shared_metrics = _sub_dict(_sub_dict(config, "telemetry"), "shared_metrics")
-    current = shared_metrics.get("enabled") is True
-    shared_metrics["enabled"] = prompt_yes_no("Enable local shared metrics?", default=current)
-    if not shared_metrics["enabled"]:
-        print_info("Local shared metrics disabled.")
-        # Sending cannot outlive collection (send=true would log an error every run, never send).
-        if shared_metrics.get("send") is True:
-            shared_metrics["send"] = False
-            print_info("Sending shared metrics disabled as well.")
-        # Turning collection off withdraws send consent too. Recorded unconditionally: the send
-        # key may already be false while the consent window is still open, and it must close.
-        _record_send_consent_change(enabled=False)
-        return
-    print_success("Local shared metrics enabled.")
-    _info(*_SEND_CONSENT_EXPLAINER)
-    shared_metrics["send"] = prompt_yes_no("Send shared metrics to SpaceshipResearch?", default=shared_metrics.get("send") is True)
-    _record_send_consent_change(enabled=shared_metrics["send"])
-    if shared_metrics["send"]:
-        print_success("Sending shared metrics enabled.")
-    else:
-        print_info("Sending shared metrics disabled (collection stays local).")
-
-
-def _record_send_consent_change(*, enabled: bool) -> None:
-    """Reconcile consent windows at the moment the user decides — same single writer as the relay
-    and the sender, so wizard, relay and mid-pass callers cannot disagree."""
-    try:
-        from scout_cli.observability.shared_metrics import SharedMetricsStore
-        from scout_cli.observability.shared_metrics_sender import reconcile_send_consent
-        from scout_cli.sqlite_util import write_txn
-        with SharedMetricsStore()._connection() as connection, write_txn(connection):
-            reconcile_send_consent(connection, enabled)
-    except Exception:
-        # Never block the wizard on telemetry bookkeeping; the relay reconciles on the next hook.
-        logger.debug("Unable to record shared-metrics consent change", exc_info=True)
-
-
 # Extracted sections, re-exported so callers and test patches keep resolving through
 # scout_cli.setup. They import this module lazily inside bodies, so this is cycle-free.
 
@@ -584,7 +517,6 @@ SETUP_SECTIONS = [
     ("terminal", "Terminal Backend", setup_terminal_backend),
     ("gateway", "Messaging Platforms (Gateway)", setup_gateway),
     ("tools", "Tools", setup_tools),
-    ("telemetry", "Shared Metrics", setup_telemetry),
     ("agent", "Agent Settings", setup_agent_settings),
 ]
 
@@ -709,7 +641,6 @@ def _run_setup_wizard_impl(args):
         # backwards-compatible no-op here.
         if quick_requested:
             _run_setup_steps([("Quick Setup", lambda: _run_quick_setup(config, scout_home))])
-            _record_setup_completed(config)
             return
         print_header("Reconfigure", gap=True)
         print_success("You already have Scout configured.")
@@ -730,7 +661,6 @@ def _run_setup_wizard_impl(args):
         if runner is not None:
             from scout_cli import setup_quick
             _run_setup_steps([(label, lambda: getattr(setup_quick, runner)(config, scout_home, is_existing))])
-            _record_setup_completed(config)
             return
     _run_full_setup(config, scout_home, is_existing=is_existing, migration_ran=migration_ran)
 
@@ -741,12 +671,3 @@ def _run_setup_wizard_impl(args):
               "If setup changed a value you customized, restore it with:",
               f"  cp {_backup_path} {config_path}")
     _print_setup_summary(config, scout_home)
-    _record_setup_completed(config)
-
-
-def _record_setup_completed(config: dict) -> None:
-    """Count a wizard run that finished. Runs after every section (shared-metrics consent
-    included) so a user who opted in during this run is counted; the API checks enablement."""
-    from scout_cli.observability.shared_metrics_events import record_setup_completed
-    model = config.get("model")
-    record_setup_completed(surface="cli", provider=model.get("provider") if isinstance(model, dict) else None)

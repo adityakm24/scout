@@ -208,19 +208,12 @@ export function getEnvVars(profile?: null | string): Promise<Record<string, EnvV
   })
 }
 
-// `providerSetup`: the caller is connecting a model provider, so shared metrics count the save as a
-// provider setup even when a tool panel uses the same key (Gemini, xAI...).
-export function setEnvVar(
-  key: string,
-  value: string,
-  profile?: ProfileScope,
-  { providerSetup = false }: { providerSetup?: boolean } = {}
-): Promise<{ ok: boolean }> {
+export function setEnvVar(key: string, value: string, profile?: ProfileScope): Promise<{ ok: boolean }> {
   return window.scoutDesktop.api<{ ok: boolean }>({
     ...capabilityScoped(profile),
     path: '/api/env',
     method: 'PUT',
-    body: providerSetup ? { key, provider_setup: true, value } : { key, value }
+    body: { key, value }
   })
 }
 
