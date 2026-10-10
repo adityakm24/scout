@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <defs><linearGradient id="face" x1="0.0" y1="0.0" x2="1024.0" y2="1024.0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d74ff"/><stop offset="1" stop-color="#7a49ec"/></linearGradient></defs>
-  <ns0:rect xmlns:ns0="http://www.w3.org/2000/svg" x="0" y="0" width="1024" height="1024" rx="245" fill="url(#face)" />
-
-  <g transform="translate(0.0 0.0) scale(1.0)"><path fill="#150e25" d="M 368 364 A 66 66 0 1 1 368 496 A 66 66 0 1 1 368 364 Z"/><path fill="#150e25" d="M 656 364 A 66 66 0 1 1 656 496 A 66 66 0 1 1 656 364 Z"/><path fill="#ece9f3" d="M 349 384 A 21 21 0 1 1 349 426 A 21 21 0 1 1 349 384 Z"/><path fill="#ece9f3" d="M 637 384 A 21 21 0 1 1 637 426 A 21 21 0 1 1 637 384 Z"/></g>
-</svg>

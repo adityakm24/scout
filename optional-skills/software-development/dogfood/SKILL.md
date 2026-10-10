@@ -2,7 +2,7 @@
 name: dogfood
 description: "Exploratory QA of web apps: find bugs, evidence, reports."
 version: 1.0.0
-author: Teknium (teknium1), Scout Agent
+author: Scout Agent
 license: MIT
 platforms: [linux, macos, windows]
 metadata:

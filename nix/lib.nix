@@ -120,7 +120,6 @@ let
           jsWorkspaceTopDirs ++ [
             # Documentation
             "docs"
-            "website"
             # CI/infra
             "docker"
             ".github"
@@ -167,7 +166,6 @@ let
           "AGENTS.md"
           "CONTRIBUTING.md"
           "SECURITY.md"
-          "README.zh-CN.md"
           ".gitignore"
           "setup-scout.sh"
         ];

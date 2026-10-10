@@ -1,6 +1,6 @@
 # Contributor Quick Reference
 
-For occasional contributors and PR authors. Full developer docs: https://scout-agent.spaceshipresearch.com/docs/developer-guide/
+For occasional contributors and PR authors. Full developer notes: `AGENTS.md` and `CONTRIBUTING.md`.
 
 ### Project Layout
 
@@ -21,8 +21,7 @@ scout-agent/
 ├── gateway/              # Messaging gateway
 │   └── platforms/        # Platform adapters (telegram, discord, etc.)
 ├── cron/                 # Job scheduler
-├── tests/                # Extensive pytest suite (run via scripts/run_tests.sh)
-└── website/              # Docusaurus docs site
+└── tests/                # Extensive pytest suite (run via scripts/run_tests.sh)
 ```
 
 Config: `~/.scout/config.yaml` (settings), `~/.scout/.env` (API keys) — both under `$SCOUT_HOME` when it is set.

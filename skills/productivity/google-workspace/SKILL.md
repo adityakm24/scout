@@ -13,7 +13,7 @@ required_credential_files:
 metadata:
   scout:
     tags: [Google, Gmail, Calendar, Drive, Sheets, Docs, Contacts, Email, OAuth]
-    homepage: https://github.com/SpaceshipResearch/scout-agent
+    homepage: https://github.com/adityakm24/scout
     related_skills: [himalaya]
 ---
 

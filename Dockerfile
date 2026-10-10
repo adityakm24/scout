@@ -375,8 +375,7 @@ RUN mkdir -p /opt/scout/bin && \
 # run as the default scout user (UID 10000).
 
 # ---------- Image provenance + install stamp ----------
-# CI (.github/workflows/docker.yml) runs scripts/write_install_stamp.py
-# before `docker build`, so the bulk `COPY . .` above already placed a
+# Run scripts/write_install_stamp.py before `docker build`, so the bulk `COPY . .` above already placed a
 # full-provenance /opt/scout/install-stamp.json next to the code.
 # .dockerignore excludes .git, so the stamp is the only commit channel the
 # image carries: scout_cli/version_info.py reads it at runtime (stamp

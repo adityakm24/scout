@@ -6,9 +6,9 @@ scope for vulnerability reports.
 
 ## 1. Reporting a Vulnerability
 
-Report privately via [GitHub Security Advisories](https://github.com/SpaceshipResearch/scout-agent/security/advisories/new)
-or **security@spaceshipresearch.com**. Do not open public issues for
-security vulnerabilities. **Scout Agent does not operate a bug
+Report privately through the repository's GitHub Security Advisories
+("Report a vulnerability" under the Security tab). Do not open public
+issues for security vulnerabilities. **Scout Agent does not operate a bug
 bounty program.**
 
 A useful report includes:
@@ -329,7 +329,6 @@ that:
 
 - **Coordinated disclosure window:** 90 days from report, or until a
   fix is released, whichever comes first.
-- **Channel:** the GHSA thread or email correspondence with
-  security@spaceshipresearch.com.
+- **Channel:** the GitHub Security Advisory thread.
 - **Credit:** reporters are credited in release notes unless
   anonymity is requested.

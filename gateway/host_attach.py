@@ -1,6 +1,6 @@
 """Is there ONE live host gateway, and does it already serve this profile?
 
-Multiplex-only (Teknium ruling): exactly one MULTIPLEXING ``scout gateway run`` per host, serving
+Multiplex-only: exactly one MULTIPLEXING ``scout gateway run`` per host, serving
 every profile; standalone per-profile gateways coexist until that migration is forced (#109417).
 The lifecycle verbs therefore answer a different question than they used to — not "does THIS home
 hold a ``gateway.pid``?" but "is the host process live, and is this profile in its served set?" —

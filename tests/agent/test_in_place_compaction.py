@@ -86,8 +86,7 @@ class TestInPlaceCompaction:
             row = db.get_session(sid)
             assert row["end_reason"] is None
             assert row["title"] == "my-research"
-            # DURABLE, NON-DESTRUCTIVE compaction (the core invariant, per
-            # Teknium's review): the LIVE context is the compacted set, but the
+            # DURABLE, NON-DESTRUCTIVE compaction (the core invariant): the LIVE context is the compacted set, but the
             # pre-compaction turns are PRESERVED on disk (active=0), not deleted
             # — searchable + recoverable under the SAME id. A resume reloads the
             # compacted set so compaction actually shrinks the live session and
@@ -312,7 +311,7 @@ class TestInPlaceAntiGrowthGuard:
 
 
 class TestCompactedTurnsStaySearchable:
-    """Teknium's review hinges on the pre-compaction transcript staying
+    """The review hinges on the pre-compaction transcript staying
     DISCOVERABLE after in-place compaction. Compaction-archived rows
     (active=0, compacted=1) must surface in session_search by default, while
     rewind/undo rows (active=0, compacted=0) must stay hidden. The two share

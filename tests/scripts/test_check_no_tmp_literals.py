@@ -89,7 +89,6 @@ def test_scan_skips_tests_lockfiles_ci_and_translations(tmp_path):
         "tools/a.py": 'X = "/tmp/a"\n',
         "skills/x/SKILL.md": "save to /tmp/out\n",
         "website/docs/guide.md": "cd /tmp\n",
-        "website/i18n/zh/guide.md": "cd /tmp\n",
         "tests/test_a.py": 'X = "/tmp/a"\n',
         "tools/test_inline.py": 'X = "/tmp/a"\n',
         "tools/conftest.py": 'X = "/tmp/a"\n',

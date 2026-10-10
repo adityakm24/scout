@@ -156,33 +156,6 @@ def test_child_failure_stops_sequence_even_with_stale_product(build_fixture, sta
     assert not out.exists()
 
 
-@pytest.mark.parametrize("identity", [("--tag", "v1.2.3"), ("--commit", "a" * 40)])
-def test_release_workflow_runs_the_shared_sequence(build_fixture, identity):
-    repo, payload, _, log, env = build_fixture
-    (repo / "scripts/termux/build.py").symlink_to(DRIVER)
-    (repo / "termux-build").mkdir()
-    (repo / "termux-build/payload").symlink_to(payload, target_is_directory=True)
-    tools = log.parent / "tools"
-    (tools / "python3").symlink_to(sys.executable)
-    env.update(SCOUT_BUILD_COMMIT=identity[1] if identity[0] == "--commit" else "",
-               SCOUT_PAYLOAD_TAG=identity[1] if identity[0] == "--tag" else "")
-    workflow = YAML(typ="safe").load((ROOT / ".github/workflows/desktop-bundled-release.yml").read_text())
-    step = next(step for step in workflow["jobs"]["termux-deb"]["steps"]
-                if step.get("name") == "Assemble the .deb")
-    bash = shutil.which("bash")
-    assert bash is not None
-    result = subprocess.run([bash, "-euo", "pipefail", "-c", step["run"]],
-                            cwd=repo, env=env, capture_output=True, text=True, timeout=30)
-    assert result.returncode == 0, result.stdout + result.stderr
-    calls = recorded_calls(log)
-    assert [Path(call["args"][0]).name for call in calls] == [
-        "node-deps.mjs", "tui.mjs", "build_deb.sh",
-    ]
-    assert calls[-1]["args"][-2:] == list(identity)
-    assert (repo / "termux-build/deb/assembly-received-product").read_text() == str(
-        repo / ".build/termux/tui")
-
-
 @pytest.mark.parametrize("changed_input", ["Dockerfile", "base"])
 def test_builder_image_identity_covers_all_inputs(tmp_path, changed_input):
     repo = tmp_path / "source with spaces"

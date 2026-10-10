@@ -1559,8 +1559,8 @@ class SessionSessionsMixin:
         Missing row → (False, ""); DB errors propagate (fail closed).
 
         ``agent/prompt_cache_scope.py`` needs both to resolve a host-declared conversation scope, and both
-        live on the same ``sessions`` row; asking for them separately read that row twice per resolution
-        (@teknium1 on 98811). The marker rules stay here, beside :meth:`is_explicit_fork_child`, instead of
+        live on the same ``sessions`` row; asking for them separately read that row twice per resolution.
+        The marker rules stay here, beside :meth:`is_explicit_fork_child`, instead of
         being re-implemented by the caller. See #98811.
         """
         session = self.get_session(session_id)

@@ -346,7 +346,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   meta = with lib; {
     description = "AI agent with advanced tool-calling capabilities";
-    homepage = "https://github.com/SpaceshipResearch/scout-agent";
+    homepage = "https://github.com/adityakm24/scout";
     mainProgram = "scout";
     license = licenses.mit;
     platforms = platforms.unix;

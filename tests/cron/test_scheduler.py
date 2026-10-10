@@ -2104,7 +2104,7 @@ class TestCronDeliveryMirror:
 
     # --- multi-participant parity with send_message (user_id passthrough) ---
 
-    # --- continuable cron: thread-preferred (Teknium's interface) ---
+    # --- continuable cron: thread-preferred (the interface) ---
 
     def test_seed_thread_session_creates_session_and_mirrors(self):
         """Seeding a freshly-opened thread creates the thread-keyed session via

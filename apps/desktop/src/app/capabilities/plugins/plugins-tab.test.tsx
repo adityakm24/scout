@@ -317,26 +317,6 @@ describe('PluginsTab', () => {
     )
   })
 
-  it.each([false, true])('opens the scoped native install dialog from the selected entry (cards=%s)', async cards => {
-    $catalogCardView.set(cards)
-    seedCatalog([
-      { ...weatherEntry, name: 'other-plugin', repo: 'https://github.com/example/other-plugin' },
-      weatherEntry
-    ])
-    renderPlugins({ profile: 'workbot' })
-
-    await selectCatalogEntry(weatherEntry.name)
-    expect($pluginInstallRequest.get()).toBeNull()
-    fireEvent.click(screen.getByRole('switch', { name: `Add ${displayName(weatherEntry.name)}` }))
-
-    expect($pluginInstallRequest.get()).toMatchObject({
-      catalogName: weatherEntry.name,
-      repo: weatherEntry.repo,
-      profile: 'workbot',
-      sha: weatherEntry.sha
-    })
-  })
-
   it('shows installed plugins in list/detail mode and filters them through the parent search', () => {
     $pluginRecords.set({
       clock: { id: 'clock', name: 'Clock', kind: 'disk', status: 'loaded' },
@@ -406,28 +386,6 @@ describe('PluginsTab', () => {
     toggle.click()
 
     expect(requestGateway).not.toHaveBeenCalledWith('plugins.manage', expect.objectContaining({ action: 'toggle' }))
-  })
-
-  it('appends the selected subdir for multi-plugin repos without changing the catalog pin', async () => {
-    const entry = {
-      ...weatherEntry,
-      name: 'nested-plugin',
-      repo: 'https://github.com/example/plugins-monorepo',
-      subdir: 'packages/nested-plugin'
-    }
-
-    seedCatalog([entry])
-    renderPlugins({ profile: null })
-
-    await selectCatalogEntry(entry.name)
-    fireEvent.click(screen.getByRole('switch', { name: `Add ${displayName(entry.name)}` }))
-
-    expect($pluginInstallRequest.get()).toMatchObject({
-      catalogName: entry.name,
-      repo: `${entry.repo}#${entry.subdir}`,
-      profile: null,
-      sha: entry.sha
-    })
   })
 
   // #96969: the Desktop Kanban switch enabled only this app's UI panel; the
@@ -686,67 +644,6 @@ describe('PluginsTab catalog UX', () => {
       profile: 'workbot',
       accept_capabilities: true
     })
-  })
-
-  it('fetches the catalog once, retaining parent search across selection and filters', async () => {
-    queryClient.clear()
-
-    const fetchCatalog = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [
-        weatherEntry,
-        { ...weatherEntry, name: 'garden-plugin', category: 'garden', description: 'Garden planning' }
-      ]
-    })
-
-    vi.stubGlobal('fetch', fetchCatalog)
-    await act(async () => {
-      renderPlugins({ profile: null })
-    })
-
-    await selectCatalogEntry('garden-plugin')
-
-    const search = screen.getByRole<HTMLInputElement>('textbox', { name: 'Search plugins' })
-
-    fireEvent.change(search, { target: { value: 'weather' } })
-    expect(await screen.findByRole('heading', { name: 'Weather Plugin' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Garden Plugin' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Installed', pressed: false }))
-    expect(screen.queryByRole('heading', { name: 'Weather Plugin' })).toBeNull()
-    expect(search.value).toBe('weather')
-    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' })[0])
-    expect(search.value).toBe('')
-    await selectCatalogEntry('garden-plugin')
-
-    expect(fetchCatalog).toHaveBeenCalledTimes(1)
-    expect(fetchCatalog.mock.calls[0][0]).toMatch(/\/docs\/api\/plugins\.json$/)
-    expect(fetchCatalog.mock.calls[0][1]).toMatchObject({ credentials: 'omit' })
-    expect($pluginInstallRequest.get()).toBeNull()
-  })
-
-  it('retries a failed catalog only when asked, not on tab bounce', async () => {
-    queryClient.clear()
-
-    const fetchCatalog = vi
-      .fn()
-      .mockResolvedValueOnce({ ok: false, status: 503 })
-      .mockResolvedValue({ ok: true, json: async () => [weatherEntry] })
-
-    vi.stubGlobal('fetch', fetchCatalog)
-    const view = renderPlugins({ profile: null })
-
-    expect(await screen.findByText('Catalog HTTP 503')).toBeTruthy()
-    expect(fetchCatalog).toHaveBeenCalledTimes(1)
-    view.unmount()
-    await act(async () => {
-      renderPlugins({ profile: null })
-    })
-    expect(fetchCatalog).toHaveBeenCalledTimes(1)
-    expect(screen.getByText('Catalog HTTP 503')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
-
-    expect(await screen.findByRole('heading', { name: 'Weather Plugin' })).toBeTruthy()
-    expect(fetchCatalog).toHaveBeenCalledTimes(2)
   })
 
   it('shows an Update chip when the catalog pin moved past the installed SHA', () => {

@@ -29,7 +29,7 @@ load_dotenv()
 # Default datasets to sample from
 DEFAULT_DATASETS = [
     "SpaceshipResearch/swe-terminus-agent-glm-kimi-minimax",
-    "SpaceshipResearch/scout-agent-megascience-sft1",
+    "adityakm24/scout-megascience-sft1",
     "SpaceshipResearch/Scout-Agent-Thinking-GLM-4.7-SFT2",
     "SpaceshipResearch/Scout-Agent-Thinking-GLM-4.7-SFT1",
     "SpaceshipResearch/terminal-tasks-glm-scout-agent"

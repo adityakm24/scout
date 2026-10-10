@@ -1,7 +1,7 @@
 """``scout gateway migrate --multiplex``: converge a per-profile-gateway install onto the ONE
 host gateway, with a table-driven preflight.
 
-Multiplex-only (Teknium ruling): exactly one ``scout gateway run`` per host, serving every
+Multiplex-only: exactly one ``scout gateway run`` per host, serving every
 profile. This command is the supported convergence path, and it is defined by TOPOLOGY, not by a
 config flag — a host is converged when no secondary profile owns a gateway process or a supervisor
 unit any more. That makes it re-runnable: a half-migrated host (flag flipped, a unit left behind, a

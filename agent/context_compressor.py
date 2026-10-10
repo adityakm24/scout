@@ -1080,9 +1080,7 @@ _ANCHOR_PATTERNS: "list[tuple[str, re.Pattern[str], int]]" = [
     ("handles", re.compile(r"@[A-Za-z0-9-]{3,30}\b"), 40),
     ("urls", re.compile(r"https?://[^\s)\"']{10,110}"), 30),
 ]
-_ANCHOR_NOISE = frozenset({
-    "@teknium", "@teknium1",  # session owner, in every transcript
-})
+_ANCHOR_NOISE: frozenset = frozenset()  # handles to leave out of the anchor index
 
 
 def _build_anchor_index(turns: List[Dict[str, Any]]) -> str:

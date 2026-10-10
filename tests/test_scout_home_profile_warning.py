@@ -1,6 +1,6 @@
 """Tests for get_scout_home() profile-mode fallback warning.
 
-Regression test for https://github.com/SpaceshipResearch/scout-agent/issues/18594.
+Regression test for https://github.com/adityakm24/scout/issues/18594.
 
 When SCOUT_HOME is unset but an active_profile file indicates a non-default
 profile is active, get_scout_home() should:

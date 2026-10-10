@@ -23,7 +23,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
-USER_AGENT = "scout-agent/1.0 (rss-feeds skill; +https://github.com/SpaceshipResearch/scout-agent)"
+USER_AGENT = "scout-agent/1.0 (rss-feeds skill; +https://github.com/adityakm24/scout)"
 TIMEOUT = 20
 NS = {
     "atom": "http://www.w3.org/2005/Atom",

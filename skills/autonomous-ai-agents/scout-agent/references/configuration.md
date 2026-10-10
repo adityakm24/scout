@@ -1,8 +1,6 @@
 # Configuration, Toolsets & Voice
 
 Edit with `scout config edit` or `scout config set section.key value`.
-Full reference: https://scout-agent.spaceshipresearch.com/docs/user-guide/configuration
-
 ### Config Sections (most-used keys)
 
 | Section | Key options |

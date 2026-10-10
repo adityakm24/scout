@@ -5,7 +5,7 @@ First-party Python only (excludes tests/, node_modules, apps/, website, build, .
 import ast, collections, io, json, os, shutil, subprocess, sys, time, tokenize
 
 TREE, LABEL = sys.argv[1], sys.argv[2]
-SKIP = {".git", "node_modules", "apps", "website", "build", ".venv", "venv", "MagicMock", "__pycache__", ".worktrees", "dist", "evals", "skills", "optional-skills", "docs"}
+SKIP = {".git", "node_modules", "apps", "build", ".venv", "venv", "MagicMock", "__pycache__", ".worktrees", "dist", "evals", "skills", "optional-skills", "docs"}
 
 def py_files(root, include_tests):
     for dp, dns, fns in os.walk(root):

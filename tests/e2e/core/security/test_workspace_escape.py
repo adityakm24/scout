@@ -1,6 +1,6 @@
 """File tools keep the documented write sandbox, write denylist and read denylist under ../ and symlink spellings.
 
-Scout documents three file-tool boundaries (website/docs/user-guide/security.md, "File write safety"):
+Scout enforces three file-tool boundaries:
 
 * ``SCOUT_WRITE_SAFE_ROOT``: ``write_file`` / ``patch`` may only land inside the listed roots.
 * Protected paths: the Scout-home ``.env`` / OAuth stores, ``~/.ssh`` keys and ``authorized_keys`` are

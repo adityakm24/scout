@@ -337,6 +337,7 @@ def test_inspect_reuses_one_ssrf_safe_client_for_metadata_and_bundle(monkeypatch
     monkeypatch.setattr(hub, "is_safe_url", lambda _url: True)
     monkeypatch.setattr(hub, "check_website_access", lambda _url: None)
     monkeypatch.setattr(search, "_scout_index_cache_file", lambda: tmp_path / "scout-index.json")
+    monkeypatch.setattr(search, "SCOUT_INDEX_URL", "https://index.example/skills-index.json")
     monkeypatch.setattr(search.httpx, "get", lambda *_a, **_k: pytest.fail("index fetch bypassed the pool"))
 
     result = cli_hub.inspect_skill("example/id")

@@ -81,7 +81,7 @@ def _connect_error_detail(exc: BaseException) -> str:
         return (
             f"{text} — macOS Local Network Privacy is blocking this launchd gateway from the LAN. "
             "Run `scout gateway install` to regenerate the launchd job, then `scout gateway restart`. "
-            "https://github.com/SpaceshipResearch/scout-agent/issues/71206"
+            "#71206"
         )
     return text
 

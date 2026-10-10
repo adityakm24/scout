@@ -2,7 +2,7 @@
 name: claude-code
 description: "Delegate coding to Claude Code CLI (features, PRs)."
 version: 2.2.1
-author: Scout Agent + Teknium
+author: Scout Agent
 license: MIT
 platforms: [linux, macos, windows]
 metadata:

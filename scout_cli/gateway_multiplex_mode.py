@@ -170,7 +170,7 @@ def _default_profile_home() -> Path:
 
 def persist_resolved_default(decision: MultiplexDecision, default_home: Optional[Path] = None) -> bool:
     """Write ``gateway.multiplex_profiles: true`` into the DEFAULT profile's config.yaml so the file
-    reads as the gateway behaves. The key has ONE valid value right now (Teknium ruling): an unset key
+    reads as the gateway behaves. The key has ONE valid value right now: an unset key
     is made explicit ("left unset" was read as "off"), a retired ``false`` is rewritten in place and
     leaves a one-time marker for the boxed notice. Comment-preserving writer, once, and NEVER on a guard
     refusal (the file must not say true while the runtime is standalone). Returns True on a write."""

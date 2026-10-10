@@ -113,7 +113,7 @@ class TestStripBlockedTools(unittest.TestCase):
         ):
             self.assertIn(toolset_name, disabled)
         # code_execution is deliberately NOT denied — children keep
-        # execute_code for programmatic tool calling (Teknium, Jul 2026).
+        # execute_code for programmatic tool calling (Jul 2026).
         self.assertNotIn("code_execution", disabled)
 
         definitions = model_tools.get_tool_definitions(

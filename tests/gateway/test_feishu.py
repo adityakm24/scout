@@ -164,8 +164,8 @@ class TestFeishuAdapterMessaging(unittest.TestCase):
         Without this UA tag the Feishu server does not push group @mention
         events over the WebSocket transport. The long-lived client must also
         stay off asyncio's shared default executor. See
-        https://github.com/SpaceshipResearch/scout-agent/issues/50656
-        https://github.com/SpaceshipResearch/scout-agent/issues/78318
+        https://github.com/adityakm24/scout/issues/50656
+        https://github.com/adityakm24/scout/issues/78318
         """
         from gateway.config import PlatformConfig
         from plugins.platforms.feishu.adapter import FeishuAdapter

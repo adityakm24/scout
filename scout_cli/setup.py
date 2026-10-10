@@ -85,7 +85,7 @@ def is_interactive_stdin() -> bool:
 def print_noninteractive_setup_guidance(reason: str | None = None) -> None:
     """Print guidance for headless/non-interactive setup flows."""
     print()
-    print(color("☤ Scout Setup — Non-interactive mode", Colors.CYAN, Colors.BOLD))
+    print(color("✦ Scout Setup — Non-interactive mode", Colors.CYAN, Colors.BOLD))
     print()
     if reason:
         print_info(reason)
@@ -607,7 +607,7 @@ def _run_setup_section(config: dict, section: str) -> None:
         print_info(f"Available sections: {', '.join(k for k, _, _ in SETUP_SECTIONS)}")
         return
     label, func = entry
-    _print_banner(f"│     ☤ Scout Setup — {label:<34s} │")
+    _print_banner(f"│     ✦ Scout Setup — {label:<34s} │")
     _run_setup_steps([(label, lambda: func(config))])
     save_config(config)
     print()
@@ -698,7 +698,7 @@ def _run_setup_wizard_impl(args):
     from scout_cli.auth import get_active_provider
     is_existing = bool(get_env_value("OPENROUTER_API_KEY") or get_env_value("OPENAI_BASE_URL")
                        or get_active_provider() is not None)
-    _print_banner("│             ☤ Scout Agent Setup Wizard                │",
+    _print_banner("│             ✦ Scout Agent Setup Wizard                │",
                   "├─────────────────────────────────────────────────────────┤",
                   "│  Let's configure your Scout Agent installation.       │",
                   "│  Press Ctrl+C at any time to exit.                     │")

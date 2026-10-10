@@ -2,13 +2,13 @@
 name: scout-agent
 description: "Use, configure, theme, extend, and orchestrate Scout Agent."
 version: 3.2.0
-author: Scout Agent + Teknium
+author: Scout Agent
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
   scout:
     tags: [scout, setup, configuration, multi-agent, spawning, cli, gateway, bots, bot-mode, features, themes, skins, desktop-plugins, tui-widgets, petdex, development]
-    homepage: https://github.com/SpaceshipResearch/scout-agent
+    homepage: https://github.com/adityakm24/scout
     related_skills: [claude-code, codex, opencode]
 ---
 
@@ -28,25 +28,24 @@ What makes Scout different:
 
 **This skill is a hub.** The body covers identity, quick start, spawning/orchestration, and hard invariants. Everything else lives in reference files — **load the matching reference (below) before answering**; do not answer detail questions from the body alone.
 
-**Docs:** https://scout-agent.spaceshipresearch.com/docs/
-
 ## Scope & Verification
 
-This skill is a concise operating guide, not the complete source of truth for every Scout feature. If a Scout feature, command, or setting is not mentioned here or in a reference, do not treat that absence as evidence that it does not exist. Check the live repository and official docs before giving a negative answer.
+This skill is a concise operating guide, not the complete source of truth for every Scout feature. If a Scout feature, command, or setting is not mentioned here or in a reference, do not treat that absence as evidence that it does not exist. Check the source and the CLI's own help before giving a negative answer.
 
 Good verification targets, cheapest first:
 
-- **Every shipped feature, one line each: https://scout-agent.spaceshipresearch.com/docs/llms.txt.** Start here for any "can Scout do X?" or "how do I do X?" — it indexes the entire documentation set with a link to the page that answers. It is generated from the docs tree on every build, so it is never behind the product. Fetch it with `web_extract`, or `curl -s https://scout-agent.spaceshipresearch.com/docs/llms.txt` when web tools are off. The whole documentation set in one file is at `/docs/llms-full.txt`.
+- **The source checkout's `AGENTS.md` files** (root plus one per area: `agent/`, `gateway/`, `tools/`, `scout_cli/`, `cron/`, `skills/`, `plugins/`, `apps/desktop/`) describe every subsystem; start there for any "can Scout do X?" or "how does X work?".
 - CLI commands: `scout --help`, `scout <command> --help`, and `scout_cli/main.py`
-- Source tree: https://github.com/SpaceshipResearch/scout-agent
+- Source tree: https://github.com/adityakm24/scout
 
-Never answer "Scout can't do that" from memory. Scout ships far more than this skill body describes, and the index exists so a negative answer is always checkable.
+Never answer "Scout can't do that" from memory. Scout ships far more than this skill body describes, and the help text and source make a negative answer checkable.
 
 ## Quick Start
 
 ```bash
-# Install (shell installer — bootstraps PM, Python, dependencies, and the launcher)
-curl -fsSL https://scout-agent.spaceshipresearch.com/install.sh | bash
+# Install from a checkout (bootstraps PM, Python and dependencies), then activate it
+git clone https://github.com/adityakm24/scout.git && cd scout
+./setup-scout.sh && source ./activate
 
 # Interactive chat (default surface; set display.interface: tui to launch the Ink TUI instead)
 scout
@@ -88,8 +87,8 @@ Profiles use `~/.scout/profiles/<name>/` with the same layout. When a profile is
 
 | User wants... | Load |
 |---|---|
-| **Anything not listed below — "can Scout do X?", "how do I set up X?"** | **https://scout-agent.spaceshipresearch.com/docs/llms.txt** |
-| Bots that chat, run routines, or message each other; the Bots tab | docs: `/user-guide/bot-mode` |
+| **Anything not listed below — "can Scout do X?", "how do I set up X?"** | **`scout --help`, `scout <command> --help`, and the area `AGENTS.md`** |
+| Bots that chat, run routines, or message each other; the Bots tab | `apps/desktop/AGENTS.md` (Bot Mode) |
 | CLI commands, subcommands, flags, "how do I run X" | `references/cli-reference.md` |
 | In-session slash commands | `references/slash-commands.md` |
 | Provider setup, API keys, OAuth | `references/providers-and-models.md` |
@@ -107,12 +106,11 @@ Profiles use `~/.scout/profiles/<name>/` with the same layout. When a profile is
 | Debugging: voice, tools missing, gateway, aux models | `references/troubleshooting.md` |
 | Contributing code: adding tools, slash commands, tests | `references/contributor-guide.md` |
 | delegate_task "capped at N" reports | `references/delegate-task-concurrency-diagnosis.md` |
-| "Can app X use my Scout Portal subscription/OAuth?" | `references/portal-auth-for-third-party-apps.md` |
-| Connecting a messaging platform (Telegram, Discord, Slack, WhatsApp, …) | docs: `/user-guide/messaging` |
+| Connecting a messaging platform (Telegram, Discord, Slack, WhatsApp, …) | `scout gateway setup`, `gateway/platforms/ADDING_A_PLATFORM.md` |
 
 The reference list above is not the feature list — it is the set of topics that
-need more than their docs page. For everything else Scout ships, fetch
-`llms.txt` and it maps the question to the page that answers it.
+need more than the CLI help. For everything else Scout ships, check `scout --help`
+and the area `AGENTS.md` files.
 
 Two theming rules that hold even without loading the reference: **you apply skins yourself** (`scout config set display.skin <name>` — every surface repaints live within ~a second; don't tell the user to run `/skin`), and **to tweak one color, edit the ACTIVE skin** (`scout skin set <key> <hex>`) — never fork `default`, which drops the palette and resets the background.
 
@@ -195,7 +193,6 @@ terminal(command="tmux new-session -d -s resumed 'scout --resume 20260225_143052
 - **Use tmux for interactive sessions** — raw PTY mode has `\r` vs `\n` issues with prompt_toolkit
 - **For scheduled tasks**, use the `cronjob` tool instead of spawning — handles delivery and retry
 - **"delegate_task is capped at N" reports** — see `references/delegate-task-concurrency-diagnosis.md`. Three real cap paths in Scout; if none fired, the model is self-limiting and rationalising it as "the runtime caps."
-- **"Can $external_app use my Scout Portal subscription / OAuth?"** — see `references/portal-auth-for-third-party-apps.md`. Walk the user through three layers (plugin-vs-app, what Portal actually exposes, local-broker-proxy option).
 
 ## Surfaces (quick orientation)
 

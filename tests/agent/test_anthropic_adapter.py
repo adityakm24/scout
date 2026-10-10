@@ -1355,7 +1355,7 @@ class TestConvertToolsToAnthropicDedup:
 
     Anthropic rejects requests with duplicate tool names.  This guard converts
     a hard failure into a warning log.  See:
-    https://github.com/SpaceshipResearch/scout-agent/issues/18478
+    https://github.com/adityakm24/scout/issues/18478
     """
 
     def _make_openai_tool(self, name: str) -> dict:
@@ -1811,7 +1811,7 @@ def test_oauth_system_prompt_sanitizer_preserves_docs_url():
                     "Scout Agent by SpaceshipResearch uses scout-agent skills. "
                     "Docs: https://scout-agent.spaceshipresearch.com/docs ; "
                     "interpreter ~/.scout/scout-agent/venv/bin/python ; "
-                    "source github.com/SpaceshipResearch/scout-agent ; mail scout-agent@example.com ; "
+                    "source github.com/adityakm24/scout ; mail scout-agent@example.com ; "
                     "skill_view(name='scout-agent') ; scout-agent's docs ; built by scout-agent."
                 ),
             },
@@ -1829,7 +1829,7 @@ def test_oauth_system_prompt_sanitizer_preserves_docs_url():
     # Paths and repo slugs are addresses too: a subagent told to run
     # ``~/.scout/claude-code/venv/bin/python`` fails on a file that does not exist.
     assert "~/.scout/scout-agent/venv/bin/python" in system_text
-    assert "github.com/SpaceshipResearch/scout-agent" in system_text
+    assert "github.com/adityakm24/scout" in system_text
     assert "scout-agent@example.com" in system_text
     assert "skill_view(name='scout-agent')" in system_text  # a quoted slug is an identifier
     assert "built by claude-code." in system_text  # a sentence-final dot is prose

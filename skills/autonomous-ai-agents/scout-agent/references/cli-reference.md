@@ -1,7 +1,6 @@
 # Scout CLI Reference
 
-Live sources when anything looks stale: `scout --help`, `scout <command> --help`,
-https://scout-agent.spaceshipresearch.com/docs/reference/cli-commands
+Live sources when anything looks stale: `scout --help`, `scout <command> --help`.
 
 ### Global Flags
 
@@ -79,8 +78,6 @@ scout gateway run|install|start|stop|restart|status|setup
 ```
 
 20+ platforms: Telegram, Discord, Slack, WhatsApp (Baileys + Business Cloud API), iMessage (Photon — `scout photon setup`), Signal, Email, SMS, Matrix, Mattermost, Teams, LINE, SimpleX, ntfy, Google Chat, Home Assistant, DingTalk, Feishu, WeCom, Weixin, API Server, Webhooks. Open WebUI connects via the API Server adapter. Most adapters ship under `plugins/platforms/`.
-Docs: https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/
-
 ### Sessions
 
 ```
@@ -142,10 +139,10 @@ Plugin- and provider-supplied subcommands (e.g. `scout photon setup`) only appea
 
 | Looking for... | Location |
 |---|---|
-| Config options | `scout config edit` · [Configuration docs](https://scout-agent.spaceshipresearch.com/docs/user-guide/configuration) |
-| Tools / toolsets | `scout tools list` · [Tools reference](https://scout-agent.spaceshipresearch.com/docs/reference/tools-reference) |
-| Skills catalog | `scout skills browse` · [Skills catalog](https://scout-agent.spaceshipresearch.com/docs/reference/skills-catalog) |
-| Provider setup | `scout model` · [Providers guide](https://scout-agent.spaceshipresearch.com/docs/integrations/providers) |
-| Env variables | `scout config env-path` · [Env vars reference](https://scout-agent.spaceshipresearch.com/docs/reference/environment-variables) |
+| Config options | `scout config edit` |
+| Tools / toolsets | `scout tools list` |
+| Skills catalog | `scout skills browse` |
+| Provider setup | `scout model` |
+| Env variables | `scout config env-path` |
 | Gateway logs | `~/.scout/logs/gateway.log` (or `scout logs`) |
 | Sessions | `scout sessions browse` (reads state.db) |

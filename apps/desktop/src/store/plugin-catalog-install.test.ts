@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { PLUGIN_CATALOG_URL, type PluginCatalogLookup } from '@/lib/plugin-catalog'
+import { PLUGIN_CATALOG_PATH, type PluginCatalogLookup } from '@/lib/plugin-catalog'
 
 import { $agentPlugins } from './agent-plugins'
 import { $notifications } from './notifications'
@@ -58,22 +58,21 @@ describe('requestPluginCatalogInstallFromDeepLink', () => {
     expect(toasts[0]?.message).toContain(fragment)
   })
 
-  it('resolves against the live catalog feed by default and rejects unknown names', async () => {
-    const feed = JSON.stringify([
-      { name: 'weather', repo: 'https://github.com/x/weather', sha: 'a'.repeat(40), subdir: '' }
-    ])
-
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(feed, { status: 200 }))
+  it("resolves against the backend's catalog by default and rejects unknown names", async () => {
+    const entries = [{ name: 'weather', repo: 'https://github.com/x/weather', sha: 'a'.repeat(40), subdir: '' }]
+    const api = vi.fn(async () => ({ entries }))
+    vi.stubGlobal('scoutDesktop', { ...window.scoutDesktop, api })
 
     await requestPluginCatalogInstallFromDeepLink('weather-evil')
 
-    expect(fetchSpy).toHaveBeenCalledWith(PLUGIN_CATALOG_URL, expect.anything())
+    expect(api).toHaveBeenCalledWith({ path: PLUGIN_CATALOG_PATH })
     expect($pluginInstallRequest.get()).toBeNull()
     expect($notifications.get()[0]?.message).toContain('\u201Cweather-evil\u201D is not in the Scout plugin catalog')
 
     await requestPluginCatalogInstallFromDeepLink('weather')
 
     expect($pluginInstallRequest.get()).toMatchObject({ catalogName: 'weather', repo: 'https://github.com/x/weather' })
+    vi.unstubAllGlobals()
   })
 })
 

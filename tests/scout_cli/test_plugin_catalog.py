@@ -28,7 +28,7 @@ def test_shipped_catalog_entries_are_all_valid_and_pinned():
     root = pc.get_catalog_dir()
     files = [p for p in root.glob("*.yaml") if p.name != "removed.yaml"]
     entries = pc.load_catalog()
-    assert len(entries) == len(files) >= 1
+    assert len(entries) == len(files)
     assert all(pc._SHA_RE.match(e.sha) and e.repo.startswith("https://") for e in entries)
     assert all(e.install_identifier.startswith(e.repo) for e in entries)
 

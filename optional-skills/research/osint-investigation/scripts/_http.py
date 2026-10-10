@@ -13,7 +13,7 @@ import urllib.request
 
 DEFAULT_UA = (
     "scout-osint-investigation/0.2 "
-    "(+https://github.com/SpaceshipResearch/scout-agent; "
+    "(+https://github.com/adityakm24/scout; "
     "set SCOUT_OSINT_UA env var to identify yourself per "
     "Wikimedia / SEC fair-use guidance)"
 )

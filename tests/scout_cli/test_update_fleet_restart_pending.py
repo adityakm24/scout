@@ -99,7 +99,7 @@ def _patch_update_deps(monkeypatch, tmp_path, run_side_effect):
     monkeypatch.setattr(
         scout_main,
         "_get_origin_url",
-        lambda *a, **k: "https://github.com/SpaceshipResearch/scout-agent.git",
+        lambda *a, **k: "https://github.com/adityakm24/scout.git",
     )
     monkeypatch.setattr(update_cmd, "_is_fork", lambda *a, **k: False)
     monkeypatch.setattr(

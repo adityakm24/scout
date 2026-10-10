@@ -7,9 +7,7 @@ the same inventory + live enable/disable contract as runtime plugins.
 Keep this tree for real shipped plugins (and the small authoring fixtures that
 dogfood the SDK). One-off demos that rebuild a core chrome piece 1:1 do not
 belong here — they double the UI and confuse Capabilities ▸ Plugins. Publish those
-in the companion
-[`scout-example-plugins`](https://github.com/SpaceshipResearch/scout-example-plugins)
-repo instead.
+in a separate examples repo instead.
 
 User- and agent-authored plugins load at runtime from
 `$SCOUT_HOME/desktop-plugins/<name>/plugin.js` (the disk door) — see the

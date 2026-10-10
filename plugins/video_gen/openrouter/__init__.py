@@ -172,7 +172,7 @@ class OpenRouterVideoGenProvider(VideoGenProvider):
 
     def _headers(self, api_key: str) -> Dict[str, str]:
         return {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
-                "HTTP-Referer": "https://github.com/SpaceshipResearch/scout-agent", "X-Title": "Scout Agent"}
+                "HTTP-Referer": "https://github.com/adityakm24/scout", "X-Title": "Scout Agent"}
 
     def _session(self) -> Any:
         import requests

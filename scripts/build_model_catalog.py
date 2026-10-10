@@ -14,10 +14,7 @@ Usage::
 
     python scripts/build_model_catalog.py
 
-Output: ``website/static/api/model-catalog.json``
-
-Live URL (after ``deploy-site.yml`` runs on merge to main):
-``https://scout-agent.spaceshipresearch.com/docs/api/model-catalog.json``
+Output: ``scout_cli/data/model-catalog.json`` (ships with Scout; scout_cli/model_catalog.py reads it)
 """
 
 from __future__ import annotations
@@ -39,7 +36,7 @@ from scout_cli.models import (  # noqa: E402
     _PROVIDER_MODELS,
 )
 
-OUTPUT_PATH = os.path.join(REPO_ROOT, "website", "static", "api", "model-catalog.json")
+OUTPUT_PATH = os.path.join(REPO_ROOT, "scout_cli", "data", "model-catalog.json")
 CATALOG_VERSION = 1
 
 

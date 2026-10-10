@@ -2,7 +2,7 @@
 name: rss-feeds
 description: "Read RSS, Atom, JSON feeds; discover feeds behind a page."
 version: 1.0.0
-author: Teknium (teknium1), Scout Agent
+author: Scout Agent
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
@@ -91,6 +91,6 @@ truncated or the first paragraph only.
 
 ## Verification
 
-`python3 scripts/feed.py read https://github.com/SpaceshipResearch/scout-agent/releases.atom
+`python3 scripts/feed.py read https://github.com/adityakm24/scout/releases.atom
 --limit 1` prints one entry with a `releases/tag/` link and a `[atom]` format tag;
 `discover https://simonwillison.net/` prints an `/atom/` URL.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """List the test files that carry a platforms() gate for a given platform.
 
-Used by the marked-OS lane of ``.github/workflows/tests.yml`` to scope what
+Used by scripts/run_tests_parallel.py to scope what
 the macOS lane imports.
 
 Why scope at all, when ``pytest -m platforms`` already selects correctly?

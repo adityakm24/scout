@@ -55,7 +55,7 @@ def _discord_source(user_id: str = OPERATOR_ID):
         chat_id="1543941724672368680",
         chat_type="thread",
         user_id=user_id,
-        user_name="Teknium",
+        user_name="Alice",
         is_bot=False,
     )
 
@@ -72,21 +72,21 @@ class TestResolvedAllowlistSurvivesEnvReload:
     def test_username_env_plus_resolved_adapter_authorizes(self, monkeypatch):
         """THE incident shape: env holds usernames (post-reload), adapter holds
         resolved numeric IDs — the operator must stay authorized."""
-        monkeypatch.setenv("DISCORD_ALLOWED_USERS", "teknium,123mikeyd")
+        monkeypatch.setenv("DISCORD_ALLOWED_USERS", "alice,123mikeyd")
         runner = _make_runner(_resolved_adapter())
         assert runner._is_user_authorized(_discord_source()) is True
 
     def test_username_env_without_adapter_still_denies(self, monkeypatch):
         """No live adapter (or resolution never ran): usernames cannot match a
         numeric user_id — deny, exactly as before the fix."""
-        monkeypatch.setenv("DISCORD_ALLOWED_USERS", "teknium,123mikeyd")
+        monkeypatch.setenv("DISCORD_ALLOWED_USERS", "alice,123mikeyd")
         runner = _make_runner(adapter=None)
         assert runner._is_user_authorized(_discord_source()) is False
 
     def test_stranger_denied_despite_resolved_adapter(self, monkeypatch):
         """The union must not widen access: a sender in neither the env list
         nor the resolved set stays denied."""
-        monkeypatch.setenv("DISCORD_ALLOWED_USERS", "teknium,123mikeyd")
+        monkeypatch.setenv("DISCORD_ALLOWED_USERS", "alice,123mikeyd")
         runner = _make_runner(_resolved_adapter())
         assert runner._is_user_authorized(_discord_source("666000666000666000")) is False
 
@@ -118,7 +118,7 @@ class TestResolvedAllowlistSurvivesEnvReload:
         """A resolver returning a non-collection (e.g. a MagicMock in a test
         fixture) must be discarded by the isinstance guard, not iterated or
         truthy-tested into an authorization."""
-        monkeypatch.setenv("DISCORD_ALLOWED_USERS", "teknium")
+        monkeypatch.setenv("DISCORD_ALLOWED_USERS", "alice")
         adapter = SimpleNamespace(resolved_allowlist_user_ids=lambda: MagicMock())
         runner = _make_runner(adapter)
         assert runner._is_user_authorized(_discord_source("666000666000666000")) is False
@@ -129,7 +129,7 @@ class TestResolvedAllowlistSurvivesEnvReload:
         def _boom():
             raise RuntimeError("adapter mid-reconnect")
 
-        monkeypatch.setenv("DISCORD_ALLOWED_USERS", f"teknium,{OPERATOR_ID}")
+        monkeypatch.setenv("DISCORD_ALLOWED_USERS", f"alice,{OPERATOR_ID}")
         adapter = SimpleNamespace(resolved_allowlist_user_ids=_boom)
         runner = _make_runner(adapter)
         # numeric entry in env still authorizes
@@ -156,5 +156,5 @@ class TestDiscordAdapterResolvedAccessor:
         """Unresolved usernames and the '*' wildcard must not pass through:
         usernames can't match numeric user_ids, and '*' would widen the
         gateway layer to allow-everyone from adapter memory alone."""
-        adapter = self._adapter({"teknium", "*", OPERATOR_ID})
+        adapter = self._adapter({"alice", "*", OPERATOR_ID})
         assert adapter.resolved_allowlist_user_ids() == {OPERATOR_ID}

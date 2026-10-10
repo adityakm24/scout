@@ -146,7 +146,7 @@ For long-lived processes: Scout gateway, tui_gateway, a daemon, a process that's
 
 For Scout, use a separate development checkout and data home, not a live
 production generation. Follow the
-[PM developer workflow](https://scout-agent.spaceshipresearch.com/docs/reference/package-management#developer-workflow)
+[PM developer workflow](https://github.com/adityakm24/scout/blob/main/CONTRIBUTING.md#development-environment)
 and activate that checkout — PowerShell: `. .\activate.ps1`. The declared `dev`
 extra includes debugpy, which PM activation does not sync (`all` excludes it).
 Through `terminal`, build a fresh, caller-owned debug/test environment with the

@@ -86,8 +86,6 @@ apps/
 # Test suite — not shipped in production images
 tests/
 
-# Documentation site (Docusaurus)
-website/
 
 # Keep the source artwork needed by web's icon-generation prebuild.
 assets/
@@ -98,8 +96,6 @@ assets/*
 !assets/backgrounds/**
 infographic/
 
-# Plugin-level docs (scout-achievements ships docs/ but the runtime doesn't read them)
-plugins/scout-achievements/docs/
 
 # Nix / Homebrew / AUR packaging metadata — irrelevant to Docker
 nix/

@@ -264,11 +264,6 @@
   const API = "/api/plugins/kanban";
   const MIME_TASK = "text/x-scout-task";
 
-  // Docs link — surfaced as a `?` icon next to the board switcher and as
-  // `title=` hints on unlabelled controls. Kept in one place so rebrands or
-  // path changes are a single edit.
-  const DOCS_URL = "https://scout-agent.nousresearch.com/docs/user-guide/features/kanban";
-  const DOCS_TUTORIAL_URL = "https://scout-agent.nousresearch.com/docs/user-guide/features/kanban-tutorial";
 
   // localStorage key for the user's selected board. Independent of the
   // CLI's on-disk ``<root>/kanban/current`` pointer so browser users
@@ -1796,20 +1791,6 @@
   // Board switcher (multi-project)
   // -------------------------------------------------------------------------
 
-  // Small `?` affordance next to the board controls. Opens the kanban docs
-  // page in a new tab so users can look up what any of the widgets mean
-  // without losing the current board view.
-  function DocsLink() {
-    return h("a", {
-      href: DOCS_URL,
-      target: "_blank",
-      rel: "noopener noreferrer",
-      className: "scout-kanban-docs-link",
-      title: "Open Scout Kanban docs in a new tab",
-      "aria-label": "Scout Kanban documentation",
-    }, "?");
-  }
-
   // ---------------------------------------------------------------------
   // OrchestrationPanel — collapsible settings panel for the kanban
   // orchestrator (orchestrator profile picker, default assignee picker,
@@ -2148,7 +2129,6 @@
             "Board settings — name, description, and the default project directory new tasks inherit"),
         }, tx(t, "boardSettings", "Settings")),
         h(BoardProjectBadge, { board: current, onUnbind: props.onUnbindProject }),
-        h(DocsLink, null),
       );
     }
 
@@ -2177,7 +2157,6 @@
           ),
         ),
         h("div", { className: "flex-1" }),
-        h(DocsLink, null),
         h(Button, {
           onClick: props.onSettingsClick,
           size: "sm",

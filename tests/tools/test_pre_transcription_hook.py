@@ -35,7 +35,7 @@ import scout_cli.plugins as plugins_mod
 from tools import transcription_tools
 
 
-PROMPT = "Scout, Teknium, SpaceshipResearch, kanban"
+PROMPT = "Scout, Alice, SpaceshipResearch, kanban"
 
 
 # ---------------------------------------------------------------------------

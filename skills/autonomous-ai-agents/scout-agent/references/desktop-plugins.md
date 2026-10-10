@@ -23,8 +23,7 @@ There are TWO on-disk doors, same contract and hot reload:
   gate). Tell the user to flip it on after installing — don't debug a
   "plugin not appearing" report before checking that toggle.
 
-Full human reference (every export, area payloads, backend, security):
-`website/docs/developer-guide/desktop-plugin-sdk.md`.
+Full reference (every export, area payloads, backend, security): `apps/desktop/src/sdk/`.
 
 ## When to Use
 

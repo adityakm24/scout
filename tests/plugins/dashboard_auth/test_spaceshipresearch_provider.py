@@ -211,7 +211,7 @@ class TestConfigYamlSource:
 
     def test_config_yaml_only_client_id_registers(self, patch_config, monkeypatch):
         """No env var, only config.yaml — plugin reads from config and
-        registers successfully. This is the path Teknium's review pushed
+        registers successfully. This is the path the review pushed
         for (".env is for secrets only")."""
         monkeypatch.delenv("SCOUT_DASHBOARD_OAUTH_CLIENT_ID", raising=False)
         monkeypatch.delenv("SCOUT_DASHBOARD_PORTAL_URL", raising=False)

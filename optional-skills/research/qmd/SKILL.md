@@ -2,7 +2,7 @@
 name: qmd
 description: Hybrid local search over notes, docs, and transcripts.
 version: 1.0.0
-author: Scout Agent + Teknium
+author: Scout Agent
 license: MIT
 platforms: [macos, linux]
 metadata:

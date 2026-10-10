@@ -1,7 +1,4 @@
 import { skillCatalogInstallIdentifier } from '@scout/shared'
-import { queryOptions, useQuery } from '@tanstack/react-query'
-
-import { queryClient } from '@/lib/query-client'
 
 export type CatalogKind = 'skills' | 'plugins'
 
@@ -40,10 +37,6 @@ export interface CatalogEntry {
   search: string
 }
 
-const DOCS_ORIGIN = 'https://scout-agent.spaceshipresearch.com'
-// The public domain redirects here without CORS headers on the redirect.
-// Use the docs' actual static host, not GitHub's API or repository endpoints.
-const CATALOG_BASE = 'https://spaceshipresearch.github.io/scout-agent/docs/api'
 const text = (value: unknown): string => (typeof value === 'string' ? value : '')
 const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter(v => typeof v === 'string') : [])
 
@@ -136,9 +129,7 @@ export function parseCatalog(kind: CatalogKind, data: unknown): CatalogEntry[] {
       platforms,
       requirements,
       sourceUrl: webUrl(row.repo || row.sourceUrl),
-      docsUrl:
-        webUrl(row.docsUrl) ||
-        (text(row.docsPath) ? `${DOCS_ORIGIN}/docs/user-guide/skills/${text(row.docsPath)}` : null),
+      docsUrl: webUrl(row.docsUrl),
       imageUrl: kind === 'plugins' ? catalogImageUrl(row.image) : null,
       screenshots:
         kind === 'plugins'
@@ -172,59 +163,4 @@ export function parseCatalog(kind: CatalogKind, data: unknown): CatalogEntry[] {
   }
 
   return [...entries.values()]
-}
-
-export async function fetchCatalog(kind: CatalogKind): Promise<CatalogEntry[]> {
-  // These are the same published snapshots as the docs galleries. Never fan
-  // out to repositories, README previews, avatars, or live hub searches.
-  const response = await fetch(`${CATALOG_BASE}/${kind}.json`, {
-    credentials: 'omit',
-    signal: AbortSignal.timeout(60_000)
-  })
-
-  if (!response.ok) {
-    throw new Error(`Catalog HTTP ${response.status}`)
-  }
-
-  return parseCatalog(kind, await response.json())
-}
-
-const catalogQuery = (kind: CatalogKind) =>
-  queryOptions({
-    queryKey: ['public-catalog', kind],
-    queryFn: () => fetchCatalog(kind),
-    staleTime: 30 * 60_000,
-    // The skills snapshot parses to ~100k rows; release it once the page has
-    // been left long enough that a revisit is a fresh browse anyway.
-    gcTime: 30 * 60_000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-    retryOnMount: false,
-    retry: false
-  })
-
-export function useCatalog(kind: CatalogKind) {
-  return useQuery({
-    ...catalogQuery(kind),
-    // A failed catalog stays parked across remounts (tab switches) until the
-    // user explicitly chooses Try again.
-    enabled: query => query.state.status !== 'error'
-  })
-}
-
-/** Warm a catalog while the browser is idle so switching tabs doesn't pay the fetch + parse. */
-export function prefetchCatalogWhenIdle(kind: CatalogKind) {
-  const prefetch = () => void queryClient.prefetchQuery(catalogQuery(kind))
-
-  // Safari/WebKit (the phone app's web view) has no requestIdleCallback.
-  if (typeof requestIdleCallback !== 'function') {
-    const timer = setTimeout(prefetch, 1_000)
-
-    return () => clearTimeout(timer)
-  }
-
-  const id = requestIdleCallback(prefetch, { timeout: 5_000 })
-
-  return () => cancelIdleCallback(id)
 }

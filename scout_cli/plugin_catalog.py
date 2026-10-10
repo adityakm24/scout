@@ -1,4 +1,4 @@
-"""Plugin catalog — curated, SpaceshipResearch-approved Scout plugins shipped with the repo.
+"""Plugin catalog — curated Scout plugins shipped with the repo.
 
 Mirrors the ``optional-mcps/`` MCP-catalog pattern: one YAML file per entry under the in-tree
 ``plugin-catalog/`` directory, pinned to an exact 40-character commit SHA. Presence in the directory IS
@@ -6,10 +6,10 @@ the human-merged approval gate; SHA bumps are new, re-reviewed PRs; ``removed.ya
 (installs of a removed name/repo are refused with the recorded reason). Full policy:
 ``plugin-catalog/README.md``.
 
-Live refresh: the docs build publishes the same data as ONE JSON document
-(``website/scripts/extract-plugins.py`` → ``/docs/api/plugin-catalog.json``, like the skills index), so
-an installed Scout sees new entries and removals without updating. A fetch failure reuses the last valid
-cached copy regardless of age, then falls back to the in-tree copy when no valid cache exists.
+Live refresh: when ``LIVE_CATALOG_URL`` names a published copy of the same data (``{"entries": [...],
+"removed": [...]}``), an installed Scout sees new entries and removals without updating. A fetch failure
+reuses the last valid cached copy regardless of age, then falls back to the in-tree copy. With no URL
+(the default: nothing is published) the in-tree copy is the catalog.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ CATALOG_TIERS = ("official", "community")
 # Browse taxonomy for the catalog page / picker. Entries without one land on the Desktop shelf
 # (the common case for community submissions); "general" is for plugins that fit no shelf.
 CATALOG_CATEGORIES = ("desktop", "memory", "platform", "web", "tools", "voice", "automation", "models", "general")
-LIVE_CATALOG_URL = "https://scout-agent.spaceshipresearch.com/docs/api/plugin-catalog.json"
+LIVE_CATALOG_URL = ""
 LIVE_CATALOG_TTL_SECONDS = 6 * 60 * 60
 # Offline pins expire, but cached removals remain a permanent kill list.
 LIVE_CATALOG_MAX_STALE_SECONDS = 24 * 60 * 60
@@ -353,6 +353,8 @@ def fetch_live_catalog(*, force: bool = False) -> Optional[Dict[str, Any]]:
     :data:`LIVE_CATALOG_FAILURE_TTL_SECONDS` so a dead host costs one timeout per TTL window, not one
     per call (``force`` bypasses both caches)."""
     global _live_fetch_failed_until
+    if not LIVE_CATALOG_URL:
+        return None
     cache = _live_cache_path()
     try:
         if not force and cache.is_file() and time.time() - cache.stat().st_mtime < LIVE_CATALOG_TTL_SECONDS:

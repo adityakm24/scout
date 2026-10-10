@@ -5,7 +5,6 @@ import { memo, type ReactNode, useDeferredValue, useEffect, useRef, useState } f
 import { PageLoader } from '@/components/page-loader'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
-import { ErrorState } from '@/components/ui/error-state'
 import { Masonry } from '@/components/ui/masonry'
 import { Reel } from '@/components/ui/reel'
 import { SearchField } from '@/components/ui/search-field'
@@ -18,9 +17,8 @@ import { cn } from '@/lib/utils'
 import { DetailColumn, ListColumn, MasterDetail } from '../../master-detail'
 import { PanelEmpty } from '../../overlays/panel'
 
-import { CatalogAlert } from './catalog-alert'
 import { CatalogCard } from './catalog-card'
-import { type CatalogEntry, type CatalogKind, useCatalog } from './catalog-data'
+import { type CatalogEntry, type CatalogKind } from './catalog-data'
 import { CatalogDetail } from './catalog-detail'
 import { CatalogDetailDialog } from './catalog-detail-dialog'
 import { CatalogFilters } from './catalog-filters'
@@ -61,14 +59,6 @@ interface CatalogBrowserProps {
 const PAGE_SIZE = 60
 // The skills hub carries ~10k distinct tags; the rail is for browsing, search covers the tail.
 const TAG_LIMIT = 16
-// The browser's own wording for an unreachable host ("Failed to fetch", "NetworkError when
-// attempting to fetch resource.", "Load failed") is not for people.
-const NETWORK_ERROR_RE = /failed to fetch|networkerror|load failed|network request failed/i
-
-function loadErrorText(error: Error, offline: string) {
-  return NETWORK_ERROR_RE.test(error.message) ? offline : error.message
-}
-
 // Discovery shelves preview a category; "See all" opens the full list. Every
 // rendered card is restyled whenever a modal locks the page.
 const SHELF_SIZE = 6
@@ -135,7 +125,6 @@ export const CatalogBrowser = memo(function CatalogBrowser({
   const { t } = useI18n()
   const c = t.catalog
   const cardView = useStore($catalogCardView)
-  const { data, isPending, error, refetch } = useCatalog(kind)
   const deferredQuery = useDeferredValue((query ?? '').trim().toLowerCase())
   const [selectedId, setSelectedId] = useState<string | null>(selectedEntryId ?? null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -172,7 +161,7 @@ export const CatalogBrowser = memo(function CatalogBrowser({
   const root = useRef<HTMLDivElement>(null)
   useEffect(() => (CATALOG_POINTER_ENABLED && root.current ? trackCatalogPointer(root.current) : undefined), [])
 
-  const entries = mergeInstalled(data ?? [], installedEntries ?? [], matchInstalled)
+  const entries = mergeInstalled([], installedEntries ?? [], matchInstalled)
   const filtered = sortCatalog(filterCatalog(entries, facets, deferredQuery, isInstalled), sort, kind)
 
   const discover =
@@ -339,22 +328,9 @@ export const CatalogBrowser = memo(function CatalogBrowser({
             </div>
           </header>
           {notice}
-          {error && entries.length > 0 && (
-            <CatalogAlert onRetry={() => void refetch()} retryLabel={c.retry} title={c.loadFailed}>
-              {loadErrorText(error, c.loadFailedOffline)}
-            </CatalogAlert>
-          )}
           <div className="min-h-0 flex-1">
-            {isPending && !entries.length ? (
+            {installedPending && !entries.length ? (
               <PageLoader label={t.skills.loading} />
-            ) : error && !entries.length ? (
-              <div className="grid h-full place-items-center p-5">
-                <ErrorState description={loadErrorText(error, c.loadFailedOffline)} title={c.loadFailed}>
-                  <Button onClick={() => void refetch()} size="sm" variant="secondary">
-                    {c.retry}
-                  </Button>
-                </ErrorState>
-              </div>
             ) : !selected ? (
               <PanelEmpty
                 action={

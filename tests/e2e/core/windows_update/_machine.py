@@ -72,9 +72,9 @@ UPDATE_TIMEOUT = 1200.0
 CMD_TIMEOUT = 300.0
 GATEWAY_READY_TIMEOUT = 240.0
 CANONICAL_URLS = (
-    "https://github.com/SpaceshipResearch/scout-agent.git",
-    "https://github.com/SpaceshipResearch/scout-agent",
-    "git@github.com:SpaceshipResearch/scout-agent.git",
+    "https://github.com/adityakm24/scout.git",
+    "https://github.com/adityakm24/scout",
+    "git@github.com:adityakm24/scout.git",
 )
 NEXT_MARKER = ".scout-e2e-next"
 # Captured before any machine strips PATH: harness plumbing (serve.git, rev-parse) only.

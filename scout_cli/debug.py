@@ -577,7 +577,7 @@ def _run_debug_share_spaceshipresearch(args, *, log_lines: int, redact: bool) ->
     print("\nShare this private link with the SpaceshipResearch team — only SpaceshipResearch staff "
           "(via Google login) can open it.\n"
           "\nPick up the discussion in:\n"
-          "  GitHub Issues        https://github.com/SpaceshipResearch/scout-agent/issues\n"
+          "  GitHub Issues        https://github.com/adityakm24/scout/issues\n"
           "  Scout Portal Support  https://portal.spaceshipresearch.com/help\n"
           "  Discord              https://discord.gg/SpaceshipResearch")
 

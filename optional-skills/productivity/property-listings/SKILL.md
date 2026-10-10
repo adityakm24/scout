@@ -2,7 +2,7 @@
 name: property-listings
 description: Present property and rental listings as desktop cards.
 version: 0.1.0
-author: Teknium (teknium1), Scout Agent
+author: Scout Agent
 license: MIT
 platforms: [linux, macos, windows]
 metadata:

@@ -24,7 +24,9 @@ from tools.skills_hub_sources import BrowseShSource, LobeHubSource, UrlSource, W
 # Log-record parity with the origin module.
 logger = logging.getLogger("tools.skills_hub")
 
-SCOUT_INDEX_URL = "https://scout-agent.spaceshipresearch.com/docs/api/skills-index.json"
+# A published skills index (``{"skills": [...]}``) to search instead of fanning out to every
+# registry; empty = none is published, so searches go to the registries directly.
+SCOUT_INDEX_URL = ""
 SCOUT_INDEX_TTL = 6 * 3600  # 6 hours
 
 
@@ -34,7 +36,7 @@ def _scout_index_cache_file() -> Path:
 
 
 def _load_scout_index() -> Optional[dict]:
-    """Fetch the centralized skills index (docs site, rebuilt daily), cached
+    """Fetch the centralized skills index (when ``SCOUT_INDEX_URL`` names one), cached
     locally for SCOUT_INDEX_TTL; on any failure serve the stale cache.
 
     Brotli is deliberately NOT negotiated: the index is tens of MB and httpx's
@@ -44,6 +46,8 @@ def _load_scout_index() -> Optional[dict]:
     ignore the header and return Brotli anyway.
     """
     from tools.skills_hub import _read_json_if_fresh
+    if not SCOUT_INDEX_URL:
+        return None
     cache_file = _scout_index_cache_file()
     cached = _read_json_if_fresh(cache_file, SCOUT_INDEX_TTL)
     if cached is not None:

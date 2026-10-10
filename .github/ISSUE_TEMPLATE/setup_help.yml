@@ -12,8 +12,7 @@ body:
         - Run `scout debug share` and paste the links in the Debug Report section below
         - If you're in a chat session, you can use `/debug` instead — it does the same thing
         - Try `scout update` to get the latest version
-        - Check the [README troubleshooting section](https://github.com/SpaceshipResearch/scout-agent#troubleshooting)
-        - For general questions, consider the [SpaceshipResearch Discord](https://discord.gg/SpaceshipResearch) for faster help
+        - Run `scout doctor` and include its output
 
   - type: textarea
     id: description

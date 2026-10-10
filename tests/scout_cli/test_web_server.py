@@ -64,7 +64,7 @@ def _install_example_plugin(_isolate_scout_home):
     The user-plugin source is preferred over a transient
     ``SCOUT_BUNDLED_PLUGINS`` override because the bundled dir is
     resolved per-call (other tests in the suite implicitly rely on the
-    real bundled plugins — kanban, scout-achievements, model providers
+    real bundled plugins — kanban, model providers
     — being available, and globally swapping that root would yank them
     all). User plugins are first in the discovery search order, so
     laying down the fixture here is enough.
@@ -4480,14 +4480,10 @@ class TestPluginAPIAuth:
         """Auth must be plugin-agnostic, not kanban-specific.
 
         The middleware fix is at the gate level (no per-plugin allowlist),
-        so any plugin's API surface — kanban, scout-achievements, future
-        plugins — must require the session token. Hit a non-kanban plugin
-        path to lock that in.
+        so any plugin's API surface — kanban or any future plugin — must
+        require the session token. Hit a non-kanban plugin path to lock that in.
         """
-        # Real plugin path (scout-achievements is loaded by default).
-        resp = self.client.get("/api/plugins/scout-achievements/overview")
-        assert resp.status_code == 401
-        # Same for an arbitrary plugin namespace that doesn't even exist —
+        # An arbitrary plugin namespace that doesn't even exist —
         # the middleware should 401 before routing decides 404, so an
         # attacker can't fingerprint plugin names by status codes.
         resp = self.client.get("/api/plugins/_definitely_not_a_plugin_/anything")

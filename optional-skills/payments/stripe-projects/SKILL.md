@@ -2,7 +2,7 @@
 name: stripe-projects
 description: Provision SaaS services + sync creds via Stripe Projects.
 version: 0.1.0
-author: Teknium (teknium1), Scout Agent
+author: Scout Agent
 license: MIT
 platforms: [linux, macos]
 metadata:

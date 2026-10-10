@@ -14,7 +14,7 @@ from scout_cli.update_channel import STABLE_TAG_RE, is_canary_tag
 
 logger = logging.getLogger(__name__)
 _PUBLIC_BASE = "https://scout-assets.spaceshipresearch.com"
-OFFICIAL_REPOSITORY = "SpaceshipResearch/scout-agent"
+OFFICIAL_REPOSITORY = "adityakm24/scout"
 _GITHUB_ORIGIN = re.compile(
     r"^(?:https://github\.com/|git@github\.com:|ssh://git@github\.com/)"
     r"([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?/?$", re.IGNORECASE,

@@ -159,7 +159,7 @@ class TestHoldInboundAcrossReconnect:
     supersession). This covers the disconnect/reconnect path only.
 
     Timing: no wall-clock races. Flush paths under test use delay=0 and/or
-    entered/release ``asyncio.Event`` sync (teknium review rule on #72037).
+    entered/release ``asyncio.Event`` sync (review rule on #72037).
     """
 
     @staticmethod
@@ -218,7 +218,7 @@ class TestHoldInboundAcrossReconnect:
     async def test_flush_cancel_after_pop_holds_event(self):
         """Cancel after pop (before handle_message returns) must hold, not lose.
 
-        Uses entered/release Events — no sleep timing (teknium #72037 rule).
+        Uses entered/release Events — no sleep timing (#72037 rule).
         Connected path then schedules redispatch (#83878).
         """
         adapter = _make_adapter()

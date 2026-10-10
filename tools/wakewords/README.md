@@ -1,8 +1,7 @@
 # Bundled wake-word models
 
 `hey_scout.tflite` — the on-device "Hey Scout" hotword model. This is the
-default detector for the wake word feature (see
-`website/docs/user-guide/features/wake-word.md`); no training or setup is
+default detector for the wake word feature; no training or setup is
 required to say "hey scout".
 
 - **Engine:** [pyopen-wakeword](https://github.com/rhasspy/pyopen-wakeword)

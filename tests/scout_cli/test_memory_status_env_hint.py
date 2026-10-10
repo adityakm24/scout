@@ -1,6 +1,6 @@
 """`scout memory status` should explain *why* a provider is unavailable.
 
-Regression coverage for SpaceshipResearch/scout-agent#2765: when the selected
+Regression coverage for adityakm24/scout#2765: when the selected
 provider reports unavailable, status lists the missing env vars and surfaces
 the systemd/gateway ``.env``-inheritance gotcha that most often causes it.
 """

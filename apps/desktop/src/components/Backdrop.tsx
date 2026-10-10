@@ -17,7 +17,7 @@ export function Backdrop() {
         alt=""
         className="h-[160dvh] w-auto min-w-dvw object-cover object-left-top [filter:invert(var(--backdrop-invert-mul,1))]"
         fetchPriority="low"
-        src={assetPath('ds-assets/filler-bg0.jpg')}
+        src={assetPath('ds-assets/backdrop-grain.jpg')}
       />
     </div>
   )

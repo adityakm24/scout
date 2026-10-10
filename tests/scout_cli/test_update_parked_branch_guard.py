@@ -1,6 +1,6 @@
 """Regression tests for the parked-branch guard in ``scout update``.
 
-Live incident (2026-08-17, Teknium's Linux box): the source checkout was
+Live incident (2026-08-17, the Linux box): the source checkout was
 parked on a stale feature branch (``claude-code-inspired/local-terminal-
 memory-limit``, days behind main) left there by earlier tooling. ``scout
 update`` autostashed, refreshed lazy backends, synced skills and printed
@@ -217,7 +217,7 @@ def _patch_update_flow(monkeypatch, repo, run_real_git=True):
     monkeypatch.setattr(main_install_repair, "_is_windows", lambda: False)
     monkeypatch.setattr(
         scout_main, "_get_origin_url",
-        lambda *a, **k: "https://github.com/SpaceshipResearch/scout-agent.git",
+        lambda *a, **k: "https://github.com/adityakm24/scout.git",
     )
     monkeypatch.setattr(update_cmd, "_is_fork", lambda *a, **k: False)
     monkeypatch.setattr(update_cmd, "_discard_lockfile_churn", lambda *a, **k: None)

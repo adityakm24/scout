@@ -8,7 +8,7 @@ import { DirectiveContent } from './directive-text'
 
 const desktopWindow = window as unknown as { scoutDesktop?: Window['scoutDesktop'] }
 
-const PR_URL = 'https://github.com/SpaceshipResearch/scout-agent/pull/107950'
+const PR_URL = 'https://github.com/adityakm24/scout/pull/107950'
 
 function installDesktopBridge() {
   const openExternal = vi.fn().mockResolvedValue(undefined)

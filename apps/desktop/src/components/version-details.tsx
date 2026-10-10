@@ -66,7 +66,7 @@ export function VersionDetails({ version }: { version: DesktopVersionInfo }) {
           <dd className="break-all text-right">
             <ExternalLink
               className="break-all font-mono text-xs"
-              href={`https://github.com/SpaceshipResearch/scout-agent/commit/${version.commit}`}
+              href={`https://github.com/adityakm24/scout/commit/${version.commit}`}
               native
             >
               {version.commit.slice(0, 14)}

@@ -66,38 +66,6 @@ def test_ci_setup_exports_python_first_and_no_installer_policy(tmp_path, monkeyp
     subprocess.run([outputs["python-path"], "-I", "-c", "import sys; assert sys.prefix != sys.base_prefix"], check=True)
 
 
-def test_ci_packages_exports_python_and_preserves_real_child_exit(tmp_path, monkeypatch, local_toolchain):
-    import pm
-    from scripts.ci import python_packages
-    from tests.pm._fixtures import _wheel
-
-    wheels = tmp_path / "wheels"
-    wheels.mkdir()
-    _wheel(wheels, "ci_probe", "1.0")
-    python = pm.build_requirements_environment(
-        ["ci-probe==1.0"], out=tmp_path / "prepared", python=Path(sys.executable),
-        wheelhouse=wheels, offline=True, explicit=True,
-    )
-
-    def selected(name, requirements, *, explicit):
-        assert name == "ci-tools" and requirements == ["ci-probe==1.0"] and explicit
-        return python
-
-    monkeypatch.setattr(pm, "ensure_environment", selected)
-    exports, path = tmp_path / "environment", tmp_path / "path"
-    monkeypatch.setenv("GITHUB_ENV", str(exports))
-    monkeypatch.setenv("GITHUB_PATH", str(path))
-    assert python_packages.main(["ci-probe==1.0"]) == 0
-    values = dict(line.split("=", 1) for line in exports.read_text(encoding="utf-8").splitlines())
-    assert values["SCOUT_PYTHON"] == str(python)
-    assert values["VIRTUAL_ENV"] == str(python.parent.parent)
-    assert not any(name.startswith("UV_") for name in values)
-    assert path.read_text(encoding="utf-8").strip() == str(python.parent)
-    assert python_packages.main([
-        "ci-probe==1.0", "--", "-I", "-c", "import ci_probe; raise SystemExit(37)",
-    ]) == 37
-
-
 def test_termux_gate_checks_real_offline_wheels_and_application_uses_same_graph(tmp_path, local_toolchain):
     from pm.package import InstallError
     from scripts.termux import build_wheels, build_environment

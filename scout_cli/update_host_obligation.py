@@ -1,6 +1,6 @@
 """Host-scoped update→restart obligation for ``scout update``.
 
-Multiplex-only (Teknium ruling): exactly ONE ``scout gateway run`` per host serves every
+Multiplex-only: exactly ONE ``scout gateway run`` per host serves every
 profile, so "this pull still owes the fleet a restart" is a property of the HOST, not of one
 profile's ``SCOUT_HOME``. The legacy ``$SCOUT_HOME/fleet_restart_pending`` marker was
 per-home: ``scout -p coder update`` armed and cleared coder's copy while restarting the

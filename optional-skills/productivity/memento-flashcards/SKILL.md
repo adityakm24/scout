@@ -212,7 +212,7 @@ python -c "import youtube_transcript_api; print(youtube_transcript_api.__file__)
 ```
 
 Follow the isolated development-home setup in
-[Package Management](https://scout-agent.spaceshipresearch.com/docs/reference/package-management#developer-workflow)
+[CONTRIBUTING.md](https://github.com/adityakm24/scout/blob/main/CONTRIBUTING.md#development-setup)
 before preparation. Retry `youtube_quiz.py` with that Python and the actual
 skill directory returned by `skill_view`. For a remote or sandbox terminal,
 prepare an independent helper environment on that host. Never pip-install into

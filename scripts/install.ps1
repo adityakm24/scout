@@ -71,7 +71,7 @@ $script:BoundParams = $PSBoundParameters
 # Under iex, script scope is the caller's session and outlives a run; start
 # each run without the previous run's answer (see Set-LauncherUserPath).
 $script:BinDirOnCallerPath = $null
-$RepoUrl = if ($env:SCOUT_REPO_URL) { $env:SCOUT_REPO_URL } else { "https://github.com/SpaceshipResearch/scout-agent.git" }
+$RepoUrl = if ($env:SCOUT_REPO_URL) { $env:SCOUT_REPO_URL } else { "https://github.com/adityakm24/scout.git" }
 
 # --- BEGIN GENERATED: bootstrap pins (scripts/gen-bootstrap-pins.py) ---
 # Derived from pm/lock.json. DO NOT EDIT BY HAND:
@@ -1097,7 +1097,7 @@ function Stage-Desktop {
     # External-caller contract: -Stage desktop stays dispatchable on its own
     # (see Invoke-StageByName). The work is the same completion call with the
     # desktop product selected. Voice and wake extras are not synced here: pm
-    # lazy-installs them at first use (policy: Teknium, July 2026, #70509).
+    # lazy-installs them at first use (policy: July 2026, #70509).
     Invoke-SourceCompletion $true
     Publish-UserCommand
     Confirm-DesktopArtifact

@@ -13,8 +13,7 @@ import sys
 
 
 def usage_snapshot_document(snapshot) -> dict:
-    """``scout usage --json`` document. Schema is documented in website/docs/reference/cli-commands.md —
-    keep the keys stable; extend only by adding keys."""
+    """``scout usage --json`` document. Keep the keys stable; extend only by adding keys."""
     return {
         "provider": snapshot.provider,
         "source": snapshot.source,

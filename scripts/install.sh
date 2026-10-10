@@ -20,7 +20,7 @@ set -u
 # hygiene can't break the locked sync the way it used to before pm owned it.
 export UV_NO_CONFIG=1
 
-REPO_URL="${SCOUT_REPO_URL:-https://github.com/SpaceshipResearch/scout-agent.git}"
+REPO_URL="${SCOUT_REPO_URL:-https://github.com/adityakm24/scout.git}"
 BRANCH="main"
 INSTALL_COMMIT=""
 INSTALL_DIR="${SCOUT_INSTALL_DIR:-}"
@@ -100,7 +100,7 @@ fail() { STAGE_REASON="$1"; log_error "$1"; exit 1; }
 print_banner() {
     printf '\n%s%s' "$C_MAGENTA" "$C_BOLD"
     printf '%s\n' "┌─────────────────────────────────────────────────────────┐"
-    printf '%s\n' "│             ☤ Scout Agent Installer                    │"
+    printf '%s\n' "│             ✦ Scout Agent Installer                    │"
     printf '%s\n' "├─────────────────────────────────────────────────────────┤"
     printf '%s\n' "│  An open source AI agent by SpaceshipResearch.              │"
     printf '%s\n' "└─────────────────────────────────────────────────────────┘"

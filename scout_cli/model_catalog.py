@@ -23,13 +23,11 @@ from utils import atomic_json_write
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CATALOG_URL = (
-    "https://scout-agent.spaceshipresearch.com/docs/api/model-catalog.json")
-# The Docusaurus site sits behind Vercel, which occasionally 403s non-browser clients (bot
-# challenge); the raw GitHub copy is the same manifest and is not bot-gated.
-DEFAULT_CATALOG_FALLBACK_URLS: tuple[str, ...] = (
-    "https://raw.githubusercontent.com/SpaceshipResearch/scout-agent/main/website/static/api/model-catalog.json",
-)
+# The catalog ships with Scout (scout_cli/data/model-catalog.json, rebuilt by
+# scripts/build_model_catalog.py). ``model_catalog.url`` may point at a hosted copy to refresh from.
+DEFAULT_CATALOG_URL = ""
+DEFAULT_CATALOG_FALLBACK_URLS: tuple[str, ...] = ()
+SHIPPED_CATALOG_PATH = Path(__file__).resolve().parent / "data" / "model-catalog.json"
 DEFAULT_TTL_MINUTES = 20
 # Legacy key, honoured only when the user set it explicitly; ``ttl_minutes`` is the shipped default.
 DEFAULT_TTL_HOURS = DEFAULT_TTL_MINUTES / 60.0
@@ -104,10 +102,12 @@ def _fetch_manifest(url: str, timeout: float) -> dict[str, Any] | None:
 
 
 def _fetch_manifest_with_fallback(
-    primary_url: str, timeout: float, fallback_urls: tuple[str, ...] = DEFAULT_CATALOG_FALLBACK_URLS
+    primary_url: str, timeout: float, fallback_urls: tuple[str, ...] | None = None
 ) -> dict[str, Any] | None:
-    """First manifest that fetches and validates from ``primary_url`` then ``fallback_urls`` (skipping
-    any equal to the primary so a raw-GitHub-configured operator doesn't double-fetch), or None."""
+    """First manifest that fetches and validates from ``primary_url`` then ``fallback_urls`` (default
+    :data:`DEFAULT_CATALOG_FALLBACK_URLS`; any equal to the primary is skipped), or None."""
+    if fallback_urls is None:
+        fallback_urls = DEFAULT_CATALOG_FALLBACK_URLS
     data = _fetch_manifest(primary_url, timeout)
     if data is not None:
         return data
@@ -203,6 +203,23 @@ def _remember(data: dict[str, Any], mtime: float) -> dict[str, Any]:
     return data
 
 
+_shipped: dict[str, Any] | None = None
+
+
+def shipped_catalog() -> dict[str, Any]:
+    """The catalog that ships with Scout, or ``{}`` when it is missing or malformed."""
+    global _shipped
+    if _shipped is None:
+        try:
+            with open(SHIPPED_CATALOG_PATH, encoding="utf-8-sig") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("shipped model catalog unreadable (%s): %s", SHIPPED_CATALOG_PATH, exc)
+            data = {}
+        _shipped = data if _validate_manifest(data) else {}
+    return _shipped
+
+
 def _in_process_catalog() -> dict[str, Any] | None:
     """The in-process copy when it mirrors the ACTIVE profile's cache file, else None."""
     if _catalog_cache is not None and _catalog_cache_source_path == str(_cache_path()):
@@ -216,6 +233,8 @@ def get_catalog(*, force_refresh: bool = False) -> dict[str, Any]:
     cfg = _load_catalog_config()
     if not cfg["enabled"]:
         return {}
+    if not cfg["url"]:
+        return shipped_catalog()
     ttl_seconds = max(0.0, cfg["ttl_hours"] * 3600.0)
     disk_data, disk_mtime = _read_disk_cache()
     now = time.time()
@@ -241,7 +260,7 @@ def get_catalog(*, force_refresh: bool = False) -> dict[str, Any]:
         return _remember(fetched, now)
     if disk_data is not None:
         return _remember(disk_data, disk_mtime)
-    return {}
+    return shipped_catalog()
 
 
 def refresh_interval_seconds() -> float:
@@ -321,14 +340,15 @@ def get_default_model_from_cache(provider: str) -> str | None:
     if found:
         return found
     disk_data, _mtime = _read_disk_cache()
-    return _default_model_from_block(_block_of(disk_data, provider)) if disk_data is not None else None
+    found = _default_model_from_block(_block_of(disk_data, provider)) if disk_data is not None else None
+    return found or _default_model_from_block(_block_of(shipped_catalog(), provider))
 
 
 def seed_cache_from_checkout(project_root: "Path | str") -> bool:
-    """Overwrite the disk cache with the checkout's ``website/static/api/model-catalog.json``.
-    After ``scout update`` that file IS the newest catalog, so the picker stays current even when
-    the remote fetch is bot-gated. Validated, then written via the same atomic writer."""
-    src = Path(project_root) / "website" / "static" / "api" / "model-catalog.json"
+    """Overwrite the disk cache with the checkout's ``scout_cli/data/model-catalog.json``.
+    After ``scout update`` that file IS the newest catalog, so a configured hosted catalog's stale
+    cache does not shadow it. Validated, then written via the same atomic writer."""
+    src = Path(project_root) / "scout_cli" / "data" / "model-catalog.json"
     try:
         with open(src, encoding="utf-8-sig") as fh:
             data = json.load(fh)

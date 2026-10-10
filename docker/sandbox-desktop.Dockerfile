@@ -7,7 +7,7 @@
 #
 #   docker build -f docker/sandbox-desktop.Dockerfile -t spaceshipresearch/scout-sandbox:desktop .
 #
-# Published as spaceshipresearch/scout-sandbox:desktop by .github/workflows/sandbox-image.yml
+# Built locally: docker build -f docker/sandbox-desktop.Dockerfile .
 # on releases and manual dispatch only: it carries no Scout code, so it does not track main.
 # The tag lives in the ARG so CI and a local build read one place; hadolint cannot
 # see through the substitution, hence the inline ignore.

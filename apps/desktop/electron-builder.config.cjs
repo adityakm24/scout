@@ -55,7 +55,7 @@ const channelRequest = channelBuildRequest()
 
 /** @typedef {import("app-builder-lib").Configuration} Configuration */
 
-const [owner, repo] = (process.env.GITHUB_REPOSITORY || 'SpaceshipResearch/scout-agent').split('/')
+const [owner, repo] = (process.env.GITHUB_REPOSITORY || 'adityakm24/scout').split('/')
 if (!owner || !repo) {
   throw new Error(`invalid GITHUB_REPOSITORY ${process.env.GITHUB_REPOSITORY}`)
 }
@@ -188,12 +188,6 @@ module.exports = {
     // Avoid the failing optional APFS shrink pass; keep compressed conversion.
     shrink: false,
     title: 'Scout Agent Installer',
-    // A prebuilt .tiff on purpose, not a PNG plus a @2x sibling: dmg-builder's
-    // PNG path runs `tiffutil -cathidpicheck`, which on macOS 26 rewrites both
-    // frames to 72 dpi and silently drops the 2x representation. A .tiff is
-    // handed to dmgbuild untouched (dmg-builder/dist/dmgUtil.js), and living
-    // outside assets/ keeps it out of the app bundle via the `files` whitelist.
-    background: 'packaging/spaceshipresearch-dmg-2b.tiff',
     iconSize: 96,
     iconTextSize: 11,
     window: {

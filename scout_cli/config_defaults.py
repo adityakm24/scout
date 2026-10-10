@@ -472,8 +472,7 @@ DEFAULT_CONFIG = {
         "allow_unsafe_evaluate": False,
         "restrict_evaluate": False,
         # CDP supervisor: dialog + frame detection over a persistent WebSocket; active only with a
-        # CDP-capable backend (Browserbase, or local Chrome via /browser connect). See
-        # website/docs/developer-guide/browser-supervisor.md.
+        # CDP-capable backend (Browserbase, or local Chrome via /browser connect).
         "dialog_policy": "must_respond",  # must_respond | auto_dismiss | auto_accept
         "dialog_timeout_s": 300,  # safety auto-dismiss after N seconds under must_respond
         "camofox": {
@@ -624,7 +623,7 @@ DEFAULT_CONFIG = {
         # micro_compact: opt-in — after each turn fold the oldest un-absorbed exchange into a
         # rolling summary, amortizing compression cost. Off by default because every pass rewrites
         # sent history and breaks the prompt-cache prefix EVERY turn; enable only if the amortized
-        # stall beats the cached-prefix discount. See website/docs/developer-guide/micro-compaction.md.
+        # stall beats the cached-prefix discount.
         "micro_compact": False,
         # Cadence: run a pass every Nth completed turn (1 = one cache break per turn, 5 = a fifth of
         # the breaks). Clamped >= 1; ignored unless micro_compact is true.
@@ -1622,7 +1621,7 @@ DEFAULT_CONFIG = {
     },
 
     "whatsapp": {
-        # reply_prefix: None = built-in "☤ *Scout Agent*" header; "" disables; \n allowed.
+        # reply_prefix: None = built-in "✦ *Scout Agent*" header; "" disables; \n allowed.
     },
 
     "telegram": {
@@ -1733,8 +1732,7 @@ DEFAULT_CONFIG = {
     },
     # Shell-script hooks: event name (pre_tool_call, post_tool_call, pre_llm_call, subagent_stop,
     # ...) -> list of {matcher, command, timeout}. First run of a new command prompts for consent;
-    # approvals persist in ~/.scout/shell-hooks-allowlist.json. Schema + examples:
-    # website/docs/user-guide/features/hooks.md.
+    # approvals persist in ~/.scout/shell-hooks-allowlist.json. Schema + examples: `scout hooks --help`.
     "hooks": {},
     # Auto-accept shell-hook registrations without a TTY prompt (also --accept-hooks or
     # SCOUT_ACCEPT_HOOKS=1). Gateway/cron/non-interactive runs need one of these to pick up
@@ -2052,7 +2050,8 @@ DEFAULT_CONFIG = {
     # release. Default URL is served by the docs-site GitHub Pages deploy.
     "model_catalog": {
         "enabled": True,
-        "url": "https://scout-agent.spaceshipresearch.com/docs/api/model-catalog.json",
+        # A hosted catalog to refresh from; empty = the catalog that ships with Scout.
+        "url": "",
         # Disk cache TTL in minutes. The gateway refreshes in the background on this cadence; the
         # CLI refetches on the next /model or `scout model` once the cache is older. Network
         # failures silently use the stale cache. Legacy `ttl_hours` is honoured if set.

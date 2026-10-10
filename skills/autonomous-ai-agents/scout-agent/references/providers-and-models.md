@@ -2,8 +2,6 @@
 
 Set via `scout model` (picker) or `scout setup`. 35+ provider profiles ship as
 plugins under `plugins/model-providers/`; user plugins of the same name override.
-Full docs: https://scout-agent.spaceshipresearch.com/docs/integrations/providers
-
 ### Providers
 
 | Provider | Auth | Key env var(s) |

@@ -61,8 +61,8 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
-$OfficialHttps = 'https://github.com/SpaceshipResearch/scout-agent.git'
-$OfficialSsh = 'git@github.com:SpaceshipResearch/scout-agent.git'
+$OfficialHttps = 'https://github.com/adityakm24/scout.git'
+$OfficialSsh = 'git@github.com:adityakm24/scout.git'
 # Diff-area cap pre sets while the snapshot is alive (post restores the original).
 $ShadowStorageMax = [UInt64]128GB
 

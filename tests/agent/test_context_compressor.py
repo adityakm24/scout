@@ -3515,7 +3515,7 @@ class TestPreLlmFeasibilityCheck:
         assert len(result) < len(msgs)
 
     def test_boundary_accounting_skip_does_not_feed_fallback_streak(self, compressor):
-        """The interaction teknium's sweeper review flagged on #68334: the
+        """The interaction the sweeper review flagged on #68334: the
         skip path sets _last_summary_fallback_used, which the boundary
         wrapper (conversation_compression.py) records via
         record_completed_compaction(used_fallback=True) — incrementing

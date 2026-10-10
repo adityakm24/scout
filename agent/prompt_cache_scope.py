@@ -116,7 +116,7 @@ def declared_conversation_scope(agent: Any) -> Optional[str]:
             # One read for both halves of the row identity (fork verdict + source).
             # One read for both halves of the row's identity: the fork verdict and the source the peer
             # queries match on live on the same ``sessions`` row, and asking for them separately read it
-            # twice per resolution (@teknium1 on #98811). A SessionDB without the combined view keeps the
+            # twice per resolution (#98811). A SessionDB without the combined view keeps the
             # original call, so nothing that predates it — including the doubles that certify the
             # fail-closed contract below — changes behaviour.
             identity = getattr(db, "declared_scope_identity", None)

@@ -2,7 +2,7 @@
 name: youtube-content
 description: "YouTube transcripts to summaries, threads, blogs."
 version: 1.0.0
-author: Teknium (teknium1), Scout Agent
+author: Scout Agent
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
@@ -26,7 +26,7 @@ Use `terminal` with the Python from a PM-prepared Scout source checkout. The
 Scout with raw pip or project-discovering `uv run`.
 
 From that checkout, first follow the isolated development-home setup in
-[Package Management](https://scout-agent.spaceshipresearch.com/docs/reference/package-management#developer-workflow),
+[CONTRIBUTING.md](https://github.com/adityakm24/scout/blob/main/CONTRIBUTING.md#development-setup),
 then prepare the extra and reactivate before running the helper:
 
 ```bash

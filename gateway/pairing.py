@@ -51,7 +51,7 @@ PAIRING_DIR = None
 # process (e.g. the ``scout pairing`` CLI) re-imports this module later with the final environment already
 # in place, so it never observes the stale value -- the resulting asymmetry is what made pending pairing
 # codes issued by the gateway unrecoverable while CLI-side writes to the same directory kept working
-# (SpaceshipResearch/scout-agent#93449). ``_default_pairing_dir()`` below resolves this fresh on every call in
+# (adityakm24/scout#93449). ``_default_pairing_dir()`` below resolves this fresh on every call in
 # production. Tests patch this attribute directly to a concrete path for isolation (e.g.
 # ``patch("gateway.pairing.PAIRING_DIR", tmp_path)``); that continues to work unchanged, since a patched
 # (non-``None``) value takes precedence over recomputing.

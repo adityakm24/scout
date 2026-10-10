@@ -1026,7 +1026,7 @@ class TestOptionalSkillSourceMetadata:
         meta = src.inspect("official/finance/3-statement-model")
 
         assert meta is not None
-        assert meta.repo == "SpaceshipResearch/scout-agent"
+        assert meta.repo == "adityakm24/scout"
         assert meta.path == "optional-skills/finance/3-statement-model"
 
     def test_scan_all_accepts_install_prefix_but_rejects_nested_support_skills(self, tmp_path):
@@ -1205,7 +1205,7 @@ class TestOptionalSkillSourceLiveRepoFallback:
         meta = src.inspect("official/software-development/ast-grep")
 
         assert meta is not None
-        assert meta.repo == "SpaceshipResearch/scout-agent"
+        assert meta.repo == "adityakm24/scout"
         assert meta.path == "optional-skills/software-development/ast-grep"
 
     def test_offline_degrades_to_local_only(self, tmp_path):
@@ -2059,9 +2059,11 @@ class TestLoadScoutIndex:
 
     @staticmethod
     def _isolate_cache(monkeypatch, tmp_path):
-        """Point the on-disk cache at an empty tmp dir so no real cache leaks in."""
+        """Point the on-disk cache at an empty tmp dir so no real cache leaks in, and publish an index
+        (none is by default)."""
         cache_file = tmp_path / "scout-index.json"
         monkeypatch.setattr("tools.skills_hub_search._scout_index_cache_file", lambda: cache_file)
+        monkeypatch.setattr("tools.skills_hub_search.SCOUT_INDEX_URL", "https://index.example/skills-index.json")
         return cache_file
 
     def test_fetch_does_not_request_brotli(self, monkeypatch, tmp_path):

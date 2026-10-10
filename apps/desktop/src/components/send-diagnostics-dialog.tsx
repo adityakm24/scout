@@ -26,7 +26,7 @@ import { ExternalLink, Loader2Icon, Lock } from '@/lib/icons'
 import { $sendDiagnostics, confirmSendDiagnostics, dismissSendDiagnostics } from '@/store/send-diagnostics'
 
 const SUPPORT_LINKS = [
-  { key: 'github', url: 'https://github.com/SpaceshipResearch/scout-agent/issues' },
+  { key: 'github', url: 'https://github.com/adityakm24/scout/issues' },
   { key: 'portal', url: 'https://portal.spaceshipresearch.com/help' },
   { key: 'discord', url: 'https://discord.gg/SpaceshipResearch' }
 ] as const

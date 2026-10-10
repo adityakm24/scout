@@ -59,7 +59,7 @@
  *
  * Environment limits are encoded rather than papered over. Electron's
  * safeStorage is unavailable on Linux with no keyring, which is the shape of
- * this suite's CI runner (ubuntu-latest, see .github/workflows/e2e-desktop.yml).
+ * a Linux CI runner.
  * The absence assertion is unconditional there — it is the security
  * requirement, and it must hold in every environment. Only the *other* half is
  * conditional: with secure storage the save must succeed, and without it the
@@ -295,7 +295,7 @@ function storedTokenEncoding(connectionFile: string): string {
  * profile — see the docstring in electron/hardening.ts, and PR #77527 for the
  * one place ACLs are being handled). Mode bits are advisory on Windows, so
  * asserting them would go red for behaviour the fix never claimed. The suite
- * runs ubuntu-latest today (.github/workflows/e2e-desktop.yml); nothing else in
+ * runs on Linux; nothing else in
  * this spec is platform-specific, and this assertion should not be what
  * changes that.
  */

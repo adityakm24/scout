@@ -66,7 +66,7 @@ def audit(event, args):
 
 
 sys.addaudithook(audit)
-assert Path(os.environ["HOME"]) != Path("/home/teknium")
+assert Path(os.environ["HOME"]) != Path("/home/alice")
 assert Path(os.environ["SCOUT_HOME"]).is_relative_to(Path(os.environ["HOME"]))
 assert not any(k for k in os.environ if "API_KEY" in k or "TOKEN" in k or "SECRET" in k)
 

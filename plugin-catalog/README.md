@@ -1,9 +1,9 @@
 # Scout Plugin Catalog
 
-Curated, SpaceshipResearch-approved Scout plugins. Each YAML file in this directory
+Curated Scout plugins. Each YAML file in this directory
 (except `removed.yaml`) is one catalog entry, discoverable via
 `scout plugins catalog` / `scout plugins search` and installable with
-`scout plugins install <name>`.
+`scout plugins install <name>`. The catalog starts empty; add entries as plugins are reviewed.
 
 ## Admission policy
 
@@ -11,7 +11,7 @@ Presence in this directory **is** the trust signal. The rules that keep it
 meaningful:
 
 1. **Human-merged gate.** Entries are added *only* via a PR to the
-   `scout-agent` repository, reviewed and merged by a maintainer. There is
+   Scout repository, reviewed and merged by a maintainer. There is
    no self-serve registry, no automated ingestion.
 2. **Exact SHA pins are mandatory.** Every entry pins a full 40-character
    commit SHA. Branches, tags, and short SHAs are rejected by the loader.
@@ -62,8 +62,7 @@ meaningful:
    and floors on the newest release get a request for the oldest
    API-compatible floor plus an upper bound, and authors are strongly
    recommended to run their own release quarantine (`uv --exclude-newer` in
-   their CI) — see the developer guide's *Dependency security policy*. A
-   recent floor alone is not grounds to hold an entry.
+   their CI). A recent floor alone is not grounds to hold an entry.
 
 ## Entry schema
 
@@ -76,14 +75,14 @@ description: One-line description.
 maintainer: OwnerName
 tier: official              # official | community (default community)
 category: memory            # desktop | memory | platform | web | tools | voice | automation | models | general
-                            # (default desktop) — the shelf the entry sits on at /docs/plugins
+                            # (default desktop) — the shelf the entry sits on in the Desktop's Plugins tab
 requires_scout: ">=0.19"   # optional
 docs_url: ""                # optional
 version: "1.4.0"            # optional human label for the sha (quote it); shown as "1.4.0 @ abcd1234"
 image: ""                   # optional https image on a GitHub host, 2:1 (e.g. 1200x600), e.g.
                             # https://raw.githubusercontent.com/owner/repo/<sha>/docs/banner.png
-screenshots: []             # optional, up to 6 https images on a GitHub host; gallery on /docs/plugins/<name>
-readme: true                # optional, default true; the README at the PINNED SHA renders on /docs/plugins/<name>
+screenshots: []             # optional, up to 6 https images on a GitHub host
+readme: true                # optional, default true; the README at the PINNED SHA is shown with the entry
 platforms: []               # optional, e.g. [linux, macos]; empty = all
 capabilities:
   provides_tools: []
@@ -96,18 +95,9 @@ capabilities:
 used to pick what installs. The sha stays the release; bump `version` in the
 same PR that bumps `sha` so the label on the card matches the code. Images must
 live on `raw.githubusercontent.com`, `github.com` or `*.githubusercontent.com`
-so the Desktop catalog and the docs site never fetch from third-party hosts;
+so the Desktop catalog never fetches from third-party hosts;
 pin the raw URL to the entry's commit and the picture is as immutable as the
 code.
-
-Every entry gets a page at `https://scout-agent.spaceshipresearch.com/docs/plugins/<name>`
-and every maintainer a page at `/docs/plugins/by/<maintainer>`, both generated
-from these files at docs build time. `screenshots:` fills the page's gallery;
-the build fetches the README (from `subdir` if set, else the repo root) **at the
-pinned sha** — GitHub and GitLab repos, on by default, `readme: false` opts out — and renders it
-through an allowlist (raw HTML dropped, links and images resolved against the
-pinned tree). The page therefore shows the README the reviewer read, and it
-changes only when a reviewed re-pin lands.
 
 ## removed.yaml — the blocklist
 

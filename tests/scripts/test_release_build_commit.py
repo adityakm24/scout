@@ -128,13 +128,13 @@ def test_commit_build_dispatch_is_repository_independent(fixture_repo):
     assert dispatches == [expected]
     assert 'disposable' not in result.stdout.lower()
     # The upstream URL used to select a different command shape; it no longer does.
-    git(repo, 'remote', 'set-url', 'origin', 'https://github.com/SpaceshipResearch/scout-agent.git')
+    git(repo, 'remote', 'set-url', 'origin', 'https://github.com/adityakm24/scout.git')
     result, calls = invoke('--build-commit', tip, '--publish',
-                           extra={'PROBE_UPSTREAM_URL': 'https://github.com/SpaceshipResearch/scout-agent.git'})
+                           extra={'PROBE_UPSTREAM_URL': 'https://github.com/adityakm24/scout.git'})
     assert result.returncode == 0, result.stderr
     dispatches = [call for call in calls if call[1:3] == ['workflow', 'run']]
     assert dispatches == [['gh', 'workflow', 'run', 'desktop-bundled-release.yml',
-                           '--ref', 'main', '--repo', 'SpaceshipResearch/scout-agent',
+                           '--ref', 'main', '--repo', 'adityakm24/scout',
                            '-f', f'build_commit={tip}', '-f', 'tag=', '-f', 'upload_release=false',
                            '-f', 'termux_upgrade_from_tag=']]
 

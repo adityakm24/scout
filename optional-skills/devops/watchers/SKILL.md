@@ -66,7 +66,7 @@ Watch a GitHub repo (set `GITHUB_TOKEN` in `${SCOUT_HOME:-~/.scout}/.env` to avo
 
 ```bash
 python $SCOUT_HOME/skills/devops/watchers/scripts/watch_github.py \
-  --name scout-issues --repo SpaceshipResearch/scout-agent --scope issues
+  --name scout-issues --repo adityakm24/scout --scope issues
 ```
 
 Poll an arbitrary JSON API:

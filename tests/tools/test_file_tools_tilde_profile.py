@@ -11,7 +11,7 @@ The fix adds ``_expand_tilde()`` which delegates to
 ``scout_constants.get_subprocess_home()`` — the same policy the terminal tool
 uses for subprocess environments.
 
-See: https://github.com/SpaceshipResearch/scout-agent/issues/48552
+See: https://github.com/adityakm24/scout/issues/48552
 """
 
 import os

@@ -28,6 +28,7 @@ def catalog(request, monkeypatch):
     wanted = [entry("NVIDIA/skills", "NVIDIA", f"gpu-target-{i}") for i in range(3)]
     auth = GitHubAuth()
     if request.param == "index":
+        monkeypatch.setattr("tools.skills_hub_search.SCOUT_INDEX_URL", "https://index.example/skills-index.json")
         path = _scout_index_cache_file()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"skills": [_skill_meta_to_dict(m) for m in others + wanted]}), encoding="utf-8")

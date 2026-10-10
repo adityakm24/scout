@@ -21,7 +21,7 @@ test.each([['repository', true, true], ['missing repository', false, true], ['no
     try {
       /** @type {import('app-builder-lib').Metadata} */
       const metadata = { name: 'fixture', version: '1.0.0', description: 'fixture', author: 'Fixture' }
-      if (repository) metadata.repository = 'https://github.com/SpaceshipResearch/scout-agent'
+      if (repository) metadata.repository = 'https://github.com/adityakm24/scout'
       fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify(metadata))
       const info = new Packager({ projectDir: root, config: {} })
       await info.validateConfig()

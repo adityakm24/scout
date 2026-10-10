@@ -194,7 +194,7 @@ con.close()
   Set-Content -LiteralPath (Join-Path $Install 'module_name.py') -Value 'print(1)'
   & git -C $Install add -A | Out-Null
   & git -C $Install -c commit.gpgsign=false commit -qm initial | Out-Null
-  & git -C $Install remote add origin https://github.com/SpaceshipResearch/scout-agent.git
+  & git -C $Install remote add origin https://github.com/adityakm24/scout.git
   New-Item -ItemType Directory -Force -Path (Join-Path $Install '.scout\bin'), (Join-Path $Install '.scout-runtime\python') | Out-Null
   Set-Content -LiteralPath (Join-Path $Install '.scout\bin\scout.cmd') -Value "@echo off`r`necho scout 0.0.0"
   Set-Content -LiteralPath (Join-Path $Install '.scout-runtime\python\interpreter.bin') -Value 'big'
@@ -285,7 +285,7 @@ try {
   Check 'PM store restored' (Test-Path -LiteralPath (Join-Path $Install '.scout-runtime\python\interpreter.bin'))
   Check 'checkout restored' (Test-Path -LiteralPath (Join-Path $Install '.git'))
   Check 'checkout HEAD restored' (((& git -C $Install rev-parse HEAD | Out-String).Trim()) -eq $HeadSha)
-  Check 'origin remote restored' (((& git -C $Install config --get remote.origin.url | Out-String).Trim()) -eq 'https://github.com/SpaceshipResearch/scout-agent.git')
+  Check 'origin remote restored' (((& git -C $Install config --get remote.origin.url | Out-String).Trim()) -eq 'https://github.com/adityakm24/scout.git')
   Check 'userData connection.json restored' (Test-Path -LiteralPath (Join-Path $env:SCOUT_DESKTOP_USER_DATA_DIR 'connection.json'))
   $cfg2 = (& git -C $Install config --local --get-regexp 'insteadOf' 2>$null | Out-String)
   if (-not $cfg2) { $cfg2 = '' }

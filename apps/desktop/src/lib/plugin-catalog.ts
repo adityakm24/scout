@@ -1,25 +1,17 @@
 /**
- * The curated Scout plugin catalog as the Desktop sees it.
- *
- * The Capabilities → Plugins tab embeds the docs-site catalog page
- * (`CATALOG_PICKER_URL`) as a one-click picker; that page renders
- * `PLUGIN_CATALOG_URL` (`/docs/api/plugins.json`, generated from the repo's
- * `plugin-catalog/` directory at site build). A `scout://plugin/install?catalog=<name>`
- * deep link resolves against the SAME document so a link and an in-app pick
- * always agree on the repo, subdir and reviewed pin for a name.
+ * The curated Scout plugin catalog as the Desktop sees it: the backend's
+ * `GET /api/dashboard/plugins/catalog` (the in-tree `plugin-catalog/` directory).
+ * A `scout://plugin/install?catalog=<name>` deep link resolves against it, so a
+ * link and an in-app pick always agree on the repo, subdir and reviewed pin for a name.
  *
  * Everything here only classifies — nothing installs. Callers open the Install
  * Plugin dialog, which still requires the user's explicit confirmation.
  */
 
-export const CATALOG_ORIGIN = 'https://scout-agent.spaceshipresearch.com'
-export const CATALOG_PICKER_URL = `${CATALOG_ORIGIN}/docs/plugins?embed=picker`
-export const PLUGIN_CATALOG_URL = `${CATALOG_ORIGIN}/docs/api/plugins.json`
+export const PLUGIN_CATALOG_PATH = '/api/dashboard/plugins/catalog'
 
 /** Catalog names are directory names under `plugin-catalog/`; anything else is not a lookup key. */
 export const PLUGIN_CATALOG_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
-
-const FETCH_TIMEOUT_MS = 15_000
 
 /** The fields an install needs — the same ones the embedded picker posts on a pick. */
 export interface PluginCatalogEntry {
@@ -62,7 +54,7 @@ function asEntry(raw: unknown): null | PluginCatalogEntry {
  */
 export async function lookupPluginCatalogEntry(
   name: string,
-  fetchImpl: typeof fetch = (...args) => fetch(...args)
+  load: () => Promise<unknown> = () => window.scoutDesktop.api({ path: PLUGIN_CATALOG_PATH })
 ): Promise<PluginCatalogLookup> {
   const trimmed = name.trim()
 
@@ -73,16 +65,7 @@ export async function lookupPluginCatalogEntry(
   let rows: unknown
 
   try {
-    const response = await fetchImpl(PLUGIN_CATALOG_URL, {
-      cache: 'no-cache',
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
-    })
-
-    if (!response.ok) {
-      return { ok: false, error: 'unavailable' }
-    }
-
-    rows = (await response.json()) as unknown
+    rows = ((await load()) as { entries?: unknown } | null)?.entries
   } catch {
     return { ok: false, error: 'unavailable' }
   }

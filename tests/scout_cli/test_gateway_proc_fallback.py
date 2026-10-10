@@ -3,7 +3,7 @@
 Verifies that _scan_gateway_pids() uses /proc/*/cmdline when available
 (Docker without procps) and falls back to ps only when /proc is absent.
 
-See: SpaceshipResearch/scout-agent#7622
+See: adityakm24/scout#7622
 """
 
 import os

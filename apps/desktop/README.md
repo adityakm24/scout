@@ -1,20 +1,12 @@
-# Scout Desktop ☤
+# Scout Desktop ✦
 
-<p align="center">
-  <a href="https://github.com/SpaceshipResearch/scout-agent/releases"><img src="https://img.shields.io/badge/Download-macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-FFD700?style=for-the-badge" alt="Download"></a>
-  <a href="https://scout-agent.spaceshipresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-scout--agent.spaceshipresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
-  <a href="https://discord.gg/SpaceshipResearch"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://github.com/SpaceshipResearch/scout-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
-</p>
-
-**The native desktop app for [Scout Agent](../../README.md) — the self-improving AI agent from [SpaceshipResearch](https://spaceshipresearch.com).** Same agent, same skills, same memory as the CLI and gateway, in a polished native window — chat with streaming tool output, side-by-side previews, a file browser, voice, and settings, no terminal required. Available for **macOS, Windows, and Linux**.
+**The native desktop app for [Scout](../../README.md).** Same agent, same skills, same memory as the CLI and gateway, in a polished native window — chat with streaming tool output, side-by-side previews, a file browser, voice, and settings, no terminal required. Available for **macOS, Windows, and Linux**.
 
 > **Intel Macs:** the `Scout-Setup.dmg` bootstrap installer is built for
 > Apple Silicon (arm64) only, so on an Intel Mac it reports "not supported on
 > this Mac". The desktop release pipeline also builds a native `darwin-x64`
 > bundle (signed, notarized, with its own update feed); use that build, or
-> install the [CLI](../../README.md) and run `scout desktop`. See
-> [Platform Support](../../website/docs/getting-started/platform-support.md#build-targets-and-support-priority).
+> install the [CLI](../../README.md) and run `scout desktop`.
 
 <table>
 <tr><td><b>Chat with the full agent</b></td><td>Streaming responses, live tool activity, structured tool summaries, and the same conversation history as every other Scout surface.</td></tr>
@@ -39,9 +31,10 @@ scout desktop
 
 It builds and launches the GUI against your existing install — same config, keys, sessions, and skills. If Desktop cannot find a usable runtime or saved remote connection, first launch lets you connect to an existing Scout gateway or install Scout locally. Local onboarding then walks you through choosing a provider and model.
 
-### Prebuilt installers
+### Building an installer
 
-Prebuilt installers are built and distributed via [the Scout Desktop website.](https://scout-agent.spaceshipresearch.com/).
+`npm run dist` in `apps/desktop` builds the installer for the current platform; see
+[`BUILDING.md`](BUILDING.md).
 
 ---
 
@@ -255,16 +248,7 @@ Remove-Item -Recurse -Force "$env:LOCALAPPDATA\scout\scout-agent\venv"
 
 ---
 
-## Community
-
-- 💬 [Discord](https://discord.gg/SpaceshipResearch)
-- 📖 [Documentation](https://scout-agent.spaceshipresearch.com/docs/)
-- 🐛 [Issues](https://github.com/SpaceshipResearch/scout-agent/issues)
-
----
-
 ## License
 
 MIT — see [LICENSE](../../LICENSE).
 
-Built by [SpaceshipResearch](https://spaceshipresearch.com).

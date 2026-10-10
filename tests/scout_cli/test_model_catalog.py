@@ -1,4 +1,5 @@
-"""Tests for scout_cli.model_catalog — remote manifest fetch + cache + fallback."""
+"""Tests for scout_cli.model_catalog — the shipped catalog, and an optional hosted one (fetch + cache +
+fallback)."""
 
 from __future__ import annotations
 
@@ -24,6 +25,8 @@ def isolated_home(tmp_path, monkeypatch):
     import importlib
     from scout_cli import model_catalog
     importlib.reload(model_catalog)
+    # Nothing is hosted by default; most tests here cover a deployment that hosts a catalog.
+    monkeypatch.setattr(model_catalog, "DEFAULT_CATALOG_URL", "https://catalog.example/model-catalog.json")
     yield home
     model_catalog.reset_cache()
 
@@ -90,12 +93,22 @@ class TestFetchSuccess:
             assert json.load(fh) == manifest
 
 
+class TestShippedCatalog:
+    def test_without_a_hosted_catalog_the_shipped_one_is_served_without_a_fetch(self, isolated_home, monkeypatch):
+        from scout_cli import model_catalog
+        monkeypatch.setattr(model_catalog, "DEFAULT_CATALOG_URL", "")
+        with patch.object(model_catalog, "_fetch_manifest") as fetch:
+            result = model_catalog.get_catalog(force_refresh=True)
+        fetch.assert_not_called()
+        assert result == model_catalog.shipped_catalog() and model_catalog._validate_manifest(result)
+
+
 class TestFetchFailure:
-    def test_network_failure_returns_empty_when_no_cache(self, isolated_home):
+    def test_network_failure_falls_back_to_the_shipped_catalog(self, isolated_home):
         from scout_cli import model_catalog
         with patch.object(model_catalog, "_fetch_manifest", return_value=None):
             result = model_catalog.get_catalog(force_refresh=True)
-        assert result == {}
+        assert result == model_catalog.shipped_catalog() != {}
 
     def test_network_failure_falls_back_to_disk_cache(self, isolated_home):
         from scout_cli import model_catalog
@@ -138,11 +151,14 @@ class TestFallbackChain:
     releases (opus 4.8, etc.) never reach the picker.
     """
 
-    PRIMARY = "https://scout-agent.spaceshipresearch.com/docs/api/model-catalog.json"
-    FALLBACK = (
-        "https://raw.githubusercontent.com/SpaceshipResearch/scout-agent"
-        "/main/website/static/api/model-catalog.json"
-    )
+    PRIMARY = "https://catalog.example/model-catalog.json"
+    FALLBACK = "https://mirror.example/model-catalog.json"
+
+    @pytest.fixture(autouse=True)
+    def _fallback_urls(self, isolated_home, monkeypatch):
+        from scout_cli import model_catalog
+        monkeypatch.setattr(model_catalog, "DEFAULT_CATALOG_URL", self.PRIMARY)
+        monkeypatch.setattr(model_catalog, "DEFAULT_CATALOG_FALLBACK_URLS", (self.FALLBACK,))
 
     def test_uses_primary_when_it_succeeds(self, isolated_home):
         from scout_cli import model_catalog
@@ -169,7 +185,8 @@ class TestFallbackChain:
             return _valid_manifest()
 
         with patch.object(model_catalog, "_fetch_manifest", side_effect=fake_fetch):
-            result = model_catalog._fetch_manifest_with_fallback(self.PRIMARY, 5.0)
+            result = model_catalog._fetch_manifest_with_fallback(
+                self.PRIMARY, 5.0, model_catalog.DEFAULT_CATALOG_FALLBACK_URLS)
 
         assert result is not None
         assert calls == [self.PRIMARY, self.FALLBACK]
@@ -211,7 +228,8 @@ class TestCuratedAccessors:
 
     def test_spaceshipresearch_returns_none_when_catalog_empty(self, isolated_home):
         from scout_cli import model_catalog
-        with patch.object(model_catalog, "_fetch_manifest", return_value=None):
+        with patch.object(model_catalog, "_fetch_manifest", return_value=None), \
+                patch.object(model_catalog, "shipped_catalog", return_value={}):
             assert model_catalog.get_curated_spaceshipresearch_models() is None
 
 
@@ -248,7 +266,8 @@ class TestDefaultModelFromCache:
         cache = isolated_home / "cache"
         cache.mkdir()
         (cache / "model_catalog.json").write_text(json.dumps(_valid_manifest()))
-        with patch.object(model_catalog, "_fetch_manifest") as fetch:
+        with patch.object(model_catalog, "_fetch_manifest") as fetch, \
+                patch.object(model_catalog, "shipped_catalog", return_value={}):
             assert model_catalog.get_default_model_from_cache("openrouter") is None
             fetch.assert_not_called()
 
@@ -261,7 +280,7 @@ class TestDefaultModelFromCache:
 
         repo_root = Path(model_catalog.__file__).resolve().parent.parent
         manifest = json.loads(
-            (repo_root / "website" / "static" / "api" / "model-catalog.json").read_text()
+            (repo_root / "scout_cli" / "data" / "model-catalog.json").read_text()
         )
         for provider in ("openrouter", "spaceshipresearch"):
             block = manifest["providers"][provider]

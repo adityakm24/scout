@@ -20,7 +20,7 @@ _ORPHAN_RESCUE_REF_MAX_AGE_DAYS = 30
 
 _GIT_TEXT_KW = dict(capture_output=True, text=True, encoding="utf-8", errors="replace")
 _BAR = "=" * 68
-_UPSTREAM_ADD_CMD = "git remote add upstream https://github.com/SpaceshipResearch/scout-agent.git"
+_UPSTREAM_ADD_CMD = "git remote add upstream https://github.com/adityakm24/scout.git"
 
 
 def _git_ok(git_cmd, args, cwd, **kw) -> bool:
@@ -230,12 +230,12 @@ def _print_parked_branch_kept_notice(current_branch: str, target_branch: str, un
 
 
 OFFICIAL_REPO_URLS = {
-    "https://github.com/SpaceshipResearch/scout-agent.git",
-    "git@github.com:SpaceshipResearch/scout-agent.git",
-    "https://github.com/SpaceshipResearch/scout-agent",
-    "git@github.com:SpaceshipResearch/scout-agent",
+    "https://github.com/adityakm24/scout.git",
+    "git@github.com:adityakm24/scout.git",
+    "https://github.com/adityakm24/scout",
+    "git@github.com:adityakm24/scout",
 }
-OFFICIAL_REPO_URL = "https://github.com/SpaceshipResearch/scout-agent.git"
+OFFICIAL_REPO_URL = "https://github.com/adityakm24/scout.git"
 SKIP_UPSTREAM_PROMPT_FILE = ".skip_upstream_prompt"
 
 
@@ -300,7 +300,7 @@ def _offer_upstream_remote(git_cmd: list[str], cwd: Path, *, assume_yes: bool, i
     from scout_cli.update_cmd import _add_upstream_remote, _mark_skip_upstream_prompt
     print(
         "\nℹ Your fork is not tracking the official Scout repository.\n"
-        "  This means you may miss updates from SpaceshipResearch/scout-agent.\n"
+        "  This means you may miss updates from adityakm24/scout.\n"
     )
     if assume_yes or (input_fn is None and not (sys.stdin.isatty() and sys.stdout.isatty())):
         print(f"  Skipping upstream setup (non-interactive run).\n  Add it later with: {_UPSTREAM_ADD_CMD}")
@@ -321,7 +321,7 @@ def _offer_upstream_remote(git_cmd: list[str], cwd: Path, *, assume_yes: bool, i
     if not _add_upstream_remote(git_cmd, cwd):
         print("  ✗ Failed to add upstream remote. Skipping upstream sync.")
         return False
-    print("  ✓ Added upstream: https://github.com/SpaceshipResearch/scout-agent.git")
+    print("  ✓ Added upstream: https://github.com/adityakm24/scout.git")
     return True
 
 
@@ -406,7 +406,7 @@ _FETCH_FAILURE_RULES = (
     # key (or lack of one) was the cause (#82169).
     (lambda s: "Permission denied (publickey)" in s or "Host key verification failed" in s,
      "✗ SSH authentication failed — check your SSH key is added to GitHub, or switch"
-     " `origin` to HTTPS: `git remote set-url origin https://github.com/SpaceshipResearch/scout-agent.git`."),
+     " `origin` to HTTPS: `git remote set-url origin https://github.com/adityakm24/scout.git`."),
 )
 
 
@@ -495,7 +495,7 @@ def _ensure_non_trampoline_git(git_cmd: list) -> list:
 def _npm_lockfile_owners(repo_root: Path) -> set[Path]:
     """Manifest directories whose specs the single root ``package-lock.json`` records: the root plus every
     workspace from the root ``workspaces`` globs (same model as ``update_cmd_deps._npm_manifest_paths``).
-    A manifest outside that graph (``website/``, ``scripts/whatsapp-bridge/``) has its own lockfile."""
+    A manifest outside that graph (``scripts/whatsapp-bridge/``) has its own lockfile."""
     owners = {Path(".")}
     try:
         import json

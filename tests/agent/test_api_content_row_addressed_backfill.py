@@ -1,4 +1,4 @@
-"""Row-addressed ``api_content`` backfill (SpaceshipResearch/scout-agent#102194).
+"""Row-addressed ``api_content`` backfill (adityakm24/scout#102194).
 
 The sidecar is stamped by the turn prologue and normally reaches the DB in the
 same INSERT as the clean content (the crash persist runs after the stamp). When

@@ -229,7 +229,7 @@ class TestOneIdentityReadPerResolution:
 
     Resolution is memoized per transcript segment, so this was never on the
     per-API-call hot path (#79017) — but reading the same row twice per
-    resolution was one read too many (@teknium1 on #98811), and a ``SessionDB``
+    resolution was one read too many (#98811), and a ``SessionDB``
     that predates the combined view has to keep the path it had.
     """
 

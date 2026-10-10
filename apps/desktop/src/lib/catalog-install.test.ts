@@ -20,8 +20,8 @@ describe('public catalog install links', () => {
     [{ name: 'pdf', source: 'Anthropic', identifier: 'anthropics/skills/skills/pdf' }, 'anthropics/skills/skills/pdf'],
     [{ name: 'pdf', source: 'optional' }, 'official/pdf'],
     [
-      { name: 'pdf', source: 'built-in', installIdentifier: 'SpaceshipResearch/scout-agent/skills/productivity/pdf' },
-      'SpaceshipResearch/scout-agent/skills/productivity/pdf'
+      { name: 'pdf', source: 'built-in', installIdentifier: 'adityakm24/scout/skills/productivity/pdf' },
+      'adityakm24/scout/skills/productivity/pdf'
     ],
     [
       { name: 'A name', source: 'future-source', identifier: 'provider/path?mode=one&two#readme' },

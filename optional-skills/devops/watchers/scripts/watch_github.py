@@ -6,7 +6,7 @@ Usage (via cron with --no-agent):
     scout cron create scout-issues \\
       --schedule "*/5 * * * *" --no-agent \\
       --script "$SCOUT_HOME/skills/devops/watchers/scripts/watch_github.py" \\
-      --script-args "--name scout-issues --repo SpaceshipResearch/scout-agent --scope issues"
+      --script-args "--name scout-issues --repo adityakm24/scout --scope issues"
 
 Set GITHUB_TOKEN (or GH_TOKEN) in the Scout .env file
 (``${SCOUT_HOME:-~/.scout}/.env``) to avoid the 60 req/hr

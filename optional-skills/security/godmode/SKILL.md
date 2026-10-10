@@ -2,7 +2,7 @@
 name: godmode
 description: "Jailbreak LLMs: Parseltongue, GODMODE, ULTRAPLINIAN."
 version: 1.0.0
-author: Scout Agent + Teknium
+author: Scout Agent
 license: MIT
 platforms: [linux, macos, windows]
 metadata:

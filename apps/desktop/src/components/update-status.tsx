@@ -24,7 +24,7 @@ import {
   type UpdateTarget
 } from '@/store/updates'
 
-const RELEASE_NOTES_URL = 'https://github.com/SpaceshipResearch/scout-agent/releases'
+const RELEASE_NOTES_URL = 'https://github.com/adityakm24/scout/releases'
 const INSTALLER_URL = 'https://scout-agent.spaceshipresearch.com/'
 
 export type UpdateStatusTone = 'idle' | 'available' | 'error' | 'unsupported'

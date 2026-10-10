@@ -177,7 +177,7 @@ async function locateScout(ssh, remoteScoutPath) {
     //   - version checking: `<python> --version` printed "Python x.y.z" instead of
     //     the Scout version, and
     //   - capability probing: `<python> serve --help` failed entirely.
-    // See https://github.com/SpaceshipResearch/scout-agent/issues/74411
+    // See #74411
     return candidate
   }
 

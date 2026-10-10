@@ -1,10 +1,8 @@
 # plugins/ — plugin kinds, compat contract, in-tree policy
 
-Applies on top of the root `AGENTS.md`. Authoring guide + canonical compat contract:
-`website/docs/developer-guide/plugins/index.md`. Per-kind guides: `memory-provider-plugin.md`,
-`model-provider-plugin.md`, `context-engine-plugin.md`, `image-gen-provider-plugin.md`, ...
+Applies on top of the root `AGENTS.md`.
 
-## Plugins never touch core (Teknium, May 2026)
+## Plugins never touch core (May 2026)
 
 Plugins live in their own directory and work within the ABCs / hooks / `ctx` surface we provide.
 A plugin MUST NOT modify `run_agent.py`, `cli.py`, `gateway/run.py`, `scout_cli/main.py`, etc.
@@ -28,9 +26,7 @@ command. A hook with no concrete consumer is speculative infrastructure and is r
   every absorbed product is our maintenance burden against a fast-moving core for a backend we don't
   own. `observability/`, `kanban/`, `disk-cleanup/` are precedent, not an invitation. Closing such a
   PR is a coupling decision, not a quality judgment.
-- Reference/docs-companion plugins (`example-dashboard`, `strike-freedom-cockpit`,
-  `plugin-llm-example`, `plugin-llm-async-example`) live in
-  [`scout-example-plugins`](https://github.com/SpaceshipResearch/scout-example-plugins), not here.
+- Reference/docs-companion plugins (examples of each plugin kind) live in their own repos, not here.
 
 ## Plugin catalog (`plugin-catalog/`, Sep 2026)
 

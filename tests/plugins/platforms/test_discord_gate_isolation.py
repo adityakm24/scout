@@ -233,17 +233,17 @@ class TestUsernameResolutionEnvWrite:
         monkeypatch.setattr(secret_scope, "_MULTIPLEX_ACTIVE", True)
 
         adapter = _adapter()
-        _snapshot(adapter, {"DISCORD_ALLOWED_USERS": "teknium"})
-        adapter._allowed_user_ids = {"teknium"}
+        _snapshot(adapter, {"DISCORD_ALLOWED_USERS": "alice"})
+        adapter._allowed_user_ids = {"alice"}
 
         member = type(
             "M",
             (),
             {
                 "id": 12345,
-                "name": "teknium",
-                "display_name": "teknium",
-                "global_name": "teknium",
+                "name": "alice",
+                "display_name": "alice",
+                "global_name": "alice",
                 "discriminator": "0",
             },
         )()
@@ -264,20 +264,20 @@ class TestUsernameResolutionEnvWrite:
     async def test_env_write_preserved_single_profile(self, monkeypatch):
         from agent import secret_scope
 
-        monkeypatch.setenv("DISCORD_ALLOWED_USERS", "teknium")
+        monkeypatch.setenv("DISCORD_ALLOWED_USERS", "alice")
         monkeypatch.setattr(secret_scope, "_MULTIPLEX_ACTIVE", False)
 
         adapter = _adapter()
-        adapter._allowed_user_ids = {"teknium"}
+        adapter._allowed_user_ids = {"alice"}
 
         member = type(
             "M",
             (),
             {
                 "id": 12345,
-                "name": "teknium",
-                "display_name": "teknium",
-                "global_name": "teknium",
+                "name": "alice",
+                "display_name": "alice",
+                "global_name": "alice",
                 "discriminator": "0",
             },
         )()

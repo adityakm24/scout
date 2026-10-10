@@ -35,10 +35,7 @@ import { describe, test } from 'vitest'
 
 const REPO_ROOT = path.resolve(__dirname, '..')
 
-const MANIFESTS = [
-  { name: 'root', dir: '.' },
-  { name: 'website', dir: 'website' }
-]
+const MANIFESTS = [{ name: 'root', dir: '.' }]
 
 function manifestLabel(dir: string): string {
   return path.join(dir === '.' ? '' : dir, 'package.json')

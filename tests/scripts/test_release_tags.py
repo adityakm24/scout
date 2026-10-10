@@ -69,18 +69,18 @@ def test_canary_tag_order_and_remote_selection(release_repo):
 def test_github_repo_parsed_from_ssh_and_https_urls(tmp_path, release_repo):
     urls = {
         "fork": "git@github.com:ethernet8023/scout-agent.git",
-        "origin": "https://github.com/SpaceshipResearch/scout-agent",
+        "origin": "https://github.com/adityakm24/scout",
         "gitlab": "git@gitlab.com:someone/elsewhere.git",
     }
     for name, url in urls.items():
         subprocess.run(['git', 'config', f'remote.{name}.url', url], cwd=tmp_path, check=True)
 
     assert release.remote_github_repo("fork") == "ethernet8023/scout-agent"
-    assert release.remote_github_repo("origin") == "SpaceshipResearch/scout-agent"
+    assert release.remote_github_repo("origin") == "adityakm24/scout"
     assert release.remote_github_repo("gitlab") is None
     subprocess.run(['git', 'config', 'url.https://github.com/fork/.pushInsteadOf',
-                    'https://github.com/SpaceshipResearch/'], cwd=tmp_path, check=True)
-    assert release.remote_github_repo('origin') == 'fork/scout-agent'
+                    'https://github.com/adityakm24/'], cwd=tmp_path, check=True)
+    assert release.remote_github_repo('origin') == 'fork/scout'
     subprocess.run(['git', 'config', 'remote.origin.pushurl', 'ssh://git@github.com:22/other/repo.git'],
                    cwd=tmp_path, check=True)
     assert release.remote_github_repo('origin') == 'other/repo'

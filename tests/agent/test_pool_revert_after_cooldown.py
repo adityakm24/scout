@@ -1,4 +1,5 @@
-# Copyright 2025 SpaceshipResearch (Licensed under the Apache License, Version 2.0)
+# Copyright 2025 Nous Research (Licensed under the Apache License, Version 2.0)
+# Modifications copyright 2026 SpaceshipResearch
 """A live session rotated off a quota-benched credential moves back once the bench lifts.
 
 New sessions already do this (``load_pool().select()`` prefers the priority-0 entry again once

@@ -98,8 +98,7 @@ grow: expansive at the edges, conservative at the waist.
   SaaS connectors, analytics dashboards, and other "someone else's product" plugins do NOT
   land under `plugins/` — every one becomes our burden against a fast-moving core for a
   backend we don't own. Ship as a **standalone plugin repo** (`~/.scout/plugins/` or pip
-  entry point), promoted in the SpaceshipResearch Discord `#plugins-skills-and-skins`. This is a
-  coupling decision, not a quality bar; such PRs are closed with a pointer to publish.
+  entry point). This is a coupling decision, not a quality bar; such PRs are closed with a pointer to publish.
 
 ### Before you call it a bug — verify the premise (and when NOT to close)
 
@@ -179,8 +178,8 @@ session-scoped. Assert the GUI session gets the tool **with the env var absent**
 ```bash
 source ./activate   # provisions/syncs PM tools + dependencies, then activates
 ```
-Select an isolated development `SCOUT_HOME` and `SCOUT_RUNTIME_DIR` first;
-see `website/docs/reference/package-management.md#developer-workflow`.
+Select an isolated development `SCOUT_HOME` and `SCOUT_RUNTIME_DIR` first
+(see `CONTRIBUTING.md`).
 PowerShell: `. .\activate.ps1`. `deactivate` restores the prior environment.
 For tests, use the independent test environment in `CONTRIBUTING.md` (or Nix);
 PM activation's `PYTHONPATH` does not survive the test runner's environment scrub.
@@ -218,7 +217,6 @@ scout-agent/
 ├── cron/                 # jobs.py + scheduler.py (+ scheduler_*.py)
 ├── evals/                # Offline benchmarks (codebase_navigability/, compaction/, ...)
 ├── scripts/              # run_tests.sh, release.py, ci/
-├── website/              # Docusaurus docs (developer-guide/ holds the long-form area docs)
 └── tests/                # Pytest suite (~39k tests / ~3.7k files, Sep 2026)
 ```
 
@@ -254,8 +252,8 @@ families: `scout_state.py` (21), `gateway/run.py` (15), `tools/mcp_tool.py` (15)
 - **No re-export shims for internal moves** ("keep the old name importable"). Internal paths
   are not API: plugins build on `ctx` and the documented ABCs. The one-time Sep 2026
   decomposition compat layer for external plugins has been removed; never reintroduce one.
-- **Moving a symbol means fixing its docs in the same PR:** grep `website/docs`,
-  `skills/`, and every `AGENTS.md` for the old `path.py` + symbol (23 doc files went stale
+- **Moving a symbol means fixing its docs in the same PR:** grep
+  `skills/` and every `AGENTS.md` for the old `path.py` + symbol (23 doc files went stale
   after the refactor). `evals/codebase_navigability/static_metrics.py <tree> <label>` measures
   file/function/CC/elif distributions before/after a large PR in ~2 min.
 
@@ -336,8 +334,8 @@ The `[tool.uv] exclude-newer = "14 days"` quarantine covers **Scout's own depend
 (every registry package in core's `uv.lock`). Plugin `python_dependencies` follow the plugin's own
 policy: when PM generates the plugin workspace (`pm/workspace.py::_core_release_quarantine`) the
 global cutoff moves onto each core-locked package, so plugin-only packages are not filtered and a
-plugin still cannot drag a core package past the window. Teknium's ruling: "plugins dont have to
-abide by our 14 day rule … Only scout' dependencies themselves have to." We recommend (not require)
+plugin still cannot drag a core package past the window: plugins do not have to abide by the
+14-day rule, only Scout's own dependencies do. We recommend (not require)
 plugin authors adopt their own quarantine — the developer guide and `plugin-catalog/README.md` carry
 that guidance.
 
@@ -388,10 +386,9 @@ scripts/run_tests.sh -v --tb=long                       # pytest flags pass thro
   under `tests/scripts/{install,desktop_update}/`. Only tests of root-level modules (`batch_runner`,
   `utils`, `scout_constants`, packaging) sit directly in `tests/`. No issue numbers in filenames —
   cite the issue in the module docstring (`test_89315_x.py` → `test_x.py`, "Regression for #89315").
-- **Placement (CI lanes):** `scripts/ci/classify_changes.py` picks jobs by changed files. A Python test
-  asserting about `package.json`, `package-lock.json`, `tsconfig.json`, or `.ts/.tsx/.js/
-  .mjs/.cjs` sources will not run on a JS-only PR (green on PR, red on `main` where the
-  classifier fails open). Such tests belong in the vitest suite, not `tests/*.py`.
+- **JS assertions belong in vitest.** A Python test asserting about `package.json`,
+  `package-lock.json`, `tsconfig.json`, or `.ts/.tsx/.js/.mjs/.cjs` sources belongs in the vitest
+  suite, not `tests/*.py`.
 - **Tests must not write to `~/.scout/`.** The autouse `_isolate_scout_home` fixture in
   `tests/conftest.py` redirects `SCOUT_HOME`; never hardcode `~/.scout/` in tests. Profile
   tests also mock `Path.home()` so `_get_profiles_root()` / `_get_default_scout_home()` stay
@@ -437,20 +434,11 @@ Specs: `linux`, `macos`, `windows`, `posix`, `any`, and `not <spec>`.
 The historic `linux_only` / `macos_only` / `windows_only` markers have been
 fully replaced — `platforms` is the only host-gating marker in the tree.
 
-**Live Windows process-topology E2E: the `wine2e` lane.** For claims about
-real Windows process behavior that mocks cannot reproduce (venv-holder
-scans, process-tree parentage, launcher/worker chains, detach semantics),
-there is an on-demand workflow `windows-venv-e2e.yml` that runs
-`tests/scout_cli/test_venv_holder_windows_live.py` on a real
-`windows-latest` runner — spawning actual processes and driving the real
-detection code, no mocked psutil. It fires ONLY on pushes to `wine2e/**`
-branches (inert on PRs and main; costs nothing on normal work). The proven
-workflow: write probes that pin CORRECT behavior, push to a `wine2e/`
-branch to reproduce the bugs live on unfixed code, build the fix, iterate
-until the lane is green, then open the PR — the live receipt on the exact
-head is the Windows proof reviewers ask for. Extend the live suite when
-touching that subsystem; assert against the gateway ANCESTOR found by
-argv, not the direct parent (the venv shim makes every spawn a
+**Live Windows process-topology tests.** Claims about real Windows process behavior that mocks
+cannot reproduce (venv-holder scans, process-tree parentage, launcher/worker chains, detach
+semantics) are proven by `tests/scout_cli/test_venv_holder_windows_live.py` on a real Windows host:
+it spawns actual processes and drives the real detection code, no mocked psutil. Assert against the
+gateway ANCESTOR found by argv, not the direct parent (the venv shim makes every spawn a
 launcher/worker chain).
 
 **Use the marker, never a bare `skipif`.** `scripts/ci/list_os_marked_tests.py`
@@ -516,9 +504,6 @@ extract, not to regex around it.
 | `skills/`, `optional-skills/`, `agent/curator*.py` | `skills/AGENTS.md` | Frontmatter, HARDLINE authoring standards, curator |
 | `cron/`, kanban (`scout_cli/kanban*.py`, `tools/kanban_tools.py`, `plugins/kanban/`) | `cron/AGENTS.md` | Scheduler invariants, job fields, kanban board/dispatcher |
 | `gateway/platforms/` new adapter | `gateway/platforms/ADDING_A_PLATFORM.md` | Step-by-step adapter guide |
-| profiles / multiplex / secret scope (any area) | `gateway/AGENTS.md` § Profile scope, `website/docs/user-guide/multi-profile-gateways.md` § What is isolated per profile | which execution points bind scope, what is isolated per profile |
+| profiles / multiplex / secret scope (any area) | `gateway/AGENTS.md` § Profile scope | which execution points bind scope, what is isolated per profile |
 
-Long-form background lives in `website/docs/developer-guide/` (agent-loop, prompt-assembly,
-context-compression-and-caching, gateway-internals, tools-runtime, plugins/, cron-internals,
-session-storage, ...). Workflow rules (PR/issue/review/salvage process) live in the
-`scout-agent-dev` skill, not here.
+Workflow rules (PR/issue/review/salvage process) live in the `scout-agent-dev` skill, not here.

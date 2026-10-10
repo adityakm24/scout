@@ -202,7 +202,7 @@ stdenv.mkDerivation {
 
   meta = with lib; {
     description = "Native Electron desktop shell for Scout Agent";
-    homepage = "https://github.com/SpaceshipResearch/scout-agent";
+    homepage = "https://github.com/adityakm24/scout";
     license = licenses.mit;
     platforms = platforms.unix;
     mainProgram = "scout-desktop";

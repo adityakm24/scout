@@ -12,8 +12,7 @@ scout tools  # → Langfuse Observability
 
 Restart Scout after setup. If dependency preparation fails, retry through
 `scout tools`; do not inject the SDK into the selected environment with pip.
-For manual source-checkout setup, see the
-[plugin guide](../../../website/docs/user-guide/features/built-in-plugins.md#observabilitylangfuse).
+For a manual source-checkout setup, enable it with `scout tools` the same way.
 
 ## Required credentials
 

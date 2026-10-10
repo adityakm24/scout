@@ -6,7 +6,7 @@ pin (it calls the retired lazy-install path for ``hindsight-all`` and loops
 update takeovers). The field is machine-readable but informational: it must
 parse and round-trip, and the install summaries must surface the text — it
 must never block an install (the guard belongs at the mode-selection seam;
-see teknium1's review on #124037 and #122341 / #123771).
+see the review on #124037 and #122341 / #123771).
 """
 
 from pathlib import Path

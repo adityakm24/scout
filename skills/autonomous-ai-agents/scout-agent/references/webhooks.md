@@ -83,8 +83,6 @@ scout webhook subscribe todoist-scout \
   --deliver telegram --deliver-chat-id "12345"
 ```
 
-Full filter syntax: https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/webhooks#payload-filters
-
 ### List subscriptions
 ```bash
 scout webhook list
