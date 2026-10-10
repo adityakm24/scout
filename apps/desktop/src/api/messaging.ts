@@ -4,9 +4,6 @@ import type {
   MessagingPlatformUpdate,
   PairingResponse,
   PairingUser,
-  TelegramOnboardingApplyResponse,
-  TelegramOnboardingStartResponse,
-  TelegramOnboardingStatusResponse,
   WebhookCreatePayload,
   WebhookCreateResponse,
   WebhookEnableResponse,
@@ -51,56 +48,6 @@ export function testMessagingPlatform(
     ...profileScoped(profile),
     path: `/api/messaging/platforms/${encodeURIComponent(platformId)}/test`,
     method: 'POST'
-  })
-}
-
-// -- Telegram QR onboarding ---------------------------------------------------
-// Pairing state lives in the memory of the backend process that started it, so
-// every call in one flow carries the SAME profile scope — the Electron router
-// picks the backend from it, and a mismatched apply would 404 the pairing.
-
-export function startTelegramOnboarding(
-  botName?: string,
-  profile?: null | string
-): Promise<TelegramOnboardingStartResponse> {
-  return scoutApi<TelegramOnboardingStartResponse>({
-    ...profileScoped(profile),
-    path: '/api/messaging/telegram/onboarding/start',
-    method: 'POST',
-    body: botName ? { bot_name: botName } : {}
-  })
-}
-
-export function getTelegramOnboardingStatus(
-  pairingId: string,
-  profile?: null | string
-): Promise<TelegramOnboardingStatusResponse> {
-  return scoutApi<TelegramOnboardingStatusResponse>({
-    ...profileScoped(profile),
-    path: `/api/messaging/telegram/onboarding/${encodeURIComponent(pairingId)}`
-  })
-}
-
-export function applyTelegramOnboarding(
-  pairingId: string,
-  allowedUserIds: string[],
-  profile?: null | string
-): Promise<TelegramOnboardingApplyResponse> {
-  const scope = profileScoped(profile)
-
-  return scoutApi<TelegramOnboardingApplyResponse>({
-    ...scope,
-    path: `/api/messaging/telegram/onboarding/${encodeURIComponent(pairingId)}/apply`,
-    method: 'POST',
-    body: { allowed_user_ids: allowedUserIds, profile: scope.profile }
-  })
-}
-
-export function cancelTelegramOnboarding(pairingId: string, profile?: null | string): Promise<{ ok: boolean }> {
-  return scoutApi<{ ok: boolean }>({
-    ...profileScoped(profile),
-    path: `/api/messaging/telegram/onboarding/${encodeURIComponent(pairingId)}`,
-    method: 'DELETE'
   })
 }
 

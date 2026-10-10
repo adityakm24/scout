@@ -61,7 +61,7 @@ def build_catalog() -> dict:
         "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "metadata": {
             "source": "scout-agent repo",
-            "docs": "https://scout-agent.spaceshipresearch.com/docs/reference/model-catalog",
+            "docs": "https://github.com/adityakm24/scout",
         },
         "providers": {
             "openrouter": {

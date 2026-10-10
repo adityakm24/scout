@@ -34,7 +34,7 @@ fireworks = FireworksProfile(
     # Attribution headers (canonical Scout set); via default_headers so they
     # survive switch_model and credential rotation.
     default_headers={
-        "HTTP-Referer": "https://scout-agent.spaceshipresearch.com",
+        "HTTP-Referer": "https://github.com/adityakm24/scout",
         "X-Title": "Scout Agent",
         "User-Agent": f"ScoutAgent/{get_version_info().base_version}",
     },

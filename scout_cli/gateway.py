@@ -4695,7 +4695,6 @@ from scout_cli.gateway_setup_wizard import (  # noqa: E402,F401 — facade re-ex
     _prompt_csv,
     _UNAUTHORIZED_ACCESS_CHOICES,
     _prompt_unauthorized_access,
-    _telegram_auto_setup,
     _clean_discord_ids,
     _prompt_allowlist_var,
     _setup_standard_platform,

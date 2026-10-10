@@ -365,7 +365,7 @@ def _download_and_swap_zip(branch: str, zip_url: str) -> None:
         print(f"✗ ZIP update failed: {e}")
         # Two-phase replace commits all or rolls all back, so no mixed tree here — don't push a needless reinstall.
         print("  Your existing install was left in place.")
-        print("  Re-run `scout update` to retry; if the agent won't start, reinstall from https://scout-agent.spaceshipresearch.com")
+        print("  Re-run `scout update` to retry; if the agent won't start, reinstall from https://github.com/adityakm24/scout")
         _m().sys.exit(1)
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)

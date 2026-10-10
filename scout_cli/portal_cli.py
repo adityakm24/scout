@@ -9,7 +9,7 @@ from scout_cli.config import load_config
 
 DEFAULT_PORTAL_URL = "https://portal.spaceshipresearch.com"
 SUBSCRIPTION_URL = "https://portal.spaceshipresearch.com/manage-subscription"
-DOCS_URL = "https://scout-agent.spaceshipresearch.com/docs/user-guide/features/tool-gateway"
+DOCS_URL = "https://github.com/adityakm24/scout"
 # Static `portal tools` catalog — the partners Tool Gateway routes to today: (key, label, partner).
 _CATALOG = [
     ("web", "Web search & extract", "SpaceshipResearch-managed"),

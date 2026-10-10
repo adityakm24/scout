@@ -4,4 +4,4 @@
  * (bundled installs with a damaged payload) and any future doc links point
  * at the same place.
  */
-export const DESKTOP_DOCS_URL = 'https://scout-agent.spaceshipresearch.com/docs/user-guide/desktop'
+export const DESKTOP_DOCS_URL = 'https://github.com/adityakm24/scout'

@@ -3,7 +3,7 @@
   "updated_at": "2026-09-28T19:38:29Z",
   "metadata": {
     "source": "scout-agent repo",
-    "docs": "https://scout-agent.spaceshipresearch.com/docs/reference/model-catalog"
+    "docs": "https://github.com/adityakm24/scout"
   },
   "providers": {
     "openrouter": {

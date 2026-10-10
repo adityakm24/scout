@@ -1049,7 +1049,7 @@ def tools_command(args=None, first_install: bool = False, config: dict = None):
     print(color("✦ Scout Tool Configuration", Colors.CYAN, Colors.BOLD))
     print(color("  Enable or disable tools per platform.", Colors.DIM))
     print(color("  Tools that need API keys will be configured when enabled.", Colors.DIM))
-    print(color("  Guide: https://scout-agent.spaceshipresearch.com/docs/user-guide/features/tools", Colors.DIM))
+    print(color("  Guide: https://github.com/adityakm24/scout", Colors.DIM))
     print()
     if first_install:
         _first_install_flow(config, enabled_platforms)

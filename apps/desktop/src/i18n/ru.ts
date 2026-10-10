@@ -1385,7 +1385,7 @@ export const ru = defineLocale({
       sshErrHostKey:
         'Ключ хоста ИЗМЕНИЛСЯ с последнего подключения. Убедитесь, что это ожидаемо, затем выполните ssh-keygen -R <host> и переподключитесь.',
       sshErrNotInstalled:
-        'Scout не установлен на удалённой машине. Установите его там (curl -fsSL https://scout-agent.spaceshipresearch.com/install.sh | sh) или задайте путь к Scout.',
+        'Scout не установлен на удалённой машине. Установите его там (git clone https://github.com/adityakm24/scout.git && cd scout && ./scripts/install.sh) или задайте путь к Scout.',
       sshErrPlatform:
         'Неподдерживаемая удалённая платформа. SSH-режим Scout Desktop поддерживает удалённые хосты Linux, macOS и Windows.',
       sshErrTimeout: 'SSH-соединение истекло. Хост может быть недоступен или «спит».',
@@ -1687,9 +1687,6 @@ export const ru = defineLocale({
       installStarted: name => `Установка ${name}...`,
       actionFailed: 'Действие с навыком не удалось',
       alreadyInstalled: name => `«${name}» уже установлен`,
-      pickerBrowse: 'Открыть весь хаб',
-      pickerHide: 'Скрыть браузер хаба',
-      pickerHint: 'Нажмите «+ Добавить к этому агенту» на любом навыке — он установится и появится в списке выше.',
       loadFailed: 'Не удалось загрузить хаб навыков',
       previewFailed: 'Не удалось получить предпросмотр навыка',
       scanFailed: 'Не удалось выполнить проверку безопасности',
@@ -2034,37 +2031,6 @@ export const ru = defineLocale({
     restartNow: 'Перезапустить',
     restarting: 'Перезапуск…',
     restartFailedManual: 'Не удалось перезапустить шлюз — перезапустите его вручную и проверьте журналы.',
-    telegramQr: {
-      title: 'Выберите способ подключения Telegram-бота',
-      subtitle:
-        'Оба способа подключают бота под вашим контролем и сохраняют его данные только в этой установке Scout.',
-      quickSetup: 'Быстрая настройка',
-      recommended: 'Рекомендуется',
-      quickHelp:
-        'Отсканируйте QR-код и подтвердите в Telegram. Scout создаст бота и определит ваш Telegram ID автоматически.',
-      createWithQr: 'Создать по QR',
-      starting: 'Запуск…',
-      replaceWarning:
-        'Данные Telegram уже настроены. Новая QR-настройка или токен заменят текущего бота при сохранении.',
-      scanHint: 'Отсканируйте в приложении Telegram на телефоне или откройте ссылку на этом компьютере.',
-      waiting: 'Ожидание Telegram…',
-      expiresIn: remaining => `Истекает через ${remaining}`,
-      expired: 'Истёк',
-      openTelegram: 'Открыть Telegram',
-      ready: 'Бот создан',
-      allowedUsers: 'Разрешённые пользователи',
-      ownerDetected: 'Владелец определён',
-      addAtLeastOne: 'Добавьте хотя бы один Telegram ID.',
-      userIdPlaceholder: 'Telegram ID пользователя',
-      add: 'Добавить',
-      numericOnly: 'Telegram ID должны быть числовыми.',
-      saveAndRestart: 'Сохранить и перезапустить',
-      applying: 'Сохранение…',
-      pairingExpired: 'Срок QR-настройки истёк. Начните новую.',
-      stillWaiting: detail => `Всё ещё ждём Telegram. Повтор после: ${detail}`,
-      savedRestarting: 'Telegram сохранён; шлюз перезапускается…',
-      savedRestartFailed: detail => `Telegram сохранён; перезапуск шлюза не удался${detail}`
-    },
     fieldCopy: {
       TELEGRAM_BOT_TOKEN: {
         label: 'Токен бота',

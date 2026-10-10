@@ -14,7 +14,6 @@ import secrets
 import subprocess
 import threading
 import time
-import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -28,17 +27,15 @@ from scout_cli._subprocess_compat import windows_hide_flags
 from scout_cli.config import OPTIONAL_ENV_VARS, get_env_path
 from scout_constants import get_process_scout_home
 from scout_cli.web_deps import LateState, late
-from scout_cli.web_server_gateway import _restart_gateway_after
 from scout_cli.web_server_messaging import (
-    _TelegramOnboardingPairing, _WhatsAppOnboardingSession, _messaging_platform_catalog, _telegram_onboarding_error_message, _telegram_onboarding_lock, _telegram_onboarding_pairings, _whatsapp_onboarding_payload, _whatsapp_onboarding_sessions,
+    _WhatsAppOnboardingSession, _messaging_platform_catalog, _whatsapp_onboarding_payload, _whatsapp_onboarding_sessions,
 )
 from scout_cli.web_routers._common import (
     REDACTED_CREDENTIAL_WRITE_DETAIL, http_failure, is_redacted_credential_preview,
     redacted_credential_preview,
 )
 from scout_cli.web_models import (
-    MessagingPlatformUpdate, TelegramOnboardingApply, TelegramOnboardingStart,
-    WhatsAppOnboardingApply, WhatsAppOnboardingStart,
+    MessagingPlatformUpdate, WhatsAppOnboardingApply, WhatsAppOnboardingStart,
 )
 
 _log = logging.getLogger("scout_cli.web_server")
@@ -49,7 +46,6 @@ _config_profile_scope = late("_config_profile_scope", "scout_cli.web_server_prof
 _profile_scope = late("_profile_scope", "scout_cli.web_server_profiles")
 _resolve_profile_dir = late("_resolve_profile_dir", "scout_cli.web_server_profiles")
 _restart_gateway_after_whatsapp_onboarding = late("_restart_gateway_after_whatsapp_onboarding", "scout_cli.web_server_messaging")
-_telegram_onboarding_request_sync = late("_telegram_onboarding_request_sync", "scout_cli.web_server_messaging")
 _whatsapp_session_path = late("_whatsapp_session_path", "scout_cli.web_server_messaging")
 _write_platform_enabled = late("_write_platform_enabled", "scout_cli.web_server_messaging")
 load_env = late("load_env", "scout_cli.config")
@@ -656,163 +652,6 @@ async def cancel_whatsapp_onboarding(pairing_id: str):
 
 
 # ── Telegram QR onboarding ─────────────────────────────────────
-
-_TELEGRAM_SESSION_NOT_FOUND = "Telegram setup session was not found. Start a new setup."
-_TELEGRAM_INCOMPLETE_RESPONSE = "Telegram setup service returned an incomplete response."
-
-
-def _parse_expiry_ts(value: str) -> float:
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-        return parsed.timestamp()
-    except Exception:
-        return time.time() + 600
-
-
-def _prune_telegram_onboarding_pairings() -> None:
-    now = time.time()
-    for pairing_id in [pid for pid, record in _telegram_onboarding_pairings.items() if record.expires_at_ts <= now]:
-        _telegram_onboarding_pairings.pop(pairing_id, None)
-
-
-def _normalize_telegram_user_id(value: Any) -> str | None:
-    normalized = str(value or "").strip()
-    return normalized if _TELEGRAM_USER_ID_RE.fullmatch(normalized) else None
-
-
-def _telegram_record_or_404(pairing_id: str):
-    """Call with ``_telegram_onboarding_lock`` held."""
-    _prune_telegram_onboarding_pairings()
-    record = _telegram_onboarding_pairings.get(pairing_id)
-    if not record:
-        raise HTTPException(status_code=404, detail=_TELEGRAM_SESSION_NOT_FOUND)
-    return record
-
-
-def _telegram_ready_payload(record) -> dict[str, Any]:
-    return {
-        "status": "ready", "bot_username": record.bot_username,
-        "owner_user_id": record.owner_user_id, "expires_at": record.expires_at,
-    }
-
-
-async def _telegram_onboarding_request(method: str, path: str, *, body=None, bearer_token=None) -> dict[str, Any]:
-    return await asyncio.to_thread(_telegram_onboarding_request_sync, method, path, body=body, bearer_token=bearer_token)
-
-
-@router.post("/api/messaging/telegram/onboarding/start")
-async def start_telegram_onboarding(body: TelegramOnboardingStart):
-    bot_name = (body.bot_name or "Scout Agent").strip() or "Scout Agent"
-    payload = await _telegram_onboarding_request("POST", "/v1/telegram/pairings", body={"bot_name": bot_name})
-
-    def field(key: str) -> str:
-        return str(payload.get(key) or "").strip()
-
-    pairing_id, poll_token, expires_at, deep_link = map(field, ("pairing_id", "poll_token", "expires_at", "deep_link"))
-    if not pairing_id or not poll_token or not expires_at or not deep_link:
-        raise HTTPException(status_code=502, detail=_TELEGRAM_INCOMPLETE_RESPONSE)
-
-    with _telegram_onboarding_lock:
-        _prune_telegram_onboarding_pairings()
-        _telegram_onboarding_pairings[pairing_id] = _TelegramOnboardingPairing(
-            poll_token=poll_token, expires_at=expires_at, expires_at_ts=_parse_expiry_ts(expires_at))
-
-    return {
-        "pairing_id": pairing_id, "suggested_username": field("suggested_username"), "deep_link": deep_link,
-        "qr_payload": str(payload.get("qr_payload") or deep_link).strip(), "expires_at": expires_at,
-    }
-
-
-@router.get("/api/messaging/telegram/onboarding/{pairing_id}")
-async def get_telegram_onboarding_status(pairing_id: str):
-    with _telegram_onboarding_lock:
-        record = _telegram_record_or_404(pairing_id)
-        if record.bot_token:
-            return _telegram_ready_payload(record)
-        poll_token = record.poll_token
-
-    payload = await _telegram_onboarding_request(
-        "GET", f"/v1/telegram/pairings/{urllib.parse.quote(pairing_id, safe='')}", bearer_token=poll_token)
-    status = str(payload.get("status") or "").strip()
-    if status == "waiting":
-        with _telegram_onboarding_lock:
-            current = _telegram_onboarding_pairings.get(pairing_id)
-            expires_at = current.expires_at if current else ""
-        return {"status": "waiting", "expires_at": expires_at}
-
-    if status == "ready":
-        bot_token = str(payload.get("token") or "").strip()
-        if not bot_token:
-            raise HTTPException(status_code=502, detail=_TELEGRAM_INCOMPLETE_RESPONSE)
-        with _telegram_onboarding_lock:
-            record = _telegram_onboarding_pairings.get(pairing_id)
-            if not record:
-                raise HTTPException(status_code=404, detail=_TELEGRAM_SESSION_NOT_FOUND)
-            record.bot_token = bot_token
-            record.bot_username = str(payload.get("bot_username") or "").strip() or None
-            record.owner_user_id = _normalize_telegram_user_id(payload.get("owner_user_id"))
-            return _telegram_ready_payload(record)
-
-    if status in {"expired", "claimed"}:
-        with _telegram_onboarding_lock:
-            _telegram_onboarding_pairings.pop(pairing_id, None)
-        raise HTTPException(status_code=410, detail=_telegram_onboarding_error_message(
-            status, "Telegram setup is no longer available. Start a new setup."))
-
-    raise HTTPException(status_code=502, detail="Telegram setup service returned an unknown status.")
-
-
-@router.post("/api/messaging/telegram/onboarding/{pairing_id}/apply")
-async def apply_telegram_onboarding(pairing_id: str, body: TelegramOnboardingApply, profile: Optional[str] = None):
-    normalized_ids = [_normalize_telegram_user_id(raw_id) for raw_id in body.allowed_user_ids]
-    if not all(normalized_ids):
-        raise HTTPException(status_code=400, detail="Allowed Telegram user IDs must be numeric.")
-    allowed_user_ids = list(dict.fromkeys(normalized_ids))
-    if not allowed_user_ids:
-        raise HTTPException(status_code=400, detail="Add at least one allowed Telegram user ID.")
-
-    with _telegram_onboarding_lock:
-        record = _telegram_record_or_404(pairing_id)
-        bot_token = record.bot_token
-        bot_username = record.bot_username
-        if not bot_token:
-            raise HTTPException(status_code=409, detail="Telegram setup is not ready yet.")
-
-    effective_profile = body.profile or profile
-
-    def _apply():
-        with _profile_scope(effective_profile):
-            save_env_value("TELEGRAM_BOT_TOKEN", bot_token)
-            save_env_value("TELEGRAM_ALLOWED_USERS", ",".join(allowed_user_ids))
-            _write_platform_enabled("telegram", True)
-
-    with _onboarding_save_errors("Telegram onboarding apply failed", "Failed to save Telegram setup."):
-        await asyncio.to_thread(_apply)
-
-    with _telegram_onboarding_lock:
-        _telegram_onboarding_pairings.pop(pairing_id, None)
-
-    # Best-effort restart: the QR flow pulls users into Telegram on another device, so a
-    # saved token waiting on a manual restart click reads as "Scout is broken" from the
-    # chat side. The save stays authoritative; a failed restart is reported for the UI banner.
-    restart_result = _restart_gateway_after(effective_profile, what="Telegram onboarding", label="Telegram onboarding")
-    return {
-        "ok": True, "platform": "telegram", "bot_username": bot_username,
-        "needs_restart": not restart_result["restart_started"], **restart_result,
-    }
-
-
-@router.delete("/api/messaging/telegram/onboarding/{pairing_id}")
-async def cancel_telegram_onboarding(pairing_id: str):
-    with _telegram_onboarding_lock:
-        _telegram_onboarding_pairings.pop(pairing_id, None)
-    return {"ok": True}
-
-
-# ── platform list / update / test ──────────────────────────────
-
 
 @router.get("/api/messaging/platforms")
 async def get_messaging_platforms(profile: Optional[str] = None):

@@ -1610,7 +1610,7 @@ def cmd_gui(args: argparse.Namespace):
             print(
                 "  This Scout came from Homebrew, which does not ship the desktop app's\n"
                 "  source tree, so it cannot be built from this install.\n"
-                "  Install the desktop app from https://scout-agent.spaceshipresearch.com,\n"
+                "  Install the desktop app from https://github.com/adityakm24/scout,\n"
                 "  or run `scout desktop` from a source checkout."
             )
         sys.exit(1)

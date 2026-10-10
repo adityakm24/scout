@@ -867,7 +867,7 @@ _PROVIDERS_WITHOUT_VISION: frozenset = frozenset({"kimi-coding", "kimi-coding-cn
 
 # OpenRouter app attribution (always sent). `X-Title` is what the dashboard reads.
 _OR_HEADERS_BASE = {
-    "HTTP-Referer": "https://scout-agent.spaceshipresearch.com",
+    "HTTP-Referer": "https://github.com/adityakm24/scout",
     "X-Title": "Scout Agent",
     "X-OpenRouter-Categories": "productivity,cli-agent",
 }
@@ -935,7 +935,7 @@ def build_nvidia_nim_headers(base_url: str | None) -> dict:
 from scout_cli.version_info import get_version_info
 
 _AI_GATEWAY_HEADERS = {
-    "HTTP-Referer": "https://scout-agent.spaceshipresearch.com",
+    "HTTP-Referer": "https://github.com/adityakm24/scout",
     "X-Title": "Scout Agent",
     "User-Agent": f"ScoutAgent/{get_version_info().base_version}",
 }

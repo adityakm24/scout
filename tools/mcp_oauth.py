@@ -3,8 +3,9 @@
 
 The SDK's ``OAuthClientProvider`` does discovery, client identification, PKCE, exchange and
 refresh; this module supplies ``ScoutTokenStorage`` (on-disk persistence), the localhost callback
-listener and ``build_oauth_auth()`` (legacy entry point). client_id is Scout' Client ID Metadata
-Document URL (CIMD) when the server supports it, else RFC 7591 DCR. ``mcp_servers.<name>.oauth`` keys
+listener and ``build_oauth_auth()`` (legacy entry point). client_id is the configured Client ID
+Metadata Document URL (CIMD, ``oauth.client_metadata_url``) when the server supports it, else RFC 7591
+DCR. ``mcp_servers.<name>.oauth`` keys
 (all optional): client_id, client_secret, scope, redirect_port, redirect_uri (proxy callback),
 redirect_host, client_name, client_metadata_url, cimd, user_agent, timeout."""
 
@@ -759,7 +760,7 @@ _SSH_HINT_LOOPBACK = (
     "         ssh -N -L {port}:127.0.0.1:{port} <user>@<this-host>\n"
     "       then open the URL above and let it redirect normally.\n"
     "\n"
-    "  See: https://scout-agent.spaceshipresearch.com/docs/guides/oauth-over-ssh\n")
+    "  See: https://github.com/adityakm24/scout\n")
 
 
 def _announce_authorization_url(
@@ -843,7 +844,7 @@ def _callback_outcome(result: dict, cimd_url: str | None):
     if result["auth_code"] is None:
         hint = (
             " If the browser showed an invalid-client error instead of an approval prompt, the authorization "
-            f"server rejected Scout' Client ID Metadata Document ({cimd_url}); set ``cimd: false`` under that "
+            f"server rejected the Client ID Metadata Document ({cimd_url}); set ``cimd: false`` under that "
             "server's ``oauth:`` block in config.yaml to authorize via dynamic client registration instead."
         ) if cimd_url else ""
         raise OAuthNonInteractiveError(
@@ -922,11 +923,10 @@ def remove_oauth_tokens(server_name: str, *, scout_home: str | Path | None = Non
 
 # CIMD (OAuth Client ID Metadata Documents): the client_id IS an HTTPS URL the server fetches for our
 # name/logo/redirect URIs, replacing per-install DCR. The SDK does the protocol; Scout only decides
-# eligibility. Published from ``website/static/oauth/client-metadata.json``; the github.io origin is
-# deliberate — servers MUST NOT follow redirects when fetching it, and scout-agent.spaceshipresearch.com/docs/* 301s here.
-_CIMD_CLIENT_METADATA_URL = "https://spaceshipresearch.github.io/scout-agent/docs/oauth/client-metadata.json"
-# Loopback ports/hosts declared in that document (exact match, so no ephemeral port under CIMD);
-# below Linux's 32768 ephemeral floor. tests/tools/test_mcp_cimd.py keeps them in sync.
+# eligibility. Opt-in per server via ``oauth.client_metadata_url``: a document the user hosts, served
+# without redirects (servers MUST NOT follow them when fetching it).
+# Loopback ports/hosts such a document must declare (exact match, so no ephemeral port under CIMD);
+# below Linux's 32768 ephemeral floor.
 _CIMD_PORTS = (27890, 27891, 27892, 27893, 27894)
 _CIMD_REDIRECT_HOSTS = frozenset({"127.0.0.1", "localhost"})
 
@@ -985,10 +985,10 @@ def _maybe_use_cimd(cfg: dict, storage: "ScoutTokenStorage | None" = None) -> "t
     """``(client_id URL, pinned callback port)``, or None to use DCR. Each ineligibility case means the
     redirect URI is not one the document declares, the client identity is already settled, or the
     server is known not to want a document — a metadata URL would be rejected."""
-    url = cfg.get("client_metadata_url") or _CIMD_CLIENT_METADATA_URL
+    url = cfg.get("client_metadata_url")
     ineligible = (
         cfg.get("cimd") is False
-        or not _is_valid_cimd_url(url)
+        or not url or not _is_valid_cimd_url(url)
         # pinned client = explicit choice; a secret = confidential client, which the document forbids
         or cfg.get("client_id") or cfg.get("client_secret")
         # the document supplies name + auth method; setting either asks for an identity CIMD can't present

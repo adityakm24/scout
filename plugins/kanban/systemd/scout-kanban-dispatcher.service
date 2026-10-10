@@ -15,7 +15,7 @@
 
 [Unit]
 Description=Scout Kanban dispatcher (DEPRECATED standalone daemon — prefer gateway-embedded dispatch)
-Documentation=https://scout-agent.spaceshipresearch.com/docs/user-guide/features/kanban
+Documentation=https://github.com/adityakm24/scout
 After=network.target
 
 [Service]

@@ -21,7 +21,7 @@ def _assert_scout_identity_headers(headers):
     plus Perplexity's integration header."""
     from scout_cli.version_info import get_version_info
 
-    assert headers["HTTP-Referer"] == "https://scout-agent.spaceshipresearch.com"
+    assert headers["HTTP-Referer"] == "https://github.com/adityakm24/scout"
     assert headers["X-Title"] == "Scout Agent"
     assert headers["User-Agent"] == f"ScoutAgent/{get_version_info().base_version}"
     assert headers["X-Pplx-Integration"] == "scout-agent"

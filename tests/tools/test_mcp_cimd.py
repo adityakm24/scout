@@ -1,12 +1,11 @@
 """Tests for CIMD (Client ID Metadata Document) support in MCP OAuth.
 
-Under CIMD the ``client_id`` is the HTTPS URL of a document Scout publishes,
-which the authorization server fetches to learn our redirect URIs. The spec
-requires an exact string match between the redirect URI in the authorization
-request and one listed in that document
-(draft-ietf-oauth-client-id-metadata-document section 4.2), so most of what
-follows guards the two halves staying consistent: the published document, and
-the conditions under which Scout is allowed to present it.
+Under CIMD the ``client_id`` is the HTTPS URL of a document the user hosts and
+configures (``oauth.client_metadata_url``), which the authorization server
+fetches to learn our redirect URIs. The spec requires an exact string match
+between the redirect URI in the authorization request and one listed in that
+document (draft-ietf-oauth-client-id-metadata-document section 4.2), so most of
+what follows guards the conditions under which Scout is allowed to present it.
 
 Port mechanics run against a private range rather than the real one. The
 production range is bound for real by ``_pick_cimd_port``, and test files run
@@ -17,7 +16,6 @@ test lost the race fail on a port another file legitimately held.
 import asyncio
 import json
 import socket
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -30,22 +28,14 @@ pytest.importorskip(
 
 from tools.mcp_oauth import (  # noqa: E402 — after the SDK availability gate
     ScoutTokenStorage,
-    _CIMD_CLIENT_METADATA_URL,
-    _CIMD_PORTS,
-    _CIMD_REDIRECT_HOSTS,
-    _build_client_metadata,
     _configure_callback_port,
     _is_valid_cimd_url,
     _maybe_use_cimd,
 )
 
-_DOCUMENT_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "website" / "static" / "oauth" / "client-metadata.json"
-)
-
-def _document() -> dict:
-    return json.loads(_DOCUMENT_PATH.read_text())
+# CIMD is opt-in: a server uses it only with a document the user hosts and configures.
+DOC_URL = "https://example.com/scout/client-metadata.json"
+DOC_CFG = {"client_metadata_url": DOC_URL}
 
 def _set_interactive_stdin(monkeypatch, *, is_tty: bool = True) -> None:
     mock_stdin = MagicMock()
@@ -80,54 +70,11 @@ def private_ports(monkeypatch):
     return ports
 
 # ---------------------------------------------------------------------------
-# The published document and the code must agree
+# The configured document URL
 # ---------------------------------------------------------------------------
 
-def test_document_client_id_is_the_url_scout_sends():
-    """A CIMD document is only valid when its client_id is its own URL."""
-    assert _document()["client_id"] == _CIMD_CLIENT_METADATA_URL
-
-def test_document_declares_every_callback_scout_can_build(tmp_path, monkeypatch):
-    """Every loopback URI a CIMD flow could produce must be registered.
-
-    Exact string matching means one missing entry is a hard auth failure on
-    whichever port the OS happens to hand out that day. Built through the real
-    ``_build_client_metadata`` so pydantic's URL serialization — not an
-    f-string that merely resembles it — is what gets compared.
-    """
-    monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
-    declared = set(_document()["redirect_uris"])
-
-    for host in _CIMD_REDIRECT_HOSTS:
-        for port in _CIMD_PORTS:
-            cfg = {"redirect_host": host, "_resolved_port": port}
-            uri = str(_build_client_metadata(cfg).redirect_uris[0])
-            assert uri in declared, f"{uri} is not registered in the document"
-
-def test_document_url_passes_the_sdk_validator():
-    """The SDK's constructor rejects a URL that fails this check."""
-    from mcp.client.auth.utils import is_valid_client_metadata_url
-
-    assert is_valid_client_metadata_url(_CIMD_CLIENT_METADATA_URL)
-
-def test_document_advertises_a_public_native_client():
-    """Loopback redirects need application_type=native (SEP-837), and CIMD
-    carries no secret, so the client must be public."""
-    doc = _document()
-    assert doc["application_type"] == "native"
-    assert doc["token_endpoint_auth_method"] == "none"
-    assert "authorization_code" in doc["grant_types"]
-    assert "refresh_token" in doc["grant_types"]
-
-def test_document_carries_no_shared_secret():
-    """Draft section 4.1 forbids secret material in the document."""
-    doc = _document()
-    assert "client_secret" not in doc
-    assert "client_secret_expires_at" not in doc
-
-def test_default_document_url_is_a_valid_client_identifier():
-    """Section 3 constrains the URL beyond the SDK's https + path check."""
-    assert _is_valid_cimd_url(_CIMD_CLIENT_METADATA_URL)
+def test_configured_document_url_is_a_valid_client_identifier():
+    assert _is_valid_cimd_url(DOC_URL)
 
 @pytest.mark.parametrize("url", [
     pytest.param("http://example.com/cimd.json", id="not-https"),
@@ -141,27 +88,6 @@ def test_client_identifier_url_requirements_are_enforced(url):
     """Rejecting locally beats an opaque invalid-client page mid-flow."""
     assert not _is_valid_cimd_url(url)
 
-def test_generated_redirect_uri_is_registered_in_the_document(tmp_path, monkeypatch):
-    """End to end on the real range: the URI the SDK will actually send is
-    one the authorization server accepts.
-
-    The only test that runs the whole chain on production constants, so it
-    binds a real pinned port. Another test file mid-flight can legitimately
-    be holding all of them; the invariant itself is covered port-by-port,
-    without binding, by the document tests above.
-    """
-    monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
-    cfg: dict = {}
-
-    _configure_callback_port(cfg, ScoutTokenStorage("srv"))
-    if "_cimd_url" not in cfg:
-        pytest.skip("every pinned CIMD port is held by another process")
-    metadata = _build_client_metadata(cfg)
-
-    assert cfg["_cimd_url"] == _CIMD_CLIENT_METADATA_URL
-    assert cfg["_resolved_port"] in _CIMD_PORTS
-    assert str(metadata.redirect_uris[0]) in set(_document()["redirect_uris"])
-
 # ---------------------------------------------------------------------------
 # Eligibility
 # ---------------------------------------------------------------------------
@@ -169,11 +95,11 @@ def test_generated_redirect_uri_is_registered_in_the_document(tmp_path, monkeypa
 def test_eligible_flow_gets_a_pinned_port(tmp_path, monkeypatch, private_ports):
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
 
-    result = _maybe_use_cimd({}, ScoutTokenStorage("srv"))
+    result = _maybe_use_cimd(dict(DOC_CFG), ScoutTokenStorage("srv"))
 
     assert result is not None
     url, port = result
-    assert url == _CIMD_CLIENT_METADATA_URL
+    assert url == DOC_URL
     assert port in private_ports
 
 def test_pinned_port_is_held_until_the_callback_adopts_it(
@@ -186,7 +112,7 @@ def test_pinned_port_is_held_until_the_callback_adopts_it(
 
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
 
-    result = _maybe_use_cimd({}, ScoutTokenStorage("srv"))
+    result = _maybe_use_cimd(dict(DOC_CFG), ScoutTokenStorage("srv"))
     assert result is not None
     port = result[1]
 
@@ -211,7 +137,7 @@ def test_pinned_socket_survives_the_ephemeral_eviction_cap(
 
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
 
-    result = _maybe_use_cimd({}, ScoutTokenStorage("srv"))
+    result = _maybe_use_cimd(dict(DOC_CFG), ScoutTokenStorage("srv"))
     assert result is not None
     pinned = result[1]
 
@@ -235,7 +161,7 @@ def test_concurrent_servers_get_different_pinned_ports(
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
 
     ports = {
-        _maybe_use_cimd({}, ScoutTokenStorage(f"srv-{i}"))[1]
+        _maybe_use_cimd(dict(DOC_CFG), ScoutTokenStorage(f"srv-{i}"))[1]
         for i in range(len(private_ports))
     }
 
@@ -254,23 +180,18 @@ def test_occupied_port_moves_to_the_next_in_the_range(
         pytest.skip(f"could not occupy port {private_ports[0]}")
 
     try:
-        result = _maybe_use_cimd({}, ScoutTokenStorage("srv"))
+        result = _maybe_use_cimd(dict(DOC_CFG), ScoutTokenStorage("srv"))
     finally:
         squatter.close()
 
     assert result is not None
     assert result[1] in private_ports[1:]
 
-def test_self_hosted_document_url_overrides_the_default(
-    tmp_path, monkeypatch, private_ports
-):
+def test_no_configured_document_uses_dcr(tmp_path, monkeypatch, private_ports):
+    """Without a document of the user's own there is nothing to present as a client_id."""
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
-    cfg = {"client_metadata_url": "https://example.com/my-cimd.json"}
 
-    result = _maybe_use_cimd(cfg, ScoutTokenStorage("srv"))
-
-    assert result is not None
-    assert result[0] == "https://example.com/my-cimd.json"
+    assert _maybe_use_cimd({}, ScoutTokenStorage("srv")) is None
 
 @pytest.mark.parametrize("cfg", [
     pytest.param({"cimd": False}, id="explicitly-disabled"),
@@ -299,7 +220,7 @@ def test_config_that_conflicts_with_the_document_falls_back_to_dcr(
     present."""
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
 
-    assert _maybe_use_cimd(dict(cfg), ScoutTokenStorage("srv")) is None
+    assert _maybe_use_cimd({**DOC_CFG, **cfg}, ScoutTokenStorage("srv")) is None
 
 def test_dashboard_flow_falls_back_to_dcr(tmp_path, monkeypatch, private_ports):
     """The dashboard redirects to its own public URL, which no static
@@ -315,7 +236,7 @@ def test_dashboard_flow_falls_back_to_dcr(tmp_path, monkeypatch, private_ports):
         redirect_uri="https://agent.example/api/mcp/oauth/callback/srv",
     )
 
-    cfg: dict = {}
+    cfg: dict = dict(DOC_CFG)
     with dashboard_oauth_flow(flow):
         _configure_callback_port(cfg, ScoutTokenStorage("srv"))
 
@@ -330,7 +251,7 @@ def test_existing_registration_falls_back_to_dcr(tmp_path, monkeypatch, private_
     storage._client_info_path().parent.mkdir(parents=True, exist_ok=True)
     storage._client_info_path().write_text('{"client_id": "dcr-issued"}')
 
-    assert _maybe_use_cimd({}, storage) is None
+    assert _maybe_use_cimd(dict(DOC_CFG), storage) is None
 
 def test_exhausted_port_range_falls_back_to_dcr(tmp_path, monkeypatch, private_ports):
     """With every pinned port held elsewhere, the flow reverts to an
@@ -348,7 +269,7 @@ def test_exhausted_port_range_falls_back_to_dcr(tmp_path, monkeypatch, private_p
         pytest.skip("could not occupy the full pinned CIMD port range")
 
     try:
-        cfg: dict = {}
+        cfg: dict = dict(DOC_CFG)
         port = _configure_callback_port(cfg, ScoutTokenStorage("srv"))
     finally:
         for sock in squatters:
@@ -367,12 +288,12 @@ def test_more_servers_than_pinned_ports_all_get_cimd(
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
 
     results = [
-        _maybe_use_cimd({}, ScoutTokenStorage(f"srv-{i}"))
+        _maybe_use_cimd(dict(DOC_CFG), ScoutTokenStorage(f"srv-{i}"))
         for i in range(len(private_ports) + 3)
     ]
 
     assert all(r is not None for r in results)
-    assert {r[0] for r in results} == {_CIMD_CLIENT_METADATA_URL}
+    assert {r[0] for r in results} == {DOC_URL}
 
 # ---------------------------------------------------------------------------
 # Only pin a port for servers that might actually want a document
@@ -404,7 +325,7 @@ def test_cached_metadata_decides_whether_to_pin(
     storage = ScoutTokenStorage("srv")
     _cache_server_metadata(storage, supports_cimd=supports_cimd)
 
-    cfg: dict = {}
+    cfg: dict = dict(DOC_CFG)
     port = _configure_callback_port(cfg, storage)
 
     assert (cfg.get("_cimd_url") is not None) is expect_pinned
@@ -415,10 +336,10 @@ def test_unknown_server_still_gets_a_document(tmp_path, monkeypatch, private_por
     the only way to ever use it."""
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
 
-    cfg: dict = {}
+    cfg: dict = dict(DOC_CFG)
     _configure_callback_port(cfg, ScoutTokenStorage("srv"))
 
-    assert cfg["_cimd_url"] == _CIMD_CLIENT_METADATA_URL
+    assert cfg["_cimd_url"] == DOC_URL
 
 def test_cached_pinned_port_is_not_handed_to_a_sibling_server(
     tmp_path, monkeypatch, private_ports
@@ -430,12 +351,12 @@ def test_cached_pinned_port_is_not_handed_to_a_sibling_server(
     settled = ScoutTokenStorage("settled")
     settled._client_info_path().parent.mkdir(parents=True, exist_ok=True)
     settled._client_info_path().write_text(json.dumps({
-        "client_id": _CIMD_CLIENT_METADATA_URL,
+        "client_id": DOC_URL,
         "redirect_uris": [f"http://127.0.0.1:{private_ports[0]}/callback"],
     }))
 
-    restored = _configure_callback_port({}, settled)
-    fresh = _maybe_use_cimd({}, ScoutTokenStorage("fresh"))
+    restored = _configure_callback_port(dict(DOC_CFG), settled)
+    fresh = _maybe_use_cimd(dict(DOC_CFG), ScoutTokenStorage("fresh"))
 
     assert restored == private_ports[0]
     assert fresh is not None
@@ -452,16 +373,16 @@ def test_build_oauth_auth_forwards_the_document_url(
     _set_interactive_stdin(monkeypatch)
     from tools.mcp_oauth import build_oauth_auth
 
-    provider = build_oauth_auth("srv", "https://mcp.example.com/mcp", {})
+    provider = build_oauth_auth("srv", "https://mcp.example.com/mcp", dict(DOC_CFG))
 
-    assert provider.context.client_metadata_url == _CIMD_CLIENT_METADATA_URL
+    assert provider.context.client_metadata_url == DOC_URL
 
 def test_build_oauth_auth_omits_the_url_when_disabled(tmp_path, monkeypatch):
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     _set_interactive_stdin(monkeypatch)
     from tools.mcp_oauth import build_oauth_auth
 
-    provider = build_oauth_auth("srv", "https://mcp.example.com/mcp", {"cimd": False})
+    provider = build_oauth_auth("srv", "https://mcp.example.com/mcp", {**DOC_CFG, "cimd": False})
 
     assert provider.context.client_metadata_url is None
 
@@ -490,7 +411,7 @@ def test_sdk_chooses_cimd_only_when_the_server_advertises_it(
     from mcp.client.auth.utils import should_use_client_metadata_url
     from tools.mcp_oauth import build_oauth_auth
 
-    provider = build_oauth_auth("srv", "https://mcp.example.com/mcp", {})
+    provider = build_oauth_auth("srv", "https://mcp.example.com/mcp", dict(DOC_CFG))
     server_metadata = SimpleNamespace(client_id_metadata_document_supported=advertised)
 
     chosen = should_use_client_metadata_url(
@@ -507,10 +428,10 @@ def test_manager_forwards_the_document_url(tmp_path, monkeypatch, private_ports)
 
     reset_manager_for_tests()
     provider = MCPOAuthManager().get_or_build_provider(
-        "srv", "https://mcp.example.com/mcp", {}
+        "srv", "https://mcp.example.com/mcp", dict(DOC_CFG)
     )
 
-    assert provider.context.client_metadata_url == _CIMD_CLIENT_METADATA_URL
+    assert provider.context.client_metadata_url == DOC_URL
 
 # ---------------------------------------------------------------------------
 # Rejection fallback
@@ -536,7 +457,7 @@ def _provider_rejected_at_token_endpoint(tmp_path, monkeypatch, client_id):
     token_endpoint = "https://idp.example.com/oauth/token"
 
     provider = MCPOAuthManager().get_or_build_provider(
-        "srv", "https://mcp.example.com", {}
+        "srv", "https://mcp.example.com", dict(DOC_CFG)
     )
     provider.context.oauth_metadata = SimpleNamespace(token_endpoint=token_endpoint)
     provider.context.client_info = SimpleNamespace(client_id=client_id)
@@ -553,7 +474,7 @@ def test_rejected_document_stops_being_presented(tmp_path, monkeypatch, private_
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
 
     provider = _provider_rejected_at_token_endpoint(
-        tmp_path, monkeypatch, _CIMD_CLIENT_METADATA_URL
+        tmp_path, monkeypatch, DOC_URL
     )
 
     assert provider.context.client_metadata_url is None
@@ -568,12 +489,12 @@ def test_rejected_document_stays_rejected_after_a_restart(
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
 
     _provider_rejected_at_token_endpoint(
-        tmp_path, monkeypatch, _CIMD_CLIENT_METADATA_URL
+        tmp_path, monkeypatch, DOC_URL
     )
     storage = ScoutTokenStorage("srv")
 
     assert storage.cimd_rejected()
-    assert _maybe_use_cimd({}, storage) is None
+    assert _maybe_use_cimd(dict(DOC_CFG), storage) is None
 
 def test_reauthorizing_clears_the_rejection(tmp_path, monkeypatch, private_ports):
     """`scout mcp login` wipes stored state, so a fixed document is retried."""
@@ -584,7 +505,7 @@ def test_reauthorizing_clears_the_rejection(tmp_path, monkeypatch, private_ports
     storage.remove()
 
     assert not storage.cimd_rejected()
-    assert _maybe_use_cimd({}, storage) is not None
+    assert _maybe_use_cimd(dict(DOC_CFG), storage) is not None
 
 def test_rejected_dcr_client_leaves_cimd_available(
     tmp_path, monkeypatch, private_ports
@@ -596,7 +517,7 @@ def test_rejected_dcr_client_leaves_cimd_available(
         tmp_path, monkeypatch, "dcr-issued-id"
     )
 
-    assert provider.context.client_metadata_url == _CIMD_CLIENT_METADATA_URL
+    assert provider.context.client_metadata_url == DOC_URL
     assert not ScoutTokenStorage("srv").cimd_rejected()
 
 # ---------------------------------------------------------------------------
@@ -624,7 +545,7 @@ def test_timeout_on_a_cimd_flow_names_the_document_and_the_escape_hatch(monkeypa
     """A server that can't validate the document aborts at the authorization
     endpoint (draft section 5.1), so no redirect ever arrives and the only
     symptom Scout sees is the callback timing out."""
-    message = _timed_out_waiter_message(monkeypatch, _CIMD_CLIENT_METADATA_URL)
+    message = _timed_out_waiter_message(monkeypatch, DOC_URL)
 
-    assert _CIMD_CLIENT_METADATA_URL in message
+    assert DOC_URL in message
     assert "cimd: false" in message

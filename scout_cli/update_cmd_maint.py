@@ -36,8 +36,8 @@ _PRE_UPDATE_SNAPSHOT_MAX_FILE_SIZE = 1 << 30  # 1 GiB
 #: Reinstalling through the official installer swaps in a Python whose SQLite is safe; the
 #: one-liner differs per OS (mirrors ``uninstall._REINSTALL_HINT``). windows -> command
 _REINSTALL_ONE_LINER = {
-    True: "iex (irm https://scout-agent.spaceshipresearch.com/install.ps1)",
-    False: "curl -fsSL https://scout-agent.spaceshipresearch.com/install.sh | bash",
+    True: "git clone https://github.com/adityakm24/scout.git; cd scout; .\\scripts\\install.ps1",
+    False: "git clone https://github.com/adityakm24/scout.git && cd scout && ./scripts/install.sh",
 }
 
 
@@ -102,7 +102,7 @@ def _print_curator_first_run_notice() -> None:
     )
     print("  Preview now:  scout curator run --dry-run")
     print("  Pause it:     scout curator pause")
-    print("  Docs:         https://scout-agent.spaceshipresearch.com/docs/user-guide/features/curator")
+    print("  Docs:         https://github.com/adityakm24/scout")
 
 
 def _print_fts_optimize_available_notice() -> None:

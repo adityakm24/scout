@@ -904,7 +904,7 @@ export default function PluginsPage() {
               {t.pluginsPage.catalogEmpty ?? "No catalog entries match."}{" "}
               <a
                 className="underline"
-                href="https://scout-agent.spaceshipresearch.com/docs/plugins"
+                href="https://github.com/adityakm24/scout"
                 target="_blank"
                 rel="noreferrer"
               >

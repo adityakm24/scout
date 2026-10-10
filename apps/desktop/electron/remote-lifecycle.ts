@@ -237,7 +237,7 @@ async function locateScout(ssh, remoteScoutPath) {
 
   const err: any = new Error(
     'Scout is not installed on the remote host (could not find a `scout` executable). ' +
-      'Install it on the remote with:  curl -fsSL https://scout-agent.spaceshipresearch.com/install.sh | sh  ' +
+      'Install it on the remote with:  git clone https://github.com/adityakm24/scout.git && cd scout && ./scripts/install.sh  ' +
       '— or set the Scout path explicitly in the SSH connection settings.'
   )
 

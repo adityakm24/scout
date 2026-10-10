@@ -2131,7 +2131,7 @@ export const frOverrides = {
       sshErrHostKey:
         "La clé de l'hôte a changé depuis votre dernière connexion. Vérifiez que ce changement est attendu, puis exécutez ssh-keygen -R <host> et reconnectez-vous.",
       sshErrNotInstalled:
-        "Scout n'est pas installé sur l'hôte distant. Installez-le là-bas (curl -fsSL https://scout-agent.spaceshipresearch.com/install.sh | sh) ou définissez le chemin Scout.",
+        "Scout n'est pas installé sur l'hôte distant. Installez-le là-bas (git clone https://github.com/adityakm24/scout.git && cd scout && ./scripts/install.sh) ou définissez le chemin Scout.",
       sshErrPlatform:
         'Plateforme distante non prise en charge. Le mode SSH de Scout Desktop supporte les hôtes distants Linux, macOS et Windows.',
       sshErrTimeout: "Expiration de la connexion SSH. L'hôte peut être inaccessible ou en veille.",
@@ -3026,10 +3026,6 @@ export const frOverrides = {
         `Le scan de sécurité a signalé ${findings > 0 ? `${findings} élément${findings === 1 ? '' : 's'}` : 'des motifs risqués'} à examiner${unverified ? " et le skill provient d'une source non vérifiée" : ''}. Consultez le scan avant de décider si vous faites confiance à l'auteur.`,
       viewScan: 'Voir le scan',
       alreadyInstalled: name => `« ${name} » est déjà installé`,
-      pickerBrowse: 'Parcourir tout le hub',
-      pickerHide: 'Masquer le navigateur du hub',
-      pickerHint:
-        'Cliquez sur « + Ajouter à cet agent » pour installer un skill : il apparaîtra ensuite dans la liste ci-dessus.',
       loadFailed: 'Échec du chargement du hub de skills',
       previewFailed: "Échec de l'aperçu du skill",
       scanFailed: 'Échec du scan de sécurité'
@@ -3409,37 +3405,6 @@ export const frOverrides = {
       'Réessayez le redémarrage ; si le problème persiste, ouvrez les journaux et envoyez les diagnostics.',
     restartAgain: 'Redémarrer à nouveau',
     openLogs: 'Ouvrir les journaux',
-    telegramQr: {
-      title: 'Choisissez comment connecter votre bot Telegram',
-      subtitle:
-        "Les deux méthodes connectent un bot que vous contrôlez et enregistrent ses identifiants uniquement dans cette installation d'Scout.",
-      quickSetup: 'Configuration rapide',
-      recommended: 'Recommandé',
-      quickHelp:
-        "Scannez un code QR et confirmez dans Telegram. Scout crée le bot et détecte automatiquement votre identifiant d'utilisateur Telegram.",
-      createWithQr: 'Créer avec un code QR',
-      starting: 'Démarrage…',
-      replaceWarning:
-        "Des identifiants Telegram sont déjà configurés. Une nouvelle configuration par QR ou un nouveau jeton remplacera le bot actuel lors de l'enregistrement.",
-      scanHint: "Scannez avec l'application Telegram de votre téléphone ou ouvrez le lien sur cet ordinateur.",
-      waiting: 'En attente de Telegram…',
-      expiresIn: remaining => `Expire dans ${remaining}`,
-      expired: 'Expiré',
-      openTelegram: 'Ouvrir Telegram',
-      ready: 'Bot créé',
-      allowedUsers: 'Utilisateurs autorisés',
-      ownerDetected: 'Propriétaire détecté',
-      addAtLeastOne: "Ajoutez au moins un identifiant d'utilisateur Telegram.",
-      userIdPlaceholder: "Identifiant d'utilisateur Telegram",
-      add: 'Ajouter',
-      numericOnly: "Les identifiants d'utilisateurs Telegram autorisés doivent être numériques.",
-      saveAndRestart: 'Enregistrer et redémarrer',
-      applying: 'Enregistrement…',
-      pairingExpired: 'La liaison Telegram a expiré. Relancez une configuration par QR pour réessayer.',
-      stillWaiting: detail => `Toujours en attente de Telegram. Nouvelle tentative après : ${detail}`,
-      savedRestarting: 'Telegram enregistré ; redémarrage du gateway…',
-      savedRestartFailed: detail => `Telegram enregistré ; le redémarrage du gateway a échoué${detail}`
-    },
     fieldCopy: {
       TELEGRAM_BOT_TOKEN: {
         label: 'Jeton du bot',

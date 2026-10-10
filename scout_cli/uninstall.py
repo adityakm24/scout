@@ -1134,8 +1134,8 @@ def _perform_uninstall(
 
 
 _REINSTALL_HINT = {
-    True: "  iex (irm https://scout-agent.spaceshipresearch.com/install.ps1)",
-    False: "  curl -fsSL https://scout-agent.spaceshipresearch.com/install.sh | bash"}
+    True: "  git clone https://github.com/adityakm24/scout.git; cd scout; .\\scripts\\install.ps1",
+    False: "  git clone https://github.com/adityakm24/scout.git && cd scout && ./scripts/install.sh"}
 # windows -> [(line, color or None)]
 _RELOAD_HINT = {
     True: [("Open a new terminal (PowerShell / Windows Terminal) to pick up", Colors.YELLOW),

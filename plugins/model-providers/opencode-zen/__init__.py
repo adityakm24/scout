@@ -14,7 +14,7 @@ from providers.base import ProviderProfile
 # Attribution headers (same values as OpenRouter / Vercel / Fireworks); via
 # default_headers so they survive model switches and credential rotation.
 _ATTRIBUTION_HEADERS = {
-    "HTTP-Referer": "https://scout-agent.spaceshipresearch.com",
+    "HTTP-Referer": "https://github.com/adityakm24/scout",
     "X-Title": "Scout Agent",
     "User-Agent": f"ScoutAgent/{get_version_info().base_version}",
 }

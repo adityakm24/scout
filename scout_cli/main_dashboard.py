@@ -654,7 +654,7 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
             "    scout dashboard register\n"
             "  It provisions a Scout Portal OAuth client and writes "
             "SCOUT_DASHBOARD_OAUTH_CLIENT_ID into ~/.scout/.env for you.\n"
-            "  Docs: https://scout-agent.spaceshipresearch.com/docs/"
+            "  Docs: https://github.com/adityakm24/scout"
             "user-guide/features/web-dashboard#authentication-gated-mode"
         )
         sys.exit(0)

@@ -5,7 +5,7 @@ import { usePageHeader } from "@/contexts/usePageHeader";
 import { cn } from "@/lib/utils";
 import { PluginSlot } from "@/plugins";
 
-export const SCOUT_DOCS_URL = "https://scout-agent.spaceshipresearch.com/docs/";
+export const SCOUT_DOCS_URL = "https://github.com/adityakm24/scout";
 
 const DS_BUTTON_OUTLINED_LINK_CN = cn(
   "group relative inline-grid grid-cols-[auto_1fr_auto] items-center",

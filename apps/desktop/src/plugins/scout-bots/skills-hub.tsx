@@ -1,27 +1,17 @@
 /**
- * The real skills hub page embedded as a picker, plus its offline search
- * fallback.
+ * Skills hub search and install for a bot.
  *
  * A leaf: the advanced profile editor and the create dialog both mount it, and
  * it reaches back into neither.
  */
 
 import { Button, Codicon, host, Input, useI18n } from '@scout/plugin-sdk'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 
 import { useBots } from './i18n'
 import { requestForBot } from './routing'
 import type { RosterRow } from './types'
 
-// ── skills hub section: the REAL hub page (docs) embedded as a picker ──────
-// https://scout-agent.spaceshipresearch.com/docs/skills?embed=picker hides the
-// docs chrome and adds "+ Add to this Agent" per card, posting
-// {type: 'scout-skill-pick', ...} to us (scout-agent#86243). We validate
-// the origin, install via skills.manage, and bubble onInstalled so the
-// checklist above gains the row. Search-box fallback kept for offline use.
-
-const HUB_ORIGIN = 'https://scout-agent.spaceshipresearch.com'
-const HUB_PICKER_URL = HUB_ORIGIN + '/docs/skills?embed=picker'
 /** One `skills.manage action=search` hit. */
 interface HubSkillResult {
   description?: string
@@ -42,51 +32,6 @@ export function HubSkillsSection({ bot, onInstalled }: HubSkillsSectionProps) {
   const [searching, setSearching] = useState(false)
   const [installing, setInstalling] = useState<null | string>(null)
   const [installed, setInstalled] = useState<Record<string, boolean>>({})
-  const [browseHub, setBrowseHub] = useState(false)
-  const installRef = useRef<((name: string, displayName?: string) => Promise<void>) | null>(null)
-  const frameRef = useRef<HTMLIFrameElement | null>(null)
-
-  // Picker messages from the embedded hub page. Origin- AND source-checked —
-  // only OUR frame may ask for an install (the hub origin alone would let any
-  // other window on it, e.g. an OAuth popup, trigger installs too); installs
-  // route through the same install() the search fallback uses.
-  useEffect(() => {
-    if (!browseHub) {
-      return undefined
-    }
-
-    const onMessage = (event: MessageEvent) => {
-      if (event.origin !== HUB_ORIGIN) {
-        return
-      }
-
-      if (!frameRef.current || event.source !== frameRef.current.contentWindow) {
-        return
-      }
-
-      const data = event.data
-
-      if (!data || data.type !== 'scout-skill-pick' || !data.name) {
-        return
-      }
-
-      const target = String(data.identifier || data.name)
-
-      // Skill identifiers are slugs / owner-name paths — keep anything
-      // else out of skills.manage.
-      if (!/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(target)) {
-        return
-      }
-
-      if (installRef.current) {
-        void installRef.current(target, String(data.name))
-      }
-    }
-
-    window.addEventListener('message', onMessage)
-
-    return () => window.removeEventListener('message', onMessage)
-  }, [browseHub])
 
   const search = async () => {
     const q = query.trim()
@@ -151,57 +96,9 @@ export function HubSkillsSection({ bot, onInstalled }: HubSkillsSectionProps) {
     }
   }
 
-  installRef.current = install
-
   return (
     <div className="grid gap-1.5 border-t border-(--ui-stroke-secondary) pt-2">
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="text-[0.7rem] font-medium text-(--ui-text-secondary)">{b.tools.skillsHub}</div>
-        <Button
-          className="text-[0.65rem] text-(--ui-text-quaternary) hover:text-(--ui-text-secondary)"
-          onClick={() => setBrowseHub(v => !v)}
-          size="inline"
-          variant="text"
-        >
-          {browseHub ? h.pickerHide : h.pickerBrowse}
-        </Button>
-      </div>
-      {browseHub ? (
-        <div className="grid gap-1">
-          {/* Resizable viewport: native CSS resize handle (bottom-right */
-          /* corner) lets the user drag it larger/smaller. The iframe */
-          /* inside is rendered oversized and scaled DOWN (133% × 0.75) */
-          /* so the hub page starts zoomed out — we can't style the */
-          /* cross-origin page itself, but scaling the frame is ours. */}
-          <div
-            className="relative w-full max-w-full resize overflow-hidden border border-(--ui-stroke-secondary)"
-            style={{
-              height: 560,
-              minHeight: 240,
-              minWidth: 320,
-              borderRadius: 8
-            }}
-          >
-            <iframe
-              ref={frameRef}
-              sandbox="allow-scripts allow-same-origin"
-              src={HUB_PICKER_URL}
-              style={{
-                width: '133.34%',
-                height: '133.34%',
-                border: 'none',
-                background: 'transparent',
-                transform: 'scale(0.75)',
-                transformOrigin: 'top left'
-              }}
-              title={b.tools.skillsHub}
-            />
-          </div>
-          <div className="px-1 text-[0.65rem] leading-4 text-(--ui-text-quaternary)">
-            {installing ? h.installStarted(installing) : `${h.pickerHint} ${b.tools.resizeHint}`}
-          </div>
-        </div>
-      ) : null}
+      <div className="text-[0.7rem] font-medium text-(--ui-text-secondary)">{b.tools.skillsHub}</div>
       <div className="flex gap-1.5">
         <Input
           className="h-7 flex-1 text-xs"

@@ -82,7 +82,7 @@ class TestBuildAnthropicClient:
             )
             kwargs = mock_sdk.Anthropic.call_args[1]
             headers = kwargs["default_headers"]
-            assert headers["HTTP-Referer"] == "https://scout-agent.spaceshipresearch.com"
+            assert headers["HTTP-Referer"] == "https://github.com/adityakm24/scout"
             assert headers["X-Title"] == "Scout Agent"
             from scout_cli.version_info import get_version_info
             assert headers["User-Agent"] == f"ScoutAgent/{get_version_info().base_version}"
@@ -1809,7 +1809,7 @@ def test_oauth_system_prompt_sanitizer_preserves_docs_url():
                 "role": "system",
                 "content": (
                     "Scout Agent by SpaceshipResearch uses scout-agent skills. "
-                    "Docs: https://scout-agent.spaceshipresearch.com/docs ; "
+                    "Docs: https://scout-agent.example.com/docs ; "
                     "interpreter ~/.scout/scout-agent/venv/bin/python ; "
                     "source github.com/adityakm24/scout ; mail scout-agent@example.com ; "
                     "skill_view(name='scout-agent') ; scout-agent's docs ; built by scout-agent."
@@ -1825,7 +1825,7 @@ def test_oauth_system_prompt_sanitizer_preserves_docs_url():
 
     system_text = "\n".join(block["text"] for block in kwargs["system"])
     assert "Claude Code by Anthropic uses claude-code skills." in system_text
-    assert "https://scout-agent.spaceshipresearch.com/docs" in system_text
+    assert "https://scout-agent.example.com/docs" in system_text
     # Paths and repo slugs are addresses too: a subagent told to run
     # ``~/.scout/claude-code/venv/bin/python`` fails on a file that does not exist.
     assert "~/.scout/scout-agent/venv/bin/python" in system_text

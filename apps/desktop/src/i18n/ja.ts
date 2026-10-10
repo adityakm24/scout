@@ -1226,7 +1226,7 @@ export const ja = defineLocale({
       sshErrHostKey:
         '前回の接続以降、ホスト鍵が変更されています。想定どおりか確認し、ssh-keygen -R <host> を実行してから再接続してください。',
       sshErrNotInstalled:
-        'リモートホストに Scout がインストールされていません。リモートでインストールする（curl -fsSL https://scout-agent.spaceshipresearch.com/install.sh | sh）か、Scout パスを設定してください。',
+        'リモートホストに Scout がインストールされていません。リモートでインストールする（git clone https://github.com/adityakm24/scout.git && cd scout && ./scripts/install.sh）か、Scout パスを設定してください。',
       sshErrPlatform:
         'サポートされていないリモートプラットフォームです。Scout Desktop の SSH モードは Linux、macOS、Windows のリモートホストに対応しています。',
       sshErrTimeout: 'SSH 接続がタイムアウトしました。ホストが到達不能、またはスリープ中の可能性があります。',
@@ -1590,9 +1590,6 @@ export const ja = defineLocale({
       noResults: '一致するスキルがハブにありません。',
       installed: 'インストール済み',
       installStarted: name => `「${name}」をインストール中…`,
-      pickerBrowse: 'ハブ全体を見る',
-      pickerHide: 'ハブのブラウザーを隠す',
-      pickerHint: 'スキルの「+ Add to this Agent」を押すと、インストールされて上の一覧に表示されます。'
     },
     tabSkills: 'スキル',
     all: 'すべて',
@@ -1850,36 +1847,6 @@ export const ja = defineLocale({
     restartNow: '今すぐ再起動',
     restarting: '再起動中…',
     restartFailedManual: 'ゲートウェイの再起動に失敗しました。手動で再起動し、ゲートウェイのログを確認してください。',
-    telegramQr: {
-      title: 'Telegram ボットの接続方法を選択',
-      subtitle: 'どちらの方法でも、あなたが管理するボットを接続し、資格情報はこの Scout にのみ保存されます。',
-      quickSetup: 'クイックセットアップ',
-      recommended: '推奨',
-      quickHelp:
-        'QR コードをスキャンして Telegram で確認します。Scout がボットを作成し、あなたの Telegram ユーザー ID を自動検出します。',
-      createWithQr: 'QR で作成',
-      starting: '開始中…',
-      replaceWarning:
-        'Telegram の資格情報はすでに設定されています。保存すると新しい QR セットアップまたはトークンが現在のボットを置き換えます。',
-      scanHint: 'スマートフォンの Telegram アプリでスキャンするか、このコンピューターでリンクを開いてください。',
-      waiting: 'Telegram を待機中…',
-      expiresIn: remaining => `有効期限: ${remaining}`,
-      expired: '期限切れ',
-      openTelegram: 'Telegram を開く',
-      ready: 'ボットを作成しました',
-      allowedUsers: '許可ユーザー',
-      ownerDetected: '所有者を検出',
-      addAtLeastOne: 'Telegram ユーザー ID を 1 つ以上追加してください。',
-      userIdPlaceholder: 'Telegram ユーザー ID',
-      add: '追加',
-      numericOnly: 'Telegram ユーザー ID は数字で入力してください。',
-      saveAndRestart: '保存して再起動',
-      applying: '保存中…',
-      pairingExpired: 'Telegram のペアリングが期限切れです。新しい QR セットアップを開始してください。',
-      stillWaiting: detail => `Telegram を待機中。エラー後に再試行: ${detail}`,
-      savedRestarting: 'Telegram を保存しました。ゲートウェイを再起動中…',
-      savedRestartFailed: detail => `Telegram を保存しましたが、ゲートウェイの再起動に失敗しました${detail}`
-    },
     credentialsSet: '認証情報を設定しました',
     needsSetup: '設定が必要',
     gatewayStopped: 'メッセージングゲートウェイが停止中',

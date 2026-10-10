@@ -2127,7 +2127,7 @@ export const deOverrides = {
       sshErrHostKey:
         'Der Host-Key hat sich seit Ihrer letzten Verbindung GEÄNDERT. Prüfen Sie, ob das erwartet ist, führen Sie dann ssh-keygen -R <host> aus und verbinden Sie sich erneut.',
       sshErrNotInstalled:
-        'Scout ist auf dem Remote-Host nicht installiert. Installieren Sie es dort (curl -fsSL https://scout-agent.spaceshipresearch.com/install.sh | sh) oder legen Sie den Scout-Pfad fest.',
+        'Scout ist auf dem Remote-Host nicht installiert. Installieren Sie es dort (git clone https://github.com/adityakm24/scout.git && cd scout && ./scripts/install.sh) oder legen Sie den Scout-Pfad fest.',
       sshErrPlatform:
         'Nicht unterstützte Remote-Plattform. Der Desktop-SSH-Modus von Scout unterstützt Linux-, macOS- und Windows-Remote-Hosts.',
       sshErrTimeout: 'SSH-Verbindung ist ausgelaufen. Der Host ist möglicherweise nicht erreichbar oder schläft.',
@@ -3019,10 +3019,6 @@ export const deOverrides = {
         `Der Sicherheitsscan hat ${findings > 0 ? `${findings} Punkt${findings === 1 ? '' : 'e'}` : 'riskante Muster'} zur Prüfung markiert${unverified ? ' und der Skill stammt aus einer unbestätigten Quelle' : ''}. Lesen Sie den Scan, bevor Sie dem Autor vertrauen.`,
       viewScan: 'Scan ansehen',
       alreadyInstalled: (name: string) => `"${name}" ist bereits installiert`,
-      pickerBrowse: 'Den ganzen Hub durchstöbern',
-      pickerHide: 'Hub-Durchsucher ausblenden',
-      pickerHint:
-        'Klicken Sie bei einem beliebigen Skill auf „+ Zu diesem Agenten hinzufügen“ – er wird installiert und erscheint in der Liste oben.',
       loadFailed: 'Skill-Hub konnte nicht geladen werden',
       previewFailed: 'Skill-Vorschau fehlgeschlagen',
       scanFailed: 'Sicherheitsscan fehlgeschlagen'
@@ -3402,37 +3398,6 @@ export const deOverrides = {
       'Versuchen Sie den Neustart erneut; wenn er weiterhin fehlschlägt, öffnen Sie die Logs und senden Sie Diagnosedaten.',
     restartAgain: 'Erneut neu starten',
     openLogs: 'Logs öffnen',
-    telegramQr: {
-      title: 'Wählen Sie, wie Sie Ihren Telegram-Bot verbinden',
-      subtitle:
-        'Beide Optionen verbinden einen Bot, den Sie kontrollieren, und speichern seine Zugangsdaten nur in dieser Scout-Installation.',
-      quickSetup: 'Schnelleinrichtung',
-      recommended: 'Empfohlen',
-      quickHelp:
-        'Scannen Sie einen QR-Code und bestätigen Sie in Telegram. Scout legt den Bot an und erkennt Ihre Telegram-Benutzer-ID automatisch.',
-      createWithQr: 'Mit QR-Code anlegen',
-      starting: 'Wird gestartet…',
-      replaceWarning:
-        'Es sind bereits Telegram-Zugangsdaten konfiguriert. Eine neue QR-Einrichtung oder ein Bot-Token ersetzt beim Speichern den aktuellen Bot.',
-      scanHint: 'Scannen Sie mit der Telegram-App auf Ihrem Handy oder öffnen Sie den Link auf diesem Computer.',
-      waiting: 'Warten auf Telegram…',
-      expiresIn: remaining => `Läuft ab in ${remaining}`,
-      expired: 'Abgelaufen',
-      openTelegram: 'Telegram öffnen',
-      ready: 'Bot angelegt',
-      allowedUsers: 'Erlaubte Benutzer',
-      ownerDetected: 'Eigentümer erkannt',
-      addAtLeastOne: 'Fügen Sie mindestens eine Telegram-Benutzer-ID hinzu.',
-      userIdPlaceholder: 'Telegram-Benutzer-ID',
-      add: 'Hinzufügen',
-      numericOnly: 'Erlaubte Telegram-Benutzer-IDs müssen numerisch sein.',
-      saveAndRestart: 'Speichern und neu starten',
-      applying: 'Wird gespeichert…',
-      pairingExpired: 'Telegram-Kopplung abgelaufen. Starten Sie eine neue QR-Einrichtung, um es erneut zu versuchen.',
-      stillWaiting: detail => `Noch keine Antwort von Telegram. Neuer Versuch nach: ${detail}`,
-      savedRestarting: 'Telegram gespeichert; Gateway wird neu gestartet…',
-      savedRestartFailed: detail => `Telegram gespeichert; Gateway-Neustart fehlgeschlagen${detail}`
-    },
     fieldCopy: {
       TELEGRAM_BOT_TOKEN: {
         label: 'Bot-Token',

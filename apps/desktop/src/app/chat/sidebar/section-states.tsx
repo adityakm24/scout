@@ -81,7 +81,7 @@ export function SidebarLoadErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 const SESSION_STORAGE_RECOVERY_URL =
-  'https://scout-agent.spaceshipresearch.com/docs/user-guide/session-storage-recovery#when-the-three-steps-do-not-work'
+  'https://github.com/adityakm24/scout'
 
 interface SidebarStorageCorruptNoticeProps {
   openRecoveryGuide?: (url: string) => void

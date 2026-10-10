@@ -1,18 +1,14 @@
-"""Messaging-platform catalog and onboarding helpers: platform overrides/env discovery, WhatsApp
-and Telegram onboarding state.
+"""Messaging-platform catalog and onboarding helpers: platform overrides/env discovery and WhatsApp
+onboarding state.
 """
 
 import logging
-import os
 import subprocess
-import threading
 from dataclasses import dataclass
-from fastapi import HTTPException
 from pathlib import Path
 from typing import Any, Optional
 from scout_cli.config import OPTIONAL_ENV_VARS, write_platform_config_field
 from scout_cli.setup_hidden_env import is_setup_hidden_env as _is_setup_hidden_env
-from scout_cli.version_info import get_version_info
 
 # Same logger the code used before extraction (record parity).
 _log = logging.getLogger("scout_cli.web_server")
@@ -79,7 +75,7 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     },
     "email": {
         "name": "Email", "description": "Talk to Scout through an IMAP/SMTP mailbox.",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/",
+        "docs_url": "https://github.com/adityakm24/scout",
         "env_vars": ("EMAIL_ADDRESS", "EMAIL_PASSWORD", "EMAIL_IMAP_HOST", "EMAIL_SMTP_HOST"),
         "required_env": ("EMAIL_ADDRESS", "EMAIL_PASSWORD", "EMAIL_IMAP_HOST", "EMAIL_SMTP_HOST"),
     },
@@ -105,7 +101,7 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     },
     "google_chat": {
         "name": "Google Chat", "description": "Connect Scout to Google Chat via Cloud Pub/Sub.",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/google_chat",
+        "docs_url": "https://github.com/adityakm24/scout",
     },
     "wecom": {
         "name": "WeCom (group bot)", "description": "Send-only WeCom group bot via webhook.",
@@ -126,7 +122,7 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     "weixin": {
         "name": "Weixin / WeChat (Personal)",
         "description": "Connect a personal WeChat account through Tencent's iLink Bot API.",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/weixin/",
+        "docs_url": "https://github.com/adityakm24/scout",
         "env_vars": ("WEIXIN_ACCOUNT_ID", "WEIXIN_TOKEN", "WEIXIN_BASE_URL"),
         "required_env": ("WEIXIN_ACCOUNT_ID", "WEIXIN_TOKEN"),
     },
@@ -150,34 +146,34 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     # Channels page can point at the Microsoft Teams setup guide.
     "teams": {
         "description": "Connect Scout to Microsoft Teams chats via the Bot Framework.",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/teams",
+        "docs_url": "https://github.com/adityakm24/scout",
     },
     # Bundled platform plugins: name comes from the plugin registry label;
     # give each a human description (the registry's install_hint is a
     # dependency note, not a description) and a docs link.
     "irc": {
         "description": "Relay messages between an IRC channel (or DMs) and Scout.",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/irc",
+        "docs_url": "https://github.com/adityakm24/scout",
     },
     "line": {
         "description": "Use Scout from LINE via the LINE Messaging API webhook.",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/line",
+        "docs_url": "https://github.com/adityakm24/scout",
     },
     "ntfy": {
         "description": "Chat with Scout over ntfy push topics (ntfy.sh or self-hosted).",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/ntfy",
+        "docs_url": "https://github.com/adityakm24/scout",
     },
     "photon": {
         "description": "Use Scout through iMessage via Photon's managed Spectrum platform.",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/photon",
+        "docs_url": "https://github.com/adityakm24/scout",
     },
     "raft": {
         "description": "Join a Raft workspace as an external agent.",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/raft",
+        "docs_url": "https://github.com/adityakm24/scout",
     },
     "simplex": {
         "description": "Talk to Scout over SimpleX Chat via a local simplex-chat daemon.",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/simplex",
+        "docs_url": "https://github.com/adityakm24/scout",
     },
     "yuanbao": {
         "name": "Yuanbao (元宝)", "description": "Connect Scout to Tencent Yuanbao.", "docs_url": "",
@@ -186,7 +182,7 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     "api_server": {
         "name": "API server",
         "description": "Expose Scout as an OpenAI-compatible HTTP API for tools like Open WebUI.",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/",
+        "docs_url": "https://github.com/adityakm24/scout",
         "env_vars": (
             "API_SERVER_ENABLED", "API_SERVER_KEY", "API_SERVER_PORT", "API_SERVER_HOST",
             "API_SERVER_MODEL_NAME",
@@ -196,19 +192,19 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     "webhook": {
         "name": "Webhooks",
         "description": "Receive events from GitHub, GitLab, and other webhook sources.",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/webhooks/",
+        "docs_url": "https://github.com/adityakm24/scout",
         "env_vars": ("WEBHOOK_ENABLED", "WEBHOOK_PORT", "WEBHOOK_SECRET"), "required_env": (),
     },
     "msgraph_webhook": {
         "name": "Microsoft Graph Webhook",
         "description": "Receive Microsoft Graph change notifications (Teams meetings, Outlook, …).",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/msgraph-webhook",
+        "docs_url": "https://github.com/adityakm24/scout",
         "required_env": (),
     },
     "whatsapp_cloud": {
         "name": "WhatsApp Cloud API",
         "description": "Use Scout via Meta's hosted WhatsApp Cloud API (no local bridge).",
-        "docs_url": "https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/whatsapp-cloud",
+        "docs_url": "https://github.com/adityakm24/scout",
     },
     "relay": {
         "name": "Relay (experimental)",
@@ -372,78 +368,3 @@ def _restart_gateway_after_whatsapp_onboarding(profile: Optional[str] = None) ->
     from scout_cli.web_server_gateway import _restart_gateway_after
     return _restart_gateway_after(profile, what="WhatsApp onboarding", label="WhatsApp onboarding")
 
-
-_TELEGRAM_ONBOARDING_DEFAULT_URL = "https://setup.scout-agent.spaceshipresearch.com"
-_TELEGRAM_ONBOARDING_USER_AGENT = f"ScoutDashboard/{get_version_info().base_version}"
-
-
-@dataclass
-class _TelegramOnboardingPairing:
-    poll_token: str
-    expires_at: str
-    expires_at_ts: float
-    bot_token: str | None = None
-    bot_username: str | None = None
-    owner_user_id: str | None = None
-
-
-_telegram_onboarding_pairings: dict[str, _TelegramOnboardingPairing] = {}
-_telegram_onboarding_lock = threading.RLock()
-
-
-def _telegram_onboarding_base_url() -> str:
-    return os.getenv("TELEGRAM_ONBOARDING_URL", _TELEGRAM_ONBOARDING_DEFAULT_URL).strip().rstrip("/")
-
-
-def _telegram_onboarding_error_message(error: str, fallback: str) -> str:
-    return {
-        "not_found": "Telegram pairing was not found. Start a new setup.",
-        "expired": "Telegram setup expired. Start a new setup.",
-        "claimed": "Telegram setup was already claimed. Start a new setup.",
-        "unauthorized": "Telegram setup service rejected this request.",
-        "telegram_manager_bot_token_not_configured": "Telegram setup service is not configured.",
-        "telegram_token_fetch_failed": "Telegram could not finish bot setup. Try again.",
-    }.get(error, fallback)
-
-
-_TELEGRAM_UNAVAILABLE = "Telegram setup service is unavailable. Try again shortly."
-_TELEGRAM_INVALID = "Telegram setup service returned an invalid response."
-
-
-def _telegram_onboarding_request_sync(
-    method: str, path: str, *, body: dict[str, Any] | None = None, bearer_token: str | None = None
-) -> dict[str, Any]:
-    import httpx
-    headers = {"Accept": "application/json", "User-Agent": _TELEGRAM_ONBOARDING_USER_AGENT}
-    request_kwargs: dict[str, Any] = {}
-    if body is not None:
-        headers["Content-Type"] = "application/json"
-        request_kwargs["json"] = body
-    if bearer_token:
-        headers["Authorization"] = f"Bearer {bearer_token}"
-    try:
-        with httpx.Client(timeout=httpx.Timeout(10.0)) as client:
-            response = client.request(method, f"{_telegram_onboarding_base_url()}{path}", headers=headers, **request_kwargs)
-            response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        try:
-            parsed = exc.response.json()
-        except Exception:
-            parsed = {}
-        error = str(parsed.get("error") or parsed.get("status") or "")
-        detail = _telegram_onboarding_error_message(error, "Telegram setup service returned an error.")
-        if error in {"expired", "claimed"}:
-            status_code = 410
-        else:
-            status_code = 404 if exc.response.status_code == 404 else 502
-        raise HTTPException(status_code=status_code, detail=detail) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=_TELEGRAM_UNAVAILABLE) from exc
-
-    try:
-        parsed = response.json()
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=_TELEGRAM_INVALID) from exc
-    if not isinstance(parsed, dict):
-        raise HTTPException(status_code=502, detail=_TELEGRAM_INVALID)
-    return parsed

@@ -2117,7 +2117,7 @@ export const esOverrides = {
       sshErrHostKey:
         'La clave del host CAMBIÓ desde la última conexión. Confirma que sea un cambio esperado, ejecuta ssh-keygen -R <host> y vuelve a conectar.',
       sshErrNotInstalled:
-        'Scout no está instalado en el host remoto. Instálalo allí (curl -fsSL https://scout-agent.spaceshipresearch.com/install.sh | sh) o indica la ruta de Scout.',
+        'Scout no está instalado en el host remoto. Instálalo allí (git clone https://github.com/adityakm24/scout.git && cd scout && ./scripts/install.sh) o indica la ruta de Scout.',
       sshErrPlatform:
         'Plataforma remota no compatible. El modo SSH de Scout Desktop admite hosts remotos Linux, macOS y Windows.',
       sshErrTimeout: 'La conexión SSH agotó el tiempo de espera. Es posible que el host no responda o esté en reposo.',
@@ -3007,9 +3007,6 @@ export const esOverrides = {
         `El análisis de seguridad marcó ${findings > 0 ? `${findings} ${findings === 1 ? 'elemento' : 'elementos'}` : 'patrones de riesgo'} para revisar${unverified ? ' y la skill proviene de una fuente no verificada' : ''}. Lee el análisis antes de decidir si confías en el autor.`,
       viewScan: 'Ver análisis',
       alreadyInstalled: (name: string) => `"${name}" ya está instalada`,
-      pickerBrowse: 'Explorar todo el hub',
-      pickerHide: 'Ocultar el explorador del hub',
-      pickerHint: 'Pulsa "+ Añadir a este agente" en cualquier skill: se instala y aparece en la lista de arriba.',
       loadFailed: 'No se pudo cargar el hub de skills',
       previewFailed: 'No se pudo cargar la vista previa de la skill',
       scanFailed: 'Falló el análisis de seguridad'
@@ -3388,38 +3385,6 @@ export const esOverrides = {
       'Vuelve a pulsar Reiniciar; si sigue fallando, abre los registros y envía un diagnóstico.',
     restartAgain: 'Reiniciar de nuevo',
     openLogs: 'Abrir registros',
-    telegramQr: {
-      title: 'Elige cómo conectar tu bot de Telegram',
-      subtitle:
-        'Ambas opciones conectan un bot que controlas y guardan sus credenciales solo en esta instalación de Scout.',
-      quickSetup: 'Configuración rápida',
-      recommended: 'Recomendado',
-      quickHelp:
-        'Escanea un código QR y confirma en Telegram. Scout crea el bot y detecta tu ID de usuario de Telegram automáticamente.',
-      createWithQr: 'Crear con QR',
-      starting: 'Iniciando…',
-      replaceWarning:
-        'Ya hay credenciales de Telegram configuradas. Una nueva configuración por QR o un nuevo token de bot sustituirá al bot actual cuando guardes.',
-      scanHint: 'Escanéalo con la app de Telegram en tu teléfono o abre el enlace en este equipo.',
-      waiting: 'Esperando a Telegram…',
-      expiresIn: (remaining: string) => `Caduca en ${remaining}`,
-      expired: 'Caducado',
-      openTelegram: 'Abrir Telegram',
-      ready: 'Bot creado',
-      allowedUsers: 'Usuarios permitidos',
-      ownerDetected: 'Propietario detectado',
-      addAtLeastOne: 'Añade al menos un ID de usuario de Telegram.',
-      userIdPlaceholder: 'ID de usuario de Telegram',
-      add: 'Añadir',
-      numericOnly: 'Los ID de usuario de Telegram permitidos deben ser numéricos.',
-      saveAndRestart: 'Guardar y reiniciar',
-      applying: 'Guardando…',
-      pairingExpired:
-        'La vinculación con Telegram caducó. Inicia una nueva configuración por QR para volver a intentarlo.',
-      stillWaiting: (detail: string) => `Seguimos esperando a Telegram. Reintentando tras: ${detail}`,
-      savedRestarting: 'Telegram guardado; reiniciando el gateway…',
-      savedRestartFailed: (detail: string) => `Telegram guardado; falló el reinicio del gateway${detail}`
-    },
     fieldCopy: {
       TELEGRAM_BOT_TOKEN: {
         label: 'Token del bot',

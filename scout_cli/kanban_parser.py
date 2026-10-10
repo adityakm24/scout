@@ -462,7 +462,7 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
         description="Durable SQLite-backed task board shared across Scout profiles. "
                     "Tasks are claimed atomically, can depend on other tasks, and "
                     "are executed by a named profile in an isolated workspace. "
-                    "See https://scout-agent.spaceshipresearch.com/docs/user-guide/features/kanban.",
+                    "See https://github.com/adityakm24/scout",
     )
     # --board scopes every subcommand to one board's DB; when omitted the
     # resolution is SCOUT_KANBAN_BOARD, then the persisted current-board

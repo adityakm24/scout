@@ -209,7 +209,7 @@ async def login_device(name, server_url, oauth_config):
     from tools.mcp_tool import sdk_httpx
 
     cfg, storage = prepare_oauth_config(name, server_url, oauth_config)
-    # Device flow never binds a callback socket or uses the hosted browser CIMD.
+    # Device flow never binds a callback socket or uses browser CIMD.
     cfg["_resolved_port"] = cfg.get("redirect_port", 8420)
     provider = ScoutMCPOAuthProvider(server_url=server_url, server_name=name, storage=storage,
                                      client_metadata=_build_client_metadata(cfg),

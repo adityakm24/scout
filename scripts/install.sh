@@ -337,7 +337,7 @@ check_platform() {
     # install the phone cannot run (no Android wheels in the lock). The
     # signed APT package is the only supported shape there.
     if [ -n "${TERMUX_VERSION:-}" ] || case "${PREFIX:-}" in *com.termux/files/usr*) true ;; *) false ;; esac; then
-        fail "Termux is installed from its APT repository, not install.sh: pkg install scout-agent (setup: https://scout-agent.spaceshipresearch.com/docs/getting-started/termux)"
+        fail "Termux is installed from its APT repository, not install.sh: pkg install scout-agent (setup: https://github.com/adityakm24/scout)"
     fi
     case "$(uname -s 2>/dev/null)" in
         Linux*) : ;;

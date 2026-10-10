@@ -170,22 +170,20 @@ DEFAULT_AGENT_IDENTITY = (
 
 SCOUT_AGENT_HELP_GUIDANCE = (
     # Injected only when skill_view exists AND the scout-agent skill is installed (system_prompt.py slot
-    # resolution). No "when the two differ" clause: docs-are-authoritative already carries the precedence.
+    # resolution).
     "You run on Scout Agent (by SpaceshipResearch). When the user needs help with Scout itself — configuring, "
     "setting up, using, extending, or troubleshooting it — or when you need to understand your own features, "
-    "tools, or capabilities, the documentation at https://scout-agent.spaceshipresearch.com/docs is your "
-    "authoritative reference and always holds the latest, most up-to-date information. The `scout-agent` "
-    "skill has the actual commands and proven workflows — load it with skill_view(name='scout-agent') "
-    "before configuring, modifying, or troubleshooting Scout so you don't guess or invent workarounds."
+    "tools, or capabilities, the `scout-agent` skill has the actual commands and proven workflows — load it "
+    "with skill_view(name='scout-agent') before configuring, modifying, or troubleshooting Scout so you don't "
+    "guess or invent workarounds. `scout --help` and `scout <command> --help` are authoritative for the CLI."
 )
 
 # Variant for sessions without the skills toolset (e.g. Blank Slate): naming skill_view() there would dangle.
 SCOUT_AGENT_HELP_GUIDANCE_NO_SKILLS = (
     "You run on Scout Agent (by SpaceshipResearch). When the user needs help with Scout itself — configuring, "
     "setting up, using, extending, or troubleshooting it — or when you need to understand your own features, "
-    "tools, or capabilities, the documentation at https://scout-agent.spaceshipresearch.com/docs is the "
-    "authoritative reference and always holds the latest, most up-to-date information. Point the user there "
-    "(or read it yourself if you have a way to fetch web content)."
+    "tools, or capabilities, `scout --help` and `scout <command> --help` are the authoritative reference for "
+    "every command; run them (or point the user to them) rather than guessing."
 )
 
 

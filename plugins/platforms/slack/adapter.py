@@ -6833,7 +6833,7 @@ def interactive_setup() -> None:
     for line in _SETUP_STEPS:
         print_info(line)
     print()
-    print_info("   Full guide: https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/slack/")
+    print_info("   Full guide: https://github.com/adityakm24/scout")
     print()
     # Write the manifest up-front for the "Create from manifest" flow.
     _write_slack_manifest_and_instruct()

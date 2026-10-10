@@ -52,7 +52,7 @@ _KEY_URL = "https://www.perplexity.ai/account/api"
 # OpenCode, plus Perplexity's integration header. No per-user identifier and no separate
 # request; the call already carries the user's own API key.
 _HEADERS = {
-    "HTTP-Referer": "https://scout-agent.spaceshipresearch.com",
+    "HTTP-Referer": "https://github.com/adityakm24/scout",
     "X-Title": "Scout Agent",
     "User-Agent": f"ScoutAgent/{get_version_info().base_version}",
     "X-Pplx-Integration": "scout-agent",

@@ -2,10 +2,8 @@
 gateway`` flow. setup.py re-exports the public names, and tests monkeypatch prompt/print/env
 helpers on scout_cli.setup, so those are imported lazily per function."""
 
-import contextlib
 import logging
 import re
-from pathlib import Path
 
 logger = logging.getLogger("scout_cli.setup")
 
@@ -15,24 +13,6 @@ _RULE = "━" * 50
 
 def _is_valid_telegram_bot_token(token: str) -> bool:
     return bool(_TELEGRAM_BOT_TOKEN_RE.match(token))
-
-
-def _profile_name_from_scout_home(scout_home) -> str | None:
-    """Return the active profile name when SCOUT_HOME is a profile dir."""
-    return scout_home.name if scout_home.parent.name == "profiles" else None
-
-
-def _setup_telegram_auto_result():
-    """Attempt automatic Telegram bot creation via managed QR onboarding."""
-    from scout_cli.setup import get_scout_home
-    try:
-        from scout_cli.telegram_managed_bot import auto_setup_telegram_bot_result
-    except ImportError:
-        return None
-    profile_name: str | None = None
-    with contextlib.suppress(Exception):
-        profile_name = _profile_name_from_scout_home(Path(get_scout_home()))
-    return auto_setup_telegram_bot_result(profile_name=profile_name)
 
 
 def declines_reconfigure(label: str, question: str, *env_vars: str) -> bool:
@@ -72,10 +52,10 @@ def _save_allowlist(env_var: str, users: str, success_msg: str) -> None:
     print_success(success_msg)
 
 
-def _prompt_allowlist(env_var: str, question: str, success_msg: str, open_msg: str, preset: str | None = None) -> str:
-    """Persist ``preset`` (or the prompted answer) as an allowlist, warning when it stays open."""
+def _prompt_allowlist(env_var: str, question: str, success_msg: str, open_msg: str) -> str:
+    """Persist the prompted answer as an allowlist, warning when it stays open."""
     from scout_cli.setup import print_info, prompt
-    users = prompt(question) if preset is None else preset
+    users = prompt(question)
     if users:
         _save_allowlist(env_var, users, success_msg)
     else:
@@ -119,38 +99,14 @@ def _telegram_allowlist_nudge() -> None:
             _save_allowlist("TELEGRAM_ALLOWED_USERS", allowed_users, "Telegram allowlist configured")
 
 
-def _obtain_telegram_token():
-    """Return (token, setup_result); auto flow first when chosen, else manual paste."""
-    from scout_cli.setup import _info, print_error, prompt
-    _info("How would you like to create your Telegram bot?", None,
-          "  [1] Automatic (recommended)",
-          "      Scan a QR code → confirm in Telegram → done.",
-          "      No token copy-paste needed.", None,
-          "  [2] Manual",
-          "      Create a bot via @BotFather yourself and paste the token.", None)
-    token = setup_result = None
-    if prompt("Choice [1/2]", default="1").strip() == "1":
-        setup_result = _setup_telegram_auto_result()
-        if setup_result:
-            token = setup_result.token
-            if not _is_valid_telegram_bot_token(token):
-                print_error("Automatic setup returned an invalid Telegram bot token.")
-                token = setup_result = None
-        if not token:
-            _info(None, "Falling back to manual setup...", None)
-    if not token:
-        token = _prompt_telegram_bot_token()
-    return token, setup_result
-
-
 def _setup_telegram():
     """Configure Telegram bot credentials and allowlist."""
-    from scout_cli.setup import _info, print_info, print_header, print_success, prompt, prompt_yes_no, save_env_value
+    from scout_cli.setup import _info, print_info, print_header, print_success, prompt_yes_no, save_env_value
     print_header("Telegram")
     if declines_reconfigure("Telegram", "Reconfigure Telegram?", "TELEGRAM_BOT_TOKEN"):
         _telegram_allowlist_nudge()
         return
-    token, setup_result = _obtain_telegram_token()
+    token = _prompt_telegram_bot_token()
     if not token:
         return
     save_env_value("TELEGRAM_BOT_TOKEN", token)
@@ -159,17 +115,10 @@ def _setup_telegram():
           "   To find your Telegram user ID:",
           "   1. Message @userinfobot on Telegram",
           "   2. It will reply with your numeric ID (e.g., 123456789)", None)
-    allowed_users = None
-    detected_id = str(getattr(setup_result, "owner_user_id", None) or "")
-    if detected_id:
-        print_success(f"Detected your Telegram user ID: {detected_id}")
-        if prompt_yes_no("Allow this Telegram account to use the bot?", True):
-            extra = prompt("Additional allowed user IDs (comma-separated, optional)")
-            allowed_users = ",".join(dict.fromkeys([detected_id, *filter(None, extra.replace(" ", "").split(","))]))
     allowed_users = _prompt_allowlist(
         "TELEGRAM_ALLOWED_USERS", "Allowed user IDs (comma-separated, leave empty for open access)",
         "Telegram allowlist configured - only listed users can use the bot",
-        "⚠️  No allowlist set - anyone who finds your bot can use it!", preset=allowed_users)
+        "⚠️  No allowlist set - anyone who finds your bot can use it!")
     _info(None, "📬 Home Channel: where Scout delivers cron job results,",
           "   cross-platform messages, and notifications.",
           "   For Telegram DMs, this is your user ID (same as above).")
@@ -233,7 +182,7 @@ def _setup_webhooks():
     print_warning("   internet. For security, run the gateway in a sandboxed environment")
     print_warning("   (Docker, VM, etc.) to limit blast radius from prompt injection.")
     print()
-    _info("   Full guide: https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/webhooks/", None)
+    _info("   Full guide: https://github.com/adityakm24/scout", None)
     _save_port("WEBHOOK_PORT", prompt("Webhook port (default 8644)"), "8644")
     save_prompted("WEBHOOK_SECRET", "Global HMAC secret (shared across all routes)", password=True,
                    success_msg="Webhook secret saved",
@@ -246,7 +195,7 @@ def _setup_webhooks():
           "   2. Point your service (GitHub, GitLab, etc.) at:",
           "      http://your-server:8644/webhooks/<route-name>", None,
           "   Route configuration guide:",
-          "   https://scout-agent.spaceshipresearch.com/docs/user-guide/messaging/webhooks/#configuring-routes",
+          "   https://github.com/adityakm24/scout",
           None,
           # Printed twice upstream; kept verbatim for output parity.
           "   Open config in your editor:  scout config edit",

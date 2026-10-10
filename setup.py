@@ -36,7 +36,7 @@ _IN_NIX_BUILD = os.environ.get("SCOUT_NIX_BUILD") == "1"
 _BLOCK_MESSAGE = (
     "Building wheels or sdists for scout-agent is not supported.\n"
     "Scout is distributed via the shell installer, Docker image, or Nix.\n"
-    "See: https://scout-agent.spaceshipresearch.com/docs/getting-started/installation\n"
+    "See: https://github.com/adityakm24/scout\n"
     "\n"
     "If you are developing, use an editable install instead:\n"
     "  source ./activate  # PowerShell: . .\\activate.ps1\n"
