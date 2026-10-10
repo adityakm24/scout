@@ -216,7 +216,7 @@ class GatewayStartupMixin:
         """Wait (BOUNDED by ``_startup_restore_drain_timeout_secs``) for startup auto-resume, then
         release + drain inbound. On timeout the gate opens and resume turns finish in the background
         (NOT cancelled) — safe because ``_schedule_resume_pending_sessions`` claims each
-        ``_running_agents`` slot SYNCHROSPACESHIPRESEARCHLY first, so drained inbound queues behind."""
+        ``_running_agents`` slot SYNCHRONOUSLY first, so drained inbound queues behind."""
         from gateway.run import _startup_restore_drain_timeout_secs
         drained = 0
         try:

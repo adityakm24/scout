@@ -1,6 +1,6 @@
 """delegate_task(background=true) on stateless API-server sessions.
 
-Previously async_delivery_supported()=False forced SYNCHROSPACESHIPRESEARCH execution for
+Previously async_delivery_supported()=False forced SYNCHRONOUS execution for
 every background dispatch on the API server, blocking the whole turn. Now
 that background completions can wake the originating session via the
 /v1/chat/completions self-post (gateway/wake.py), a session-continuable
@@ -165,5 +165,5 @@ def test_apiserver_session_without_id_stays_synchronous(monkeypatch):
     )
     parsed = json.loads(out)
     assert parsed.get("status") != "dispatched", parsed
-    assert "SYNCHROSPACESHIPRESEARCHLY" in parsed.get("note", "")
+    assert "SYNCHRONOUSLY" in parsed.get("note", "")
     assert process_registry.completion_queue.empty()

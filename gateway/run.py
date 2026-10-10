@@ -948,7 +948,7 @@ def _auto_continue_freshness_window() -> float:
 def _startup_restore_drain_timeout_secs() -> float:
     """Max seconds ``_finish_startup_restore`` holds the inbound gate for boot auto-resume; <=0 disables.
 
-    Duplicate-agent safety does NOT depend on it: ``_schedule_resume_pending_sessions`` claims SYNCHROSPACESHIPRESEARCHLY.
+    Duplicate-agent safety does NOT depend on it: ``_schedule_resume_pending_sessions`` claims SYNCHRONOUSLY.
     """
     return _float_env("SCOUT_STARTUP_RESTORE_DRAIN_TIMEOUT", _STARTUP_RESTORE_DRAIN_TIMEOUT_SECS_DEFAULT)
 

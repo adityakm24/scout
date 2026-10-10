@@ -317,7 +317,7 @@ def main():
             (home / ".scout").mkdir()
             env = {"PATH": os.environ.get("PATH", ""), "HOME": temp,
                    "SCOUT_HOME": str(home / ".scout"), "LANG": "C.UTF-8", "TZ": "UTC",
-                   "PYTHONSPACESHIPRESEARCHERSITE": "1"}
+                   "PYTHONNOUSERSITE": "1"}
             completed = subprocess.run([sys.executable, str(Path(__file__).resolve()),
                 "--repo", str(repo), "--output", str(output), "--isolated-worker"],
                 env=env, cwd=temp, stdin=subprocess.DEVNULL, timeout=180, check=False)

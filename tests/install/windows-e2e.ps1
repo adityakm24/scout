@@ -109,7 +109,7 @@ param(
 
     [string]$WorkRoot = $(if ($env:SCOUT_E2E_WORKROOT) { $env:SCOUT_E2E_WORKROOT } else { Join-Path $env:TEMP "scout-desktop-gui-e2e" }),
 
-    [string]$SetupExeUrl = "https://scout-assets.spaceshipresearch.com/Scout-Setup.exe",
+    [string]$SetupExeUrl = "",
 
     # Driver dependencies come from the current checkout lockfile.
     [string]$DriverNode = $env:SCOUT_E2E_NODE
@@ -986,6 +986,7 @@ function Invoke-PhaseInstallGui {
 
     $setupExe = Join-Path $WorkRoot "Scout-Setup.exe"
     if (-not (Test-Path -LiteralPath $setupExe)) {
+        if (-not $SetupExeUrl) { throw "no Scout-Setup.exe in $WorkRoot: pass -SetupExeUrl (no installer is published by default)" }
         Write-Host "  downloading $SetupExeUrl"
         Invoke-WebRequest -Uri $SetupExeUrl -OutFile $setupExe
     }

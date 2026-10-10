@@ -2,18 +2,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from html.parser import HTMLParser
 import json
 import logging
 import re
 import subprocess
-import urllib.error
 import urllib.request
 
 from scout_cli.update_channel import STABLE_TAG_RE, is_canary_tag
 
 logger = logging.getLogger(__name__)
-_PUBLIC_BASE = "https://scout-assets.spaceshipresearch.com"
 OFFICIAL_REPOSITORY = "adityakm24/scout"
 _GITHUB_ORIGIN = re.compile(
     r"^(?:https://github\.com/|git@github\.com:|ssh://git@github\.com/)"
@@ -62,18 +59,17 @@ class SourceTarget:
 def _resolve_channel(name: str, repository: str):
     """The only adapter to the validated requested/terminal records and manifest.
 
-    ChannelReader owns HTTPS, authority and digests. The source adapter below
-    admits its retirement constraints before any checkout operation. No legacy
-    GitHub fallback is allowed when a record is unavailable; the one exception
-    is an unpublished ``main`` record, which resolves to the main branch.
+    No release host publishes channel records for this repository, so every channel is unpublished:
+    ``main`` resolves to the main branch and any other channel has nothing to update to. Tests model
+    published records by patching this seam.
     """
-    from scout_cli.release_channels import ChannelReader
+    from scout_cli.release_channels import ChannelNotFound
 
-    return ChannelReader(_PUBLIC_BASE, repository=repository).resolve(name)
+    raise ChannelNotFound(f"No {name} release channel is published; follow main or pass --branch")
 
 
 def resolve_source_target(channel: str, git_cmd=None, cwd=None, *, repository=None) -> SourceTarget:
-    """Resolve every subscription, including default labels, through R2."""
+    """Resolve every subscription, including default labels, through the channel records."""
     from scout_cli.release_channels import ChannelNotFound, validate_name
 
     validate_name(channel)
@@ -154,29 +150,13 @@ def _refuse_retirement_downgrade(request: dict, terminal: dict, git_cmd, cwd) ->
                 raise ValueError("Source retirement would downgrade the newer destination build; select the destination channel explicitly")
 
 
-def _read(url: str, *, missing_ok: bool = False) -> str | None:
+def _read(url: str) -> str:
     request = urllib.request.Request(url, headers={
         "User-Agent": "scout-update", "Cache-Control": "no-cache",
         "Accept": "application/json, text/html",
     })
-    try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            return response.read(2 * 1024 * 1024).decode("utf-8-sig")
-    except urllib.error.HTTPError as exc:
-        if missing_ok and exc.code == 404:
-            return None
-        raise
-
-
-class _BuildMetadata(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.tags = []
-
-    def handle_starttag(self, tag, attrs):
-        fields = dict(attrs)
-        if tag == "meta" and fields.get("name") == "scout-build":
-            self.tags.append(fields.get("content"))
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read(2 * 1024 * 1024).decode("utf-8-sig")
 
 
 def _valid_tag(tag, channel: str) -> bool:
@@ -194,9 +174,7 @@ def _published(release, channel: str) -> bool:
 
 
 def _json(url: str):
-    text = _read(url)
-    assert text is not None
-    return json.loads(text)
+    return json.loads(_read(url))
 
 
 def _published_fallback(channel: str, base: str) -> dict:
@@ -219,33 +197,11 @@ def _published_fallback(channel: str, base: str) -> dict:
     raise ValueError(f"No published {channel} release")
 
 
-def _release_pointer(channel: str) -> tuple[str | None, str | None]:
-    # Stable's completion job writes this before publishing the GitHub draft.
-    # Publication is checked separately, so that interval fails closed.
-    if channel == "stable":
-        text = _read(f"{_PUBLIC_BASE}/releases/stable/release-candidates.json", missing_ok=True)
-        if text is not None:
-            data = json.loads(text)
-            if (not isinstance(data, dict) or not _valid_tag(data.get("tag"), channel)
-                    or not isinstance(data.get("commit"), str) or not _SHA.fullmatch(data["commit"])):
-                raise ValueError("Invalid stable release pointer")
-            return data["tag"], data["commit"]
-    text = _read(f"{_PUBLIC_BASE}/releases/{channel}/index.html", missing_ok=True)
-    if text is None:
-        return None, None
-    page = _BuildMetadata()
-    page.feed(text)
-    if len(page.tags) != 1 or not _valid_tag(page.tags[0], channel):
-        raise ValueError(f"Invalid {channel} release pointer")
-    return page.tags[0], None
-
-
 def resolve_source_release(channel: str, git_cmd=None, cwd=None, *, repository=None) -> tuple[str | None, str | None]:
     """Read historical stable/canary release metadata (not channel discovery).
 
     Runtime check/apply use ``resolve_source_target`` and never fall back here.
-    Channel pointers outrank GitHub's release listing. A malformed pointer,
-    draft, or tag/commit mismatch is not permission to select a different build.
+    A draft or tag/commit mismatch is not permission to select a different build.
     ``git_cmd`` resolves the selected tag on origin; ZIP callers omit it and
     resolve the same tag through GitHub's commit endpoint.
     """
@@ -254,15 +210,8 @@ def resolve_source_release(channel: str, git_cmd=None, cwd=None, *, repository=N
     try:
         repository = repository or source_repository(git_cmd, cwd)
         base = f"https://api.github.com/repos/{repository}"
-        tag, pinned_sha = (_release_pointer(channel)
-                           if repository.lower() == OFFICIAL_REPOSITORY.lower() else (None, None))
-        if tag is None:
-            release = _published_fallback(channel, base)
-            tag = release["tag_name"]
-        else:
-            release = _json(f"{base}/releases/tags/{tag}")
-        if not _published(release, channel) or release["tag_name"] != tag:
-            raise ValueError(f"{tag} is not a published {channel} release")
+        release = _published_fallback(channel, base)
+        tag = release["tag_name"]
         commit = _json(f"{base}/commits/{tag}")
         sha = commit.get("sha") if isinstance(commit, dict) else None
         if not isinstance(sha, str) or not _SHA.fullmatch(sha):
@@ -281,8 +230,6 @@ def resolve_source_release(channel: str, git_cmd=None, cwd=None, *, repository=N
                         if len(parts := line.split()) == 2)
             if refs.get(ref + "^{}", refs.get(ref)) != sha:
                 raise ValueError(f"Origin tag {tag} does not match the published release commit")
-        if pinned_sha is not None and sha != pinned_sha:
-            raise ValueError(f"Release {tag} no longer matches its published commit")
         return tag, sha
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         logger.warning("Could not resolve the %s source release: %s", channel, exc)

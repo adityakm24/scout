@@ -102,8 +102,8 @@ def build_update_parser(subparsers, *, cmd_update: Callable) -> None:
         metavar="CHANNEL",
         help=(
             "Track CHANNEL for this run only (transient override; "
-            "--set-channel persists). 'stable' and 'canary' select published "
-            "releases, 'main' the branch tip. Source installs only."
+            "--set-channel persists). 'main' (the branch tip) is the only "
+            "channel source installs can follow."
         ),
     )
     update_parser.add_argument(

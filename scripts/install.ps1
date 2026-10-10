@@ -80,12 +80,10 @@ $script:UvPinVersion = "0.12.3"
 $script:UvPinFiles = @{
     "win32-x64" = @{
         Url    = "https://github.com/astral-sh/uv/releases/download/0.12.3/uv-x86_64-pc-windows-msvc.zip"
-        MirrorUrl = "https://scout-assets.spaceshipresearch.com/upstream/sha256/b23350c79e8ad0192b8124af13a0f17e8d4e4549524785e1aef389ae5a06990e"
         Sha256 = "b23350c79e8ad0192b8124af13a0f17e8d4e4549524785e1aef389ae5a06990e"
     }
     "win32-arm64" = @{
         Url    = "https://github.com/astral-sh/uv/releases/download/0.12.3/uv-aarch64-pc-windows-msvc.zip"
-        MirrorUrl = "https://scout-assets.spaceshipresearch.com/upstream/sha256/4343217d668727b8a8eb5cad92389a1d2eeead93c89940d1b955ba1bb15462eb"
         Sha256 = "4343217d668727b8a8eb5cad92389a1d2eeead93c89940d1b955ba1bb15462eb"
     }
 }
@@ -94,12 +92,10 @@ $script:GitPinVersion = "2.53.0+3"
 $script:GitPinFiles = @{
     "win32-x64" = @{
         Url    = "https://github.com/git-for-windows/git/releases/download/v2.53.0.windows.3/PortableGit-2.53.0.3-64-bit.7z.exe"
-        MirrorUrl = "https://scout-assets.spaceshipresearch.com/upstream/sha256/b365da794b1d2225eb24d5f5e09ef7792cfd5fa26c3a3586210280c80dff3a2a"
         Sha256 = "b365da794b1d2225eb24d5f5e09ef7792cfd5fa26c3a3586210280c80dff3a2a"
     }
     "win32-arm64" = @{
         Url    = "https://github.com/git-for-windows/git/releases/download/v2.53.0.windows.3/PortableGit-2.53.0.3-arm64.7z.exe"
-        MirrorUrl = "https://scout-assets.spaceshipresearch.com/upstream/sha256/0db54010054c01f35501cf69e1e32d3710138ecb934d188bd77093afed24300e"
         Sha256 = "0db54010054c01f35501cf69e1e32d3710138ecb934d188bd77093afed24300e"
     }
 }
@@ -371,16 +367,14 @@ function Get-WindowsArch {
     return 'x64'
 }
 
-# Mirror bytes must match the same pin; corruption is never a cache miss.
+# Downloaded bytes must match the pin; corruption is never a cache miss.
 function Invoke-VerifiedDownload {
     param(
         [Parameter(Mandatory = $true)][string]$Url,
         [Parameter(Mandatory = $true)][string]$Sha256,
-        [Parameter(Mandatory = $true)][string]$OutFile,
-        [string]$MirrorUrl = ""
+        [Parameter(Mandatory = $true)][string]$OutFile
     )
     $urls = @($Url)
-    if ($MirrorUrl -and $MirrorUrl -ne $Url) { $urls += $MirrorUrl }
     $httpFailure = ""
     foreach ($candidate in $urls) {
         try {
@@ -405,7 +399,7 @@ function Invoke-VerifiedDownload {
         $digest = (Get-FileHash -Path $OutFile -Algorithm SHA256).Hash.ToLowerInvariant()
         if ($digest -eq $Sha256.ToLowerInvariant()) { return }
         Remove-Item -Path $OutFile -Force -ErrorAction SilentlyContinue
-        # Wrong bytes = tampering or a corrupt mirror, not a routing problem.
+        # Wrong bytes = tampering or corruption, not a routing problem.
         Fail "download digest mismatch for $candidate (expected $Sha256, got $digest)"
     }
     $tried = $urls -join " or "
@@ -515,7 +509,7 @@ function Get-Uv {
     try {
         New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
         $zipPath = Join-Path $tmpDir "uv.zip"
-        Invoke-VerifiedDownload -Url $pin.Url -MirrorUrl $pin.MirrorUrl -Sha256 $pin.Sha256 -OutFile $zipPath
+        Invoke-VerifiedDownload -Url $pin.Url -Sha256 $pin.Sha256 -OutFile $zipPath
         $extractDir = Join-Path $tmpDir "unpacked"
         Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
         # The zip carries uv.exe (+ uvx.exe) at the root or under one
@@ -548,7 +542,7 @@ function Get-PinnedGit {
     try {
         New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
         $sfxPath = Join-Path $tmpDir "portable-git.7z.exe"
-        Invoke-VerifiedDownload -Url $pin.Url -MirrorUrl $pin.MirrorUrl -Sha256 $pin.Sha256 -OutFile $sfxPath
+        Invoke-VerifiedDownload -Url $pin.Url -Sha256 $pin.Sha256 -OutFile $sfxPath
         $extractDir = Join-Path $tmpDir "unpacked"
         New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
         # PortableGit's self-extracting 7z carries its own extractor: stock

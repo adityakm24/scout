@@ -84,12 +84,16 @@ def installation(tmp_path, monkeypatch):
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    monkeypatch.setattr(source_releases, "_PUBLIC_BASE", f"http://127.0.0.1:{server.server_port}")
+    from scout_cli.release_channels import ChannelReader
+    host = f"http://127.0.0.1:{server.server_port}"
+    # A published release host: the real reader against the local archive.
+    monkeypatch.setattr(source_releases, "_resolve_channel",
+                        lambda name, repository: ChannelReader(host, repository=repository).resolve(name))
     original = urllib.request.urlopen
 
     def local(request, *args, **kwargs):
         url = urlsplit(request.full_url)
-        assert url.hostname in {"api.github.com", "scout-assets.spaceshipresearch.com"}
+        assert url.hostname in {"api.github.com", "127.0.0.1"}
         rewritten = urllib.request.Request(
             f"http://127.0.0.1:{server.server_port}{url.path}" + (f"?{url.query}" if url.query else ""),
             headers=dict(request.header_items()))

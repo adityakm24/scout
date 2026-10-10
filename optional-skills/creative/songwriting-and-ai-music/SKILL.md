@@ -236,7 +236,7 @@ AI vocalists don't read — they pronounce. Help them:
 PHONETIC RESPELLING:
 - Spell words as they SOUND: "through" -> "thru"
 - Proper nouns are highest failure rate — test early
-- "SpaceshipResearch" -> "Noose" (forces correct pronunciation)
+- "nginx" -> "engine-x" (forces correct pronunciation)
 - Hyphenate to guide syllables: "Re-search", "bio-engineering"
 
 DELIVERY CONTROL:

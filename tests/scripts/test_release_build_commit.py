@@ -80,7 +80,8 @@ else:
     calls = tmp_path / 'gh.jsonl'
     env = {k: v for k, v in os.environ.items() if not k.startswith(('GITHUB_', 'GH_'))}
     env.update({'PROBE_CALLS': str(calls), 'PROBE_REMOTE': upstream.as_uri(), 'GIT_ALLOW_PROTOCOL': 'file',
-                'GIT_TERMINAL_PROMPT': '0', 'SCOUT_HOME': str(tmp_path / 'home')})
+                'GIT_TERMINAL_PROMPT': '0', 'SCOUT_HOME': str(tmp_path / 'home'),
+                'CLOUDFLARE_R2_PUBLIC_URL': 'https://cdn.example.com'})
 
     def invoke(*args, extra=None):
         calls.unlink(missing_ok=True)
@@ -101,7 +102,7 @@ def test_commit_build_cli_dispatches_only_the_resolved_remote_commit(fixture_rep
         result, calls = invoke('--build-commit', revision)
         assert result.returncode == 0, result.stderr
         assert tip in result.stdout
-        assert f'https://scout-assets.spaceshipresearch.com/releases/commit/{tip}/index.html' in result.stdout
+        assert f'https://cdn.example.com/releases/commit/{tip}/index.html' in result.stdout
         assert not any(call[1:3] == ['workflow', 'run'] for call in calls)
     result, calls = invoke('--build-commit', tip, '--publish')
     assert result.returncode == 0, result.stderr

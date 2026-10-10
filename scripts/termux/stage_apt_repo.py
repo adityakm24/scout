@@ -513,10 +513,8 @@ def main(argv: list | None = None) -> int:
     ap = argparse.ArgumentParser(description="Stage a static APT repo layout.")
     ap.add_argument("--pool", required=True, type=Path)
     ap.add_argument("--out", required=True, type=Path)
-    # scout-nightly is the suite actually published today
-    # (https://scout-assets.spaceshipresearch.com/releases/termux/nightly/,
-    # verified 2026-09-06); scout-stable/scout-canary are what CI stages
-    # for the stable/canary channels.
+    # scout-nightly is the nightly suite; scout-stable/scout-canary are what
+    # CI stages for the stable/canary channels.
     ap.add_argument(
         "--suite", required=True,
         choices=["scout-stable", "scout-canary", "scout-nightly"],

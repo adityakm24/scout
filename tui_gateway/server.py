@@ -161,7 +161,7 @@ _DETAIL_MODES = frozenset({"hidden", "collapsed", "expanded"})
 # mcp.servers.* = rediscovery, cold npx spawn, ~30s OAuth wait; profiles.* = skill-tree walk + state.db
 # open; bot_relay.* = a FULL one-turn agent conversation (600s); setup.* / session.active_list =
 # Desktop-polled and under GIL pressure block the WS read loop (false "needs setup", stalled
-# interrupts); voice.*/wake.* = SYNCHROSPACESHIPRESEARCH faster-whisper install (300s); session.workspace.move =
+# interrupts); voice.*/wake.* = SYNCHRONOUS faster-whisper install (300s); session.workspace.move =
 # git subprocess probes on an arbitrary (maybe slow) mount.
 _LONG_HANDLERS = frozenset({
     "session.foreign.list", "session.foreign.preview", "session.foreign.import",

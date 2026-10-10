@@ -577,9 +577,9 @@ _log_configured_delete_overridden_once = functools.partial(_log_once, "delete_ov
 
 
 # Operators write synchronous as a name; mapped so a typo becomes a warning, not a silently different level.
-_SYNCHROSPACESHIPRESEARCH_LEVELS: Dict[str, int] = {"OFF": 0, "NORMAL": 1, "FULL": 2, "EXTRA": 3}
-_SYNCHROSPACESHIPRESEARCH_NAMES: Dict[int, str] = {v: k for k, v in _SYNCHROSPACESHIPRESEARCH_LEVELS.items()}
-_SYNCHROSPACESHIPRESEARCH_FULL = 2
+_SYNCHRONOUS_LEVELS: Dict[str, int] = {"OFF": 0, "NORMAL": 1, "FULL": 2, "EXTRA": 3}
+_SYNCHRONOUS_NAMES: Dict[int, str] = {v: k for k, v in _SYNCHRONOUS_LEVELS.items()}
+_SYNCHRONOUS_FULL = 2
 
 
 def resolve_synchronous_level(raw_value: Any) -> Optional[int]:
@@ -590,12 +590,12 @@ def resolve_synchronous_level(raw_value: Any) -> Optional[int]:
         # bool is an int subclass and YAML turns bare `on`/`off` into one; "off" is a real choice, True meaningless.
         return 0 if raw_value is False else None
     if isinstance(raw_value, int):
-        return raw_value if raw_value in _SYNCHROSPACESHIPRESEARCH_NAMES else None
+        return raw_value if raw_value in _SYNCHRONOUS_NAMES else None
     text = str(raw_value).strip()
-    if text.upper() in _SYNCHROSPACESHIPRESEARCH_LEVELS:
-        return _SYNCHROSPACESHIPRESEARCH_LEVELS[text.upper()]
+    if text.upper() in _SYNCHRONOUS_LEVELS:
+        return _SYNCHRONOUS_LEVELS[text.upper()]
     with contextlib.suppress(TypeError, ValueError):
-        return int(text) if int(text) in _SYNCHROSPACESHIPRESEARCH_NAMES else None
+        return int(text) if int(text) in _SYNCHRONOUS_NAMES else None
     return None
 
 
@@ -610,10 +610,10 @@ def _apply_synchronous_pragma(conn: sqlite3.Connection, raw_value: Any, *, db_la
         logger.warning("%s: ignoring unrecognized database.synchronous=%r (expected OFF, NORMAL, FULL, EXTRA, or 0-3)",
                        db_label, raw_value)
         return
-    if sys.platform == "darwin" and level < _SYNCHROSPACESHIPRESEARCH_FULL:
+    if sys.platform == "darwin" and level < _SYNCHRONOUS_FULL:
         logger.warning("%s: refusing database.synchronous=%s on macOS; keeping FULL. Darwin's fsync() does not "
                        "guarantee write ordering, so a lower level readmits the half-written btree pages FULL exists "
-                       "to prevent.", db_label, _SYNCHROSPACESHIPRESEARCH_NAMES[level])
+                       "to prevent.", db_label, _SYNCHRONOUS_NAMES[level])
         return
     with contextlib.suppress(sqlite3.OperationalError):
         conn.execute(f"PRAGMA synchronous={level}")

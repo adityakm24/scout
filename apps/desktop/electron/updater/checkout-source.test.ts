@@ -168,7 +168,7 @@ function buildManifest(
       windowsVersion: `0.0.${sequence}.0`,
       identity,
       bundleEnv: {},
-      publicBase: 'https://scout-assets.spaceshipresearch.com'
+      publicBase: 'https://cdn.example.com'
     },
     packages: [
       {
@@ -304,7 +304,7 @@ original_build = urllib.request.build_opener
 passthrough = original_build().open
 def local(request, *args, **kwargs):
     parsed = urlsplit(request.full_url if isinstance(request, urllib.request.Request) else request)
-    assert parsed.hostname in ('scout-assets.spaceshipresearch.com', 'api.github.com')
+    assert parsed.hostname in ('cdn.example.com', 'api.github.com')
     url = 'http://127.0.0.1:${address.port}' + parsed.path + ('?' + parsed.query if parsed.query else '')
     # ChannelReader compares response.geturl() against the ORIGINAL request url:
     # wrap so the redirect detector still sees the un-rewritten authority.
@@ -319,6 +319,11 @@ def local_build(*args, **kwargs):
     opener.open = local
     return opener
 urllib.request.build_opener = local_build
+# Model a published release host: the real channel reader against the placeholder origin above.
+from scout_cli import source_releases
+from scout_cli.release_channels import ChannelReader
+source_releases._resolve_channel = (
+    lambda name, repository: ChannelReader('https://cdn.example.com', repository=repository).resolve(name))
 `
     )
     vi.stubEnv('SCOUT_MANAGED', '')

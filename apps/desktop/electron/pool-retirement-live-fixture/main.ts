@@ -150,7 +150,7 @@ async function spawnResident(key: string, release: () => void): Promise<Resident
       SCOUT_DASHBOARD_SESSION_TOKEN: token,
       PYTHONUNBUFFERED: '1',
       PYTHONDONTWRITEBYTECODE: '1',
-      PYTHONSPACESHIPRESEARCHERSITE: '1'
+      PYTHONNOUSERSITE: '1'
       // Environment contains only the launch allowlist and fixture values.
     }
   })

@@ -214,22 +214,20 @@ def test_download_page_keys_and_public_urls():
 
 
 def test_public_base_url_precedence(monkeypatch):
-    # Explicit value, then $CLOUDFLARE_R2_PUBLIC_URL, then the documented
-    # production origin — so a local command always names a real page.
+    # Explicit value, then $CLOUDFLARE_R2_PUBLIC_URL; there is no built-in origin.
     monkeypatch.delenv("CLOUDFLARE_R2_PUBLIC_URL", raising=False)
-    assert public_base_url() == "https://scout-assets.spaceshipresearch.com"
+    with pytest.raises(ValueError, match="CLOUDFLARE_R2_PUBLIC_URL"):
+        public_base_url()
     monkeypatch.setenv("CLOUDFLARE_R2_PUBLIC_URL", "https://cdn.example.com")
     assert public_base_url() == "https://cdn.example.com"
     assert public_base_url("https://explicit.example.com/") == "https://explicit.example.com"
 
 
-def test_channel_public_base_defaults_to_production(monkeypatch):
-    # Unscoped channel administration names the same documented production
-    # origin the commit-build path falls back to; the public URL is not a
-    # secret, so a local command should not have to hand-set it.
+def test_channel_public_base_follows_the_configured_origin(monkeypatch):
     monkeypatch.delenv("CLOUDFLARE_R2_PUBLIC_URL", raising=False)
     monkeypatch.delenv("R2_DISPOSABLE_RUN", raising=False)
-    assert channel_public_base() == "https://scout-assets.spaceshipresearch.com"
+    with pytest.raises(ValueError, match="CLOUDFLARE_R2_PUBLIC_URL"):
+        channel_public_base()
     monkeypatch.setenv("CLOUDFLARE_R2_PUBLIC_URL", "https://cdn.example.com")
     assert channel_public_base() == "https://cdn.example.com"
     assert channel_public_base("https://explicit.example.com/") == "https://explicit.example.com"

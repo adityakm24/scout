@@ -71,7 +71,7 @@ def reader_result(source, name, destination=None, repository="adityakm24/scout")
         "schema": 1, "request": {"buildId": "build-fixture", "channel": terminal["name"],
         "sequence": 1, "repository": repository, "commit": source.commits[1],
         "sourceVersion": "1.2.3", "version": "0.0.1", "identity": {}, "bundleEnv": {},
-        "publicBase": "https://scout-assets.spaceshipresearch.com"}, "packages": []})
+        "publicBase": "https://cdn.example.com"}, "packages": []})
 
 
 def install_reader(monkeypatch, result):
@@ -216,7 +216,10 @@ def channel_archive(source, monkeypatch):
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base = f"http://127.0.0.1:{server.server_port}"
-    monkeypatch.setattr(source_releases, "_PUBLIC_BASE", base)
+    from scout_cli.release_channels import ChannelReader
+    # A published release host: the real reader against the local archive.
+    monkeypatch.setattr(source_releases, "_resolve_channel",
+                        lambda name, repository: ChannelReader(base, repository=repository).resolve(name))
     try:
         yield archive, base
     finally:

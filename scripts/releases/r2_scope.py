@@ -92,9 +92,6 @@ def channel_public_base(explicit: str | None = None) -> str:
     if explicit is not None:
         return public_base(explicit)
     if not configured:
-        # The documented production origin is the default, exactly as the
-        # commit-build path (r2.public_base_url) does, so a local command can
-        # name the page it is about to publish without hand-setting the URL.
-        from scripts.releases.r2 import DEFAULT_PUBLIC_URL
-        configured = DEFAULT_PUBLIC_URL
+        from scripts.releases.r2 import configured_public_url
+        configured = configured_public_url()
     return public_base(configured)

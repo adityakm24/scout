@@ -53,18 +53,12 @@ def releases(tmp_path, monkeypatch, request):
     responses = {}
     requests = []
     for channel, tag in tags.items():
-        responses[f"/releases/{channel}/index.html"] = (
-            f'<meta name="scout-build" content="{tag}">'
-        )
         responses[f"/repos/adityakm24/scout/releases/tags/{tag}"] = {
             "tag_name": tag, "draft": False, "prerelease": channel == "canary",
         }
         responses[f"/repos/adityakm24/scout/commits/{tag}"] = {
             "sha": commits[1 if channel == "stable" else 2],
         }
-    responses["/releases/stable/release-candidates.json"] = {
-        "tag": tags["stable"], "commit": commits[1],
-    }
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -109,14 +103,6 @@ def releases(tmp_path, monkeypatch, request):
     server.shutdown()
     server.server_close()
     thread.join()
-
-
-@pytest.mark.parametrize("git_cmd", [["git"], None], ids=["git", "no-git"])
-def test_stable_resolution_uses_promoted_pointer_not_highest_tag(releases, git_cmd):
-    assert resolve_source_release("stable", git_cmd, releases.root) == (
-        releases.tags["stable"], releases.commits[1],
-    )
-    assert releases.requests
 
 
 @pytest.mark.parametrize("channel", ["stable", "canary"])
@@ -220,19 +206,7 @@ def test_main_check_still_uses_branch_without_release_requests(releases, capsys)
 
 
 @pytest.mark.parametrize("channel", ["stable", "canary"])
-def test_origin_tag_cannot_substitute_a_fork_commit(releases, channel):
-    git(releases.origin, "tag", "-f", releases.tags[channel], releases.commits[3])
-    assert resolve_source_release(channel, ["git"], releases.root) == (None, None)
-    # Without git, the same selection remains pinned to the official commit.
-    assert resolve_source_release(channel) == (
-        releases.tags[channel], releases.commits[1 if channel == "stable" else 2],
-    )
-
-
-@pytest.mark.parametrize("channel", ["stable", "canary"])
-def test_missing_pointers_fall_back_only_to_published_releases(releases, channel):
-    releases.responses.pop("/releases/stable/release-candidates.json")
-    releases.responses.pop(f"/releases/{channel}/index.html")
+def test_resolution_selects_only_published_releases(releases, channel):
     published = releases.responses[f"/repos/adityakm24/scout/releases/tags/{releases.tags[channel]}"]
     releases.responses["/repos/adityakm24/scout/releases/latest"] = published
     releases.responses["/repos/adityakm24/scout/releases?per_page=100&page=1"] = [

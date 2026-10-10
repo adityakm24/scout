@@ -50,7 +50,7 @@ describe('submissionCore.submitPrompt — synchronous busy (queue-race fix)', ()
     patchUiState({ sid: 'sess-1' })
   })
 
-  it('flips busy=true SYNCHROSPACESHIPRESEARCHLY, before input.detect_drop resolves', () => {
+  it('flips busy=true SYNCHRONOUSLY, before input.detect_drop resolves', () => {
     const { gw, resolveDrop } = makeDeferredGateway()
 
     expect(getUiState().busy).toBe(false)

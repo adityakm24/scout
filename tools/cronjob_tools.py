@@ -522,7 +522,7 @@ def _manual_run_completion(
 def _try_dispatch_background_run(
     job: Dict[str, Any], session_id: Optional[str] = None, extra_prompt: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
-    """Claim ``job`` now (SYNCHROSPACESHIPRESEARCHLY, so unrunnable jobs report immediately), then fire it
+    """Claim ``job`` now (SYNCHRONOUSLY, so unrunnable jobs report immediately), then fire it
     on the async-delegation executor like ``delegate_task``'s background mode: the tool returns
     a handle and a ``type="async_delegation"`` completion re-enters as a fresh turn (role
     alternation legal, prompt cache intact) instead of blocking the parent turn for minutes.

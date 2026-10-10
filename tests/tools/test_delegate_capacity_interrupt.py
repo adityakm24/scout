@@ -236,7 +236,7 @@ def test_rejected_background_child_stops_with_parent(
         child.allow_finish.set()
         result = outcome.result(timeout=5)
         if background_child is None:
-            assert "SYNCHROSPACESHIPRESEARCHLY" in result["note"]
+            assert "SYNCHRONOUSLY" in result["note"]
             assert result["results"][0]["status"] == "interrupted"
         else:
             assert result["status"] == "dispatched"

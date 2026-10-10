@@ -4,7 +4,7 @@ Before this, `apply_database_pragmas()` accepted five sizing pragmas and no
 durability one, and `_enforce_macos_synchronous_full()` returned early off
 Darwin. So on Linux and Windows nothing in the process ever executed
 `PRAGMA synchronous` against state.db, and the effective level was whichever
-`SQLITE_DEFAULT_WAL_SYNCHROSPACESHIPRESEARCH` the interpreter's SQLite happened to be
+`SQLITE_DEFAULT_WAL_SYNCHRONOUS` the interpreter's SQLite happened to be
 compiled with -- invisible from config, unpinnable, and different between
 builds. See #90837, where three weeks of corruption forensics were carried out
 under the stated assumption of `synchronous=FULL` on Ubuntu.

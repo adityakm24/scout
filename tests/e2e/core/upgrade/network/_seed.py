@@ -35,7 +35,6 @@ from tests.e2e.core.upgrade import _helpers as H
 from tests.e2e.core.upgrade import _install_helpers as I
 from tests.e2e.core.upgrade.network import _netedge as N
 
-ASSETS = "scout-assets.spaceshipresearch.com"
 REPOSITORY = "adityakm24/scout"
 # Hosts a correctly isolated update must never reach directly; with the proxy they appear in
 # the proxy log as "refused" (the proxy has no route for them).
@@ -116,12 +115,11 @@ class Installed:
         return I.publish_commit(self.origin, self.root, f"e2e network: {tag} #{self._n}", files)
 
     # -- edges -----------------------------------------------------------------
-    def edge(self, *, assets: N.App | None = None, git: N.App | None = None,
+    def edge(self, *, git: N.App | None = None,
              extra: dict[str, N.App] | None = None, sites: Iterable[N.HttpSite] = (),
              eof_hosts: Iterable[str] = (), auth: tuple[str, str] | None = None) -> Edge:
-        """Proxy routes: the release-channel host (default: no records published, so ``main``
-        follows the branch), github.com (default: the git server over the bare origin)."""
-        routes = {ASSETS: assets or N.static_app({}), "github.com": git or N.git_app(self.gitroot)}
+        """Proxy routes: github.com (default: the git server over the bare origin)."""
+        routes = {"github.com": git or N.git_app(self.gitroot)}
         routes.update(extra or {})
         for host in eof_hosts:
             routes.pop(host, None)
@@ -213,7 +211,7 @@ def assert_isolated(inst: Installed) -> None:
     probe = (
         "import socket,sys\n"
         "bad=[]\n"
-        "for host in ('github.com','pypi.org','scout-assets.spaceshipresearch.com'):\n"
+        "for host in ('github.com','pypi.org','registry.npmjs.org'):\n"
         "    try: socket.getaddrinfo(host,443); bad.append('dns:'+host)\n"
         "    except OSError: pass\n"
         "for ip in ('140.82.112.3','1.1.1.1'):\n"
@@ -228,44 +226,6 @@ def assert_isolated(inst: Installed) -> None:
     finally:
         edge.close()
     assert r.rc == 0 and "ISOLATED" in r.cp.stdout, "network namespace is not isolated:\n" + I.describe(r.cp)
-
-
-# ---------------------------------------------------------------------------
-# Release-channel records (the R2 objects under https://scout-assets.spaceshipresearch.com/).
-# ---------------------------------------------------------------------------
-
-def canonical(value: object) -> bytes:
-    """The channel wire encoding (sorted keys, compact, trailing newline)."""
-    return (json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n").encode()
-
-
-def _identity(name: str, token: str) -> dict:
-    pascal = f"ScoutChannel{token}"
-    return {"token": token, "displayName": f"Scout {name}", "appId": f"ai.scout.channel.h{token}",
-            "appNamePascal": pascal, "artifactNamePascal": pascal, "cliName": f"scout-{name}",
-            "windowsExecutableName": pascal, "msixAppIdWithOrg": f"SpaceshipResearch.{pascal}"}
-
-
-def stable_objects(commit: str, *, version: str = "2099.1.1", build_id: str = "c" * 32,
-                   repository: str = REPOSITORY) -> dict[str, bytes]:
-    """A published stable release pinned at ``commit``: the channel record and its build manifest."""
-    identity = _identity("stable", "5" * 16)
-    prefix = f"releases/channel-builds/{build_id}/"
-    request = {"schema": 1, "buildId": build_id, "channel": "stable", "sequence": 1,
-               "repository": repository, "commit": commit, "sourceVersion": version, "version": version,
-               "windowsVersion": version + ".0", "releaseTag": "v" + version, "identity": identity,
-               "bundleEnv": {}, "publicBase": f"https://{ASSETS}"}
-    manifest = {"schema": 1, "receiverProtocol": 1, "request": request, "packages": [
-        {"platform": "darwin", "arch": "arm64", "variant": "bundled", "identity": identity["appId"],
-         "version": version, "teamId": "ABCDEFGHIJ",
-         "artifact": {"key": prefix + "Scout.dmg", "sha256": "d" * 64, "size": 100},
-         "feed": {"key": prefix + "stable-mac.yml", "channel": "stable"}}]}
-    body = canonical(manifest)
-    record = {"schema": 1, "name": "stable", "repository": repository, "policy": "stable-release",
-              "state": "active", "revision": 1, "nextSequence": 2, "identity": identity,
-              "head": {"buildId": build_id, "sequence": 1, "manifestKey": prefix + "build.json",
-                       "sha256": hashlib.sha256(body).hexdigest()}}
-    return {"/releases/channels/stable.json": canonical(record), f"/{prefix}build.json": body}
 
 
 # ---------------------------------------------------------------------------

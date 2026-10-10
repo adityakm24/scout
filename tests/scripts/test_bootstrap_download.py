@@ -1,10 +1,9 @@
-"""Real bootstrap downloads preserve the pin across an upstream outage."""
+"""Real bootstrap downloads accept only the pinned bytes."""
 import hashlib
 import io
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tarfile
 import threading
@@ -45,48 +44,43 @@ def fixture_bytes(server, mode, body):
     http, base = server
     if mode != "missing":
         http.files["/primary"] = b"bad bytes" if mode == "corrupt" else body
-    http.files["/mirror"] = body
-    return base + "/primary", base + "/mirror", hashlib.sha256(body).hexdigest()
+    return base + "/primary", hashlib.sha256(body).hexdigest()
 
 
 @pytest.mark.platforms("windows")
-@pytest.mark.parametrize("mode", ["primary", "missing", "corrupt", "both-missing"])
-def test_windows_download_uses_only_verified_candidates(tmp_path, server, mode):
+@pytest.mark.parametrize("mode", ["primary", "missing", "corrupt"])
+def test_windows_download_accepts_only_the_pinned_bytes(tmp_path, server, mode):
     body = b"exact archive bytes"
-    primary, mirror, digest = fixture_bytes(server, mode, body)
-    if mode == "both-missing":
-        server[0].files.clear()
+    primary, digest = fixture_bytes(server, mode, body)
     destination = tmp_path / "out.zip"
     script = tmp_path / "driver.ps1"
     script.write_text(
         f". '{ROOT / 'scripts/install.ps1'}' -ScoutHome '{tmp_path / 'home'}' -InstallDir '{tmp_path / 'repo'}'\n"
-        f"Invoke-VerifiedDownload -Url '{primary}' -MirrorUrl '{mirror}' -Sha256 '{digest}' -OutFile '{destination}'\n",
+        f"Invoke-VerifiedDownload -Url '{primary}' -Sha256 '{digest}' -OutFile '{destination}'\n",
         encoding="utf-8",
     )
     result = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", str(script)],
                             capture_output=True, text=True, timeout=60)
-    if mode in ("primary", "missing"):
+    if mode == "primary":
         assert result.returncode == 0, result.stdout + result.stderr
         assert destination.read_bytes() == body
     else:
         assert result.returncode != 0
         assert primary in result.stdout + result.stderr
-        if mode == "both-missing":
-            assert mirror in result.stdout + result.stderr
-    assert server[0].requests == (["/primary", "/mirror"] if mode in ("missing", "both-missing") else ["/primary"])
+    assert server[0].requests == ["/primary"]
 
 
 @pytest.mark.platforms("windows")
 @pytest.mark.parametrize("name", ["uv", "git"])
 def test_windows_bootstrap_rejects_corrupt_bytes_before_extract(tmp_path, server, name):
-    primary, mirror, digest = fixture_bytes(server, "corrupt", b"expected archive")
+    primary, digest = fixture_bytes(server, "corrupt", b"expected archive")
     script = tmp_path / "caller.ps1"
     script.write_text(
         f". '{ROOT / 'scripts/install.ps1'}' -ScoutHome '{tmp_path / 'home'}'\n"
         f"$env:SCOUT_RUNTIME_DIR = '{tmp_path / 'tools'}'\n"
         "function Get-Command { param($Name) return $null }\n"
         "$target = 'win32-' + (Get-WindowsArch)\n"
-        f"$pin = @{{Url='{primary}'; MirrorUrl='{mirror}'; Sha256='{digest}'}}\n"
+        f"$pin = @{{Url='{primary}'; Sha256='{digest}'}}\n"
         + ("$script:UvPinFiles[$target] = $pin\nGet-Uv\n" if name == "uv" else "$script:GitPinFiles[$target] = $pin\nGet-PinnedGit\n"),
         encoding="utf-8",
     )
@@ -109,30 +103,27 @@ def uv_archive():
 
 
 @pytest.mark.platforms("posix")
-@pytest.mark.parametrize("mode", ["primary", "missing", "corrupt", "both-missing"])
+@pytest.mark.parametrize("mode", ["primary", "missing", "corrupt"])
 def test_posix_download_keeps_the_pinned_hash(tmp_path, server, mode):
-    primary, mirror, digest = fixture_bytes(server, mode, uv_archive())
-    if mode == "both-missing":
-        server[0].files.clear()
+    primary, digest = fixture_bytes(server, mode, uv_archive())
     script = f"""
 source '{ROOT / 'scripts/install.sh'}'
 command() {{ if [ "$*" = '-v uv' ]; then return 1; fi; builtin command "$@"; }}
-uv_bootstrap_pin() {{ UV_PIN_VERSION=fixture; UV_PIN_URL='{primary}'; UV_PIN_MIRROR='{mirror}'; UV_PIN_SHA256='{digest}'; }}
+uv_bootstrap_pin() {{ UV_PIN_VERSION=fixture; UV_PIN_URL='{primary}'; UV_PIN_SHA256='{digest}'; }}
 ensure_uv
 """
     env = {**os.environ, "SCOUT_HOME": str(tmp_path / "home"), "HOME": str(tmp_path / "home"), "SCOUT_RUNTIME_DIR": str(tmp_path / "tools")}
     result = subprocess.run(["bash", "-c", script], cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60)
-    assert (result.returncode == 0) == (mode in ("primary", "missing")), result.stdout + result.stderr
+    assert (result.returncode == 0) == (mode == "primary"), result.stdout + result.stderr
     if mode == "corrupt":
         assert "digest mismatch" in result.stderr
-    if mode == "both-missing":
-        assert primary in result.stderr and mirror in result.stderr
-    assert server[0].requests == (["/primary", "/mirror"] if mode in ("missing", "both-missing") else ["/primary"])
+    if mode == "missing":
+        assert primary in result.stderr
+    assert server[0].requests == ["/primary"]
 
 
 @pytest.mark.platforms("windows")
 def test_generated_windows_pins_match_the_shared_authority(tmp_path):
-    from pm.artifact_mirror import mirror_url
     script = tmp_path / "pins.ps1"
     script.write_text(
         f". '{ROOT / 'scripts/install.ps1'}' -ScoutHome '{tmp_path / 'home'}'\n"
@@ -147,25 +138,4 @@ def test_generated_windows_pins_match_the_shared_authority(tmp_path):
         assert targets
         for target, pin in targets.items():
             authority = lock[name]["artifacts"][target]
-            assert (pin["Url"], pin["Sha256"], pin["MirrorUrl"]) == (authority["url"], authority["sha256"], mirror_url(authority["sha256"]))
-
-
-@pytest.mark.platforms("posix")
-def test_dev_setup_reaches_the_same_mirror_without_python(tmp_path, server):
-    from pm.store import current_target
-    body = uv_archive()
-    digest = hashlib.sha256(body).hexdigest()
-    http, base = server
-    http.files["/archive/" + digest] = body
-    repo = tmp_path / "repo"
-    (repo / "pm").mkdir(parents=True)
-    shutil.copyfile(ROOT / "setup-scout.sh", repo / "setup-scout.sh")
-    (repo / "pm/artifact-mirror.json").write_text(json.dumps({"origin": base, "prefix": "archive/"}, indent=2), encoding="utf-8")
-    (repo / "pm/lock.json").write_text(json.dumps({"packages": {
-        "uv": {"version": "fixture", "artifacts": {current_target(): {"url": base + "/missing.tar.gz", "sha256": digest}}},
-        "python": {"version": "3.14.7"},
-    }}, indent=2, sort_keys=True), encoding="utf-8")
-    env = {**os.environ, "SCOUT_HOME": str(tmp_path / "home"), "HOME": str(tmp_path / "home"), "SCOUT_RUNTIME_DIR": str(tmp_path / "tools")}
-    result = subprocess.run(["bash", str(repo / "setup-scout.sh")], cwd=repo, env=env, text=True, capture_output=True, timeout=60)
-    assert result.returncode == 73, result.stdout + result.stderr  # stop at the bootstrap interpreter boundary
-    assert http.requests == ["/missing.tar.gz", "/archive/" + digest]
+            assert (pin["Url"], pin["Sha256"]) == (authority["url"], authority["sha256"])

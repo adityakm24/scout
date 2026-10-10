@@ -46,7 +46,7 @@ function isolatedEnv(home: string, scoutHome: string): Record<string, string> {
     USERPROFILE: home,
     SCOUT_HOME: scoutHome,
     PYTHONPATH: REPO_ROOT,
-    PYTHONSPACESHIPRESEARCHERSITE: '1',
+    PYTHONNOUSERSITE: '1',
     PYTHONDONTWRITEBYTECODE: '1',
     TMPDIR: process.env.TMPDIR ?? path.dirname(home),
     LANG: 'C.UTF-8',

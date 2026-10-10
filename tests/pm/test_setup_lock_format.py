@@ -23,11 +23,10 @@ pytestmark = pytest.mark.platforms("posix")
 REPO = Path(__file__).resolve().parents[2]
 
 
-@pytest.mark.parametrize("indent,blank_lines,mirror_indent,fallback", [
-    (2, False, 2, False), (4, False, 7, False), (0, False, 2, False),
-    ("\t", False, 7, False), (4, True, 2, False), (2, False, 9, True),
+@pytest.mark.parametrize("indent,blank_lines", [
+    (2, False), (4, False), (0, False), ("\t", False), (4, True),
 ])
-def test_setup_reads_pins_independent_of_indentation(tmp_path, served, indent, blank_lines, mirror_indent, fallback):
+def test_setup_reads_pins_independent_of_indentation(tmp_path, served, indent, blank_lines):
     bash = shutil.which("bash")
     assert bash, "the shell bootstrap contract requires Bash"
     core = tmp_path / "checkout with spaces"
@@ -60,10 +59,6 @@ def test_setup_reads_pins_independent_of_indentation(tmp_path, served, indent, b
     docroot, base_url = served
     filename, digest = make_tar(docroot, "uv.tar.gz", {"uv-fixture/uv": uv_script})
     artifact = {"sha256": digest, "url": f"{base_url}/{filename}"}
-    if fallback:
-        (docroot / "mirror").mkdir()
-        shutil.copy2(docroot / filename, docroot / "mirror" / digest)
-        artifact["url"] = "http://127.0.0.1:1/uv.tar.gz"
     decoy = {"sha256": "0" * 64, "url": f"{base_url}/wrong-target.tar.gz"}
     target = current_target()
     data = {"packages": {
@@ -77,12 +72,9 @@ def test_setup_reads_pins_independent_of_indentation(tmp_path, served, indent, b
     if blank_lines:
         content = content.replace("\n", "\n \t\n")
     (core / "pm" / "lock.json").write_text(content + "\n", encoding="utf-8")
-    (core / "pm" / "artifact-mirror.json").write_text(
-        json.dumps({"origin": base_url, "prefix": "mirror/"}, indent=mirror_indent), encoding="utf-8",
-    )
     env = {"PATH": os.environ["PATH"], "HOME": str(home),
            "SCOUT_HOME": str(home / ".scout"), "SCOUT_RUNTIME_DIR": str(runtime),
-           "PYTHONSPACESHIPRESEARCHERSITE": "1"}
+           "PYTHONNOUSERSITE": "1"}
     result = subprocess.run(
         [bash, str(core / "setup-scout.sh"), "--runtime-only"], cwd=tmp_path,
         env=env, capture_output=True, text=True, timeout=30,

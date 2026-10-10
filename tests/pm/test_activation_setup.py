@@ -57,7 +57,7 @@ def test_activation_real_setup_pm_lifecycle(tmp_path, served):
         "PATH": os.environ["PATH"], "HOME": str(home), "SCOUT_HOME": str(scout_home),
         "SCOUT_RUNTIME_DIR": str(runtime), "SHELL": bash, "TMPDIR": str(scratch),
         "XDG_CONFIG_HOME": str(home / ".config"), "XDG_CACHE_HOME": str(home / ".cache"),
-        "LANG": "C.UTF-8", "PYTHONSPACESHIPRESEARCHERSITE": "1", "UV_OFFLINE": "1",
+        "LANG": "C.UTF-8", "PYTHONNOUSERSITE": "1", "UV_OFFLINE": "1",
         "UV_CACHE_DIR": str(home / ".cache" / "uv"), "UV_PYTHON_DOWNLOADS": "never",
     }
     for name in ("activate", "setup-scout.sh", "scout_constants.py", "scout_yaml.py", "utils.py"):
@@ -123,11 +123,6 @@ def test_activation_real_setup_pm_lifecycle(tmp_path, served):
     assert not (scout_home / "installs").exists()
 
     docroot, base_url = served
-    # Both the shell bootstrap and PM's fallback downloader stay on loopback.
-    (core / "pm" / "artifact-mirror.json").write_text(
-        json.dumps({"origin": base_url, "prefix": "mirror/"}, indent=2) + "\n",
-        encoding="utf-8",
-    )
     calls = tmp_path / "uv-calls"
     uv_script = (
         f"#!{bash}\n"

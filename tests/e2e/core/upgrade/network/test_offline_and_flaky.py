@@ -1,17 +1,15 @@
 """Offline and flaky networks: fail fast, loud and truthfully, or retry within bounds.
 
 Every command runs in a private network namespace. ``edge=None`` is a machine with no network
-at all; otherwise the only egress is the test's proxy, whose sites script the failure: a release
-host answering 503 with ``Retry-After``, a forge that rate-limits (HTTP 429), an artifact host
-serving bytes that don't match the pinned digest.
+at all; otherwise the only egress is the test's proxy, whose sites script the failure: a forge
+that rate-limits (HTTP 429), an artifact host serving bytes that don't match the pinned digest.
 
 The contract for a failure (``_seed.assert_nothing_changed``): non-zero exit, a message naming
 what failed, no success banner, the checkout / selected PM environment / PM runtime / tool store
 exactly as before, and the next ``scout`` still starts. For a transient fault the contract is
 that the operation retries within bounds and then succeeds.
 
-Classes: offline update (channel and git phases) and offline PM provisioning; transient and
-persistent 503 on the channel record; persistent 429 from the forge (#106026 printed the success
+Classes: offline update and offline PM provisioning; persistent 429 from the forge (#106026 printed the success
 banner after a failed fetch); transient 503 then a digest mismatch on a PM download, for the
 tools whose artifacts come from GitHub releases and from nodejs.org (#106027's class: a Node
 tarball accepted without verification).
@@ -38,7 +36,6 @@ pytestmark = [
     pytest.mark.skipif(I.real_uv() is None, reason="uv required"),
 ]
 
-MAIN_RECORD = "/releases/channels/main.json"
 FAST = 60  # seconds a no-network failure may take, bounded retries included
 
 
@@ -72,37 +69,6 @@ def test_offline_provisioning_of_a_missing_tool_fails_loudly(inst):
             "an offline install left a store entry behind\n" + r.report(inst))
 
 
-def test_channel_503_with_retry_after_is_retried_then_updates(inst):
-    """One 503 + ``Retry-After: 1`` from the release host (a CDN blip), then normal service."""
-    new = inst.publish("channel-blip")
-    assets = N.static_app({}, faults={MAIN_RECORD: [N.Response(503, b"busy\n", {"Retry-After": "1"})]})
-    edge = inst.edge(assets=assets)
-    try:
-        r = inst.scout("update", "--yes", edge=edge)
-    finally:
-        edge.close()
-    reads = [h for h in edge.proxy.requests(S.ASSETS) if h.path == MAIN_RECORD]
-    assert r.rc == 0 and inst.head() == new, (
-        f"a single transient 503 aborted the update ({len(reads)} channel read(s))\n" + r.report(inst))
-    assert len(reads) >= 2, f"update succeeded without re-reading the record ({reads})\n" + r.report(inst)
-
-
-def test_channel_outage_fails_truthfully_within_bounds(inst):
-    """The release host answers 503 to every request: bounded retries, then a truthful failure,
-    and no fall-through to the git branch."""
-    inst.publish("channel-outage")
-    before = inst.state()
-    assets = N.static_app({}, always={MAIN_RECORD: N.Response(503, b"down\n", {"Retry-After": "1"})})
-    edge = inst.edge(assets=assets)
-    try:
-        r = inst.scout("update", "--yes", edge=edge, timeout=300)
-    finally:
-        edge.close()
-    assert r.secs < FAST, f"a persistent 503 took {r.secs:.0f}s to give up\n" + r.report(inst)
-    S.assert_nothing_changed(inst, before, r, "channel outage")
-    assert "503" in r.out and "channel" in r.out.lower(), "the failure does not name the 503 from the channel\n" + r.report(inst)
-
-
 def test_forge_rate_limit_fails_truthfully(inst):
     """Every git request gets HTTP 429 (the repo-scoped throttle users hit): the update must exit
     non-zero, say it was rate limited, and print no success banner (#106026)."""
@@ -120,7 +86,7 @@ def test_forge_rate_limit_fails_truthfully(inst):
 
 
 # Where each tool's pinned artifact is downloaded from, as the PM lock declares it; the edge
-# serves those hosts (and the content-addressed scout-assets mirror) with wrong bytes.
+# serves those hosts with wrong bytes.
 ARTIFACT_HOSTS = {
     "ripgrep": ("github.com", "objects.githubusercontent.com", "release-assets.githubusercontent.com"),
     "node": ("nodejs.org",),
@@ -136,7 +102,7 @@ def test_pm_download_retries_then_refuses_a_digest_mismatch(inst, tool_name):
     extra = {host: N.static_app({"*": bad}, faults=flaky) for host in ARTIFACT_HOSTS[tool_name]}
     with S.tool_missing(inst, tool_name) as tool:
         before = inst.state()
-        edge = inst.edge(assets=N.static_app({"*": bad}), git=extra.pop("github.com", None), extra=extra)
+        edge = inst.edge(git=extra.pop("github.com", None), extra=extra)
         try:
             r = inst.scout("pm", "install", tool_name, edge=edge, timeout=600)
         finally:
