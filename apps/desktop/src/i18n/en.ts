@@ -284,8 +284,6 @@ export const en: Translations = {
     categoryAll: 'All categories',
     uncategorised: 'Uncategorised',
 
-    residencyLocal: 'On this device',
-
     segment: {
       all: 'All',
       available: 'Available',
@@ -302,26 +300,18 @@ export const en: Translations = {
     },
 
     card: {
-      kindManaged: 'Managed',
       kindCatalog: 'MCP · Catalog',
       kindCustom: 'MCP · Custom',
       kindPlugin: (plugin: string) => `MCP · Plugin ${plugin}`,
       inCatalog: 'In the Scout catalog',
-      hostedTwin: 'Managed version available',
-      alsoLocal: 'Also runs on this device',
       open: (name: string) => `Open ${name}`,
       turnServerOn: (name: string) => `Turn ${name} on`,
       turnServerOff: (name: string) => `Turn ${name} off`,
       reload: (name: string) => `Reload ${name}`,
       state: {
-        accessExpired: 'Access expired',
         available: 'Available',
         connected: 'Connected',
         connecting: 'Connecting',
-        connectionUnknown: 'State unknown',
-        couldNotConnect: 'Could not connect',
-        offByYourOrganisation: 'Off by your organisation',
-        offForYou: 'Off for you',
         serverConnecting: 'Connecting…',
         serverError: 'Error',
         serverNeedsAuth: 'Needs authentication',
@@ -337,17 +327,10 @@ export const en: Translations = {
       },
       verb: {
         authenticate: 'Authenticate',
-        connect: 'Connect',
         install: 'Install',
-        openLogs: 'Open logs',
-        reconnect: 'Reconnect',
-        stopWaiting: 'Stop waiting',
-        tryAgain: 'Try again',
-        turnBackOn: 'Turn back on'
+        openLogs: 'Open logs'
       },
       reason: {
-        finishSignIn: 'Finish the sign-in in your browser.',
-        reconnect: 'Reconnect to keep this app working.',
         serverError: 'The server refused the connection.',
         serverNeedsAuth: 'Sign in to let this server answer.'
       }
@@ -359,20 +342,10 @@ export const en: Translations = {
       noMatchTitle: 'No matching apps',
       noMatchBody: 'Nothing here matches. Point Scout at your own MCP server to add it.',
       clearSearch: 'Clear the search',
-      hostedFailedTitle: 'Could not reach the hosted apps.',
-      hostedFailedBody: 'The servers on this computer are unaffected and still running. Nothing was turned off.',
       retry: 'Retry',
       matchesElsewhere: (count: number) => `${count} more match${count === 1 ? '' : 'es'} in other groups.`,
       showAllMatches: 'Show all matches',
-      segmentNoMatch: (segment: string) => `No match in ${segment}, so every match is shown.`,
-      freeTierNote: 'Connections stay on this computer until you sign in.',
-      signInLine: 'Sign in to SpaceshipResearch to use managed apps.',
-      signIn: 'Sign in',
-      writeFailed: 'That change was not saved.',
-      refreshFailed: 'The tool list was not refreshed.',
-      disconnectNoAccount: 'Scout has no account to disconnect here. Refresh the page and try again.',
-      disconnectRefused:
-        'SpaceshipResearch could not remove this sign-in right now. Turn the app off with the switch instead, or try again later.'
+      segmentNoMatch: (segment: string) => `No match in ${segment}, so every match is shown.`
     },
 
     add: {
@@ -410,30 +383,12 @@ export const en: Translations = {
     },
 
     dialog: {
-      disconnect: 'Disconnect',
-      disconnectTitle: (name: string) => `Disconnect ${name}?`,
-      disconnectBody: 'Scout stops acting as this account. You can connect again at any time.',
       menuRefreshTools: 'Refresh tools',
       moreActions: 'More actions',
       removeServerTitle: (name: string) => `Remove ${name}?`,
       removeServerBody: 'The entry leaves mcp.json on this computer. Nothing else is deleted.',
-      appSwitch: (name: string) => `Scout can use ${name}`,
-      waysTitle: (name: string) => `Where ${name} runs`,
-      wayNotConnected: (name: string) => `Not connected yet. Sign in to ${name} in your browser.`,
-      wayHosted: 'Managed',
-      bothOn: (name: string) => `Both are on, so Scout sees every ${name} tool twice.`,
-      turnOffLocal: 'Turn off the local server',
       providedByPlugin: (plugin: string) => `Provided by plugin ${plugin}`,
       openPlugins: 'Open the Plugins tab',
-      // Verbatim, by decision of the design of record.
-      spaceshipResearchLine: 'SpaceshipResearch apps follow your account, not the profile.',
-      rulesReadOnly: 'Rules cannot be changed right now.',
-      rulesAppOff: (name: string) => `Turn ${name} on to change its tools.`,
-      rulesSignIn: 'Sign in to change what Scout may do here.',
-      orgNote: (count: number) => `Your organisation turned ${count} tools off.`,
-      orgLink: 'Open the connectors admin',
-      connectEnded: 'The sign-in did not finish.',
-      connectOpenAgain: 'Open the link again',
       tokensPerCall: 'tokens per call',
       usesPerMonth: 'uses in 30 days',
       advanced: 'Advanced',
@@ -456,7 +411,6 @@ export const en: Translations = {
       showSummary: 'Show summary',
       facetSwitch: (facet: string) => `Turn ${facet} tools on or off`,
       moreHints: (count: number) => `+${count}`,
-      staleSignIn: 'Sign in to read the latest tool list.',
       searchCountPlaceholder: (count: number) => `Search ${count} tools`,
       toolList: (name: string) => `${name} tools`,
       categorySelect: (count: number) => `${count} categories`,
@@ -465,7 +419,6 @@ export const en: Translations = {
       quickReadOnly: 'Read only',
       quickNoDestructive: 'Turn off destructive',
       quickEverythingOn: 'Everything on',
-      lockedHint: 'off by your organisation',
       turnToolOn: (tool: string) => `Turn ${tool} on`,
       turnToolOff: (tool: string) => `Turn ${tool} off`,
       showDetails: (tool: string) => `Show what ${tool} does`,
@@ -481,20 +434,6 @@ export const en: Translations = {
       remove: 'Remove',
       offTitle: (name: string) => `${name} is off.`,
       offBody: 'Turn it on with the switch above to read the tools it brings.',
-      signedOutTitle: 'Sign in to SpaceshipResearch to read the tool list.',
-      signedOutBody: 'Your servers on this computer are unaffected.',
-      conflictTitle: 'Someone changed this rule while you were editing.',
-      // Two sentences at most, and the second says the work is still here.
-      conflictBody: (theyOff: number, theyOn: number) => {
-        const they = [
-          theyOff > 0 ? `turned off ${theyOff} tool${theyOff === 1 ? '' : 's'} you have on` : '',
-          theyOn > 0 ? `left ${theyOn} tool${theyOn === 1 ? '' : 's'} on that you turned off` : ''
-        ].filter(Boolean)
-
-        return `${they.length > 0 ? `They ${they.join(', and ')}. ` : ''}Your edits stay on screen; nothing was written.`
-      },
-      conflictReload: 'Reload their version',
-      conflictSave: 'Save over their version',
       saveFailed: 'Those tool rules were not saved.',
       footerDirty: (off: number, backOn: number) =>
         `${off} tool${off === 1 ? '' : 's'} off, ${backOn === 0 ? 'none' : backOn} back on`,
@@ -679,13 +618,6 @@ export const en: Translations = {
         `Signs out of the saved remote browser session, then opens ${signInLabel}. Use local gateway to switch to the bundled backend instead.`,
       signOutAndSignIn: 'Sign out & sign in',
       remoteFailureHint: 'Check the gateway URL and sign-in under Gateway settings, or switch to the local gateway.',
-      cloudDownTitle: 'SpaceshipResearch Cloud agent is down',
-      cloudDownDescription:
-        'The SpaceshipResearch-managed cloud agent this gateway connects to is returning a server error. It cannot be restarted from here — check its status, switch to the local gateway, or get support.',
-      cloudDownHint:
-        'The buttons below open the Scout Portal (instance status and controls) and our Discord for support.',
-      cloudDownCheckPortal: 'Check Portal status',
-      cloudDownDiscord: 'Get help on Discord',
       hideRecentLogs: 'Hide recent logs',
       showRecentLogs: 'Show recent logs',
       signedInTitle: 'Signed in',
@@ -775,8 +707,7 @@ export const en: Translations = {
       turnDoneBody: '',
       turnErrorTitle: 'Turn failed',
       backgroundDoneTitle: 'Background task finished',
-      backgroundFailedTitle: 'Background task failed',
-      creditsTitle: 'Credits'
+      backgroundFailedTitle: 'Background task failed'
     }
   },
 
@@ -786,36 +717,10 @@ export const en: Translations = {
   },
 
   billingBlock: {
-    titleSpaceshipResearch: 'Out of SpaceshipResearch credits',
     titleProvider: provider => `Out of credits — ${provider}`,
     fallbackMessage: 'Your account is out of credits. Add credits to keep going.',
-    openBilling: 'Open billing',
     addCredits: 'Add credits',
     dismiss: 'Dismiss'
-  },
-
-  sendDiagnostics: {
-    title: 'Send diagnostics to SpaceshipResearch',
-    privacyNotice:
-      'This uploads a debug bundle to SpaceshipResearch-internal storage (not a public paste). It includes system info (OS, versions, provider, which API keys are configured — never the keys themselves) and full agent, gateway, and desktop logs (up to 512 KB each), which likely contain conversation content, tool outputs, and file paths. Secrets are redacted before upload. The bundle is viewable only by SpaceshipResearch staff and allowlisted Discord moderators, and auto-deletes after 14 days.',
-    upload: 'Upload',
-    uploading: 'Uploading…',
-    cancel: 'Cancel',
-    close: 'Close',
-    copyLink: 'Copy link',
-    uploadIdFallback: id => `No view link returned — quote upload ID ${id} to support`,
-    doneTitle: 'Diagnostics sent',
-    doneDescription:
-      'Your bundle was uploaded privately. Share the link below in your support thread so the team can see your logs.',
-    failedTitle: 'Upload failed',
-    failedHint:
-      'You can also run `scout debug share --spaceshipresearch` from a terminal, or `scout debug share --local` to print the report without uploading.',
-    handoffLead: 'Pick up the discussion in:',
-    links: {
-      github: 'GitHub Issues',
-      portal: 'Scout Portal Support',
-      discord: 'Discord'
-    }
   },
 
   titlebar: {
@@ -1020,9 +925,7 @@ export const en: Translations = {
       vaultCredentials: 'Saved credentials',
       vaultSources: 'Password managers',
       appUpdates: 'Version & updates',
-      uninstall: 'Uninstall',
-      billingOverview: 'Overview',
-      billingPlans: 'Plans'
+      uninstall: 'Uninstall'
     },
     closeSettings: 'Close settings',
     exportConfig: 'Export config',
@@ -1046,7 +949,6 @@ export const en: Translations = {
       archivedChats: 'Archived Chats',
       sessions: 'Sessions',
       about: 'About',
-      billing: 'Billing',
       notifications: 'Notifications',
       vault: 'Passwords & Logins'
     },
@@ -1229,10 +1131,6 @@ export const en: Translations = {
         backgroundDone: {
           label: 'Background task finished',
           description: 'A backgrounded terminal command completed.'
-        },
-        credits: {
-          label: 'Credit alerts',
-          description: 'Credit access is paused or restored.'
         },
         plugin: {
           label: 'Plugin notifications',
@@ -1632,7 +1530,7 @@ export const en: Translations = {
     // v2 multi-connection registry: Settings → Gateways.
     connections: {
       title: 'Registered gateways',
-      intro: 'Manage this device and every Scout gateway it can reach through remote, SSH, or Cloud connections.',
+      intro: 'Manage this device and every Scout gateway it can reach through remote or SSH connections.',
       stagedNote:
         'Switch gateways from Sessions. Profiles, chats, messaging, and cron jobs stay with their gateway; work on other gateways keeps running.',
       launchModeTitle: 'At startup, return to Sessions on the last-used gateway',
@@ -1659,14 +1557,11 @@ export const en: Translations = {
       updateAllRunning: 'Updating all instances…',
       updateAllDone: 'Updates dispatched',
       updateAllFailed: 'Update fan-out failed',
-      updateSkippedCloud: 'Managed by Scout Cloud',
       kindLocal: 'Local',
       kindRemote: 'Remote gateway',
-      kindCloud: 'Scout Cloud',
       kindSsh: 'SSH',
       kindLocalDesc: 'The Scout runtime managed by this app.',
       kindRemoteDesc: 'A Scout gateway reachable over HTTP(S) — LAN, Tailscale, or the internet.',
-      kindCloudDesc: 'A hosted instance discovered through your Scout Cloud account.',
       kindSshDesc: 'A Scout install reached over SSH.',
       labelTitle: 'Name',
       labelDesc: 'Required. Shown everywhere this instance appears; must be unique (e.g. “Homelab”, “Work laptop”).',
@@ -1685,8 +1580,6 @@ export const en: Translations = {
       duplicateSsh: (label: string) => `A connection to this SSH host already exists (“${label}”).`,
       sameBackendHint: (label: string) => `Same backend as “${label}”`,
       localAddHint: 'Local is unavailable: the managed local connection already exists (there is only ever one).',
-      cloudAddHint:
-        'Tip: signing in under Scout Cloud above discovers your agents automatically — use this form only to register a known instance URL by hand.',
       save: 'Save connection',
       saving: 'Saving…',
       cancel: 'Cancel',
@@ -1727,42 +1620,6 @@ export const en: Translations = {
       remoteTitle: 'Remote gateway',
       remoteDesc: 'Connect this desktop shell to a remote Scout backend.',
       remoteAuthHint: 'Hosted gateways use OAuth or a username and password; self-hosted ones may use a session token.',
-      cloudTitle: 'Scout Cloud',
-      cloudDesc: 'Sign in once to Scout Cloud and pick from the agents on your account — no URL to paste.',
-      cloudSignInTitle: 'Scout Cloud',
-      cloudSignIn: 'Sign in to Scout Cloud',
-      cloudSignedIn: 'Signed in to Scout Cloud',
-      cloudNeedsSignIn: 'Sign in to Scout Cloud to discover the agents on your account.',
-      cloudSignedInDesc: 'You are signed in. Pick an agent below; the session refreshes automatically.',
-      cloudAgentsTitle: 'Your agents',
-      cloudOrgPickerTitle: 'Choose an organization',
-      cloudOrgSelect: 'Select',
-      cloudOrgChange: 'Change org',
-      cloudOrgRole: role => `Role: ${role}`,
-      cloudLoadingAgents: 'Loading your agents…',
-      cloudNoAgents: {
-        before: 'No agents found on this account. Create one in the ',
-        linkText: 'Scout portal',
-        after: ', then refresh.'
-      },
-      cloudRefresh: 'Refresh',
-      cloudConnect: 'Connect',
-      cloudSavedTitle: 'Saved Cloud gateways',
-      cloudSavedDesc:
-        'Use a saved gateway without changing your default. Sign in below to add instances. Manage names and sign-in in the saved connections list.',
-      cloudUseSaved: 'Use gateway',
-      cloudActive: 'Active in this window',
-      cloudConnecting: 'Connecting…',
-      cloudDiscoverFailed: 'Could not load your Scout Cloud agents',
-      cloudConnectFailed: 'Could not connect to that agent',
-      cloudSignInFailed: 'Scout Cloud sign-in failed',
-      cloudSignedOutTitle: 'Signed out of Scout Cloud',
-      cloudSignedOutMessage: 'Cleared the Scout Cloud session.',
-      cloudConnectedTitle: 'Connected',
-      cloudConnectedPill: 'Connected',
-      cloudConnectedTo: name => `Connected to ${name}.`,
-      cloudAgentProvisioning: 'Provisioning…',
-      cloudStatusLabel: status => `Status: ${status}`,
       remoteUrlTitle: 'Remote URL',
       remoteUrlDesc: 'Base URL for the remote dashboard backend. Path prefixes are supported, for example /scout.',
       probing: 'Checking how this gateway authenticates…',
@@ -2076,281 +1933,6 @@ export const en: Translations = {
       deleted: model => `${model} deleted.`,
       deleteFailed: 'Delete failed'
     },
-    billing: {
-      perMonth: amount => `${amount}/mo`,
-      creditsPerMonth: amount => `${amount} credits/mo`,
-      usageLabel: label => `${label} usage`,
-      freeTier: {
-        signIn: 'Sign in',
-        title: "You're on the SpaceshipResearch free tier",
-        message: 'Sign in with a SpaceshipResearch account to unlock more models and tools.',
-        caption:
-          'Runs on spaceshipresearch/welcome with connectors included. Signing in keeps your connectors and adds the tools that need an account and every other model.',
-        name: 'SpaceshipResearch · free tier',
-        footnote:
-          'The free tier has no balance and nothing to pay. Payment and usage appear when you sign in with a SpaceshipResearch account.',
-        plan: 'Free tier',
-        model: 'Model',
-        connectors: 'Connectors',
-        included: 'Included'
-      },
-      amountValidation: {
-        reloadTo: 'Reload-to',
-        greaterThanThreshold: 'Reload-to amount must be greater than the threshold.',
-        decimal: label => `${label}: enter a dollar amount with at most 2 decimal places.`,
-        positive: label => `${label}: amount must be greater than $0.`,
-        minimum: (label, amount) => `${label}: minimum is ${amount}.`,
-        maximum: (label, amount) => `${label}: maximum is ${amount}.`
-      },
-      stepUp: {
-        openVerification: 'Open verification page',
-        dismiss: 'Dismiss',
-        waiting: 'Waiting for verification link…',
-        verify: 'Verify to continue',
-        deniedTitle: 'Verification was not approved',
-        deniedBody: 'Verification finished without allowing Remote Spending for this terminal.',
-        successTitle: 'Verification complete',
-        successBody: 'Remote Spending is allowed for this terminal.'
-      },
-      charge: {
-        added: amount => (amount ? `$${amount} added.` : 'Credits added.'),
-        failedTitle: 'Charge failed',
-        unconfirmedTitle: 'Charge outcome unconfirmed',
-        unconfirmedBody: message =>
-          `${message} Your last charge's outcome is unconfirmed - check your balance/history before retrying.`,
-        checkTitle: 'Could not check charge',
-        checkBody: 'Could not check the charge.',
-        untrackedTitle: 'Charge could not be tracked',
-        untrackedBody: 'The billing service accepted the request but did not return a charge id.',
-        timeoutTitle: 'Still processing after 5 minutes',
-        timeoutBody: 'Charge may still settle. Check the portal before retrying.',
-        authenticationRequired:
-          'Your bank requires verification (3DS). Complete it on the portal to finish this purchase.',
-        expired: 'Your card has expired. Update it on the portal.',
-        declined: 'Your card was declined. Try another card on the portal.',
-        failedBody: reason => `The charge didn't go through (${reason}).`
-      },
-      title: 'Billing',
-      preview: 'preview',
-      summary: {
-        balance: 'Balance',
-        plan: 'Plan',
-        autoRefill: 'Auto-refill'
-      },
-      sections: {
-        invoices: 'Invoices',
-
-        plan: 'Plan',
-        paymentAndCredits: 'Payment & credits',
-        usage: 'Usage'
-      },
-      usage: {
-        title: 'Usage'
-      },
-      buyCredits: {
-        customAmount: 'Custom credit amount',
-        title: 'Buy credits now',
-        buyButton: 'Buy',
-        processing: 'Processing… checking settlement',
-        added: amount => `${amount} added. Balance is refreshing.`,
-        retry: 'Retry',
-        openPortal: 'Open portal'
-      },
-      plan: {
-        title: 'Plans',
-        changePlan: 'Change plan',
-        viewPlans: 'View plans',
-        backAria: 'Back to billing',
-        current: 'Current plan',
-        scheduled: 'Scheduled',
-        empty: 'No plans are available to change to right now.',
-        undo: 'Undo',
-        undoing: 'Undoing…',
-        downgrade: 'Downgrade',
-        confirmDowngrade: 'Confirm downgrade',
-        tryAgain: 'Try again',
-        checkingChange: 'Checking this change…',
-        cannotChange: 'That change cannot be made here.',
-        alreadyOn: name => `You are already on ${name} — nothing to change.`,
-        notScheduleable: 'This change cannot be scheduled here.',
-        scheduling: 'Scheduling…',
-        cancel: 'Cancel',
-        effectScheduled: (targetName, effectiveAt, creditsDelta) =>
-          `Change to ${targetName} — takes effect ${effectiveAt}. No charge now; you keep your current plan until then.${creditsDelta ? ` Monthly credits change: ${creditsDelta}.` : ''}`
-      },
-      autoReload: {
-        threshold: 'Threshold',
-        thresholdAria: 'Auto-refill threshold',
-        reloadTo: 'Reload to',
-        reloadToAria: 'Auto-refill reload-to amount',
-        turnOffConfirm: 'Turn off auto-refill?',
-        turnOff: 'Turn off',
-        disable: 'Disable',
-        updated: 'Auto-refill updated.',
-        turnedOff: 'Auto-refill turned off.',
-        manage: 'Manage',
-        save: 'Save',
-        saving: 'Saving…',
-        cancel: 'Cancel'
-      },
-      state: {
-        notice: {
-          loggedOut: {
-            title: 'Connect your SpaceshipResearch account',
-            message: 'Sign in with your SpaceshipResearch account to see your balance, plan and usage here.',
-            action: 'Sign in'
-          },
-          openPortal: 'Open portal ↗',
-          noCard: {
-            title: 'No payment method on file',
-            message:
-              'Buying top-up credits and auto-refill stay disabled until a card is on file. Add one on the portal.',
-            action: 'Add card ↗'
-          }
-        },
-        paymentMethod: {
-          title: 'Payment method',
-          description: 'Manage the card used for top-ups and subscription renewals.',
-          addAction: 'Add payment method',
-          updateAction: 'Update',
-          provenance: {
-            autoRefill: 'auto-refill card',
-            customerDefault: 'customer default',
-            subPin: 'subscription card',
-            suffix: label => ` - ${label}`
-          }
-        },
-        buyCredits: {
-          description: 'A single charge on your card, added to your balance today.'
-        },
-        autoRefill: {
-          title: 'Refill when low',
-          genericDescription: 'Keep your balance topped up when it drops below your threshold.',
-          offPill: 'Off',
-          enabledPill: 'Enabled',
-          notAvailablePill: '—',
-          manageCaption: 'Manage auto-refill from the portal.',
-          turnOnCaption: 'Turn on auto-refill from the portal',
-          chargesDescription: (reloadTo, threshold) =>
-            `Charges ${reloadTo} automatically when your balance falls below ${threshold}.`,
-          distinctCardCaption: cardLabel => `Auto-refill charges ${cardLabel} — reconcile on the portal`,
-          distinctCardFallback: 'a different card',
-          reconcileAction: 'Reconcile ↗'
-        },
-        usage: {
-          subscriptionCredits: {
-            title: 'Subscription credits',
-            barLabel: 'Subscription credits remaining',
-            captionResets: date => `Resets ${date}`,
-            valueOf: (remaining, monthly) => `${remaining} of ${monthly} left`,
-            valueOver: (remaining, monthly, over) => `${remaining} of ${monthly} left · ${over} over`
-          },
-          topupCredits: {
-            title: 'Top-up credits',
-            caption: 'Does not expire'
-          },
-          monthlyCap: {
-            title: 'Monthly spend cap',
-            barLabel: 'Monthly spend cap used',
-            captionDefault: 'Default ceiling',
-            captionSpending: 'Monthly remote spending',
-            valueUsed: (spent, limit) => `${spent} of ${limit} used`
-          }
-        },
-        planCard: {
-          freeTier: 'Free',
-          chooseAction: 'Choose ↗',
-          adjustPlanAction: 'Adjust plan ↗',
-          unavailableCaption: 'Subscription details are unavailable; opening the portal is still available.',
-          downgradeCaption: (tierName, when) => `Changes to ${tierName} on ${when}.`,
-          cancellationCaption: when => `Cancels on ${when}.`,
-          renewsCaption: date => `Renews ${date}`,
-          noSubscriptionCaption: 'No active subscription — paid models draw down top-up credits.'
-        }
-      },
-      errors: {
-        consentRequired: {
-          title: 'Card confirmation needed',
-          message: 'Confirm this card for terminal charges in the portal'
-        },
-        insufficientScope: {
-          title: 'Remote Spending needs approval',
-          message: 'This needs Remote Spending allowed. Start a top-up to allow it, then retry.'
-        },
-        remoteSpendingRevoked: {
-          title: 'Remote spending was stopped',
-          messageByAdmin: 'An admin stopped remote spending for this terminal.',
-          messageBySelf: 'You stopped remote spending for this terminal.'
-        },
-        remoteSpendingReconnect: who => `${who} Reconnect from Settings -> Gateway to re-authorize this device.`,
-        sessionRevoked: {
-          title: 'Session logged out',
-          message: 'Your session was logged out. Sign in again from Settings → Gateway.'
-        },
-        cliBillingDisabled: {
-          title: 'Remote spending is off',
-          message:
-            "Remote spending is off for this account — a billing admin can turn it on from the portal's Scout Agent page."
-        },
-        roleRequired: {
-          title: 'Admin role required',
-          message: 'Adding funds needs an org admin/owner. Ask an admin, or manage on the portal.'
-        },
-        idempotencyConflict: {
-          title: 'Start a fresh top-up',
-          message: '🔴 That charge key was already used for a different amount. Start a fresh top-up.'
-        },
-        noPaymentMethod: {
-          title: 'No saved card',
-          message:
-            '💳 No saved card for terminal charges yet. Set one up on the portal ' +
-            "(one-time credit buys don't save a reusable card)."
-        },
-        orgAccessDenied: {
-          title: 'Org access denied',
-          message: "This token isn't bound to an org you can manage"
-        },
-        monthlyCapExceeded: {
-          title: 'Monthly spend cap reached',
-          messageReached: '🔴 Monthly spend cap reached.',
-          messageHeadroom: remaining => `🔴 Monthly spend cap reached — $${remaining} headroom left.`
-        },
-        rateLimited: {
-          title: 'Too many charges right now',
-          message: mins =>
-            mins > 0
-              ? `🟡 Too many charges right now (try again in ~${mins} min). This isn't a payment failure.`
-              : "🟡 Too many charges right now. This isn't a payment failure."
-        },
-        stripeUnavailable: {
-          title: 'Stripe is having trouble',
-          message: mins =>
-            mins > 0
-              ? `Stripe is having trouble — try again in ~${mins} min`
-              : 'Stripe is having trouble — try again shortly'
-        },
-        upgradeCapExceeded: {
-          title: 'Daily plan-change limit reached',
-          message: 'Daily plan-change limit reached — try again tomorrow'
-        },
-        endpointUnavailable: {
-          title: 'Billing endpoint unavailable',
-          message: 'Billing endpoint returned a non-JSON response (it may not be available on this deployment).'
-        },
-        timeout: {
-          title: 'Billing request timed out',
-          message: 'Billing request timed out.'
-        },
-        transport: {
-          title: 'Billing connection failed',
-          message: 'Billing request failed before reaching the gateway.'
-        },
-        default: {
-          title: 'Billing request failed',
-          message: 'Billing request failed.'
-        }
-      }
-    },
     providers: {
       connectAccount: 'Connect an account',
       haveApiKey: 'Have an API key instead?',
@@ -2437,17 +2019,6 @@ export const en: Translations = {
       activeBackend: 'Active',
       activeBackendHint: 'This is your active backend',
       useBackend: 'Use this backend',
-      spaceshipResearchIncluded:
-        'Included with a SpaceshipResearch subscription — sign in with your SpaceshipResearch account to activate.',
-      spaceshipResearchAuthNeededTitle: 'Sign in with your SpaceshipResearch account',
-      spaceshipResearchAuthNeededMessage: provider =>
-        `${provider} is saved but will only work once you sign in with your SpaceshipResearch account.`,
-      spaceshipResearchAuthSignIn: 'Sign in',
-      spaceshipResearchAuthDoneTitle: 'SpaceshipResearch account connected',
-      spaceshipResearchAuthDoneMessage: 'Your subscription backends are now active.',
-      spaceshipResearchAuthFailed: 'SpaceshipResearch sign-in did not complete',
-      spaceshipResearchAuthFailedMessage: 'Try again.',
-      spaceshipResearchAuthTryAgain: 'Try again',
       noApiKeyRequired: 'No API key required.',
       postSetupHint: step =>
         `This backend needs a one-time install (${step}). Runs on this machine — may take a few minutes.`,
@@ -3643,8 +3214,7 @@ export const en: Translations = {
       title: 'Session database is damaged',
       body: (profiles: string) =>
         `Scout can't read all of the session history for ${profiles}. Chats missing from this list were not deleted; the file they are stored in is damaged.`,
-      action: 'Quit Scout on this profile, then inspect the file without changing it, or restore a snapshot:',
-      guide: 'Recovery guide'
+      action: 'Quit Scout on this profile, then inspect the file without changing it, or restore a snapshot:'
     },
     noFilterMatches: 'No sessions match these filters',
     projects: {
@@ -3900,8 +3470,6 @@ export const en: Translations = {
       '/browser': 'Manage browser CDP connection [connect|disconnect|status] (local gateway only)',
       '/palette': 'Open the fuzzy command palette (also Ctrl+P)',
       '/usage': 'Show token usage and rate limits; `reset` redeems a banked Codex limit reset',
-      '/subscription': 'View your SpaceshipResearch plan and change it in the browser',
-      '/topup': 'Show your SpaceshipResearch balance and manage billing on the portal',
       '/platform': 'Pause, resume, or list a failing gateway platform',
       '/version': 'Show Scout Agent version',
       '/debug': 'Upload debug report (system info + logs) and get shareable links',
@@ -4442,7 +4010,6 @@ export const en: Translations = {
     chooseLater: "I'll choose a provider later",
     recommended: 'Recommended',
     connected: 'Connected',
-    featuredPitch: 'One subscription, 300+ frontier models — the recommended way to run Scout',
     fireworksPitch: 'Direct model API — Fireworks-hosted frontier models',
     localModelsTitle: 'Run models locally',
     localModelsPitch: 'No account needed — download a model and run it on this machine',
@@ -4499,7 +4066,6 @@ export const en: Translations = {
     reopenAuthPage: 'Re-open authorization page',
     autoBrowser: provider =>
       `We opened ${provider} in your browser. Authorize Scout there and you'll be connected automatically — nothing to copy or paste.`,
-    reopenSignInPage: 'Re-open sign-in page',
     waitingAuthorize: 'Waiting for you to authorize...',
     externalPending: provider =>
       `${provider} signs in through its own CLI. Run this command in a terminal, then come back and pick "I've signed in":`,
@@ -4508,81 +4074,11 @@ export const en: Translations = {
     reopenVerification: 'Re-open verification page',
     copy: 'Copy',
     defaultModel: 'Default model',
-    freeTier: 'Free tier',
-    pro: 'Pro',
     free: 'Free',
     price: (input, output) => `${input} in / ${output} out per Mtok`,
     change: 'Change',
     startChatting: 'Begin',
     docs: provider => `${provider} docs`
-  },
-
-  freeTier: {
-    providerRowTitle: 'SpaceshipResearch · free tier',
-    providerRowPitch: 'Sign in with a SpaceshipResearch account to unlock more models and tools.',
-    readyTitle: 'Scout is ready.',
-    readyCaption: 'Free · connectors included',
-    begin: 'Begin',
-    signInInstead: 'Sign in with a SpaceshipResearch account instead',
-    otherProviders: 'Other providers',
-    stripTitle: 'Free SpaceshipResearch inference and connectors are now available.',
-    stripBody: 'Open the model picker to try them, or sign in with a SpaceshipResearch account.',
-    dismiss: 'Dismiss',
-    providerName: 'SpaceshipResearch',
-    statusLabel: model => `SpaceshipResearch · ${model}`,
-    signIn: 'Sign in',
-    signInHeading: 'Sign in with a SpaceshipResearch account to unlock more models and tools.',
-    settingUp: 'Setting up free inference…',
-    codeBody: 'Enter this code in your browser to finish signing in.',
-    copyLink: 'Copy link',
-    doNotShare: 'Do not share this code.',
-    waiting: 'Waiting for sign-in…',
-    finishingHeading: 'Finishing sign-in…',
-    finishingBody: 'Approved in the browser. Collecting your account tokens.',
-    signedInAs: email => `Signed in as ${email}`,
-    signedIn: 'Signed in.',
-    completedBody: 'Your account now carries inference and tools.',
-    defaultModel: 'Default model',
-    change: 'Change',
-    done: 'Done',
-    notNow: 'Not now',
-    tryAgain: 'Try again',
-    startAgain: 'Start again',
-    didNotComplete: "Sign-in didn't finish",
-    rejectedBody: "No problem, you're still on the free SpaceshipResearch service. Sign in whenever you're ready.",
-    supersededBody: 'A newer sign-in code replaced this one. Use the newest one, or start again.',
-    timedOutHeading: 'That sign-in link has expired',
-    timedOutBody: "Start again whenever you're ready. You're still on the free SpaceshipResearch service.",
-    retiredBody:
-      "Your session ended before the sign-in finished. Scout will start a new one; then sign in again whenever you're ready.",
-    errorBody: "Sign-in didn't finish. Try again whenever you're ready.",
-    busyHeading: 'Almost there',
-    busyBody: wait =>
-      `Scout couldn't finish signing you in because the SpaceshipResearch service is busy. Try again in ${wait}. Your session is still here in the meantime.`,
-    unreachableBody:
-      "Scout couldn't reach the SpaceshipResearch service to finish signing you in. Check your internet connection and try again. Your session is still here.",
-    alreadySignedInHeading: 'Already signed in.',
-    alreadySignedInBody: 'This Scout is already signed in to a SpaceshipResearch account.',
-    setupFailed: {
-      gateClosed:
-        "This version of Scout can't start without a SpaceshipResearch account. Sign in or create one, it's free and only takes a minute.",
-      paused:
-        'Using Scout without signing in is paused for a moment. Scout will keep checking. Signing in is free and gets you going right now.',
-      rateLimited: wait =>
-        `Lots of people are getting started right now, so Scout will try again in ${wait}. Signing in is free and skips the wait.`,
-      unreachable:
-        "Scout couldn't reach the SpaceshipResearch service. Check your internet connection, then tap Try again. Or connect another provider for now.",
-      serverError:
-        'The SpaceshipResearch service had a hiccup. Tap Try again in a moment, or connect another provider for now.',
-      powRequired:
-        "The SpaceshipResearch server asked for a proof of work, but that isn't implemented in your Agent yet. Sign in or create a free SpaceshipResearch account to continue.",
-      locked:
-        "This session can't continue without signing in. Sign in or create a free SpaceshipResearch account to keep going.",
-      generic: "Scout couldn't set up free access without signing in. Signing in is free, or connect another provider.",
-      signInBelow: 'Signing in is free. Pick SpaceshipResearch below.',
-      tryAgain: 'Try again',
-      retrying: 'Trying again…'
-    }
   },
 
   modelPicker: {
@@ -4597,12 +4093,8 @@ export const en: Translations = {
     downloading: 'Downloading',
     localDownloadsHeading: 'Local',
     noAuthenticatedProviders: 'No authenticated providers.',
-    pro: 'Pro',
-    proNeedsSubscription: 'Pro models need a paid SpaceshipResearch subscription.',
     free: 'Free',
-    freeTier: 'Free tier',
     priceTitle: 'Input / Output price per million tokens',
-    wasPrice: 'was',
     customModel: 'Custom model',
     addCustomModelAction: 'Add custom model…',
     customModelPlaceholder: 'Type a model id, e.g. openai/gpt-5'
@@ -4691,8 +4183,6 @@ export const en: Translations = {
       clientLabel: version => `client v${version}`,
       connectionSsh: host => `SSH: ${host}`,
       connectionRemote: host => `Remote: ${host}`,
-      connectionCloud: host => `Cloud: ${host}`,
-      connectionCloudTooltip: host => `Scout Cloud · ${host}`,
       connectionSshTooltip: host => `SSH · ${host}`,
       connectionRemoteTooltip: host => `Remote · ${host}`,
       backendLabel: version => `backend v${version}`,
@@ -4724,7 +4214,6 @@ export const en: Translations = {
       toggleTerminal: 'Terminal',
       toggleTokensPerSecond: 'Tokens per second',
       toggleVersion: 'Version & updates',
-      toggleFreeTier: 'Free tier',
       toggleWorkspace: 'Workspace',
       cacheHitRateTitle: 'Prompt cache hit rate this session — cached tokens cost less, so higher is cheaper',
       tokensPerSecondTitle: 'Output tokens per second, averaged over the last 10 model calls',
@@ -5169,36 +4658,6 @@ export const en: Translations = {
         disk_full: {
           title: 'Disk full',
           body: 'Your disk is full, so Scout could not save this conversation. Free some space, then retry.'
-        },
-        // SpaceshipResearch free tier. The body is normally the backend's own sentence (it names the wait
-        // and the way forward); these bodies stand in for an older backend that sent none.
-        free_tier_disabled: {
-          title: 'Using Scout without signing in is switched off right now',
-          body: "Sign in with a SpaceshipResearch account to keep chatting, it's free."
-        },
-        free_tier_rate_limited: {
-          title: "You've used up the allowance for chatting without signing in",
-          body: "It refreshes shortly. Sign in with a SpaceshipResearch account for a bigger allowance, it's free."
-        },
-        free_tier_at_capacity: {
-          title: 'Chatting without signing in is really busy right now',
-          body: "Sign in to skip the queue, it's free, or try again in a little while."
-        },
-        free_tier_model_not_free: {
-          title: "That model isn't available without signing in",
-          body: "Scout uses the free model for now. Sign in with a SpaceshipResearch account for more models, it's free."
-        },
-        free_tier_route: {
-          title: "Scout couldn't reach the free model on this route",
-          body: "Sign in with a SpaceshipResearch account, it's free, or check the SPACESHIPRESEARCH_INFERENCE_BASE_URL setting."
-        },
-        free_tier_outage: {
-          title: 'The free model is having trouble responding right now',
-          body: 'Try sending your message again in a minute.'
-        },
-        free_tier_refused: {
-          title: "Scout couldn't send that without signing in",
-          body: 'Signing in with a SpaceshipResearch account is free.'
         }
       },
       errorAuthKinds: {
@@ -5225,14 +4684,12 @@ export const en: Translations = {
       errorOpenScoutFolderFailed: 'Could not open the Scout folder',
       errorUpdateApiKey: 'Update API key',
       errorSignInAgain: provider => `Sign in to ${provider} again`,
-      errorSignInFreeTier: 'Sign in with a SpaceshipResearch account',
       errorOauthExpired: provider =>
         `Your ${provider} sign-in has expired or was revoked. Sign in again to keep chatting.`,
       errorOpenLogs: 'Open logs',
       errorOpenLogsFailed: 'Could not open the logs folder',
       errorOpenDesktopLogs: 'Open Desktop logs',
       errorCopyDiagnostics: 'Copy error details',
-      errorSendDiagnostics: 'Send diagnostics',
       filesChanged: count => (count === 1 ? '1 file changed' : `${count} files changed`),
       reviewChanges: 'Review',
       readAloudFailed: 'Read aloud failed',
@@ -5645,7 +5102,6 @@ export const en: Translations = {
     boundaryTitle: 'Something broke in the interface',
     boundaryDesc: 'The view hit an unexpected error. Your chats and settings are safe.',
     boundaryDetails: 'Details',
-    sendDiagnostics: 'Send diagnostics',
     reloadWindow: 'Reload window',
     openLogs: 'Open logs'
   },

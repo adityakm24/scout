@@ -149,7 +149,7 @@ def test_commit_bundle_environment_is_literal_and_validated(fixture_repo):
     repo, _, invoke = fixture_repo
     tip = git(repo, 'rev-parse', 'HEAD')
     values = {'SCOUT_GUEST_ONBOARDING': '1', 'SCOUT_DATA_DIR_SUFFIX': 'magic-test',
-              'SCOUT_SKIP_INTRO': '', 'SCOUT_SHARED_AUTH_DIR': 'a=b "quote"\n$(not-a-command)'}
+              'SCOUT_SKIP_INTRO': '', 'SCOUT_DESKTOP_USER_DATA_DIR': 'a=b "quote"\n$(not-a-command)'}
     flags = [part for key, value in values.items() for part in ('--bundle-env', f'{key}={value}')]
     result, calls = invoke('--build-commit', tip, '--publish', *flags)
     assert result.returncode == 0, result.stderr

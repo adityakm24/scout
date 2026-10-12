@@ -270,7 +270,7 @@ function RowOutcome({
     )
   }
 
-  if (target.state === 'failed' || target.state === 'expired') {
+  if (target.state === 'failed') {
     return (
       <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
         <p className={cn(CAPTION, 'min-w-0 text-destructive wrap-anywhere')} role="status">

@@ -21,9 +21,7 @@ Env vars::
     PERPLEXITY_API_KEY=...       # required for direct search and extract
     PERPLEXITY_BASE_URL=...      # optional override of https://api.perplexity.ai
 
-No anonymous tier. The SpaceshipResearch Subscription selection serves search through
-``perplexity-gateway.<TOOL_GATEWAY_DOMAIN>`` using the SpaceshipResearch token; a direct
-key takes precedence. Managed extract stays on Firecrawl.
+No anonymous tier.
 
 Extract caveat: Perplexity's only supported page-content route returns the
 passages of a page relevant to a *query* (elisions marked ``…``), not the
@@ -70,18 +68,8 @@ def _missing_key_error() -> str:
     return f"PERPLEXITY_API_KEY is not set. Get a key at {_KEY_URL}"
 
 
-def _managed_gateway(token_reader=None):
-    """SpaceshipResearch Tool Gateway config when web_search is on the managed route, else None."""
-    from tools import managed_tool_gateway as gw
-    from tools.web_tools import _managed_web_search
-
-    if not _managed_web_search():
-        return None
-    return gw.resolve_managed_tool_gateway("perplexity", token_reader=token_reader)
-
-
-def _perplexity_request(endpoint: str, payload: Dict[str, Any], gateway=None) -> Dict[str, Any]:
-    """POST to Perplexity or the supplied gateway; return parsed JSON.
+def _perplexity_request(endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """POST to Perplexity; return parsed JSON.
 
     Raises ``ValueError`` when the key is missing or on any non-2xx status,
     carrying the response body so Perplexity's own error text (invalid key,
@@ -91,13 +79,9 @@ def _perplexity_request(endpoint: str, payload: Dict[str, Any], gateway=None) ->
 
     api_key = get_provider_env("PERPLEXITY_API_KEY")
     headers = _HEADERS
-    if gateway is not None:
-        # SpaceshipResearch-owned key behind the gateway: identify the harness only, not a per-user integration.
-        base_url, api_key, headers = gateway.gateway_origin.rstrip("/"), gateway.spaceshipresearch_user_token, {"User-Agent": _HEADERS["User-Agent"]}
-    elif api_key:
-        base_url = (get_provider_env("PERPLEXITY_BASE_URL") or _DEFAULT_BASE_URL).rstrip("/")
-    else:
+    if not api_key:
         raise ValueError(_missing_key_error())
+    base_url = (get_provider_env("PERPLEXITY_BASE_URL") or _DEFAULT_BASE_URL).rstrip("/")
     url = f"{base_url}/{endpoint.lstrip('/')}"
     logger.info("Perplexity %s request to %s", endpoint, url)
 
@@ -183,11 +167,10 @@ class PerplexityWebSearchProvider(WebSearchProvider):
         return "Perplexity"
 
     def is_available(self) -> bool:
-        """True with a ``PERPLEXITY_API_KEY``, or on the managed route with a likely-usable SpaceshipResearch token."""
+        """True with a ``PERPLEXITY_API_KEY``."""
         from agent.web_search_provider import get_provider_env
-        from tools.managed_tool_gateway import peek_spaceshipresearch_access_token
 
-        return bool(get_provider_env("PERPLEXITY_API_KEY")) or _managed_gateway(token_reader=peek_spaceshipresearch_access_token) is not None
+        return bool(get_provider_env("PERPLEXITY_API_KEY"))
 
     def supports_search(self) -> bool:
         return True
@@ -208,24 +191,13 @@ class PerplexityWebSearchProvider(WebSearchProvider):
             if is_interrupted():
                 return {"success": False, "error": "Interrupted"}
 
-            from agent.web_search_provider import get_provider_env
-            from tools.web_tools import _managed_web_search
-
-            direct = bool(get_provider_env("PERPLEXITY_API_KEY"))
-            gateway = None if direct else _managed_gateway()
-            if gateway is None and not direct and _managed_web_search():
-                from tools.tool_backend_helpers import SPACESHIPRESEARCH_MANAGED_PROVIDER, selection_error
-                raise ValueError(selection_error(
-                    "web", SPACESHIPRESEARCH_MANAGED_PROVIDER, "the SpaceshipResearch Tool Gateway is not available (not entitled or unreachable)"))
-            logger.info("Perplexity search: '%s' (limit=%d%s)", query, limit, ", managed" if gateway else "")
+            logger.info("Perplexity search: '%s' (limit=%d)", query, limit)
             payload = {
                 "query": query,
                 "max_results": max(1, min(limit, _MAX_SEARCH_RESULTS)),
                 "search_context_size": "low",
             }
-            if gateway is not None:
-                payload["search_type"] = "fast"
-            raw = _perplexity_request("search", payload, gateway)
+            raw = _perplexity_request("search", payload)
             return _normalize_search_results(raw)
         except ValueError as exc:
             return {"success": False, "error": str(exc)}

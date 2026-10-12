@@ -64,7 +64,7 @@ with open(os.path.join(hh, "config.yaml"), "w", encoding="utf-8") as f:
 os.environ["SCOUT_HOME"] = hh
 # Strip web-fetch shortcuts: every arm must drive the browser.
 os.environ.pop("BROWSER_USE_API_KEY", None)
-for k in ("FIRECRAWL_API_KEY", "SPACESHIPRESEARCH_API_KEY", "TAVILY_API_KEY", "SERPER_API_KEY"):
+for k in ("FIRECRAWL_API_KEY", "TAVILY_API_KEY", "SERPER_API_KEY"):
     os.environ.pop(k, None)
 os.environ["BU_CDP_URL"] = cdp
 os.environ["PATH"] = (
@@ -92,27 +92,15 @@ if ARM == "prns":
 
 from run_agent import AIAgent  # noqa: E402
 
-# Provider resolution: default openrouter (original battery), but allow the
-# SpaceshipResearch-subscription path on boxes without an OpenRouter key. Credentials are
-# resolved through the product's own auth state, never printed.
+# Provider: OpenRouter (the original battery). Credentials are never printed.
 _or_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
-if _or_key:
-    _agent_auth = dict(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=_or_key,
-        provider="openrouter",
-    )
-else:
-    # Resolved by the orchestrator BEFORE SCOUT_HOME is redirected to the
-    # throwaway home (auth state lives in the real profile). Never printed.
-    _tok = os.environ.get("BUBENCH_SPACESHIPRESEARCH_TOKEN", "").strip()
-    if not _tok:
-        raise SystemExit("no OPENROUTER_API_KEY and no SpaceshipResearch auth available")
-    _agent_auth = dict(
-        base_url=os.environ.get("BUBENCH_SPACESHIPRESEARCH_BASE_URL", "https://inference-api.spaceshipresearch.com/v1"),
-        api_key=_tok,
-        provider="spaceshipresearch",
-    )
+if not _or_key:
+    raise SystemExit("OPENROUTER_API_KEY is required")
+_agent_auth = dict(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=_or_key,
+    provider="openrouter",
+)
 
 agent = AIAgent(
     **_agent_auth,

@@ -140,7 +140,7 @@ def test_string_api_keys_are_not_retained_in_cache_key_repr():
 
 
 def test_client_cache_key_is_scoped_per_profile_home(tmp_path):
-    """Callers that omit api_key (pool / SpaceshipResearch auth.json paths) must not share a client across
+    """Callers that omit api_key (pool / Fixture Co auth.json paths) must not share a client across
     multiplex profiles: the per-turn SCOUT_HOME override has to participate in the key."""
     import scout_constants
 
@@ -150,7 +150,7 @@ def test_client_cache_key_is_scoped_per_profile_home(tmp_path):
     for home in (a, b):
         tok = scout_constants.set_scout_home_override(str(home))
         try:
-            keys.append(aux._client_cache_key("spaceshipresearch", async_mode=False, base_url="https://inf.example", model="m"))
+            keys.append(aux._client_cache_key("fixtureco", async_mode=False, base_url="https://inf.example", model="m"))
         finally:
             scout_constants.reset_scout_home_override(tok)
     assert keys[0] != keys[1]

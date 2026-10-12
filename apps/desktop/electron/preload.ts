@@ -29,9 +29,8 @@ contextBridge.exposeInMainWorld('scoutDesktop', {
   // Launch-flag fact: the app was started with --local, so the renderer may
   // show the local-models surfaces. Static for the window's lifetime.
   localModelsEnabled: launchFlags?.localModels === true,
-  // Launch-flag fact: the SpaceshipResearch free tier is on for this launch
-  // (SCOUT_GUEST_ONBOARDING=1 or --guest-onboarding). Read-only; the same
-  // decision is stamped onto every backend the app spawns.
+  // Launch-flag fact: the guided chat onboarding is on for this launch
+  // (SCOUT_GUEST_ONBOARDING=1 or --guest-onboarding). Read-only.
   guestOnboardingEnabled: launchFlags?.guestOnboarding === true,
   localSkin: localSkin && typeof localSkin === 'object' ? localSkin : null,
   getConnection: (profile, opts) => ipcRenderer.invoke('scout:connection', profile, opts),
@@ -279,15 +278,6 @@ contextBridge.exposeInMainWorld('scoutDesktop', {
   oauthLoginConnectionConfig: (remoteUrl, options) =>
     ipcRenderer.invoke('scout:connection-config:oauth-login', remoteUrl, options),
   oauthLogoutConnectionConfig: remoteUrl => ipcRenderer.invoke('scout:connection-config:oauth-logout', remoteUrl),
-  // Scout Cloud: one portal login powers discovery + silent per-agent sign-in
-  // (cloud-auto-discovery Phase 3).
-  cloud: {
-    status: () => ipcRenderer.invoke('scout:cloud:status'),
-    login: () => ipcRenderer.invoke('scout:cloud:login'),
-    logout: () => ipcRenderer.invoke('scout:cloud:logout'),
-    discover: org => ipcRenderer.invoke('scout:cloud:discover', org),
-    agentSignIn: dashboardUrl => ipcRenderer.invoke('scout:cloud:agent-sign-in', dashboardUrl)
-  },
   profile: {
     getDefault: () => ipcRenderer.invoke('scout:profile:default:get'),
     setDefault: (route: DesktopProfileRoute) => ipcRenderer.invoke('scout:profile:default:set', route),

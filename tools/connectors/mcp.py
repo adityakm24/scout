@@ -11,10 +11,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from scout_constants import scout_home_key
 from tools.connectors.contract import Actor, SettleReason, TargetState
-from tools.connectors.gateway.config import operation_session_key
+from tools.connectors.config import operation_session_key
 from tools.connectors.operation import ConnectionOperation, DetachedOperation, IllegalTransition, Target
 from tools.connectors.run import Kind, run_operation
-from tools.connectors.targets import hosted_names, misrouted_to_mcp_error
 from tools.registry import tool_error
 
 logger = logging.getLogger(__name__)
@@ -65,12 +64,6 @@ def validate_mcp_names(action: str, names: List[str]) -> Optional[str]:
     unknown = [n for n in names if n not in allowed]
     if not unknown:
         return None
-    foreign = [n for n in unknown if n not in catalog and n not in configured]
-    if foreign:
-        hosted = hosted_names() or set()
-        misrouted = [n for n in foreign if n in hosted]
-        if misrouted:
-            return " ".join(misrouted_to_mcp_error(action, name) for name in misrouted)
     if action == "install":
         return (
             f"unknown MCP server(s) for install: {', '.join(unknown)}. Install works for "
@@ -738,7 +731,7 @@ def apply_answer(operation: ConnectionOperation, raw: str) -> None:
         elif status == "approved" and runner is not None:
             if target.state == TargetState.pending:
                 runner.run(_APPROVE, operation, target, _answer_env(entry))
-            elif target.state in (TargetState.failed, TargetState.expired):
+            elif target.state == TargetState.failed:
                 # Connect on the form a failed row reopened: the same attempt, with the new values.
                 runner.run(_RETRY, operation, target, _answer_env(entry))
     if answer.get("settled_by") == SettleReason.continue_.value and not operation.all_resolved:

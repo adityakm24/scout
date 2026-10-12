@@ -339,8 +339,6 @@ function ModelResults({
           return null
         }
 
-        const unavailable = new Set(provider.unavailable_models ?? [])
-
         return (
           <CommandGroup heading={<ProviderHeading provider={provider} />} key={provider.slug}>
             {provider.warning && (
@@ -353,7 +351,6 @@ function ModelResults({
             {models.map(model => {
               const isCurrent = model === currentModel && catalogProviderMatches(provider, currentProvider)
               const price = provider.pricing?.[model]
-              const locked = unavailable.has(model)
               // Managed local model loading into memory right now: show the
               // real load percent inline (keyed by exact model id — remote
               // providers never match).
@@ -364,16 +361,10 @@ function ModelResults({
                   className={cn(
                     'flex items-center gap-2 pl-6 font-mono',
                     isCurrent &&
-                      'bg-primary text-primary-foreground data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground',
-                    locked && 'cursor-not-allowed opacity-45'
+                      'bg-primary text-primary-foreground data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground'
                   )}
-                  disabled={locked}
                   key={`${provider.slug}:${model}`}
-                  onSelect={() => {
-                    if (!locked) {
-                      onSelectModel(provider, model)
-                    }
-                  }}
+                  onSelect={() => onSelectModel(provider, model)}
                   value={`${provider.slug}:${model}`}
                 >
                   <span className="min-w-0 flex-1 truncate">
@@ -390,9 +381,6 @@ function ModelResults({
                       <span className="text-[0.62rem] tabular-nums text-muted-foreground">{loadProgress.percent}%</span>
                     </span>
                   )}
-                  {locked && (
-                    <span className="shrink-0 text-[0.6875rem] font-medium opacity-80">{copy.pro}</span>
-                  )}
                   <ModelPrice isCurrent={isCurrent} price={price} />
                 </CommandItem>
               )
@@ -400,11 +388,6 @@ function ModelResults({
             {groupDownloads.map(job => (
               <DownloadingModelRow jobId={job.jobId} key={job.jobId} owner={owner} target={job.target} />
             ))}
-            {unavailable.size > 0 && (
-              <div className="px-6 pb-2 pt-1 text-[0.62rem] leading-relaxed text-muted-foreground">
-                {copy.proNeedsSubscription}
-              </div>
-            )}
           </CommandGroup>
         )
       })}
@@ -505,62 +488,26 @@ function ModelPrice({ price, isCurrent }: { price?: ModelPricing; isCurrent: boo
 
   if (price.free) {
     return (
-      <span className="shrink-0 inline-flex items-center gap-1.5">
-        {typeof price.discount_percent === 'number' ? (
-          <span
-            className={cn(
-              'rounded-sm px-1 py-0.5 text-[0.62rem] font-semibold',
-              isCurrent ? 'bg-primary-foreground/20' : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-            )}
-          >
-            -{price.discount_percent}%
-          </span>
-        ) : null}
-        <span
-          className={cn(
-            'shrink-0 rounded-full px-1.5 py-0.5 text-[0.6875rem] font-medium',
-            isCurrent ? 'bg-primary-foreground/20' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-          )}
-        >
-          {copy.free}
-        </span>
+      <span
+        className={cn(
+          'shrink-0 rounded-full px-1.5 py-0.5 text-[0.6875rem] font-medium',
+          isCurrent ? 'bg-primary-foreground/20' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+        )}
+      >
+        {copy.free}
       </span>
     )
   }
 
-  const onSale = typeof price.discount_percent === 'number' && Boolean(price.was_input || price.was_output)
-
   return (
     <span
       className={cn(
-        'shrink-0 inline-flex items-center gap-1.5 text-[0.66rem] tabular-nums',
+        'shrink-0 text-[0.66rem] tabular-nums',
         isCurrent ? 'text-primary-foreground/80' : 'text-muted-foreground'
       )}
       title={copy.priceTitle}
     >
-      {onSale ? (
-        <span
-          className={cn(
-            'rounded-sm px-1 py-0.5 text-[0.62rem] font-semibold',
-            isCurrent ? 'bg-primary-foreground/20' : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-          )}
-        >
-          -{price.discount_percent}%
-        </span>
-      ) : null}
-      <span>
-        {price.input || '?'} / {price.output || '?'}
-      </span>
-      {onSale ? (
-        <span
-          className={cn(
-            'line-through decoration-from-font opacity-70',
-            isCurrent ? 'text-primary-foreground/60' : 'text-muted-foreground/80'
-          )}
-        >
-          {copy.wasPrice} {price.was_input || '?'} / {price.was_output || '?'}
-        </span>
-      ) : null}
+      {price.input || '?'} / {price.output || '?'}
     </span>
   )
 }
@@ -578,31 +525,12 @@ function LoadingResults() {
 }
 
 function ProviderHeading({ provider }: { provider: ModelOptionProvider }) {
-  const { t } = useI18n()
-  const copy = t.modelPicker
-
-  // Two different facts wear the same badge: `free_tier` is a signed-in SpaceshipResearch
-  // account on the free plan; `free_tier_row` is the no-account route's own
-  // row. Either way the user is on free inference, so say so. Never match the
-  // route by name — the label is copy.
-  const tierBadge =
-    provider.free_tier === true || provider.free_tier_row === true ? (
-      <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-emerald-600 dark:text-emerald-400">
-        {copy.freeTier}
-      </span>
-    ) : provider.free_tier === false ? (
-      <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-primary">
-        {copy.pro}
-      </span>
-    ) : null
-
   return (
     <span className="flex min-w-0 items-center gap-2">
       <span className="truncate">{provider.name}</span>
       <span className="font-mono text-xs font-normal normal-case tracking-normal text-muted-foreground">
         {provider.slug} · {provider.total_models ?? provider.models?.length ?? 0}
       </span>
-      {tierBadge}
     </span>
   )
 }

@@ -4,9 +4,9 @@ import { resolvePluginSourceLinks } from './plugin-source-urls'
 
 describe('resolvePluginSourceLinks', () => {
   it('maps owner/repo to github browse and clone urls', () => {
-    expect(resolvePluginSourceLinks('SpaceshipResearch/scout-example-plugins')).toEqual({
-      gitUrl: 'https://github.com/SpaceshipResearch/scout-example-plugins.git',
-      browseUrl: 'https://github.com/SpaceshipResearch/scout-example-plugins',
+    expect(resolvePluginSourceLinks('example-org/scout-example-plugins')).toEqual({
+      gitUrl: 'https://github.com/example-org/scout-example-plugins.git',
+      browseUrl: 'https://github.com/example-org/scout-example-plugins',
       subdir: null
     })
   })

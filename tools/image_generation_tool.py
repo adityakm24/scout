@@ -29,64 +29,24 @@ def _load_fal_client() -> Any:
 
 
 from tools.debug_helpers import DebugSession
-from tools.fal_common import (
-    _ManagedFalSyncClient, _extract_http_status, _managed_fal_billing_error,
-    _normalize_fal_queue_url_format, submit_managed_fal_with_rate_limit_retry,
-)
 from tools.image_generation_catalog import (
     DEFAULT_ASPECT_RATIO, DEFAULT_MODEL, FAL_MODELS, UPSCALER_CREATIVITY, UPSCALER_DEFAULT_PROMPT,
     UPSCALER_FACTOR, UPSCALER_GUIDANCE_SCALE, UPSCALER_MODEL, UPSCALER_NEGATIVE_PROMPT,
     UPSCALER_NUM_INFERENCE_STEPS, UPSCALER_RESEMBLANCE, UPSCALER_SAFETY_CHECKER, VALID_ASPECT_RATIOS,
 )
-from tools.managed_tool_gateway import resolve_managed_tool_gateway
-from tools.tool_backend_helpers import (
-    SPACESHIPRESEARCH_MANAGED_PROVIDER, fal_key_is_configured, managed_spaceshipresearch_tools_enabled,
-    spaceshipresearch_tool_gateway_unavailable_message, read_selection, selection_error)
+from tools.tool_backend_helpers import LEGACY_MANAGED_SELECTION, fal_key_is_configured, read_selection, selection_error
 
 logger = logging.getLogger(__name__)
 
 _debug = DebugSession("image_tools", env_var="IMAGE_TOOLS_DEBUG")
-_managed_fal_client = None
-_managed_fal_client_config = None
-_managed_fal_client_lock = threading.Lock()
 
 
-# --- Managed FAL gateway (SpaceshipResearch Subscription) ---
-def _resolve_managed_fal_gateway():
-    """Managed gateway config for the stored `scout tools` selection, or ``None`` for direct FAL.
-
-    ``"spaceshipresearch"`` (or legacy ``use_gateway: true``) → managed ONLY (unreachable = selection-naming
-    error, never a silent FAL_KEY fallback). Other stored provider → direct ONLY (missing FAL_KEY
-    = error naming the selection). Never configured → autodetect: direct if FAL_KEY, else managed.
-    """
+def _check_fal_selection() -> None:
+    """Raise the selection-naming error when ``scout tools`` stored a selection FAL cannot serve
+    (no FAL_KEY). A never-configured category stays silent: the caller reports "no backend"."""
     selected = read_selection("image_gen")
-    if selected == SPACESHIPRESEARCH_MANAGED_PROVIDER:
-        gateway = resolve_managed_tool_gateway("fal-queue")
-        if gateway is None:
-            raise ValueError(selection_error(
-                "image_gen", SPACESHIPRESEARCH_MANAGED_PROVIDER,
-                "the SpaceshipResearch Tool Gateway is not available (not entitled or unreachable)"))
-        return gateway
-    if selected is not None:
-        if fal_key_is_configured():
-            return None
+    if selected is not None and not fal_key_is_configured():
         raise ValueError(selection_error("image_gen", selected, "FAL_KEY is not set"))
-    # Never-configured category: legacy credential autodetect (do NOT persist).
-    return None if fal_key_is_configured() else resolve_managed_tool_gateway("fal-queue")
-
-
-def _get_managed_fal_client(managed_gateway):
-    """Reuse the managed FAL client so its internal httpx.Client is not leaked per call."""
-    global _managed_fal_client, _managed_fal_client_config
-    client_config = (managed_gateway.gateway_origin.rstrip("/"), managed_gateway.spaceshipresearch_user_token)
-    with _managed_fal_client_lock:
-        if _managed_fal_client is None or _managed_fal_client_config != client_config:
-            # Resolved on this module so monkeypatching ``image_generation_tool.fal_client`` still applies.
-            _managed_fal_client = _ManagedFalSyncClient(
-                _load_fal_client(), key=managed_gateway.spaceshipresearch_user_token,
-                queue_run_origin=managed_gateway.gateway_origin)
-            _managed_fal_client_config = client_config
-        return _managed_fal_client
 
 
 class ImageGenerationInterrupted(Exception):
@@ -120,37 +80,10 @@ def _wait_fal_result(handler, *, poll_seconds: float = 0.5):
 
 
 def _submit_fal_request(model: str, arguments: Dict[str, Any]):
-    """Submit a FAL request using direct credentials or the managed queue gateway."""
+    """Submit a FAL request with the user's own credentials."""
     _load_fal_client()
-    request_headers = {"x-idempotency-key": str(uuid.uuid4())}
-    managed_gateway = _resolve_managed_fal_gateway()
-    if managed_gateway is None:
-        return fal_client.submit(model, arguments=arguments, headers=request_headers)
-    try:
-        return submit_managed_fal_with_rate_limit_retry(
-            lambda headers: _get_managed_fal_client(managed_gateway).submit(
-                model, arguments=arguments, headers=headers),
-            what="image model", name=model)
-    except Exception as exc:
-        # A managed-gateway 4xx usually means the portal doesn't proxy this model
-        # (allowlist miss, billing gate): give remediation instead of a raw httpx error.
-        status = _extract_http_status(exc)
-        if status is not None and 400 <= status < 500:
-            billing = _managed_fal_billing_error(exc, "model")
-            if billing is not None:
-                raise ValueError(
-                    f"SpaceshipResearch Subscription gateway rejected model '{model}' (HTTP {status}): {billing}") from exc
-            gateway_message = ""
-            if status in {401, 402, 403}:
-                gateway_message = "\n\n" + spaceshipresearch_tool_gateway_unavailable_message(
-                    "managed FAL image generation", force_fresh=True)
-            raise ValueError(
-                f"SpaceshipResearch Subscription gateway rejected model '{model}' (HTTP {status}). This model "
-                f"may not yet be enabled on the Scout Portal's FAL proxy. Either:\n"
-                f"  • Set FAL_KEY in your environment to use FAL.ai directly, or\n"
-                f"  • Pick a different model via `scout tools` → Image Generation."
-                f"{gateway_message}") from exc
-        raise
+    _check_fal_selection()
+    return fal_client.submit(model, arguments=arguments, headers={"x-idempotency-key": str(uuid.uuid4())})
 
 
 # --- Config readers, model resolution + payload construction ---
@@ -187,9 +120,10 @@ def _read_configured_image_provider():
 
 
 def _plugin_provider_name() -> Optional[str]:
-    """Configured provider that must go through the plugin registry; None for unset/fal/spaceshipresearch."""
+    """Configured provider that must go through the plugin registry; None for unset/fal (and the removed
+    hosted gateway selection, which the FAL path reports)."""
     configured = _read_configured_image_provider()
-    if not configured or configured in ("fal", SPACESHIPRESEARCH_MANAGED_PROVIDER):
+    if not configured or configured in ("fal", LEGACY_MANAGED_SELECTION):
         return None
     return configured
 
@@ -385,9 +319,10 @@ def _prepare_fal_request(model_id, meta, prompt, aspect_ratio, seed, overrides, 
     """Validate inputs and return ``(endpoint, arguments)``; raises ValueError with the user-facing message."""
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("Prompt is required and must be a non-empty string")
-    # A stored-but-broken selection raises the selection-naming error from
-    # _resolve_managed_fal_gateway(); only never-configured reports "no backend at all".
-    if not (fal_key_is_configured() or _resolve_managed_fal_gateway()):
+    # A stored-but-broken selection raises the selection-naming error; only never-configured
+    # reports "no backend at all".
+    _check_fal_selection()
+    if not fal_key_is_configured():
         raise ValueError(_build_no_backend_setup_message())
     edit_endpoint, display = meta.get("edit_endpoint"), meta.get("display", model_id)
     # Fail clearly rather than silently dropping sources and producing an unrelated picture.
@@ -486,37 +421,20 @@ def image_generate_tool(
 
 
 def check_fal_api_key() -> bool:
-    """True if the selected FAL backend (never configured: any FAL backend) is available.
-
-    A stored-but-broken selection reports False here (registry gating); the naming error
-    surfaces at call time from ``_resolve_managed_fal_gateway``.
-    """
-    try:
-        gateway = _resolve_managed_fal_gateway()
-    except ValueError:
-        return False
-    return bool(gateway) or fal_key_is_configured()
+    """True when FAL can serve image generation (a stored-but-broken selection reports False here; the
+    naming error surfaces at call time)."""
+    return fal_key_is_configured()
 
 
 def _build_no_backend_setup_message() -> str:
-    """Actionable no-backend error: FAL_KEY signup, managed-gateway status, plugin alternative."""
-    managed = managed_spaceshipresearch_tools_enabled()
-    lines = ["Image generation is unavailable in this environment.", "", "Missing requirements:"]
-    if managed:
-        lines.append("  - FAL_KEY is not set and the managed FAL gateway is unreachable")
-    else:
-        lines.append("  - FAL_KEY environment variable is not set")
-        if gateway_message := spaceshipresearch_tool_gateway_unavailable_message("managed FAL image generation"):
-            lines.append(f"  - {gateway_message}")
-    lines += ["", "To enable image generation, do one of:",
-              "  1. Get a free API key at https://fal.ai and set FAL_KEY=<your-key> "
-              "(then restart the session)"]
-    if managed:
-        lines.append("  2. Sign in to a SpaceshipResearch account that has the managed FAL gateway enabled "
-                     "(`scout setup`)")
-    lines.append("  3. Configure a different image_gen provider via `scout tools` → Image Generation "
-                 "(run `scout plugins list` to see installed backends)")
-    return "\n".join(lines)
+    """Actionable no-backend error: FAL_KEY signup or a plugin alternative."""
+    return "\n".join([
+        "Image generation is unavailable in this environment.", "", "Missing requirements:",
+        "  - FAL_KEY environment variable is not set", "",
+        "To enable image generation, do one of:",
+        "  1. Get a free API key at https://fal.ai and set FAL_KEY=<your-key> (then restart the session)",
+        "  2. Configure a different image_gen provider via `scout tools` → Image Generation "
+        "(run `scout plugins list` to see installed backends)"])
 
 
 def _get_plugin_provider(name: str, *, force: bool = False):
@@ -618,7 +536,7 @@ def _dispatch_to_plugin_provider(
     prompt: str, aspect_ratio: str, image_url: Optional[str] = None,
     reference_image_urls: Optional[list] = None, upscale: Optional[bool] = None):
     """JSON result from the selected plugin provider, or ``None`` to fall through to in-tree FAL
-    (provider unset / ``"fal"`` / ``"spaceshipresearch"``). Providers without ``upscale`` ignore it via ``**kwargs``."""
+    (provider unset / ``"fal"`` / the removed legacy managed selection). Providers without ``upscale`` ignore it via ``**kwargs``."""
     configured = _plugin_provider_name()
     if configured is None:
         return None
@@ -662,73 +580,6 @@ def _dispatch_to_plugin_provider(
     return _provider_result(result, "Provider returned a non-dict result")
 
 
-def _normalize_krea_model(model_id: Optional[str]) -> Optional[str]:
-    """Return ``model_id`` when it is one of the Krea plugin's model ids, else ``None``."""
-    from plugins.image_gen.krea import KREA_MODEL_IDS
-
-    candidate = model_id.strip() if isinstance(model_id, str) else None
-    return candidate if candidate in KREA_MODEL_IDS else None
-
-
-def _managed_model_plugin() -> Optional[tuple]:
-    """``(plugin_name, model_id)`` when the managed selection stores a Krea or Portal model, else ``None``.
-
-    The managed row writes ``provider: spaceshipresearch`` for three gateways; the model id says which. FAL
-    models (and an unset model) return ``None`` so the in-tree FAL path handles them. Only the
-    ``spaceshipresearch``/unset selection qualifies — a direct/BYO provider pick dispatches normally.
-    """
-    from tools.image_generation_managed import KREA, PORTAL, managed_backend_for_model
-
-    configured_provider = _read_configured_image_provider()
-    if configured_provider is not None and configured_provider != SPACESHIPRESEARCH_MANAGED_PROVIDER:
-        return None
-    model_id = _read_configured_image_model()
-    backend = managed_backend_for_model(model_id)
-    if backend == KREA:
-        return "krea", model_id
-    if backend == PORTAL and configured_provider == SPACESHIPRESEARCH_MANAGED_PROVIDER:
-        return "spaceshipresearch", model_id
-    return None
-
-
-def _maybe_route_managed_model(
-    prompt: str, aspect_ratio: str, image_url: Optional[str] = None,
-    reference_image_urls: Optional[list] = None, upscale: Optional[bool] = None) -> Optional[str]:
-    """JSON result from the Krea or Portal gateway the stored model belongs to, or ``None`` to fall
-    through to FAL.
-
-    A Krea model with no reachable Krea gateway falls through (direct/BYO users keep their
-    pipeline); a Portal model never does — falling through would silently bill a FAL default.
-    """
-    target = _managed_model_plugin()
-    if target is None:
-        return None
-    plugin_name, model_id = target
-    try:
-        if plugin_name == "krea":
-            from plugins.image_gen.krea import _resolve_managed_krea_gateway
-            if _resolve_managed_krea_gateway() is None:
-                return None
-        provider = _get_plugin_provider(plugin_name)
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("Managed %s routing unavailable: %s", plugin_name, exc)
-        provider = None
-    if provider is None:
-        if plugin_name == "krea":
-            return None
-        return _provider_error(
-            f"image_gen.model='{model_id}' is a Scout Portal model but the Portal image backend is not "
-            f"available. Pick another model via `scout tools` → Image Generation.", "provider_not_registered")
-    kwargs: Dict[str, Any] = {"prompt": prompt, "aspect_ratio": aspect_ratio, "model": model_id}
-    try:
-        _add_provider_kwargs(kwargs, image_url, reference_image_urls, upscale)
-        result = provider.generate(**kwargs)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Managed %s routing failed: %s", plugin_name, exc)
-        return _provider_error(f"Managed {provider.display_name} generation error: {exc}", "provider_exception")
-    return _provider_result(result, f"{provider.display_name} provider returned a non-dict result")
-
-
 def _confine_source_images(image_url, reference_image_urls, task_id, *, permitted: tuple = ("image",)):
     """Resolve path-like sources to ``data:`` URLs under a non-local terminal backend.
 
@@ -767,12 +618,11 @@ def _handle_image_generate(args, **kw):
         args.get("image_url"), args.get("reference_image_urls"), task_id)
     if confine_error is not None:
         return confine_error
-    # Order matters: explicit plugin provider, then the model-driven managed gateways (Krea /
-    # Portal — only under the "spaceshipresearch"/unset selection, so BYO/direct FAL stays untouched), then FAL.
+    # Order matters: an explicit plugin provider first, then FAL.
     sources = dict(image_url=image_url, reference_image_urls=reference_image_urls,
                    upscale=upscale if isinstance(upscale, bool) else None)
     raw = None
-    for route in (_dispatch_to_plugin_provider, _maybe_route_managed_model, image_generate_tool):
+    for route in (_dispatch_to_plugin_provider, image_generate_tool):
         raw = route(prompt, aspect_ratio, **sources)
         if raw is not None:
             break
@@ -788,19 +638,11 @@ _NO_CAPABILITIES = {"modalities": ["text"], "max_reference_images": 0, "supports
 def _active_image_capabilities() -> Dict[str, Any]:
     """Best-effort capabilities of the active backend/model; never raises.
 
-    Mirrors runtime dispatch: a Krea or Portal model id under the managed selection asks that
-    plugin, a set ``image_gen.provider`` asks that plugin, else the FAL catalog.
+    Mirrors runtime dispatch: a set ``image_gen.provider`` asks that plugin, else the FAL catalog.
     Fail-closed: an undeclared capability is advertised as absent.
     """
     info: Dict[str, Any] = dict(_NO_CAPABILITIES)
-    configured_provider = _read_configured_image_provider()
-    managed = _managed_model_plugin()
-    if managed is not None:
-        plugin_name = managed[0]
-    elif configured_provider and configured_provider != "fal":
-        plugin_name = configured_provider
-    else:
-        plugin_name = None
+    plugin_name = _plugin_provider_name()
     if plugin_name:
         try:
             provider = _get_plugin_provider(plugin_name)

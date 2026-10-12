@@ -1,6 +1,6 @@
 import { AlertCircle, RotateCcw } from "lucide-react";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Card } from "@spaceshipresearch/ui/ui/components/card";
+import { Button } from "@/ui/components/button";
+import { Card } from "@/ui/components/card";
 
 import { useI18n } from "@/i18n";
 import { loadErrorCopy } from "@/lib/load-error-copy";

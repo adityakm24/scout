@@ -28,7 +28,7 @@ class TestReadFileSchemaStatic(unittest.TestCase):
 
     def test_hosted_ocr_available_gate_states(self):
         """Maintainer decision: ONLY a direct FIRECRAWL_API_KEY unlocks —
-        not config true, not the SpaceshipResearch gateway."""
+        not config true, not the Fixture Co gateway."""
         import tools.read_extract as rx
 
         # direct key → True
@@ -47,14 +47,14 @@ class TestReadFileSchemaStatic(unittest.TestCase):
             with patch("scout_cli.config.load_config_readonly",
                        return_value={"file_tools": {"hosted_ocr": True}}):
                 self.assertFalse(rx.hosted_ocr_available())
-        # nothing → False (SpaceshipResearch gateway alone must NOT unlock)
+        # nothing → False (Fixture Co gateway alone must NOT unlock)
         with patch("scout_cli.config.load_config_readonly",
                    return_value={}):
             rx.os.environ.pop("FIRECRAWL_API_KEY", None)
             self.assertFalse(rx.hosted_ocr_available())
 
     def test_runtime_route_is_direct_key_only(self):
-        """_hosted_ocr_config never resolves the SpaceshipResearch gateway: api_url is
+        """_hosted_ocr_config never resolves the Fixture Co gateway: api_url is
         always None (anydoc defaults to api.firecrawl.dev) and enabled
         tracks the key."""
         import tools.read_extract as rx
@@ -80,7 +80,7 @@ class TestReadFileSchemaStatic(unittest.TestCase):
 
 class TestNeedsOcrPath(unittest.TestCase):
     """anydoc>=0.2 NeedsOcrError wiring: hosted OCR attempt + typed warning
-    (maintainer caveats: #1 spaceshipresearch-gateway Parse was live-probed HTTP 500 →
+    (maintainer caveats: #1 fixtureco-gateway Parse was live-probed HTTP 500 →
     attempt-and-fall-through; #2 warning recommends LOCAL OCR skills)."""
 
     def _fake_mod(self, hosted_result=None, hosted_exc=None):

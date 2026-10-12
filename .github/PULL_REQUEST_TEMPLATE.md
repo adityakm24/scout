@@ -57,15 +57,15 @@ Fixes #
 - [ ] I've updated relevant documentation (README, `docs/`, docstrings) — or N/A
 - [ ] I've updated `cli-config.yaml.example` if I added/changed config keys — or N/A
 - [ ] I've updated `CONTRIBUTING.md` or `AGENTS.md` if I changed architecture or workflows — or N/A
-- [ ] I've considered cross-platform impact (Windows, macOS) per the [compatibility guide](https://github.com/adityakm24/scout/blob/main/CONTRIBUTING.md#cross-platform-compatibility) — or N/A
+- [ ] I've considered cross-platform impact (Windows, macOS) per the [compatibility guide](https://github.com/adityakm24/scout/blob/main/AGENTS.md#dont-fake-the-host-os) — or N/A
 - [ ] I've updated tool descriptions/schemas if I changed tool behavior — or N/A
 
 ## For New Skills
 
 <!-- Only fill this out if you're adding a skill. Delete this section otherwise. -->
 
-- [ ] This skill is **broadly useful** to most users (if bundled) — see [Contributing Guide](https://github.com/adityakm24/scout/blob/main/CONTRIBUTING.md#should-the-skill-be-bundled)
-- [ ] SKILL.md follows the [standard format](https://github.com/adityakm24/scout/blob/main/CONTRIBUTING.md#skillmd-format) (frontmatter, trigger conditions, steps, pitfalls)
+- [ ] This skill is **broadly useful** to most users (if bundled) — see [the skills guide](https://github.com/adityakm24/scout/blob/main/skills/AGENTS.md#two-surfaces)
+- [ ] SKILL.md follows the [standard format](https://github.com/adityakm24/scout/blob/main/skills/AGENTS.md#skillmd-frontmatter) (frontmatter, trigger conditions, steps, pitfalls)
 - [ ] No external dependencies that aren't already available (prefer stdlib, curl, existing Scout tools)
 - [ ] I've tested the skill end-to-end: `scout --toolsets skills -q "Use the X skill to do Y"`
 

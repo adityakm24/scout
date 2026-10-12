@@ -78,7 +78,7 @@ export async function refreshProfileRemoteOverrides(names: string[]): Promise<vo
       try {
         const config = await getConnectionConfig(key)
 
-        if ((config.mode === 'remote' || config.mode === 'cloud') && config.remoteUrl) {
+        if (config.mode === 'remote' && config.remoteUrl) {
           next[key] = { host: remoteHostLabel(config.remoteUrl) || config.remoteUrl, url: config.remoteUrl }
         }
       } catch {

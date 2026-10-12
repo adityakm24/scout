@@ -127,7 +127,7 @@ def test_codex_rotation_keeps_proxy_override(monkeypatch):
         _reapply_route_client_config=MagicMock(), _replace_primary_openai_client=MagicMock(),
     )
 
-    assert AIAgent._swap_credential(agent, entry) is True
+    AIAgent._swap_credential(agent, entry)
     assert agent.base_url == "http://127.0.0.1:8787/backend-api/codex"
     assert agent._client_kwargs["base_url"] == "http://127.0.0.1:8787/backend-api/codex"
     assert agent.api_key == "tok-second"

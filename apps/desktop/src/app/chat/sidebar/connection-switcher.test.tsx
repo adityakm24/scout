@@ -37,7 +37,6 @@ vi.mock('@/i18n', () => ({
         connections: {
           noSearchResults: 'No gateways match your search.',
           searchPlaceholder: 'Search gateways…',
-          kindCloud: 'Scout Cloud',
           kindLocal: 'Local',
           kindRemote: 'Remote gateway',
           kindSsh: 'SSH',

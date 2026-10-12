@@ -116,7 +116,6 @@ Multiple credentials per provider form a pool that rotates automatically and ski
 scout desktop / gui        Native desktop app
 scout dashboard            Web admin panel + embedded chat (--stop / --status)
 scout proxy                OpenAI-compatible local proxy backed by an OAuth provider
-scout portal               Quick setup / sign in via Scout Portal
 scout kanban <verb>        Multi-agent work-queue board
 scout project              Named multi-folder workspaces
 scout skin list|use|set    Switch/tweak skins (see references/themes.md)

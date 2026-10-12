@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n'
 import type { Translations } from '@/i18n/types'
 
-import type { ConflictDifference, ToolsEditorPhase } from './types'
+import type { ToolsEditorPhase } from './types'
 
 export function ToolsWash({ label, rows = 8 }: { label?: string; rows?: number }) {
   const { t } = useI18n()
@@ -26,12 +26,11 @@ export function ToolsWash({ label, rows = 8 }: { label?: string; rows?: number }
 type PageCopy = Translations['connectorsPage']
 type ToolsCopy = PageCopy['tools']
 
-export type ToolsStatusAction = 'keepMine' | 'reload' | 'remove' | 'signIn'
-export type ToolsStatusPhase = 'conflict' | 'gone' | 'needsAuth' | 'off' | 'signedOut'
+export type ToolsStatusAction = 'remove'
+export type ToolsStatusPhase = 'gone' | 'needsAuth' | 'off'
 
 interface StatusContext {
   connectorName: string
-  difference: ConflictDifference
 }
 
 interface StatusView {
@@ -44,15 +43,6 @@ interface StatusView {
 type StatusTable = { readonly [phase in ToolsStatusPhase]: StatusView }
 
 const STATUS: StatusTable = {
-  conflict: {
-    actions: [
-      { id: 'reload', label: copy => copy.tools.conflictReload, variant: 'secondary' },
-      { id: 'keepMine', label: copy => copy.tools.conflictSave }
-    ],
-    body: (copy, { difference }) => copy.conflictBody(difference.theyOff, difference.theyOn),
-    icon: 'git-merge',
-    title: copy => copy.conflictTitle
-  },
   gone: {
     actions: [{ id: 'remove', label: copy => copy.tools.remove, variant: 'secondary' }],
     body: copy => copy.goneBody,
@@ -70,12 +60,6 @@ const STATUS: StatusTable = {
     body: copy => copy.offBody,
     icon: 'plug',
     title: (copy, { connectorName }) => copy.offTitle(connectorName)
-  },
-  signedOut: {
-    actions: [{ id: 'signIn', label: copy => copy.page.signIn }],
-    body: copy => copy.signedOutBody,
-    icon: 'sign-in',
-    title: copy => copy.signedOutTitle
   }
 }
 
@@ -85,19 +69,17 @@ export function isToolsStatusPhase(phase: ToolsEditorPhase): phase is ToolsStatu
 
 export function ToolsStatus({
   connectorName,
-  difference,
   onAction,
   phase
 }: {
   connectorName: string
-  difference: ConflictDifference
   onAction: (id: ToolsStatusAction) => void
   phase: ToolsStatusPhase
 }) {
   const { t } = useI18n()
   const copy = t.connectorsPage.tools
   const view = STATUS[phase]
-  const context = { connectorName, difference }
+  const context = { connectorName }
 
   return (
     <PanelEmpty

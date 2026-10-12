@@ -1,7 +1,6 @@
-"""Tests for inventory._apply_pricing — the pricing/tier enrichment that
+"""Tests for inventory._apply_pricing — the pricing enrichment that feeds the
 
-feeds the desktop GUI model picker (and onboarding) so it can show $/Mtok
-columns + Free/Pro badges and gate paid models on free SpaceshipResearch accounts, the
+desktop GUI model picker (and onboarding) so it can show $/Mtok columns the
 same way the `scout model` CLI picker does.
 """
 
@@ -9,27 +8,17 @@ from threading import Event
 from time import monotonic
 
 import scout_cli.inventory as inv
-import scout_cli.models as models_mod
 from scout_cli import models_pricing
 
 
-def _patch_pricing(monkeypatch, *, free_tier, pricing, unavailable=None):
+def _patch_pricing(monkeypatch, *, pricing):
     monkeypatch.setattr(models_pricing, "get_pricing_for_provider", lambda slug, **kw: pricing.get(slug, {}))
-    monkeypatch.setattr(models_mod, "check_spaceshipresearch_free_tier", lambda *, force_fresh=False: free_tier)
-    monkeypatch.setattr(
-        models_mod, "partition_spaceshipresearch_models_by_tier",
-        lambda ids, pr, free_tier: (
-            [m for m in ids if m not in (unavailable or [])],
-            list(unavailable or []),
-        ),
-    )
 
 
 def test_apply_pricing_formats_per_model_prices(monkeypatch):
     """Each model gets formatted input/output/cache + a free flag."""
     _patch_pricing(
         monkeypatch,
-        free_tier=False,
         pricing={
             "openrouter": {
                 "a/paid": {"prompt": "0.000003", "completion": "0.000015", "input_cache_read": "0.0000003"},
@@ -44,65 +33,6 @@ def test_apply_pricing_formats_per_model_prices(monkeypatch):
     assert pricing["a/paid"] == {"input": "$3.00", "output": "$15.00", "cache": "$0.30", "free": False}
     assert pricing["b/free"]["free"] is True
     assert pricing["b/free"]["input"] == "free"
-
-
-def test_apply_pricing_free_models_get_flat_100_percent_sale(monkeypatch):
-    """Free models show -100% chrome; was_* only when original was served."""
-    _patch_pricing(
-        monkeypatch,
-        free_tier=False,
-        pricing={
-            "spaceshipresearch": {
-                "a/free": {
-                    "prompt": "0",
-                    "completion": "0",
-                    "original": {
-                        "prompt": "0.000002",
-                        "completion": "0.00001",
-                    },
-                },
-                "b/natively-free": {
-                    "prompt": "0",
-                    "completion": "0",
-                },
-            }
-        },
-    )
-    rows = [{"slug": "spaceshipresearch", "models": ["a/free", "b/natively-free"]}]
-    inv._apply_pricing(rows)
-    free = rows[0]["pricing"]["a/free"]
-    assert free["free"] is True
-    assert free["discount_percent"] == 100
-    assert free["was_input"] == "$2.00"
-    assert free["was_output"] == "$10.00"
-    native = rows[0]["pricing"]["b/natively-free"]
-    assert native["free"] is True
-    assert native["discount_percent"] == 100
-    # No gateway original → no fabricated was prices.
-    assert "was_input" not in native
-    assert "was_output" not in native
-
-
-def test_apply_pricing_omits_sale_when_original_not_cheaper(monkeypatch):
-    _patch_pricing(
-        monkeypatch,
-        free_tier=False,
-        pricing={
-            "spaceshipresearch": {
-                "a/eq": {
-                    "prompt": "0.000002",
-                    "completion": "0.00001",
-                    "original": {
-                        "prompt": "0.000002",
-                        "completion": "0.00001",
-                    },
-                },
-            }
-        },
-    )
-    rows = [{"slug": "spaceshipresearch", "models": ["a/eq"]}]
-    inv._apply_pricing(rows)
-    assert "discount_percent" not in rows[0]["pricing"]["a/eq"]
 
 
 def test_model_options_cold_pricing_fetch_runs_off_the_request_path(monkeypatch):
@@ -157,26 +87,6 @@ def test_model_options_cold_pricing_fetch_runs_off_the_request_path(monkeypatch)
         release_fetch.set()
         for thread in threads:
             thread.join(timeout=2)
-
-
-def test_cold_spaceshipresearch_entitlement_keeps_models_unselectable(monkeypatch):
-    """A cold nonblocking response must not expose paid models fail-open."""
-    monkeypatch.setattr(models_pricing, "get_pricing_for_provider", lambda *_args, **_kwargs: {}
-    )
-    monkeypatch.setattr(models_mod, "get_cached_spaceshipresearch_free_tier", lambda: None)
-    rows = [{"slug": "spaceshipresearch", "models": ["free/model", "paid/model"]}]
-
-    inv._apply_pricing(rows, cached_only=True)
-
-    assert rows[0]["free_tier_pending"] is True
-    assert rows[0]["unavailable_models"] == ["free/model", "paid/model"]
-    # The whole list renders locked — the picker's per-provider warning
-    # surface must say why, without clobbering an existing auth warning.
-    assert "entitlement" in rows[0]["warning"]
-
-    rows = [{"slug": "spaceshipresearch", "models": ["m"], "warning": "paste SPACESHIPRESEARCH_API_KEY to activate"}]
-    inv._apply_pricing(rows, cached_only=True)
-    assert rows[0]["warning"] == "paste SPACESHIPRESEARCH_API_KEY to activate"
 
 
 def test_prewarm_preserves_context_and_runs_once_per_profile(tmp_path, monkeypatch):
@@ -280,7 +190,6 @@ def test_prewarm_endpoint_rotation_starts_a_new_worker(tmp_path, monkeypatch):
 
     endpoint_a = "https://endpoint-a.example"
     endpoint_b = "https://endpoint-b.example"
-    active_endpoint = {"value": endpoint_a}
     started = {endpoint_a: Event(), endpoint_b: Event()}
     release_a = Event()
     expected = {
@@ -291,127 +200,36 @@ def test_prewarm_endpoint_rotation_starts_a_new_worker(tmp_path, monkeypatch):
     monkeypatch.setattr(models_pricing, "_pricing_cache", {})
     monkeypatch.setattr(models_pricing, "_pricing_cache_retry_after", {})
     monkeypatch.setattr(models_pricing, "_pricing_provider_cache_keys", {})
-    monkeypatch.setattr(models_pricing, "_resolve_spaceshipresearch_pricing_credentials",
-        lambda: ("", active_endpoint["value"]),
-    )
 
-    def fetch_pricing(*, base_url, **_kwargs):
+    def fetch_pricing(**_kwargs):
+        base_url = models_pricing._novita_pricing_scope()
         started[base_url].set()
         if base_url == endpoint_a:
             release_a.wait(timeout=5)
         return models_pricing._cache_catalog(base_url, expected[base_url])
 
-    monkeypatch.setattr(models_pricing, "fetch_models_with_pricing", fetch_pricing)
+    monkeypatch.setattr(models_pricing, "_fetch_novita_pricing", fetch_pricing)
     monkeypatch.setattr(
         inv,
         "_apply_pricing",
-        lambda _rows: models_pricing.get_pricing_for_provider("spaceshipresearch"),
+        lambda _rows: models_pricing.get_pricing_for_provider("novita"),
     )
 
     token = set_scout_home_override(str(tmp_path / "profile"))
     threads = []
     try:
-        threads.append(
-            inv._prewarm_pricing_async(
-                [{"slug": "spaceshipresearch", "models": ["a/model"]}],
-                current_provider="spaceshipresearch",
-                current_base_url=endpoint_a,
-            )
-        )
+        monkeypatch.setenv("NOVITA_BASE_URL", endpoint_a)
+        threads.append(inv._prewarm_pricing_async([{"slug": "novita", "models": ["a/model"]}]))
         assert started[endpoint_a].wait(timeout=1)
 
-        active_endpoint["value"] = endpoint_b
-        threads.append(
-            inv._prewarm_pricing_async(
-                [{"slug": "spaceshipresearch", "models": ["b/model"]}],
-                current_provider="spaceshipresearch",
-                current_base_url=endpoint_b,
-            )
-        )
+        monkeypatch.setenv("NOVITA_BASE_URL", endpoint_b)
+        threads.append(inv._prewarm_pricing_async([{"slug": "novita", "models": ["b/model"]}]))
 
         assert threads[0] is not threads[1]
         assert started[endpoint_b].wait(timeout=1)
         threads[1].join(timeout=2)
         assert not threads[1].is_alive()
-        assert models_pricing.get_pricing_for_provider(
-            "spaceshipresearch", cached_only=True
-        ) == expected[endpoint_b]
-    finally:
-        release_a.set()
-        for thread in threads:
-            if thread is not None:
-                thread.join(timeout=2)
-        reset_scout_home_override(token)
-
-
-def test_prewarm_spaceshipresearch_rotation_when_another_provider_is_current(tmp_path, monkeypatch):
-    """SpaceshipResearch endpoint identity must not depend on SpaceshipResearch being selected."""
-    from scout_constants import (
-        reset_scout_home_override,
-        set_scout_home_override,
-    )
-
-    endpoint_a = "https://endpoint-a.example"
-    endpoint_b = "https://endpoint-b.example"
-    active_endpoint = {"value": endpoint_a}
-    started = {endpoint_a: Event(), endpoint_b: Event()}
-    release_a = Event()
-    expected = {
-        endpoint_a: {"a/model": {"prompt": "1", "completion": "2"}},
-        endpoint_b: {"b/model": {"prompt": "3", "completion": "4"}},
-    }
-    monkeypatch.setattr(inv, "_pricing_prewarm_threads", {})
-    monkeypatch.setattr(models_pricing, "_pricing_cache", {})
-    monkeypatch.setattr(models_pricing, "_pricing_cache_retry_after", {})
-    monkeypatch.setattr(models_pricing, "_pricing_provider_cache_keys", {})
-    monkeypatch.setattr(models_pricing, "get_cached_spaceshipresearch_inference_base_url",
-        lambda: active_endpoint["value"],
-    )
-    monkeypatch.setattr(models_pricing, "_resolve_spaceshipresearch_pricing_credentials",
-        lambda: ("", active_endpoint["value"]),
-    )
-
-    def fetch_pricing(*, base_url, **_kwargs):
-        started[base_url].set()
-        if base_url == endpoint_a:
-            release_a.wait(timeout=5)
-        return models_pricing._cache_catalog(base_url, expected[base_url])
-
-    monkeypatch.setattr(models_pricing, "fetch_models_with_pricing", fetch_pricing)
-    monkeypatch.setattr(
-        inv,
-        "_apply_pricing",
-        lambda _rows: models_pricing.get_pricing_for_provider("spaceshipresearch"),
-    )
-
-    token = set_scout_home_override(str(tmp_path / "profile"))
-    threads = []
-    try:
-        threads.append(
-            inv._prewarm_pricing_async(
-                [{"slug": "spaceshipresearch", "models": ["a/model"]}],
-                current_provider="openrouter",
-                current_base_url="https://openrouter.ai/api/v1",
-            )
-        )
-        assert started[endpoint_a].wait(timeout=1)
-
-        active_endpoint["value"] = endpoint_b
-        threads.append(
-            inv._prewarm_pricing_async(
-                [{"slug": "spaceshipresearch", "models": ["b/model"]}],
-                current_provider="openrouter",
-                current_base_url="https://openrouter.ai/api/v1",
-            )
-        )
-
-        assert threads[0] is not threads[1]
-        assert started[endpoint_b].wait(timeout=1)
-        threads[1].join(timeout=2)
-        assert not threads[1].is_alive()
-        assert models_pricing.get_pricing_for_provider(
-            "spaceshipresearch", cached_only=True
-        ) == expected[endpoint_b]
+        assert models_pricing.get_pricing_for_provider("novita", cached_only=True) == expected[endpoint_b]
     finally:
         release_a.set()
         for thread in threads:
@@ -452,21 +270,15 @@ def test_cached_only_dynamic_pricing_is_profile_scoped(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(models_pricing, "_pricing_cache_retry_after", {})
     monkeypatch.setattr(models_pricing, "_pricing_provider_cache_keys", {})
-    active_endpoint = {"value": endpoint_a}
-    monkeypatch.setattr(models_pricing, "_resolve_spaceshipresearch_pricing_credentials",
-        lambda: ("", active_endpoint["value"]),
-    )
-    monkeypatch.setattr(models_pricing, "fetch_models_with_pricing",
-        lambda **kwargs: models_pricing._pricing_cache[kwargs["base_url"]],
+    monkeypatch.setattr(models_pricing, "_fetch_novita_pricing",
+        lambda **_kwargs: models_pricing._pricing_cache[models_pricing._novita_pricing_scope()],
     )
 
     def in_profile(home, endpoint, *, cached_only):
         token = set_scout_home_override(str(home))
-        active_endpoint["value"] = endpoint
+        monkeypatch.setenv("NOVITA_BASE_URL", endpoint)
         try:
-            return models_pricing.get_pricing_for_provider(
-                "spaceshipresearch", cached_only=cached_only
-            )
+            return models_pricing.get_pricing_for_provider("novita", cached_only=cached_only)
         finally:
             reset_scout_home_override(token)
 
@@ -474,5 +286,3 @@ def test_cached_only_dynamic_pricing_is_profile_scoped(tmp_path, monkeypatch):
     assert in_profile(tmp_path / "b", endpoint_b, cached_only=False) == expected_b
     assert in_profile(tmp_path / "a", endpoint_b, cached_only=True) == expected_a
     assert in_profile(tmp_path / "b", endpoint_a, cached_only=True) == expected_b
-
-

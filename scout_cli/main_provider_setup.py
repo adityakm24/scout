@@ -218,8 +218,8 @@ def _aux_config_menu() -> None:
         _say("", "  Auxiliary models — side-task routing", "",
              "  Side tasks (vision, compression, web extraction, etc.) default",
              '  to your main chat model.  "auto" means "use my main model" —',
-             "  Scout only falls back to a lightweight backend (OpenRouter,",
-             "  Scout Portal) if the main model is unavailable.  Override a",
+             "  Scout only falls back to a lightweight backend (OpenRouter)",
+             "  if the main model is unavailable.  Override a",
              "  task below if you want it pinned to a specific provider/model.", "")
 
         menu_tasks = _all_aux_tasks() + [(_DELEGATION_TASK_KEY, _DELEGATION_TASK_NAME, _DELEGATION_TASK_DESC)]
@@ -921,14 +921,6 @@ def _build_provider_picker_rows(config: dict, active: str, provider_labels: dict
         else:
             slug = row["slug"]
             label = canonical_descs.get(slug, provider_labels.get(slug, slug))
-            if slug == "spaceshipresearch":
-                # Same free-tier rule as the gateway/TUI pickers: relabel for a guest, hide
-                # when spaceshipresearch.guest is off, untouched for a real account.
-                from scout_cli.model_switch_providers import _free_tier_spaceshipresearch_row
-                tier_row = _free_tier_spaceshipresearch_row({"name": label, "models": []})
-                if tier_row is None:
-                    continue
-                label = tier_row["name"]
             _add(slug, label, [], bool(active) and slug == active)
 
     for key, provider_info in custom_provider_map.items():

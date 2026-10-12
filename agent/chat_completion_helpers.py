@@ -498,23 +498,6 @@ def _prompt_cache_scope_for_agent(agent) -> "str | None":
         return None
 
 
-def _merge_scout_portal_messages_extra_body(agent, anthropic_kwargs: dict) -> dict:
-    """Merge Portal ``tags`` / ``session_id`` onto an Anthropic Messages kwargs dict.
-    The SpaceshipResearch profile is only consulted by the OpenAI-wire transport; ``session_id``
-    only — never ``provider_preferences`` (an OpenAI-wire routing object)."""
-    if getattr(agent, "provider", None) not in {"spaceshipresearch", "scout-portal", "spaceshipresearch"}:
-        return anthropic_kwargs
-    try:
-        from providers import get_provider_profile
-        spaceshipresearch_profile = get_provider_profile("spaceshipresearch")
-        if spaceshipresearch_profile is not None:
-            anthropic_kwargs.setdefault("extra_body", {}).update(
-                spaceshipresearch_profile.build_extra_body(session_id=getattr(agent, "session_id", None)))
-    except Exception as exc:  # noqa: BLE001 — never block a turn on tagging
-        logger.debug("Scout Portal extra_body merge failed: %s", exc)
-    return anthropic_kwargs
-
-
 def _estimate_chunk_bytes(chunk: Any) -> int:
     """Cheap per-chunk size estimate for the stream diagnostic counters: delta
     string lengths plus a framing floor (~3x cheaper than ``len(repr(chunk))``
@@ -1411,7 +1394,7 @@ def _consume_ephemeral_max_output(agent):
 def _build_anthropic_kwargs(agent, api_messages, tools_for_api, reasoning_config, request_overrides):
     ctx_len = getattr(agent, "context_compressor", None)
     ephemeral_out = _consume_ephemeral_max_output(agent)
-    anthropic_kwargs = agent._get_transport().build_kwargs(model=agent.model,
+    return agent._get_transport().build_kwargs(model=agent.model,
         messages=agent._prepare_anthropic_messages_for_api(api_messages), tools=tools_for_api,
         max_tokens=ephemeral_out if ephemeral_out is not None else agent.max_tokens,
         reasoning_config=reasoning_config, is_oauth=agent._is_anthropic_oauth,
@@ -1420,9 +1403,6 @@ def _build_anthropic_kwargs(agent, api_messages, tools_for_api, reasoning_config
         base_url=getattr(agent, "_anthropic_base_url", None),
         fast_mode=request_overrides.get("speed") == "fast",
         drop_context_1m_beta=bool(getattr(agent, "_oauth_1m_beta_disabled", False)))
-    # Portal reads ``tags`` / ``session_id`` on its Messages route too, but the profile hook
-    # is only consulted by the OpenAI-wire transport — merge here to keep sticky routing.
-    return _merge_scout_portal_messages_extra_body(agent, anthropic_kwargs)
 
 
 def _build_bedrock_kwargs(agent, api_messages, tools_for_api):
@@ -1515,7 +1495,6 @@ def _build_chat_completions_kwargs(agent, api_messages, tools_for_api, reasoning
         **_common,
         model_lower=(agent.model or "").lower(),
         is_openrouter=_is_or,
-        is_spaceshipresearch=base_url_host_matches(_host, "spaceshipresearch.com"),
         is_qwen_portal=_is_qwen,
         is_github_models=_is_gh,
         is_nvidia_nim=base_url_host_matches(_host, "integrate.api.nvidia.com"),
@@ -1785,19 +1764,6 @@ def _fallback_entry_key(fb: dict) -> tuple[str, str, str]:
             str(fb.get("base_url") or "").strip().rstrip("/"))
 
 
-def _fallback_entry_unavailable_without_network(agent, fb: dict) -> Optional[str]:
-    """Return a skip reason for fallback entries known to be unusable locally."""
-    if (fb.get("provider") or "").strip().lower() != "spaceshipresearch":
-        return None
-    try:
-        from scout_cli.auth import get_provider_auth_state
-        state = get_provider_auth_state("spaceshipresearch") or {}
-    except Exception as exc:
-        return f"spaceshipresearch_auth_unreadable:{type(exc).__name__}"
-    has_token = any(isinstance(t, str) and t.strip() for t in (state.get("access_token"), state.get("refresh_token")))
-    return None if has_token else "spaceshipresearch_token_missing"
-
-
 _FALLBACK_REASON_LABELS = {
     FailoverReason.auth: "authentication failed",
     FailoverReason.auth_permanent: "authentication permanently failed",
@@ -1875,10 +1841,6 @@ def _fallback_api_mode_resolved(agent, fb_provider: str, fb_model: str, fb_base_
         # (minimax, qwen) and chat_completions models behind one provider; the primary /model path
         # already re-derives per model — the fallback wire must agree (#102148).
         return opencode_model_api_mode(opencode_family, fb_model)
-    if fb_provider in {"spaceshipresearch", "scout-portal", "spaceshipresearch"}:
-        # Portal is dual-wire: anthropic/* must land on /v1/messages (the swap rebuilds the native client).
-        from scout_cli.providers import spaceshipresearch_api_mode
-        return spaceshipresearch_api_mode(fb_model)
     if _is_anthropic_wire_url(fb_base_url):
         # Named custom providers (cron-anthropic) resolve base_url from config; the hint pass never saw it.
         return "anthropic_messages"
@@ -1961,7 +1923,7 @@ def _candidate_pool_exhausted(agent, fb_provider: str, fb_model: str) -> bool:
 
 
 def _should_skip_fallback_candidate(agent, fb: dict, fb_key: tuple, fb_provider: str, fb_model: str, unavailable: set) -> bool:
-    """True when the entry is already unavailable, malformed, locally unusable, or resolves
+    """True when the entry is already unavailable, malformed, unentitled, pool-exhausted, or resolves
     to the backend that just failed (falling back to it would loop the failure)."""
     if fb_key in unavailable:
         logger.debug("Fallback skip: %s previously marked unavailable", fb_key)
@@ -1974,11 +1936,6 @@ def _should_skip_fallback_candidate(agent, fb: dict, fb_key: tuple, fb_provider:
         return True
     if _candidate_pool_exhausted(agent, fb_provider, fb_model):
         logger.warning("Fallback skip: %s/%s credential pool is exhausted (every entry in cooldown)", fb_provider, fb_model)
-        return True
-    local_skip_reason = _fallback_entry_unavailable_without_network(agent, fb)
-    if local_skip_reason:
-        unavailable.add(fb_key)
-        logger.warning("Fallback skip: %s/%s is not locally usable (%s); suppressing for this session", fb_provider, fb_model, local_skip_reason)
         return True
     # Identity semantics (axes, shim aliases, credential surfaces, multi-endpoint pools)
     # are owned by agent.backend_identity — do not re-implement comparisons here.
@@ -2189,8 +2146,6 @@ def try_activate_fallback(agent, reason: "FailoverReason | None" = None, reset_a
                 model=agent.model, base_url=agent.base_url, provider=fb_provider, is_codex_backend=fb_provider == "openai-codex")
             return True
         except Exception as e:
-            if fb_provider == "spaceshipresearch":
-                unavailable.add(fb_key)
             logger.error("Failed to activate fallback %s: %s", fb_model, e)
             continue  # try next in chain
 
@@ -2327,7 +2282,6 @@ def _anthropic_summary_attempt(agent, api_messages: list, api_request_id: str):
             model=agent.model, messages=api_messages, tools=None, max_tokens=agent.max_tokens,
             reasoning_config=agent.reasoning_config, is_oauth=agent._is_anthropic_oauth,
             preserve_dots=agent._anthropic_preserve_dots(), base_url=getattr(agent, "_anthropic_base_url", None))
-        ant_kw = _merge_scout_portal_messages_extra_body(agent, ant_kw)
         response = _managed_summary_call(
             agent, api_request_id, ant_kw, agent._interruptible_api_call, retry_count=retry_count)
         return _summary_text(agent, response, strip_tool_prefix=agent._is_anthropic_oauth)
@@ -3056,7 +3010,7 @@ class _StreamingCall(StreamingWaitMonitor):
             body = _provider_error_body(
                 {"code": _err_type or "provider_in_stream_error", "message": str(_err_msg or chunk)}, _status)
             raise ProviderStreamError(status_code=_status, body=body, raw_text=f"{_err_type}: {_err_msg}")
-        # Scout Portal usage frames (choices=[] + lastOne=true, no [DONE]) are a
+        # ``lastOne`` usage frames (choices=[] + lastOne=true, no [DONE]) are a
         # clean terminal, not a drop; relabelled upstreams send 1 / "true".
         # See #90848.
         last_one = getattr(chunk, "lastOne", None)
@@ -3083,8 +3037,6 @@ class _StreamingCall(StreamingWaitMonitor):
     def _chat_stream_created(self, raw_stream: Any) -> None:
         response = self._attempt_stream_response = getattr(raw_stream, "response", None)
         self.agent._capture_rate_limits(response)
-        self.agent._capture_credits(response)
-        self.agent._capture_spaceshipresearch_model_switch(response)
         self.agent._stream_diag_capture_response(self.clients.diag, response)
         self.agent._check_openrouter_cache_status(response)
         self._writer_token = claim_stream_writer(self.agent)

@@ -36,13 +36,10 @@ const PET_HEART_CONFIG: Partial<ParticleFieldConfig> = {
   bank: [6, 14]
 }
 
-// Pixel-art heart from @spaceshipresearch/ui (14×12), crisp + `currentColor`.
+// 7×6 pixel-art heart on a 2px grid (14×12), crisp + `currentColor`.
 const HEART_GLYPH = (
   <svg fill="none" shapeRendering="crispEdges" viewBox="0 0 14 12" xmlns="http://www.w3.org/2000/svg">
-    <path
-      d="M13.2 0v5.65714h-1.8857v1.88572H9.42857v1.88571H7.54286v1.88573H5.65714V9.42857H3.77143V7.54286H1.88571V5.65714H0V0h5.65714v1.88571h1.88572V0z"
-      fill="currentColor"
-    />
+    <path d="M2 0h4v2H2zM8 0h4v2H8zM0 2h14v4H0zM2 6h10v2H2zM4 8h6v2H4zM6 10h2v2H6z" fill="currentColor" />
   </svg>
 )
 

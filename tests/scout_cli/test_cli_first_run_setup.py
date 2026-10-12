@@ -172,22 +172,22 @@ def test_offer_first_run_setup_routes_into_shared_picker(monkeypatch):
     # After the picker "runs", config has a provider and creds resolve.
     monkeypatch.setattr(
         "scout_cli.config.load_config",
-        lambda: {"model": {"provider": "spaceshipresearch", "default": "scout-4-405b"}},
+        lambda: {"model": {"provider": "openai-codex", "default": "gpt-5.3-codex"}},
     )
     monkeypatch.setattr(
         "scout_cli.runtime_provider.resolve_runtime_provider",
         lambda **kw: {
-            "provider": "spaceshipresearch",
-            "api_key": "portal-token",
-            "base_url": "https://inference-api.spaceshipresearch.com/v1",
+            "provider": "openai-codex",
+            "api_key": "codex-token",
+            "base_url": "https://chatgpt.com/backend-api/codex",
             "source": "oauth",
         },
     )
 
     assert shell._offer_first_run_setup() is True
     assert picker_calls["count"] == 1
-    assert shell.requested_provider == "spaceshipresearch"
-    assert shell.model == "scout-4-405b"
+    assert shell.requested_provider == "openai-codex"
+    assert shell.model == "gpt-5.3-codex"
     # Agent must be rebuilt with the new credentials on next use.
     assert shell.agent is None
 
@@ -198,17 +198,17 @@ def test_offer_first_run_setup_re_resolves_reasoning_for_picked_model(monkeypatc
     cli = _import_cli()
     monkeypatch.setitem(cli.CLI_CONFIG, "agent", {
         **cli.CLI_CONFIG.get("agent", {}), "reasoning_effort": "medium",
-        "reasoning_overrides": {"scout-4-405b": "high"}})
+        "reasoning_overrides": {"gpt-5.3-codex": "high"}})
     shell = _make_shell(cli, monkeypatch)
     assert shell.reasoning_config["effort"] == "medium"
     monkeypatch.setattr("scout_cli.main.select_provider_and_model", lambda: None)
     monkeypatch.setattr("builtins.input", lambda *a, **k: "y")
     monkeypatch.setattr("scout_cli.config.load_config",
-                        lambda: {"model": {"provider": "spaceshipresearch", "default": "scout-4-405b"}})
+                        lambda: {"model": {"provider": "openai-codex", "default": "gpt-5.3-codex"}})
     monkeypatch.setattr(shell, "_runtime_credentials_ready", lambda: True)
 
     assert shell._offer_first_run_setup() is True
-    assert shell.model == "scout-4-405b"
+    assert shell.model == "gpt-5.3-codex"
     assert shell.reasoning_config["effort"] == "high"
 
 
@@ -279,12 +279,12 @@ def test_empty_key_error_names_actual_provider(monkeypatch, capsys):
 # ---------------------------------------------------------------------------
 
 
-def _bench_spaceshipresearch_pool(monkeypatch, **entry_fields):
+def _bench_codex_pool(monkeypatch, **entry_fields):
     import time
     from agent.credential_pool import STATUS_EXHAUSTED, CredentialPool, PooledCredential
 
-    benched = PooledCredential(id="e1", provider="spaceshipresearch", auth_type="oauth", access_token="x",
-                               refresh_token="r", label="portal", source="manual:device_code",
+    benched = PooledCredential(id="e1", provider="openai-codex", auth_type="oauth", access_token="x",
+                               refresh_token="r", label="codex", source="manual:device_code",
                                priority=0, last_status=STATUS_EXHAUSTED, last_status_at=time.time() - 5,
                                **entry_fields)
     pool = CredentialPool.__new__(CredentialPool)
@@ -308,14 +308,14 @@ def test_benched_credential_prints_cooldown_instead_of_wizard(monkeypatch, capsy
     user to re-authenticate, and never offers the first-run wizard."""
     cli = _import_cli()
     shell = _make_shell(cli, monkeypatch)
-    shell.requested_provider = "spaceshipresearch"
+    shell.requested_provider = "openai-codex"
 
     def _raise(**kwargs):
-        raise AuthError("Scout is not logged into Scout Portal.", provider="spaceshipresearch",
-                        code="spaceshipresearch_auth_missing", relogin_required=True)
+        raise AuthError("Scout is not logged into OpenAI Codex.", provider="openai-codex",
+                        code="codex_auth_missing", relogin_required=True)
 
     monkeypatch.setattr("scout_cli.runtime_provider.resolve_runtime_provider", _raise)
-    _bench_spaceshipresearch_pool(monkeypatch, last_error_code=429, last_error_reason="rate_limited")
+    _bench_codex_pool(monkeypatch, last_error_code=429, last_error_reason="rate_limited")
     _forbid_wizard(monkeypatch, shell)
     monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
 
@@ -324,15 +324,15 @@ def test_benched_credential_prints_cooldown_instead_of_wizard(monkeypatch, capsy
     out = capsys.readouterr().out
     assert t("cli.startup.first_run_no_provider") not in out
     headline = next(line for line in out.splitlines() if line.strip())
-    assert headline.endswith(t("cli.startup.credential_cooling_down", provider="spaceshipresearch",
+    assert headline.endswith(t("cli.startup.credential_cooling_down", provider="openai-codex",
                          cause=t("cli.startup.cooldown_cause_rate_limit"), minutes=1))
     assert t("cli.startup.cooldown_cause_token_refresh") not in out
-    assert "not logged into Scout Portal" in out
+    assert "not logged into OpenAI Codex" in out
     assert "re-authenticate" not in out and "scout model" not in out
 
 
 def test_auth_json_only_login_explains_instead_of_wizard(monkeypatch, capsys, tmp_path):
-    """auth.json-only shape: logged into SpaceshipResearch but no ``model.provider`` (requested "auto"). The
+    """auth.json-only shape: logged into Fixture Co but no ``model.provider`` (requested "auto"). The
     ladder swallows the AuthError and falls through to a keyless OpenRouter fallback; the gate
     must still explain the real failure rather than treat the profile as a blank install.
     Control: the resolver's ``no_provider_configured`` still reaches the wizard."""
@@ -345,13 +345,13 @@ def test_auth_json_only_login_explains_instead_of_wizard(monkeypatch, capsys, tm
     for key in [k for k in os.environ if k.endswith("_API_KEY")]:
         monkeypatch.delenv(key, raising=False)
 
-    def _spaceshipresearch_fail():
-        raise AuthError("Scout is not logged into Scout Portal.", provider="spaceshipresearch",
-                        code="spaceshipresearch_auth_missing", relogin_required=True)
+    def _codex_fail():
+        raise AuthError("Scout is not logged into OpenAI Codex.", provider="openai-codex",
+                        code="codex_auth_missing", relogin_required=True)
 
-    monkeypatch.setattr(rp, "resolve_provider", lambda *a, **kw: "spaceshipresearch")
-    monkeypatch.setitem(rp._OAUTH_RUNTIME_PROVIDERS, "spaceshipresearch",
-                        dataclasses.replace(rp._OAUTH_RUNTIME_PROVIDERS["spaceshipresearch"], resolve=_spaceshipresearch_fail))
+    monkeypatch.setattr(rp, "resolve_provider", lambda *a, **kw: "openai-codex")
+    monkeypatch.setitem(rp._OAUTH_RUNTIME_PROVIDERS, "openai-codex",
+                        dataclasses.replace(rp._OAUTH_RUNTIME_PROVIDERS["openai-codex"], resolve=_codex_fail))
 
     cli = _import_cli()
     shell = _make_shell(cli, monkeypatch)
@@ -363,7 +363,7 @@ def test_auth_json_only_login_explains_instead_of_wizard(monkeypatch, capsys, tm
 
     shell._maybe_offer_first_run_setup()
     out = capsys.readouterr().out
-    assert "not logged into Scout Portal" in out
+    assert "not logged into OpenAI Codex" in out
     assert t("cli.startup.first_run_no_provider") not in out
 
     offered = []

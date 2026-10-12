@@ -1,7 +1,7 @@
 """Dashboard authentication provider framework. The auth gate engages only when the dashboard
 binds to a non-loopback host without ``--insecure``; every request must then carry a verified
-session from a registered ``DashboardAuthProvider`` (SpaceshipResearch provider is the default; third parties
-register theirs via the plugin hook ``ctx.register_dashboard_auth_provider``)."""
+session from a registered ``DashboardAuthProvider`` (bundled: basic auth and self-hosted OIDC; third
+parties register theirs via the plugin hook ``ctx.register_dashboard_auth_provider``)."""
 from scout_cli.dashboard_auth.base import (
     DashboardAuthProvider, Session, TokenPrincipal, LoginStart, InvalidCodeError,
     InvalidCredentialsError, ProviderError, RefreshExpiredError, assert_protocol_compliance,

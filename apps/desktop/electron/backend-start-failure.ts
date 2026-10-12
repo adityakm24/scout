@@ -25,7 +25,7 @@
 export interface BackendStartFailureContext {
   /**
    * True when the boot that just failed was resolving/dialing a REMOTE (or
-   * cloud) primary backend rather than spawning a local child.
+   * SSH) primary backend rather than spawning a local child.
    */
   attemptedRemote: boolean
   /**
@@ -51,7 +51,7 @@ export function shouldLatchBackendStartFailure(context: BackendStartFailureConte
 }
 
 export interface RemoteReauthFailureContext {
-  /** True when the boot that just failed was dialing a REMOTE (or cloud) backend. */
+  /** True when the boot that just failed was dialing a REMOTE backend. */
   attemptedRemote: boolean
   /**
    * True when the failure was a CONFIRMED auth rejection (a credentialed
@@ -82,7 +82,7 @@ export function shouldLatchRemoteReauthFailure(context: RemoteReauthFailureConte
 }
 
 export interface RemoteBootRetryContext {
-  /** True when the boot that just failed was dialing a REMOTE (or cloud/SSH) backend. */
+  /** True when the boot that just failed was dialing a REMOTE (or SSH) backend. */
   attemptedRemote: boolean
   /**
    * True when the failure was a CONFIRMED auth rejection (401/403), which can

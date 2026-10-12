@@ -506,7 +506,7 @@ from scout_cli.setup_terminal import setup_terminal_backend  # noqa: E402
 from scout_cli.setup_platforms import setup_gateway  # noqa: E402
 from scout_cli.setup_summary import _print_setup_summary  # noqa: E402,F401
 from scout_cli.setup_migration import _offer_openclaw_migration, _skip_configured_section  # noqa: E402
-from scout_cli.setup_quick import _run_portal_one_shot, _run_quick_setup  # noqa: E402
+from scout_cli.setup_quick import _run_quick_setup  # noqa: E402
 
 
 # ── Main Wizard Orchestrator ──
@@ -585,7 +585,7 @@ def _run_full_setup(config: dict, scout_home, *, is_existing: bool, migration_ra
 
 # First-time mode picker: (menu label, setup_quick runner name) — None falls through to Full Setup.
 _FIRST_TIME_MODES = (
-    ("Quick Setup (Scout Portal) — free OAuth login, no API keys, model + tools (recommended)",
+    ("Quick Setup — pick a provider and model; sensible defaults for everything else (recommended)",
      "_run_first_time_quick_setup"),
     ("Full setup — configure every provider, tool & option yourself (bring your own keys)", None),
     ("Blank Slate — everything off except the bare minimum; opt in to each capability", "_run_blank_slate_setup"),
@@ -593,8 +593,8 @@ _FIRST_TIME_MODES = (
 
 
 def _run_setup_wizard_impl(args):
-    """Run the interactive setup wizard: full/quick (auto-detected), ``--portal``, or one
-    ``scout setup <section>`` from SETUP_SECTIONS."""
+    """Run the interactive setup wizard: full/quick (auto-detected), or one ``scout setup <section>``
+    from SETUP_SECTIONS."""
     from scout_cli.config import is_managed, managed_error
     if is_managed():
         managed_error("run setup wizard")
@@ -617,9 +617,6 @@ def _run_setup_wizard_impl(args):
     # Non-interactive environments (headless SSH, Docker, CI/CD)
     if getattr(args, 'non_interactive', False) or not is_interactive_stdin():
         print_noninteractive_setup_guidance("Running in a non-interactive environment (no TTY detected).")
-        return
-    if getattr(args, "portal", False):  # one-shot Scout Portal setup; skips the rest
-        _run_portal_one_shot(config)
         return
     section = getattr(args, "section", None)
     if section:

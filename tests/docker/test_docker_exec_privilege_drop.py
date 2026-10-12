@@ -5,7 +5,7 @@ exists to prevent the auth.json ownership-mismatch bug where
 `docker exec <c> scout login` would write /opt/data/auth.json as
 root:root mode 0600, leaving the supervised gateway (UID 10000) unable
 to read its own credentials and returning "Provider authentication
-failed: Scout is not logged into Scout Portal" on every message.
+failed: Scout is not logged into Fixture Co" on every message.
 
 These tests verify:
 
@@ -162,8 +162,7 @@ def test_e2e_login_then_supervised_gateway_can_read_auth(
     Pre-shim: ``docker exec <c> scout login`` (root) wrote
     /opt/data/auth.json as root:root 0600. The supervised gateway (UID
     10000) couldn't read it, _load_auth_store swallowed PermissionError
-    as a parse failure, and resolve_spaceshipresearch_runtime_credentials raised
-    "Scout is not logged into Scout Portal" on every message.
+    as a parse failure, so every credential read failed on every message.
 
     We can't do a real OAuth login in a unit test, but we can stand in
     for it by writing the same file shape via `scout config set`-style

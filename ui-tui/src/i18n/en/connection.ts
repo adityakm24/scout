@@ -13,10 +13,8 @@ export const connectionEn = {
     // Card title verb, indexed by the target's `action` (backend value, not shown raw).
     verb: {
       authorize: 'Authorize',
-      connect: 'Connect',
       enable: 'Enable',
-      install: 'Install',
-      reconnect: 'Reconnect'
+      install: 'Install'
     },
     header: {
       moreToAnswer: (count: number) => `${count} more to answer after this one.`
@@ -30,7 +28,6 @@ export const connectionEn = {
       tryAgain: 'Try again'
     },
     failure: {
-      expired: 'The link expired.',
       failed: 'That did not work.'
     },
     status: {

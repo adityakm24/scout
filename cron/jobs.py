@@ -2369,20 +2369,6 @@ def clear_preflight_alerted(job_id: str) -> None:
     _set_alert_flag(job_id, "preflight_alerted", False)
 
 
-def note_fire_forward_failure(job_id: str, detail: str) -> bool:
-    """Durably record (as ``last_fire_error``) that a scheduled fire could not be handed to the
-    runner — written by the dashboard fire webhook when the loopback forward fails. Without it
-    the miss is invisible (no execution row, last_status only covers started runs); mark_job_run
-    clears it."""
-    def apply(jobs, _i, job):
-        job["last_fire_error"] = {
-            "at": _scout_now().isoformat(), "detail": str(detail or "")[:500]}
-        save_jobs(jobs)
-        return True
-
-    return _with_job(job_id, apply, False)
-
-
 def _record_run_outcome(
     job: Dict[str, Any], success: bool, error: Optional[str], delivery_error: Optional[str],
     status: Optional[str], now: str,

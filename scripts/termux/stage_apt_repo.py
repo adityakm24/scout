@@ -266,7 +266,7 @@ def stage(
                 "Package": fields["Package"],
                 "Version": fields["Version"],
                 "Architecture": arch,
-                "Maintainer": fields.get("Maintainer", "Scout Agent <noreply@spaceshipresearch.com>"),
+                "Maintainer": fields.get("Maintainer", "Scout Agent"),
                 "Installed-Size": fields.get("Installed-Size", "0"),
                 "Description": fields.get("Description", "Scout Agent"),
                 "Filename": filename,

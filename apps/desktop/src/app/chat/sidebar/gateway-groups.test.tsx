@@ -49,7 +49,7 @@ it('keeps equal profile names on separate gateways and routes section creation a
       connections: [
         { id: 'local', label: 'This computer', kind: 'local', tokenSet: false, tokenPreview: null },
         { id: 'remote-1', label: 'Homelab', kind: 'remote', tokenSet: false, tokenPreview: null },
-        { id: 'cloud-1', label: 'Cloud workspace', kind: 'cloud', tokenSet: false, tokenPreview: null }
+        { id: 'ssh-1', label: 'Studio box', kind: 'ssh', tokenSet: false, tokenPreview: null }
       ]
     })
     $profiles.set([
@@ -60,7 +60,7 @@ it('keeps equal profile names on separate gateways and routes section creation a
     $sidebarRowMeta.set(['cost', 'tokens'])
     $sessionProfilesUsage.set({ default: { cost_usd: 3, tokens: 100 } })
     $sessions.set(
-      ['local', 'remote-1', 'cloud-1'].map(connection_id =>
+      ['local', 'remote-1', 'ssh-1'].map(connection_id =>
         makeSessionInfo({
           id: connection_id,
           connection_id,
@@ -102,10 +102,10 @@ it('keeps equal profile names on separate gateways and routes section creation a
   expect(gateway.querySelectorAll('[data-gateway-group]')).toHaveLength(2)
   fireEvent.click(within(gateway).getAllByRole('button', { name: 'New session in default' })[0])
   expect($newChatRoute.get()).toMatchObject({ connectionId: 'remote-1', profile: 'default' })
-  fireEvent.click(screen.getByText('cloud-1 session'))
+  fireEvent.click(screen.getByText('ssh-1 session'))
   expect(resume).toHaveBeenLastCalledWith(
-    'cloud-1',
-    expect.objectContaining({ connection_id: 'cloud-1', profile: 'default' })
+    'ssh-1',
+    expect.objectContaining({ connection_id: 'ssh-1', profile: 'default' })
   )
   const group = within(gateway).getByText('default').closest('[data-gateway-group]')!
   fireEvent.click(within(group as HTMLElement).getByRole('button', { name: 'Hide default sessions' }))

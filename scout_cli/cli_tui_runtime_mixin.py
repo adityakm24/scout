@@ -340,11 +340,11 @@ class CLITuiRuntimeMixin:
             pass
 
     def _tui_startup_background_maintenance(self):
-        """Best-effort startup passes: curator skill maintenance, personal + org skill sync.
+        """Best-effort startup pass: curator skill maintenance.
 
         Off the main thread: the curator's deterministic pass snapshots and prunes the whole
-        skills tree (a due weekly pass held the prompt for 6 minutes on a large library), and
-        the sync pulls can hit the network. The REPL must never wait on housekeeping."""
+        skills tree (a due weekly pass held the prompt for 6 minutes on a large library). The
+        REPL must never wait on housekeeping."""
         threading.Thread(target=self._run_startup_maintenance, name="startup-maintenance", daemon=True).start()
 
     def _run_startup_maintenance(self):
@@ -354,19 +354,6 @@ class CLITuiRuntimeMixin:
                 idle_for_seconds=float("inf"),  # CLI startup = fully idle
                 on_summary=lambda msg: self._console_print(f"[dim #6b7684]💾 {msg}[/]"),
             )
-
-        # Skill sync (personal, then org-shared): inert unless the access gate is open
-        # and a sync base URL is configured. The org pull is gated on a real org role on
-        # the token (only issued for multi-member orgs), so a solo account never hits
-        # the network here. Both fail-quiet.
-        try:
-            from tools.skills_sync_client import maybe_pull_skills
-            from tools.skills_sync_client_org import maybe_pull_org_skills
-        except Exception:
-            return
-        for pull in (maybe_pull_skills, maybe_pull_org_skills):
-            with suppress(Exception):
-                pull()
 
     def _tui_build_application(self, layout, kb, style):
         """Construct the prompt_toolkit Application for the REPL."""

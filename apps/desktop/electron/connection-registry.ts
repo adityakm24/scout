@@ -4,7 +4,7 @@
  * Pure, electron-free helpers for the desktop's multi-connection registry —
  * the v2 successor to the single global `mode` + `remote` block in
  * connection.json. The registry is a named list of agent SOURCES (local
- * runtime, remote gateways, Scout Cloud instances, SSH hosts) that are all
+ * runtime, remote gateways, SSH hosts) that are all
  * registered at once; routing/pooling changes that consume the registry land
  * separately, so this module is deliberately storage-shaped, not
  * transport-shaped.
@@ -41,31 +41,25 @@ export const REGISTRY_VERSION = 2
 
 export const LOCAL_CONNECTION_ID = 'local'
 
-/** Connection kinds. 'cloud' is remote-shaped (see modeIsRemoteLike) but keeps
- * its provenance so the UI can render the right card and updates can skip
- * platform-managed instances. */
-export type ConnectionKind = 'cloud' | 'local' | 'remote' | 'ssh'
+/** Connection kinds. */
+export type ConnectionKind = 'local' | 'remote' | 'ssh'
 
 export interface RegistryConnection {
   id: string
   kind: ConnectionKind
   /** Required, unique (case-insensitive) display name — the "device name". */
   label: string
-  /** remote/cloud: normalized base URL. */
+  /** remote: normalized base URL. */
   url?: string
-  /** remote/cloud: 'token' | 'oauth'. */
+  /** remote: 'token' | 'oauth'. */
   authMode?: 'oauth' | 'token'
   /** remote: encrypted token envelope (opaque here; main.ts encrypts/decrypts). */
   token?: unknown
-  /** remote/cloud: extra gateway headers (Cloudflare Access etc.). Secret
+  /** remote: extra gateway headers (Cloudflare Access etc.). Secret
    * envelopes, same shape as `token`; names pre-filtered through
    * normalizeRemoteHeaders. Optional and additive — v2 registries written
    * before this field keep loading unchanged. */
   headers?: Record<string, unknown>
-  /** cloud: portal org slug/id the instance was discovered under. */
-  org?: string
-  /** Cloud instance name, separate from the user-editable label. */
-  name?: string
   /** ssh fields (normalizeSshConfig shapes). */
   host?: string
   user?: string
@@ -243,9 +237,8 @@ export interface ResolvedConnectionDescriptor {
   connectionId?: unknown
   headers?: Record<string, unknown>
   mode?: 'local' | 'remote'
-  org?: unknown
   remoteHost?: string
-  remoteKind?: 'cloud' | 'ssh' | 'url'
+  remoteKind?: 'ssh' | 'url'
   ssh?: ResolvedConnectionSshDescriptor
   token?: unknown
 }
@@ -318,9 +311,7 @@ export function resolvedConnectionId(
     return matchingConnectionId(registry, { kind: 'ssh', ...ssh }, 'unique') ?? null
   }
 
-  const kind = descriptor.remoteKind === 'cloud' ? 'cloud' : descriptor.remoteKind === 'url' ? 'remote' : null
-
-  if (!kind) {
+  if (descriptor.remoteKind !== 'url') {
     return null
   }
 
@@ -337,8 +328,7 @@ export function resolvedConnectionId(
   const route: StoredRoute = {
     authMode,
     headers: descriptor.headers,
-    kind,
-    org: descriptor.org,
+    kind: 'remote',
     token: descriptor.token,
     url
   }
@@ -346,16 +336,15 @@ export function resolvedConnectionId(
   const hasExactEnvelope =
     Object.prototype.hasOwnProperty.call(descriptor, 'authMode') &&
     Object.prototype.hasOwnProperty.call(descriptor, 'headers') &&
-    (authMode === 'oauth' || Object.prototype.hasOwnProperty.call(descriptor, 'token')) &&
-    (kind === 'remote' || Object.prototype.hasOwnProperty.call(descriptor, 'org'))
+    (authMode === 'oauth' || Object.prototype.hasOwnProperty.call(descriptor, 'token'))
 
   if (!hasExactEnvelope) {
     // A URL alone cannot choose among legal registrations that differ by auth,
-    // headers, Cloud organization, or account. Require one coarse candidate
+    // headers, or account. Require one coarse candidate
     // before the same full-envelope matcher is allowed to accept the legacy
     // defaults; otherwise zero/multiple candidates fail closed.
     const coarseMatches = registry.connections.filter(connection => {
-      if (connection.kind !== kind) {
+      if (connection.kind !== 'remote') {
         return false
       }
 
@@ -467,7 +456,7 @@ export interface SharedRegistryProfileScope {
   sharedRemote: true
 }
 
-/** Reuse the live URL/cloud primary without losing the caller's REST profile scope. */
+/** Reuse the live URL primary without losing the caller's REST profile scope. */
 export async function reuseMatchingPrimaryRemoteBackend<T extends ResolvedConnectionDescriptor>({
   connectionId,
   ensurePrimary,
@@ -819,8 +808,8 @@ export function buildAgentRoster(
 }
 
 /** Deterministic route priority for same-backend rows: local is definitionally
- * this box; ssh beats HTTP remotes; cloud last. */
-const CANONICAL_KIND_PRIORITY: Record<ConnectionKind, number> = { cloud: 3, local: 0, remote: 2, ssh: 1 }
+ * this box; ssh beats HTTP remotes. */
+const CANONICAL_KIND_PRIORITY: Record<ConnectionKind, number> = { local: 0, remote: 2, ssh: 1 }
 
 /**
  * Which connection represents a collapsed same-backend roster row: the ACTIVE
@@ -842,28 +831,6 @@ function pickCanonicalConnection<T extends { connection: RegistryConnection; ord
     (a, b) =>
       CANONICAL_KIND_PRIORITY[a.connection.kind] - CANONICAL_KIND_PRIORITY[b.connection.kind] || a.order - b.order
   )[0]
-}
-
-// ── Fan-out update eligibility ──────────────────────────────────────────────
-
-export interface UpdateEligibility {
-  eligible: boolean
-  /** Present when not eligible: 'cloud-managed' (platform updates it). */
-  reason?: 'cloud-managed'
-}
-
-/**
- * Whether "Update all instances" may drive this connection. Scout Cloud
- * instances are platform-managed — we never run `scout update` against them.
- * Local, remote, and ssh sources are all eligible (reachability and busy
- * checks happen at dispatch time, not here).
- */
-export function updateEligibility(connection: RegistryConnection): UpdateEligibility {
-  if (connection.kind === 'cloud') {
-    return { eligible: false, reason: 'cloud-managed' }
-  }
-
-  return { eligible: true }
 }
 
 /** Mint a registry-unique id from a label (slug, then -2/-3… suffixes). */
@@ -922,9 +889,6 @@ export interface ConnectionInput {
   authMode?: string
   token?: unknown
   headers?: Record<string, unknown>
-  org?: string
-  /** Cloud instance name, separate from the user-editable label. */
-  name?: string
   host?: string
   user?: string
   port?: number | string
@@ -939,17 +903,6 @@ export interface ConnectionInput {
  * uniqueness context; when `input.id` matches an existing entry this is an
  * edit and that entry is excluded from the label-collision check.
  */
-/**
- * Auth mode a stored remote-shaped entry actually uses. A Scout Cloud gateway
- * signs in through its OAuth session and never keeps a pasted token (the save
- * path drops one), so a cloud entry on token auth with no token has no
- * credential at all and Test can only fail (#89529). Read it as oauth; a cloud
- * entry that does carry a token keeps its mode.
- */
-function storedAuthMode(kind: ConnectionKind, authMode: unknown, token: unknown): 'oauth' | 'token' {
-  return kind === 'cloud' && !token ? 'oauth' : normAuthMode(authMode)
-}
-
 export function normalizeConnectionInput(input: ConnectionInput, registry: ConnectionRegistry): RegistryConnection {
   const label = String(input.label || '').trim()
 
@@ -1032,32 +985,29 @@ export function normalizeConnectionInput(input: ConnectionInput, registry: Conne
     return entry
   }
 
-  if (kind === 'remote' || kind === 'cloud') {
+  if (kind === 'remote') {
     // normalizeRemoteBaseUrl throws its own user-facing message on bad input.
     const url = normalizeRemoteBaseUrl(input.url)
 
-    // Duplicate prevention: remote/cloud entries collide on the normalized URL
-    // (trimmed, trailing slashes stripped, lowercased) regardless of kind — a
-    // cloud entry and a remote entry pointing at the same gateway are dupes.
+    // Duplicate prevention: remote entries collide on the normalized URL
+    // (trimmed, trailing slashes stripped, lowercased).
     const urlKey = (value: string) => value.trim().replace(/\/+$/, '').toLowerCase()
 
     const urlDupe = registry.connections.find(
-      c => (c.kind === 'remote' || c.kind === 'cloud') && c.id !== id && urlKey(c.url || '') === urlKey(url)
+      c => c.kind === 'remote' && c.id !== id && urlKey(c.url || '') === urlKey(url)
     )
 
     if (urlDupe) {
       throw new Error(`A connection to this gateway URL already exists ("${urlDupe.label}").`)
     }
 
-    // Cloud never stores a token (below), so it is always oauth.
-    const authMode = storedAuthMode(kind, input.authMode, undefined)
+    const authMode = normAuthMode(input.authMode)
     const entry: RegistryConnection = { id, kind, label, url, authMode }
 
     // A token is only meaningful for token-auth remotes. Dropping it here is
-    // what clears the stale envelope when an entry is switched token→oauth
-    // (or is a cloud entry, which authenticates via the portal session) —
+    // what clears the stale envelope when an entry is switched token→oauth —
     // otherwise dead secret material rides along on the edited entry.
-    if (input.token !== undefined && kind === 'remote' && authMode === 'token') {
+    if (input.token !== undefined && authMode === 'token') {
       entry.token = input.token
     }
 
@@ -1073,18 +1023,6 @@ export function normalizeConnectionInput(input: ConnectionInput, registry: Conne
       }
     }
 
-    const name = String(input.name || '').trim()
-
-    if (kind === 'cloud' && name) {
-      entry.name = name
-    }
-
-    const org = String(input.org || '').trim()
-
-    if (kind === 'cloud' && org) {
-      entry.org = org
-    }
-
     return entry
   }
 
@@ -1093,9 +1031,7 @@ export function normalizeConnectionInput(input: ConnectionInput, registry: Conne
 
 /**
  * Merge a (possibly partial) edit payload over the stored entry so fields the
- * editor doesn't carry survive a save. Renaming a migrated cloud entry must
- * not drop its `org` (downstream update-fanout uses it to skip
- * platform-managed instances), and renaming an ssh entry must not drop
+ * editor doesn't carry survive a save. Renaming an ssh entry must not drop
  * `remoteScoutPath`/`remoteProfile`. Only fields the payload explicitly
  * carries (non-undefined) override; `token` is deliberately NOT merged here —
  * the caller owns secret handling.
@@ -1115,15 +1051,6 @@ export function mergeConnectionInput(input: ConnectionInput, existing?: null | R
 
   inherit('url')
   inherit('authMode')
-  inherit('org')
-
-  if (
-    input.kind === 'cloud' &&
-    (input.url === undefined || normalizeRemoteBaseUrl(input.url) === normalizeRemoteBaseUrl(existing.url))
-  ) {
-    inherit('name')
-  }
-
   inherit('host')
   inherit('keyPath')
   inherit('remoteScoutPath')
@@ -1163,7 +1090,6 @@ export function connectionDialFieldsChanged(before: RegistryConnection, after: R
   const fields: (keyof RegistryConnection)[] = [
     'url',
     'authMode',
-    'org',
     'host',
     'user',
     'port',
@@ -1259,7 +1185,7 @@ export function normalizeRegistry(raw: unknown): ConnectionRegistry {
       const entry = item as Record<string, unknown>
       const kind = entry.kind
 
-      if (kind !== 'local' && kind !== 'remote' && kind !== 'cloud' && kind !== 'ssh') {
+      if (kind !== 'local' && kind !== 'remote' && kind !== 'ssh') {
         quarantine('entry-unrecognized-kind', item)
 
         continue
@@ -1291,7 +1217,7 @@ export function normalizeRegistry(raw: unknown): ConnectionRegistry {
 
       const clean: RegistryConnection = { id, kind, label }
 
-      if (kind === 'remote' || kind === 'cloud') {
+      if (kind === 'remote') {
         const url = String(entry.url || '').trim()
 
         if (!url) {
@@ -1301,7 +1227,7 @@ export function normalizeRegistry(raw: unknown): ConnectionRegistry {
         }
 
         clean.url = url
-        clean.authMode = storedAuthMode(kind, entry.authMode, entry.token)
+        clean.authMode = normAuthMode(entry.authMode)
 
         if (entry.token !== undefined) {
           clean.token = entry.token
@@ -1311,18 +1237,6 @@ export function normalizeRegistry(raw: unknown): ConnectionRegistry {
 
         if (Object.keys(storedHeaders).length > 0) {
           clean.headers = storedHeaders
-        }
-
-        const name = String(entry.name || '').trim()
-
-        if (kind === 'cloud' && name) {
-          clean.name = name
-        }
-
-        const org = String(entry.org || '').trim()
-
-        if (kind === 'cloud' && org) {
-          clean.org = org
         }
       } else if (kind === 'ssh') {
         const ssh = normalizeSshConfig({ ...entry, mode: 'ssh' })
@@ -1338,7 +1252,7 @@ export function normalizeRegistry(raw: unknown): ConnectionRegistry {
 
         // normalizeSshConfig describes only the dial, so the token
         // persistSshConnectionToken() adopted must be carried explicitly (as the
-        // remote/cloud branch does). Losing it on a cold read fails the
+        // remote branch does). Losing it on a cold read fails the
         // remote-lifecycle reuse gate and reaps a healthy backend (#103795).
         if (entry.token !== undefined) {
           clean.token = entry.token
@@ -1390,14 +1304,14 @@ export function migrateV1ToRegistry(v1: unknown): ConnectionRegistry {
   const connections: RegistryConnection[] = [localEntry()]
   const byFingerprint = new Map<string, RegistryConnection>()
 
-  const addRemoteLike = (block: Record<string, any>, kind: 'cloud' | 'remote'): null | RegistryConnection => {
+  const addRemote = (block: Record<string, any>): null | RegistryConnection => {
     const url = String(block?.url || '').trim()
 
     if (!url) {
       return null
     }
 
-    const fingerprint = `${kind}:${url}`
+    const fingerprint = `remote:${url}`
     const existing = byFingerprint.get(fingerprint)
 
     if (existing) {
@@ -1405,7 +1319,7 @@ export function migrateV1ToRegistry(v1: unknown): ConnectionRegistry {
     }
 
     const label = uniqueLabel(
-      hostLabelFromBaseUrl(url) || (kind === 'cloud' ? 'Scout Cloud' : 'Remote gateway'),
+      hostLabelFromBaseUrl(url) || 'Remote gateway',
       connections.map(c => c.label)
     )
 
@@ -1414,7 +1328,7 @@ export function migrateV1ToRegistry(v1: unknown): ConnectionRegistry {
         label,
         connections.map(c => c.id)
       ),
-      kind,
+      kind: 'remote',
       label,
       url,
       authMode: normAuthMode(block.authMode)
@@ -1428,18 +1342,6 @@ export function migrateV1ToRegistry(v1: unknown): ConnectionRegistry {
 
     if (Object.keys(v1Headers).length > 0) {
       entry.headers = v1Headers
-    }
-
-    const name = String(block.name || '').trim()
-
-    if (kind === 'cloud' && name) {
-      entry.name = name
-    }
-
-    const org = String(block.org || '').trim()
-
-    if (kind === 'cloud' && org) {
-      entry.org = org
     }
 
     connections.push(entry)
@@ -1490,7 +1392,7 @@ export function migrateV1ToRegistry(v1: unknown): ConnectionRegistry {
   const globalMode = config.mode
 
   if (modeIsRemoteLike(globalMode)) {
-    const entry = addRemoteLike(config.remote || {}, globalMode === 'cloud' ? 'cloud' : 'remote')
+    const entry = addRemote(config.remote || {})
 
     if (entry) {
       primary = entry.id
@@ -1512,7 +1414,7 @@ export function migrateV1ToRegistry(v1: unknown): ConnectionRegistry {
     }
 
     if (modeIsRemoteLike(block.mode)) {
-      addRemoteLike(block, block.mode === 'cloud' ? 'cloud' : 'remote')
+      addRemote(block)
     } else if (block.mode === 'ssh') {
       addSsh(block)
     } else if (block.mode === 'local' && block.savedSsh) {
@@ -1581,9 +1483,9 @@ export function setLastUsedConnection(registry: ConnectionRegistry, id: string):
  * Apply must publish the same primary identity to connections.json in the
  * same transaction or the live remote descriptor has no connectionId.
  *
- * Remote-shaped entries are matched by normalized URL across remote/cloud so
+ * Remote entries are matched by normalized URL so
  * changing provenance never duplicates a gateway. Existing identity and
- * user-chosen label win; a Cloud name upgrades only the default host label. Switching to
+ * user-chosen label win; a gateway-provided name upgrades only the default host label. Switching to
  * local keeps registered remotes available while moving primary/last-used
  * back to This device.
  */
@@ -1607,7 +1509,7 @@ export function reconcileAppliedGlobalConnection(
   const url = normalizeRemoteBaseUrl(block.url)
 
   const existing = registry.connections.find(connection => {
-    if (connection.kind !== 'remote' && connection.kind !== 'cloud') {
+    if (connection.kind !== 'remote') {
       return false
     }
 
@@ -1618,30 +1520,24 @@ export function reconcileAppliedGlobalConnection(
     }
   })
 
-  const kind: ConnectionKind = mode === 'cloud' ? 'cloud' : 'remote'
+  const hostLabel = hostLabelFromBaseUrl(url) || 'Remote gateway'
 
-  const hostLabel = hostLabelFromBaseUrl(url) || (kind === 'cloud' ? 'Scout Cloud' : 'Remote gateway')
-  const name = kind === 'cloud' ? String(block.name ?? existing?.name ?? '').trim() : ''
-
-  const label =
-    existing && (!name || existing.label !== hostLabel)
-      ? existing.label
-      : uniqueLabel(
-          name || hostLabel,
-          registry.connections.filter(connection => connection.id !== existing?.id).map(connection => connection.label)
-        )
+  const label = existing
+    ? existing.label
+    : uniqueLabel(
+        hostLabel,
+        registry.connections.map(connection => connection.label)
+      )
 
   const entry = normalizeConnectionInput(
     {
       id: existing?.id,
-      kind,
+      kind: 'remote',
       label,
       url,
       authMode: block.authMode,
       token: block.token,
-      headers: block.headers,
-      org: block.org,
-      name
+      headers: block.headers
     },
     registry
   )
@@ -1759,7 +1655,7 @@ export function reconcileRegistryDrift(
   }
 
   const alreadyRegistered = registry.connections.some(connection => {
-    if (connection.kind !== 'remote' && connection.kind !== 'cloud') {
+    if (connection.kind !== 'remote') {
       return false
     }
 

@@ -165,8 +165,8 @@ SCENARIOS: list[tuple[str, str, dict[str, str]]] = [
         "managed-gateway-only",
         "",
         {
-            "TOOL_GATEWAY_DOMAIN": "spaceshipresearch.com",
-            "TOOL_GATEWAY_USER_TOKEN": "spaceshipresearch-token",
+            "TOOL_GATEWAY_DOMAIN": "fixtureco.example",
+            "TOOL_GATEWAY_USER_TOKEN": "fixtureco-token",
         },
     ),
 ]

@@ -27,7 +27,7 @@ from scout_cli.secret_prompt import masked_secret_prompt
 
 
 # Providers that support OAuth login in addition to API keys.
-_OAUTH_CAPABLE_PROVIDERS = {"anthropic", "spaceshipresearch", "openai-codex", "xai-oauth", "qwen-oauth", "minimax-oauth", "openrouter"}
+_OAUTH_CAPABLE_PROVIDERS = {"anthropic", "openai-codex", "xai-oauth", "qwen-oauth", "minimax-oauth", "openrouter"}
 # ...and default to it when ``--type`` is omitted. OpenRouter stays API-key-first: the documented
 # ``scout auth add openrouter --api-key sk-or-...`` must keep working with no ``--type``.
 _OAUTH_DEFAULT_PROVIDERS = _OAUTH_CAPABLE_PROVIDERS - {"openrouter"}
@@ -303,48 +303,6 @@ def _ask(prompt: str, reader: Callable[[str], str] | None = None) -> str | None:
         return None
 
 
-def _add_spaceshipresearch_oauth_credential(args, provider: str) -> PooledCredential:
-    """``scout auth add spaceshipresearch --type oauth``: shared-credential import, else device-code login."""
-    custom_label = (getattr(args, "label", None) or "").strip() or None
-    timeout = getattr(args, "timeout", None) or 15.0
-
-    def _persist(creds: dict, what: str) -> PooledCredential:
-        # `--label` is embedded into providers.spaceshipresearch so label_from_token doesn't overwrite it on every
-        # subsequent load_pool("spaceshipresearch").
-        entry = auth_mod.persist_spaceshipresearch_credentials(creds, label=custom_label)
-        shown_label = entry.label if entry is not None else label_from_token(
-            creds.get("access_token", ""), f"{provider}-oauth-1")
-        print(f'{what} {provider} OAuth {"device-code " if what == "Saved" else ""}credentials: "{shown_label}"')
-        return entry
-
-    # Codex-style auto-import: a shared SpaceshipResearch credential at <scout-root>/shared/spaceshipresearch_auth.json
-    # (written by any previous login) makes `scout --profile <name> auth add spaceshipresearch --type oauth`
-    # a one-tap operation for multi-profile users.
-    if auth_mod._read_shared_spaceshipresearch_state():
-        try:
-            found = f"Found existing SpaceshipResearch OAuth credentials at {auth_mod._spaceshipresearch_shared_store_path()}"
-        except RuntimeError:
-            found = "Found existing shared SpaceshipResearch OAuth credentials"
-        print()
-        print(found)
-        do_import = _ask("Import these credentials? [Y/n]: ")
-        if do_import is None or do_import.lower() in {"", "y", "yes"}:
-            print("Rehydrating SpaceshipResearch session from shared credentials...")
-            rehydrated = auth_mod._try_import_shared_spaceshipresearch_state(timeout_seconds=timeout)
-            if rehydrated is not None:
-                return _persist(rehydrated, "Imported")
-            # Expired refresh_token, portal down, etc. — fall through to device-code.
-            print("Could not refresh shared credentials — falling back to device-code login.")
-
-    creds = auth_mod._spaceshipresearch_device_code_login(
-        portal_base_url=getattr(args, "portal_url", None),
-        inference_base_url=getattr(args, "inference_url", None),
-        client_id=getattr(args, "client_id", None), scope=getattr(args, "scope", None),
-        open_browser=not getattr(args, "no_browser", False), timeout_seconds=timeout,
-        insecure=bool(getattr(args, "insecure", False)), ca_bundle=getattr(args, "ca_bundle", None))
-    return _persist(creds, "Saved")
-
-
 def _unsuppress_provider_sources(provider: str) -> None:
     """Clear ALL suppressions for this provider — re-adding a credential is a strong signal the
     user wants auth re-enabled. Covers env:* (shell-exported vars), gh_cli (copilot), claude_code,
@@ -414,8 +372,6 @@ def auth_add_command(args) -> None:
 def _add_credential(args, provider: str, pool, requested_type: str) -> PooledCredential:
     if requested_type == AUTH_TYPE_API_KEY:
         return _add_api_key_credential(args, provider, pool)
-    if provider == "spaceshipresearch":
-        return _add_spaceshipresearch_oauth_credential(args, provider)
 
     spec = _OAUTH_ADD_SPECS.get(provider)
     if spec is None:
@@ -495,17 +451,6 @@ def auth_priority_command(args) -> None:
     _report_priority(provider, pool, moved, requested, "Set", "to")
 
 
-def _free_tier_lines() -> tuple[str, str]:
-    """The two-line free-tier rendering shared by every auth display surface (R-USR-1)."""
-    from scout_cli.anon_auth import FREE_TIER_LABEL, GUEST_MODEL, UPGRADE_HINT
-    return f"{FREE_TIER_LABEL} · {GUEST_MODEL}", UPGRADE_HINT
-
-
-def _is_free_tier_entry(entry) -> bool:
-    from scout_cli.anon_auth import is_guest_state
-    return is_guest_state(getattr(entry, "extra", None))
-
-
 def auth_list_command(args) -> None:
     provider_filter = _normalize_provider(getattr(args, "provider", "") or "")
     if provider_filter:
@@ -522,13 +467,6 @@ def auth_list_command(args) -> None:
         if not entries:
             continue
         current = pool.peek()
-        if provider == "spaceshipresearch" and all(_is_free_tier_entry(e) for e in entries):
-            # The free tier is not a credential the user added; never list it as one.
-            label, hint = _free_tier_lines()
-            print(f"{provider}: {label}")
-            print(f"  {hint}")
-            print()
-            continue
         print(f"{provider} ({len(entries)} credentials):")
         for idx, entry in enumerate(entries, start=1):
             marker = "← " if current is not None and entry.id == current.id else "  "
@@ -638,12 +576,6 @@ def auth_refresh_command(args) -> None:
         raise SystemExit(
             f"{provider} credential #{index} ({matched.label}) is not a refreshable OAuth "
             f"credential.")
-    # SpaceshipResearch's resolver is singleton-bound, not an independent-account refresher.
-    if provider == "spaceshipresearch" and matched.source != "device_code":
-        raise SystemExit(
-            f"spaceshipresearch credential #{index} ({matched.label}) is not a refreshable OAuth "
-            "credential: only the device_code singleton supports refresh. "
-            "Reauthenticate with `scout auth add spaceshipresearch --type oauth`.")
     refreshed = pool.try_refresh_matching(credential_id=matched.id)
     if refreshed is None:
         after = next((e for e in pool.entries() if e.id == matched.id), None)
@@ -672,12 +604,6 @@ def auth_status_command(args) -> None:
         load_pool(provider)  # runs the forked-grant heal first so the report reflects the consolidated grant
     status = auth_mod.get_auth_status(provider)
     _print_oauth_heal_notices()
-    if status.get("free_tier"):
-        # Free tier: not an account login, so no account fields; point at the upgrade path.
-        label, hint = _free_tier_lines()
-        print(f"{provider}: {label}")
-        print(f"  {hint}")
-        return
     if not status.get("logged_in"):
         reason = status.get("error")
         print(f"{provider}: logged out" + (f" ({reason})" if reason else ""))
@@ -830,8 +756,7 @@ def _interactive_add() -> None:
         return
     auth_add_command(SimpleNamespace(
         provider=provider, auth_type=auth_type, label=label or None, api_key=None,
-        portal_url=None, inference_url=None, client_id=None, scope=None,
-        no_browser=False, timeout=None, insecure=False, ca_bundle=None))
+        no_browser=False, timeout=None))
 
 
 def _interactive_remove() -> None:
@@ -886,18 +811,10 @@ def _interactive_strategy() -> None:
     print(f"Set {provider} strategy to: {strategy}")
 
 
-def auth_upgrade_command(args) -> None:
-    """``scout auth upgrade``: sign the free tier into a SpaceshipResearch account, keeping its connectors."""
-    from scout_cli.anon_auth import upgrade_guest
-    code = upgrade_guest(args)
-    if code:
-        raise SystemExit(code)
-
-
 _AUTH_ACTIONS = {
     "add": auth_add_command, "list": auth_list_command, "remove": auth_remove_command,
     "reset": auth_reset_command, "priority": auth_priority_command, "refresh": auth_refresh_command, "status": auth_status_command,
-    "logout": auth_logout_command, "upgrade": auth_upgrade_command,
+    "logout": auth_logout_command,
     "spotify": auth_spotify_command}
 
 

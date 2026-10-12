@@ -1,117 +1,20 @@
-"""Behavior tests for manage_connections.
-
-DI-callable idiom: a fake client injected through manage_connections'
-seams; no module mocks, no network.
-"""
+"""Behavior tests for manage_connections: the MCP catalog tool and its session reachability."""
 
 import json
-from unittest.mock import patch
 
-
+from tools.connectors.targets import MCP_ACTIONS
 from tools.connectors.tool import MANAGE_CONNECTIONS_SCHEMA, manage_connections
 
 
-class FakeClient:
-    def __init__(self):
-        self.calls = []
-
-    def list_connectors(self, **_):
-        self.calls.append(("list",))
-        return [
-            {"connector": "gmail", "enabled": True, "connected": False},
-            {"connector": "linear", "enabled": True, "connected": True},
-        ]
-
-    def connections(self, connectors, *, reinitiate=False):
-        self.calls.append(("connections", tuple(connectors), reinitiate))
-        return {
-            "results": [
-                {
-                    "connector": c,
-                    "status": "initiated",
-                    "connect_url": f"https://connect.example/{c}",
-                    "instruction": f"finish authorizing {c} in the browser",
-                    "reinitiated": reinitiate,
-                }
-                for c in connectors
-            ],
-            "summary": {"total": len(connectors), "initiated": len(connectors)},
-        }
-
-
-def test_status_lists_and_filters_connectors():
-    client = FakeClient()
-    out = json.loads(
-        manage_connections(
-            {"action": "status", "connectors": ["GMAIL"]},
-            client_factory=lambda: client,
-        )
-    )
-    assert out["connectors"] == [
-        {"connector": "gmail", "enabled": True, "connected": False}
-    ]
-
-
-
-
-
-
-
-
-def test_connect_without_connectors_is_a_usage_error():
-    out = json.loads(
-        manage_connections({"action": "connect"}, client_factory=FakeClient)
-    )
-    assert "requires 'connectors'" in out["error"]
-
-
-def test_disconnect_is_refused_before_any_gateway_call():
-    # De-authentication is user-only: the tool rejects it up front and the
-    # gateway never hears about it.
-    client = FakeClient()
-    out = json.loads(
-        manage_connections(
-            {"action": "disconnect", "connectors": ["gmail"]},
-            client_factory=lambda: client,
-        )
-    )
-    assert "error" in out
-    assert client.calls == []
-
-
-def test_gateway_failure_is_a_model_actionable_error():
-    def exploding():
-        raise RuntimeError("gateway on fire")
-
-    out = json.loads(
-        manage_connections({"action": "status"}, client_factory=exploding)
-    )
-    assert "connector gateway request failed" in out["error"]
-
-
-def test_mcp_actions_belong_to_mcp_targets_only():
-    # The MCP verbs are in the enum for mcp:true targets only. The callback that an earlier
-    # fold could not reach through registry.dispatch now arrives via the inline executor.
+def test_actions_are_the_mcp_verbs_and_need_targets():
     enum = MANAGE_CONNECTIONS_SCHEMA["parameters"]["properties"]["action"]["enum"]
-    assert {"install", "enable", "authorize"} <= set(enum)
+    assert set(enum) == set(MCP_ACTIONS)
 
-    out = json.loads(manage_connections({"action": "install", "connectors": ["linear"]}))
-    assert "mcp" in out["error"] and "install" in out["error"]
-
-    out = json.loads(
-        manage_connections({"action": "connect", "connectors": [{"name": "linear", "mcp": True}]})
-    )
-    assert "managed-connector action" in out["error"]
+    out = json.loads(manage_connections({"action": "install"}))
+    assert "requires 'connectors'" in out["error"]
 
     out = json.loads(manage_connections({"action": "uninstall", "connectors": ["gmail"]}))
     assert "action must be one of" in out["error"]
-
-
-# ---------------------------------------------------------------------------
-# blocking operations are never parallelized
-# ---------------------------------------------------------------------------
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -119,30 +22,30 @@ def test_mcp_actions_belong_to_mcp_targets_only():
 # ---------------------------------------------------------------------------
 
 
-def _session_tool_names(enabled_toolsets, *, connectors, disabled_toolsets=None):
-    """Tool names a session would actually receive, through the real assembly.
+def _session_tool_names(monkeypatch, enabled_toolsets, *, disabled_toolsets=None):
+    """Tool names a session would actually receive, through the real assembly, with the
+    ``tools.connectors.enabled`` opt-in on.
 
     Skips the tool_search step so the assertion is about NAME resolution and
     check_fn, not about how many MCP servers the developer running the suite
     happens to have configured.
     """
     from model_tools import _compute_tool_definitions
+    from tools.connectors import config
     from tools.registry import invalidate_check_fn_cache
 
-    with patch("tools.connectors.gateway.config.connectors_available",
-               return_value=connectors):
+    monkeypatch.setattr(config, "connectors_available", lambda *a, **k: True)
+    invalidate_check_fn_cache()
+    try:
+        defs = _compute_tool_definitions(
+            enabled_toolsets=enabled_toolsets,
+            disabled_toolsets=disabled_toolsets,
+            quiet_mode=True,
+            skip_tool_search_assembly=True,
+        )
+    finally:
         invalidate_check_fn_cache()
-        try:
-            defs = _compute_tool_definitions(
-                enabled_toolsets=enabled_toolsets,
-                disabled_toolsets=disabled_toolsets,
-                quiet_mode=True,
-                skip_tool_search_assembly=True,
-            )
-        finally:
-            invalidate_check_fn_cache()
     return {d["function"]["name"] for d in defs}
-
 
 
 def test_cli_session_gets_the_tool_outside_a_code_workspace(tmp_path, monkeypatch):
@@ -153,9 +56,7 @@ def test_cli_session_gets_the_tool_outside_a_code_workspace(tmp_path, monkeypatc
     enabled = sorted(_get_platform_tools({}, "cli", include_default_mcp_servers=True))
 
     assert "connections" in enabled
-    assert "manage_connections" in _session_tool_names(enabled, connectors=True)
-
-
+    assert "manage_connections" in _session_tool_names(monkeypatch, enabled)
 
 
 def test_tui_and_desktop_sessions_get_the_tool(monkeypatch):
@@ -165,12 +66,12 @@ def test_tui_and_desktop_sessions_get_the_tool(monkeypatch):
     monkeypatch.delenv("SCOUT_TUI_TOOLSETS", raising=False)
     for platform in ("tui", "desktop"):
         selection = _load_enabled_toolsets(platform)
-        names = _session_tool_names(selection, connectors=True)
+        names = _session_tool_names(monkeypatch, selection)
         assert "manage_connections" in names, platform
 
 
 def test_focus_mode_coding_posture_gets_the_tool(monkeypatch):
-    """An engineer pinned to the coding posture still sees their accounts."""
+    """An engineer pinned to the coding posture still sees the connections tool."""
     from pathlib import Path
 
     from agent.coding_context import coding_selection
@@ -181,32 +82,7 @@ def test_focus_mode_coding_posture_gets_the_tool(monkeypatch):
         platform="cli", cwd=str(repo), config={"agent": {"coding_context": "focus"}}
     )
     assert selection == ["coding"]  # posture collapse still collapses
-    assert "manage_connections" in _session_tool_names(selection, connectors=True)
-
-
-def test_session_the_portal_has_not_enabled_never_receives_the_tool(tmp_path, monkeypatch):
-    """The portal gate is the tool's check_fn: a session whose account the portal has not enabled
-    for connectors does not get ``manage_connections`` in its schema on any surface, so the
-    model cannot call it and read the gateway's 404 back to the user. The handler keeps the same
-    gate for the direct RPC path."""
-    from scout_cli.tools_config import _get_platform_tools
-    from tools.registry import registry
-    from tui_gateway.server import _load_enabled_toolsets
-
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("SCOUT_TUI_TOOLSETS", raising=False)
-    selections = [
-        sorted(_get_platform_tools({}, "cli", include_default_mcp_servers=True)),
-        _load_enabled_toolsets("tui"),
-        _load_enabled_toolsets("desktop"),
-        ["coding"],
-    ]
-    for selection in selections:
-        assert "manage_connections" not in _session_tool_names(selection, connectors=False), selection
-
-    with patch("tools.connectors.gateway.config.connectors_available", return_value=False):
-        out = json.loads(registry.dispatch("manage_connections", {"action": "status"}))
-    assert "not available in this session" in out["error"]
+    assert "manage_connections" in _session_tool_names(monkeypatch, selection)
 
 
 def test_operator_can_still_turn_it_off(tmp_path, monkeypatch):
@@ -222,10 +98,10 @@ def test_operator_can_still_turn_it_off(tmp_path, monkeypatch):
     enabled = sorted(_get_platform_tools({}, "cli", include_default_mcp_servers=True))
 
     assert "manage_connections" not in _session_tool_names(
-        enabled, connectors=True, disabled_toolsets=["connections"]
+        monkeypatch, enabled, disabled_toolsets=["connections"]
     )
     assert "manage_connections" in _session_tool_names(
-        enabled, connectors=True, disabled_toolsets=["scout-cli"]
+        monkeypatch, enabled, disabled_toolsets=["scout-cli"]
     )
 
 

@@ -2,7 +2,7 @@
 
 Renders any content as colored ASCII character video. Audio, video, images, text, or pure math in, MP4/GIF/PNG sequence out. Full RGB color per character cell, 1080p 24fps default. No GPU.
 
-Built for [Scout Agent](https://github.com/adityakm24/scout). Usable in any coding agent. Canonical source lives here; synced to [`adityakm24/scout/skills/creative/ascii-video`](https://github.com/adityakm24/scout/tree/main/skills/creative/ascii-video) via PR.
+Built for [Scout Agent](https://github.com/adityakm24/scout). Usable in any coding agent.
 
 ## What this is
 

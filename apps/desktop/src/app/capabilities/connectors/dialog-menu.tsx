@@ -11,18 +11,14 @@ import {
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
 
-import { openConnectorsAdmin } from './data/portal'
-
 export interface ConnectorDialogMenuProps {
-  onDisconnect?: () => void
-  onReconnect?: () => void
   onRefreshTools: () => void
   /** Delete the server from this computer's mcp.json (asks first). Omitted when
    *  the server isn't the user's to delete. */
   onRemove?: () => void
 }
 
-export function ConnectorDialogMenu({ onDisconnect, onReconnect, onRefreshTools, onRemove }: ConnectorDialogMenuProps) {
+export function ConnectorDialogMenu({ onRefreshTools, onRemove }: ConnectorDialogMenuProps) {
   const { t } = useI18n()
   const copy = t.connectorsPage
 
@@ -34,29 +30,9 @@ export function ConnectorDialogMenu({ onDisconnect, onReconnect, onRefreshTools,
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {onReconnect ? (
-          <DropdownMenuItem className={dropdownMenuRow} onSelect={onReconnect}>
-            {copy.card.verb.reconnect}
-          </DropdownMenuItem>
-        ) : null}
         <DropdownMenuItem className={dropdownMenuRow} onSelect={onRefreshTools}>
           {copy.dialog.menuRefreshTools}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className={dropdownMenuRow} onSelect={() => void openConnectorsAdmin()}>
-          {copy.dialog.orgLink}
-        </DropdownMenuItem>
-        {onDisconnect ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className={cn(dropdownMenuRow, 'text-destructive focus:text-destructive')}
-              onSelect={onDisconnect}
-            >
-              {copy.dialog.disconnect}
-            </DropdownMenuItem>
-          </>
-        ) : null}
         {onRemove ? (
           <>
             <DropdownMenuSeparator />

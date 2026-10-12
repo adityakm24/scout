@@ -322,7 +322,7 @@ class TestBareCustomNoBaseUrlHealsFromConfig:
 #
 # The config-provider fallback above only heals when ``config.model.provider``
 # still points at the custom entry. A user whose global default is a built-in
-# provider (e.g. SpaceshipResearch) but who switched THIS session to a self-hosted model
+# provider (e.g. Fixture Co) but who switched THIS session to a self-hosted model
 # gets no heal: the bare provider is dropped, resume falls back to the default
 # provider, and the default provider's endpoint 404s with "Model '<x>' not
 # found" (the b200/scout-ultra-sft report). The stored MODEL NAME is the one
@@ -334,7 +334,7 @@ ULTRA_URL = "http://b200-cluster:30090/v1"
 ULTRA_CONFIG = {
     # Global default deliberately points at a BUILT-IN provider — the config
     # fallback must not fire; only the model lookup can recover the entry.
-    "model": {"default": "some-spaceshipresearch-model", "provider": "spaceshipresearch"},
+    "model": {"default": "some-openrouter-model", "provider": "openrouter"},
     "providers": {
         "scout-ultra": {
             "api": ULTRA_URL,
@@ -345,7 +345,7 @@ ULTRA_CONFIG = {
 }
 
 ULTRA_LEGACY_CONFIG = {
-    "model": {"default": "some-spaceshipresearch-model", "provider": "spaceshipresearch"},
+    "model": {"default": "some-openrouter-model", "provider": "openrouter"},
     "custom_providers": [
         {
             "name": "scout-ultra",
@@ -498,7 +498,7 @@ class TestOverridesHaveRoutableProvider:
 # Room plumbing sessions are per-member scratch conversations inside a group
 # chat (desktop Bot Mode). They must ALWAYS rebuild from the member profile's
 # current config: restoring the stored model/provider pin from an old row is
-# what left room bots stuck on a stale provider (e.g. "out of SpaceshipResearch credits"
+# what left room bots stuck on a stale provider (e.g. "out of Fixture Co credits"
 # after the profile was switched to ollama-cloud) while the same bots worked
 # fine in DMs. The stored-runtime restore stays intact for normal 1:1 chats.
 #
@@ -507,7 +507,7 @@ class TestOverridesHaveRoutableProvider:
 # "Group:" title shape kept as a legacy fallback for rows created by older
 # desktop builds that never sent the marker.
 #
-# Regression: GH #89497 (room bots hang then report "out of SpaceshipResearch credits").
+# Regression: GH #89497 (room bots hang then report "out of Fixture Co credits").
 
 
 class TestRoomPlumbingRuntimeOverrides:
@@ -518,9 +518,9 @@ class TestRoomPlumbingRuntimeOverrides:
 
         row = {
             "model": "openai/gpt-5.6-luna-pro",
-            "billing_provider": "spaceshipresearch",
+            "billing_provider": "openrouter",
             "model_config": json.dumps(
-                {"model": "openai/gpt-5.6-luna-pro", "provider": "spaceshipresearch", "room_plumbing": True}
+                {"model": "openai/gpt-5.6-luna-pro", "provider": "openrouter", "room_plumbing": True}
             ),
         }
         assert _stored_session_runtime_overrides(row) == {}
@@ -530,7 +530,7 @@ class TestRoomPlumbingRuntimeOverrides:
 
         row = {
             "model": "openai/gpt-5.6-luna-pro",
-            "model_config": {"model": "openai/gpt-5.6-luna-pro", "provider": "spaceshipresearch", "room_plumbing": True},
+            "model_config": {"model": "openai/gpt-5.6-luna-pro", "provider": "openrouter", "room_plumbing": True},
         }
         assert _stored_session_runtime_overrides(row) == {}
 
@@ -543,8 +543,8 @@ class TestRoomPlumbingRuntimeOverrides:
             "title": "Group: Ceo, Product Designer, Cfo, COO, CTO, Coding",
             "hidden": 1,
             "model": "openai/gpt-5.6-luna-pro",
-            "billing_provider": "spaceshipresearch",
-            "model_config": json.dumps({"model": "openai/gpt-5.6-luna-pro", "provider": "spaceshipresearch"}),
+            "billing_provider": "openrouter",
+            "model_config": json.dumps({"model": "openai/gpt-5.6-luna-pro", "provider": "openrouter"}),
         }
         assert _stored_session_runtime_overrides(row) == {}
 
@@ -601,17 +601,17 @@ class TestFollowProfileConfigRuntimeOverrides:
         launch, secondary = tmp_path / "a", tmp_path / "b"
         for home, model in ((launch, "launch/model"), (secondary, "profile/default")):
             home.mkdir()
-            (home / "config.yaml").write_text(f"model:\n  default: {model}\n  provider: spaceshipresearch\n", encoding="utf-8")
+            (home / "config.yaml").write_text(f"model:\n  default: {model}\n  provider: openrouter\n", encoding="utf-8")
             (home / ".env").write_text("", encoding="utf-8")
         stored = "20260919-000000-botc"
         db = SessionDB(db_path=secondary / "state.db")
         db.create_session(stored, "desktop", model="profile/default",
-                          model_config={"model": "profile/default", "provider": "spaceshipresearch", "follow_profile_config": True})
+                          model_config={"model": "profile/default", "provider": "openrouter", "follow_profile_config": True})
         db.append_message(stored, "user", "hi")
         db.append_message(stored, "assistant", "hello")
 
         class _FakeAgent:
-            model, provider, base_url, api_key, api_mode = "profile/default", "spaceshipresearch", "", "", ""
+            model, provider, base_url, api_key, api_mode = "profile/default", "openrouter", "", "", ""
             _session_db = db
 
             def switch_model(self, **kw):
@@ -642,7 +642,7 @@ class TestFollowProfileConfigRuntimeOverrides:
                 server._apply_model_switch("sid-live", live, "glm-5.1")
 
             row = json.loads(db.get_session(stored)["model_config"])
-            assert row["composer_override_profile"] == {"model": "profile/default", "provider": "spaceshipresearch"}
+            assert row["composer_override_profile"] == {"model": "profile/default", "provider": "openrouter"}
             assert row["model"] == "zai/glm-5.1"
 
             def resume():
@@ -656,9 +656,9 @@ class TestFollowProfileConfigRuntimeOverrides:
 
             record = resume()
             assert record["model_override"]["model"] == "zai/glm-5.1"
-            assert record["composer_override_profile"] == {"model": "profile/default", "provider": "spaceshipresearch"}
+            assert record["composer_override_profile"] == {"model": "profile/default", "provider": "openrouter"}
 
-            (secondary / "config.yaml").write_text("model:\n  default: profile/new-default\n  provider: spaceshipresearch\n", encoding="utf-8")
+            (secondary / "config.yaml").write_text("model:\n  default: profile/new-default\n  provider: openrouter\n", encoding="utf-8")
             assert resume().get("model_override") is None
         finally:
             db.close()
@@ -676,7 +676,7 @@ class TestFollowProfileConfigRuntimeOverrides:
         launch, secondary = tmp_path / "a", tmp_path / "b"
         for home, model in ((launch, "launch/model"), (secondary, "profile/default")):
             home.mkdir()
-            (home / "config.yaml").write_text(f"model:\n  default: {model}\n  provider: spaceshipresearch\n")
+            (home / "config.yaml").write_text(f"model:\n  default: {model}\n  provider: openrouter\n")
             (home / ".env").write_text("")
         monkeypatch.setenv("SCOUT_HOME", str(launch))
         monkeypatch.setattr(server, "_scout_home", str(launch))
@@ -692,7 +692,7 @@ class TestFollowProfileConfigRuntimeOverrides:
                 "follow_profile_config": True}})
             assert "error" not in resp, resp
             session = server._sessions[resp["result"]["session_id"]]
-            assert session["composer_override_profile"] == {"model": "profile/default", "provider": "spaceshipresearch"}
+            assert session["composer_override_profile"] == {"model": "profile/default", "provider": "openrouter"}
             assert server._ensure_session_db_row(session)
             db = SessionDB(db_path=secondary / "state.db")
             try:
@@ -711,26 +711,26 @@ class TestFollowProfileConfigRuntimeOverrides:
         """Changing the Bot profile invalidates both stored and live chat pins."""
         import tui_gateway.server as server
 
-        monkeypatch.setattr(server, "_config_model_target", lambda: ("profile/new-default", "spaceshipresearch"))
+        monkeypatch.setattr(server, "_config_model_target", lambda: ("profile/new-default", "openrouter"))
         row = {
             "title": "Bot Chat",
             "model": "openai/gpt-5.6-luna-pro",
             "model_config": json.dumps(
                 {
                     "model": "openai/gpt-5.6-luna-pro",
-                    "provider": "spaceshipresearch",
+                    "provider": "openrouter",
                     "follow_profile_config": True,
-                    "composer_override_profile": {"model": "profile/old-default", "provider": "spaceshipresearch"},
+                    "composer_override_profile": {"model": "profile/old-default", "provider": "openrouter"},
                 }
             ),
         }
         assert server._stored_session_runtime_overrides(row) == {}
 
         session = {
-            "agent": types.SimpleNamespace(model="openai/gpt-5.6-luna-pro", provider="spaceshipresearch"),
-            "model_override": {"model": "openai/gpt-5.6-luna-pro", "provider": "spaceshipresearch"},
-            "composer_override_profile": {"model": "profile/old-default", "provider": "spaceshipresearch"},
-            "config_model_seen": ("profile/old-default", "spaceshipresearch"),
+            "agent": types.SimpleNamespace(model="openai/gpt-5.6-luna-pro", provider="openrouter"),
+            "model_override": {"model": "openai/gpt-5.6-luna-pro", "provider": "openrouter"},
+            "composer_override_profile": {"model": "profile/old-default", "provider": "openrouter"},
+            "config_model_seen": ("profile/old-default", "openrouter"),
         }
         apply_switch = MagicMock()
         monkeypatch.setattr(server, "_apply_model_switch", apply_switch)
@@ -740,7 +740,7 @@ class TestFollowProfileConfigRuntimeOverrides:
         assert "model_override" not in session
         assert session["composer_override_profile"] is None
         apply_switch.assert_called_once_with(
-            "sid", session, "profile/new-default --provider spaceshipresearch",
+            "sid", session, "profile/new-default --provider openrouter",
             confirm_expensive_model=True, pin_session_override=False, persist_override=False,
         )
 
@@ -752,11 +752,11 @@ class TestFollowProfileConfigRuntimeOverrides:
 
         row = {
             "model": "openai/gpt-5.6-luna-pro",
-            "billing_provider": "spaceshipresearch",
+            "billing_provider": "openrouter",
             "model_config": json.dumps(
                 {
                     "model": "openai/gpt-5.6-luna-pro",
-                    "provider": "spaceshipresearch",
+                    "provider": "openrouter",
                     "follow_profile_config": True,
                 }
             ),
@@ -778,9 +778,9 @@ class TestFollowProfileConfigRuntimeOverrides:
                 "title": "Bot Chat",
                 "hidden": hidden,
                 "model": "openai/gpt-5.6-luna-pro",
-                "billing_provider": "spaceshipresearch",
+                "billing_provider": "openrouter",
                 "model_config": json.dumps(
-                    {"model": "openai/gpt-5.6-luna-pro", "provider": "spaceshipresearch"}
+                    {"model": "openai/gpt-5.6-luna-pro", "provider": "openrouter"}
                 ),
             }
             assert _stored_session_runtime_overrides(row) == {}
@@ -821,12 +821,12 @@ class TestFollowProfileConfigRuntimeOverrides:
             "session_key": "key-1",
             "model_override": {"model": "glm-5.1", "provider": "ollama-cloud"},
             "follow_profile_config": True,
-            "composer_override_profile": {"model": "profile/default", "provider": "spaceshipresearch"},
+            "composer_override_profile": {"model": "profile/default", "provider": "openrouter"},
         }
         server._ensure_session_db_row(session)
         assert captured["model_config"].get("follow_profile_config") is True
         # A pick made before the first send rides the same first-write projection as the marker.
-        assert captured["model_config"].get("composer_override_profile") == {"model": "profile/default", "provider": "spaceshipresearch"}
+        assert captured["model_config"].get("composer_override_profile") == {"model": "profile/default", "provider": "openrouter"}
 
     def test_ensure_db_row_omits_marker_without_contract(self, monkeypatch):
         """Sessions without the contract do NOT get the marker — normal chats
@@ -860,7 +860,7 @@ class TestFollowProfileConfigRuntimeOverrides:
 # _persist_live_session_runtime updated the model column separately. Resume
 # then read the fresh model from the column but the STALE provider/endpoint
 # from model_config, silently routing the chat to the wrong provider (e.g. a
-# VeniceAI/empero endpoint under a model that should run on SpaceshipResearch). The sibling
+# VeniceAI/empero endpoint under a model that should run on Fixture Co). The sibling
 # CLI path (_persist_model_switch_to_session) already deletes stale keys with
 # or-None; the gateway writer must drop them too, not merely omit the write.
 
@@ -900,12 +900,12 @@ class TestRuntimeModelConfigDropsStaleKeys:
         old model as its own."""
         from tui_gateway.server import _runtime_model_config
 
-        agent = _agent_like(model="", provider="spaceshipresearch")
-        existing = {"model": "meituan/longcat-2.0:free", "provider": "spaceshipresearch"}
+        agent = _agent_like(model="", provider="openrouter")
+        existing = {"model": "meituan/longcat-2.0:free", "provider": "openrouter"}
         config = _runtime_model_config(agent, existing)
 
         assert "model" not in config, config
-        assert config["provider"] == "spaceshipresearch"
+        assert config["provider"] == "openrouter"
 
     def test_truthy_provider_overwrites_stale_existing(self):
         from tui_gateway.server import _runtime_model_config
@@ -915,9 +915,9 @@ class TestRuntimeModelConfigDropsStaleKeys:
             "provider": "stealth-ox-alpha",
             "base_url": "https://api.venice.ai/api/v1",
         }
-        config = _runtime_model_config(_agent_like(provider="spaceshipresearch"), existing)
+        config = _runtime_model_config(_agent_like(provider="openrouter"), existing)
 
-        assert config["provider"] == "spaceshipresearch"
+        assert config["provider"] == "openrouter"
         assert config["model"] == "deepseek/deepseek-v4-flash-0731"
 
     def test_resume_overrides_get_no_stale_provider(self):
@@ -939,15 +939,15 @@ class TestRuntimeModelConfigDropsStaleKeys:
         row = {
             "model": "deepseek/deepseek-v4-flash-0731",
             "model_config": json.dumps(config),
-            "billing_provider": "spaceshipresearch",
+            "billing_provider": "openrouter",
         }
         overrides = _stored_session_runtime_overrides(row)
 
         assert overrides["model_override"]["model"] == "deepseek/deepseek-v4-flash-0731"
         # The stale endpoint identity is gone; resume routes through the
         # billing fallback to the profile's real provider.
-        assert overrides["model_override"]["provider"] == "spaceshipresearch"
-        assert overrides["provider_override"] == "spaceshipresearch"
+        assert overrides["model_override"]["provider"] == "openrouter"
+        assert overrides["provider_override"] == "openrouter"
 
 
     def test_existing_none_returns_only_agent_identity(self):
@@ -956,8 +956,8 @@ class TestRuntimeModelConfigDropsStaleKeys:
         crash on the None existing_config."""
         from tui_gateway.server import _runtime_model_config
 
-        config = _runtime_model_config(_agent_like(provider="spaceshipresearch"), None)
+        config = _runtime_model_config(_agent_like(provider="openrouter"), None)
 
-        assert config == {"model": "deepseek/deepseek-v4-flash-0731", "provider": "spaceshipresearch"}
+        assert config == {"model": "deepseek/deepseek-v4-flash-0731", "provider": "openrouter"}
 
 

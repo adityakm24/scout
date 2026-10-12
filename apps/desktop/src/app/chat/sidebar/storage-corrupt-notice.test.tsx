@@ -1,15 +1,12 @@
 import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { $corruptSessionStores, setCorruptSessionStores } from '@/store/session'
 
 import { SidebarStorageCorruptNotice } from './section-states'
 
-const openRecoveryGuide = vi.fn<(href: string) => void>()
-
 beforeEach(() => {
   $corruptSessionStores.set([])
-  openRecoveryGuide.mockClear()
 })
 
 afterEach(cleanup)
@@ -26,7 +23,7 @@ describe('SidebarStorageCorruptNotice', () => {
 
   it('names the damaged profile and gives the non-destructive recovery path', () => {
     setCorruptSessionStores({ default: 'corrupt' })
-    render(<SidebarStorageCorruptNotice openRecoveryGuide={openRecoveryGuide} />)
+    render(<SidebarStorageCorruptNotice />)
 
     const notice = screen.getByTestId('storage-corrupt-notice')
 
@@ -37,9 +34,6 @@ describe('SidebarStorageCorruptNotice', () => {
     expect(notice.textContent).toContain('scout sessions recover --source <state.db> --inspect-only')
     // No blanket "run repair" advice: structural damage goes to inspect/restore first.
     expect(notice.textContent).not.toContain('sessions repair')
-
-    screen.getByRole('button', { name: /recovery guide/i }).click()
-    expect(openRecoveryGuide).toHaveBeenCalledWith(expect.stringContaining('/user-guide/session-storage-recovery'))
   })
 
   it('keeps atom identity when a refresh reports the same stores', () => {

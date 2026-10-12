@@ -173,8 +173,7 @@ def mount_spa(application: FastAPI):
         )
         if prefix:
             # Rewrite absolute asset URLs baked into the Vite build to go through the proxy.
-            for attr in ('href="/assets/', 'src="/assets/', 'href="/favicon.ico"', 'href="/fonts/',
-                         'href="/ds-assets/', 'src="/ds-assets/'):
+            for attr in ('href="/assets/', 'src="/assets/', 'href="/favicon.ico"'):
                 html = html.replace(attr, attr.replace('"/', f'"{prefix}/', 1))
         theme_bootstrap = _render_active_theme_bootstrap_css()
         if theme_bootstrap:
@@ -182,7 +181,7 @@ def mount_spa(application: FastAPI):
         html = html.replace("</head>", f"{bootstrap_script}</head>", 1)
         return HTMLResponse(html, headers=_NO_STORE)
 
-    # Built CSS contains absolute ``url(/fonts/...)`` / ``url(/ds-assets/...)`` references that
+    # Built CSS contains absolute ``url(/fonts-terminal/...)`` / ``url(/assets/...)`` references that
     # browsers resolve against the document origin — wrong under a proxy prefix. Intercept CSS
     # BEFORE the StaticFiles mount and rewrite when a prefix is in play.
     @application.get("/assets/{filename}.css")
@@ -193,7 +192,7 @@ def mount_spa(application: FastAPI):
         prefix = _normalise_prefix(request.headers.get("x-forwarded-prefix"))
         css = css_path.read_text(encoding="utf-8-sig")
         if prefix:
-            for asset_dir in ("/fonts/", "/fonts-terminal/", "/ds-assets/", "/assets/"):
+            for asset_dir in ("/fonts-terminal/", "/assets/"):
                 for quote in ("", '"', "'"):
                     css = css.replace(f"url({quote}{asset_dir}", f"url({quote}{prefix}{asset_dir}")
         return Response(

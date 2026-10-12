@@ -44,7 +44,7 @@ class LaunchProfileBleed(AssertionError):
 
 _STRIP_SUFFIXES = ("_API_KEY", "_TOKEN", "_BASE_URL", "_SECRET", "_ACCESS_KEY", "_KEY_ID", "_KEY")
 _STRIP_PREFIXES = ("SCOUT_", "OPENAI", "ANTHROPIC", "OPENROUTER", "AWS_", "AZURE_", "GOOGLE_", "GEMINI",
-                   "PYTEST_", "SPACESHIPRESEARCH_", "XAI_", "LLM_", "CUSTOM_", "TERMINAL_", "TENANT_", "API_SERVER_")
+                   "PYTEST_", "FIXTURECO_", "XAI_", "LLM_", "CUSTOM_", "TERMINAL_", "TENANT_", "API_SERVER_")
 
 
 def real_user_home() -> Path:

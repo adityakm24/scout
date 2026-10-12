@@ -7,8 +7,8 @@ emitter it was typed from — that emitter is the source of truth, the hand-writ
 anything conditional is ``X | None = None``.
 
 A handful of payloads stay ``extra="allow"`` on purpose: their closed shape is owned by another
-module (the skin engine, the pet store, the goal/loop/heartbeat state files, the free-tier bootstrap
-record) or they are watcher signals whose payload is ``{}`` today and may grow. Everything else is
+module (the skin engine, the pet store, the goal/loop/heartbeat state files) or they are watcher
+signals whose payload is ``{}`` today and may grow. Everything else is
 closed, so a drifted emitter fails the suite (``registry.check_payload`` raises under
 ``SCOUT_TEST_ISOLATION``).
 """
@@ -19,7 +19,7 @@ from pydantic import Field
 
 from .base import JsonValue, Payload, WireEnum
 from .common import MessageReaction, SessionLiveInfo, SubagentStatus, ToolLabel, ToolLabelKind, Usage
-from .config_free_tier_control import SessionControlSnapshot
+from .config_control import SessionControlSnapshot
 from .registry import event
 
 
@@ -61,27 +61,6 @@ event("gateway.ready", GatewayReadyPayload,
       doc="First frame of a connection: the resolved skin, the change-event capability and the replay epoch.")
 event("skin.changed", SkinPayload,
       doc="The active skin moved (name switch or live colour edit); repaint from this palette.")
-
-
-class SetupReadyPayload(OpenPayload):
-    """``scout_cli/free_tier_bootstrap.py::SetupRecord.as_payload``."""
-
-    provider_configured: bool
-    inference_provider: str
-    free_tier_account: bool
-    free_tier_route: bool
-    has_identity: bool
-    other_providers: bool
-    error: str = ""
-    # Present only when the free-tier mint did not happen (``anon_auth.MintFailure.as_payload``).
-    error_code: str | None = None
-    retryable: bool | None = None
-    retry_after: int | None = None
-    finished_at: float
-
-
-event("setup.ready", SetupReadyPayload,
-      doc="The free-tier bootstrap finished (broadcast); the desktop's setup gate reads the record.")
 
 
 class ErrorPayload(Payload):
@@ -163,7 +142,6 @@ class BillingBlock(Payload):
     provider_label: str
     model: str
     billing_url: str | None
-    is_spaceshipresearch: bool
     message: str
     unverified: bool | None = None
 
@@ -330,7 +308,7 @@ event("todo.updated", TodoUpdatedPayload, doc="Full todo snapshot after a todo t
 
 
 class NotificationShowPayload(Payload):
-    """``agent/credits_tracker.py::AgentNotice`` via notice_callback, and ``server._await_agent_ready``'s
+    """``agent/notices.py::AgentNotice`` via notice_callback, and ``server._await_agent_ready``'s
     slow-build notice. ``level``: info | warn | error | success; ``kind``: sticky | ttl | agent."""
 
     text: str
@@ -404,17 +382,6 @@ class SessionControlUpdatePayload(Payload):
 
 
 event("session.control.update", SessionControlUpdatePayload, doc="Persisted goal / loop / heartbeat state changed.")
-
-
-class BillingStepUpVerificationPayload(Payload):
-    """``methods_session`` billing.step_up on_verification."""
-
-    verification_url: str
-    user_code: str
-
-
-event("billing.step_up.verification", BillingStepUpVerificationPayload,
-      doc="Device-flow URL + code for the billing scope step-up; the client opens the browser.")
 
 
 # ── side agents (methods_prompt._spawn_side_agent) ────────────────────────────────────────────
@@ -716,7 +683,7 @@ event("bot_relay.outbox.pending", ChangeSignalPayload, doc="A bot-relay outbox e
 
 
 __all__ = [
-    "BillingBlock", "BillingStepUpVerificationPayload", "BrowserControllerCancelPayload",
+    "BillingBlock", "BrowserControllerCancelPayload",
     "BrowserControllerCommandPayload", "BrowserProgressPayload", "ChangeSignalPayload", "ErrorPayload",
     "ErrorSurface", "GatewayReadyPayload", "LayoutApplyPayload", "MessageCompletePayload",
     "MessageInterimPayload", "MessageReaction", "MessageReactionPayload", "MoaAggregatingPayload",
@@ -726,7 +693,7 @@ __all__ = [
     "PreviewOpenPayload", "PreviewRestartProgressPayload", "ReactionPayload", "ResumePhaseStatus",
     "ReviewSummaryPayload", "SessionControlSnapshot", "SessionControlUpdatePayload",
     "SessionReclaimedPayload", "SessionResumeProgressPayload", "SessionTitlePayload", "SessionUsagePayload",
-    "SetupReadyPayload", "SideAgentCompletePayload", "SkinPayload", "StatusUpdatePayload",
+    "SideAgentCompletePayload", "SkinPayload", "StatusUpdatePayload",
     "StreamDeltaPayload", "SubagentEventPayload", "SubagentOutputTailEntry", "TerminalClosePayload",
     "TerminalOutputPayload", "TipShowPayload", "TodoUpdatedPayload", "ToolCompletePayload",
     "ToolGeneratingPayload", "ToolLabel", "ToolLabelKind", "ToolOutputRiskPayload", "ToolStartPayload",

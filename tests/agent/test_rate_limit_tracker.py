@@ -7,9 +7,9 @@ from agent.rate_limit_tracker import (
     parse_rate_limit_headers,
 )
 
-# ── Sample headers from SpaceshipResearch inference API ──────────────────────────────
+# ── Sample headers from Fixture Co inference API ──────────────────────────────
 
-SPACESHIPRESEARCH_HEADERS = {
+FIXTURECO_HEADERS = {
     "x-ratelimit-limit-requests": "800",
     "x-ratelimit-limit-requests-1h": "33600",
     "x-ratelimit-limit-tokens": "8000000",
@@ -26,9 +26,9 @@ SPACESHIPRESEARCH_HEADERS = {
 
 class TestParseHeaders:
     def test_basic_parsing(self):
-        state = parse_rate_limit_headers(SPACESHIPRESEARCH_HEADERS, provider="spaceshipresearch")
+        state = parse_rate_limit_headers(FIXTURECO_HEADERS, provider="fixtureco")
         assert state is not None
-        assert state.provider == "spaceshipresearch"
+        assert state.provider == "fixtureco"
         assert state.has_data
 
         assert state.requests_min.limit == 800

@@ -28,7 +28,7 @@ const NVIDIA_APP: ConnectionOperationTarget = {
   kind: 'plugin',
   name: 'nvidia-app',
   platforms: ['windows'],
-  repo: 'https://github.com/SpaceshipResearch/scout-nvidia',
+  repo: 'https://github.com/example-org/scout-nvidia',
   sha: SHA,
   state: 'pending',
   subdir: 'nvidia-app',

@@ -295,14 +295,6 @@ async def _lifespan(app: "FastAPI"):
 
     threading.Thread(target=_boot_local_runtime, daemon=True, name="local-runtime-boot").start()
 
-    # SpaceshipResearch free tier: the ONE place its identity is created. Inventories credentials, mints only
-    # when SCOUT_GUEST_ONBOARDING=1, records the answer for setup.status / free_tier.status and
-    # broadcasts `setup.ready`. Off-thread so a slow portal never delays the socket; the desktop's
-    # first setup.status waits on the record (bounded) instead.
-    from scout_cli.free_tier_bootstrap import start_background_bootstrap
-
-    start_background_bootstrap()
-
     try:
         yield
     finally:
@@ -445,7 +437,7 @@ app.add_middleware(
 
 # Endpoints that do NOT require the session token; everything else under /api/
 # is gated below. Shared with the OAuth gate so the two allowlists cannot
-# drift (/api/status once 401'd under the OAuth gate, breaking the portal probe).
+# drift (/api/status once 401'd under the OAuth gate, breaking the status probe).
 from scout_cli.dashboard_auth.public_paths import PUBLIC_API_PATHS as _PUBLIC_API_PATHS
 
 
@@ -1061,10 +1053,10 @@ def _no_auth_provider_message(host: str) -> str:
     """
     skip_reasons: list[str] = []
     try:
-        from plugins.dashboard_auth import spaceshipresearch as _spaceshipresearch_plugin
+        from plugins.dashboard_auth import self_hosted as _self_hosted_plugin
 
-        if _spaceshipresearch_plugin.LAST_SKIP_REASON:
-            skip_reasons.append(f"  • spaceshipresearch: {_spaceshipresearch_plugin.LAST_SKIP_REASON}")
+        if _self_hosted_plugin.LAST_SKIP_REASON:
+            skip_reasons.append(f"  • self_hosted: {_self_hosted_plugin.LAST_SKIP_REASON}")
     except Exception:
         pass
 
@@ -1099,8 +1091,8 @@ def _no_auth_provider_message(host: str) -> str:
         "    (hash with: python -c \"from "
         "plugins.dashboard_auth.basic import hash_password; "
         "print(hash_password('your-password'))\")\n"
-        "  • OAuth: run `scout dashboard register` (Scout Portal) or "
-        "install a DashboardAuthProvider plugin.\n"
+        "  • OAuth: configure dashboard.oauth.self_hosted (your own OIDC "
+        "provider) or install a DashboardAuthProvider plugin.\n"
         "There is no unauthenticated public-dashboard option. For "
         "local-only use, bind 127.0.0.1 and leave dashboard.public_url "
         "unset; a configured external public URL requires auth even "
@@ -1544,13 +1536,6 @@ def start_server(
     apply_nofile_soft_limit()
 
     import uvicorn  # noqa: F401 — fail fast (before any side effects) when the dashboard extra is missing
-
-    try:
-        from scout_cli.spaceshipresearch_auth_keepalive import start_spaceshipresearch_auth_keepalive
-
-        start_spaceshipresearch_auth_keepalive()
-    except Exception as exc:
-        _log.debug("SpaceshipResearch auth keepalive did not start: %s", exc)
 
     _configure_auth_gate(host, allow_public, ssh_session_token, ssh_owner_nonce)
 

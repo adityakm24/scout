@@ -35,7 +35,7 @@ interface ResolvedPrimaryRemote {
   headers?: Record<string, string>
   remoteScoutVersion?: string
   remoteHost?: string
-  remoteKind?: 'cloud' | 'ssh' | 'url'
+  remoteKind?: 'ssh' | 'url'
   source?: string
   ssh?: {
     effectiveConfigFingerprint?: string

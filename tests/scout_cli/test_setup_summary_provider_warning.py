@@ -9,7 +9,6 @@ working model configured (consumer-onboarding audit finding #7, Aug 2026).
 from unittest.mock import patch
 
 from scout_cli.auth import AuthError
-from scout_cli import spaceshipresearch_subscription
 
 
 def _summary_output(capsys, provider_ready: bool):
@@ -25,15 +24,13 @@ def _summary_output(capsys, provider_ready: bool):
             )
 
     # Keep the summary fast/hermetic: stub the heavier feature probes.
-    with patch("scout_cli.auth.resolve_provider", resolver), \
-         patch.object(spaceshipresearch_subscription, "get_spaceshipresearch_subscription_features") as feats:
-        feats.side_effect = Exception("stubbed")
+    with patch("scout_cli.auth.resolve_provider", resolver):
         try:
             setup_mod._print_setup_summary({}, "/tmp/nowhere")
         except Exception:
-            # Downstream summary sections may fail from the stubbed
-            # features — the provider warning prints first and is what
-            # this test asserts on.
+            # Downstream summary sections may fail without a real home —
+            # the provider warning prints first and is what this test
+            # asserts on.
             pass
     return capsys.readouterr().out
 
@@ -42,7 +39,6 @@ def test_summary_warns_when_no_provider(capsys):
     out = _summary_output(capsys, provider_ready=False)
     assert "No inference provider is configured" in out
     assert "scout model" in out
-    assert "scout setup --portal" in out
 
 
 def test_summary_quiet_when_provider_ready(capsys):

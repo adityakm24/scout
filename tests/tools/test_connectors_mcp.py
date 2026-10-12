@@ -263,19 +263,6 @@ def test_registry_dispatch_never_blocks_and_never_reaches_a_card(backend):
     assert out["targets"][0]["state"] == TargetState.connected.value
 
 
-def test_a_managed_action_never_accepts_mcp_targets_and_vice_versa():
-    client = FakeClient()
-    out = json.loads(manage_connections(
-        {"action": "connect", "connectors": ["gmail", _linear()]}, client_factory=lambda: client))
-    assert "managed-connector action" in out["error"]
-    assert client.calls == []  # rejected before any gateway call
-
-    out = json.loads(manage_connections({"action": "install", "connectors": ["gmail", _linear()]}))
-    assert "must carry" in out["error"]
-
-
-
-
 def test_unknown_target_fields_are_rejected():
     out = json.loads(manage_connections({"action": "install", "connectors": [_linear(url="https://evil")]}))
     assert "unknown target field" in out["error"] and "url" in out["error"]
@@ -330,13 +317,9 @@ def test_setup_mcp_replay_shim_translates_to_an_mcp_target(backend):
     assert out["targets"][0]["state"] == TargetState.skipped.value
 
 
-
-
 # ---------------------------------------------------------------------------
 # deadline ownership
 # ---------------------------------------------------------------------------
-
-
 
 
 # ---------------------------------------------------------------------------

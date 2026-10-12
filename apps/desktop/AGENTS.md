@@ -109,7 +109,7 @@ backend.
 
 There are three distinct switch shapes, and conflating them is the classic bug:
 
-- A **connection/mode apply** (local ↔ remote ↔ cloud) is the soft re-home:
+- A **connection/mode apply** (local ↔ remote ↔ SSH) is the soft re-home:
   shell mounted, gateway-bound stores explicitly wiped, then reconnect. Query
   invalidation alone cannot evict live session stores — wipe them.
 - A **runtime home change** (switching the underlying `SCOUT_HOME` profile) is
@@ -125,7 +125,7 @@ backend.
 
 ## Cross everything as an observable ladder
 
-Desktop lives at the seams: versions, profiles, local vs remote vs cloud,
+Desktop lives at the seams: versions, profiles, local vs remote vs SSH,
 partially installed runtimes, stale caches, older backends. The durable technique
 for all of it is the same — an ordered ladder of candidates:
 
@@ -215,7 +215,7 @@ renderer (open a pane, read the in-app browser, react to a message) — it is a
 property of the SESSION's client, not of the backend host. Wire its
 availability off the session source the app already sends on `session.create`
 (`source: 'desktop'`), never off an env var on the backend process: that
-process might be a remote or cloud gateway this app merely connected to. See
+process might be a remote gateway this app merely connected to. See
 the root AGENTS.md, "Surface capability is a property of the SESSION."
 
 ## Respect the person using it
@@ -256,9 +256,7 @@ actually run rather than inventing a command; when in doubt, read the scripts.
 
 From `apps/desktop`, use a fresh temporary directory for each rehearsal and run
 `env -u NODE_ENV SCOUT_GUEST_ONBOARDING=1 SCOUT_HOME=<tmp>/.scout SCOUT_DESKTOP_USER_DATA_DIR=<tmp>/electron-user-data npm run dev`
-(replace `<tmp>` with that directory). To use the portal stand-in, add
-`SCOUT_PORTAL_BASE_URL=http://127.0.0.1:8765 SCOUT_ANON_API_SECRET=test-secret SCOUT_SHARED_AUTH_DIR=<tmp>/.scout/shared`
-before `npm run dev`. Stop Electron and its dev server after the run.
+(replace `<tmp>` with that directory). Stop Electron and its dev server after the run.
 
 ## The taste test before you hand off
 
@@ -273,17 +271,3 @@ before `npm run dev`. Stop Electron and its dev server after the run.
   locales?
 
 If any answer is "not sure," that's the part to go verify.
-
-## SpaceshipResearch free tier: state is pulled, never latched in the renderer
-
-The free tier (a SpaceshipResearch identity with no account, `scout_cli/anon_auth.py`) reaches the renderer
-through one JSON-RPC pair: `free_tier.status` (has_guest, enabled, available,
-notice_pending, model, label) read from local auth state with zero network, and
-`free_tier.ack_notice`, which persists the one-time notice flag on the identity itself. The
-first-launch ready screen and the own-key strip are the SAME state rendered for two situations,
-keyed on `notice_pending`; there is no localStorage latch, so the CLI and the desktop cannot
-disagree about whether the notice was shown. Sign-in goes through the existing
-`POST /api/providers/oauth/spaceshipresearch/start` + poll route, which over a free-tier identity registers the
-connector transfer and reports `reason`, `account_email` and `model` on completion; every entry
-point (Billing, status chip, ready screen) opens the one free-tier sign-in dialog. Never branch on
-provider display names: the picker row carries `free_tier_row`, status cards carry `free_tier`.

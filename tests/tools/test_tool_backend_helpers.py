@@ -1,7 +1,6 @@
 """Unit tests for tools/tool_backend_helpers.py.
 
 Tests cover:
-- managed_spaceshipresearch_tools_enabled() subscription-based gate
 - normalize_browser_cloud_provider() coercion
 - coerce_modal_mode() / normalize_modal_mode() validation
 - has_direct_modal_credentials() detection
@@ -16,14 +15,10 @@ from unittest.mock import patch
 
 import pytest
 
-from scout_cli.spaceshipresearch_account import SpaceshipResearchPaidServiceAccessInfo, ScoutPortalAccountInfo
 from tools.tool_backend_helpers import (
     coerce_modal_mode,
     has_direct_modal_credentials,
-    managed_spaceshipresearch_tools_enabled,
-    spaceshipresearch_tool_gateway_unavailable_message,
     normalize_browser_cloud_provider,
-    prefers_gateway,
     resolve_modal_backend_state,
     resolve_openai_audio_api_key,
 )
@@ -31,58 +26,6 @@ from tools.tool_backend_helpers import (
 
 def _raise_import():
     raise ImportError("simulated missing module")
-
-
-# ---------------------------------------------------------------------------
-# managed_spaceshipresearch_tools_enabled
-# ---------------------------------------------------------------------------
-class TestManagedSpaceshipResearchToolsEnabled:
-    """Subscription-based gate: True for paid SpaceshipResearch subscribers."""
-
-    def test_disabled_when_not_logged_in(self, monkeypatch):
-        monkeypatch.setattr(
-            "scout_cli.spaceshipresearch_account.get_scout_portal_account_info",
-            lambda: ScoutPortalAccountInfo(logged_in=False, source="none", fresh=False),
-        )
-        assert managed_spaceshipresearch_tools_enabled() is False
-
-
-    def test_returns_false_on_exception(self, monkeypatch):
-        """Should never crash — returns False on any exception."""
-        monkeypatch.setattr(
-            "scout_cli.spaceshipresearch_account.get_scout_portal_account_info",
-            _raise_import,
-        )
-        assert managed_spaceshipresearch_tools_enabled() is False
-
-
-class TestSpaceshipResearchToolGatewayUnavailableMessage:
-    def test_uses_entitlement_reason_for_logged_in_user(self, monkeypatch):
-        monkeypatch.setattr(
-            "scout_cli.spaceshipresearch_account.get_scout_portal_account_info",
-            lambda force_fresh=False: ScoutPortalAccountInfo(
-                logged_in=True,
-                source="account_api",
-                fresh=True,
-                paid_service_access=False,
-                portal_base_url="https://portal.example.test",
-                paid_service_access_info=SpaceshipResearchPaidServiceAccessInfo(
-                    allowed=False,
-                    reason="no_usable_credits",
-                    has_active_subscription=True,
-                    active_subscription_is_paid=True,
-                    subscription_credits_remaining=0,
-                    purchased_credits_remaining=0,
-                    total_usable_credits=0,
-                ),
-            ),
-        )
-
-        message = spaceshipresearch_tool_gateway_unavailable_message("managed image generation")
-
-        assert "credits are exhausted" in message
-        assert "managed image generation" in message
-        assert "https://portal.example.test/billing" in message
 
 
 # ---------------------------------------------------------------------------
@@ -95,15 +38,13 @@ class TestNormalizeBrowserCloudProvider:
         assert normalize_browser_cloud_provider(None) == "local"
 
 
-
-
 # ---------------------------------------------------------------------------
 # coerce_modal_mode / normalize_modal_mode
 # ---------------------------------------------------------------------------
 class TestCoerceModalMode:
     """Validate and coerce the requested modal execution mode."""
 
-    @pytest.mark.parametrize("value", ["auto", "direct", "managed"])
+    @pytest.mark.parametrize("value", ["auto", "direct"])
     def test_valid_modes_passthrough(self, value):
         assert coerce_modal_mode(value) == value
 
@@ -112,9 +53,10 @@ class TestCoerceModalMode:
 
 
     def test_strips_whitespace(self):
-        assert coerce_modal_mode("  managed  ") == "managed"
+        assert coerce_modal_mode("  direct  ") == "direct"
 
-
+    def test_removed_managed_mode_falls_back_to_auto(self):
+        assert coerce_modal_mode("managed") == "auto"
 
 
 # ---------------------------------------------------------------------------
@@ -159,78 +101,17 @@ class TestHasDirectModalCredentials:
             assert has_direct_modal_credentials() is True
 
 
-# ---------------------------------------------------------------------------
-# prefers_gateway
-# ---------------------------------------------------------------------------
-class TestPrefersGateway:
-    """Honor bool-ish config values for tool gateway routing."""
-
-    def test_returns_false_for_quoted_false(self, monkeypatch):
-        monkeypatch.setattr(
-            "scout_cli.config.load_config",
-            lambda: {"web": {"use_gateway": "false"}},
-        )
-        assert prefers_gateway("web") is False
-
-    def test_returns_true_for_quoted_true(self, monkeypatch):
-        monkeypatch.setattr(
-            "scout_cli.config.load_config",
-            lambda: {"web": {"use_gateway": "true"}},
-        )
-        assert prefers_gateway("web") is True
-
-
-# ---------------------------------------------------------------------------
-# resolve_modal_backend_state
-# ---------------------------------------------------------------------------
 class TestResolveModalBackendState:
-    """Full matrix of direct vs managed Modal backend selection."""
+    """Modal runs on direct credentials or not at all."""
 
-    @staticmethod
-    def _resolve(monkeypatch, mode, *, has_direct, managed_ready, spaceshipresearch_enabled=False):
-        """Helper to call resolve_modal_backend_state with feature flag control."""
-        monkeypatch.setattr(
-            "tools.tool_backend_helpers.managed_spaceshipresearch_tools_enabled",
-            lambda: spaceshipresearch_enabled,
-        )
-        return resolve_modal_backend_state(
-            mode, has_direct=has_direct, managed_ready=managed_ready
-        )
+    @pytest.mark.parametrize("mode", ["auto", "direct", "bogus"])
+    def test_selects_direct_only_with_credentials(self, mode):
+        assert resolve_modal_backend_state(mode, has_direct=True)["selected_backend"] == "direct"
+        assert resolve_modal_backend_state(mode, has_direct=False)["selected_backend"] is None
 
-    # --- auto mode ---
-
-    def test_auto_prefers_managed_when_available(self, monkeypatch):
-        result = self._resolve(monkeypatch, "auto", has_direct=True, managed_ready=True, spaceshipresearch_enabled=True)
-        assert result["selected_backend"] == "managed"
-
-
-    # --- direct mode ---
-
-    def test_direct_selects_direct_when_available(self, monkeypatch):
-        result = self._resolve(monkeypatch, "direct", has_direct=True, managed_ready=True, spaceshipresearch_enabled=True)
-        assert result["selected_backend"] == "direct"
-
-    def test_direct_none_when_no_credentials(self, monkeypatch):
-        result = self._resolve(monkeypatch, "direct", has_direct=False, managed_ready=True, spaceshipresearch_enabled=True)
-        assert result["selected_backend"] is None
-
-    # --- managed mode ---
-
-
-    def test_managed_blocked_when_spaceshipresearch_disabled(self, monkeypatch):
-        result = self._resolve(monkeypatch, "managed", has_direct=True, managed_ready=True, spaceshipresearch_enabled=False)
-        assert result["selected_backend"] is None
-        assert result["managed_mode_blocked"] is True
-
-    # --- return structure ---
-
-
-    # --- invalid mode falls back to auto ---
-
-    def test_invalid_mode_treated_as_auto(self, monkeypatch):
-        result = self._resolve(monkeypatch, "bogus", has_direct=True, managed_ready=False)
-        assert result["requested_mode"] == "auto"
-        assert result["mode"] == "auto"
+    def test_invalid_mode_treated_as_auto(self):
+        result = resolve_modal_backend_state("bogus", has_direct=True)
+        assert result["requested_mode"] == result["mode"] == "auto"
 
 
 # ---------------------------------------------------------------------------

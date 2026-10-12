@@ -42,7 +42,6 @@ async function loadEnglishCatalog(source) {
   const outfile = join(outdir, `en-${process.pid}.mjs`)
   const alias = {
     '@scout/shared/ansi': join(source, 'apps/shared/src/ansi.ts'),
-    '@scout/shared/billing': join(source, 'apps/shared/src/billing-types.ts'),
     '@scout/shared/color': join(source, 'apps/shared/src/color.ts'),
     '@scout/shared/i18n': join(source, 'apps/shared/src/i18n.ts'),
     '@scout/shared/translucency': join(source, 'apps/shared/src/translucency.ts'),

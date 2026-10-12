@@ -8,7 +8,6 @@ plugins under `plugins/model-providers/`; user plugins of the same name override
 |----------|------|----------------|
 | openrouter | API key | `OPENROUTER_API_KEY` |
 | anthropic | API key | `ANTHROPIC_API_KEY` (also `CLAUDE_CODE_OAUTH_TOKEN`) |
-| spaceshipresearch | OAuth device code | `scout auth add spaceshipresearch` (or `SPACESHIPRESEARCH_API_KEY`) |
 | openai-codex | OAuth | `scout auth add openai-codex` |
 | qwen-oauth | OAuth | `scout auth add qwen-oauth` |
 | minimax-oauth | OAuth | `scout auth add minimax-oauth` |

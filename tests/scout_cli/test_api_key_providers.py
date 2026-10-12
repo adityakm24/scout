@@ -34,7 +34,7 @@ from scout_cli.auth import PROVIDER_REGISTRY as _REGISTRY
 
 _EXTRA_ENV_VARS = (
     # Checked directly in resolve_provider("auto"), not via the registry.
-    "OPENROUTER_API_KEY", "SPACESHIPRESEARCH_API_KEY",
+    "OPENROUTER_API_KEY", "FIXTURECO_API_KEY",
     # Base URLs / paths that influence detection but aren't api_key_env_vars.
     "LM_BASE_URL", "KIMI_BASE_URL", "STEPFUN_BASE_URL", "KILOCODE_BASE_URL",
     "GMI_BASE_URL", "OPENAI_BASE_URL",
@@ -444,19 +444,19 @@ class TestHasAnyProviderConfigured:
         import json
         scout_home = self._setup_home(monkeypatch, tmp_path)
         (scout_home / "auth.json").write_text(json.dumps({
-            "active_provider": "spaceshipresearch",
+            "active_provider": "fixtureco",
         }))
         calls = []
 
         def _guarded_status(provider_id):
             calls.append(provider_id)
-            assert provider_id == "spaceshipresearch", "sweep must be skipped"
+            assert provider_id == "fixtureco", "sweep must be skipped"
             return {"logged_in": True}
 
         monkeypatch.setattr("scout_cli.auth.get_auth_status", _guarded_status)
         from scout_cli.main import _has_any_provider_configured
         assert _has_any_provider_configured() is True
-        assert calls == ["spaceshipresearch"], (
+        assert calls == ["fixtureco"], (
             f"provider registry sweep ran before auth.json short-circuit: {calls}"
         )
 

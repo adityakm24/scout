@@ -258,7 +258,7 @@ def _model_consumes_thought_signature(model: Any) -> bool:
 
 def _route_replays_reasoning_details(base_url: Any) -> bool:
     """True when the target route reads replayed ``reasoning_details`` (OpenRouter's unified
-    reasoning array, also consumed by the Scout Portal).
+    reasoning array).
 
     Every other chat-completions endpoint either ignores the field or, when its schema is
     strict (Groq, Mistral, Cerebras, opencode relays: ``property 'reasoning_details' is
@@ -269,7 +269,7 @@ def _route_replays_reasoning_details(base_url: Any) -> bool:
     """
     from utils import base_url_host_matches
 
-    return base_url_host_matches(base_url, "openrouter.ai") or base_url_host_matches(base_url, "spaceshipresearch.com")
+    return base_url_host_matches(base_url, "openrouter.ai")
 
 
 def _has_replayable_thought_signature(extra_content: Any) -> bool:

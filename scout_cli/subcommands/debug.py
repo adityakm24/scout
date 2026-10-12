@@ -22,7 +22,6 @@ Examples:
     scout debug share --expire 30  Keep dpaste.com fallback pastes for 30 days
     scout debug share --local      Print report locally (no upload)
     scout debug share --no-redact  Disable upload-time secret redaction
-    scout debug share --spaceshipresearch       Upload to SpaceshipResearch-internal storage (private)
     scout debug delete <url>       Delete a previously uploaded paste
 """)
     debug_sub = debug_parser.add_subparsers(dest="debug_command")
@@ -50,13 +49,6 @@ Examples:
             "are normally run through agent.redact.redact_sensitive_text "
             "with force=True before upload so credentials are not leaked "
             "into the public paste service.")
-    share_parser.add_argument(
-        "--spaceshipresearch", action="store_true",
-        help="Upload the debug bundle to SpaceshipResearch-internal storage (AWS S3) instead "
-            "of a public paste service. The bundle is private — viewable only "
-            "by SpaceshipResearch staff (and allowlisted Discord mods) via a Google-login-"
-            "gated viewer — and auto-deletes after 14 days. Still force-redacts "
-            "secrets unless --no-redact is also passed.")
     delete_parser = debug_sub.add_parser(
         "delete", help="Delete a paste uploaded by 'scout debug share'")
     delete_parser.add_argument(

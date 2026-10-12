@@ -5,7 +5,7 @@
 # Bot Screen, computer_use and the browser can live INSIDE the sandbox instead of
 # on the gateway host. No Scout runtime in here; the gateway shells in.
 #
-#   docker build -f docker/sandbox-desktop.Dockerfile -t spaceshipresearch/scout-sandbox:desktop .
+#   docker build -f docker/sandbox-desktop.Dockerfile -t ghcr.io/adityakm24/scout-sandbox:desktop .
 #
 # Built locally: docker build -f docker/sandbox-desktop.Dockerfile .
 # on releases and manual dispatch only: it carries no Scout code, so it does not track main.

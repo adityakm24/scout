@@ -41,7 +41,7 @@ def canary(label: str) -> str:
 
 _STRIP_SUFFIXES = ("_API_KEY", "_TOKEN", "_BASE_URL", "_SECRET", "_ACCESS_KEY", "_KEY_ID", "_KEY", "_PASSWORD")
 _STRIP_PREFIXES = ("SCOUT_", "OPENAI", "ANTHROPIC", "OPENROUTER", "AWS_", "AZURE_", "GOOGLE_", "GEMINI",
-                   "PYTEST_", "SPACESHIPRESEARCH_", "XAI_", "LLM_", "CUSTOM_", "TERMINAL_", "API_SERVER_")
+                   "PYTEST_", "FIXTURECO_", "XAI_", "LLM_", "CUSTOM_", "TERMINAL_", "API_SERVER_")
 _DROP = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy",
          "XDG_STATE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME",
          # no route to the developer's systemd --user bus

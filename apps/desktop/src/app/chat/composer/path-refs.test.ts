@@ -58,7 +58,7 @@ describe('pathifyRefs', () => {
   })
 
   it('leaves an email alone', () => {
-    expect(pathifyRefs('mail me at brooklyn@spaceshipresearch.dev/x')).toBe('mail me at brooklyn@spaceshipresearch.dev/x')
+    expect(pathifyRefs('mail me at brooklyn@fixtureco.example/x')).toBe('mail me at brooklyn@fixtureco.example/x')
   })
 
   it('is a no-op without an @', () => {

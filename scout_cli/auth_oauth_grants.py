@@ -23,32 +23,21 @@ logger = logging.getLogger("scout_cli.auth")
 # ``refresh_token_reused``.
 # Profiles must never receive a copy: ONE grant lives at the global root and named profiles read
 # it through the ``read_credential_pool`` root fallback.
-SINGLE_USE_REFRESH_POOL_PROVIDERS = frozenset({"anthropic", "openai-codex", "xai-oauth", "spaceshipresearch"})
+SINGLE_USE_REFRESH_POOL_PROVIDERS = frozenset({"anthropic", "openai-codex", "xai-oauth"})
 
 # Singleton credential files holding the same single-use grants outside ``auth.json``. Copying one
 # into a profile re-seeds a forked pool row on the profile's next ``load_pool()``.
 SINGLE_USE_OAUTH_SINGLETON_FILES = (".anthropic_oauth.json",)
 
 # Providers whose device-code grants live under ``providers.<id>`` (not only the pool).
-# Only a block carrying a refresh token is a forkable grant: an agent_key-only ``spaceshipresearch`` block is
-# not single-use and must survive.
-_DEVICE_CODE_BLOCK_PROVIDERS = ("openai-codex", "xai-oauth", "spaceshipresearch")
+# Only a block carrying a refresh token is a forkable grant.
+_DEVICE_CODE_BLOCK_PROVIDERS = ("openai-codex", "xai-oauth")
 
 
 def _block_tokens(block: Dict[str, Any]) -> Dict[str, Any]:
-    # Codex/xAI nest the pair under ``tokens``; SpaceshipResearch stores it flat on the block.
+    # Codex/xAI nest the pair under ``tokens``; a flat block carries it directly.
     tokens = block.get("tokens")
     return tokens if isinstance(tokens, dict) else block
-
-
-def _is_forkable_pool_row(provider_id: str, entry: Any) -> bool:
-    # An agent_key-only spaceshipresearch row carries no single-use refresh token: it is not a fork, and
-    # stripping it while its providers block survives lets the profile's next load_pool('spaceshipresearch')
-    # write that block over root's shared row. Same refresh_token gate the block strip uses.
-    if not _is_oauth_pool_payload(entry):
-        return False
-    # Pool rows are flat (no ``tokens`` nesting), so read refresh_token directly.
-    return provider_id != "spaceshipresearch" or bool(str(entry.get("refresh_token") or "").strip())
 
 
 def _is_oauth_pool_payload(entry: Any) -> bool:
@@ -116,7 +105,7 @@ def strip_cloned_single_use_oauth_grants(profile_dir: Path) -> Dict[str, Any]:
             if (provider_id not in SINGLE_USE_REFRESH_POOL_PROVIDERS
                     or not isinstance(entries, list)):
                 continue
-            kept = [e for e in entries if not _is_forkable_pool_row(provider_id, e)]
+            kept = [e for e in entries if not _is_oauth_pool_payload(e)]
             if len(kept) != len(entries):
                 changed = True
                 stripped["pool"].append(provider_id)
@@ -438,8 +427,8 @@ class _HealPass:
     def heal_pool_rows(self) -> None:
         kept_rows: List[Any] = []
         for row in self.p_rows:
-            if not _is_forkable_pool_row(self.provider_id, row):
-                # API keys (and agent_key-only spaceshipresearch rows) are safe to duplicate
+            if not _is_oauth_pool_payload(row):
+                # API keys are safe to duplicate
                 kept_rows.append(row)
                 continue
             match_idx = _find_root_counterpart(row, self.r_rows)

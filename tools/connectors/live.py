@@ -63,14 +63,6 @@ def get_by_op_id(op_id: str, *, profile_home: Optional[str] = None) -> Optional[
                      if key == profile_key and operation.op_id == op_id and not operation.settled), None)
 
 
-def find_target(name: str, *, profile_home: Optional[str] = None) -> Optional[ConnectionOperation]:
-    profile_key = _profile_key(profile_home)
-    with _lock:
-        return next((operation for (key, _), operation in _open.items()
-                     if key == profile_key and not operation.settled
-                     and (target := operation.target(name)) is not None and target.kind == "connector"), None)
-
-
 def close(operation: ConnectionOperation) -> None:
     key = (operation.profile_key, operation.session_key)
     with _lock:

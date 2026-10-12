@@ -5,7 +5,7 @@ Verifies that:
 2. The fallback chain index resets so all fallbacks are available again
 3. Context compressor state is restored alongside the runtime
 4. Transient transport errors get one recovery cycle before fallback
-5. Recovery is skipped for aggregator providers (OpenRouter, SpaceshipResearch)
+5. Recovery is skipped for aggregator providers (OpenRouter, Fixture Co)
 6. Non-transport errors don't trigger recovery
 """
 
@@ -498,20 +498,20 @@ class TestTryRecoverPrimaryTransport:
 
 
 
-    def test_allowed_for_spaceshipresearch_anthropic_messages(self):
+    def test_allowed_for_fixtureco_anthropic_messages(self):
         """Portal Claude holds a local Anthropic SDK client — rebuild it."""
         agent = _make_agent(
-            provider="spaceshipresearch",
-            base_url="https://inference-api.spaceshipresearch.com/v1",
+            provider="fixtureco",
+            base_url="https://inference.fixtureco.example/v1",
         )
         agent.api_mode = "anthropic_messages"
         agent.model = "anthropic/claude-opus-4.8"
         agent._primary_runtime.update({
             "api_mode": "anthropic_messages",
             "model": "anthropic/claude-opus-4.8",
-            "provider": "spaceshipresearch",
+            "provider": "fixtureco",
             "anthropic_api_key": "portal-jwt",
-            "anthropic_base_url": "https://inference-api.spaceshipresearch.com/v1",
+            "anthropic_base_url": "https://inference.fixtureco.example/v1",
             "is_anthropic_oauth": False,
         })
         error = _make_transport_error("ReadTimeout")

@@ -2,7 +2,6 @@ import { type ReactNode } from 'react'
 
 import { PanelEmpty } from '@/app/overlays/panel'
 import { Button } from '@/components/ui/button'
-import { ErrorBanner } from '@/components/ui/error-state'
 import { SearchField } from '@/components/ui/search-field'
 import { SegmentedControl } from '@/components/ui/segmented-control'
 import { useI18n } from '@/i18n'
@@ -20,14 +19,10 @@ export interface ConnectorsDirectoryProps {
   /** An account card shown above the groups (Google Workspace), when it matches the search. */
   featured?: ReactNode
   filter: ConnectorsFilter
-  hostedFailed?: boolean
   loading?: boolean
-  notices?: ReactNode
   onFilterChange: (next: ConnectorsFilter) => void
   onOpen: (card: ConnectorCardModel) => void
-  onPrefetch?: (card: ConnectorCardModel) => void
   onReload?: (card: ConnectorCardModel) => void
-  onRetryHosted?: () => void
   onServerToggle?: (card: ConnectorCardModel, next: boolean) => void
   onVerb?: (card: ConnectorCardModel) => void
   selectedKey?: null | string
@@ -39,22 +34,17 @@ export function ConnectorsDirectory({
   cards,
   featured,
   filter,
-  hostedFailed = false,
   loading = false,
-  notices,
   onFilterChange,
   onOpen,
-  onPrefetch,
   onReload,
-  onRetryHosted,
   onServerToggle,
   onVerb,
   selectedKey = null
 }: ConnectorsDirectoryProps) {
   const { t } = useI18n()
   const copy = t.connectorsPage
-  const where = copy.residencyLocal
-  const segmentLabel = (id: ConnectorSegmentId) => (id === 'local' ? where : copy.segment[id])
+  const segmentLabel = (id: ConnectorSegmentId) => copy.segment[id]
   const set = (patch: Partial<ConnectorsFilter>) => onFilterChange({ ...filter, ...patch })
 
   const { groups, hiddenMatches, segment, segments } = derivePage(cards, filter)
@@ -113,20 +103,6 @@ export function ConnectorsDirectory({
         </>
       )}
 
-      {notices}
-
-      {hostedFailed && onRetryHosted ? (
-        <ErrorBanner className="shrink-0 items-center">
-          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-            <span className="font-medium">{copy.page.hostedFailedTitle}</span>
-            <span className="opacity-80">{copy.page.hostedFailedBody}</span>
-            <Button className="text-destructive" onClick={onRetryHosted} size="xs" variant="text">
-              {copy.page.retry}
-            </Button>
-          </span>
-        </ErrorBanner>
-      ) : null}
-
       {loading ? (
         <ToolsWash label={copy.page.loading} rows={10} />
       ) : groups.length > 0 ? (
@@ -138,21 +114,17 @@ export function ConnectorsDirectory({
               group={group}
               key={group.id}
               onOpen={onOpen}
-              onPrefetch={onPrefetch}
               onReload={onReload}
               onServerToggle={onServerToggle}
               onVerb={onVerb}
               selectedKey={selectedKey}
-              where={where}
             />
           ))}
         </div>
       ) : featured ? (
         <div className="grid min-h-0 flex-1 content-start overflow-y-auto pb-4">{featured}</div>
       ) : cards.length === 0 ? (
-        hostedFailed ? null : (
-          <PanelEmpty action={addYourOwn} icon="plug" title={copy.page.emptyTitle} />
-        )
+        <PanelEmpty action={addYourOwn} icon="plug" title={copy.page.emptyTitle} />
       ) : (
         <PanelEmpty
           action={
@@ -176,22 +148,18 @@ function Group({
   busyKey,
   group,
   onOpen,
-  onPrefetch,
   onReload,
   onServerToggle,
   onVerb,
-  selectedKey,
-  where
+  selectedKey
 }: {
   busyKey: null | string
   group: ConnectorGroupModel
   onOpen: (card: ConnectorCardModel) => void
-  onPrefetch?: (card: ConnectorCardModel) => void
   onReload?: (card: ConnectorCardModel) => void
   onServerToggle?: (card: ConnectorCardModel, next: boolean) => void
   onVerb?: (card: ConnectorCardModel) => void
   selectedKey: null | string
-  where: string
 }) {
   const { t } = useI18n()
   const copy = t.connectorsPage.group
@@ -200,7 +168,7 @@ function Group({
     <section className="grid gap-2">
       <header className="flex items-center gap-2">
         <h3 className="text-sm font-semibold text-(--ui-text-primary)">
-          {group.id === 'local' ? where : copy[group.id]}
+          {copy[group.id]}
         </h3>
         <span className="tabular-nums text-xs text-(--ui-text-tertiary)">{group.cards.length}</span>
 
@@ -218,7 +186,6 @@ function Group({
               card={card}
               key={key}
               onOpen={() => onOpen(card)}
-              onPrefetch={onPrefetch ? () => onPrefetch(card) : undefined}
               onReload={onReload ? () => onReload(card) : undefined}
               onServerToggle={onServerToggle ? next => onServerToggle(card, next) : undefined}
               onVerb={onVerb ? () => onVerb(card) : undefined}

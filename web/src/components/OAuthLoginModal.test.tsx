@@ -35,12 +35,12 @@ let container: HTMLDivElement;
 let root: Root;
 
 const provider = {
-  cli_command: "scout login spaceshipresearch",
+  cli_command: "scout auth add openai-codex",
   disconnectable: true,
-  docs_url: "https://example.com/spaceshipresearch",
+  docs_url: "https://example.com/openai-codex",
   flow: "device_code" as const,
-  id: "spaceshipresearch",
-  name: "Scout Portal",
+  id: "openai-codex",
+  name: "ChatGPT or Codex Subscription",
   status: { logged_in: false },
 };
 
@@ -51,7 +51,7 @@ function deviceStart(expiresIn: number) {
     poll_interval: 5,
     session_id: "sess-1",
     user_code: "ABCD-EFGH",
-    verification_url: "https://portal.example/device",
+    verification_url: "https://auth.example/device",
   };
 }
 
@@ -109,7 +109,7 @@ describe("OAuthLoginModal local expiry", () => {
       session_id: "sess-1",
       status: "error",
       error_message:
-        "Timed out waiting for device authorization. Portal sign-in is required before the device code can be approved.",
+        "Timed out waiting for device authorization. Sign-in is required before the device code can be approved.",
     });
     await exhaustCountdown(5);
     await act(async () => {
@@ -118,7 +118,7 @@ describe("OAuthLoginModal local expiry", () => {
     await act(async () => {});
 
     expect(container.textContent).toContain(
-      "Portal sign-in is required",
+      "Sign-in is required before the device code",
     );
   });
 
@@ -143,7 +143,7 @@ describe("OAuthLoginModal local expiry", () => {
 
   it("falls back to guidance naming the stalled-tab cause (pkce flow, no poll)", async () => {
     apiMocks.startOAuthLogin.mockResolvedValue({
-      auth_url: "https://portal.example/auth",
+      auth_url: "https://auth.example/auth",
       expires_in: 3,
       flow: "pkce",
       session_id: "sess-1",

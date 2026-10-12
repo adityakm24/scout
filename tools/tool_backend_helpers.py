@@ -12,37 +12,7 @@ from utils import is_truthy_value
 logger = logging.getLogger(__name__)
 _DEFAULT_BROWSER_PROVIDER = "local"
 _DEFAULT_MODAL_MODE = "auto"
-_VALID_MODAL_MODES = {"auto", "direct", "managed"}
-
-
-def managed_spaceshipresearch_tools_enabled(*, force_fresh: bool = False) -> bool:
-    """Coarse gate: entitled to the SpaceshipResearch Tool Gateway (paid Portal access OR a live free
-    pool). Fails closed on unknown/error — never blocks startup. Callers narrow per category
-    via ``tool_gateway_entitled_for``; ``force_fresh`` is for flows needing a just-bought grant."""
-    try:
-        from scout_cli.spaceshipresearch_account import get_scout_portal_account_info
-        account_info = (get_scout_portal_account_info(force_fresh=True) if force_fresh
-                        else get_scout_portal_account_info())
-        return bool(account_info.logged_in) and account_info.tool_gateway_entitled
-    except Exception:
-        return False
-
-
-def spaceshipresearch_tool_gateway_unavailable_message(capability: str = "the SpaceshipResearch Tool Gateway", *,
-                                          force_fresh: bool = False) -> str:
-    """Return account-aware guidance for an unavailable SpaceshipResearch Tool Gateway path."""
-    try:
-        from scout_cli.spaceshipresearch_account import (
-            format_scout_portal_entitlement_message, get_scout_portal_account_info)
-        message = format_scout_portal_entitlement_message(
-            get_scout_portal_account_info(force_fresh=force_fresh), capability=capability,
-            in_chat=True)
-        if message:
-            return message
-    except Exception:
-        pass
-    return (f"{capability} is unavailable. Run `scout model` to refresh your "
-            "Scout Portal login and billing status.")
+_VALID_MODAL_MODES = {"auto", "direct"}
 
 
 def normalize_browser_cloud_provider(value: object | None) -> str:
@@ -72,23 +42,11 @@ def has_direct_modal_credentials() -> bool:
         return False
 
 
-def resolve_modal_backend_state(modal_mode: object | None, *, has_direct: bool,
-                                managed_ready: bool,
-                                managed_enabled: bool | None = None) -> Dict[str, Any]:
-    """Resolve direct vs managed Modal backend: ``direct``/``managed`` are exclusive; ``auto``
-    prefers managed when available, else direct."""
+def resolve_modal_backend_state(modal_mode: object | None, *, has_direct: bool) -> Dict[str, Any]:
+    """Resolve the Modal backend: direct credentials or nothing."""
     requested_mode = coerce_modal_mode(modal_mode)
-    if managed_enabled is None:
-        managed_enabled = managed_spaceshipresearch_tools_enabled()
-    managed_ok = managed_enabled and managed_ready
-    exclusive = {"managed": "managed" if managed_ok else None,
-                 "direct": "direct" if has_direct else None}
-    selected_backend = exclusive.get(
-        requested_mode, "managed" if managed_ok else "direct" if has_direct else None)
     return {"requested_mode": requested_mode, "mode": requested_mode, "has_direct": has_direct,
-            "managed_ready": managed_ready,
-            "managed_mode_blocked": requested_mode == "managed" and not managed_enabled,
-            "selected_backend": selected_backend}
+            "selected_backend": "direct" if has_direct else None}
 
 
 def _scoped_credential(name: str) -> str:
@@ -179,19 +137,10 @@ def resolve_openai_audio_api_key() -> str:
             or resolve_provider_secret("OPENAI_API_KEY", "openai-api"))
 
 
-def prefers_gateway(config_section: str) -> bool:
-    """True when ``<section>.use_gateway`` is set in config.yaml. Never raises."""
-    try:
-        from scout_cli.config import load_config
-        section = (load_config() or {}).get(config_section)
-        return isinstance(section, dict) and is_truthy_value(section.get("use_gateway"))
-    except Exception:
-        return False
-
-
-# Provider value the managed "SpaceshipResearch Subscription" picker rows write for every category;
-# any other name = that vendor direct; no key = legacy autodetect.
-SPACESHIPRESEARCH_MANAGED_PROVIDER = "spaceshipresearch"
+# Provider value the removed hosted "SpaceshipResearch Subscription" picker rows wrote for every
+# category (``use_gateway: true`` is its older spelling); any other name = that vendor direct; no
+# key = legacy autodetect.
+LEGACY_MANAGED_SELECTION = "spaceshipresearch"
 # Per-capability keys that also count as "this category has been configured".
 _EXTRA_SELECTION_KEYS = {"web": ("search_backend", "extract_backend")}
 # Key(s) carrying the category's provider selection. ``browser.backend`` is the DRIVER
@@ -212,17 +161,17 @@ def _raw_section(section: str) -> Dict[str, Any] | None:
 
 
 def read_selection(section: str) -> str | None:
-    """THE single runtime read of the persisted `scout tools` selection: ``"spaceshipresearch"`` (managed
-    gateway row), a vendor name (direct, own credentials), or ``None`` (never configured ->
-    legacy autodetect allowed). Reads the RAW config.yaml so key presence means "actually
-    written", not "schema default"; a raw ``local`` is therefore a real user selection.
-    Legacy shim: ``use_gateway: true`` was only ever written by the managed row, so it maps
-    to ``"spaceshipresearch"`` regardless of the name key. Never raises."""
+    """THE single runtime read of the persisted `scout tools` selection: a vendor name (direct, own
+    credentials), ``LEGACY_MANAGED_SELECTION`` (the removed hosted gateway row, reported through
+    ``selection_error``), or ``None`` (never configured -> legacy autodetect allowed). Reads the RAW
+    config.yaml so key presence means "actually written", not "schema default"; a raw ``local`` is
+    therefore a real user selection. ``use_gateway: true`` was only ever written by the managed row,
+    so it maps to the legacy selection regardless of the name key. Never raises."""
     raw = _raw_section(section)
     if raw is None:
         return None
     if is_truthy_value(raw.get("use_gateway")):
-        return SPACESHIPRESEARCH_MANAGED_PROVIDER
+        return LEGACY_MANAGED_SELECTION
     for key in _SELECTION_NAME_KEYS.get(section, _DEFAULT_NAME_KEYS):
         text = str(raw.get(key)).strip().lower() if raw.get(key) is not None else ""
         if text:
@@ -246,18 +195,14 @@ def selection_exists(section: str) -> bool:
 # otherwise fail silently at the FIRST tool call with a generic "no registered provider has that
 # name". Used by the startup config check and selection_error(); add removals here, never as
 # one-off string checks:  "web": {"<name>": "the <Name> backend was removed in vX (...)"}
-REMOVED_BACKENDS: Dict[str, Dict[str, str]] = {}
+_HOSTED_GATEWAY_REMOVED = ("the hosted SpaceshipResearch Tool Gateway it used no longer exists; "
+                           "pick a provider with your own key")
+REMOVED_BACKENDS: Dict[str, Dict[str, str]] = {
+    section: {LEGACY_MANAGED_SELECTION: _HOSTED_GATEWAY_REMOVED}
+    for section in ("web", "image_gen", "video_gen", "tts", "stt", "browser")
+}
 
 
-# Backends that once shipped in-tree but were removed. A config that still points at one otherwise fails
-# silently at the FIRST tool call with a generic "no registered provider has that name" — no migration, no
-# startup notice (reported after the Tavily removal in #99199). Both the startup config check
-# (scout_cli.config.validate_config_structure) and selection_error() consult this map so the user learns
-# what actually happened and what to do. Declared data, one policy — add future removals here, never as
-# one-off string checks at call sites.
-# Currently empty: the Tavily removal (#99199) that introduced this registry was reverted by the #99731
-# restore. Future backend removals add an entry here, e.g. "web": {"<name>": "the <Name> backend was removed
-# in vX.Y.Z (...)"},
 def removed_backend_note(section: str, name: str) -> Optional[str]:
     """Explanation for a backend that used to ship in-tree, or None. ``name`` tolerates the
     quoted form callers pass to selection_error()."""

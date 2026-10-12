@@ -9,13 +9,11 @@ import type {
 } from './types'
 
 const STATE_RANK = {
-  available: 5,
+  available: 3,
   broken: 0,
-  connected: 4,
-  connecting: 3,
-  expired: 1,
-  off: 6,
-  unknown: 2
+  connected: 2,
+  connecting: 1,
+  off: 4
 } satisfies Record<ConnectorState, number>
 
 const GROUP_OF = {
@@ -23,15 +21,13 @@ const GROUP_OF = {
   broken: 'connected',
   connected: 'connected',
   connecting: 'connected',
-  expired: 'connected',
-  off: 'off',
-  unknown: 'connected'
+  off: 'off'
 } satisfies Record<ConnectorState, ConnectorGroupId>
 
-const GROUP_ORDER: readonly ConnectorGroupId[] = ['connected', 'local', 'available', 'off']
+const GROUP_ORDER: readonly ConnectorGroupId[] = ['connected', 'available', 'off']
 
 export function groupIdOf(card: ConnectorCardModel): ConnectorGroupId {
-  return card.residency === 'local' && card.state !== 'available' ? 'local' : GROUP_OF[card.state]
+  return GROUP_OF[card.state]
 }
 
 function byStateThenName(a: ConnectorCardModel, b: ConnectorCardModel): number {
@@ -65,7 +61,7 @@ function groupCards(cards: readonly ConnectorCardModel[]): ConnectorGroupModel[]
 }
 
 export function showsAttentionFirst({ cards }: ConnectorGroupModel): boolean {
-  return cards.length > 1 && cards.some(card => card.state === 'broken' || card.state === 'expired')
+  return cards.length > 1 && cards.some(card => card.state === 'broken')
 }
 
 export function derivePage(

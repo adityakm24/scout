@@ -1,10 +1,9 @@
 #!/usr/bin/env -S bash -c 'exec "$BASH" "$(dirname "$0")/_scout-python" "$0" "$@"'
 """Build the Scout Model Catalog — a centralized JSON manifest of curated models.
 
-This script reads the in-repo hardcoded curated lists (``OPENROUTER_MODELS``,
-``_PROVIDER_MODELS["spaceshipresearch"]``) and writes them to a JSON manifest that the
-Scout CLI fetches at runtime. Publishing the catalog through the docs site
-lets maintainers update model lists without shipping a Scout release.
+This script reads the in-repo hardcoded curated list (``OPENROUTER_MODELS``) and writes it to a
+JSON manifest that the Scout CLI can fetch at runtime (``model_catalog.url``), so model lists can
+be updated without shipping a Scout release.
 
 The runtime fetcher falls back to the same in-repo hardcoded lists if the
 manifest is unreachable, so this script is a convenience for keeping the
@@ -33,7 +32,6 @@ os.environ.setdefault("SCOUT_HOME", os.path.join(os.path.expanduser("~"), ".scou
 from scout_cli.models import (  # noqa: E402
     OPENROUTER_MODELS,
     PREFERRED_SILENT_DEFAULT_MODEL,
-    _PROVIDER_MODELS,
 )
 
 OUTPUT_PATH = os.path.join(REPO_ROOT, "scout_cli", "data", "model-catalog.json")
@@ -44,13 +42,6 @@ def _openrouter_entry(mid: str, desc: str) -> dict:
     entry: dict = {"id": mid, "description": desc}
     if mid == PREFERRED_SILENT_DEFAULT_MODEL:
         entry["description"] = desc or "default"
-        entry["default"] = True
-    return entry
-
-
-def _spaceshipresearch_entry(mid: str) -> dict:
-    entry: dict = {"id": mid}
-    if mid == PREFERRED_SILENT_DEFAULT_MODEL:
         entry["default"] = True
     return entry
 
@@ -77,19 +68,6 @@ def build_catalog() -> dict:
                 "models": [
                     _openrouter_entry(mid, desc)
                     for mid, desc in OPENROUTER_MODELS
-                ],
-            },
-            "spaceshipresearch": {
-                "metadata": {
-                    "display_name": "Scout Portal",
-                    "note": (
-                        'The entry labeled "default": true is the model Scout '
-                        "silently lands on when the user never picked one."
-                    ),
-                },
-                "models": [
-                    _spaceshipresearch_entry(mid)
-                    for mid in _PROVIDER_MODELS.get("spaceshipresearch", [])
                 ],
             },
         },

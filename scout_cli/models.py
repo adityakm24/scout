@@ -193,12 +193,6 @@ def _write_openrouter_catalog_disk(curated: list[tuple[str, str]]) -> None:
 _ai_gateway_catalog_cache: list[tuple[str, str]] | None = None
 
 
-# ---------------------------------------------------------------------------
-# Scout Portal free-model helpers — the Portal models endpoint is the source of truth for what is
-# offered (free or paid); we surface it as-is, no local allowlist filtering.
-# ---------------------------------------------------------------------------
-
-
 def _zero_priced(pricing: Any, keys: tuple[str, str], default: str) -> bool:
     """True when both pricing fields parse to 0 (missing fields read as ``default``)."""
     if not isinstance(pricing, dict):
@@ -209,234 +203,11 @@ def _zero_priced(pricing: Any, keys: tuple[str, str], default: str) -> bool:
         return False
 
 
-def _is_subscription_billed(entry: Any) -> bool:
-    """The gateway bills this catalog row to a subscription the account holds, not to credits."""
-    return isinstance(entry, dict) and entry.get("billing_mode") == "subscription"
-
-
-def _is_model_free(model_id: str, pricing: dict[str, dict[str, str]]) -> bool:
-    """Return True if *model_id* costs no credits: zero-cost prompt AND completion pricing, or a row
-    the gateway bills to a subscription."""
-    entry = pricing.get(model_id)
-    return bool(entry) and (_is_subscription_billed(entry) or _zero_priced(entry, ("prompt", "completion"), "1"))
-
-
-def partition_spaceshipresearch_models_by_tier(
-    model_ids: list[str], pricing: dict[str, dict[str, str]], free_tier: bool
-) -> tuple[list[str], list[str]]:
-    """Split SpaceshipResearch models into (selectable, unavailable): free-tier users may only select free models
-    (paid ones are returned as unavailable, shown grayed out)."""
-    if not free_tier or not pricing:  # no pricing → can't determine, show everything
-        return (model_ids, [])
-    selectable = [mid for mid in model_ids if _is_model_free(mid, pricing)]
-    return (selectable, [mid for mid in model_ids if mid not in selectable])
-
-
-def _union_with_portal_recommendations(
-    tier_key: str, curated_ids: list[str], pricing: dict[str, dict[str, str]], portal_base_url: str,
-    *, force_refresh: bool, synthesize_free_pricing: bool,
-) -> tuple[list[str], dict[str, dict[str, str]]]:
-    """Append the Portal's ``<tier_key>`` recommendations missing from ``curated_ids``.
-
-    Curated models show first, Portal-only picks follow. Failures (network, parse, missing field)
-    silently return the inputs unchanged — never block the picker on a Portal-side hiccup.
-    """
-    try:
-        payload = fetch_spaceshipresearch_recommended_models(portal_base_url, force_refresh=force_refresh)
-    except Exception:
-        payload = None
-    block = payload.get(tier_key) if isinstance(payload, dict) else None
-    entries = block if isinstance(block, list) else []
-    portal_ids = [name for entry in entries if (name := _extract_model_name(entry))]
-    if not portal_ids:
-        return (list(curated_ids), dict(pricing))
-
-    augmented_pricing = dict(pricing)
-    if synthesize_free_pricing:
-        for mid in portal_ids:
-            augmented_pricing.setdefault(mid, {"prompt": "0", "completion": "0"})
-    seen = set(curated_ids)
-    return (list(curated_ids) + [mid for mid in portal_ids if mid not in seen], augmented_pricing)
-
-
-def union_with_portal_free_recommendations(
-    curated_ids: list[str], pricing: dict[str, dict[str, str]], portal_base_url: str = "", *,
-    force_refresh: bool = False) -> tuple[list[str], dict[str, dict[str, str]]]:
-    """Curated list + pricing plus the Portal's ``freeRecommendedModels``; Portal-only free picks get a
-    synthetic $0 pricing entry so tier partitioning sees them as free."""
-    return _union_with_portal_recommendations(
-        "freeRecommendedModels", curated_ids, pricing, portal_base_url,
-        force_refresh=force_refresh, synthesize_free_pricing=True)
-
-
-def union_with_portal_paid_recommendations(
-    curated_ids: list[str], pricing: dict[str, dict[str, str]], portal_base_url: str = "", *,
-    force_refresh: bool = False) -> tuple[list[str], dict[str, dict[str, str]]]:
-    """Curated list plus the Portal's ``paidRecommendedModels``; ``pricing`` is deliberately left untouched."""
-    return _union_with_portal_recommendations(
-        "paidRecommendedModels", curated_ids, pricing, portal_base_url,
-        force_refresh=force_refresh, synthesize_free_pricing=False)
-
-
-# Free-tier detection cache, per profile — short so an account upgrade shows within minutes.
-_FREE_TIER_CACHE_TTL: int = 180  # seconds
-_free_tier_cache: dict[str, tuple[bool, float]] = {}  # profile key -> (result, timestamp)
-
-
 def _pricing_profile_key() -> str:
     """Stable profile identity for process-local pricing caches."""
     from scout_constants import scout_home_key
 
     return scout_home_key()
-
-
-def get_cached_spaceshipresearch_free_tier() -> Optional[bool]:
-    """This profile's live cached entitlement, or ``None`` if unknown/expired."""
-    cached = _free_tier_cache.get(_pricing_profile_key())
-    if cached is None or time.monotonic() - cached[1] >= _FREE_TIER_CACHE_TTL:
-        return None
-    return cached[0]
-
-
-def check_spaceshipresearch_free_tier(*, force_fresh: bool = False, cached_only: bool = False) -> bool:
-    """True only when the Scout Portal user is KNOWN to be free-tier (unknown/error → False so this
-    never blocks users). Cached ``_FREE_TIER_CACHE_TTL`` seconds so an upgrade shows within minutes.
-    ``cached_only`` returns the live cached answer or the fail-open ``False`` without contacting Portal."""
-    now = time.monotonic()
-    profile_key = _pricing_profile_key()
-    if not force_fresh:
-        cached_result = get_cached_spaceshipresearch_free_tier()
-        if cached_result is not None:
-            return cached_result
-    if cached_only:
-        return False
-    try:
-        from scout_cli.spaceshipresearch_account import get_scout_portal_account_info
-
-        result = get_scout_portal_account_info(force_fresh=force_fresh).is_free_tier
-    except Exception:
-        result = False  # default to paid on error — don't block users
-    _free_tier_cache[profile_key] = (result, now)
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Scout Portal recommended models — curated paid/free suggestions plus dedicated compaction (aux)
-# and vision picks, TTL-cached per process. Fields read: {paid,free}RecommendedModels:
-# [{modelName}], {paid,free}Recommended{Compaction,Vision}Model: {modelName} | null
-# ---------------------------------------------------------------------------
-
-SPACESHIPRESEARCH_RECOMMENDED_MODELS_PATH = "/api/spaceshipresearch/recommended-models"
-_SPACESHIPRESEARCH_RECOMMENDED_CACHE_TTL: int = 600  # seconds (10 minutes)
-# (result_dict, monotonic timestamp), scoped to the profile and portal.
-_spaceshipresearch_recommended_cache: dict[tuple[str, str], tuple[dict[str, Any], float]] = {}
-
-
-def _spaceshipresearch_recommended_disk_path() -> "Path":
-    from scout_constants import get_scout_home
-    return get_scout_home() / "cache" / "spaceshipresearch_recommended_cache.json"
-
-
-def _read_spaceshipresearch_recommended_disk(base: str) -> tuple[dict[str, Any], float] | None:
-    """Return the last good payload and its age for the freshness check."""
-    blob = _read_json_cache(_spaceshipresearch_recommended_disk_path(), errors=(OSError, json.JSONDecodeError, UnicodeDecodeError))
-    entry = (blob or {}).get(base)
-    data = entry.get("data") if isinstance(entry, dict) else None
-    if not isinstance(data, dict) or not data:
-        return None
-    try:
-        age = time.time() - float(entry.get("ts", 0))
-    except (TypeError, ValueError, OverflowError):
-        age = float("inf")
-    return data, age
-
-
-def _write_spaceshipresearch_recommended_disk(base: str, data: dict[str, Any]) -> None:
-    """Merge ``data`` into the per-base disk map atomically; failures are debug-logged (the in-process
-    cache still works)."""
-    if not data:
-        return
-    path = _spaceshipresearch_recommended_disk_path()
-    try:
-        blob = _read_json_cache(path, errors=(OSError, json.JSONDecodeError, UnicodeDecodeError)) or {}
-        blob[base] = {"data": data, "ts": time.time()}
-        _write_json_cache(path, blob, indent=2)
-    except OSError as exc:
-        logger.debug("spaceshipresearch recommended-models disk cache write failed: %s", exc)
-
-
-def fetch_spaceshipresearch_recommended_models(
-    portal_base_url: str = "", timeout: float = 5.0, *, force_refresh: bool = False
-) -> dict[str, Any]:
-    """Fetch the Portal's public ``/api/spaceshipresearch/recommended-models`` payload (no auth).
-
-    Reuse successful results for ``_SPACESHIPRESEARCH_RECOMMENDED_CACHE_TTL`` seconds, including across
-    process restarts. ``force_refresh`` bypasses both caches. Stale disk data remains a fallback
-    on live failure; reading it never renews its freshness.
-    """
-    base = (portal_base_url or "https://portal.spaceshipresearch.com").rstrip("/")
-    now = time.monotonic()
-    cache_key = (_pricing_profile_key(), base)
-    cached = _spaceshipresearch_recommended_cache.get(cache_key)
-    if not force_refresh and cached is not None and now - cached[1] < _SPACESHIPRESEARCH_RECOMMENDED_CACHE_TTL:
-        return cached[0]
-    disk = _read_spaceshipresearch_recommended_disk(base)
-    if not force_refresh and disk is not None and 0 <= disk[1] < _SPACESHIPRESEARCH_RECOMMENDED_CACHE_TTL:
-        data, age = disk
-        _spaceshipresearch_recommended_cache[cache_key] = (data, now - age)
-        return data
-    try:
-        data = _get_json(
-            f"{base}{SPACESHIPRESEARCH_RECOMMENDED_MODELS_PATH}", timeout=timeout,
-            headers={"Accept": "application/json", "Accept-Encoding": "gzip"}
-        )
-        if not isinstance(data, dict):
-            data = {}
-    except Exception:
-        data = {}
-    if data:
-        _write_spaceshipresearch_recommended_disk(base, data)
-    else:
-        data = disk[0] if disk is not None else data
-    _spaceshipresearch_recommended_cache[cache_key] = (data, now)
-    return data
-
-
-def _resolve_scout_portal_url() -> str:
-    """Best-effort lookup of the Portal base URL the user is authed against."""
-    try:
-        from scout_cli.auth import DEFAULT_SCOUT_PORTAL_URL, get_provider_auth_state
-
-        state = get_provider_auth_state("spaceshipresearch") or {}
-        portal = str(state.get("portal_base_url") or "").strip()
-        return (portal or str(DEFAULT_SCOUT_PORTAL_URL)).rstrip("/")
-    except Exception:
-        return "https://portal.spaceshipresearch.com"
-
-
-def _extract_model_name(entry: Any) -> Optional[str]:
-    """Pull the ``modelName`` field from a recommended-model entry, else None."""
-    model_name = entry.get("modelName") if isinstance(entry, dict) else None
-    return model_name.strip() if isinstance(model_name, str) and model_name.strip() else None
-
-
-def get_spaceshipresearch_recommended_aux_model(
-    *, vision: bool = False, free_tier: Optional[bool] = None, portal_base_url: str = "",
-    force_refresh: bool = False) -> Optional[str]:
-    """The Portal's recommended model for an auxiliary task: free tier → free pick only; paid tier →
-    paid pick, falling back to the free one when the Portal returned ``null`` (staged rollouts)."""
-    base = portal_base_url or _resolve_scout_portal_url()
-    payload = fetch_spaceshipresearch_recommended_models(base, force_refresh=force_refresh)
-    if not payload:
-        return None
-    if free_tier is None:
-        try:
-            free_tier = check_spaceshipresearch_free_tier()
-        except Exception:
-            free_tier = False  # assume paid on detection error — paid users see both fields anyway
-    kind = "Vision" if vision else "Compaction"
-    tiers = ("free",) if free_tier else ("paid", "free")
-    return next((n for t in tiers if (n := _extract_model_name(payload.get(f"{t}Recommended{kind}Model")))), None)
 
 
 def get_preferred_silent_default_model(provider: str = "openrouter") -> str:
@@ -459,39 +230,6 @@ def pick_silent_default_model(model_ids: list[str], provider: str = "openrouter"
     return preferred if preferred in model_ids else (model_ids[0] if model_ids else "")
 
 
-def recommended_spaceshipresearch_default_model() -> dict[str, Any]:
-    """The model a SpaceshipResearch account lands on without choosing one, honouring the account's tier.
-
-    Curated catalog plus the Portal's recommendations for the tier, narrowed to the org's policy,
-    then (free tier) to the rows the tier may select, then :func:`pick_silent_default_model`.
-    Contacts the Portal for a fresh tier read, so never call it on a hot path. Returns
-    ``{"provider": "spaceshipresearch", "model": str, "free_tier": bool}``; ``model`` may be ``""`` when nothing
-    is selectable (callers degrade). Shared by ``GET /api/model/recommended-default`` and the
-    sign-in completion in ``scout_cli.anon_auth`` so both land on the same model.
-    """
-    from scout_cli import models_pricing as mp
-    from scout_cli.auth import get_provider_auth_state
-
-    model_ids = get_curated_spaceshipresearch_model_ids()
-    pricing = mp.get_pricing_for_provider("spaceshipresearch") or {}
-    free_tier = check_spaceshipresearch_free_tier(force_fresh=True)
-    try:
-        portal_url = (get_provider_auth_state("spaceshipresearch") or {}).get("portal_base_url", "") or ""
-    except Exception:
-        portal_url = ""
-    # Narrow to policy BEFORE the tier split, so a rescued id still has to pass the free/paid predicate.
-    policy_allowed = mp.spaceshipresearch_policy_allowed_ids()
-    union = union_with_portal_free_recommendations if free_tier else union_with_portal_paid_recommendations
-    model_ids, pricing = union(model_ids, pricing, portal_url)
-    model_ids = mp.restrict_to_spaceshipresearch_policy(model_ids, policy_allowed, rescue_empty=True)
-    if free_tier:
-        model_ids, _unavailable = partition_spaceshipresearch_models_by_tier(model_ids, pricing, free_tier=True)
-        # Never default onto a subscription-billed row: spending that plan is the user's call.
-        model_ids = [mid for mid in model_ids if not _is_subscription_billed(pricing.get(mid))] or model_ids
-    return {"provider": "spaceshipresearch", "model": pick_silent_default_model(model_ids, provider="spaceshipresearch"),
-            "free_tier": bool(free_tier)}
-
-
 def get_default_model_for_provider(provider: str) -> str:
     """Cost-safe default model for a provider, or "" — the NON-INTERACTIVE fallback when a provider
     is configured but no model was ever selected."""
@@ -511,8 +249,8 @@ def _openrouter_model_is_free(pricing: Any) -> bool:
 
 def _openrouter_model_supports_tools(item: Any) -> bool:
     """True when ``supported_parameters`` advertises ``tools`` (scout-agent is tool-calling-first).
-    Permissive when the field is absent/malformed: some OpenRouter-compatible gateways (Scout Portal,
-    private mirrors) don't populate it, and the picker must not silently empty for them.
+    Permissive when the field is absent/malformed: some OpenRouter-compatible gateways (private
+    mirrors) don't populate it, and the picker must not silently empty for them.
 
     Ported from Kilo-Org/kilocode#9068.
     """
@@ -520,7 +258,7 @@ def _openrouter_model_supports_tools(item: Any) -> bool:
     return "tools" in params if isinstance(params, list) else True
 
 
-# Reasoning-capability cache slots, one set per catalog (OpenRouter, Scout Portal). The logic
+# Reasoning-capability cache slots for the OpenRouter catalog. The logic
 # lives in models_reasoning_caps and reads/writes these by name so tests can reset them here.
 # ``*_cache``: model id → parsed caps for the process lifetime; ``*_failed_at``: monotonic time
 # of the last failed fetch (60s re-fetch suppression); the flags are once-per-process guards.
@@ -528,12 +266,6 @@ _openrouter_reasoning_caps_cache: dict[str, Optional[dict[str, Any]]] | None = N
 _openrouter_reasoning_caps_failed_at: float | None = None
 _openrouter_caps_disk_checked = False
 _openrouter_caps_warm_started = False
-_spaceshipresearch_reasoning_caps_cache: dict[str, Optional[dict[str, Any]]] | None = None
-_spaceshipresearch_reasoning_caps_failed_at: float | None = None
-_spaceshipresearch_caps_disk_checked = False
-_spaceshipresearch_caps_warm_started = False
-
-
 from agent.reasoning_effort import CODEX_ASTRA_EFFORTS, clamp_effort as _clamp_effort, is_astra_model
 
 
@@ -646,17 +378,6 @@ def fetch_openrouter_models(
 def model_ids(*, force_refresh: bool = False) -> list[str]:
     """Return just the OpenRouter model-id strings."""
     return [mid for mid, _ in fetch_openrouter_models(force_refresh=force_refresh)]
-
-
-def get_curated_spaceshipresearch_model_ids() -> list[str]:
-    """Curated Scout Portal model ids: the remote catalog manifest, else the in-repo
-    ``_PROVIDER_MODELS["spaceshipresearch"]`` snapshot. Always a list."""
-    try:
-        from scout_cli.model_catalog import get_curated_spaceshipresearch_models
-        remote = get_curated_spaceshipresearch_models()
-    except Exception:
-        remote = None
-    return list(remote or _PROVIDER_MODELS.get("spaceshipresearch", []))
 
 
 def _ai_gateway_model_is_free(pricing: Any) -> bool:
@@ -879,7 +600,7 @@ def curated_models_for_provider(
     if normalized == "openrouter":
         return fetch_openrouter_models(force_refresh=force_refresh)
 
-    # Try live API first (Codex, SpaceshipResearch, etc. all support /models)
+    # Try live API first (Codex, OpenRouter, etc. all support /models)
     live = provider_model_ids(normalized)
     if live:
         return [(m, "") for m in live]
@@ -952,14 +673,14 @@ def detect_static_provider_for_model(
     if alias_match:
         return alias_match
 
-    # Step 0: a bare provider name typed as the model (`/model spaceshipresearch`) is a provider switch to that
+    # Step 0: a bare provider name typed as the model (`/model openrouter`) is a provider switch to that
     # provider's default. Skip "custom" (no catalog) and "openrouter" (needs an explicit model).
     resolved_provider = _PROVIDER_ALIASES.get(name_lower, name_lower)
     if resolved_provider not in {"custom", "openrouter"}:
         default_models = _PROVIDER_MODELS.get(resolved_provider, [])
         if resolved_provider in _PROVIDER_LABELS and default_models and resolved_provider not in current_keys:
             # Cost-safe default, not ``default_models[0]``: metered aggregators list most-capable-first,
-            # so [0] would silently escalate `/model spaceshipresearch` to the priciest flagship.
+            # so [0] would silently escalate `/model openrouter` to the priciest flagship.
             return (resolved_provider, get_default_model_for_provider(resolved_provider) or default_models[0])
 
     # A model in the current provider's own catalog never suggests switching.
@@ -1009,10 +730,10 @@ def _configured_provider_ids() -> set[str]:
 
 
 def _resolve_provider_prefix(model_name: str) -> Optional[tuple[str, str]]:
-    """Route an explicit ``vendor/model`` prefix (``spaceshipresearch/deepseek-v4-pro``, ``ollama/qwen3.5:4b``) to
+    """Route an explicit ``vendor/model`` prefix (``deepseek/deepseek-v4-pro``, ``ollama/qwen3.5:4b``) to
     a provider the user defined in ``providers:`` (by raw name or alias) instead of the default.
 
-    ``spaceshipresearch/deepseek-v4-pro`` or ``ollama/qwen3.5:4b`` should route to the named provider instead of falling
+    ``deepseek/deepseek-v4-pro`` or ``ollama/qwen3.5:4b`` should route to the named provider instead of falling
     back to the configured default (which silently sends non-default models to the wrong endpoint, #87189).
     """
     if "/" not in model_name:
@@ -1038,7 +759,7 @@ def detect_provider_for_model(
 
     Never hands back a provider the user holds no credentials for: an unauthenticated guess is
     skipped and the ladder continues (``None`` = stay on the current provider). Exceptions: the user
-    NAMED the provider (``/model spaceshipresearch``), or there is no current provider yet (``auto``) — then the
+    NAMED the provider (``/model openrouter``), or there is no current provider yet (``auto``) — then the
     first guess is returned so the credential step fails loudly instead of silently ignoring input."""
     from scout_cli.models_detect import (
         current_provider_catalog_match, current_provider_owns_vendor, provider_has_credentials)
@@ -1048,7 +769,7 @@ def detect_provider_for_model(
         return None
 
     # The current provider's LIVE catalog outranks every static guess: a model it already serves
-    # (Codex early-access ids, Portal-only slugs, Ollama Cloud models absent from _PROVIDER_MODELS)
+    # (Codex early-access ids, Ollama Cloud models absent from _PROVIDER_MODELS)
     # must never re-route the session to another vendor or to metered OpenRouter.
     served = current_provider_catalog_match(name, current_provider)
     if served is not None:
@@ -1368,22 +1089,6 @@ def _copilot_catalog(normalized: str, force_refresh: bool) -> Optional[list[str]
     return CuratedFallbackModels(_PROVIDER_MODELS.get("copilot", []))
 
 
-def _spaceshipresearch_catalog(normalized: str, force_refresh: bool) -> Optional[list[str]]:
-    try:
-        from scout_cli.auth import fetch_spaceshipresearch_models, resolve_spaceshipresearch_runtime_credentials
-
-        creds = resolve_spaceshipresearch_runtime_credentials()
-        if creds:
-            live = fetch_spaceshipresearch_models(api_key=creds.get("api_key", ""), inference_base_url=creds.get("base_url", ""))
-            if live:
-                return live
-    except Exception:
-        pass
-    # Live failed / no creds: the docs-hosted manifest — NOT the in-repo snapshot — so newly added
-    # Portal models still surface without a Scout release.
-    return get_curated_spaceshipresearch_model_ids() or None
-
-
 def _api_key_credentials(normalized: str) -> tuple[str, str]:
     """``(api_key, base_url)`` from ``resolve_api_key_provider_credentials``; empty strings on any miss."""
     try:
@@ -1513,7 +1218,6 @@ _PROVIDER_CATALOG_FETCHERS: dict[str, Any] = {
     "openai-codex": _codex_catalog,
     "copilot": _copilot_catalog,
     "copilot-acp": _copilot_catalog,
-    "spaceshipresearch": _spaceshipresearch_catalog,
     "stepfun": _api_key_provider_live,
     "gmi": _api_key_provider_live,
     "anthropic": _anthropic_catalog,

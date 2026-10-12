@@ -599,7 +599,7 @@ describe('primary failure foreground isolation', () => {
           connectionId: foregroundId,
           profile: 'default',
           mode: primaryMode === 'local' ? 'remote' : 'local',
-          remoteKind: primaryMode === 'local' ? 'cloud' : undefined,
+          remoteKind: primaryMode === 'local' ? 'url' : undefined,
           authMode: primaryMode === 'local' ? 'oauth' : 'token'
         }))
       })
@@ -643,7 +643,7 @@ describe('primary failure foreground isolation', () => {
     desktop.getConnection.mockResolvedValue({
       ...primaryConn,
       mode: 'remote',
-      remoteKind: 'cloud',
+      remoteKind: 'url',
       authMode: 'oauth'
     } as typeof primaryConn)
     ;(window as { scoutDesktop?: unknown }).scoutDesktop = desktop
@@ -674,10 +674,10 @@ describe('primary failure foreground isolation', () => {
     async path => {
       const error = 'Your remote gateway session has expired.'
 
-      const cloud = {
+      const oauthRemote = {
         ...primaryConn,
         mode: 'remote' as const,
-        remoteKind: 'cloud' as const,
+        remoteKind: 'url' as const,
         authMode: 'oauth' as const
       }
 
@@ -695,7 +695,7 @@ describe('primary failure foreground isolation', () => {
           unsupportedPlatform: null,
           bundled: false
         })),
-        getConnectionConfig: vi.fn(async () => ({ mode: 'cloud', remoteAuthMode: 'oauth', remoteUrl: cloud.baseUrl })),
+        getConnectionConfig: vi.fn(async () => ({ mode: 'remote', remoteAuthMode: 'oauth', remoteUrl: oauthRemote.baseUrl })),
         getConnectionFor: vi.fn(async () => ({
           ...coderConn,
           connectionId: 'local',
@@ -706,7 +706,7 @@ describe('primary failure foreground isolation', () => {
         }))
       })
 
-      desktop.getConnection.mockResolvedValue(cloud as typeof primaryConn)
+      desktop.getConnection.mockResolvedValue(oauthRemote as typeof primaryConn)
 
       ;(window as { scoutDesktop?: unknown }).scoutDesktop = desktop
       const { BootFailureOverlay } = await import('@/components/boot-failure-overlay')

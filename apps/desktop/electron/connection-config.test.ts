@@ -15,7 +15,6 @@ import assert from 'node:assert/strict'
 import { test } from 'vitest'
 
 import { httpStatusError } from './api-transport'
-import { makeSpaceshipResearchCloudBackendDownError } from './backend-health'
 import {
   apiRequestRegistryConnectionId,
   authModeFromStatus,
@@ -139,11 +138,8 @@ test('remoteRequestMatchesBaseUrl treats HTTPS and WSS as the same gateway origi
 
 // --- modeIsRemoteLike ---
 
-test('modeIsRemoteLike is true for remote and cloud, false otherwise', () => {
-  // cloud resolves to a remote backend under the hood (Q6), so every resolution
-  // site treats it like remote.
+test('modeIsRemoteLike is true only for remote', () => {
   assert.equal(modeIsRemoteLike('remote'), true)
-  assert.equal(modeIsRemoteLike('cloud'), true)
   assert.equal(modeIsRemoteLike('local'), false)
   assert.equal(modeIsRemoteLike(undefined), false)
   assert.equal(modeIsRemoteLike(null), false)
@@ -213,22 +209,6 @@ test('profileRemoteOverride preserves normalized remote headers', () => {
   })
 })
 
-test('profileRemoteOverride treats a cloud entry as a remote override', () => {
-  // A 'cloud' per-profile entry resolves to the same remote backend a 'remote'
-  // entry would (Q6) — the override must be returned, not dropped.
-  const config = {
-    profiles: {
-      coder: { mode: 'cloud', url: 'https://agent-1.agents.spaceshipresearch.com', authMode: 'oauth' }
-    }
-  }
-
-  assert.deepEqual(profileRemoteOverride(config, 'coder'), {
-    url: 'https://agent-1.agents.spaceshipresearch.com',
-    authMode: 'oauth',
-    token: undefined
-  })
-})
-
 test('profileRemoteOverride tolerates a missing/!object profiles map', () => {
   assert.equal(profileRemoteOverride({}, 'coder'), null)
   assert.equal(profileRemoteOverride({ profiles: null }, 'coder'), null)
@@ -274,7 +254,7 @@ test('profileRemoteOverride drops invalid or reserved remote profile mappings', 
     undefined
   )
   assert.equal(
-    profileRemoteOverride({ profiles: { p: { mode: 'cloud', url: 'https://x', remoteProfile: 'root' } } }, 'p')
+    profileRemoteOverride({ profiles: { p: { mode: 'remote', url: 'https://x', remoteProfile: 'root' } } }, 'p')
       ?.remoteProfile,
     undefined
   )
@@ -351,14 +331,14 @@ test('normalizeSshConfig strips a pasted "ssh " command prefix', () => {
   })
 })
 
-test('localProfileEntry preserves inactive SSH drafts but drops Cloud state', () => {
+test('localProfileEntry preserves inactive SSH drafts but drops URL-remote state', () => {
   const ssh = { mode: 'ssh', host: 'box', user: 'alice', remoteScoutPath: '/scout' }
   assert.deepEqual(localProfileEntry(ssh), { mode: 'local', savedSsh: ssh })
   assert.deepEqual(localProfileEntry({ mode: 'local', savedSsh: ssh }), {
     mode: 'local',
     savedSsh: ssh
   })
-  assert.equal(localProfileEntry({ mode: 'cloud', url: 'https://agent' }), null)
+  assert.equal(localProfileEntry({ mode: 'remote', url: 'https://agent' }), null)
 })
 
 test('saved SSH drafts are inactive and explicit overrides take precedence', () => {
@@ -1001,12 +981,12 @@ test('resolveProfileApiRequest uses exact method and path eligibility for mixed 
     { backendProfile: null, requestPath: '/api/config/defaults?profile=iris' }
   )
   assert.deepEqual(
-    resolveProfileApiRequest('iris', '/api/model/recommended-default?provider=spaceshipresearch', {
+    resolveProfileApiRequest('iris', '/api/model/recommended-default?provider=openrouter', {
       requestMethod: 'GET'
     }),
     {
       backendProfile: null,
-      requestPath: '/api/model/recommended-default?provider=spaceshipresearch&profile=iris'
+      requestPath: '/api/model/recommended-default?provider=openrouter&profile=iris'
     }
   )
 })
@@ -1194,7 +1174,7 @@ test('buildGatewayWsUrlWithTicket url-encodes the ticket', () => {
 // --- authModeFromStatus ---
 
 test('authModeFromStatus returns oauth when auth_required is true', () => {
-  assert.equal(authModeFromStatus({ auth_required: true, auth_providers: ['spaceshipresearch'] }), 'oauth')
+  assert.equal(authModeFromStatus({ auth_required: true, auth_providers: ['github'] }), 'oauth')
 })
 
 test('authModeFromStatus returns token when auth_required is false/missing', () => {
@@ -1524,56 +1504,14 @@ test('gatewayTicketFailure preserves a structured 503 statusCode as a transport 
 })
 
 test('gatewayTicketFailure only copies an integer statusCode, not a message prefix', () => {
-  // A legacy "503: ..." message carries no structured statusCode; the Cloud
-  // classifier (makeSpaceshipResearchCloudBackendDownError) handles the prefix at the mint
-  // boundary. The wrapper must not invent an integer from the message.
+  // A legacy "503: ..." message carries no structured statusCode. The wrapper
+  // must not invent an integer from the message.
   const source = new Error('503: Service Unavailable') as any
 
   const wrapped = gatewayTicketFailure(source, 'auth message', 'transport message')
 
   assert.equal((wrapped as any).statusCode, undefined)
   assert.equal((wrapped as any).needsOauthLogin, undefined)
-})
-
-// OAuth integration regression (#85373): the WS-ticket mint boundary runs
-// BEFORE waitForScoutReady. This mirrors main.ts buildRemoteConnection's
-// catch — classify a SpaceshipResearch Cloud server fault via the shared factory, else
-// fall through to gatewayTicketFailure. Proves the production composition:
-//   1. Cloud + OAuth ticket mint + 503  -> actionable Cloud-down error
-//   2. Cloud + OAuth ticket mint + 401  -> reauth (never Cloud-down)
-test('OAuth ticket-mint 503 surfaces the Cloud-down error (startup boundary)', () => {
-  const baseUrl = 'https://ares-3009.agents.spaceshipresearch.com'
-  const ticketErr = new Error('upstream unavailable') as any
-  ticketErr.statusCode = 503
-
-  // The exact production sequence from main.ts.
-  const cloudError = makeSpaceshipResearchCloudBackendDownError(baseUrl, ticketErr)
-
-  if (cloudError !== null) {
-    assert.equal((cloudError as any).isCloudBackendDown, true)
-    assert.equal((cloudError as any).statusCode, 503)
-
-    return
-  }
-
-  const wrapped = gatewayTicketFailure(ticketErr, 'auth', 'transport')
-
-  assert.fail(`expected Cloud-down classification, got wrapper: ${wrapped.message}`)
-})
-
-test('OAuth ticket-mint 401 stays on the reauth path (never Cloud-down)', () => {
-  const baseUrl = 'https://ares-3009.agents.spaceshipresearch.com'
-  const ticketErr = new Error('Unauthorized') as any
-  ticketErr.statusCode = 401
-
-  const cloudError = makeSpaceshipResearchCloudBackendDownError(baseUrl, ticketErr)
-  assert.equal(cloudError, null, 'a 401 must not become a Cloud-down error')
-
-  const wrapped = gatewayTicketFailure(ticketErr, 'auth message', 'transport message')
-
-  assert.equal(wrapped.message, 'auth message')
-  assert.equal((wrapped as any).needsOauthLogin, true)
-  assert.equal((wrapped as any).statusCode, 401)
 })
 
 test('FIX #95701: a confirmed 401/403 ticket rejection is tagged isReauthRequired so startScout latches it', () => {

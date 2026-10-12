@@ -85,10 +85,6 @@ def _live_listing(provider: str, runtime: dict) -> list[str]:
         from scout_cli.models import fetch_api_models
 
         return list(fetch_api_models(api_key, base_url, timeout=20.0) or [])
-    if provider == "spaceshipresearch":
-        from scout_cli.auth import fetch_spaceshipresearch_models
-
-        return list(fetch_spaceshipresearch_models(inference_base_url=base_url, api_key=api_key) or [])
     from providers import get_provider_profile
 
     profile = get_provider_profile(provider)

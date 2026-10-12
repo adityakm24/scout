@@ -12,7 +12,7 @@
  * hand-authored ambient declaration rather than ``typeof
  * window.__SCOUT_PLUGIN_SDK__`` because:
  *   1. The runtime object is assembled from many internal modules
- *      (``@/lib/api``, ``@spaceshipresearch/ui``, …). Deriving the type would
+ *      (``@/lib/api``, ``@/ui``, …). Deriving the type would
  *      leak those internal import paths into the public contract and couple
  *      external plugins to the host's internal module layout.
  *   2. A hand-authored contract is the *versioned API boundary* — changing
@@ -31,7 +31,7 @@
  *     ``manifest.sdk_version`` is compatible before executing it?
  *   - The ``components`` map is typed loosely as ``Record<string,
  *     ComponentType>`` here; do we want exact per-component prop types
- *     (pulls @spaceshipresearch/ui types into the contract) or is the loose
+ *     (pulls @/ui types into the contract) or is the loose
  *     shape the right boundary for external authors?
  */
 
@@ -149,7 +149,7 @@ export interface ScoutPluginSDK {
   buildWsAuthParam: BuildWsAuthParam;
 
   /**
-   * Shared UI primitives (SpaceshipResearch DS / shadcn). Typed permissively at the
+   * Shared UI primitives (the dashboard's own UI kit). Typed permissively at the
    * boundary: the host's concrete components (some of which require props like
    * ``active``/``value``/``name``) must be assignable here, and external plugin
    * authors render them dynamically without the host's internal prop types.

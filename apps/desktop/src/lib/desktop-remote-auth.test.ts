@@ -22,20 +22,20 @@ describe('deriveRemoteAuthProviderShape', () => {
 
   it('keeps OAuth copy for redirect providers and mixed deployments', () => {
     expect(
-      deriveRemoteAuthProviderShape([{ name: 'spaceshipresearch', displayName: 'SpaceshipResearch', supportsPassword: false }])
+      deriveRemoteAuthProviderShape([{ name: 'fixtureco', displayName: 'Fixture Co', supportsPassword: false }])
     ).toEqual({
       isPassword: false,
-      providerLabel: 'SpaceshipResearch'
+      providerLabel: 'Fixture Co'
     })
 
     expect(
       deriveRemoteAuthProviderShape([
         { name: 'basic', displayName: 'Username & Password', supportsPassword: true },
-        { name: 'spaceshipresearch', displayName: 'SpaceshipResearch', supportsPassword: false }
+        { name: 'fixtureco', displayName: 'Fixture Co', supportsPassword: false }
       ])
     ).toEqual({
       isPassword: false,
-      providerLabel: 'Username & Password / SpaceshipResearch'
+      providerLabel: 'Username & Password / Fixture Co'
     })
   })
 

@@ -31,7 +31,7 @@ def _wire_body() -> dict:
     """Production-shaped chat body: content parts incl. an image, a tool_calls turn, a tool
     result, function tool schemas, and a caller-populated extra_body (reasoning/provider)."""
     return {
-        "model": "scout-4-70b",
+        "model": "model-4-70b",
         "messages": [
             {"role": "system", "content": "You are Scout."},
             {"role": "user", "content": [
@@ -52,7 +52,7 @@ def _wire_body() -> dict:
         "stream": True,
         "temperature": 0.7,
         "stream_options": {"include_usage": True},
-        "extra_body": {"reasoning": {"effort": "high"}, "provider": {"order": ["spaceshipresearch"]}},
+        "extra_body": {"reasoning": {"effort": "high"}, "provider": {"order": ["fixtureco"]}},
     }
 
 

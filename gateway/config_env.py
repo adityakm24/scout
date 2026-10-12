@@ -461,9 +461,9 @@ def _relay(config: GatewayConfig) -> None:
 
     Relay-exclusive: the GATEWAY_RELAY_URL env stamp means the connector owns every platform
     connection; a directly-connected adapter would be a second unmanaged ingress (duplicate
-    deliveries, split sessions, a socket disarming scale-to-zero). So the env stamp disables all
+    deliveries, split sessions). So the env stamp disables all
     other messaging platforms — even explicitly enabled ones — except non-messaging surfaces (local,
-    api_server, webhook; same set as the scale-to-zero arm gate). relay_url from YAML only keeps the
+    api_server, webhook). relay_url from YAML only keeps the
     additive behavior. Opt out with GATEWAY_RELAY_ALLOW_DIRECT_PLATFORMS=true.
     """
     relay_url_env = getenv("GATEWAY_RELAY_URL").strip()

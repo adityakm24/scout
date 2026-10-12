@@ -71,7 +71,7 @@ def test_failed_commit_summary_publishes_downloads_or_run_links(tmp_path, r2_ser
     jobs = _workflow()['jobs']
     summary_job = commit_summary(jobs)
     bundle_env = {'SCOUT_HOME': None, 'SCOUT_SKIP_INTRO': '',
-                  'SCOUT_SHARED_AUTH_DIR': '<script>\n"café" & value</script>'}
+                  'SCOUT_DESKTOP_USER_DATA_DIR': '<script>\n"café" & value</script>'}
     env = dict(SCOUT_BUILD_COMMIT=sha, SCOUT_PAYLOAD_TAG='', RELEASE_COMMIT=sha,
                GITHUB_REPOSITORY='fixture-owner/fixture-repo',
                SCOUT_BUNDLE_ENV_JSON=json.dumps(bundle_env), CI_SECRET='must-not-appear',
@@ -98,7 +98,7 @@ def test_failed_commit_summary_publishes_downloads_or_run_links(tmp_path, r2_ser
     assert f'href="https://github.com/fixture-owner/fixture-repo/commit/{sha}"' in page
     assert 'Bundle environment' in page and 'SCOUT_HOME' in page and 'Unset' in page
     assert '<code>SCOUT_SKIP_INTRO</code></td><td><code>&quot;&quot;</code>' in page
-    assert html.escape(json.dumps(bundle_env['SCOUT_SHARED_AUTH_DIR'], ensure_ascii=False)) in page
+    assert html.escape(json.dumps(bundle_env['SCOUT_DESKTOP_USER_DATA_DIR'], ensure_ascii=False)) in page
     assert '<script>' not in page and 'must-not-appear' not in page and 'CI_SECRET' not in page
     links = re.findall(r'\]\((https?://[^)]+)\)', text)
     download_links = [url for url in links if url.endswith('.msix')]

@@ -41,7 +41,6 @@ class TestCatalogCapabilityCoverage(unittest.TestCase):
         self.assertFalse(caps.get("supports_upscale", False))
 
 
-
 class TestDynamicParamGating(unittest.TestCase):
     def _schema_for(self, model_id):
         with patch.object(ig, "_resolve_fal_model",
@@ -100,30 +99,12 @@ class TestDynamicParamGating(unittest.TestCase):
         self.assertEqual(sorted(props), ["aspect_ratio", "prompt"])
         self.assertNotIn("upscale", props)
 
-    def test_managed_krea_model_advertises_krea_edit_args_and_upscale(self):
-        """provider spaceshipresearch + a Krea model id is served by the Krea gateway, so the
-        schema must advertise what the Krea plugin declares, not the FAL catalog."""
-        from plugins.image_gen.krea import KreaImageGenProvider
-
-        with patch.object(ig, "_read_configured_image_provider",
-                          return_value="spaceshipresearch"), \
-             patch.object(ig, "_read_configured_image_model",
-                          return_value="krea-2-medium"):
-            schema = _build_dynamic_image_schema()
-        props = schema["parameters"]["properties"]
-        self.assertIn("image_url", props)
-        self.assertEqual(
-            props["reference_image_urls"]["maxItems"],
-            KreaImageGenProvider().capabilities()["max_reference_images"],
-        )
-        self.assertIn("upscale", props)
 
     def test_static_schema_carries_no_capability_args(self):
         """The registration-time placeholder must stay minimal — dynamic
         overrides own the capability args (do-not-re-add guard)."""
         props = IMAGE_GENERATE_SCHEMA["parameters"]["properties"]
         self.assertEqual(sorted(props), ["aspect_ratio", "prompt"])
-
 
 
 if __name__ == "__main__":

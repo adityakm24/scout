@@ -2,13 +2,11 @@ import importlib
 import sys
 import types
 from contextlib import nullcontext
-from types import SimpleNamespace
 
 import pytest
 
 from scout_cli.auth import AuthError
 from scout_cli import main as scout_main
-import scout_cli.main_provider_setup as scout_cli_main_provider_setup
 from scout_cli import model_switch
 
 
@@ -131,10 +129,10 @@ def test_provider_flag_uses_named_custom_default_model(monkeypatch):
     monkeypatch.setitem(
         cli.CLI_CONFIG,
         "model",
-        {"default": "tencent/hy3:free", "provider": "spaceshipresearch"},
+        {"default": "tencent/hy3:free", "provider": "fixtureco"},
     )
     config = {
-        "model": {"default": "tencent/hy3:free", "provider": "spaceshipresearch"},
+        "model": {"default": "tencent/hy3:free", "provider": "fixtureco"},
         "providers": {
             "gmk-lan": {
                 "name": "GMK Local",
@@ -159,10 +157,10 @@ def test_explicit_model_wins_over_provider_default_model(monkeypatch):
     monkeypatch.setitem(
         cli.CLI_CONFIG,
         "model",
-        {"default": "tencent/hy3:free", "provider": "spaceshipresearch"},
+        {"default": "tencent/hy3:free", "provider": "fixtureco"},
     )
     config = {
-        "model": {"default": "tencent/hy3:free", "provider": "spaceshipresearch"},
+        "model": {"default": "tencent/hy3:free", "provider": "fixtureco"},
         "providers": {
             "gmk-lan": {
                 "name": "GMK Local",
@@ -183,7 +181,6 @@ def test_explicit_model_wins_over_provider_default_model(monkeypatch):
     )
 
     assert shell.model == "explicit-id"
-
 
 
 @pytest.mark.parametrize(
@@ -241,7 +238,7 @@ def test_provider_flag_logs_when_custom_default_model_cannot_resolve(monkeypatch
     monkeypatch.setitem(
         cli.CLI_CONFIG,
         "model",
-        {"default": "tencent/hy3:free", "provider": "spaceshipresearch"},
+        {"default": "tencent/hy3:free", "provider": "fixtureco"},
     )
 
     def _boom(_name):
@@ -260,8 +257,6 @@ def test_provider_flag_logs_when_custom_default_model_cannot_resolve(monkeypatch
         "gmk-lan" in rec.getMessage() and "catalog unavailable" in rec.getMessage()
         for rec in caplog.records
     )
-
-
 
 
 def test_runtime_resolution_failure_is_not_sticky(monkeypatch):
@@ -319,8 +314,6 @@ def test_ensure_runtime_credentials_passes_cli_model_as_target_model(monkeypatch
     assert shell._ensure_runtime_credentials() is True
     assert seen["requested"] == "opencode-go"
     assert seen["target_model"] == "mimo-v2.5"
-
-
 
 
 def test_fallback_runtime_resolves_the_fallback_entry_model(monkeypatch, tmp_path):
@@ -428,88 +421,6 @@ def test_ensure_runtime_credentials_records_quota_vs_bad_key(monkeypatch, tmp_pa
     assert bad_shell._credentials_rate_limited is False
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-def test_model_flow_spaceshipresearch_does_not_restore_stale_custom_api_key(tmp_path, monkeypatch):
-    import scout_yaml as yaml
-
-    config_home = tmp_path / "scout"
-    config_home.mkdir()
-    monkeypatch.setenv("SCOUT_HOME", str(config_home))
-
-    config_path = config_home / "config.yaml"
-    config_path.write_text(
-        yaml.safe_dump(
-            {
-                "model": {
-                    "provider": "custom",
-                    "default": "glm-5.2",
-                    "base_url": "https://api.neuralwatt.com/v1",
-                    "api_key": "${NEURALWATT_API_KEY}",
-                    "api_mode": "chat_completions",
-                }
-            },
-            sort_keys=False,
-        )
-    )
-
-    stale_config = yaml.safe_load(config_path.read_text()) or {}
-    selected_model = "deepseek/deepseek-v4-flash"
-
-    monkeypatch.setattr(
-        "scout_cli.auth.get_provider_auth_state",
-        lambda provider: {
-            "access_token": "spaceshipresearch-token",
-            "portal_base_url": "https://portal.example.com",
-        },
-    )
-    monkeypatch.setattr(
-        "scout_cli.auth.resolve_spaceshipresearch_runtime_credentials",
-        lambda *args, **kwargs: {
-            "base_url": "https://inference-api.spaceshipresearch.com/v1",
-            "api_key": "spaceshipresearch-key",
-        },
-    )
-    monkeypatch.setattr(
-        "scout_cli.models.get_curated_spaceshipresearch_model_ids",
-        lambda: [selected_model],
-    )
-    monkeypatch.setattr("scout_cli.models_pricing.get_pricing_for_provider", lambda provider: {})
-    monkeypatch.setattr("scout_cli.models.check_spaceshipresearch_free_tier", lambda **kwargs: False)
-    monkeypatch.setattr(
-        "scout_cli.models.union_with_portal_paid_recommendations",
-        lambda model_ids, pricing, portal_url: (model_ids, pricing),
-    )
-    monkeypatch.setattr(
-        "scout_cli.auth._prompt_model_selection",
-        lambda *args, **kwargs: selected_model,
-    )
-    monkeypatch.setattr(
-        "scout_cli.spaceshipresearch_subscription.prompt_enable_tool_gateway",
-        lambda config: None,
-    )
-
-    scout_main._model_flow_spaceshipresearch(stale_config, current_model="glm-5.2")
-
-    config = yaml.safe_load(config_path.read_text()) or {}
-    model = config.get("model")
-    assert model["provider"] == "spaceshipresearch"
-    assert model["default"] == selected_model
-    assert model["base_url"] == "https://inference-api.spaceshipresearch.com/v1"
-    assert "api_key" not in model
-    assert "api_mode" not in model
-
-
 def _seed_stale_custom_model(tmp_path, monkeypatch):
     import scout_yaml as yaml
 
@@ -534,12 +445,6 @@ def _seed_stale_custom_model(tmp_path, monkeypatch):
     )
     (config_home / ".env").write_text("")
     return config_path
-
-
-
-
-
-
 
 
 def test_codex_provider_uses_config_model(monkeypatch):
@@ -635,14 +540,6 @@ def test_custom_entry_model_swap_re_resolves_reasoning(monkeypatch):
     assert shell._ensure_runtime_credentials() is True
     assert shell.model == "real-model"
     assert shell.reasoning_config["effort"] == "high"
-
-
-
-
-
-
-
-
 
 
 def test_model_flow_custom_saves_verified_v1_base_url(monkeypatch):
@@ -754,67 +651,9 @@ def test_model_flow_custom_persists_selected_api_mode(monkeypatch):
     assert saved_env[key_env] == "test-key"
 
 
-def test_cmd_model_forwards_spaceshipresearch_login_tls_options(monkeypatch):
-    monkeypatch.setattr(scout_main, "_require_tty", lambda *a: None)
-    monkeypatch.setattr(
-        "scout_cli.config.load_config",
-        lambda: {"model": {"default": "gpt-5", "provider": "spaceshipresearch"}},
-    )
-    monkeypatch.setattr("scout_cli.config.save_config", lambda cfg: None)
-    monkeypatch.setattr("scout_cli.config.get_env_value", lambda key: "")
-    monkeypatch.setattr("scout_cli.config.save_env_value", lambda key, value: None)
-    monkeypatch.setattr("scout_cli.auth.resolve_provider", lambda requested, **kwargs: "spaceshipresearch")
-    monkeypatch.setattr("scout_cli.auth.get_provider_auth_state", lambda provider_id: None)
-    monkeypatch.setattr(scout_main, "_prompt_provider_choice", lambda choices, **kwargs: 0)
-    monkeypatch.setattr(scout_cli_main_provider_setup, "_prompt_provider_choice", lambda choices, **kwargs: 0)
-
-    captured = {}
-
-    def _fake_login(login_args, provider_config):
-        captured["portal_url"] = login_args.portal_url
-        captured["inference_url"] = login_args.inference_url
-        captured["client_id"] = login_args.client_id
-        captured["scope"] = login_args.scope
-        captured["no_browser"] = login_args.no_browser
-        captured["timeout"] = login_args.timeout
-        captured["ca_bundle"] = login_args.ca_bundle
-        captured["insecure"] = login_args.insecure
-
-    monkeypatch.setattr("scout_cli.auth._login_spaceshipresearch", _fake_login)
-
-    scout_main.cmd_model(
-        SimpleNamespace(
-            portal_url="https://portal.spaceshipresearch.com",
-            inference_url="https://inference.spaceshipresearch.com/v1",
-            client_id="scout-local",
-            scope="openid profile",
-            no_browser=True,
-            timeout=7.5,
-            ca_bundle="/tmp/local-ca.pem",
-            insecure=True,
-        )
-    )
-
-    assert captured == {
-        "portal_url": "https://portal.spaceshipresearch.com",
-        "inference_url": "https://inference.spaceshipresearch.com/v1",
-        "client_id": "scout-local",
-        "scope": "openid profile",
-        "no_browser": True,
-        "timeout": 7.5,
-        "ca_bundle": "/tmp/local-ca.pem",
-        "insecure": True,
-    }
-
-
 # ---------------------------------------------------------------------------
 # _auto_provider_name — unit tests
 # ---------------------------------------------------------------------------
-
-
-
-
-
 
 
 def test_save_custom_provider_uses_provided_name(monkeypatch, tmp_path):
@@ -863,8 +702,6 @@ def test_save_custom_provider_references_the_key_instead_of_inlining_it(monkeypa
     assert entry["key_env"] == "SCOUT_CUSTOM_LOCALHOST_11434_API_KEY"
     assert "api_key" not in entry
     assert "sk-secret" not in yaml.safe_dump(saved)
-
-
 
 
 def test_custom_endpoint_key_env_is_a_valid_posix_name_for_ip_endpoints():

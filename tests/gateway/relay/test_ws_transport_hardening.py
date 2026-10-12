@@ -206,8 +206,6 @@ async def test_send_allowed_once_redial_installs_fresh_socket(monkeypatch):
                 pass
 
 
-
-
 async def _run_reader_to_exit(t: WebSocketRelayTransport, fake: _DroppingWS) -> None:
     """Start the reader on ``fake``, drop the socket, and wait for the reader
     to fully unwind — the state every post-drop assertion depends on."""
@@ -330,69 +328,3 @@ async def test_send_raising_socket_returns_error_dict():
     await t._reader
 
 
-@pytest.mark.asyncio
-async def test_redial_hold_parks_the_supervisor_until_released(monkeypatch):
-    """A re-dial mid-suspend clears the dormant flip, so it must be parked."""
-    dials = []
-
-    async def _never_dials(self):
-        dials.append(1)
-
-    monkeypatch.setattr(
-        WebSocketRelayTransport, "_dial_and_start", _never_dials, raising=True
-    )
-
-    t = WebSocketRelayTransport(
-        "ws://unused", "discord", "bot1", reconnect=True, reconnect_backoff_s=0.01
-    )
-    t._dormant_redial_s = 0.01
-    t.hold_redial()
-
-    supervisor = asyncio.create_task(t._reconnect_loop())
-    try:
-        # Well past the cadence: unheld, this would have dialled many times.
-        await asyncio.sleep(0.15)
-        assert dials == [], "supervisor re-dialled while a brokered suspend was in flight"
-
-        # A refused suspend releases it and the re-dial resumes.
-        t.release_redial()
-        for _ in range(100):
-            if dials:
-                break
-            await asyncio.sleep(0.01)
-        assert dials == [1]
-    finally:
-        t._closing = True
-        supervisor.cancel()
-
-
-@pytest.mark.asyncio
-async def test_redial_hold_expires_so_a_lost_suspend_cannot_strand_us(monkeypatch):
-    """Bounded: a suspend that never lands must reconnect, not hold forever."""
-    dials = []
-
-    async def _count_dial(self):
-        dials.append(1)
-
-    monkeypatch.setattr(
-        WebSocketRelayTransport, "_dial_and_start", _count_dial, raising=True
-    )
-
-    t = WebSocketRelayTransport(
-        "ws://unused", "discord", "bot1", reconnect=True, reconnect_backoff_s=0.01
-    )
-    t._dormant_redial_s = 0.01
-    t._redial_hold_max_s = 0.05
-    t.hold_redial()
-
-    supervisor = asyncio.create_task(t._reconnect_loop())
-    try:
-        for _ in range(100):
-            if dials:
-                break
-            await asyncio.sleep(0.01)
-        assert dials == [1]
-        assert t._redial_held is False
-    finally:
-        t._closing = True
-        supervisor.cancel()

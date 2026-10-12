@@ -1,6 +1,6 @@
 """Tests for the bundled self-hosted OIDC dashboard-auth plugin.
 
-Covers, by analogy with ``test_spaceshipresearch_provider.py``:
+Covers, by analogy with ``test_fixtureco_provider.py``:
 
 1. Plugin entry-point registration gating (env + config.yaml precedence).
 2. ``start_login`` shape (PKCE/state, authorize URL parameters, OIDC discovery).

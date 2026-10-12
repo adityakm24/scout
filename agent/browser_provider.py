@@ -14,7 +14,6 @@ regardless of provider::
         "cdp_url": str,             # CDP websocket URL
         "expires_at": str,          # optional provider-authoritative ISO timestamp
         "features": dict,           # feature flags that were enabled
-        "external_call_id": str,    # optional, managed-gateway billing key
     }
 """
 

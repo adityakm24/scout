@@ -17,7 +17,7 @@ import subprocess
 import sys
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, get_args, get_type_hints
+from typing import Any, get_args
 
 from pydantic import TypeAdapter
 from pydantic.json_schema import GenerateJsonSchema
@@ -27,27 +27,16 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tui_gateway import contracts  # noqa: E402,F401  (imports every topic module → fills the tables)
-from tui_gateway.contracts.connectors import (  # noqa: E402
-    ConnectorAccountStatus,
-    ConnectorErrorReason,
-    ConnectorToolFacet,
-    ConnectorToolsSource,
-)
+from tui_gateway.contracts.connectors import ConnectorErrorReason  # noqa: E402
 from tui_gateway.contracts.connectors_operation import ConnectionSettleReason, ConnectionTargetState  # noqa: E402
 from tui_gateway.contracts.registry import EVENTS, METHODS, SERVER_REQUESTS  # noqa: E402
 from tools.connectors.contract import SettleReason, TargetState  # noqa: E402
-from tools.connectors.gateway.wire import ConnectionStatus  # noqa: E402
-from tools.connectors.portal.tools_cache import ToolsRead  # noqa: E402
-from tools.connectors.portal.wire import ConnectorTool  # noqa: E402
 
 TS_OUT = ROOT / "apps" / "shared" / "src" / "gateway-contract.generated.ts"
 OPENRPC_OUT = ROOT / "apps" / "shared" / "src" / "gateway-contract.openrpc.json"
 _ENUM_PAIRS = (
     ("ConnectionTargetState", ConnectionTargetState, "TargetState", TargetState),
     ("ConnectionSettleReason", ConnectionSettleReason, "SettleReason", SettleReason),
-    ("ConnectorAccountStatus", ConnectorAccountStatus, "ConnectionStatus", ConnectionStatus),
-    ("ConnectorToolFacet", ConnectorToolFacet, "ConnectorTool.facet", ConnectorTool.model_fields["facet"].annotation),
-    ("ConnectorToolsSource", ConnectorToolsSource, "ToolsRead.source", get_type_hints(ToolsRead)["source"]),
 )
 
 HEADER = (

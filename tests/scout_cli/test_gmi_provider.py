@@ -146,7 +146,6 @@ class TestGmiDoctor:
         try:
             from scout_cli import auth as _auth_mod
 
-            monkeypatch.setattr(_auth_mod, "get_spaceshipresearch_auth_status", lambda: {})
             monkeypatch.setattr(_auth_mod, "get_codex_auth_status", lambda: {})
         except Exception:
             pass

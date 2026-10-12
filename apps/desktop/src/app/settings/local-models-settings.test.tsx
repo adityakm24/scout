@@ -632,10 +632,10 @@ describe('added-by-you rows', () => {
   it('staged models outside the catalog get the full action set', async () => {
     vi.mocked(scout.getLocalModelsStatus).mockResolvedValue({
       ...BASE_STATUS,
-      loaded_models: { 'Scout-4.3-36B-Q5_K_M': 'loaded' },
-      models: [{ id: 'Scout-4.3-36B-Q5_K_M', size_bytes: 25 * 2 ** 30, size_label: '25.0 GB' }],
+      loaded_models: { 'Model-4.3-36B-Q5_K_M': 'loaded' },
+      models: [{ id: 'Model-4.3-36B-Q5_K_M', size_bytes: 25 * 2 ** 30, size_label: '25.0 GB' }],
       placement: {
-        'Scout-4.3-36B-Q5_K_M': {
+        'Model-4.3-36B-Q5_K_M': {
           granted_window_label: '96K',
           spilled: false,
           window: 98304,
@@ -647,7 +647,7 @@ describe('added-by-you rows', () => {
     vi.mocked(scout.getLocalCatalog).mockResolvedValue({ models: [] })
 
     renderPane()
-    await screen.findByText('Scout-4.3-36B-Q5_K_M')
+    await screen.findByText('Model-4.3-36B-Q5_K_M')
 
     // Full management surface: Use, eject, delete, live placement pill.
     expect(screen.getByText(/added by you/i)).toBeTruthy()

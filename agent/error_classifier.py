@@ -97,9 +97,6 @@ class ClassifiedError:
 
 # Billing exhaustion (not transient rate limit). "out of extra usage" is the
 # Anthropic OAuth Pro/Max overage bucket depleted (HTTP 400).
-# The SpaceshipResearch gateway's own words for "the free tier will not serve this" — a billing wall for a
-# named account, the tier refusing for an anonymous one (see ``_WELCOME_403_NAMED_PATTERNS``).
-_FREE_TIER_REFUSAL_PATTERNS = ("model_not_supported_on_free_tier", "not available on the free tier")
 _BILLING_PATTERNS = (
     "insufficient credits", "insufficient_quota", "insufficient balance", "credit balance",
     "credits exhausted", "credits have been exhausted", "requires available credits",
@@ -109,7 +106,6 @@ _BILLING_PATTERNS = (
     # OpenRouter org-level monthly cap arrives as 403 "Budget limit exceeded (monthly limit)" (#107166):
     # account exhaustion, not a credential problem.
     "budget limit exceeded",
-    *_FREE_TIER_REFUSAL_PATTERNS,
     # LiteLLM proxies word a hard cap as "hard billing limit" (structured twin:
     # ``terminal_quota_exhausted`` in _BILLING_ERROR_CODES). "terminal billing
     # limit" free text is NOT matched: substring rules can't negate the
@@ -129,15 +125,13 @@ _XAI_SPENDING_LIMIT_ERROR_CODE = "personal-team-blocked:spending-limit"
 # Structured codes meaning the account cannot serve paid traffic.
 _BILLING_ERROR_CODES = frozenset({
     "insufficient_quota", "billing_not_active", "payment_required", "insufficient_credits",
-    "no_usable_credits", "balance_depleted", "model_not_supported_on_free_tier",
+    "no_usable_credits", "balance_depleted",
     "member_spend_cap_exceeded", "terminal_quota_exhausted", _XAI_SPENDING_LIMIT_ERROR_CODE,
     # OpenAI (and OpenAI-compatible aggregators) spend/usage-limit family:
     # a credit balance or an org/project spend or usage cap is exhausted —
     # terminal for this credential until limits are raised.
     "credit_balance_exhausted", "organization_spend_limit_exceeded",
     "organization_usage_limit_exceeded", "project_spend_limit_exceeded",
-    # SpaceshipResearch paid model behind an empty credit balance arrives as a 404 (#115702).
-    "insufficient_credits_for_paid_model",
 })
 
 # Transient rate limiting. Bedrock "Throttling error: Too many tokens" also
@@ -482,7 +476,7 @@ _V_ROLE_ALTERNATION = _v(_R.role_alternation, **_ABORT_FALLBACK)
 # other provider can fix that output, so falling back only replays the same broken turn 4-5 times
 # (20-60s per occurrence, #12770). Abort this call; the loop's argument repair handles the retry.
 _V_MALFORMED_TOOL_ARGS = _v(_R.format_error, retryable=False, should_fallback=False)
-# A reasoning-mandatory route answering ``reasoning: {enabled: false}`` (Scout Portal + OpenRouter wording).
+# A reasoning-mandatory route answering ``reasoning: {enabled: false}`` (OpenRouter wording).
 _REASONING_MANDATORY_PATTERN = "reasoning is mandatory"
 
 # Generic markers a provider 400 puts next to the offending parameter name. Bedrock Converse
@@ -529,7 +523,7 @@ _REASONING_REQUIRED_MARKERS = (
 
 def is_reasoning_required_rejection(error_msg: str) -> bool:
     """Provider 400 saying the model's reasoning cannot be switched OFF ("Reasoning is mandatory for
-    this endpoint and cannot be disabled", the Scout Portal on gpt-6-astra). The opposite of
+    this endpoint and cannot be disabled", e.g. gpt-6-astra). The opposite of
     ``is_reasoning_field_rejection``: the field is understood, the *disable* is refused, so the right
     reaction is to step the effort up to the lowest level rather than drop the field (a dropped field
     also works, but tells the caller nothing about the next call)."""
@@ -595,8 +589,8 @@ _OVERFLOW_AS_5XX_RULES = (
     (_CONTEXT_OVERFLOW_PATTERNS, _V_CONTEXT_OVERFLOW),
 )
 
-# 404: SpaceshipResearch API surfaces credit depletion as a paid model vanishing from the
-# Free Tier (billing, not missing model); policy block before model_not_found.
+# 404: a gateway may surface credit depletion as a paid model vanishing (billing, not a
+# missing model); policy block before model_not_found.
 _404_RULES = (
     (_BILLING_PATTERNS, _V_BILLING), (_PROVIDER_POLICY_BLOCKED_PATTERNS, _V_POLICY_BLOCKED),
     (_MODEL_NOT_FOUND_PATTERNS, _V_MODEL_NOT_FOUND),
@@ -678,7 +672,6 @@ class _Ctx:
     context_length: int
     num_messages: int
     base_url: str = ""  # the route the call went to; "" when the caller did not say
-    anonymous: bool = False
 
     def __post_init__(self) -> None:
         self.error_type = type(self.error).__name__
@@ -769,62 +762,9 @@ RETRYABLE_CLIENT_REASONS = frozenset({
 })
 
 
-# A welcome-host 403 that spells one of these out is a safety block or a billing wall, not the
-# tier refusing. The free-tier refusal phrases are left OUT: on the free route they mean exactly
-# "the tier refused", and an anonymous session has no credits to check.
-_WELCOME_403_NAMED_PATTERNS = _CONTENT_POLICY_BLOCKED_PATTERNS + tuple(
-    p for p in _BILLING_PATTERNS if p not in _FREE_TIER_REFUSAL_PATTERNS)
-
-
-def _spaceshipresearch_welcome_tier(c: _Ctx) -> Optional[Verdict]:
-    """The SpaceshipResearch inference gateway's welcome-tier (free tier) refusals, read from the structured body.
-
-    A 429 carrying a fairshare ``reason`` is either a tier gate (``model_not_free`` /
-    ``feature_not_free``: the model or feature is never served on the free tier, so retrying is
-    pointless — abort this route and fall back) or capacity (``at_capacity`` / ``admission_closed``
-    / ``rate_limited``: honour ``retry_after``, never rotate the free tier's only credential). A
-    400/403 whose message names the wrong host or a dark tier is deterministic for the request.
-    The parsed refusal rides ``error_context`` so the terminal copy can say what happened.
-    """
-    from scout_cli.anon_auth import (
-        WELCOME_TIER_GATE_REASONS, parse_welcome_refusal, welcome_route_refusal)
-    status = c.status_code
-    if not c.anonymous:
-        # A named credential's fairshare 429 is an ordinary rate limit, whatever its body says. The
-        # one welcome refusal it does receive is the gateway's mirror 400 on the welcome host; its
-        # reconnect copy stands, only the sign-in card is withheld (``_welcome_surface_kind``).
-        if c.provider == "spaceshipresearch" and status == 400 and welcome_route_refusal(status, c.msg) == "named_on_welcome_host":
-            return _v(_R.format_error, retryable=False, should_fallback=True,
-                      error_context={"welcome_route": "named_on_welcome_host"})
-        return None
-    if status == 429:
-        refusal = parse_welcome_refusal(c.body)
-        if refusal is None:
-            return None
-        ctx = {"welcome_refusal": refusal}
-        if refusal["reason"] in WELCOME_TIER_GATE_REASONS:
-            return _v(_R.model_not_found, retryable=False, should_fallback=True, error_context=ctx)
-        if refusal["retry_after"] > 0:
-            ctx["reset_at"] = time.time() + refusal["retry_after"]
-        return _v(_R.rate_limit, should_fallback=True, error_context=ctx)
-    # The route-keyed dark-tier 403 applies only to a 403 that says nothing else: a safety refusal
-    # or a billing wall on the welcome host keeps its own classification (and its own recovery).
-    plain_403 = not any(p in c.msg for p in _WELCOME_403_NAMED_PATTERNS)
-    kind = welcome_route_refusal(status, c.msg, c.base_url if plain_403 else None)
-    if kind is None:
-        return None
-    ctx = {"welcome_route": kind}
-    if status == 403:
-        return _v(_R.auth_permanent, retryable=False, should_fallback=True, error_context=ctx)
-    return _v(_R.format_error, retryable=False, should_fallback=True, error_context=ctx)
-
-
 def _provider_special_cases(c: _Ctx) -> Optional[Verdict]:
     """Highest-priority provider-specific shapes that a status code would misroute."""
     msg, status = c.msg, c.status_code
-    welcome = _spaceshipresearch_welcome_tier(c)
-    if welcome is not None:
-        return welcome
     # Safety refusal before status classification so a 400 block isn't downgraded
     # to format_error and a status-less block isn't left retryable (#18028).
     if any(p in msg for p in _CONTENT_POLICY_BLOCKED_PATTERNS):
@@ -962,15 +902,11 @@ def classify_api_error(
     error: Exception, *, provider: str = "", model: str = "",
     approx_tokens: int = 0, context_length: int = 200000, num_messages: int = 0,
     base_url: str = "",
-    api_key: Any = None,
 ) -> ClassifiedError:
     """Classify an API error into a structured recovery recommendation (see ``_STAGES``).
 
-    ``base_url`` (optional) is the route the call went to; the SpaceshipResearch welcome tier keys its
-    dark-tier 403 on it because that refusal carries no distinguishing message.
-    ``api_key`` identifies an anonymous request; a host or fairshare reason alone does not.
-    The credential is never included in the returned context."""
-    from scout_cli.anon_auth import is_anonymous_request
+    ``base_url`` (optional) is the route the call went to; an auth refusal from a non-stock
+    route names that host."""
     status_code = _extract_status_code(error)
     # Copilot/GitHub Models RateLimitError may not set .status_code; force 429.
     if status_code is None and type(error).__name__ == "RateLimitError":
@@ -979,7 +915,6 @@ def classify_api_error(
     c = _Ctx(
         error, status_code, body, _build_error_msg(error, body), provider, model,
         approx_tokens, context_length, num_messages, str(base_url or ""),
-        anonymous=is_anonymous_request(provider, api_key),
     )
     verdict = next((v for v in (stage(c) for stage in _STAGES) if v is not None), _V_UNKNOWN)
     message = _extract_message(error, body)
@@ -1156,7 +1091,7 @@ def _classify_400(c: _Ctx) -> Verdict:
         "conflicting authenticated continuation identities" in msg
     ):
         return _V_INVALID_ENCRYPTED
-    # Route rejecting a reasoning disable: a reasoning-mandatory route (GLM-5.3 on Scout Portal /
+    # Route rejecting a reasoning disable: a reasoning-mandatory route (GLM-5.3 on
     # OpenRouter) or a chat-only relay that does not accept ``reasoning_effort: none`` at all
     # (#114460). Deterministic for the request shape, but the only bad field is the disable — the
     # loop drops it and retries once. Must precede request-validation, which would abort as format_error.

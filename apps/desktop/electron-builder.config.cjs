@@ -252,7 +252,7 @@ module.exports = {
   },
   linux: {
     category: 'Development',
-    maintainer: 'SpaceshipResearch <support@spaceshipresearch.com>',
+    maintainer: 'SpaceshipResearch <adityakm24@users.noreply.github.com>',
     synopsis: light
       ? 'Remote-only desktop client for Scout Agent.'
       : 'Native desktop shell for Scout Agent.',

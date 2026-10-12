@@ -19,23 +19,23 @@ import { api } from "@/lib/api";
 import type { EnvVarInfo } from "@/lib/api";
 import { removeDeletedEnvVarFromState } from "@/lib/env-state";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
-import { useConfirmDelete } from "@spaceshipresearch/ui/hooks/use-confirm-delete";
-import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
+import { Toast } from "@/ui/components/toast";
+import { useConfirmDelete } from "@/ui/hooks/use-confirm-delete";
+import { useToast } from "@/ui/hooks/use-toast";
 import { OAuthProvidersCard } from "@/components/OAuthProvidersCard";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { ListItem } from "@spaceshipresearch/ui/ui/components/list-item";
-import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
+import { Button } from "@/ui/components/button";
+import { ListItem } from "@/ui/components/list-item";
+import { Spinner } from "@/ui/components/spinner";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@spaceshipresearch/ui/ui/components/card";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
+} from "@/ui/components/card";
+import { Badge } from "@/ui/components/badge";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
 import { useI18n } from "@/i18n";
 import { usePageHeader } from "@/contexts/usePageHeader";
 import { PluginSlot } from "@/plugins";
@@ -47,9 +47,7 @@ import { errorMessage } from "@/lib/api-error";
 
 /** Map env-var key prefixes to a human-friendly provider name + ordering. */
 const PROVIDER_GROUPS: { prefix: string; name: string; priority: number }[] = [
-  // Scout Portal first
-  { prefix: "SPACESHIPRESEARCH_", name: "Scout Portal", priority: 0 },
-  // Then alphabetical by display name
+  // Alphabetical by display name
   { prefix: "ANTHROPIC_", name: "Anthropic", priority: 1 },
   { prefix: "DASHSCOPE_", name: "DashScope (Qwen)", priority: 2 },
   { prefix: "SCOUT_QWEN_", name: "DashScope (Qwen)", priority: 2 },
@@ -670,7 +668,7 @@ export default function EnvPage() {
             key={s.id}
             type="button"
             onClick={() => scrollTo(s.id)}
-            className="shrink-0 cursor-pointer px-2 py-0.5 font-mondwest text-display text-xs tracking-wider text-text-secondary hover:text-foreground border border-border/50 hover:border-foreground/30 transition-colors"
+            className="shrink-0 cursor-pointer px-2 py-0.5 font-display text-display text-xs tracking-wider text-text-secondary hover:text-foreground border border-border/50 hover:border-foreground/30 transition-colors"
           >
             {s.label}
           </button>
@@ -1073,7 +1071,7 @@ function EnvCategoryCard({
               type="button"
               onClick={() => setShowAll((open) => !open)}
               aria-expanded={showAll}
-              className="shrink-0 cursor-pointer border-0 bg-transparent p-0 font-mondwest text-xs tracking-[0.08em] text-text-secondary transition-colors hover:text-foreground"
+              className="shrink-0 cursor-pointer border-0 bg-transparent p-0 font-display text-xs tracking-[0.08em] text-text-secondary transition-colors hover:text-foreground"
             >
               {showAll ? t.env.showLess : t.env.showMore}
             </button>

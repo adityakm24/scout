@@ -607,7 +607,7 @@ class TestSessionLifecycle:
             model_config={
                 "_branched_from": "parent-session",
                 "browser_model_lock": {
-                    "provider": "spaceshipresearch",
+                    "provider": "fixtureco",
                     "model": "x-ai/grok-4.5",
                     "confirmed": True,
                 },

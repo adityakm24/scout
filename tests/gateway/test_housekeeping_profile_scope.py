@@ -2,14 +2,13 @@
 profile's runtime scope on a multiplexed gateway.
 
 The housekeeping thread has no turn on the stack, so nothing bound a profile for it: under
-``gateway.multiplex_profiles`` the skills-sync pulls resolved SpaceshipResearch credentials through the
-fail-closed reader and logged ``no profile secret scope on a multiplexed call`` four times per
-hourly tick, per chore, while the launch profile's home/credentials leaked into every served
-profile's pull. The MCP config reconciler already iterated the served profiles under
-``_profile_runtime_scope``; the sync/curator ticks now ride the same iteration.
+``gateway.multiplex_profiles`` a credential-reading chore resolved secrets through the fail-closed
+reader and logged ``no profile secret scope on a multiplexed call`` on every hourly tick, while the
+launch profile's home/credentials leaked into every served profile's run. The MCP config
+reconciler already iterated the served profiles under ``_profile_runtime_scope``; the curator tick
+now rides the same iteration.
 """
 
-import json
 import logging
 from pathlib import Path
 from types import SimpleNamespace
@@ -33,13 +32,10 @@ class _Ticks:
         return True
 
 
-def _profile(home: Path, base_url: str) -> None:
+def _profile(home: Path, api_key: str) -> None:
     home.mkdir(parents=True, exist_ok=True)
-    (home / "config.yaml").write_text("model:\n  provider: spaceshipresearch\n", encoding="utf-8")
-    (home / ".env").write_text(f"SPACESHIPRESEARCH_INFERENCE_BASE_URL={base_url}\n", encoding="utf-8")
-    (home / "auth.json").write_text(json.dumps({"version": 1, "providers": {"spaceshipresearch": {
-        "access_token": "x.y.z", "refresh_token": "r", "expires_at": 0,
-        "portal_base_url": "https://portal.spaceshipresearch.com", "client_id": "c"}}}), encoding="utf-8")
+    (home / "config.yaml").write_text("model:\n  provider: openrouter\n", encoding="utf-8")
+    (home / ".env").write_text(f"OPENROUTER_API_KEY={api_key}\n", encoding="utf-8")
 
 
 @pytest.fixture
@@ -48,11 +44,11 @@ def two_homes(tmp_path, monkeypatch):
     fake_home = tmp_path / "home"
     a = fake_home / ".scout"
     b = a / "profiles" / "b"
-    _profile(a, "https://a.example/v1")
-    _profile(b, "https://b.example/v1")
+    _profile(a, "key-a")
+    _profile(b, "key-b")
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: fake_home))
     monkeypatch.setenv("SCOUT_HOME", str(a))
-    monkeypatch.delenv("SPACESHIPRESEARCH_INFERENCE_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     # The hermetic conftest pins ``scout_state.DEFAULT_DB_PATH`` at one sandbox store whenever
     # scout_state is already imported, and that pin WINS over ``get_scout_home()`` inside
     # ``_default_db_path()`` — exactly the per-profile resolution these tests exist to prove.
@@ -67,20 +63,16 @@ def two_homes(tmp_path, monkeypatch):
 
 
 def _record_credential_chores(monkeypatch):
-    """Replace the three credential-reading chores with recorders of (home, SpaceshipResearch override) they see."""
+    """Replace the credential-reading curator chore with a recorder of (home, scoped key) it sees."""
     import agent.curator as curator
-    import tools.skills_sync_client as ssc
-    import tools.skills_sync_client_org as sso
-    from scout_cli.auth_spaceshipresearch import _spaceshipresearch_inference_env_override
+    from agent.secret_scope import get_secret
     from scout_constants import get_scout_home
 
-    seen: dict = {"sync": [], "org": [], "curator": []}
+    seen: dict = {"curator": []}
 
     def _rec(key):
-        return lambda *a, **k: seen[key].append((get_scout_home().name, _spaceshipresearch_inference_env_override()))
+        return lambda *a, **k: seen[key].append((get_scout_home().name, get_secret("OPENROUTER_API_KEY")))
 
-    monkeypatch.setattr(ssc, "maybe_pull_skills", _rec("sync"))
-    monkeypatch.setattr(sso, "maybe_pull_org_skills", _rec("org"))
     monkeypatch.setattr(curator, "maybe_run_curator", _rec("curator"))
     return seen
 
@@ -105,8 +97,8 @@ def test_multiplexed_sync_ticks_run_once_per_profile_in_its_own_scope(two_homes,
     finally:
         set_multiplex_active(False)
 
-    expected = [(a.name, "https://a.example/v1"), (b.name, "https://b.example/v1")]
-    assert seen == {"sync": expected, "org": expected, "curator": expected}
+    expected = [(a.name, "key-a"), (b.name, "key-b")]
+    assert seen == {"curator": expected}
     assert not [r for r in caplog.records if "no profile secret scope" in r.getMessage()]
     assert get_scout_home() == a
 
@@ -152,7 +144,7 @@ def test_multiplexed_maintenance_tick_prunes_every_served_profile_store(two_home
     homes = two_homes
     for home in homes:
         (home / "config.yaml").write_text(
-            "model:\n  provider: spaceshipresearch\n"
+            "model:\n  provider: openrouter\n"
             "sessions:\n"
             "  auto_prune: true\n"
             "  retention_days: 0\n"
@@ -257,7 +249,7 @@ def test_prune_unlinks_transcripts_under_the_configured_sessions_dir(two_homes, 
     override.mkdir()
     for home, transcripts in ((a, override), (b, b / "sessions")):
         (home / "config.yaml").write_text(
-            "model:\n  provider: spaceshipresearch\n"
+            "model:\n  provider: openrouter\n"
             "sessions:\n"
             "  auto_prune: true\n"
             "  retention_days: 0\n"
@@ -290,8 +282,7 @@ def test_single_profile_sync_ticks_run_once_against_the_process_home(two_homes, 
 
     _run_60_ticks(SimpleNamespace(config=SimpleNamespace(multiplex_profiles=False)))
 
-    assert {k: [h for h, _ in v] for k, v in seen.items()} == {
-        "sync": [a.name], "org": [a.name], "curator": [a.name]}
+    assert {k: [h for h, _ in v] for k, v in seen.items()} == {"curator": [a.name]}
 
 
 def test_multiplexed_plugin_update_check_visits_every_served_profiles_plugins(two_homes, monkeypatch):

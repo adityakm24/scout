@@ -29,7 +29,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 
 _STRIP_SUFFIXES = ("_API_KEY", "_TOKEN", "_SECRET", "_PASSWORD", "_KEY")
 _STRIP_PREFIXES = ("SCOUT_", "TELEGRAM_", "DISCORD_", "SLACK_", "OPENAI_", "ANTHROPIC_", "OPENROUTER_",
-                   "GATEWAY_", "SPACESHIPRESEARCH_")
+                   "GATEWAY_", "FIXTURECO_")
 _TOKEN_RE = re.compile(r"\[in:([A-Za-z0-9_.-]+)\]")
 
 

@@ -150,13 +150,13 @@ class TestCreateProfile:
         """
         default_home = profile_env / ".scout"
         (default_home / "config.yaml").write_text(
-            "model:\n  provider: spaceshipresearch\n  default: some/model\n", encoding="utf-8"
+            "model:\n  provider: fixtureco\n  default: some/model\n", encoding="utf-8"
         )
 
         profile_dir = create_profile("coder", no_alias=True)
 
         cfg = yaml.safe_load((profile_dir / "config.yaml").read_text(encoding="utf-8-sig"))
-        assert cfg["model"]["provider"] == "spaceshipresearch"
+        assert cfg["model"]["provider"] == "fixtureco"
         assert cfg["model"]["default"] == "some/model"
 
 
@@ -187,7 +187,7 @@ class TestCreateProfile:
         """
         default_home = profile_env / ".scout"
         (default_home / "config.yaml").write_text(
-            "model:\n  provider: spaceshipresearch\n  default: some/model\n", encoding="utf-8"
+            "model:\n  provider: fixtureco\n  default: some/model\n", encoding="utf-8"
         )
         profile_dir = create_profile("coder", no_alias=True)
 
@@ -196,7 +196,7 @@ class TestCreateProfile:
         )
 
         cfg = yaml.safe_load((profile_dir / "config.yaml").read_text(encoding="utf-8-sig"))
-        assert cfg["model"]["provider"] == "spaceshipresearch"
+        assert cfg["model"]["provider"] == "fixtureco"
         assert cfg["model"]["default"] == "some/model"
 
 

@@ -13,7 +13,7 @@
 // Two things are deliberately NOT collapsed:
 //   * `SCOUT_DESKTOP_ISOLATED_BACKEND=1` — the escape hatch that gives this
 //     app a private backend instead of the host's.
-//   * Remote / SSH / Cloud backends — a DIFFERENT host. Its ownership proof
+//   * Remote / SSH backends — a DIFFERENT host. Its ownership proof
 //     (`remote-lifecycle.ts` isolated_count === 1) is about that machine's
 //     process, not ours, and stays pooled.
 //

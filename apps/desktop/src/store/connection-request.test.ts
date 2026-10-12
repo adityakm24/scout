@@ -25,15 +25,15 @@ const WIRE = {
   timeout_seconds: 120,
   targets: [
     {
-      action: 'connect' as const,
+      action: 'authorize' as const,
       discovery_error: 'tool discovery failed',
       instructions: 'Authorize Gmail.',
-      kind: 'connector' as const,
+      kind: 'mcp' as const,
       name: 'gmail',
       required_env: [{ default: 'primary', name: 'ACCOUNT', prompt: 'Account', required: true, secret: false }],
       state: 'pending' as const
     },
-    { action: 'connect' as const, kind: 'connector' as const, name: 'notion', state: 'pending' as const }
+    { action: 'authorize' as const, kind: 'mcp' as const, name: 'notion', state: 'pending' as const }
   ]
 }
 
@@ -93,8 +93,8 @@ describe('connection-request store', () => {
     expect(parsed?.deadlineAt).toBe(WIRE.deadline_at)
     expect(parsed?.opId).toBe('op-1')
     expect(parsed?.targets.map(t => [t.name, t.kind, t.state])).toEqual([
-      ['gmail', 'connector', 'pending'],
-      ['notion', 'connector', 'pending']
+      ['gmail', 'mcp', 'pending'],
+      ['notion', 'mcp', 'pending']
     ])
     expect(parsed?.targets[0]).toMatchObject({
       discoveryError: 'tool discovery failed',
@@ -131,8 +131,8 @@ describe('connection-request store', () => {
       settled: false,
       settled_by: null,
       targets: [
-        { action: 'connect', connect_url: 'https://l/gmail', kind: 'connector', name: 'gmail', state: 'initiated' },
-        { action: 'connect', kind: 'connector', name: 'notion', state: 'pending' }
+        { action: 'authorize', connect_url: 'https://l/gmail', kind: 'mcp', name: 'gmail', state: 'initiated' },
+        { action: 'authorize', kind: 'mcp', name: 'notion', state: 'pending' }
       ]
     })
 

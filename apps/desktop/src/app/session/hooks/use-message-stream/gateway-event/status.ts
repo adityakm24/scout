@@ -5,7 +5,7 @@ import { coerceGatewayText } from '@/lib/chat-runtime'
 import type { ErrorSurface } from '@/lib/error-surface'
 import { errorCardText } from '@/lib/error-surface-copy'
 import { isProviderSetupErrorMessage } from '@/lib/provider-setup-errors'
-import { type AgentNoticePayload, clearAgentNotice, nativeNoticeInput, showAgentNotice } from '@/store/agent-notices'
+import { type AgentNoticePayload, clearAgentNotice, showAgentNotice } from '@/store/agent-notices'
 import { clearClarifyRequest } from '@/store/clarify'
 import { reconcileSessionCompacting, setSessionCompacting, takeCompressDeferred } from '@/store/compaction'
 import { refreshBackgroundProcesses } from '@/store/composer-status'
@@ -240,39 +240,20 @@ export function handleStatusEvent(ctx: GatewayEventContext): boolean {
   }
 
   if (event.type === 'notification.show') {
-    // Driver-agnostic agent notice (credits usage/grant/depleted/restored
-    // from `agent/credits_tracker.py`). The Ink TUI renders these in its
-    // status bar; the desktop renders them as toasts. The notice key doubles
-    // as the toast id, so the escalating 50→75→90 credits line replaces in
-    // place instead of stacking. Account-wide signal — shown regardless of
-    // which session is focused.
+    // Driver-agnostic agent notice (`agent/notices.py`). The Ink TUI renders
+    // these in its status bar; the desktop renders them as toasts. The notice
+    // key doubles as the toast id, so a re-emitted notice replaces in place
+    // instead of stacking. Shown regardless of which session is focused.
     const notice = event.payload as AgentNoticePayload | undefined
 
     showAgentNotice(notice)
-
-    // The urgent pair (access paused / restored) also breaks through as a
-    // native OS notification when Scout is backgrounded; dispatch is gated
-    // by the user's notification prefs + backgrounded check.
-    const native = nativeNoticeInput(notice, translateNow('notifications.native.creditsTitle'))
-
-    if (native) {
-      dispatchNativeNotification(native)
-    }
-
-    // A credits crossing moves the account balance. Settings → Billing polls
-    // `billing.state` every 30s; nudge it so the page reflects the crossing
-    // immediately instead of up to 30s late.
-    if (notice?.key?.startsWith('credits.')) {
-      void queryClient.invalidateQueries({ queryKey: ['billing', 'state'] })
-    }
 
     return true
   }
 
   if (event.type === 'notification.clear') {
-    // Key-matched dismissal (e.g. credits restored clears the depleted
-    // notice). notify() keys the toast by the notice key, so this maps
-    // straight to dismissNotification(key).
+    // Key-matched dismissal. notify() keys the toast by the notice key, so
+    // this maps straight to dismissNotification(key).
     clearAgentNotice((event.payload as AgentNoticePayload | undefined)?.key)
 
     return true

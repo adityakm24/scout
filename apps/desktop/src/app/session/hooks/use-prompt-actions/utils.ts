@@ -513,7 +513,7 @@ export function slashStatusText(command: string, output: string): string {
  *   because it needs transcript replacement)
  * - `session.status`:   { output: "<multi-line plain text>" }
  * - `session.save`:     { file: "<absolute path>" }
- * - `session.usage`:    { calls, input, output, total, account_lines?, credits_lines? }
+ * - `session.usage`:    { calls, input, output, total, account_lines? }
  * - `session.steer`:    { status: 'queued' | 'rejected', text }
  * - `process.stop`:     { killed: boolean }
  * - `agents.list`:      { processes: [{ session_id, command, status, uptime }] }
@@ -572,7 +572,7 @@ export function renderRpcResult(response: unknown, name: string): string {
     return r.output
   }
 
-  // session.usage — { calls, input, output, total, account_lines?, credits_lines? }
+  // session.usage — { calls, input, output, total, account_lines? }
   if ('total' in r || 'input' in r || 'output' in r || 'calls' in r) {
     const calls = Number(r.calls ?? 0)
     const input = Number(r.input ?? 0)
@@ -583,13 +583,11 @@ export function renderRpcResult(response: unknown, name: string): string {
       `Usage: ${calls.toLocaleString()} calls · ${input.toLocaleString()} in / ${output.toLocaleString()} out · ${total.toLocaleString()} total`
     ]
 
-    // Provider account limits (e.g. Codex quota windows) first, then SpaceshipResearch credits — same order as CLI /usage.
-    for (const extra of [r.account_lines, r.credits_lines]) {
-      if (Array.isArray(extra)) {
-        for (const line of extra) {
-          if (typeof line === 'string' && line.trim()) {
-            lines.push(line.trim())
-          }
+    // Provider account limits (e.g. Codex quota windows) — same as CLI /usage.
+    if (Array.isArray(r.account_lines)) {
+      for (const line of r.account_lines) {
+        if (typeof line === 'string' && line.trim()) {
+          lines.push(line.trim())
         }
       }
     }

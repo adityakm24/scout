@@ -38,14 +38,14 @@ class TestCronCommandLifecycle:
                 "--model",
                 "new-model",
                 "--provider",
-                "spaceshipresearch",
+                "fixtureco",
             ]
         )
         cron_command(args)
 
         updated = get_job(job["id"])
         assert updated["model"] == "new-model"
-        assert updated["provider"] == "spaceshipresearch"
+        assert updated["provider"] == "fixtureco"
         assert "Updated job" in capsys.readouterr().out
 
     def test_edit_can_replace_and_clear_skills(self, tmp_cron_dir, capsys):

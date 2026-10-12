@@ -1123,7 +1123,7 @@ class TestTerminalOutputRedaction:
         from agent.redact import redact_terminal_output
         out = (
             "MISTRAL_API_KEY=abc123opaqueSecretValue\n"
-            "SPACESHIPRESEARCH_API_KEY=xyz789opaqueKey\n"
+            "FIXTURECO_API_KEY=xyz789opaqueKey\n"
             "DEBUG=true\n"
         )
         red = redact_terminal_output(out, "cat .env")

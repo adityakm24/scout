@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from scout_constants import get_scout_home
-from utils import is_truthy_value
 
 logger = logging.getLogger(__name__)
 
@@ -184,20 +183,6 @@ def _read_browser_cfg() -> dict:
         return {}
 
 
-def _use_gateway(browser_cfg: dict) -> bool:
-    """True when the browser section selects the SpaceshipResearch Tool Gateway — by the current ``scout tools``
-    picker row (``cloud_provider: spaceshipresearch``) or the pre-picker ``use_gateway: true`` flag. Reading only
-    the legacy flag missed every picker-configured gateway, and the direct-API branch it fell into
-    holds no credentials in managed mode (#108310)."""
-    if is_truthy_value(browser_cfg.get("use_gateway"), default=False):
-        return True
-    try:
-        from tools.tool_backend_helpers import SPACESHIPRESEARCH_MANAGED_PROVIDER
-    except Exception:  # pragma: no cover — helper ships with the package
-        return False
-    return str(browser_cfg.get("cloud_provider") or "").strip().lower() == SPACESHIPRESEARCH_MANAGED_PROVIDER
-
-
 def get_browser_backend() -> str:
     """Configured browser backend key ("" = unset → default). YAML 1.1 parses an
     unquoted ``off`` as False — that must mean BACKEND_DISABLED, not "unset"."""
@@ -212,7 +197,7 @@ def is_legacy_browser_use_cloud_config(browser_cfg: dict) -> bool:
     if not isinstance(browser_cfg, dict) or browser_cfg.get("backend"):
         return False
     provider = str(browser_cfg.get("cloud_provider") or "").strip().lower()
-    if provider not in {"browser-use", ""} or _use_gateway(browser_cfg) or _camofox_active(" during migration"):
+    if provider not in {"browser-use", ""} or _camofox_active(" during migration"):
         return False
     # Profile credential: a multiplexed secondary must not inherit the default's cloud mode.
     from agent.secret_scope import get_secret
@@ -444,11 +429,9 @@ def _resolve_backend_cdp(env: dict, task_id: Optional[str], session_name: str = 
         return _resolve_local_engine_cdp(env, task_id, session_name)
 
     # Browser Use direct-API configs: the CLI talks to BU cloud natively (BU_AUTOSPAWN / auth login) — the
-    # legacy provider would create a second, redundant session. SpaceshipResearch-gateway configs (cloud_provider: spaceshipresearch
-    # from the picker, or the pre-picker use_gateway: true) DO resolve through the provider: the gateway
-    # provisions the browser server-side and returns its CDP URL.
+    # legacy provider would create a second, redundant session.
     provider_key = str(getattr(provider, "name", "") or "").strip().lower()
-    if provider_key == _BACKEND_KEY and not _use_gateway(_read_browser_cfg()):
+    if provider_key == _BACKEND_KEY:
         env[_PRIVATE_BROWSER_SENTINEL] = "1"  # named BU cloud browsers are exclusive to their daemon
         return None
 

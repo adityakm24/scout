@@ -76,16 +76,11 @@ class CloudBrowserProvider(BrowserProvider):
     def _session_name(task_id: str) -> str:
         return f"scout_{task_id}_{uuid.uuid4().hex[:8]}"
 
-    def _post_create(
-        self, url: str, headers: Dict[str, str], payload: Dict[str, object], *, wrap_errors: bool = True
-    ) -> requests.Response:
-        """POST the create request; network failures → RuntimeError unless the managed gateway
-        caller needs the raw exception to retry."""
+    def _post_create(self, url: str, headers: Dict[str, str], payload: Dict[str, object]) -> requests.Response:
+        """POST the create request; network failures → RuntimeError."""
         try:
             return requests.post(url, headers=headers, json=payload, timeout=30)
         except requests.RequestException as exc:
-            if not wrap_errors:
-                raise
             raise RuntimeError(f"{self.label} API connection failed: {exc}") from exc
 
     def _check_created(self, response: requests.Response) -> None:

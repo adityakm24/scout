@@ -22,7 +22,7 @@ def _maybe_keep_current_tts(question, choices):
 
 def _clear_provider_env(monkeypatch):
     for key in (
-        "SPACESHIPRESEARCH_API_KEY",
+        "FIXTURECO_API_KEY",
         "OPENROUTER_API_KEY",
         "OPENAI_BASE_URL",
         "OPENAI_API_KEY",
@@ -132,8 +132,7 @@ def test_select_provider_and_model_warns_if_named_custom_provider_disappears(
 
 
 
-def test_modal_setup_persists_direct_mode_when_user_chooses_their_own_account(tmp_path, monkeypatch):
-    monkeypatch.setattr("tools.tool_backend_helpers.managed_spaceshipresearch_tools_enabled", lambda: True)
+def test_modal_setup_persists_direct_mode(tmp_path, monkeypatch):
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     monkeypatch.delenv("MODAL_TOKEN_ID", raising=False)
     monkeypatch.delenv("MODAL_TOKEN_SECRET", raising=False)
@@ -142,26 +141,12 @@ def test_modal_setup_persists_direct_mode_when_user_chooses_their_own_account(tm
     def fake_prompt_choice(question, choices, default=0):
         if question == "Select terminal backend:":
             return 2
-        if question == "Select how Modal execution should be billed:":
-            return 1
         raise AssertionError(f"Unexpected prompt_choice call: {question}")
 
     prompt_values = iter(["token-id", "token-secret", ""])
 
     monkeypatch.setattr("scout_cli.setup.prompt_choice", fake_prompt_choice)
     monkeypatch.setattr("scout_cli.setup.prompt", lambda *args, **kwargs: next(prompt_values))
-    monkeypatch.setattr(
-        "scout_cli.spaceshipresearch_subscription.get_spaceshipresearch_subscription_features",
-        lambda config: type("Features", (), {"spaceshipresearch_auth_present": True})(),
-    )
-    monkeypatch.setitem(
-        sys.modules,
-        "tools.managed_tool_gateway",
-        types.SimpleNamespace(
-            is_managed_tool_gateway_ready=lambda vendor: vendor == "modal",
-            resolve_managed_tool_gateway=lambda vendor: None,
-        ),
-    )
     monkeypatch.setitem(sys.modules, "swe_rex", object())
     monkeypatch.setitem(sys.modules, "modal", types.ModuleType("modal"))
 

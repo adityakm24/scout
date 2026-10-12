@@ -18,9 +18,9 @@
  * keeps the chat context focused on switching conversations quickly.
  */
 
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { ListItem } from "@spaceshipresearch/ui/ui/components/list-item";
-import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
+import { Button } from "@/ui/components/button";
+import { ListItem } from "@/ui/components/list-item";
+import { Spinner } from "@/ui/components/spinner";
 import { AlertCircle, MessageSquarePlus, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";

@@ -123,7 +123,7 @@ def manage_catalog(
 def install(items: List[Dict[str, str]], *, session_id: Optional[str], tool_call_id: Optional[str],
             connection_callback: Callable[[Dict[str, Any]], Optional[str]], installer: Any = None) -> str:
     from tools.connectors.catalog import open_runner
-    from tools.connectors.gateway.config import operation_session_key
+    from tools.connectors.config import operation_session_key
     from tools.connectors.operation import Target
     from tools.connectors.run import Kind, run_operation
 

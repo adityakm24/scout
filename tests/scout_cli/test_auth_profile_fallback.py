@@ -118,13 +118,13 @@ def test_provider_auth_state_falls_back_to_global_when_profile_has_none(profile_
     from scout_cli.auth import get_provider_auth_state
 
     _write(profile_env["global"] / "auth.json", _make_auth_store(providers={
-        "spaceshipresearch": {"access_token": "spaceshipresearch-global", "refresh_token": "rt-global"},
+        "fixtureco": {"access_token": "fixtureco-global", "refresh_token": "rt-global"},
     }))
     _write(profile_env["profile"] / "auth.json", _make_auth_store(providers={}))
 
-    state = get_provider_auth_state("spaceshipresearch")
+    state = get_provider_auth_state("fixtureco")
     assert state is not None
-    assert state["access_token"] == "spaceshipresearch-global"
+    assert state["access_token"] == "fixtureco-global"
 
 
 def test_provider_auth_state_returns_none_when_neither_has_it(profile_env):
@@ -133,18 +133,18 @@ def test_provider_auth_state_returns_none_when_neither_has_it(profile_env):
     _write(profile_env["global"] / "auth.json", _make_auth_store(providers={}))
     _write(profile_env["profile"] / "auth.json", _make_auth_store(providers={}))
 
-    assert get_provider_auth_state("spaceshipresearch") is None
+    assert get_provider_auth_state("fixtureco") is None
 
 
 # ---------------------------------------------------------------------------
 # _load_provider_state — internal global fallback (issue #18594 follow-up)
 #
-# Several runtime helpers (notably ``resolve_spaceshipresearch_runtime_credentials`` and
-# ``resolve_spaceshipresearch_access_token``) call ``_load_provider_state`` directly with
+# Several runtime helpers (notably ``resolve_fixtureco_runtime_credentials`` and
+# ``resolve_fixtureco_access_token``) call ``_load_provider_state`` directly with
 # a profile-loaded auth store rather than going through
 # ``get_provider_auth_state``. Without the fallback wired into
 # ``_load_provider_state`` itself, those helpers raise ``"Scout is not
-# logged into Scout Portal"`` even though the user has a valid global SpaceshipResearch
+# logged into Fixture Co"`` even though the user has a valid global Fixture Co
 # login. These tests pin the per-provider shadowing into the helper.
 # ---------------------------------------------------------------------------
 

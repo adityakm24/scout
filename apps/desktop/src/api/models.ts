@@ -64,13 +64,10 @@ export function getGlobalModelOptions(
 export interface RecommendedDefaultModel {
   provider: string
   model: string
-  /** True/false for SpaceshipResearch (free vs paid tier); null for other providers. */
-  free_tier: boolean | null
 }
 
 // Recommended default model for a freshly-authenticated provider. Mirrors the
-// curation `scout model` does — for SpaceshipResearch it honors the free/paid tier so a
-// free user gets a free model instead of a paid default.
+// curation `scout model` does.
 export function getRecommendedDefaultModel(provider: string, profile?: ProfileScope): Promise<RecommendedDefaultModel> {
   return window.scoutDesktop.api<RecommendedDefaultModel>({
     ...capabilityScoped(profile),

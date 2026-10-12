@@ -179,12 +179,10 @@ def _desktop_preview(agent, args: dict, ctx: InlineToolContext) -> Any:
 def _manage_connections(agent, args: dict, ctx: InlineToolContext) -> Any:
     # The GUI callback lives on the agent; registry dispatch never forwards it.
     from tools.connectors import manage_connections
-    from tools.connectors.gateway import config as gateway_config
 
     result = manage_connections(
         args, session_id=getattr(agent, "session_id", None), tool_call_id=ctx.tool_call_id,
         connection_callback=getattr(agent, "connection_callback", None),
-        connectors_available=gateway_config.connectors_available,
     )
     _scope_in_connected_mcp_servers(agent, result)
     return result

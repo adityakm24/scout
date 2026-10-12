@@ -7,7 +7,7 @@ prompt/completion tokens, wall time).
 
 Usage:
   python3 evals/readtool/runner.py --model anthropic/claude-opus-4.8 \\
-      --provider spaceshipresearch --reps 3 --label baseline
+      --provider openrouter --reps 3 --label baseline
   python3 evals/readtool/runner.py --model qwen/qwen3.8-max \\
       --provider openrouter --reps 3 --label baseline --tasks fifo_hang
 

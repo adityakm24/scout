@@ -19,7 +19,6 @@ from .registry import event, method
 
 
 class ConnectionTargetKind(WireEnum):
-    connector = "connector"
     mcp = "mcp"
     # ``manage_catalog`` rows: a catalog plugin (may bring MCP tools and/or skills) or a skill.
     plugin = "plugin"
@@ -28,10 +27,8 @@ class ConnectionTargetKind(WireEnum):
 
 class ConnectionTargetAction(WireEnum):
     authorize = "authorize"
-    connect = "connect"
     enable = "enable"
     install = "install"
-    reconnect = "reconnect"
 
 
 class ConnectionTargetState(WireEnum):
@@ -42,7 +39,6 @@ class ConnectionTargetState(WireEnum):
     connected = "connected"
     skipped = "skipped"
     failed = "failed"
-    expired = "expired"
     not_connected = "not_connected"
 
 
@@ -51,7 +47,6 @@ class ConnectionActor(WireEnum):
 
     user = "user"
     backend_watcher = "backend_watcher"
-    clock = "clock"
 
 
 class ConnectionSettleReason(WireEnum):
@@ -189,15 +184,7 @@ class ConnectionOperationParams(ProfileParams):
 
 
 method("connectors.operation.status", params=ConnectionOperationParams, result=ConnectionOperationStatus,
-       doc="The current snapshot of one open session or account operation.")
-
-
-class ConnectionWakeResult(Result):
-    status: Literal["ok"]
-
-
-method("connectors.operation.wake", params=ConnectionOperationParams, result=ConnectionWakeResult,
-       doc="The browser leg came back (scout://connections/done): read the accounts now, not at the next tick.")
+       doc="The current snapshot of one open session operation.")
 
 
 class ConnectionAnswerStatus(WireEnum):

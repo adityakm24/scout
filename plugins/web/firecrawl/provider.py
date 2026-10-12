@@ -1,7 +1,7 @@
-"""Firecrawl web search + extract provider (direct SDK, keyless cloud, or SpaceshipResearch tool-gateway).
+"""Firecrawl web search + extract provider (direct SDK or keyless cloud).
 
 Config: ``web.backend`` / ``web.search_backend`` / ``web.extract_backend: firecrawl``.
-Env: FIRECRAWL_API_KEY, FIRECRAWL_API_URL (self-hosted), FIRECRAWL_GATEWAY_URL / TOOL_GATEWAY_*.
+Env: FIRECRAWL_API_KEY, FIRECRAWL_API_URL (self-hosted).
 """
 
 from __future__ import annotations
@@ -13,8 +13,6 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from plugins.web._common import BaseWebSearchProvider, keyless_extract, keyless_search, search_fail, search_ok, setup_schema
-from tools import managed_tool_gateway as _gateway
-from tools import tool_backend_helpers as _backend_helpers
 from tools.url_safety import is_safe_url
 # Module-level (cheap import) so tests can monkeypatch the policy gate on this module.
 from tools.website_policy import check_website_access
@@ -61,7 +59,7 @@ class _FirecrawlProxy:
 
 Firecrawl = _FirecrawlProxy()
 
-# --- Client construction (direct vs managed-gateway) ---------------------------
+# --- Client construction (direct SDK vs keyless cloud) -------------------------
 def _wt():
     """Client cache slots live on tools.web_tools so tests that reset ``_firecrawl_client`` there see it."""
     import tools.web_tools as _mod
@@ -92,19 +90,14 @@ def _is_explicit_firecrawl_selection() -> bool:
 
 
 def _use_keyless_ring() -> bool:
-    """Route via the keyless ring only with no direct credentials, when the managed SpaceshipResearch
-    gateway isn't the selected path, and the keyless tier isn't disabled or pinned paid."""
+    """Route via the keyless ring only with no direct credentials, when the stored selection is not the
+    removed hosted gateway (that reports instead), and the keyless tier isn't disabled or pinned paid."""
     if _env("FIRECRAWL_API_KEY") or _env("FIRECRAWL_API_URL"):
         return False
-    from tools.tool_backend_helpers import SPACESHIPRESEARCH_MANAGED_PROVIDER, read_selection
+    from tools.tool_backend_helpers import LEGACY_MANAGED_SELECTION, read_selection
     from plugins.web.keyless_mcp import use_keyless
-    # Both probes are optional layers: a failing probe never blocks the ring.
-    for probe in (lambda: read_selection("web") == SPACESHIPRESEARCH_MANAGED_PROVIDER, lambda: _is_tool_gateway_ready() and not _is_explicit_firecrawl_selection()):
-        try:
-            if probe():
-                return False
-        except Exception:  # noqa: BLE001
-            pass
+    if read_selection("web") == LEGACY_MANAGED_SELECTION:
+        return False
     return use_keyless("firecrawl", "")
 
 
@@ -124,56 +117,26 @@ class _KeylessFirecrawlClient:
     scrape = lambda self, *, url, formats: self._post("/v2/scrape", {"url": url, "formats": formats})  # noqa: E731
 
 
-def _get_firecrawl_gateway_url() -> str:
-    return _gateway.build_vendor_gateway_url("firecrawl")
-
-
-def _is_tool_gateway_ready() -> bool:
-    """True when gateway URL + SpaceshipResearch Subscriber token are available."""
-    return _gateway.resolve_managed_tool_gateway("firecrawl", token_reader=_gateway.peek_spaceshipresearch_access_token) is not None
-
-
 def check_firecrawl_api_key() -> bool:
-    """True when the route selected via ``scout tools`` (or, on a never-configured
-    install, either route) is usable."""
-    from tools.tool_backend_helpers import SPACESHIPRESEARCH_MANAGED_PROVIDER, read_selection
-    selected = read_selection("web")
-    if selected == SPACESHIPRESEARCH_MANAGED_PROVIDER:
-        return _is_tool_gateway_ready()
-    return _get_direct_firecrawl_config() is not None or (selected is None and _is_tool_gateway_ready())
-
-
-def _firecrawl_backend_help_suffix() -> str:
-    return ", or use the SpaceshipResearch Tool Gateway via your subscription (FIRECRAWL_GATEWAY_URL or TOOL_GATEWAY_DOMAIN)" if _backend_helpers.managed_spaceshipresearch_tools_enabled() else ""
+    """True when direct Firecrawl (keyed, self-hosted, or an explicit keyless selection) is usable."""
+    return _get_direct_firecrawl_config() is not None
 
 
 def _get_firecrawl_client() -> Any:
-    """Get or create the cached Firecrawl client. Strict selection semantics on the stored ``web`` selection:
-    ``"spaceshipresearch"`` → managed Tool Gateway ONLY; any other stored backend → direct Firecrawl ONLY (never a silent
-    managed fallback billed to SpaceshipResearch); never-configured → direct when present, else managed. Raises ValueError
-    when the resolved path is unusable."""
+    """Get or create the cached Firecrawl client. A stored ``web`` selection is direct Firecrawl ONLY (missing
+    credentials name the selection); never-configured → direct when present. Raises ValueError when the
+    resolved path is unusable."""
     wt = _wt()
-    from tools.tool_backend_helpers import SPACESHIPRESEARCH_MANAGED_PROVIDER, read_selection, selection_error
+    from tools.tool_backend_helpers import read_selection, selection_error
     selected = read_selection("web")
     direct_config = _get_direct_firecrawl_config()
 
-    def _managed():
-        gw = _gateway.resolve_managed_tool_gateway("firecrawl", token_reader=_gateway.read_spaceshipresearch_access_token)
-        if gw is None:
-            return None
-        return "sdk", {"api_key": gw.spaceshipresearch_user_token, "api_url": gw.gateway_origin}, ("tool-gateway", gw.gateway_origin, gw.spaceshipresearch_user_token)
-
     def _unconfigured_message() -> str:
-        message = "Web tools are not configured. Set FIRECRAWL_API_KEY for cloud Firecrawl or set FIRECRAWL_API_URL for a self-hosted Firecrawl instance."
-        if _backend_helpers.managed_spaceshipresearch_tools_enabled():
-            return message + " With your SpaceshipResearch subscription you can also use the Tool Gateway. run `scout tools` and select SpaceshipResearch Subscription as the web provider."
-        return message + " " + _backend_helpers.spaceshipresearch_tool_gateway_unavailable_message("managed Firecrawl web tools")
+        return ("Web tools are not configured. Set FIRECRAWL_API_KEY for cloud Firecrawl or set FIRECRAWL_API_URL "
+                "for a self-hosted Firecrawl instance.")
 
     # (resolved config, log detail, error message) per selection state; the message is built lazily.
-    if selected == SPACESHIPRESEARCH_MANAGED_PROVIDER:
-        resolved, log, message = _managed(), "the SpaceshipResearch Subscription web selection is stored but the tool gateway is unavailable.", lambda: selection_error(
-            "web", SPACESHIPRESEARCH_MANAGED_PROVIDER, "the SpaceshipResearch Tool Gateway is not available (not entitled or unreachable)")
-    elif selected is not None or _is_explicit_firecrawl_selection():
+    if selected is not None or _is_explicit_firecrawl_selection():
         # Stored vendor selection (shared name, or a per-capability key naming firecrawl): direct only (no
         # credentials → explicit selection unlocks keyless cloud mode). A per-capability key naming ANOTHER
         # vendor is not a firecrawl selection: the other capability's ladder reached firecrawl on its own,
@@ -182,8 +145,8 @@ def _get_firecrawl_client() -> Any:
             "web", selected or "firecrawl", "neither FIRECRAWL_API_KEY nor FIRECRAWL_API_URL is set")
     elif direct_config is not None:
         resolved = direct_config
-    else:  # never-configured web section: legacy managed fallback
-        resolved, log, message = _managed(), "missing direct config and tool-gateway auth.", _unconfigured_message
+    else:  # never-configured web section with no direct config
+        resolved, log, message = None, "missing direct config.", _unconfigured_message
     if resolved is None:
         logger.error("Firecrawl client initialization failed: %s", log)
         raise ValueError(message())
@@ -196,7 +159,7 @@ def _get_firecrawl_client() -> Any:
     return wt._firecrawl_client
 
 
-# --- Response shape normalization (SDK / direct / gateway differ) --------------
+# --- Response shape normalization (SDK / direct differ) -----------------------
 def _to_plain_object(value: Any) -> Any:
     """SDK objects (pydantic ``model_dump`` / ``__dict__``) → plain data when possible."""
     if value is None or isinstance(value, (dict, list, str, int, float, bool)):
@@ -215,7 +178,7 @@ def _normalize_result_list(values: Any) -> List[Dict[str, Any]]:
 
 
 def _extract_web_search_results(response: Any) -> List[Dict[str, Any]]:
-    """Search results across SDK/direct/gateway response shapes."""
+    """Search results across SDK/direct response shapes."""
     plain = _to_plain_object(response)
     if isinstance(plain, dict):
         data = plain.get("data")
@@ -328,7 +291,7 @@ class FirecrawlWebSearchProvider(BaseWebSearchProvider):
 
     def get_setup_schema(self) -> Dict[str, Any]:
         return setup_schema(
-            "Firecrawl", "keyless/paid · optional gateway",
-            "Full search + extract; supports keyless cloud, direct API, and SpaceshipResearch tool-gateway routing.",
+            "Firecrawl", "keyless/paid",
+            "Full search + extract; supports keyless cloud, direct API, and self-hosted instances.",
             "FIRECRAWL_API_KEY", "Firecrawl API key (optional; blank = keyless cloud or self-hosted)", "https://docs.firecrawl.dev/introduction",
         )

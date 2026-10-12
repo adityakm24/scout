@@ -81,8 +81,8 @@ def _post_enroll(
             pass
         if exc.code == 401:
             message = (
-                "Connector rejected the caller identity (401). Your Scout Portal "
-                "token could not be verified — try `scout auth add spaceshipresearch` and retry."
+                "Connector rejected the caller identity (401). Check the identity provider "
+                "configured under gateway.idp and retry."
             )
         elif exc.code == 403:
             message = detail or "Enrollment token invalid, expired, already used, or tenant mismatch (403)."
@@ -107,7 +107,6 @@ def _fail(*lines: str) -> None:
 
 def cmd_gateway_enroll(args) -> None:
     """Enroll this gateway with a relay connector; persist the auth creds to .env."""
-    from scout_cli.auth import AuthError
     from scout_cli.config import is_managed, save_env_value
 
     # Managed installs get GATEWAY_RELAY_* stamped in by the orchestrator; save_env_value refuses
@@ -137,19 +136,11 @@ def cmd_gateway_enroll(args) -> None:
     gateway_id = (getattr(args, "gateway_id", None) or _default_gateway_id()).strip()
 
     # Caller-identity token (proves the tenant). ``gateway.relay`` owns the ONE resolver shared with
-    # the runtime self-provision path: generic OIDC client-credentials when ``gateway.idp.token_url``
-    # is set (air-gapped / self-hosted IdP), otherwise Scout Portal.
+    # the runtime self-provision path: generic OIDC client-credentials from ``gateway.idp``.
     try:
         from gateway.relay import _resolve_relay_identity_token
 
         access_token = _resolve_relay_identity_token()
-    except AuthError as exc:
-        if getattr(exc, "relogin_required", False):
-            _fail(
-                "✗ You're not logged into Scout Portal.",
-                "  Run `scout setup` (or `scout auth add spaceshipresearch`) first, then retry.",
-            )
-        _fail(f"✗ Could not resolve a Scout Portal access token: {exc}")
     except Exception as exc:
         _fail(f"✗ Could not resolve a caller-identity token: {exc}")
 

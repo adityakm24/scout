@@ -359,10 +359,9 @@ def test_vertex_default_model_estimates_cached_usage(monkeypatch):
 
 
 def test_curated_google_flash_models_resolve_official_snapshot_pricing(monkeypatch):
-    """Every ``google/gemini-*-flash`` model curated for the OpenRouter and SpaceshipResearch
-    pickers must also bill through the Google official-docs snapshot on the
-    direct Gemini and Vertex routes — a model pickable via the aggregators but
-    ``unknown`` to Google-route accounting is a catalog/pricing drift.
+    """Every ``google/gemini-*-flash`` model curated for the OpenRouter picker must also bill
+    through the Google official-docs snapshot on the direct Gemini and Vertex routes — a model
+    pickable via the aggregator but ``unknown`` to Google-route accounting is a catalog/pricing drift.
     """
     from scout_cli.models_catalog_static import OPENROUTER_MODELS, _PROVIDER_MODELS
 
@@ -370,7 +369,7 @@ def test_curated_google_flash_models_resolve_official_snapshot_pricing(monkeypat
         "agent.usage_pricing.fetch_endpoint_model_metadata",
         lambda *_args, **_kwargs: {},
     )
-    curated = {m for m, _desc in OPENROUTER_MODELS} | set(_PROVIDER_MODELS["spaceshipresearch"])
+    curated = {m for m, _desc in OPENROUTER_MODELS}
     flash = sorted(m for m in curated if m.startswith("google/gemini-") and m.endswith("-flash"))
     assert flash, "expected curated google/gemini-*-flash picker entries"
     usage = CanonicalUsage(input_tokens=1_000_000, output_tokens=1_000_000, cache_read_tokens=1_000_000)
@@ -384,10 +383,6 @@ def test_curated_google_flash_models_resolve_official_snapshot_pricing(monkeypat
         # Direct-route models the picker offers must also be pickable directly.
         assert bare in _PROVIDER_MODELS["gemini"], model
         assert model in _PROVIDER_MODELS["vertex"], model
-
-
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -428,7 +423,6 @@ class TestFormatCostLabel:
         # Exact boundary: $0.00005 rounds to 0.0000 under ROUND_HALF_EVEN
         # and must also take the fallback.
         assert format_cost_label(Decimal("0.00005")) == "~$<0.0001"
-
 
 
 # ---------------------------------------------------------------------------

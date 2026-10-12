@@ -342,7 +342,6 @@ from typing import Optional
 
 
 from scout_cli.subcommands.cron import build_cron_parser
-from scout_cli.subcommands.sync import build_sync_parser
 from scout_cli.subcommands.gateway import build_gateway_parser
 from scout_cli.subcommands.profile import build_profile_parser
 from scout_cli.subcommands.model import build_model_parser
@@ -769,7 +768,6 @@ from datetime import datetime
 
 from scout_cli.model_setup_flows import (
     _model_flow_openrouter,
-    _model_flow_spaceshipresearch,
     _model_flow_openai_codex,
     _model_flow_xai_oauth,
     _model_flow_qwen_oauth,
@@ -801,7 +799,6 @@ from scout_cli.main_agent_cmds import (
 )
 from scout_cli.main_platform_setup import (
     cmd_slack,
-    cmd_sync,
     cmd_whatsapp,
     cmd_whatsapp_cloud,
 )
@@ -1089,9 +1086,7 @@ def _auth_store_logged_in(auth_file: Path, registry, strict_profile_scope: bool)
 
 
 def _has_any_provider_configured(*, strict_profile_scope: bool = False) -> bool:
-    """Check if at least one inference provider is usable. Never creates one: the SpaceshipResearch free tier
-    counts only once its identity exists, and the boot bootstrap (``scout_cli.free_tier_bootstrap``)
-    is the only thing that creates it; ``cmd_chat`` runs the bootstrap before asking.
+    """Check if at least one inference provider is usable. Never creates one.
 
     ``strict_profile_scope``: the caller has bound a NAMED profile's home and
     secret scope and wants an answer for that profile only — launch-process
@@ -1176,12 +1171,6 @@ def _has_any_provider_configured(*, strict_profile_scope: bool = False) -> bool:
         except Exception:
             pass
 
-    # Nothing explicit anywhere: an existing SpaceshipResearch free-tier identity counts while the tier is on.
-    try:
-        from scout_cli.anon_auth import guest_enabled, has_guest
-        return guest_enabled() and has_guest()
-    except Exception as exc:
-        logger.debug("free tier check on first run skipped: %s", exc)
     return False
 
 
@@ -1839,11 +1828,7 @@ def cmd_chat(args):
 
     _warn_retired_xai_models()
 
-    # First-run guard: the free-tier bootstrap runs first (synchronously here; it is the only thing
-    # that may create the identity), then the inventory decides whether setup is needed.
-    from scout_cli.free_tier_bootstrap import run_bootstrap
-
-    run_bootstrap(announce=False)
+    # First-run guard: the inventory decides whether setup is needed.
     if not _has_any_provider_configured():
         _first_run_setup_guard(args)
         return
@@ -1972,7 +1957,6 @@ cmd_dump = _forward_command("cmd_dump", "scout_cli.dump", "run_dump", doc='Dump 
 cmd_debug = _forward_command("cmd_debug", "scout_cli.debug", "run_debug", doc='Debug tools (share report, etc.).')
 cmd_skin = _forward_command("cmd_skin", "scout_cli.skin_cmd", "skin_command", doc='Skin management (list / use / set).')
 cmd_import = _forward_command("cmd_import", "scout_cli.backup", "run_import", forward_return=True, doc='Restore a Scout backup from a zip file.')
-cmd_dashboard_register = _forward_command("cmd_dashboard_register", "scout_cli.dashboard_register", "cmd_dashboard_register", doc='Register a self-hosted dashboard OAuth client with Scout Portal.')
 cmd_gateway_enroll = _forward_command("cmd_gateway_enroll", "scout_cli.gateway_enroll", "cmd_gateway_enroll", doc='Enroll a self-hosted gateway with a relay connector.')
 cmd_prompt_size = _forward_command("cmd_prompt_size", "scout_cli.prompt_size", "cmd_prompt_size", doc='Show a byte/char breakdown of the system prompt + tool schemas.')
 cmd_pairing = _forward_command("cmd_pairing", "scout_cli.pairing", "pairing_command")
@@ -2007,7 +1991,6 @@ _PROVIDER_MODEL_FLOWS = {
     "openrouter": lambda c, m, a: _model_flow_openrouter(c, m),
     "moa": lambda c, m, a: _model_flow_moa(c, m),
     "ai-gateway": lambda c, m, a: _model_flow_ai_gateway(c, m),
-    "spaceshipresearch": lambda c, m, a: _model_flow_spaceshipresearch(c, m, args=a),
     "openai-codex": lambda c, m, a: _model_flow_openai_codex(c, m),
     "xai-oauth": lambda c, m, a: _model_flow_xai_oauth(c, m, args=a),
     "qwen-oauth": lambda c, m, a: _model_flow_qwen_oauth(c, m),
@@ -2077,7 +2060,7 @@ def _resolve_active_provider(config, model_cfg, effective_provider, custom_provi
             if exc.code == "no_provider_configured":
                 # The picker that is about to open IS the fix; a warning that says
                 # "run `scout model`" from inside `scout model` is circular.
-                print("No provider is set up yet — pick one below. (Scout Portal works without an API key.)")
+                print("No provider is set up yet — pick one below.")
             elif effective_provider == "auto":
                 print(f"Warning: {format_auth_error(exc)} Falling back to auto provider detection.")
             active = None  # no provider yet; default to first in list
@@ -2882,12 +2865,12 @@ _BUILTIN_SUBCOMMANDS = frozenset(
         "dump", "egress", "fallback", "gateway", "hooks", "import", "import-agent", "insights",
         "gui", "desktop", "kanban", "login", "logout", "logs", "lsp", "mcp", "memory", "migrate", "moa",
         "journey", "memory-graph", "learning",
-        "google", "model", "monitoring", "pairing", "pause", "peer", "pets", "plugins", "portal", "profile",
+        "google", "model", "monitoring", "pairing", "pause", "peer", "pets", "plugins", "profile",
         "project", "proxy",
         "prompt-size",
         "resume",
         "send", "sessions", "setup",
-        "skin", "skills", "slack", "status", "sync", "tools", "uninstall", "update",
+        "skin", "skills", "slack", "status", "tools", "uninstall", "update",
         "usage", "vault",
         "webhook", "whatsapp", "whatsapp-cloud", "worktree", "chat", "secrets", "security",
         "browser",
@@ -3476,14 +3459,10 @@ def _build_cli_parser():
     build_pause_parser(subparsers)
     build_planner_parser(subparsers)
     build_cron_parser(subparsers, cmd_cron=cmd_cron)
-    build_sync_parser(subparsers, cmd_sync=cmd_sync)
     build_webhook_parser(subparsers, cmd_webhook=cmd_webhook)
 
     from scout_cli.subcommands.peer import build_peer_parser
     build_peer_parser(subparsers)
-
-    from scout_cli.portal_cli import add_parser as _add_portal_parser
-    _add_portal_parser(subparsers)
 
     from scout_cli.kanban import build_parser as _build_kanban_parser
     _build_kanban_parser(subparsers).set_defaults(func=cmd_kanban)
@@ -3534,7 +3513,6 @@ def _build_cli_parser():
     build_dashboard_parser(
         subparsers,
         cmd_dashboard=cmd_dashboard,
-        cmd_dashboard_register=cmd_dashboard_register,
     )
     # "desktop" is canonical (Scout-Setup.exe tells users to run it, so it
     # must be the name --help shows); "gui" is a deprecated alias.

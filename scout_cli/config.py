@@ -329,7 +329,7 @@ def is_nix_install_method(method: str) -> bool:
 
 
 _UPDATE_COMMAND_BY_METHOD = {
-    "docker": "docker pull spaceshipresearch/scout-agent:latest",
+    "docker": "docker pull ghcr.io/adityakm24/scout-agent:latest",
     "apt": "pkg upgrade scout-agent",  # "apt" == Termux APT by contract; uses Termux's `pkg`.
 }
 
@@ -355,23 +355,23 @@ def recommended_update_command() -> str:
 _DOCKER_UPDATE_MESSAGE = """\
 ✗ ``scout update`` doesn't apply inside the Docker container.
 
-Scout Agent runs as a published image (spaceshipresearch/scout-agent), not a
+Scout Agent runs as a published image (ghcr.io/adityakm24/scout-agent), not a
 git checkout — the container has no working tree to pull into.  Update by
 pulling a fresh image and restarting your container instead:
 
-  docker pull spaceshipresearch/scout-agent:latest
+  docker pull ghcr.io/adityakm24/scout-agent:latest
   # then restart whatever started the container, e.g.:
   docker compose up -d --force-recreate scout-agent
   # or, for ad-hoc runs, exit the current container and `docker run` again
 
 Verify the new version after restart:
-  docker run --rm spaceshipresearch/scout-agent:latest --version
+  docker run --rm ghcr.io/adityakm24/scout-agent:latest --version
 
 Notes:
   • If you pinned a specific tag (e.g. ``:v0.14.0``) the ``:latest`` tag
     won't move your container — pull the newer tag you actually want, or
     switch to ``:latest`` / ``:main`` for rolling updates.  See available
-    tags at https://hub.docker.com/r/spaceshipresearch/scout-agent/tags
+    tags at https://github.com/adityakm24/scout/pkgs/container/scout-agent
   • On a ``-desktop`` tag (the one carrying Bot Screen)?  Keep the suffix:
     the unsuffixed image has no Xvnc/Xfce and no sudo to add them, so
     pulling it stops the bots' screens from starting.
@@ -856,9 +856,7 @@ def _unset_nested(config, dotted_key: str) -> bool:
 _ENV_CONFIG_KEYS = frozenset({
     'OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'VOICE_TOOLS_OPENAI_KEY',
     'EXA_API_KEY', 'PARALLEL_API_KEY', 'FIRECRAWL_API_KEY', 'FIRECRAWL_API_URL',
-    'FIRECRAWL_GATEWAY_URL', 'TOOL_GATEWAY_URL', 'CONNECTOR_GATEWAY_URL',
-    'TOOL_GATEWAY_DOMAIN', 'TOOL_GATEWAY_SCHEME',
-    'TOOL_GATEWAY_USER_TOKEN', 'TAVILY_API_KEY', 'PERPLEXITY_API_KEY', 'API_SERVER_KEY',
+    'TAVILY_API_KEY', 'PERPLEXITY_API_KEY', 'API_SERVER_KEY',
     'BROWSERBASE_API_KEY', 'BROWSERBASE_PROJECT_ID', 'BROWSER_USE_API_KEY',
     'FAL_KEY', 'TELEGRAM_BOT_TOKEN', 'DISCORD_BOT_TOKEN',
     'TERMINAL_SSH_HOST', 'TERMINAL_SSH_USER', 'TERMINAL_SSH_KEY',
@@ -2403,7 +2401,6 @@ _FALLBACK_COMMENT = """
 # Supported providers:
 #   openrouter   (OPENROUTER_API_KEY)  — routes to any model
 #   openai-codex (OAuth — scout auth) — OpenAI Codex
-#   spaceshipresearch         (OAuth — scout auth) — Scout Portal
 #   zai          (ZAI_API_KEY)         — Z.AI / GLM
 #   kimi-coding  (KIMI_API_KEY)        — Kimi / Moonshot
 #   kimi-coding-cn (KIMI_CN_API_KEY)   — Kimi / Moonshot (China)
@@ -2867,7 +2864,7 @@ _SECRET_CONFIG_KEYS = frozenset({
 # the suffixes ``_is_env_config_key`` routes to .env. Suffix-only so ``token_count`` stays visible.
 _SECRET_CONFIG_KEY_SUFFIXES = ("_api_key", "_token", "_secret", "_password", "_key", "_access_key")
 # .env-routed keys are credentials by default; these suffixes name the non-secret exceptions
-# (``TERMINAL_SSH_HOST``, ``TOOL_GATEWAY_URL``, ``BROWSERBASE_PROJECT_ID``).
+# (``TERMINAL_SSH_HOST``, ``FIRECRAWL_API_URL``, ``BROWSERBASE_PROJECT_ID``).
 _NON_SECRET_KEY_SUFFIXES = ("_url", "_host", "_user", "_id", "_domain", "_scheme")
 _ENV_PLACEHOLDER_RE = re.compile(r"^\$\{[A-Za-z_][A-Za-z0-9_]*\}$")
 

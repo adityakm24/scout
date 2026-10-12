@@ -6,8 +6,6 @@ import logging
 import shutil
 import subprocess
 import sys
-from tools import tool_backend_helpers
-from scout_cli import spaceshipresearch_subscription
 
 logger = logging.getLogger("scout_cli.setup")
 
@@ -239,22 +237,13 @@ def _setup_tts_provider(config: dict):
     _setup.print_header("Text-to-Speech Provider (optional)")
     _setup._info(f"Current: {current_label}", None)
     options = list(_TTS_PROVIDER_CHOICES)
-    if tool_backend_helpers.managed_spaceshipresearch_tools_enabled() and spaceshipresearch_subscription.get_spaceshipresearch_subscription_features(config).spaceshipresearch_auth_present:
-        options.insert(0, ("spaceshipresearch-openai",
-                           "SpaceshipResearch Subscription (managed OpenAI TTS, billed to your subscription)"))
     choices = [label for _, label in options] + [f"Keep current ({current_label})"]
     keep_current_idx = len(choices) - 1
     idx = _setup.prompt_choice("Select TTS provider:", choices, keep_current_idx)
     if idx == keep_current_idx:
         return
     selected = options[idx][0]
-    if selected == "spaceshipresearch-openai":
-        selected = "openai"
-        _setup.print_info("OpenAI TTS will use the managed SpaceshipResearch gateway and bill to your subscription.")
-        if _setup.get_env_value("VOICE_TOOLS_OPENAI_KEY") or _setup.get_env_value("OPENAI_API_KEY"):
-            _setup.print_warning("Direct OpenAI credentials are still configured and may take precedence "
-                                 "until removed from ~/.scout/.env.")
-    elif selected in _TTS_LOCAL_PROVIDERS:
+    if selected in _TTS_LOCAL_PROVIDERS:
         selected = _tts_local_install_step(selected)
     elif selected in _TTS_API_KEY_PROVIDERS:
         selected = _tts_api_key_step(selected)

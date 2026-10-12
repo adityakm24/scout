@@ -32,7 +32,7 @@ class TestResolveAutoCustomEndToEnd:
         import agent.auxiliary_client as mod
 
         # Hermetic: no aggregator creds, no stale OPENAI_BASE_URL.
-        for var in ("OPENROUTER_API_KEY", "SPACESHIPRESEARCH_API_KEY", "OPENAI_API_KEY",
+        for var in ("OPENROUTER_API_KEY", "FIXTURECO_API_KEY", "OPENAI_API_KEY",
                     "OPENAI_BASE_URL"):
             monkeypatch.delenv(var, raising=False)
         scout_home = tmp_path / ".scout"
@@ -71,7 +71,7 @@ class TestResolveAutoCustomEndToEnd:
         broke the named-custom branch and returned None here."""
         import agent.auxiliary_client as mod
 
-        for var in ("OPENROUTER_API_KEY", "SPACESHIPRESEARCH_API_KEY", "OPENAI_API_KEY",
+        for var in ("OPENROUTER_API_KEY", "FIXTURECO_API_KEY", "OPENAI_API_KEY",
                     "OPENAI_BASE_URL"):
             monkeypatch.delenv(var, raising=False)
         scout_home = tmp_path / ".scout"
@@ -112,7 +112,7 @@ class TestResolveAutoCustomEndToEnd:
         AnthropicAuxiliaryClient pointed at the ORIGINAL /anthropic URL."""
         import agent.auxiliary_client as mod
 
-        for var in ("OPENROUTER_API_KEY", "SPACESHIPRESEARCH_API_KEY", "OPENAI_API_KEY",
+        for var in ("OPENROUTER_API_KEY", "FIXTURECO_API_KEY", "OPENAI_API_KEY",
                     "OPENAI_BASE_URL"):
             monkeypatch.delenv(var, raising=False)
         scout_home = tmp_path / ".scout"

@@ -37,7 +37,6 @@ class _AzureChild:
         self.api_key = entry.runtime_api_key
         self.base_url = entry.base_url
         self._credential_pool_entry_id = entry.id
-        return True
 
     def _is_entitlement_failure(self, error_context, status_code):
         return False

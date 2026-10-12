@@ -42,7 +42,7 @@ class TurnFacadeMixin:
         from agent.aux_accounting import reset_accounting_context, set_accounting_context
         from agent.auxiliary_client import scoped_runtime_main
         from agent.conversation_loop import run_conversation
-        from agent.portal_tags import (
+        from agent.conversation_scope import (
             reset_affinity_scope, reset_conversation_context, set_affinity_scope,
             set_conversation_context,
         )
@@ -116,7 +116,7 @@ class TurnFacadeMixin:
             relay_turn = relay_runtime.SESSION_COORDINATOR.begin_turn(
                 relay_lease, **relay_turn_kwargs
             )
-            # Ambient Scout Portal tagging: every LLM call in this turn (loop, compression,
+            # Ambient conversation scope: every LLM call in this turn (loop, compression,
             # vision, MoA, review forks) inherits `conversation=<root>`; host-declared
             # affinity scope falls back to it; accounting handles route aux usage to the session.
             token = set_conversation_context(self._conversation_root_id())

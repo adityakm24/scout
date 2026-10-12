@@ -20,7 +20,7 @@ body:
       label: What's Going Wrong?
       description: Describe what you're trying to do and where it fails.
       placeholder: |
-        I ran `scout setup` and selected Scout Portal, but when I try to
+        I ran `scout setup` and selected OpenRouter, but when I try to
         start the gateway I get...
     validations:
       required: true

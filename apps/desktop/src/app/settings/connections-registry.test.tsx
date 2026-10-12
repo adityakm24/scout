@@ -201,49 +201,6 @@ describe('ConnectionsRegistrySection', () => {
     })
   })
 
-  it('signs a hand-registered Cloud connection in and saves it as oauth (#89529)', async () => {
-    const oauthLoginConnectionConfig = vi.fn().mockResolvedValue({ connected: true, ok: true })
-    Object.assign(window.scoutDesktop!, { oauthLoginConnectionConfig })
-
-    render(<ConnectionsRegistrySection />)
-
-    await screen.findByText('Homelab')
-    fireEvent.click(screen.getByText('Add connection'))
-    fireEvent.click(screen.getByRole('button', { name: 'Scout Cloud' }))
-    fireEvent.change(screen.getByPlaceholderText('Homelab'), { target: { value: 'Team cloud' } })
-    fireEvent.change(screen.getByPlaceholderText('http://homelab.lan:9119'), {
-      target: { value: 'https://team.scout.cloud' }
-    })
-
-    // Cloud never takes a pasted token: no token box, a sign-in button instead.
-    expect(screen.queryByPlaceholderText('Paste session token')).toBeNull()
-    fireEvent.click(await screen.findByRole('button', { name: /sign in/i }))
-    // The draft identity rides along (#99989): a pre-save sign-in must name the
-    // connection whose jar the login writes into — connectionId null (unset draft)
-    // plus the draft label here. The kind/authMode matter just as much: a CLOUD
-    // draft must sign in on the legacy shared portal jar, which is the jar the
-    // saved cloud entry reads — never a private per-connection jar.
-    await waitFor(() =>
-      expect(oauthLoginConnectionConfig).toHaveBeenCalledWith('https://team.scout.cloud', {
-        connectionId: null,
-        label: 'Team cloud',
-        authMode: 'oauth',
-        kind: 'cloud'
-      })
-    )
-
-    fireEvent.click(screen.getByText('Save connection').closest('button')!)
-
-    await waitFor(() => expect(save).toHaveBeenCalledTimes(1))
-    expect(save.mock.calls[0][0]).toMatchObject({
-      authMode: 'oauth',
-      kind: 'cloud',
-      label: 'Team cloud',
-      url: 'https://team.scout.cloud'
-    })
-    expect(save.mock.calls[0][0].token).toBeUndefined()
-  })
-
   it('saves a custom remote Scout path for SSH connections', async () => {
     render(<ConnectionsRegistrySection />)
 
@@ -495,10 +452,10 @@ describe('dedupe helpers', () => {
     ).toBeNull()
   })
 
-  it('keys remote/cloud dupes on the normalized URL across both kinds', () => {
+  it('keys remote dupes on the normalized URL', () => {
     expect(
       findDuplicateConnection(
-        { host: '', id: null, kind: 'cloud', remoteProfile: '', url: 'http://HOMELAB.lan:9119/' },
+        { host: '', id: null, kind: 'remote', remoteProfile: '', url: 'http://HOMELAB.lan:9119/' },
         registry.connections
       )
     ).toMatchObject({ id: 'homelab' })

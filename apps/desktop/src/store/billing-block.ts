@@ -18,13 +18,6 @@ export interface ActiveBillingBlock {
 
 export const $billingBlock = atom<ActiveBillingBlock | null>(null)
 
-/**
- * Navigation intent counter. A toast fired outside React (or any surface
- * without router context) bumps this to ask the shell — which owns
- * `useNavigate` — to open Settings → Billing in-app. See `contrib/wiring.tsx`.
- */
-export const $billingSettingsRequest = atom(0)
-
 export function setBillingBlock(sessionId: string, block: BillingBlock): void {
   $billingBlock.set({ at: Date.now(), block, sessionId })
 }
@@ -45,32 +38,19 @@ export function clearBillingBlock(sessionId?: string): void {
   $billingBlock.set(null)
 }
 
-export function requestBillingSettings(): void {
-  $billingSettingsRequest.set($billingSettingsRequest.get() + 1)
-}
-
 /**
  * The single recovery action for a billing wall, shared by the toast and the
- * in-chat banner so both behave identically: SpaceshipResearch routes to the in-app
- * Settings → Billing surface; a third-party provider deep-links to its own
- * billing page (falling back to the in-app surface only if we have no URL).
+ * in-chat banner so both behave identically: deep-link to the provider's own
+ * billing page. Null when the provider has no known billing URL.
  */
-export function runBillingRecovery(block: BillingBlock): void {
-  if (block.is_spaceshipresearch) {
-    requestBillingSettings()
-
-    return
-  }
-
-  if (block.billing_url) {
-    openExternalLink(block.billing_url)
-
-    return
-  }
-
-  requestBillingSettings()
+export function billingRecoveryUrl(block: BillingBlock): null | string {
+  return block.billing_url || null
 }
 
-export function billingCtaLabel(block: BillingBlock, copy: { addCredits: string; openBilling: string }): string {
-  return block.is_spaceshipresearch ? copy.openBilling : copy.addCredits
+export function runBillingRecovery(block: BillingBlock): void {
+  const url = billingRecoveryUrl(block)
+
+  if (url) {
+    openExternalLink(url)
+  }
 }

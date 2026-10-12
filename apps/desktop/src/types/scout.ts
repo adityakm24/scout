@@ -62,15 +62,8 @@ export interface ElevenLabsVoicesResponse {
 }
 
 export interface OAuthProviderStatus {
-  /** SpaceshipResearch only: the tier name the token resolves to, when the backend knows
-   *  one. Null for a free-tier identity and for older backends. */
-  account_tier?: null | string
   error?: string
   expires_at?: null | string
-  /** SpaceshipResearch only: true when the stored token belongs to a free-tier identity
-   *  rather than a signed-in account. `logged_in` stays true either way — a
-   *  token exists — so this is the only way to tell the two apart. */
-  free_tier?: boolean
   has_refresh_token?: boolean
   last_refresh?: null | string
   logged_in: boolean
@@ -120,52 +113,10 @@ export interface OAuthSubmitResponse {
 }
 
 export interface OAuthPollResponse {
-  /** Approved sign-ins only: the account the tokens now belong to. Null when
-   *  the backend has no address for it. */
-  account_email?: null | string
   error_message?: null | string
   expires_at?: null | number
-  /** Approved sign-ins only: the default model the backend settled on. Null
-   *  when the config already pointed at the user's own model and was left
-   *  alone. */
-  model?: null | string
-  /** Why a non-approved terminal status ended that way: `user_declined`
-   *  (status `denied`), or `superseded` / `account_retired` /
-   *  `account_not_anonymous` / `account_busy` / `timeout` (status `error`).
-   *  `error_message` carries the matching user-facing text. */
-  reason?: null | string
-  /** Failed sign-ins over a free-tier identity: the seconds the account service
-   *  asked the client to wait before trying again (0 or absent when none). */
-  retry_after?: null | number
-  /** Failed sign-ins over a free-tier identity: whether a later attempt can succeed. */
-  retryable?: boolean | null
   session_id: string
   status: 'approved' | 'denied' | 'error' | 'expired' | 'pending'
-}
-
-/** Result of the `free_tier.status` RPC. Pull-only: it reads local auth state
- *  and makes no network call, so it is safe to refresh on the ambient status
- *  cadence. */
-export interface FreeTierStatus {
-  /** An identity exists AND the free tier is on: connectors ride on it, and so
-   *  does inference when nothing else carries it. Whether inference actually
-   *  runs on it is the ROUTE's answer (`setup.runtime_check.free_tier_route`). */
-  available: boolean
-  enabled: boolean
-  has_guest: boolean
-  /** Display name for the route, e.g. "SpaceshipResearch · free tier". */
-  label: string
-  model: string
-  /** True until the one-time introduction has been acknowledged. */
-  notice_pending: boolean
-  /** Present only while `enabled` and no identity exists: why the last attempt
-   *  to create one failed. `error_code` is one of the backend's `anon_*` codes
-   *  (`scout_cli/anon_auth.py`), `error` its sentence, `retryable` whether a
-   *  later attempt can succeed, `retry_after` the seconds still to wait. */
-  error?: string
-  error_code?: string
-  retryable?: boolean
-  retry_after?: number
 }
 
 export interface MemoryProviderOAuthStatus {
@@ -1168,12 +1119,11 @@ export interface ToolProvider {
   tag: string
   env_vars: ToolEnvVar[]
   post_setup: string | null
-  requires_spaceshipresearch_auth: boolean
   /** True when this is the provider currently written to config (mirrors the
    *  CLI `scout tools` active-provider detection). */
   is_active: boolean
-  /** Honest readiness computed server-side (keys ∧ SpaceshipResearch entitlement ∧
-   *  post-setup install state). Optional for older backends. */
+  /** Honest readiness computed server-side (keys ∧ post-setup install state).
+   *  Optional for older backends. */
   status?: ToolProviderStatus
   /** Web toolset only: the backend key written to web.*backend config
    *  (e.g. 'searxng'). Absent on other toolsets and older backends. */
@@ -1768,10 +1718,6 @@ export interface DebugShareResponse {
 export interface ModelAssignmentResponse {
   /** Persisted endpoint URL for custom/local providers (echoed back). */
   base_url?: string
-  /** Toolset keys auto-routed through the SpaceshipResearch Tool Gateway as a result of
-   *  switching the main provider to SpaceshipResearch. Empty unless provider === 'spaceshipresearch'
-   *  and the user is a paid subscriber with unconfigured tools. */
-  gateway_tools?: string[]
   confirm_message?: string
   confirm_required?: boolean
   model?: string

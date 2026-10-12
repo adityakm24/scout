@@ -90,7 +90,7 @@ _STEWARD_UNINSTALL_MESSAGES = {
         "✗ This Scout runs from a Docker image.\n"
         "\n"
         "There is no code to uninstall — remove the container and image:\n"
-        "  docker rm <container> && docker rmi spaceshipresearch/scout-agent\n"
+        "  docker rm <container> && docker rmi ghcr.io/adityakm24/scout-agent\n"
         "\n" +
         _STEWARD_DELETE_DATA_PREAMBLE +
         _STEWARD_DELETE_DATA_CLI

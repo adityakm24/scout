@@ -159,7 +159,6 @@ def cmd_channel(args) -> None:
                 bundle_env["SCOUT_DATA_DIR_SUFFIX"] = f"-channel-build-{args.channel}"
                 bundle_env["SCOUT_HOME"] = None
                 bundle_env["SCOUT_DESKTOP_USER_DATA_DIR"] = None
-                bundle_env["SCOUT_SHARED_AUTH_DIR"] = None
 
             result = prepare_build(
                 name=args.channel,
@@ -283,7 +282,6 @@ def validate_arguments(parser, args) -> bool:
         banned = (
             "SCOUT_DATA_DIR_SUFFIX",
             "SCOUT_HOME",
-            "SCOUT_SHARED_AUTH_DIR",
             "SCOUT_DESKTOP_USER_DATA_DIR",
         )
         bad_vars = [e for e in env if e in banned]

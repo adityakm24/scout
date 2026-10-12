@@ -43,9 +43,9 @@ const OPTIONS: ModelOptionsResult = {
       authenticated: true
     },
     {
-      slug: 'spaceshipresearch',
-      name: 'SpaceshipResearch',
-      models: ['Scout-4.5'],
+      slug: 'fixtureco',
+      name: 'Fixture Co',
+      models: ['Model-4.5'],
       authenticated: true
     }
   ]
@@ -133,7 +133,7 @@ describe('ModelPickerDialog download rows', () => {
     })
     renderPicker()
 
-    expect(await screen.findByText('Scout-4.5')).toBeTruthy()
+    expect(await screen.findByText('Model-4.5')).toBeTruthy()
     expect(screen.getByText('Qwen3.8 Flash Next (UD-Q4_K_XL)')).toBeTruthy()
     expect(screen.getByText('41%')).toBeTruthy()
   })
@@ -176,9 +176,9 @@ describe('ModelPickerDialog search ranking', () => {
 
   it('orders model rows exactly as the shared fuzzyRank does', async () => {
     vi.mocked(requestModelOptions).mockResolvedValue({
-      providers: [{ slug: 'spaceshipresearch', name: 'SpaceshipResearch', models: MODELS, authenticated: true }]
+      providers: [{ slug: 'fixtureco', name: 'Fixture Co', models: MODELS, authenticated: true }]
     })
-    renderPicker({ currentModel: 'gpt-4o', currentProvider: 'spaceshipresearch' })
+    renderPicker({ currentModel: 'gpt-4o', currentProvider: 'fixtureco' })
     await screen.findByText('gpt-4o')
 
     const query = 'g4o'
@@ -205,9 +205,9 @@ describe('ModelPickerDialog search ranking', () => {
     const catalog = ['gpt-4o', 'claude-3-opus', 'qwen3.8-flash']
 
     vi.mocked(requestModelOptions).mockResolvedValue({
-      providers: [{ slug: 'spaceshipresearch', name: 'SpaceshipResearch', models: catalog, authenticated: true }]
+      providers: [{ slug: 'fixtureco', name: 'Fixture Co', models: catalog, authenticated: true }]
     })
-    renderPicker({ currentModel: 'gpt-4o', currentProvider: 'spaceshipresearch' })
+    renderPicker({ currentModel: 'gpt-4o', currentProvider: 'fixtureco' })
     await screen.findByText('gpt-4o')
 
     fireEvent.change(screen.getByRole('combobox'), { target: { value: query } })

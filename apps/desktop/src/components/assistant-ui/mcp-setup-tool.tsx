@@ -67,7 +67,6 @@ type McpVerb = 'approve' | 'none' | 'open' | 'reissue' | 'working'
 
 const MCP_VERBS = {
   connected: 'none',
-  expired: 'reissue',
   failed: 'reissue',
   initiated: 'open',
   not_connected: 'none',

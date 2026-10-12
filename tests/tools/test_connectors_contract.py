@@ -35,8 +35,6 @@ def test_only_the_backend_watcher_may_report_connected():
         assert edges.get(c.TargetState.skipped) in {None, c.Actor.user}, (kind, _from)
 
 def test_allowed_is_a_pure_lookup():
-    assert c.allowed("connector", c.TargetState.initiated, c.TargetState.connected) == c.Actor.backend_watcher
-    assert c.allowed("connector", c.TargetState.initiated, c.TargetState.expired) == c.Actor.clock
     assert c.allowed("mcp", c.TargetState.initiated, c.TargetState.connected) == c.Actor.backend_watcher
     assert c.allowed("mcp", c.TargetState.failed, c.TargetState.initiated) == c.Actor.user
-    assert c.allowed("connector", c.TargetState.connected, c.TargetState.pending) is None
+    assert c.allowed("mcp", c.TargetState.connected, c.TargetState.pending) is None

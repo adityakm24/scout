@@ -83,32 +83,6 @@ class TestChatCompletionsBasic:
             "{}",
         ]
 
-    @pytest.mark.parametrize("provider", ["spaceshipresearch", "openrouter"])
-    def test_gpt56_ultra_uses_max_wire_effort(self, transport, provider):
-        from providers import get_provider_profile
-
-        profile = get_provider_profile(provider)
-        kw = transport.build_kwargs(
-            model="openai/gpt-5.6-sol",
-            messages=[{"role": "user", "content": "Hi"}],
-            tools=[],
-            reasoning_config={"enabled": True, "effort": "ultra"},
-            supports_reasoning=True,
-            provider_profile=profile,
-            provider_name=provider,
-            base_url=profile.base_url,
-        )
-        assert kw["extra_body"]["reasoning"] == {"enabled": True, "effort": "max"}
-
-
-
-
-
-
-
-
-
-
 
     def test_convert_messages_strips_timestamp(self, transport):
         """Internal per-message ``timestamp`` metadata (stamped by
@@ -258,11 +232,7 @@ class TestChatCompletionsBasic:
         assert "extra_content" in msgs[1]["tool_calls"][1]
 
 
-
 class TestChatCompletionsBuildKwargs:
-
-
-
 
 
     def test_openrouter_provider_prefs(self, transport):
@@ -276,35 +246,6 @@ class TestChatCompletionsBuildKwargs:
         )
         assert kw["extra_body"]["provider"] == {"only": ["openai"]}
 
-
-
-
-
-
-    def test_spaceshipresearch_tags(self, transport):
-        from agent.portal_tags import scout_portal_tags
-        from providers import get_provider_profile
-        profile = get_provider_profile("spaceshipresearch")
-        msgs = [{"role": "user", "content": "Hi"}]
-        kw = transport.build_kwargs(model="gpt-4o", messages=msgs, provider_profile=profile)
-        assert kw["extra_body"]["tags"] == scout_portal_tags()
-
-
-    def test_spaceshipresearch_omits_disabled_reasoning_for_unknown_model(self, transport):
-        from providers import get_provider_profile
-        profile = get_provider_profile("spaceshipresearch")
-        msgs = [{"role": "user", "content": "Hi"}]
-        kw = transport.build_kwargs(
-            model="gpt-4o", messages=msgs,
-            provider_profile=profile,
-            supports_reasoning=True,
-            reasoning_config={"enabled": False},
-        )
-        # Not a Portal model id, so the catalog can't rule out a
-        # reasoning-mandatory route (which 400s on a disable) — omit.
-        # tests/plugins/model_providers/test_spaceshipresearch_profile.py covers the
-        # catalog-known cases where the disable IS forwarded.
-        assert "reasoning" not in kw.get("extra_body", {})
 
     def test_ollama_num_ctx(self, transport):
         from providers import get_provider_profile
@@ -342,7 +283,6 @@ class TestChatCompletionsBuildKwargs:
         )
         assert kw.get("extra_body", {}).get("think") is None
         assert kw.get("reasoning_effort") == "none"
-
 
 
     def test_gemini_openai_compat_flash_reasoning_maps_to_nested_google_thinking_config(self, transport):
@@ -408,21 +348,6 @@ class TestChatCompletionsBuildKwargs:
         assert kw["max_tokens"] == 4096
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def test_omit_temperature(self, transport):
         """Omit temperature is set via ProviderProfile with OMIT_TEMPERATURE sentinel."""
         from providers.base import ProviderProfile, OMIT_TEMPERATURE
@@ -438,12 +363,8 @@ class TestChatCompletionsKimi:
     """Regression tests for the Kimi/Moonshot quirks migrated into the transport."""
 
 
-
-
-
-
     def test_moonshot_tool_schemas_are_sanitized_by_model_name(self, transport):
-        """Aggregator routes (SpaceshipResearch, OpenRouter) hit Moonshot by model name, not base URL."""
+        """Aggregator routes (Fixture Co, OpenRouter) hit Moonshot by model name, not base URL."""
         tools = [
             {
                 "type": "function",
@@ -545,14 +466,10 @@ class TestChatCompletionsLmStudioReasoning:
         assert kw["reasoning_effort"] == "high"
 
 
-
-
-
 class TestChatCompletionsValidate:
 
     def test_none(self, transport):
         assert transport.validate_response(None) is False
-
 
 
     @pytest.mark.parametrize("usage", [None, SimpleNamespace(completion_tokens=0)])
@@ -623,7 +540,6 @@ class TestChatCompletionsNormalize:
         assert nr.tool_calls[0].id == "call_123"
 
 
-
     def test_empty_reasoning_content_preserved(self, transport):
         """DeepSeek can require an explicit empty reasoning_content replay field."""
         r = SimpleNamespace(
@@ -643,19 +559,11 @@ class TestChatCompletionsNormalize:
         assert nr.reasoning_content == ""
 
 
-
-
-
-
-
-
-
 class TestChatCompletionsCacheStats:
 
     def test_no_usage(self, transport):
         r = SimpleNamespace(usage=None)
         assert transport.extract_cache_stats(r) is None
-
 
 
     def test_deepseek_native_top_level_cache_hit_tokens(self, transport):
@@ -672,57 +580,6 @@ class TestChatCompletionsCacheStats:
         )
         result = transport.extract_cache_stats(r)
         assert result == {"cached_tokens": 1500, "creation_tokens": 0}
-
-
-
-class TestChatCompletionsGeminiNativeExtraBodyStrip:
-    """Profile extra_body (e.g. Scout portal tags) must not reach a native
-    Gemini endpoint — Google's REST API rejects unknown fields with HTTP 400.
-    """
-
-    def _spaceshipresearch_profile(self):
-        from providers import get_provider_profile
-        return get_provider_profile("spaceshipresearch")
-
-    def test_tags_stripped_when_endpoint_is_native_gemini(self, transport):
-        kw = transport.build_kwargs(
-            "anthropic/claude-sonnet-4.6",
-            [{"role": "user", "content": "hi"}],
-            None,
-            provider_profile=self._spaceshipresearch_profile(),
-            base_url="https://generativelanguage.googleapis.com/v1beta",
-            session_id="s1",
-            max_tokens=None,
-        )
-        eb = kw.get("extra_body")
-        assert not eb or "tags" not in eb
-
-    def test_tags_preserved_on_spaceshipresearch_endpoint(self, transport):
-        kw = transport.build_kwargs(
-            "scout-3-405b",
-            [{"role": "user", "content": "hi"}],
-            None,
-            provider_profile=self._spaceshipresearch_profile(),
-            base_url="https://inference.spaceshipresearch.com/v1",
-            session_id="s1",
-            max_tokens=None,
-        )
-        eb = kw.get("extra_body")
-        assert eb and "tags" in eb
-
-    def test_tags_pass_through_on_gemini_openai_compat(self, transport):
-        # /openai compat endpoint is not "native" — unchanged behavior.
-        kw = transport.build_kwargs(
-            "anthropic/claude-sonnet-4.6",
-            [{"role": "user", "content": "hi"}],
-            None,
-            provider_profile=self._spaceshipresearch_profile(),
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai",
-            session_id="s1",
-            max_tokens=None,
-        )
-        eb = kw.get("extra_body")
-        assert eb and "tags" in eb
 
 
 class TestPromptCacheKeyCapability:

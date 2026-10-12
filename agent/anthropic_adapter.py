@@ -19,7 +19,7 @@ from utils import normalize_proxy_env_vars
 from agent.anthropic_credentials import _is_oauth_token
 from agent.anthropic_endpoints import (
     _base_url_needs_context_1m_beta, _is_azure_anthropic_endpoint, _is_kimi_coding_endpoint,
-    _is_minimax_anthropic_endpoint, _is_scout_portal_endpoint, _is_opencode_endpoint,
+    _is_minimax_anthropic_endpoint, _is_opencode_endpoint,
     _is_third_party_anthropic_endpoint, _model_name_is_kimi_family, _normalize_base_url_text,
     _requires_bearer_auth,
 )
@@ -98,7 +98,7 @@ _LEGACY_MANUAL_THINKING_CLAUDE_SUBSTRINGS = (
 # sampling params.
 _NO_XHIGH_CLAUDE_SUBSTRINGS = ("claude-opus-4-6", "claude-opus-4.6", "claude-sonnet-4-6", "claude-sonnet-4.6")
 # Adaptive families where thinking is mandatory: ``thinking: {"type": "disabled"}`` answers HTTP
-# 400 (Portal flags them ``reasoning.mandatory``). The failure is asymmetric — a missing entry
+# 400 (catalogs flag them ``reasoning.mandatory``). The failure is asymmetric — a missing entry
 # 400s the turn, a spurious one only leaves thinking on — so when in doubt, add the family.
 _MANDATORY_THINKING_CLAUDE_SUBSTRINGS = ("claude-fable",)
 
@@ -405,7 +405,7 @@ def _new_sdk_client(sdk, kwargs: Dict[str, Any], headers: Dict[str, str], route:
 
     The SDK fills whichever of ``api_key`` / ``auth_token`` we left unset from ANTHROPIC_API_KEY /
     ANTHROPIC_AUTH_TOKEN in the environment (both loaded from ~/.scout/.env) and then sends dual
-    auth — x-api-key *and* Authorization: Bearer — shipping a foreign credential to Portal / MiniMax
+    auth — x-api-key *and* Authorization: Bearer — shipping a foreign credential to MiniMax
     / OAuth / Entra / third-party endpoints (#26970, #105774). An ``Omit()`` default header is the
     SDK-sanctioned way to drop the other header, and unlike an attribute clear it survives
     ``with_options()``, which re-runs the constructor and re-reads the environment."""
@@ -627,10 +627,7 @@ def build_anthropic_kwargs(
     ``fast_mode`` adds ``extra_body.speed="fast"`` plus the fast-mode beta on native Anthropic only."""
     system, anthropic_messages = convert_messages_to_anthropic(messages, base_url=base_url, model=model)
     anthropic_tools = convert_tools_to_anthropic(tools) if tools else []
-    # Scout Portal routes on its own catalog ids (``anthropic/claude-opus-4.8``); normalizing would
-    # make the model unresolvable there (prefix AND dots kept).
-    if not _is_scout_portal_endpoint(base_url):
-        model = normalize_model_name(model, preserve_dots=preserve_dots)
+    model = normalize_model_name(model, preserve_dots=preserve_dots)
     # Non-positive/non-finite values fail locally instead of 400-ing upstream.
     effective_max_tokens = _resolve_anthropic_messages_max_tokens(max_tokens, model, context_length=context_length)
     if context_length and effective_max_tokens > context_length:
@@ -830,8 +827,8 @@ def create_anthropic_message(
     turn path and fall back to ``create()`` only for providers that explicitly don't support
     streaming (restricted Bedrock roles). Both callbacks are best-effort and fire only on the
     streaming path: ``on_stream_event(event)`` lets liveness watchdogs see forward progress;
-    ``on_response(httpx_response)`` exposes headers the parsed Message drops (Scout Portal's
-    ``x-spaceshipresearch-credits-*`` balance family)."""
+    ``on_response(httpx_response)`` exposes headers the parsed Message drops (rate-limit and
+    balance headers)."""
     sanitize_anthropic_kwargs(api_kwargs, log_prefix=log_prefix)
     messages_api = getattr(client, "messages", None)
     stream_fn = getattr(messages_api, "stream", None)

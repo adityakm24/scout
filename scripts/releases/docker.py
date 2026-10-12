@@ -15,7 +15,7 @@ GIT_SHA = re.compile(r"[a-f0-9]{40}")
 from scout_cli.update_channel import STABLE_TAG_RE
 from scripts.releases.versioning import parse_attempt_ref
 ARCHES = ("amd64", "arm64")
-IMAGE = "spaceshipresearch/scout-agent"
+IMAGE = "ghcr.io/adityakm24/scout-agent"
 
 class DockerReleaseError(ValueError):
     """Raised when a phase/manifest violates the staged-release contract."""

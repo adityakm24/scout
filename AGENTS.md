@@ -155,8 +155,8 @@ Choose the highest (least-footprint) rung that correctly solves the problem:
 A tool that works only because of *who is on the other end* (desktop panes, in-app browser,
 message reactions, Projects) must resolve availability from the **session's own source**, not
 from an env var on the backend. Client and backend are separate machines: the desktop app may
-drive a locally spawned backend, one over SSH, one behind URL + token, or Scout Cloud, and
-only the first two carry `SCOUT_DESKTOP=1`. An env-keyed gate is a silent no-op on the other
+drive a locally spawned backend, one over SSH, or one behind URL + token, and only the first
+two carry `SCOUT_DESKTOP=1`. An env-keyed gate is a silent no-op on the other
 topologies — the tool is stripped from the schema while the platform hint tells the model it
 is "inside the Scout desktop app". The pattern:
 

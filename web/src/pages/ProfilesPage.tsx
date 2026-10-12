@@ -23,25 +23,25 @@ import {
   X,
 } from "lucide-react";
 import spinners from "unicode-animations";
-import { H2 } from "@spaceshipresearch/ui/ui/components/typography/h2";
+import { H2 } from "@/ui/components/typography";
 import { api } from "@/lib/api";
 import type { ActiveProfileInfo, ProfileInfo } from "@/lib/api";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
-import { useConfirmDelete } from "@spaceshipresearch/ui/hooks/use-confirm-delete";
+import { useToast } from "@/ui/hooks/use-toast";
+import { useConfirmDelete } from "@/ui/hooks/use-confirm-delete";
 import { useModalBehavior } from "@/hooks/useModalBehavior";
-import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
-import { Card, CardContent } from "@spaceshipresearch/ui/ui/components/card";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
+import { Toast } from "@/ui/components/toast";
+import { Card, CardContent } from "@/ui/components/card";
+import { Badge } from "@/ui/components/badge";
+import { Button } from "@/ui/components/button";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
 import {
   Select,
   SelectOption,
-} from "@spaceshipresearch/ui/ui/components/select";
-import { Checkbox } from "@spaceshipresearch/ui/ui/components/checkbox";
+} from "@/ui/components/select";
+import { Checkbox } from "@/ui/components/checkbox";
 import { useI18n } from "@/i18n";
 import { usePageHeader } from "@/contexts/usePageHeader";
 import { cn, themedBody } from "@/lib/utils";
@@ -832,7 +832,7 @@ export default function ProfilesPage() {
             <header className="p-5 pb-3 border-b border-border">
               <h2
                 id="create-profile-title"
-                className="font-mondwest text-display text-base tracking-wider"
+                className="font-display text-display text-base tracking-wider"
               >
                 {t.profiles.newProfile}
               </h2>
@@ -925,7 +925,7 @@ export default function ProfilesPage() {
               </div>
 
               <fieldset className="grid gap-3 border-t border-border pt-4">
-                <legend className="font-mondwest text-display text-xs tracking-wider text-muted-foreground">
+                <legend className="font-display text-display text-xs tracking-wider text-muted-foreground">
                   {L.advancedOptions}
                 </legend>
 
@@ -939,7 +939,7 @@ export default function ProfilesPage() {
 
                   <Label
                     className={cn(
-                      "font-mondwest normal-case tracking-normal text-sm cursor-pointer",
+                      "font-display normal-case tracking-normal text-sm cursor-pointer",
                       !cloning && "opacity-50",
                     )}
                     htmlFor="clone-all"
@@ -958,7 +958,7 @@ export default function ProfilesPage() {
 
                   <Label
                     className={cn(
-                      "font-mondwest normal-case tracking-normal text-sm cursor-pointer",
+                      "font-display normal-case tracking-normal text-sm cursor-pointer",
                       cloning && "opacity-50",
                     )}
                     htmlFor="no-skills"
@@ -1257,7 +1257,7 @@ export default function ProfilesPage() {
             <header className="p-5 pb-3 border-b border-border">
               <h2
                 id="profile-editor-title"
-                className="font-mondwest text-display text-base tracking-wider"
+                className="font-display text-display text-base tracking-wider"
               >
                 {editorKind === "model"
                   ? L.editModel
@@ -1322,7 +1322,7 @@ export default function ProfilesPage() {
                   <div className="flex items-center justify-between gap-2">
                     <Label
                       htmlFor="profile-desc-editor"
-                      className="font-mondwest text-display text-xs tracking-wider text-muted-foreground"
+                      className="font-display text-display text-xs tracking-wider text-muted-foreground"
                     >
                       {L.description}
                     </Label>
@@ -1364,7 +1364,7 @@ export default function ProfilesPage() {
                 <>
                   <Label
                     htmlFor="profile-soul-editor"
-                    className="font-mondwest text-display text-xs tracking-wider text-muted-foreground"
+                    className="font-display text-display text-xs tracking-wider text-muted-foreground"
                   >
                     {t.profiles.soulSection}
                   </Label>

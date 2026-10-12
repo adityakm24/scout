@@ -106,7 +106,7 @@ export function ToolsSummary({
                   <Switch
                     aria-label={alone ? copy.allToolsSwitch : copy.facetSwitch(label)}
                     checked={row.switchState !== 'off'}
-                    disabled={readOnly || row.locked}
+                    disabled={readOnly}
                     onCheckedChange={next => onToggleFacet(row.facet, next)}
                     size="xs"
                   />

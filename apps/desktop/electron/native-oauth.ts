@@ -11,11 +11,11 @@
  * safeStorage keychain writes) and calls these helpers for the pure logic.
  *
  * Why the gateway brokers the flow (not a direct desktop→IDP client): the
- * upstream IDP (Scout Portal) issues a per-gateway-instance client_id and only
- * accepts a redirect_uri on the gateway's own origin, so a desktop loopback
- * redirect can't be a direct Portal client. Instead the gateway exposes
+ * upstream IDP issues a per-gateway-instance client_id and only accepts a
+ * redirect_uri on the gateway's own origin, so a desktop loopback redirect
+ * can't be a direct IDP client. Instead the gateway exposes
  * /auth/native/{authorize,token,refresh}: it is the authorization server to
- * the desktop and an OAuth client to Portal. The desktop still gets the full
+ * the desktop and an OAuth client to the IDP. The desktop still gets the full
  * RFC 8252 experience — its own PKCE pair, its own loopback redirect, tokens
  * it stores itself.
  *

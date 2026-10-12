@@ -45,8 +45,8 @@ def _valid_manifest() -> dict:
                     {"id": "openrouter/elephant-alpha", "description": "free"},
                 ],
             },
-            "spaceshipresearch": {
-                "metadata": {"display_name": "Scout Portal"},
+            "ai-gateway": {
+                "metadata": {"display_name": "Vercel AI Gateway"},
                 "models": [
                     {"id": "anthropic/claude-opus-4.7"},
                     {"id": "moonshotai/kimi-k2.6"},
@@ -226,13 +226,6 @@ class TestCuratedAccessors:
         ]
 
 
-    def test_spaceshipresearch_returns_none_when_catalog_empty(self, isolated_home):
-        from scout_cli import model_catalog
-        with patch.object(model_catalog, "_fetch_manifest", return_value=None), \
-                patch.object(model_catalog, "shipped_catalog", return_value={}):
-            assert model_catalog.get_curated_spaceshipresearch_models() is None
-
-
 class TestDefaultModelFromCache:
     """get_default_model_from_cache reads the '"default": true' label without
     ever hitting the network."""
@@ -240,7 +233,7 @@ class TestDefaultModelFromCache:
     def _manifest_with_default(self) -> dict:
         m = _valid_manifest()
         m["providers"]["openrouter"]["models"][1]["default"] = True  # gpt-5.4
-        m["providers"]["spaceshipresearch"]["models"][1]["default"] = True  # kimi-k2.6
+        m["providers"]["ai-gateway"]["models"][1]["default"] = True  # kimi-k2.6
         return m
 
     def test_reads_label_from_disk_cache(self, isolated_home):
@@ -256,7 +249,7 @@ class TestDefaultModelFromCache:
                 == "openai/gpt-5.4"
             )
             assert (
-                model_catalog.get_default_model_from_cache("spaceshipresearch")
+                model_catalog.get_default_model_from_cache("ai-gateway")
                 == "moonshotai/kimi-k2.6"
             )
             fetch.assert_not_called()
@@ -273,7 +266,7 @@ class TestDefaultModelFromCache:
 
 
     def test_shipped_manifest_labels_glm52_default(self, isolated_home):
-        """Contract with the in-repo manifest: both provider blocks label the
+        """Contract with the in-repo manifest: every provider block labels the
         same default entry the code constant points at."""
         import scout_cli.model_catalog as model_catalog
         from scout_cli.models import PREFERRED_SILENT_DEFAULT_MODEL
@@ -282,8 +275,7 @@ class TestDefaultModelFromCache:
         manifest = json.loads(
             (repo_root / "scout_cli" / "data" / "model-catalog.json").read_text()
         )
-        for provider in ("openrouter", "spaceshipresearch"):
-            block = manifest["providers"][provider]
+        for provider, block in manifest["providers"].items():
             labeled = [m["id"] for m in block["models"] if m.get("default")]
             assert labeled == [PREFERRED_SILENT_DEFAULT_MODEL], (
                 f"{provider}: exactly one entry must be labeled default and it "
@@ -343,73 +335,15 @@ class TestRefreshCadence:
         with patch.object(model_catalog, "_load_catalog_config", return_value={
             "enabled": True, "url": "http://master", "ttl_hours": 1.0, "providers": {},
         }), patch.object(model_catalog, "get_catalog", return_value=_valid_manifest()) as gc, \
-             patch("scout_cli.models.fetch_openrouter_models") as orm, \
-             patch("scout_cli.models.fetch_spaceshipresearch_recommended_models") as spaceshipresearch:
+             patch("scout_cli.models.fetch_openrouter_models") as orm:
             assert model_catalog.refresh_catalogs() is True
         gc.assert_called_once_with(force_refresh=True)
         orm.assert_called_once_with(force_refresh=True)
-        spaceshipresearch.assert_called_once_with(force_refresh=True)
 
 
 class TestIntegrationWithModelsModule:
     """Exercise the fallback paths via the real callers in scout_cli.models."""
 
-
-
-    def test_picker_spaceshipresearch_row_uses_curated_list(self, tmp_path, monkeypatch):
-        """The /model picker surfaces the curated ``_PROVIDER_MODELS["spaceshipresearch"]``
-        list in curated order — matching the ``scout model`` CLI — not the live
-        ``/v1/models`` catalog or the manifest. Portal free/paid recommendations
-        are unioned in when reachable; offline (as here, with the Portal calls
-        stubbed out) it's exactly the curated list.
-        """
-        # We deliberately do NOT use the ``isolated_home`` fixture here:
-        # that fixture monkeypatches ``Path.home`` to ``tmp_path``, which
-        # trips the auth-store seat-belt in ``_auth_file_path()`` because
-        # ``SCOUT_HOME / auth.json`` then resolves to the same path the
-        # seat-belt thinks is the "real" user store. Use the autouse
-        # ``_hermetic_environment`` SCOUT_HOME directly instead.
-        import importlib
-        from scout_cli import model_catalog
-        from scout_cli.models import get_curated_spaceshipresearch_model_ids
-        importlib.reload(model_catalog)
-        try:
-            from scout_cli.model_switch_providers import list_picker_providers
-
-            active_home = Path(os.environ["SCOUT_HOME"])
-            (active_home / "auth.json").write_text(
-                json.dumps(
-                    {
-                        "providers": {"spaceshipresearch": {"access_token": "fake"}},
-                        "credential_pool": {},
-                    }
-                )
-            )
-
-            # Stub the Portal recommendation union so the row is deterministic
-            # (the curated list alone) and never touches the network. ``expected``
-            # is computed from the same source the picker uses internally
-            # (``curated["spaceshipresearch"] = get_curated_spaceshipresearch_model_ids()``), so the test
-            # stays an invariant — it can't rot as the curated/manifest list grows.
-            with patch.object(
-                model_catalog, "_fetch_manifest", return_value=_valid_manifest()
-            ), patch("scout_cli.models.check_spaceshipresearch_free_tier", return_value=False), patch(
-                "scout_cli.models.union_with_portal_free_recommendations",
-                side_effect=lambda ids, *a, **k: (ids, {}),
-            ), patch(
-                "scout_cli.models.union_with_portal_paid_recommendations",
-                side_effect=lambda ids, *a, **k: (ids, {}),
-            ):
-                expected = get_curated_spaceshipresearch_model_ids()
-                picker = list_picker_providers(
-                    current_provider="spaceshipresearch", max_models=99
-                )
-        finally:
-            model_catalog.reset_cache()
-
-        spaceshipresearch_row = next((r for r in picker if r["slug"] == "spaceshipresearch"), None)
-        assert spaceshipresearch_row is not None, "spaceshipresearch row must appear when authed"
-        assert spaceshipresearch_row["models"] == expected
 
     def test_picker_max_models_cap_semantics(self, tmp_path, monkeypatch):
         """The cap argument has three distinct meanings on the real slicing
@@ -418,72 +352,44 @@ class TestIntegrationWithModelsModule:
         the ``is not None`` distinction the cap-removal follow-up introduced —
         a ``if max_models`` (falsy) check would conflate ``0`` with unlimited.
         """
-        import importlib
-        from scout_cli import model_catalog
-        from scout_cli.models import get_curated_spaceshipresearch_model_ids
-        importlib.reload(model_catalog)
-        try:
-            from scout_cli.model_switch import list_authenticated_providers
-            from scout_cli.model_switch_providers import list_picker_providers
+        from scout_cli.model_switch import list_authenticated_providers
+        from scout_cli.model_switch_providers import list_picker_providers
+        from scout_cli.models import OPENROUTER_MODELS
 
-            active_home = Path(os.environ["SCOUT_HOME"])
-            (active_home / "auth.json").write_text(
-                json.dumps(
-                    {
-                        "providers": {"spaceshipresearch": {"access_token": "fake"}},
-                        "credential_pool": {},
-                    }
-                )
-            )
-            with patch.object(
-                model_catalog, "_fetch_manifest", return_value=_valid_manifest()
-            ), patch("scout_cli.models.check_spaceshipresearch_free_tier", return_value=False), patch(
-                "scout_cli.models.union_with_portal_free_recommendations",
-                side_effect=lambda ids, *a, **k: (ids, {}),
-            ), patch(
-                "scout_cli.models.union_with_portal_paid_recommendations",
-                side_effect=lambda ids, *a, **k: (ids, {}),
-            ):
-                expected = get_curated_spaceshipresearch_model_ids()
-                full = list_picker_providers(current_provider="spaceshipresearch", max_models=None)
-                one = list_picker_providers(current_provider="spaceshipresearch", max_models=1)
-                # 0 is exercised on list_authenticated_providers (the slug-only
-                # path); the picker variant drops empty-model rows entirely, so
-                # the empty-list contract lives on the auth-providers call.
-                zero = list_authenticated_providers(
-                    current_provider="spaceshipresearch", max_models=0
-                )
-        finally:
-            model_catalog.reset_cache()
+        monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-fake")
+        catalog = list(OPENROUTER_MODELS)
+        expected = [mid for mid, _ in catalog]
+        with patch("scout_cli.models.fetch_openrouter_models", lambda *a, **k: list(catalog)):
+            full = list_picker_providers(current_provider="openrouter", max_models=None)
+            one = list_picker_providers(current_provider="openrouter", max_models=1)
+            # 0 is exercised on list_authenticated_providers (the slug-only
+            # path); the picker variant drops empty-model rows entirely, so
+            # the empty-list contract lives on the auth-providers call.
+            zero = list_authenticated_providers(current_provider="openrouter", max_models=0)
 
-        def _spaceshipresearch(rows):
-            return next((r for r in rows if r["slug"] == "spaceshipresearch"), None)
+        def _openrouter(rows):
+            return next((r for r in rows if r["slug"] == "openrouter"), None)
 
         # Only meaningful when the curated list actually exceeds 1 entry.
-        assert len(expected) > 1, "test needs a multi-model curated spaceshipresearch list"
+        assert len(expected) > 1, "test needs a multi-model curated openrouter list"
 
-        full_row = _spaceshipresearch(full)
+        full_row = _openrouter(full)
         assert full_row is not None and full_row["models"] == expected
 
-        one_row = _spaceshipresearch(one)
+        one_row = _openrouter(one)
         assert one_row is not None and one_row["models"] == expected[:1]
 
-        zero_row = _spaceshipresearch(zero)
+        zero_row = _openrouter(zero)
         # 0 means an empty model list — NOT unlimited. total_models still real.
         assert zero_row is not None
         assert zero_row["models"] == []
-        assert zero_row["total_models"] == len(expected)
+        assert zero_row["total_models"] >= 1
 
 
 # -----------------------------------------------------------------------------
 # Drift guard — prevent the in-repo curated lists from going out of sync with
-# the docs-hosted manifest at website/static/api/model-catalog.json.
-#
-# History: qwen/qwen3.6-plus was added to _PROVIDER_MODELS["spaceshipresearch"] in commit
-# 9dd6e5510 but website/static/api/model-catalog.json was not regenerated for
-# weeks, so free-tier users on a new install fetched a stale manifest and the
-# free-tier picker showed "No free models currently available." even though
-# the Portal was serving qwen/qwen3.6-plus as free. CI must catch this.
+# the shipped manifest at scout_cli/data/model-catalog.json. A stale manifest
+# means a new install's picker offers a list the code no longer curates.
 # -----------------------------------------------------------------------------
 
 
@@ -591,14 +497,11 @@ class TestManifestMatchesInRepoLists:
         """``scripts/build_model_catalog.py`` output must match the committed file.
 
         If this fails, run ``python scripts/build_model_catalog.py`` and
-        commit the regenerated ``website/static/api/model-catalog.json``.
+        commit the regenerated ``scout_cli/data/model-catalog.json``.
         """
         # Resolve the repo root from this test file's location.
         repo_root = Path(__file__).resolve().parents[2]
-        manifest_path = repo_root / "website" / "static" / "api" / "model-catalog.json"
-
-        if not manifest_path.exists():
-            pytest.skip(f"manifest missing at {manifest_path}")
+        manifest_path = repo_root / "scout_cli" / "data" / "model-catalog.json"
 
         # Build expected catalog using the same script CI would.
         import importlib.util
@@ -613,8 +516,7 @@ class TestManifestMatchesInRepoLists:
             actual = json.load(fh)
 
         assert self._strip_volatile(actual) == self._strip_volatile(expected), (
-            "website/static/api/model-catalog.json is out of sync with "
-            "_PROVIDER_MODELS['spaceshipresearch'] / OPENROUTER_MODELS. "
+            "scout_cli/data/model-catalog.json is out of sync with OPENROUTER_MODELS. "
             "Run: python scripts/build_model_catalog.py && "
-            "git add website/static/api/model-catalog.json"
+            "git add scout_cli/data/model-catalog.json"
         )

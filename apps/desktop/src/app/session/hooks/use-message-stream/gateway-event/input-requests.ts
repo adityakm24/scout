@@ -1,6 +1,5 @@
 import type { ConnectionRequestPayload, ConnectionUpdatePayload, GatewayEvent } from '@scout/shared'
 
-import { applyAccountConnectionUpdate } from '@/app/capabilities/connectors/data/account-operations'
 import { abortPreviewTyping } from '@/app/chat/right-rail/preview-typing-abort'
 import { pendingClarifyToolPayload } from '@/app/session/hooks/use-session-actions/restore-pending-clarify'
 import { connectionRequestToolPayload } from '@/app/session/hooks/use-session-actions/restore-pending-connection'
@@ -81,12 +80,6 @@ export function handleInputRequestEvent(ctx: GatewayEventContext): boolean {
   }
 
   if (isConnectionUpdateEvent(event)) {
-    if (event.payload.owner.type === 'account') {
-      applyAccountConnectionUpdate(event.payload)
-
-      return true
-    }
-
     updateConnectionRequest(sessionId ?? null, event.payload)
 
     if (event.payload.settled && sessionId) {

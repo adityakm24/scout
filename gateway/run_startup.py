@@ -52,7 +52,7 @@ class GatewayStartupMixin:
                     "unlimited" if limit == TURN_LIMIT_UNLIMITED else limit)
 
     # A configured platform failed non-retryably this boot and is parked: every "we are serving"
-    # status stamp (startup, drain release, scale-to-zero wake) must say ``degraded``, not ``running``.
+    # status stamp (startup, drain release) must say ``degraded``, not ``running``.
     _startup_parked_platforms: bool = False
 
     def _serving_state(self) -> str:
@@ -117,13 +117,6 @@ class GatewayStartupMixin:
             drained += 1
         return drained
 
-    @staticmethod
-    def _start_free_tier_bootstrap() -> None:
-        """One bootstrap per process. `run_bootstrap` already records its own failure in the boot record
-        and never raises, so this is a plain call; it exists as a method so tests can seam it."""
-        from scout_cli.free_tier_bootstrap import run_bootstrap
-        run_bootstrap(announce=False)
-
     def _start_startup_warmup(self) -> None:
         """Kick off the boot turn-machinery warm-up so it overlaps the network-bound platform
         connects; ``_finish_startup_restore`` awaits it (bounded)."""
@@ -135,8 +128,8 @@ class GatewayStartupMixin:
 
     async def _run_boot_probe_in_launch_scope(self, fn):
         """Run a boot-time probe on the default executor under the LAUNCH profile's scope when
-        multiplexing (the ``_discover_gateway_mcp_tools`` shape). Boot probes (``check_fn``s, the
-        free-tier bootstrap) read profile-scoped secrets; an unscoped read under multiplex fails
+        multiplexing (the ``_discover_gateway_mcp_tools`` shape). Boot probes (``check_fn``s) read
+        profile-scoped secrets; an unscoped read under multiplex fails
         closed, so routing overrides resolve as absent and default routing applies. ``copy_context``
         carries the contextvars across the executor hop; single-profile keeps environ semantics."""
         loop = asyncio.get_running_loop()
@@ -152,11 +145,6 @@ class GatewayStartupMixin:
                 logger.debug("multiplex launch-scope entry failed for boot probe %s; running unscoped",
                              getattr(fn, "__name__", fn), exc_info=True)
         return await loop.run_in_executor(None, copy_context().run, fn)
-
-    async def _run_free_tier_bootstrap(self) -> None:
-        """The free-tier bootstrap mints the Portal identity through the same profile-scoped routing
-        overrides the warm-up resolves, so it takes the same launch-profile binding."""
-        await self._run_boot_probe_in_launch_scope(self._start_free_tier_bootstrap)
 
     async def _warm_turn_prerequisites(self) -> None:
         """Initialize turn machinery on an executor thread before the gate opens. Never raises: a
@@ -840,8 +828,6 @@ class GatewayStartupMixin:
                     start_time=getattr(self, "_gateway_started_at", 0.0),
                 )
             )
-            # PERMANENT watcher tag so the scale-to-zero idle check doesn't count it as busy forever.
-            task._scout_supervised_watcher = True  # type: ignore[attr-defined]
             _bg = getattr(self, "_background_tasks", None)
             if _bg is not None:
                 self._track_task_in(_bg, task)
@@ -1533,19 +1519,6 @@ class GatewayStartupMixin:
         self._spawn_reconnect_watcher()
         for method in self._POST_RECONNECT_WATCHERS:
             self._spawn_supervised(getattr(self, method), method[1:])
-        # Scale-to-zero watcher ONLY when opted in, messaging is relay-only/absent, and a wakeUrl exists.
-        try:
-            if self._scale_to_zero_should_arm():
-                logger.info(
-                    "scale-to-zero: armed (idle timeout %.0fs) — watching for idle",
-                    self._scale_to_zero_idle_timeout_seconds(),
-                )
-                self._spawn_supervised(self._scale_to_zero_watcher, "scale_to_zero_watcher")
-            else:
-                # Say WHY an OPTED-IN instance didn't arm (non-opted stays silent).
-                self._log_scale_to_zero_not_armed_reason()
-        except Exception:  # noqa: BLE001 - arming must never block startup
-            logger.debug("scale-to-zero: arm check failed at startup", exc_info=True)
         # Drain-control watcher: reconciles new-turn acceptance with the dashboard's ``.drain_request.json``
         # marker (prior-instantiation markers are ignored via epoch).
         self._spawn_supervised(self._drain_control_watcher, "drain_control_watcher")
@@ -1578,12 +1551,6 @@ class GatewayStartupMixin:
         if self._start_check_access_policy():
             return True
         await self._start_recover_previous_run()
-        # The gateway is a boot owner of the SpaceshipResearch free tier, beside `cmd_chat` and `scout serve`: every
-        # demand-time site (provider resolution, /login, the connector token) is a read that needs the
-        # identity to already exist. Blocking here, before any adapter connects, is what keeps a fast
-        # first DM from arriving with nothing to resolve. With the launch gate unset this is a local
-        # inventory and no network.
-        await self._run_free_tier_bootstrap()
         # Serialize startup restore against inbound: adapters receive as soon as they connect, so inbound
         # queues until every synthetic resume turn has finished.
         self._startup_restore_in_progress = True

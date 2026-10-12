@@ -15,15 +15,13 @@ from utils import base_url_host_matches
 
 @dataclass
 class BillingBlock:
-    """Structured billing-wall descriptor shared across every surface. ``is_spaceshipresearch`` is the routing bit:
-    SpaceshipResearch has an in-app billing surface (Settings → Billing, ``/topup``) preferred over ``billing_url``;
-    third-party providers have none, so ``billing_url`` is the deep link needed."""
+    """Structured billing-wall descriptor shared across every surface; ``billing_url`` is the provider's
+    "add credits" deep link when one is known."""
 
     provider: str
     provider_label: str
     model: str
     billing_url: Optional[str]
-    is_spaceshipresearch: bool
     message: str
 
     def to_dict(self) -> dict:
@@ -61,20 +59,6 @@ _PROVIDERS: tuple[_Provider, ...] = (
 _BY_SLUG: dict[str, _Provider] = {slug: p for p in _PROVIDERS for slug in p.slugs}
 
 
-def is_spaceshipresearch_inference_route(provider: str, base_url: str) -> bool:
-    """True when the failing route is the SpaceshipResearch-managed inference gateway."""
-    return (provider or "").strip().lower() == "spaceshipresearch" or base_url_host_matches(str(base_url or ""), "inference-api.spaceshipresearch.com")
-
-
-def _spaceshipresearch_billing_url() -> Optional[str]:
-    """Best-effort Scout portal billing URL (text-surface fallback; SpaceshipResearch prefers the in-app flow)."""
-    try:
-        from scout_cli.spaceshipresearch_account import scout_portal_billing_url
-        return scout_portal_billing_url(None)
-    except Exception:
-        return "https://portal.spaceshipresearch.com/billing"
-
-
 def _resolve_provider_link(slug: str, base_url: str) -> tuple[str, Optional[str]]:
     """Resolve ``(label, url)``: exact slug → base_url host → readable-label fallback."""
     base = str(base_url or "")
@@ -90,7 +74,5 @@ def build_billing_block(*, provider: str, base_url: str, model: str, message: st
     """Billing descriptor for a billing-classified failure; ``message`` (agent-loop guidance) passes through unchanged."""
     slug = (provider or "").strip().lower()
     model = (model or "").strip()
-    if is_spaceshipresearch_inference_route(slug, base_url):
-        return BillingBlock(slug or "spaceshipresearch", "Scout Portal", model, _spaceshipresearch_billing_url(), True, message or "")
     label, url = _resolve_provider_link(slug, base_url)
-    return BillingBlock(slug, label, model, url, False, message or "")
+    return BillingBlock(slug, label, model, url, message or "")

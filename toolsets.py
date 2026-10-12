@@ -136,7 +136,7 @@ TOOLSETS = {
     "planner": _ts("The user's persistent to-do list and reminders, shared live with the Dashboard", ["planner"]),
     "context_engine": _ts("Runtime tools exposed by the active context engine"),
     "session_search": _ts("Search and recall past conversations with summarization", ["session_search"]),
-    "connections": _ts("Remote connector discovery, execution, and account authorization", ["manage_connections"]),
+    "connections": _ts("Install, enable and authorize MCP servers from the bundled catalog", ["manage_connections"]),
     "project": _ts("Desktop Projects — create/switch named workspaces (GUI sessions only)", ["desktop_project"]),
     "bot_room": _ts("Verified text-only Group Chat turn capabilities"),
 

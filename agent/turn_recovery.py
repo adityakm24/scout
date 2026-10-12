@@ -101,18 +101,6 @@ def _image_error_max_dimension(error: Exception) -> Optional[int]:
     return max_dimension if 512 <= max_dimension <= 8000 else None
 
 
-def _try_refresh_spaceshipresearch_paid_entitlement_credentials(agent) -> bool:
-    """Refresh SpaceshipResearch runtime credentials after a fresh paid-entitlement check."""
-    try:
-        from scout_cli.spaceshipresearch_account import get_scout_portal_account_info
-
-        if get_scout_portal_account_info(force_fresh=True).paid_service_access is not True:
-            return False
-        return agent._try_refresh_spaceshipresearch_client_credentials(force=True)
-    except Exception:
-        return False
-
-
 def _repair_transport_credentials(agent: Any) -> bool:
     """Strip non-ASCII from ``_client_kwargs["default_headers"]`` and the API key.
 
@@ -315,43 +303,6 @@ def recover_before_classification(
     return False, active_system_prompt
 
 
-def _print_spaceshipresearch_401_diagnostics(agent: Any, api_error: Exception) -> None:
-    """SpaceshipResearch 401 that survived a credential refresh: likely Portal OAuth expired/revoked,
-    no credits, or agent key blocked."""
-    from agent.conversation_loop import _print_spaceshipresearch_entitlement_guidance
-    from scout_constants import display_scout_home
-    _body_text = ""
-    try:
-        _body = getattr(api_error, "body", None) or getattr(api_error, "response", None)
-        if _body is not None:
-            _body_text = str(_body)[:200]
-    except Exception:
-        pass
-    _plines(agent, "🔐 SpaceshipResearch 401 — Portal authentication failed.")
-    if _body_text:
-        _plines(agent, f"   Response: {_body_text}")
-    try:
-        from scout_cli.anon_auth import is_anonymous_agent
-        if is_anonymous_agent(agent):
-            # The free tier has no credits, no agent key and no auth.json to inspect: its session
-            # ended and could not be replaced. The two doors are a sign-in or another provider.
-            _plines(agent, "   Your session ended and Scout couldn't start a new one.",
-                    "   Sign in with a SpaceshipResearch account (it's free), or switch providers with /model.")
-            return
-    except Exception:
-        pass
-    if not _print_spaceshipresearch_entitlement_guidance(agent, "SpaceshipResearch model access"):
-        _plines(agent, "   Most likely: Portal OAuth expired, account out of credits, or agent key revoked.")
-    _plines(
-        agent,
-        "   Troubleshooting:",
-        "     • Re-authenticate: scout auth add spaceshipresearch",
-        "     • Check credits / billing: https://portal.spaceshipresearch.com",
-        f"     • Verify stored credentials: {display_scout_home()}/auth.json",
-        "     • Switch providers temporarily: /model <model> --provider openrouter",
-    )
-
-
 def _print_anthropic_401_diagnostics(agent: Any, key: Any) -> None:
     """Anthropic 401 that survived a credential refresh: show auth method + fixes."""
     from agent.anthropic_credentials import _is_oauth_token
@@ -391,8 +342,8 @@ def _print_anthropic_401_diagnostics(agent: Any, key: Any) -> None:
 def _refresh_credentials_after_401(
     agent: Any, api_error: Exception, _retry: TurnRetryState, status_code: Optional[int]
 ) -> bool:
-    """Per-provider one-shot credential refresh on 401 (codex/xai, vertex, spaceshipresearch, copilot,
-    anthropic), printing user-facing diagnostics when the spaceshipresearch/anthropic refresh fails.
+    """Per-provider one-shot credential refresh on 401 (codex/xai, vertex, copilot, anthropic), printing
+    user-facing diagnostics when the anthropic refresh fails.
     Returns True when a refresh succeeded and the call should be retried."""
     from agent.conversation_loop import _is_copilot_provider
 
@@ -413,16 +364,6 @@ def _refresh_credentials_after_401(
         if agent._try_refresh_vertex_client_credentials():
             agent._buffer_vprint("🔐 Vertex AI token refreshed after 401. Retrying request...")
             return True
-    if (
-        agent.api_mode in ("chat_completions", "anthropic_messages")
-        and agent.provider == "spaceshipresearch"
-        and not _retry.spaceshipresearch_auth_retry_attempted
-    ):
-        _retry.spaceshipresearch_auth_retry_attempted = True
-        if agent._try_refresh_spaceshipresearch_client_credentials(force=True):
-            agent._buffer_vprint("🔐 SpaceshipResearch agent key refreshed after 401. Retrying request...")
-            return True
-        _print_spaceshipresearch_401_diagnostics(agent, api_error)
     if _is_copilot_provider(agent) and not _retry.copilot_auth_retry_attempted:
         _retry.copilot_auth_retry_attempted = True
         if agent._try_refresh_copilot_client_credentials():
@@ -565,89 +506,24 @@ def _recover_format_errors(
     return False
 
 
-_WELCOME_ROUTE_HEAL_COPY = {
-    "anon_on_paid_host": "Reconnected to the free model's own route.",
-    "named_on_welcome_host": "Reconnected to your SpaceshipResearch account's own route.",
-}
-
-
-def _recover_welcome_tier(agent: Any, classified: Any, _retry: TurnRetryState) -> bool:
-    """Two one-shot repairs for the SpaceshipResearch free tier, both silent on the wire and named once in chat.
-
-    ``model_not_free``: the session asked the welcome host for a model it does not serve; move
-    to the first alternate the gateway named (its own model) and retry, instead of failing the
-    turn. ``anon_on_paid_host`` / ``named_on_welcome_host``: this process is pointed at the other
-    identity's host (a stale route); re-read the credentials, which heals the URL, and retry. The
-    refresh reports False when the store yields the same route, so a user-set
-    ``SPACESHIPRESEARCH_INFERENCE_BASE_URL`` falls straight through to the terminal copy.
-
-    Reads the CLASSIFIER's context (``classified.error_context``): that is where
-    ``_spaceshipresearch_welcome_tier`` parks ``welcome_refusal`` / ``welcome_route``. The turn's other context
-    (``extract_api_error_context``) never carries them."""
-    ctx = getattr(classified, "error_context", None) or {}
-    refusal = ctx.get("welcome_refusal") if isinstance(ctx, dict) else None
-    if isinstance(refusal, dict) and refusal.get("reason") == "model_not_free" and not _retry.welcome_model_switch_attempted:
-        _retry.welcome_model_switch_attempted = True
-        alternates = [a for a in (refusal.get("alternates") or []) if isinstance(a, str) and a]
-        requested = str(getattr(agent, "model", "") or "")
-        target = alternates[0] if alternates else None
-        if target and target != requested:
-            try:
-                agent.model = target
-                agent._spaceshipresearch_model_switch = (requested, target)
-            except Exception:
-                return False
-            _vlines(agent, f"↪️  {requested} isn't available without signing in; using {target} for now. Retrying...")
-            logger.info("%sSpaceshipResearch free tier: moved %s -> %s after model_not_free", agent.log_prefix, requested, target)
-            return True
-    route = ctx.get("welcome_route") if isinstance(ctx, dict) else None
-    if route in _WELCOME_ROUTE_HEAL_COPY and not _retry.welcome_route_heal_attempted:
-        _retry.welcome_route_heal_attempted = True
-        try:
-            healed = bool(agent._try_refresh_spaceshipresearch_client_credentials(force=True))
-        except Exception:
-            healed = False
-        if healed:
-            _vlines(agent, f"🔐 {_WELCOME_ROUTE_HEAL_COPY[route]} Retrying request...")
-            return True
-    return False
-
-
 def recover_after_classification(
     agent: Any, api_error: Exception, classified: Any, _retry: TurnRetryState, *,
     status_code: Optional[int], error_context: Any, messages: List[Dict[str, Any]],
     api_messages: Any,
-) -> Tuple[bool, bool]:
+) -> bool:
     """One-shot recovery chain that runs AFTER ``classify_api_error`` and before the
     generic retry path. Order is load-bearing (each branch may ``return`` early):
-    SpaceshipResearch paid-entitlement refresh → Codex stale-reasoning strip on 401 ``token_expired`` →
+    Codex stale-reasoning strip on 401 ``token_expired`` →
     credential-pool rotation → image shrink → multimodal-tool-content strip → corrupt-image
     strip → Anthropic OAuth 1M-beta disable → per-provider 401 credential refresh →
     format-recovery strips.
-    Returns ``(retry_now, recovered_with_pool)``; the latter feeds the SpaceshipResearch rate-limit guard."""
-    from agent.conversation_loop import _is_spaceshipresearch_inference_route
-
-    if _recover_welcome_tier(agent, classified, _retry):
-        return True, False
-
+    Returns True when the call should be retried now."""
     # 401 ``token_expired`` while the transcript still carries ``codex_reasoning_items`` is a
     # stale replayed blob far more often than a dead bearer (#88510): strip BEFORE the pool
     # refreshes/benches every healthy entry over a session-state problem. A real expiry pays
     # one extra round-trip and then takes the credential path below as before.
     if _is_codex_token_expired(agent, api_error) and _recover_stale_codex_reasoning(agent, _retry, messages):
-        return True, False
-
-    if (
-        classified.reason == FailoverReason.billing
-        and _is_spaceshipresearch_inference_route(
-            getattr(agent, "provider", "") or "", getattr(agent, "base_url", "") or ""
-        )
-        and not _retry.spaceshipresearch_paid_entitlement_refresh_attempted
-    ):
-        _retry.spaceshipresearch_paid_entitlement_refresh_attempted = True
-        if _try_refresh_spaceshipresearch_paid_entitlement_credentials(agent):
-            _vlines(agent, "🔐 SpaceshipResearch paid access verified — refreshed runtime credentials and retrying request...")
-            return True, False
+        return True
 
     recovered_with_pool, _retry.has_retried_429 = agent._recover_with_credential_pool(
         status_code=status_code, has_retried_429=_retry.has_retried_429,
@@ -655,7 +531,7 @@ def recover_after_classification(
         billing_unverified=classified.billing_unverified,
     )
     if recovered_with_pool:
-        return True, recovered_with_pool
+        return True
 
     # Shrink oversized native image parts in-place and retry once.
     if classified.reason == FailoverReason.image_too_large and not _retry.image_shrink_retry_attempted:
@@ -664,7 +540,7 @@ def recover_after_classification(
             api_messages, max_dimension=_image_error_max_dimension(api_error) or 8000
         ):
             _vlines(agent, "📐 Image(s) exceeded provider size limit — shrank and retrying...")
-            return True, recovered_with_pool
+            return True
         logger.info(
             "image-shrink recovery: no data-URL image parts found "
             "or shrink didn't reduce size; surfacing original error."
@@ -679,13 +555,13 @@ def recover_after_classification(
         _retry.multimodal_tool_content_retry_attempted = True
         if agent._try_strip_image_parts_from_tool_messages(api_messages):
             _vlines(agent, "📐 Provider rejected list-type tool content — downgraded screenshots to text and retrying...")
-            return True, recovered_with_pool
+            return True
         logger.info(
             "multimodal-tool-content recovery: no list-type tool "
             "messages with image parts found; surfacing original error."
         )
 
-    # Route rejecting a reasoning disable: a reasoning-mandatory route (Scout Portal / OpenRouter,
+    # Route rejecting a reasoning disable: a reasoning-mandatory route (OpenRouter,
     # e.g. GLM-5.3) 400s on ``reasoning: {enabled: false}``; a chat-only OpenAI-compatible relay
     # 400s on the ``reasoning_effort: none`` the title/continuation disable projects (#114460).
     # The catalog guard in the provider profile normally swallows the first, but a process that
@@ -705,7 +581,7 @@ def recover_after_classification(
             agent._reasoning_effort_rejected = True
             _vlines(agent, f"⚠️  {agent.model} rejects reasoning effort {sent['effort']} — using the route's default for this session, retrying...")
             logger.warning("%sReasoning-effort recovery: dropping reasoning config for %s", agent.log_prefix, agent.model)
-            return True, recovered_with_pool
+            return True
         agent._reasoning_disable_rejected = True
         # "Reasoning is mandatory ... cannot be disabled" understands the field and refuses only the
         # OFF: step up to the floor effort (the closest the route allows to what the user asked for)
@@ -726,14 +602,14 @@ def recover_after_classification(
         else:
             _vlines(agent, f"⚠️  {agent.model} rejects disabling reasoning — using the route's default for this session, retrying...")
             logger.warning("%sReasoning-disable recovery: dropping reasoning disable for %s", agent.log_prefix, agent.model)
-        return True, recovered_with_pool
+        return True
 
     # Provider rejected the image bytes; shrinking can't help, so strip image parts.
     # Strip ONLY the per-call copy: replacing msg["content"] on the shallow api_messages
     # rows keeps canonical history's images (transient rejection must not erase history).
     if classified.reason == FailoverReason.image_corrupt:
         if _strip_request_images_and_retry(agent, api_messages):
-            return True, recovered_with_pool
+            return True
         logger.info("image-corrupt recovery: no image parts found to strip; surfacing original error.")
 
     # Anthropic OAuth subscription rejected the 1M-context beta: disable it for this
@@ -755,14 +631,14 @@ def recover_after_classification(
                 pass
             agent._rebuild_anthropic_client()
             _vlines(agent, "🔕 OAuth subscription doesn't support the 1M-context beta — disabled for this session and retrying...")
-            return True, recovered_with_pool
+            return True
 
     if _refresh_credentials_after_401(agent, api_error, _retry, status_code):
-        return True, recovered_with_pool
+        return True
 
     if _recover_format_errors(agent, api_error, classified, _retry, messages, api_messages):
-        return True, recovered_with_pool
-    return False, recovered_with_pool
+        return True
+    return False
 
 
 def _failed_turn_result(final_response: str, messages: Any, api_call_count: int, error: str) -> Dict[str, Any]:
@@ -832,16 +708,14 @@ def _print_nonretryable_auth_guidance(
     agent: Any, classified: Any, *, status_code: Optional[int], provider: Any, base_url: Any, model: Any,
 ) -> None:
     """Actionable guidance for a terminal auth / billing error."""
-    from agent.conversation_loop import _print_billing_or_entitlement_guidance, _print_spaceshipresearch_entitlement_guidance
+    from agent.conversation_loop import _print_billing_or_entitlement_guidance
 
     if classified.reason == FailoverReason.billing and _print_billing_or_entitlement_guidance(
         agent, capability="model access", provider=provider, base_url=str(base_url),
         model=model, unverified=classified.billing_unverified,
     ):
         return
-    if provider == "spaceshipresearch" and _print_spaceshipresearch_entitlement_guidance(agent, "SpaceshipResearch model access"):
-        return
-    if provider in {"openai-codex", "xai-oauth", "spaceshipresearch"} and status_code == 401:
+    if provider in {"openai-codex", "xai-oauth"} and status_code == 401:
         if provider == "openai-codex":
             from agent.turn_failure_copy import oauth_relogin_command
 
@@ -851,29 +725,12 @@ def _print_nonretryable_auth_guidance(
                 "      refreshed by another client (Codex CLI, VS Code) or another Scout profile.",
                 f"      Sign this profile in again: `{oauth_relogin_command(provider)}`",
             )
-        elif provider == "xai-oauth":
+        else:
             _vlines(
                 agent,
                 "   💡 xAI OAuth token was rejected (HTTP 401). To fix:",
                 "      re-authenticate with xAI Grok OAuth (SuperGrok / Premium+) from `scout model`.",
             )
-        else:  # spaceshipresearch
-            _vlines(
-                agent,
-                "   💡 Scout Portal OAuth token was rejected (HTTP 401). Your token may be",
-                "      expired, revoked, or your account may be out of credits. To fix:",
-                "      1. Re-authenticate: scout portal",
-                "      2. Check your portal account: https://portal.spaceshipresearch.com",
-            )
-            # ``:free`` is OpenRouter slug syntax; Scout Portal will reject the model
-            # name even after a successful re-auth.
-            if isinstance(model, str) and model.endswith(":free"):
-                _vlines(
-                    agent,
-                    f"      ⚠️  Note: `{model}` looks like an OpenRouter slug (`:free` suffix).",
-                    "         Scout Portal won't recognize that model name. Either switch to a",
-                    f"         SpaceshipResearch catalog model, or run `/model openrouter:{model}` to use OpenRouter.",
-                )
         return
     _vlines(
         agent,
@@ -883,68 +740,6 @@ def _print_nonretryable_auth_guidance(
     )
     if base_url_host_matches(str(base_url), "openrouter.ai"):
         _vlines(agent, "      • Check credits: https://openrouter.ai/settings/credits")
-
-
-def _welcome_tier_guidance(classified: Any, *, model: Any, in_chat: bool, door: bool = True) -> str:
-    """Copy for a SpaceshipResearch free-tier refusal the classifier parsed (``welcome_refusal`` /
-    ``welcome_route`` in ``error_context``); empty for every other error."""
-    ctx = getattr(classified, "error_context", None) or {}
-    refusal, route = ctx.get("welcome_refusal"), ctx.get("welcome_route")
-    if not refusal and not route:
-        return ""
-    from scout_cli.anon_auth import welcome_refusal_copy, welcome_route_refusal_copy
-    if refusal:
-        return welcome_refusal_copy(refusal, model=str(model or ""), in_chat=in_chat, door=door)
-    return welcome_route_refusal_copy(str(route), in_chat=in_chat, door=door)
-
-
-# Closed table: every card kind the desktop has copy for. An unknown gateway reason lands on
-# "refused" (generic card, sentence kept) rather than a code the desktop cannot key on.
-_WELCOME_SURFACE_KINDS = {
-    "rate_limited": "rate_limited", "at_capacity": "at_capacity", "admission_closed": "at_capacity",
-    "model_not_free": "model_not_free", "feature_not_free": "model_not_free",
-}
-
-
-def _welcome_surface_kind(classified: Any) -> str:
-    """The free-tier failure kind a client renders its card from (``error_surface`` code
-    ``free_tier_<kind>``): the welcome refusal's reason, or the route refusal; "" otherwise."""
-    ctx = getattr(classified, "error_context", None) or {}
-    refusal = ctx.get("welcome_refusal") if isinstance(ctx, dict) else None
-    if isinstance(refusal, dict):
-        return _WELCOME_SURFACE_KINDS.get(str(refusal.get("reason") or ""), "refused")
-    route = ctx.get("welcome_route") if isinstance(ctx, dict) else None
-    if route == "tier_disabled":
-        return "disabled"
-    # A named account on the welcome host has already signed in: no sign-in card, copy only.
-    if route == "named_on_welcome_host":
-        return ""
-    return "route" if route else ""
-
-
-def _stamp_free_tier(result: Dict[str, Any], kind: str, message: str) -> Dict[str, Any]:
-    """Structured free-tier failure block: ``error_surface`` keys its code on ``kind`` and a client
-    shows ``message`` (the chat sentence) as the card body instead of its own generic copy."""
-    result["free_tier"] = {"kind": kind or "refused", "message": message}
-    return result
-
-
-def _welcome_outage_copy(base_url: Any, classified: Any, *, anonymous: bool = False) -> str:
-    """On the SpaceshipResearch free tier, a transport / server failure that outlived every retry reads as one
-    plain sentence (the free model is having trouble) rather than the technical summary. Empty
-    for every other route and for rate limits / billing, which have their own copy."""
-    try:
-        from scout_cli.anon_auth import FREE_TIER_OUTAGE_COPY, route_is_welcome_host
-        # Both: an anonymous JWT sent to a user-overridden paid host never reached the free model.
-        if not anonymous or not route_is_welcome_host(base_url):
-            return ""
-        # Not ``unknown``: that is the classifier's catch-all for status-less local failures, which
-        # are not the free model's trouble.
-        if classified.reason in (FailoverReason.timeout, FailoverReason.overloaded, FailoverReason.server_error):
-            return FREE_TIER_OUTAGE_COPY
-    except Exception:
-        pass
-    return ""
 
 
 # Terminal status label per non-retryable reason (default names the HTTP status).
@@ -998,13 +793,8 @@ def nonretryable_client_error_result(
             f"   🔌 Provider: {provider}  Model: {model}  (HTTP {status_code})",
             f"   🌐 Endpoint: {base_url}",
         )
-    _welcome_hint = _welcome_tier_guidance(classified, model=model, in_chat=False)
     _prefix_suggestion = _missing_vendor_prefix_suggestion(api_error, provider, model)
-    if _welcome_hint:
-        # A free-tier gate or a wrong-host refusal: the way forward is a sign-in or another
-        # provider, never the key/credits advice below.
-        _vlines(agent, f"   💡 {_welcome_hint}")
-    elif classified.is_auth or classified.reason == FailoverReason.billing:
+    if classified.is_auth or classified.reason == FailoverReason.billing:
         _print_nonretryable_auth_guidance(
             agent, classified, status_code=status_code, provider=provider, base_url=base_url, model=model
         )
@@ -1067,16 +857,11 @@ def nonretryable_client_error_result(
             classified=classified, summary=_nonretryable_summary, messages=messages,
             api_call_count=api_call_count, provider=provider, base_url=base_url, model=model,
         )
-    if _welcome_hint:
-        # A free-tier refusal is fully explained by its own sentence; the raw provider summary
-        # (status codes, JSON) is for the log, not for a first-time user's chat.
-        _final_response = _welcome_tier_guidance(classified, model=model, in_chat=True)
-    else:
-        # Every surface reads final_response; the CLI hint lines above never reach chat.
-        _final_response = nonretryable_copy(
-            classified, provider=provider, model=model, summary=_nonretryable_summary,
-            prefix_suggestion=_prefix_suggestion,
-        )
+    # Every surface reads final_response; the CLI hint lines above never reach chat.
+    _final_response = nonretryable_copy(
+        classified, provider=provider, model=model, summary=_nonretryable_summary,
+        prefix_suggestion=_prefix_suggestion,
+    )
     # Same verdict fields as the max-retries path: without them the UI descriptor
     # (agent/error_surface.py) reads a rejected OAuth token as a retryable
     # "Provider error" and offers Retry instead of a re-login.
@@ -1091,10 +876,6 @@ def nonretryable_client_error_result(
     if _keep_partial:
         result["partial"] = True
     _stamp_limit_reset(result, agent, api_error)
-    if _welcome_hint and (_kind := _welcome_surface_kind(classified)):
-        # The card form: the desktop renders the sign-in as a button, so no "To sign in" tail.
-        _stamp_free_tier(result, _kind,
-                         _welcome_tier_guidance(classified, model=model, in_chat=True, door=False))
     return result
 
 
@@ -1115,7 +896,6 @@ def max_retries_exhausted_result(
     guidance (the latter wins), persist, build the result with ``failure_reason`` /
     ``failure_retryable`` / ``billing_block``."""
     # Result/guidance helpers stay in the loop module (tests import + patch them there).
-    from scout_cli.anon_auth import is_anonymous_agent
     from agent.conversation_loop import (
         _billing_block_dict, _billing_or_entitlement_message, _billing_terminal_label,
         _print_billing_or_entitlement_guidance,
@@ -1149,9 +929,6 @@ def max_retries_exhausted_result(
     else:
         agent._emit_diagnostic_status(f"❌ API failed after {max_retries} retries — {_final_summary}")
     _vlines(agent, f"   💀 Final error: {_final_summary}")
-    _welcome_hint = _welcome_tier_guidance(classified, model=model, in_chat=False)
-    if _welcome_hint:
-        _vlines(agent, f"   💡 {_welcome_hint}")
 
     # SSE stream-drop (e.g. "Network connection lost"): usually a proxy/CDN cutting a very
     # large tool call mid-response.
@@ -1184,7 +961,6 @@ def max_retries_exhausted_result(
     agent._persist_session(messages, conversation_history)
     _billing_block = None
     _billing_unverified = False
-    _free_tier_kind = ""
     if _is_billing:
         _billing_unverified = classified.billing_unverified
         _final_response = _billing_terminal_label(_final_summary, _billing_unverified)
@@ -1202,11 +978,6 @@ def max_retries_exhausted_result(
             classified.reason.value, label=provider_label_for(provider), attempts=max_retries,
             summary=_final_summary, reset_seconds=_reset_at - time.time() if _reset_at else None,
         )
-        if _welcome_hint:
-            _final_response = _welcome_tier_guidance(classified, model=model, in_chat=True)
-            _free_tier_kind = _welcome_surface_kind(classified)
-        elif _outage := _welcome_outage_copy(base_url, classified, anonymous=is_anonymous_agent(agent)):
-            _final_response, _free_tier_kind = _outage, "outage"
     if _is_thinking_timeout:
         # Thinking-timeout guidance overrides stream-drop guidance, which would wrongly
         # suggest splitting large file writes.
@@ -1226,7 +997,7 @@ def max_retries_exhausted_result(
         "failure_retryable": bool(classified.retryable),
         # True when the billing verdict rests on an ambiguous body.
         "billing_unverified": _billing_unverified,
-        # Present only for billing walls: (provider, billing_url, is_spaceshipresearch, message).
+        # Present only for billing walls: (provider, billing_url, message).
         "billing_block": _billing_block,
     })
     # Retry-exhaustion after partial delivery (#119001): the text was already
@@ -1239,10 +1010,6 @@ def max_retries_exhausted_result(
         result["final_response"] = _final_response
         result["partial"] = True
     _stamp_limit_reset(result, agent, api_error)
-    if _free_tier_kind:
-        _stamp_free_tier(result, _free_tier_kind, (
-            _welcome_tier_guidance(classified, model=model, in_chat=True, door=False)
-            if _welcome_hint else _final_response))
     return result
 
 
@@ -1503,7 +1270,7 @@ def classify_codex_soft_failure(agent: Any, response: Any) -> Tuple[Any, Dict[st
     exc = _CodexSoftFailure(_codex_soft_failure_error(response))
     classified = classify_api_error(
         exc, provider=getattr(agent, "provider", "") or "", model=getattr(agent, "model", "") or "",
-        base_url=str(getattr(agent, "base_url", "") or ""), api_key=getattr(agent, "api_key", None),
+        base_url=str(getattr(agent, "base_url", "") or ""),
     )
     return classified, agent._extract_api_error_context(exc)
 
@@ -1622,8 +1389,8 @@ def _failure_hint_for(code: Optional[int], api_duration: float) -> str:
 @dataclass
 class ClassifiedErrorVerdict:
     """Outcome of ``route_classified_error``. ``action``: ``"return"`` (terminal result),
-    ``"break"`` (restart armed on ``_retry``), ``"continue"`` (re-enter the retry loop; SpaceshipResearch
-    guard re-check) or ``"fallthrough"`` (proceed to overflow / client-error / backoff
+    ``"break"`` (restart armed on ``_retry``), ``"continue"`` (re-enter the retry loop) or
+    ``"fallthrough"`` (proceed to overflow / client-error / backoff
     handling). The remaining fields are loop locals the router rebound or computed."""
 
     action: str
@@ -1714,46 +1481,9 @@ def activate_codex_app_server_fallback(agent: Any, result: Dict[str, Any]) -> bo
     return bool(agent._try_activate_fallback(reason=classified.reason))
 
 
-def _is_genuine_spaceshipresearch_rate_limit(agent: Any, api_error: Exception, error_context: Any, classified: Any = None) -> bool:
-    """Record a genuine account-level SpaceshipResearch 429 to the cross-session breaker; upstream
-    capacity 429s (no exhausted bucket in headers or last-known state) are left alone.
-
-    *error_context* is the turn's (``extract_api_error_context``); *classified* brings the
-    classifier's own context, where a welcome-tier ``rate_limited`` refusal and its ``reset_at``
-    live. A long welcome reset is an exhausted allowance whatever the headers say, and the one
-    place the user is told that signing in lifts it."""
-    _genuine = False
-    try:
-        from agent.spaceshipresearch_rate_guard import (
-            is_genuine_spaceshipresearch_rate_limit, is_long_welcome_rate_limit, record_spaceshipresearch_rate_limit)
-        _err_resp = getattr(api_error, "response", None)
-        _err_hdrs = getattr(_err_resp, "headers", None) if _err_resp else None
-        from scout_cli.anon_auth import is_anonymous_agent
-        anonymous = is_anonymous_agent(agent)
-        _classified_ctx = getattr(classified, "error_context", None) or {}
-        # Only an anonymous request's fairshare body is an allowance verdict; named
-        # requests keep the exhausted-bucket rule, whatever their host or body says.
-        _genuine = (
-            (anonymous and is_long_welcome_rate_limit(_classified_ctx))
-            or is_genuine_spaceshipresearch_rate_limit(headers=_err_hdrs, last_known_state=agent._rate_limit_state))
-        if _genuine:
-            _merged = {**(error_context if isinstance(error_context, dict) else {}), **_classified_ctx}
-            record_spaceshipresearch_rate_limit(headers=_err_hdrs, error_context=_merged, anonymous=anonymous)
-        else:
-            logger.info(
-                "SpaceshipResearch 429 looks like upstream capacity "
-                "(no exhausted bucket in headers or "
-                "last-known state) -- not tripping "
-                "cross-session breaker."
-            )
-    except Exception:
-        pass
-    return _genuine
-
-
 def route_classified_error(
     agent: Any, api_error: Exception, classified: Any, _retry: TurnRetryState, *, error_msg: str,
-    error_context: Any, recovered_with_pool: bool, base_url: Any, model: Any,
+    error_context: Any, base_url: Any, model: Any,
     messages: List[Dict[str, Any]], api_messages: Any, system_message: Any,
     active_system_prompt: Any, conversation_history: Any, retry_count: int, max_retries: int,
     compression_attempts: int, max_compression_attempts: int, api_call_count: int,
@@ -1764,7 +1494,7 @@ def route_classified_error(
     long-context tier 429 → cap at 200k and compress; eager fallback for rate-limit/billing
     (immediately) and transport failures (after 1 retry) unless credential-pool rotation may
     still recover (upstream-aggregator 429s always fall back); persistent 401/403 → fallback
-    chain once; genuine SpaceshipResearch 429 → cross-session breaker + re-enter the loop exactly once."""
+    chain once."""
     from agent.conversation_compression import conversation_history_after_compression
     from agent.conversation_loop import _arm_fallback_restart, _ra
     from agent.model_metadata import estimate_request_tokens_rough
@@ -1908,18 +1638,4 @@ def route_classified_error(
         if agent._try_activate_fallback(reason=classified.reason):
             return _fallback_break()
 
-    # Scout Portal: a genuine account-level 429 is recorded to a shared file so ALL
-    # sessions back off; is_genuine_spaceshipresearch_rate_limit excludes upstream 429s.
-    if (
-        is_rate_limited
-        and agent.provider == "spaceshipresearch"
-        and classified.reason == FailoverReason.rate_limit
-        and not recovered_with_pool
-        and _is_genuine_spaceshipresearch_rate_limit(agent, api_error, error_context, classified)
-    ):
-        # Re-enter the loop exactly once so the top-of-loop SpaceshipResearch guard runs
-        # (retry_count = max_retries would skip it entirely).
-        retry_count = max(0, max_retries - 1)
-        return _verdict("continue")
-    # Upstream capacity 429: normal retry logic will typically succeed.
     return _verdict("fallthrough")

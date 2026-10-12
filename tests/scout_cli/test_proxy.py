@@ -4,106 +4,18 @@ from __future__ import annotations
 
 import asyncio
 import json
-import threading
 from pathlib import Path
 from typing import Any, Dict
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-from scout_cli.proxy.adapters import ADAPTERS, get_adapter
 from scout_cli.proxy.adapters.base import UpstreamAdapter, UpstreamCredential
-from scout_cli.proxy.adapters.scout_portal import ScoutPortalAdapter
 from scout_cli.proxy.adapters.xai import XAIGrokAdapter
 
 
 # ---------------------------------------------------------------------------
 # Adapter registry
 # ---------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-# ---------------------------------------------------------------------------
-# ScoutPortalAdapter
-# ---------------------------------------------------------------------------
-
-
-def _write_auth_store(scout_home: Path, spaceshipresearch_state: Dict[str, Any]) -> Path:
-    """Write an auth.json with the given spaceshipresearch state into a hermetic SCOUT_HOME."""
-    auth_path = scout_home / "auth.json"
-    auth_path.write_text(json.dumps({
-        "version": 1,
-        "providers": {"spaceshipresearch": spaceshipresearch_state},
-    }))
-    return auth_path
-
-
-
-
-def test_spaceshipresearch_adapter_concurrent_refresh_serialized(tmp_path, monkeypatch):
-    """Two parallel get_credential() calls must serialize through the lock."""
-    monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
-    _write_auth_store(tmp_path, {
-        "access_token": "a", "refresh_token": "r",
-    })
-
-    call_log: list = []
-    in_flight = threading.Event()
-    overlap_detected = threading.Event()
-    counter = [0]
-    counter_lock = threading.Lock()
-
-    def serializing_refresh(**kwargs):
-        # If another thread is already inside refresh, the lock is broken.
-        if in_flight.is_set():
-            overlap_detected.set()
-        in_flight.set()
-        try:
-            call_log.append(threading.current_thread().ident)
-            # Simulate refresh latency so any race window is exposed.
-            import time
-            time.sleep(0.05)
-            with counter_lock:
-                counter[0] += 1
-                idx = counter[0]
-            return {
-                "api_key": f"key-{idx}",
-                "expires_at": "2099-01-01T00:00:00Z",
-                "base_url": "https://inference-api.spaceshipresearch.com/v1",
-            }
-        finally:
-            in_flight.clear()
-
-    adapter = ScoutPortalAdapter()
-    results: list = []
-    errors: list = []
-
-    def worker():
-        try:
-            results.append(adapter.get_credential().bearer)
-        except Exception as exc:  # pragma: no cover - shouldn't happen
-            errors.append(exc)
-
-    with patch(
-        "scout_cli.proxy.adapters.scout_portal.resolve_spaceshipresearch_runtime_credentials",
-        side_effect=serializing_refresh,
-    ):
-        threads = [threading.Thread(target=worker) for _ in range(3)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-    assert not errors, f"workers errored: {errors}"
-    assert len(results) == 3
-    assert len(call_log) == 3
-    assert not overlap_detected.is_set(), "refresh calls overlapped — lock is broken"
-    assert all(r.startswith("key-") for r in results)
 
 
 # ---------------------------------------------------------------------------
@@ -337,10 +249,6 @@ def _build_retrying_fake_upstream(captured: Dict[str, Any]) -> "web.Application"
     return app
 
 
-
-
-
-
 def test_server_strips_client_auth_header():
     """The client's Authorization header MUST NOT reach the upstream."""
     async def run():
@@ -387,7 +295,7 @@ def _build_sse_upstream(
 
 
 def test_proxy_appends_done_when_upstream_omits_sentinel():
-    """#90848: complete Portal-shaped SSE without [DONE] gets one appended."""
+    """#90848: complete SSE without [DONE] gets one appended."""
     async def run():
         frames = [
             b'data: {"choices":[{"delta":{"content":"LONGCAT_OK"}}]}\n\n',
@@ -501,9 +409,5 @@ def test_proxy_does_not_append_done_after_malformed_trailing_frame():
 # ---------------------------------------------------------------------------
 # CLI handlers
 # ---------------------------------------------------------------------------
-
-
-
-
 
 

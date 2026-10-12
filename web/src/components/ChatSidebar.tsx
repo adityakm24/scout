@@ -25,9 +25,9 @@
  * terminal pane keeps working unimpaired.
  */
 
-import { Button } from '@spaceshipresearch/ui/ui/components/button'
-import { Badge } from '@spaceshipresearch/ui/ui/components/badge'
-import { Card } from '@spaceshipresearch/ui/ui/components/card'
+import { Button } from '@/ui/components/button'
+import { Badge } from '@/ui/components/badge'
+import { Card } from '@/ui/components/card'
 
 import { ModelPickerDialog } from '@/components/ModelPickerDialog'
 import { ModelReloadConfirm } from '@/components/ModelReloadConfirm'

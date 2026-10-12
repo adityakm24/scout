@@ -254,8 +254,8 @@ function ConfirmingModelPanel({
   // a familiar UI for users who'll see this picker again later.
   const [pickerOpen, setPickerOpen] = useState(false)
 
-  // Pull pricing + tier for the just-picked default so the confirm card
-  // shows the same $/Mtok + Free/Pro info the picker and CLI do.
+  // Pull pricing for the just-picked default so the confirm card shows the
+  // same $/Mtok info the picker and CLI do.
   const options = useQuery({
     queryKey: ['onboarding-model-options', profileScopeKey(ctx.scope ?? ctx.profile), flow.providerSlug],
     queryFn: () => getGlobalModelOptions({ includeUnconfigured: true, explicitOnly: false }, ctx.scope ?? ctx.profile)
@@ -266,7 +266,6 @@ function ConfirmingModelPanel({
   )
 
   const price = providerRow?.pricing?.[flow.currentModel]
-  const freeTier = providerRow?.free_tier
 
   return (
     <div className="grid place-items-center gap-7 py-6 text-center">
@@ -282,16 +281,6 @@ function ConfirmingModelPanel({
           <span className="font-mono text-[0.6875rem] text-muted-foreground">
             {t.onboarding.defaultModel}
           </span>
-          {freeTier === true && (
-            <span className="rounded-sm bg-emerald-500/15 px-1 py-0.5 text-[0.6rem] font-semibold text-emerald-600 dark:text-emerald-400">
-              {t.onboarding.freeTier}
-            </span>
-          )}
-          {freeTier === false && (
-            <span className="rounded-sm bg-primary/15 px-1 py-0.5 text-[0.6rem] font-semibold text-primary">
-              {t.onboarding.pro}
-            </span>
-          )}
         </div>
         <p className="font-mono text-base">
           <GlyphText text={scrambledModel} />

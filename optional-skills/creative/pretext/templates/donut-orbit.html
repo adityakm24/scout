@@ -147,11 +147,6 @@
   }
 
   @font-face {
-    font-family: "Mondwest";
-    src: url("https://esm.sh/@spaceshipresearch/ui@0.4.0/dist/fonts/Mondwest-Regular.woff2") format("woff2");
-    font-weight: 400; font-style: normal; font-display: block;
-  }
-  @font-face {
     font-family: "Geist Mono";
     src: url("https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.2.5/files/geist-mono-latin-400-normal.woff2") format("woff2");
     font-weight: 400; font-style: normal; font-display: block;
@@ -162,7 +157,6 @@
     font-weight: 400; font-style: normal; font-display: block;
   }
 
-  .font-primer { position: fixed; left: -9999px; top: -9999px; font: 400 26px "Mondwest", serif; }
 </style>
 </head>
 <body>
@@ -171,7 +165,6 @@
 <div class="layer vignette"></div>
 <div class="layer fg-lens"></div>
 <div class="layer noise"><canvas id="noiseCanvas"></canvas></div>
-<div class="font-primer" aria-hidden="true">Aa Mondwest priming glyphs 0123456789</div>
 
 <script type="module">
 import {
@@ -945,7 +938,6 @@ function rasterizeOrb(time) {
     const y = r * CELL_H + CELL_H * 0.5;
     const stageY = y - canvasTop;
     for (let c = cMin; c <= cMax; c++) {
-      // Direct port of bb-ascii/app/spaceshipresearch/sphere/page.tsx:
       // px uses width/height normalization, py is row-normalized, then both
       // are offset by pan. This is what makes the sphere circular on screen.
       const stageX = c * CELL_W + CELL_W * 0.5 - canvasLeft;
@@ -1448,16 +1440,12 @@ function draw(time) {
 }
 
 resize();
-const DS_CDN = "https://esm.sh/@spaceshipresearch/ui@0.4.0/dist/fonts";
-const FACES = [new FontFace("Mondwest", `url(${DS_CDN}/Mondwest-Regular.woff2) format("woff2")`, { weight: "400", display: "block" })];
 (async () => {
   try {
-    const loaded = await Promise.all(FACES.map(f => f.load()));
-    for (const f of loaded) document.fonts.add(f);
     await document.fonts.load(BODY_FONT, "Aa");
     await document.fonts.load(ASCII_FONT, "Aa");
   } catch (err) {
-    console.warn("DS font load failed, using fallbacks:", err);
+    console.warn("Font load failed, using fallbacks:", err);
   }
   rebuildLayouts();
   fontsReady = true;

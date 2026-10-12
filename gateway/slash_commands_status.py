@@ -287,14 +287,6 @@ class GatewayStatusCommandsMixin:
             lines.append(t("gateway.status.model_provider", model=fields["model"], provider=fields["provider"]))
         elif fields["model"]:
             lines.append(t("gateway.status.model", model=fields["model"]))
-        try:
-            from scout_cli.anon_auth import free_tier_route
-
-            free_tier_active = await self._run_in_executor_with_context(free_tier_route)
-            if free_tier_active:
-                lines.append(t("gateway.status.free_tier"))
-        except Exception:
-            pass
         from agent.context_breakdown import context_display_source
         mark = "~" if context_display_source(getattr(status_agent, "context_compressor", None)) != "provider_usage" else ""
         if context_total:
@@ -490,21 +482,6 @@ class GatewayStatusCommandsMixin:
             lines += ["", t("gateway.agents.none")]
         return "\n".join(lines)
 
-    async def _handle_topup_command(self, event: MessageEvent) -> str:
-        """Handle /topup -- show the SpaceshipResearch balance and hand off to the portal. Does NOT charge, confirm,
-        or track payment (that happens in the browser; the next /topup shows the new balance)."""
-        from agent.account_usage import build_credits_view
-        view = await _quiet(lambda: asyncio.to_thread(build_credits_view, markdown=True))
-        if view is None or not view.logged_in:
-            return t("gateway.credits.not_logged_in")
-        # Drop the helper's 📈 header; we print our own.
-        lines = [t("gateway.topup.header")] + [ln for ln in view.balance_lines if not ln.lstrip().startswith("📈")]
-        if view.identity_line:
-            lines += ["", view.identity_line]
-        if view.topup_url:
-            lines += ["", t("gateway.topup.portal_link", url=view.topup_url), t("gateway.topup.hint")]
-        return "\n".join(lines)
-
     def _context_breakdown_block(self, agent, source, expanded: bool) -> list[str]:
         """/context per-category block (plain text, chars/4 estimate, same engine as /usage).
         Runs in a thread; returns [] and never raises."""
@@ -606,19 +583,12 @@ class GatewayStatusCommandsMixin:
             render_account_usage_lines(account_snapshot, markdown=True) if account_snapshot else []
         )
 
-        # SpaceshipResearch credits + monthly-grant gauge (shared with CLI/TUI). Gates on "a SpaceshipResearch account is
-        # logged in" — NOT the inference provider — so a SpaceshipResearch user inferring elsewhere still sees
-        # a balance. Fail-open: never break /usage.
-        from agent.account_usage import spaceshipresearch_credits_lines
-        credits_lines = await _quiet(lambda: asyncio.to_thread(spaceshipresearch_credits_lines, markdown=True), [])
-
         def _with_account_blocks(lines: list[str]) -> str:
-            # Each block is preceded by a blank divider only when something precedes it.
-            for block in (account_lines, credits_lines):
-                if block:
-                    if lines:
-                        lines.append("")
-                    lines.extend(block)
+            # The account block is preceded by a blank divider only when something precedes it.
+            if account_lines:
+                if lines:
+                    lines.append("")
+                lines.extend(account_lines)
             return "\n".join(lines)
         if agent and hasattr(agent, "session_total_tokens") and agent.session_api_calls > 0:
             lines = _usage_agent_stats_lines(agent)
@@ -643,7 +613,7 @@ class GatewayStatusCommandsMixin:
                 t("gateway.usage.label_estimated_context", count=_fmt(approx)),
                 t("gateway.usage.detailed_after_first"),
             ])
-        if account_lines or credits_lines:
+        if account_lines:
             return _with_account_blocks([])
         return t("gateway.usage.no_data")
 

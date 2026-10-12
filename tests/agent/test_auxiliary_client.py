@@ -10,7 +10,6 @@ from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
 
 from agent.auxiliary_client import (
-    _SPACESHIPRESEARCH_MODEL,
     CodexAuxiliaryClient,
     get_text_auxiliary_client,
     get_available_vision_backends,
@@ -26,7 +25,6 @@ from agent.auxiliary_client import (
     _is_model_not_found_error,
     _is_model_incompatible_error,
     _is_statusless_structured_provider_error,
-    _refresh_spaceshipresearch_recommended_model,
     _normalize_aux_provider,
     _try_payment_fallback,
     _try_openrouter,
@@ -35,7 +33,6 @@ from agent.auxiliary_client import (
     _resolve_task_provider_model,
     _resolve_xai_oauth_for_aux,
     _CodexCompletionsAdapter,
-    _pool_runtime_base_url,
 )
 
 
@@ -68,7 +65,7 @@ def _clean_env(monkeypatch):
     """Strip provider env vars so each test starts clean."""
     for key in (
         "OPENROUTER_API_KEY", "OPENAI_BASE_URL", "OPENAI_API_KEY",
-        "OPENAI_MODEL", "LLM_MODEL", "SPACESHIPRESEARCH_INFERENCE_BASE_URL",
+        "OPENAI_MODEL", "LLM_MODEL", "FIXTURECO_INFERENCE_BASE_URL",
         "ANTHROPIC_API_KEY", "ANTHROPIC_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN",
         "NVIDIA_API_KEY", "NVIDIA_BASE_URL",
     ):
@@ -91,7 +88,6 @@ class TestResolveTaskProviderModel:
         [
             "anthropic",
             "minimax-oauth",
-            "spaceshipresearch",
             "openai-codex",
             "qwen-oauth",
             "xai-oauth",
@@ -111,7 +107,6 @@ class TestResolveTaskProviderModel:
         assert base_url == "https://provider.example/v1"
         assert api_key == "resolved-token"
         assert api_mode is None
-
 
 
     def test_explicit_provider_adopts_configured_task_endpoint(self):
@@ -135,10 +130,6 @@ class TestResolveTaskProviderModel:
         assert api_key == "nvapi-secret"
         assert model == "meta/llama-3.2-11b-vision-instruct"
         assert api_mode is None
-
-
-
-
 
 
     def test_explicit_provider_moa_unwraps_to_aggregator(self, monkeypatch):
@@ -271,14 +262,14 @@ class TestMoaAggregatorSharedResolution:
                                     "model": "anthropic/claude-opus-4.8",
                                 },
                             },
-                            "spaceshipresearch-mix": {
+                            "fixtureco-mix": {
                                 "enabled": True,
                                 "reference_models": [
-                                    {"provider": "spaceshipresearch", "model": "scout-4-70b"}
+                                    {"provider": "fixtureco", "model": "model-4-70b"}
                                 ],
                                 "aggregator": {
-                                    "provider": "spaceshipresearch",
-                                    "model": "scout-4-405b",
+                                    "provider": "fixtureco",
+                                    "model": "model-4-405b",
                                 },
                             },
                         },
@@ -307,10 +298,6 @@ class TestMoaAggregatorSharedResolution:
         assert model == "anthropic/claude-opus-4.8"
         assert base_url is None
         assert api_key is None
-
-
-
-
 
 
     def test_main_agent_fallback_uses_aggregator_for_moa_main(self, tmp_path, monkeypatch):
@@ -375,7 +362,7 @@ class TestBuildCallKwargsMaxTokens:
             ("zai", "glm-5.2", "https://api.z.ai/api/coding/paas/v4", "max_tokens"),
             ("openrouter", "deepseek/deepseek-v4-flash:nitro", "https://openrouter.ai/api/v1", "max_tokens"),
             ("copilot", "gpt-5.5", "https://api.githubcopilot.com", "max_completion_tokens"),
-            ("spaceshipresearch", "scout-4", "https://inference-api.spaceshipresearch.com/v1", "max_tokens"),
+            ("fixtureco", "model-4", "https://inference.fixtureco.example/v1", "max_tokens"),
         ],
     )
     def test_moa_task_sends_max_tokens_on_openai_compatible(self, provider, model, base_url, expected_key):
@@ -401,8 +388,6 @@ class TestBuildCallKwargsMaxTokens:
             task="moa_reference",
         )
         assert kwargs[expected_key] == 800
-
-
 
 
     def test_moa_task_exact_match(self):
@@ -439,34 +424,6 @@ class TestBuildCallKwargsMaxTokens:
             task="moa_custom_future",
         )
         assert "max_tokens" not in kw3
-
-
-class TestSpaceshipResearchTagsScoping:
-    def test_tags_injected_when_provider_is_spaceshipresearch(self, monkeypatch):
-        import agent.auxiliary_client as aux
-
-        monkeypatch.setattr(aux, "auxiliary_is_spaceshipresearch", False)
-
-        kwargs = aux._build_call_kwargs(
-            provider="spaceshipresearch",
-            model="scout-4",
-            messages=[{"role": "user", "content": "hi"}],
-        )
-
-        assert kwargs["extra_body"]["tags"] == aux._scout_portal_tags()
-
-    def test_tags_not_injected_for_gemini_when_main_is_spaceshipresearch(self, monkeypatch):
-        import agent.auxiliary_client as aux
-
-        monkeypatch.setattr(aux, "auxiliary_is_spaceshipresearch", True)
-
-        kwargs = aux._build_call_kwargs(
-            provider="gemini",
-            model="gemini-2.5-flash",
-            messages=[{"role": "user", "content": "hi"}],
-        )
-
-        assert "extra_body" not in kwargs
 
 
 class TestNormalizeAuxProvider:
@@ -813,7 +770,7 @@ class TestResolveProviderClientUniversalModelFallback:
     ``(None, None)`` on an empty model — both lack a catalog default
     because their accepted-model lists drift on the backend.  That
     silent failure caused ``_resolve_auto_route`` to drop to its Step-2
-    fallback chain (OpenRouter / SpaceshipResearch / etc.), so aux tasks billed
+    fallback chain (OpenRouter / Fixture Co / etc.), so aux tasks billed
     against the wrong subscription.
     """
 
@@ -880,7 +837,6 @@ class TestExpiredCodexFallback:
     """Test that expired Codex tokens don't block the auto chain."""
 
 
-
     def test_expired_codex_openrouter_wins(self, tmp_path, monkeypatch):
         """With expired Codex + OpenRouter key, OpenRouter should win (1st in chain)."""
         import base64
@@ -924,10 +880,6 @@ class TestExpiredCodexFallback:
             mock_openai.assert_called()
 
 
-
-
-
-
     def test_claude_code_oauth_env_sets_flag(self, monkeypatch):
         """CLAUDE_CODE_OAUTH_TOKEN env var should get is_oauth=True."""
         monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-ant-oat-cc-test-token")
@@ -954,7 +906,6 @@ class TestExplicitProviderRouting:
             assert client is not None
             adapter = client.chat.completions
             assert adapter._is_oauth is False
-
 
 
     def test_try_openrouter_pool_exhausted_falls_back_to_env(self, monkeypatch):
@@ -1154,7 +1105,7 @@ class TestGetTextAuxiliaryClient:
         monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-        with patch("agent.auxiliary_client._read_spaceshipresearch_auth", return_value=None), \
+        with \
              patch("agent.auxiliary_client._resolve_codex_credential_and_base",
                    return_value=(None, "https://chatgpt.com/backend-api/codex")), \
              patch("agent.auxiliary_client._resolve_api_key_provider", return_value=(None, None)):
@@ -1165,8 +1116,6 @@ class TestGetTextAuxiliaryClient:
     def test_custom_endpoint_uses_codex_wrapper_when_runtime_requests_responses_api(self):
         with patch("agent.auxiliary_client._resolve_custom_runtime",
                    return_value=("https://api.openai.com/v1", "sk-test", "codex_responses")), \
-             patch("agent.auxiliary_client._read_spaceshipresearch_auth", return_value=None), \
-             patch("agent.auxiliary_client._resolve_spaceshipresearch_runtime_api", return_value=None), \
              patch("agent.auxiliary_client._read_main_model", return_value="gpt-5.3-codex"), \
              patch("agent.auxiliary_client.OpenAI") as mock_openai:
             client, model = get_text_auxiliary_client()
@@ -1185,8 +1134,7 @@ class TestVisionClientFallback:
         """Active provider appears in available backends when credentials exist."""
         monkeypatch.setenv("ANTHROPIC_API_KEY", "***")
         with (
-            patch("agent.auxiliary_client._read_spaceshipresearch_auth", return_value=None),
-            patch("agent.auxiliary_client._read_main_provider", return_value="anthropic"),
+                        patch("agent.auxiliary_client._read_main_provider", return_value="anthropic"),
             patch("agent.auxiliary_client._read_main_model", return_value="claude-sonnet-4"),
             patch("agent.anthropic_adapter.build_anthropic_client", return_value=MagicMock()),
             patch("agent.anthropic_credentials.resolve_anthropic_token", return_value="***"),
@@ -1229,87 +1177,6 @@ class TestVisionClientFallback:
 
 
 class TestAuxiliaryPoolAwareness:
-
-    def test_try_spaceshipresearch_refreshes_stale_pool_entry(self):
-        stale_token = _jwt_with_claims({
-            "scope": "inference:invoke",
-            "exp": int(time.time() - 60),
-        })
-        fresh_token = _jwt_with_claims({
-            "scope": "inference:invoke",
-            "exp": int(time.time() + 3600),
-        })
-
-        class _Entry:
-            def __init__(self, token):
-                self.access_token = "pooled-access-token"
-                self.agent_key = token
-                self.agent_key_expires_at = "2099-01-01T00:00:00+00:00"
-                self.scope = "inference:invoke"
-                self.inference_base_url = "https://inference.pool.example/v1"
-
-        class _Pool:
-            refreshed = False
-
-            def has_credentials(self):
-                return True
-
-            def select(self):
-                return _Entry(stale_token)
-
-            def try_refresh_current(self):
-                self.refreshed = True
-                return _Entry(fresh_token)
-
-        pool = _Pool()
-        with (
-            patch("agent.auxiliary_client.load_pool", return_value=pool),
-            patch("agent.auxiliary_client.OpenAI") as mock_openai,
-            patch("scout_cli.models.get_spaceshipresearch_recommended_aux_model", return_value=None),
-        ):
-            from agent.auxiliary_client import _try_spaceshipresearch
-
-            client, model = _try_spaceshipresearch()
-
-        assert pool.refreshed is True
-        assert client is not None
-        assert model == _SPACESHIPRESEARCH_MODEL
-        assert mock_openai.call_args.kwargs["api_key"] == fresh_token
-        assert mock_openai.call_args.kwargs["base_url"] == "https://inference.pool.example/v1"
-
-
-
-
-
-    def test_call_llm_retries_spaceshipresearch_after_401(self):
-        class _Auth401(Exception):
-            status_code = 401
-
-        stale_client = MagicMock()
-        stale_client.base_url = "https://inference-api.spaceshipresearch.com/v1"
-        stale_client.chat.completions.create.side_effect = _Auth401("stale spaceshipresearch key")
-
-        fresh_client = MagicMock()
-        fresh_client.base_url = "https://inference-api.spaceshipresearch.com/v1"
-        fresh_client.chat.completions.create.return_value = {"ok": True}
-
-        with (
-            patch("agent.auxiliary_client._resolve_task_provider_model", return_value=("spaceshipresearch", "spaceshipresearch-model", None, None, None)),
-            patch("agent.auxiliary_client._get_cached_client", return_value=(stale_client, "spaceshipresearch-model")),
-            patch("agent.auxiliary_client.OpenAI", return_value=fresh_client),
-            patch("agent.auxiliary_client._validate_llm_response", side_effect=lambda resp, _task, **_kw: resp),
-            patch("agent.auxiliary_client._resolve_spaceshipresearch_runtime_api", return_value=("fresh-agent-key", "https://inference-api.spaceshipresearch.com/v1")),
-        ):
-            result = call_llm(
-                task="compression",
-                messages=[{"role": "user", "content": "hi"}],
-            )
-
-        assert result == {"ok": True}
-        assert stale_client.chat.completions.create.call_count == 1
-        assert fresh_client.chat.completions.create.call_count == 1
-
-
 
 
     def test_cached_gmi_client_keeps_explicit_slash_model_override(self):
@@ -1364,8 +1231,6 @@ class TestIsPaymentError:
         assert _is_payment_error(exc) is True
 
 
-
-
     @pytest.mark.parametrize("spelling", ["RESOURCE_EXHAUSTED", "ResourceExhausted", "resource-exhausted"])
     @pytest.mark.parametrize("status", [None, 429])
     def test_resource_exhausted_separator_variants_are_payment(self, spelling, status):
@@ -1391,9 +1256,6 @@ class TestIsPaymentError:
         assert _is_payment_error(exc) is False
 
 
-
-
-
     # ── Daily / monthly quota exhaustion (#26803) ────────────────────────────
 
 
@@ -1401,28 +1263,6 @@ class TestIsModelNotFoundError:
     """_is_model_not_found_error detects stale/invalid model 404s, distinct
     from payment errors."""
 
-    def test_spaceshipresearch_openrouter_catalog_404(self):
-        """The exact incident error: a Portal-recommended model dropped from
-        the SpaceshipResearch → OpenRouter catalog."""
-        exc = Exception(
-            "Model 'gpt-5.4-mini' not found. The requested model does not "
-            "exist in our configuration or OpenRouter catalog."
-        )
-        exc.status_code = 404
-        assert _is_model_not_found_error(exc) is True
-
-
-
-
-    def test_billing_404_is_not_model_not_found(self):
-        """Free-tier / credit 404s belong to _is_payment_error, not here —
-        the two predicates must not overlap."""
-        exc = Exception(
-            "Model 'gpt-5' is not available on the free tier. Upgrade."
-        )
-        exc.status_code = 404
-        assert _is_model_not_found_error(exc) is False
-        assert _is_payment_error(exc) is True
 
     def test_out_of_funds_404_is_not_model_not_found(self):
         exc = Exception(
@@ -1449,7 +1289,6 @@ class TestIsModelIncompatibleError:
         assert _is_model_incompatible_error(exc) is True
 
 
-
     def test_not_found_is_not_incompatible(self):
         """A model-does-not-exist 400 belongs to _is_model_not_found_error —
         the two predicates must not overlap."""
@@ -1467,32 +1306,6 @@ class TestIsModelIncompatibleError:
         assert _is_model_incompatible_error(exc) is False
 
 
-class TestRefreshSpaceshipResearchRecommendedModel:
-    """_refresh_spaceshipresearch_recommended_model picks a fresh model after a stale 404."""
-
-
-
-    def test_falls_back_to_default_when_portal_unavailable(self, monkeypatch):
-        def _boom(**kw):
-            raise RuntimeError("portal down")
-        monkeypatch.setattr(
-            "scout_cli.models.get_spaceshipresearch_recommended_aux_model", _boom)
-        out = _refresh_spaceshipresearch_recommended_model(
-            vision=False, stale_model="some/dead-model")
-        assert out == _SPACESHIPRESEARCH_MODEL
-
-    def test_returns_none_when_no_distinct_alternative(self, monkeypatch):
-        """When the failed model IS the default and the Portal has nothing
-        else, there's no usable alternative."""
-        monkeypatch.setattr(
-            "scout_cli.models.get_spaceshipresearch_recommended_aux_model",
-            lambda **kw: _SPACESHIPRESEARCH_MODEL,
-        )
-        out = _refresh_spaceshipresearch_recommended_model(
-            vision=False, stale_model=_SPACESHIPRESEARCH_MODEL)
-        assert out is None
-
-
 class TestIsRateLimitError:
     """_is_rate_limit_error detects 429 rate-limit errors warranting fallback."""
 
@@ -1500,12 +1313,6 @@ class TestIsRateLimitError:
         exc = Exception("Rate limit exceeded, try again in 2 seconds")
         exc.status_code = 429
         assert _is_rate_limit_error(exc) is True
-
-
-
-
-
-
 
 
     def test_openai_ratelimiterror_classname(self):
@@ -1538,24 +1345,23 @@ class TestTryPaymentFallback:
         """Discovery only walks with no selected main provider (``auto``); a selected provider that
         fails never hops to another logged-in account (test_auxiliary_auto_never_guesses_provider)."""
         mock_client = MagicMock()
-        with patch("agent.auxiliary_client._try_openrouter", return_value=(None, None)), \
-             patch("agent.auxiliary_client._try_spaceshipresearch", return_value=(mock_client, "spaceshipresearch-model")), \
+        with patch("agent.auxiliary_client._try_openrouter", return_value=(None, None)) as or_try, \
+             patch("agent.auxiliary_client._try_custom_endpoint", return_value=(mock_client, "local-model")), \
              patch("agent.auxiliary_client._read_main_provider", return_value="auto"):
             client, model, label = _try_payment_fallback("openrouter", task="compression")
         assert client is mock_client
-        assert model == "spaceshipresearch-model"
-        assert label == "spaceshipresearch"
-
+        assert model == "local-model"
+        assert label == "local/custom"
+        or_try.assert_not_called()
 
 
     def test_codex_not_in_fallback_chain(self):
         """Codex is deliberately NOT a fallback rung (shifting model allow-list).
 
-        When OR/SpaceshipResearch/custom/api-key all fail, payment-fallback returns None —
+        When OR/Fixture Co/custom/api-key all fail, payment-fallback returns None —
         Codex is never tried with a guessed model.
         """
         with patch("agent.auxiliary_client._try_openrouter", return_value=(None, None)), \
-             patch("agent.auxiliary_client._try_spaceshipresearch", return_value=(None, None)), \
              patch("agent.auxiliary_client._try_custom_endpoint", return_value=(None, None)), \
              patch("agent.auxiliary_client._resolve_api_key_provider", return_value=(None, None)), \
              patch("agent.auxiliary_client._read_main_provider", return_value="auto"):
@@ -1838,12 +1644,6 @@ class TestAuxiliaryFallbackLayering:
         return exc
 
 
-
-
-
-
-
-
     def test_explicit_provider_rate_limit_triggers_fallback(self, monkeypatch):
         """429 rate-limit on an explicit provider must trigger fallback (not be ignored).
 
@@ -2109,7 +1909,6 @@ class TestTransientTransportRetry:
                 side_effect=lambda resp, _task, **_kw: resp,
             ),
         )
-
 
 
     def test_does_not_retry_non_transient_400(self):
@@ -2380,7 +2179,6 @@ class TestIsConnectionError:
         assert _is_connection_error(err) is True
 
 
-
     def test_normal_api_error_not_connection(self):
         from agent.auxiliary_client import _is_connection_error
         err = Exception("Bad Request: invalid model")
@@ -2395,8 +2193,6 @@ class TestKimiTemperatureOmitted:
     active mode (thinking → 1.0, non-thinking → 0.6).  Sending any temperature
     value conflicts with gateway-managed defaults.
     """
-
-
 
 
     @pytest.mark.asyncio
@@ -2571,7 +2367,7 @@ class TestAuxiliaryTaskExtraBody:
     def test_profile_projection_receives_wire_clamped_effort(self, monkeypatch):
         """Profiles clamp only against their own narrower sets (or a catalog that may be cold), so
         ``ultra`` must already be a wire level when the projection sees it — the MoA aggregator on
-        an OpenRouter/SpaceshipResearch slot 400'd otherwise (#112010)."""
+        an OpenRouter/Fixture Co slot 400'd otherwise (#112010)."""
         import agent.auxiliary_client as aux
 
         seen = {}
@@ -2656,10 +2452,6 @@ class TestAuxiliaryTaskExtraBody:
         assert kwargs["extra_body"]["enable_thinking"] is True
 
 
-
-
-
-
     @pytest.mark.parametrize("moa_task", ["moa_reference", "moa_aggregator"])
     def test_moa_tasks_reject_task_level_reasoning_effort(self, moa_task, caplog):
         """MoA reasoning is per-slot in the preset — the auxiliary-task
@@ -2739,10 +2531,6 @@ class TestAuxiliaryTaskExtraBody:
         }
 
 
-
-
-
-
     def test_bare_custom_auth_error_does_not_fall_back_to_env_base_url(self, monkeypatch):
         """Bare 'custom' with nothing configured: the main resolver raises AuthError; aux must
         return no endpoint rather than route to a stale env OPENAI_BASE_URL with a placeholder key."""
@@ -2761,7 +2549,6 @@ class TestAuxiliaryTaskExtraBody:
 
 class TestAnthropicCompatImageConversion:
     """Tests for _is_anthropic_compat_endpoint and _convert_openai_images_to_anthropic."""
-
 
 
     def test_url_based_detection(self):
@@ -2784,9 +2571,6 @@ class TestAnthropicCompatImageConversion:
         assert img_block["type"] == "image"
         assert img_block["source"]["type"] == "url"
         assert img_block["source"]["url"] == "https://example.com/img.jpg"
-
-
-
 
 
     def test_url_video_converted_to_video_block(self):
@@ -2852,10 +2636,6 @@ class TestAuxiliaryAuthRefreshRetry:
 
         assert resp.choices[0].message.content == "fresh-sync"
         mock_refresh.assert_called_once_with("openai-codex")
-
-
-
-
 
 
     def test_refresh_provider_credentials_force_refreshes_anthropic_oauth_and_evicts_cache(self, monkeypatch):
@@ -3111,7 +2891,6 @@ class TestAuxiliaryProviderProfileReasoning:
         assert "thinking" not in kwargs.get("extra_body", {})
 
 
-
     @pytest.mark.asyncio
     async def test_async_call_llm_preserves_profile_reasoning_kwargs(self):
         response = SimpleNamespace(
@@ -3209,7 +2988,6 @@ class TestCodexAdapterReasoningTranslation:
         return adapter, captured_kwargs
 
 
-
     def test_reasoning_effort_low_passed_through(self):
         adapter, captured = self._build_adapter()
         adapter.create(
@@ -3236,8 +3014,6 @@ class TestCodexAdapterReasoningTranslation:
         assert "reasoning" not in captured
 
 
-
-
     def test_no_extra_body_means_no_reasoning_keys(self):
         """Baseline: without extra_body, no reasoning/include is sent (preserves
         current behavior for callers that don't opt in)."""
@@ -3245,7 +3021,6 @@ class TestCodexAdapterReasoningTranslation:
         adapter.create(messages=[{"role": "user", "content": "hi"}])
         assert "reasoning" not in captured
         assert "include" not in captured
-
 
 
     def test_reasoning_effort_null_falls_back_to_medium(self):
@@ -3309,10 +3084,6 @@ class TestCodexAdapterPromptCacheKey:
         real_client.responses.create = _create
         adapter = _CodexCompletionsAdapter(real_client, model)
         return adapter, captured_kwargs
-
-
-
-
 
 
     @pytest.mark.parametrize("model", [
@@ -3545,7 +3316,7 @@ class TestVisionAutoSkipsKimiCoding:
         def fake_strict(provider, model=None):
             if provider == "openrouter":
                 return fake_or_client, "google/gemini-3-flash-preview"
-            if provider == "spaceshipresearch":
+            if provider == "fixtureco":
                 return None, None
             raise AssertionError(
                 f"strict vision backend should not be called for {provider!r} "
@@ -4038,8 +3809,6 @@ class TestAuxiliaryClientPoisonedCacheEviction:
     """
 
 
-
-
     def test_evict_cached_client_instance_walks_async_wrapper(self):
         """async_mode is part of the cache key so sync and async share the same
         underlying OpenAI client across two distinct cache entries. A single
@@ -4247,18 +4016,6 @@ class TestOpenRouterExplicitApiKey:
             )
 
 
-def test_pool_runtime_base_url_uses_spaceshipresearch_env_override(monkeypatch):
-    entry = SimpleNamespace(
-        provider="spaceshipresearch",
-        runtime_base_url="https://inference-api.spaceshipresearch.com/v1",
-        inference_base_url="https://inference-api.spaceshipresearch.com/v1",
-        base_url="https://inference-api.spaceshipresearch.com/v1",
-    )
-    monkeypatch.setenv("SPACESHIPRESEARCH_INFERENCE_BASE_URL", "https://ai.wildebeest-newton.ts.net/v1")
-
-    assert _pool_runtime_base_url(entry) == "https://ai.wildebeest-newton.ts.net/v1"
-
-
 class TestAnthropicExplicitApiKey:
     """Test that explicit_api_key is correctly propagated to _try_anthropic().
 
@@ -4267,7 +4024,6 @@ class TestAnthropicExplicitApiKey:
     updated — _try_anthropic() always fell back to resolve_anthropic_token()
     even when an explicit key was supplied (e.g. from a fallback_model entry).
     """
-
 
 
     def test_resolve_provider_client_passes_explicit_api_key_to_anthropic(self):
@@ -4322,8 +4078,6 @@ class TestAuxUnhealthyCache:
         assert "openrouter" not in _aux_unhealthy_until
 
 
-
-
     def test_payment_fallback_skips_unhealthy(self):
         """_try_payment_fallback also consults the unhealthy cache so a 402
         on OpenRouter doesn't cause a second OR call within the same chain
@@ -4332,18 +4086,17 @@ class TestAuxUnhealthyCache:
             _try_payment_fallback,
             _mark_provider_unhealthy,
         )
-        spaceshipresearch_client = MagicMock()
-        # Mark BOTH the failed provider (openrouter) and a sibling (custom)
-        # unhealthy. The chain should still find spaceshipresearch.
+        api_key_client = MagicMock()
+        # Mark the sibling (custom) unhealthy; openrouter is the failed provider. The chain should
+        # still reach the API-key provider.
         _mark_provider_unhealthy("local/custom")
         with patch("agent.auxiliary_client._read_main_provider", return_value="auto"), \
              patch("agent.auxiliary_client._try_openrouter") as or_try, \
-             patch("agent.auxiliary_client._try_spaceshipresearch", return_value=(spaceshipresearch_client, "n-model")), \
              patch("agent.auxiliary_client._try_custom_endpoint") as custom_try, \
-             patch("agent.auxiliary_client._resolve_api_key_provider", return_value=(None, None)):
+             patch("agent.auxiliary_client._resolve_api_key_provider", return_value=(api_key_client, "m")):
             client, model, label = _try_payment_fallback("openrouter", task="compression")
-        assert client is spaceshipresearch_client
-        assert label == "spaceshipresearch"
+        assert client is api_key_client
+        assert label == "api-key"
         # OR is skipped via skip_chain_labels (failed provider), custom via unhealthy cache.
         or_try.assert_not_called()
         custom_try.assert_not_called()
@@ -4379,17 +4132,17 @@ class TestAuxUnhealthyCache:
         err.status_code = 402
         primary_client.chat.completions.create.side_effect = err
 
-        spaceshipresearch_client = MagicMock()
-        spaceshipresearch_resp = MagicMock()
-        spaceshipresearch_resp.choices = [MagicMock(message=MagicMock(content="ok"))]
-        spaceshipresearch_client.chat.completions.create.return_value = spaceshipresearch_resp
+        fixtureco_client = MagicMock()
+        fixtureco_resp = MagicMock()
+        fixtureco_resp.choices = [MagicMock(message=MagicMock(content="ok"))]
+        fixtureco_client.chat.completions.create.return_value = fixtureco_resp
 
         with patch("agent.auxiliary_client._get_cached_client",
                     return_value=(primary_client, "google/gemini-3-flash-preview")), \
              patch("agent.auxiliary_client._resolve_task_provider_model",
                     return_value=("auto", "google/gemini-3-flash-preview", None, None, None)), \
              patch("agent.auxiliary_client._try_payment_fallback",
-                    return_value=(spaceshipresearch_client, "n-model", "spaceshipresearch")), \
+                    return_value=(fixtureco_client, "n-model", "fixtureco")), \
              patch("agent.auxiliary_client._build_call_kwargs",
                     return_value={"model": "n-model", "messages": [{"role": "user", "content": "hi"}]}):
             assert _is_provider_unhealthy("openrouter") is False
@@ -4488,19 +4241,15 @@ class TestAuxiliaryMaxTokensParam:
     ``max_tokens`` and 400-ing on ``unsupported_parameter``."""
 
 
-
     def test_openrouter_api_key_present_keeps_max_tokens_without_model_hint(self, monkeypatch):
         monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-v1-test")
         with (
             patch("agent.auxiliary_client._current_custom_base_url",
                   return_value="https://openrouter.ai/api/v1"),
-            patch("agent.auxiliary_client._read_spaceshipresearch_auth", return_value=None),
-        ):
+                    ):
             assert auxiliary_max_tokens_param(4096) == {"max_tokens": 4096}
 
     # Model-name fallback — this is the regression guard.
-
-
 
 
     def test_empty_model_falls_back_to_url_only(self):
@@ -4508,8 +4257,7 @@ class TestAuxiliaryMaxTokensParam:
         with (
             patch("agent.auxiliary_client._current_custom_base_url",
                   return_value="https://my-gateway.example.com/v1"),
-            patch("agent.auxiliary_client._read_spaceshipresearch_auth", return_value=None),
-        ):
+                    ):
             assert auxiliary_max_tokens_param(4096, model="") == {"max_tokens": 4096}
             assert auxiliary_max_tokens_param(4096, model=None) == {"max_tokens": 4096}
 
@@ -5160,7 +4908,7 @@ class TestFastModelTier:
             "stepfun/step-3.7-flash:free": {},
         }
         with patch("scout_cli.models_pricing.fetch_models_with_pricing", return_value=catalog):
-            assert ac._fast_model_from_catalog("spaceshipresearch") == "~openai/gpt-mini-latest"
+            assert ac._fast_model_from_catalog("openrouter") == "~openai/gpt-mini-latest"
 
     def test_catalog_match_skips_reasoning_batch_and_embedding_lookalikes(self):
         """Substring matching must not pick a thinker, a queue, or an encoder."""
@@ -5173,7 +4921,7 @@ class TestFastModelTier:
             "google/gemini-3.6-flash": {},
         }
         with patch("scout_cli.models_pricing.fetch_models_with_pricing", return_value=catalog):
-            assert ac._fast_model_from_catalog("spaceshipresearch") == "google/gemini-3.6-flash"
+            assert ac._fast_model_from_catalog("openrouter") == "google/gemini-3.6-flash"
 
     def test_catalog_match_skips_the_non_chat_siblings_of_a_chat_model(self):
         """A provider names its speech and image endpoints after the chat model
@@ -5187,7 +4935,7 @@ class TestFastModelTier:
             "openai/gpt-4o-mini": {},
         }
         with patch("scout_cli.models_pricing.fetch_models_with_pricing", return_value=catalog):
-            assert ac._fast_model_from_catalog("spaceshipresearch") == "openai/gpt-4o-mini"
+            assert ac._fast_model_from_catalog("openrouter") == "openai/gpt-4o-mini"
 
     def test_catalog_match_takes_the_newest_of_a_family(self):
         """The bare family rungs must land on the current generation.
@@ -5204,7 +4952,7 @@ class TestFastModelTier:
             "openai/gpt-10-mini": {},
         }
         with patch("scout_cli.models_pricing.fetch_models_with_pricing", return_value=catalog):
-            assert ac._fast_model_from_catalog("spaceshipresearch") == "openai/gpt-10-mini"
+            assert ac._fast_model_from_catalog("openrouter") == "openai/gpt-10-mini"
 
     def test_catalog_fetch_is_authenticated(self):
         """Most /v1/models endpoints need a key; anonymously they 401.
@@ -5240,7 +4988,7 @@ class TestFastModelTier:
         from agent import auxiliary_client as ac
 
         with patch.object(ac, "_fast_model_from_catalog") as spy:
-            ac._get_aux_model_for_provider("spaceshipresearch")
+            ac._get_aux_model_for_provider("fixtureco")
         spy.assert_not_called()
 
     def test_only_titling_is_in_the_fast_tier(self):

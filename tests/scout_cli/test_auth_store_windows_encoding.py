@@ -1,6 +1,6 @@
 """Regression tests for auth store encoding on Windows.
 
-``_load_auth_store`` and the Codex/SpaceshipResearch shared-store readers previously called
+``_load_auth_store`` and the Codex shared-store readers previously called
 ``Path.read_text()`` with no ``encoding=``, so the bytes were decoded with
 ``locale.getpreferredencoding()`` — cp1252 on Windows. The store is *written* as
 UTF-8 (``_save_auth_store`` uses ``encoding="utf-8"``), so any non-ASCII byte
@@ -171,67 +171,6 @@ class TestAuthJsonSiblingReaders:
 
         assert has_xai_credentials() is True
 
-    def test_auxiliary_spaceshipresearch_provider_reads_non_ascii_store(self, scout_home, windows_default_encoding, monkeypatch):
-        """agent/auxiliary_client's SpaceshipResearch-provider lookup reads the same store.
-
-        The lookup returns None on any read failure, silently disabling SpaceshipResearch as
-        the auxiliary (vision/summarization) provider. A non-ASCII label must
-        not trigger that path.
-        """
-        store = {
-            "version": auth.AUTH_STORE_VERSION,
-            "active_provider": "spaceshipresearch",
-            "providers": {"spaceshipresearch": {"agent_key": "k", "label": "工作账号"}},
-        }
-        _write_utf8(scout_home / "auth.json", store)
-
-        import agent.auxiliary_client as aux
-
-        # _AUTH_JSON_PATH is resolved at module import time, so the
-        # SCOUT_HOME env from the fixture doesn't reach it — point it at
-        # the tmp store explicitly.
-        monkeypatch.setattr(aux, "_AUTH_JSON_PATH", scout_home / "auth.json")
-
-        # _read_spaceshipresearch_auth consults the credential pool FIRST and returns early
-        # when a pool entry exists, never reaching the auth.json read. Force the
-        # pool-absent path so the auth.json code under test actually runs.
-        monkeypatch.setattr(aux, "_select_pool_entry", lambda _provider: (False, None))
-
-        provider = aux._read_spaceshipresearch_auth()
-        assert provider is not None
-        assert provider.get("agent_key") == "k"
-
-    def test_read_shared_spaceshipresearch_state_reads_non_ascii_store(
-        self, tmp_path, monkeypatch, windows_default_encoding
-    ):
-        """scout_cli.auth._read_shared_spaceshipresearch_state must read a non-ASCII store.
-
-        The shared SpaceshipResearch store (``spaceshipresearch_auth.json``) is written as UTF-8. A
-        non-ASCII field (e.g. an accented display name) must not cause the
-        read to raise under the Windows-default-encoding fixture and be
-        silently swallowed — which would drop the user's shared OAuth
-        credentials and force a device-code re-login.
-        """
-        # The shared-store path has a seat belt that refuses to resolve to the
-        # real user's store under pytest; pin it to a tmp dir explicitly.
-        shared_dir = tmp_path / "shared"
-        monkeypatch.setenv("SCOUT_SHARED_AUTH_DIR", str(shared_dir))
-
-        payload = {
-            "refresh_token": "rt",
-            "access_token": "at",
-            # Non-ASCII display name → UTF-8 bytes cp1252 cannot decode.
-            "display_name": "Réne — Noël",
-        }
-        _write_utf8(shared_dir / "spaceshipresearch_auth.json", payload)
-
-        provider = auth._read_shared_spaceshipresearch_state()
-        assert provider is not None
-        assert provider["access_token"] == "at"
-        assert provider["refresh_token"] == "rt"
-        # The non-ASCII field round-trips intact.
-        assert provider["display_name"] == "Réne — Noël"
-
     def test_has_any_provider_configured_reads_non_ascii_auth_store(
         self, scout_home, monkeypatch, windows_default_encoding
     ):
@@ -278,34 +217,3 @@ class TestAuthJsonSiblingReaders:
         monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
 
         assert main_mod._has_any_provider_configured() is True
-
-    def test_managed_tool_gateway_reads_non_ascii_spaceshipresearch_state(
-        self, scout_home, windows_default_encoding
-    ):
-        """tools.managed_tool_gateway._read_spaceshipresearch_provider_state reads auth.json.
-
-        The SpaceshipResearch provider entry can carry a non-ASCII label. Under the
-        Windows-default-encoding fixture a no-encoding read raises and the
-        broad except swallows it, returning None — so the gateway treats
-        SpaceshipResearch as unconfigured.
-        """
-        store = {
-            "version": auth.AUTH_STORE_VERSION,
-            "providers": {
-                "spaceshipresearch": {
-                    "agent_key": "k",
-                    # Non-ASCII label → UTF-8 bytes cp1252 cannot decode.
-                    "label": "工作账号",
-                }
-            },
-        }
-        _write_utf8(scout_home / "auth.json", store)
-
-        from tools.managed_tool_gateway import _read_spaceshipresearch_provider_state
-
-        spaceshipresearch = _read_spaceshipresearch_provider_state()
-        assert spaceshipresearch is not None
-        assert spaceshipresearch.get("agent_key") == "k"
-        # The non-ASCII label round-trips intact.
-        assert spaceshipresearch.get("label") == "工作账号"
-

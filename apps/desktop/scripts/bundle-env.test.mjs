@@ -70,7 +70,7 @@ test('applyBundleEnvironment replays the banner semantics for defaults, runtime 
 
 test('baked defaults precede imported module initialization and reach children without overriding explicit env', async () => {
   const root = mkdtempSync(join(tmpdir(), 'scout-bundle-env-'))
-  const defaults = { SCOUT_GUEST_ONBOARDING: '1', SCOUT_DATA_DIR_SUFFIX: 'magic-test', SCOUT_SHARED_AUTH_DIR: 'a=b "q"\n$(no)', SCOUT_SKIP_INTRO: '' }
+  const defaults = { SCOUT_GUEST_ONBOARDING: '1', SCOUT_DATA_DIR_SUFFIX: 'magic-test', SCOUT_DESKTOP_USER_DATA_DIR: 'a=b "q"\n$(no)', SCOUT_SKIP_INTRO: '' }
   const env = { ...process.env }
   for (const key of Object.keys(defaults)) {
     delete env[key]

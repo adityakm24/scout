@@ -1,8 +1,7 @@
-"""Streamlined setup flows: the Scout Portal one-shot (`scout portal`), first-time quick setup,
-Blank Slate setup and the `--quick` missing-items pass. Names from setup.py are imported lazily
+"""Streamlined setup flows: first-time quick setup, Blank Slate setup and the `--quick`
+missing-items pass. Names from setup.py are imported lazily
 per function so test patches on ``scout_cli.setup`` take effect."""
 
-import contextlib
 import logging
 import os
 import sys
@@ -35,78 +34,16 @@ def _reload_config_into(config: dict, *, dict_only: bool = False) -> None:
         config.update(refreshed)
 
 
-def _run_spaceshipresearch_flow(config: dict, *, context: str, cancel_exc: tuple, cancel_lines: tuple, print_error) -> bool:
-    """Run ``_model_flow_spaceshipresearch`` (login, model pick, provider switch, Tool Gateway opt-in) — the
-    single source of truth shared with ``scout model``. False when cancelled or failed (the
-    message is already printed)."""
-    from scout_cli.setup import _info
-    try:
-        from scout_cli.model_setup_flows import _model_flow_spaceshipresearch
-        _model_flow_spaceshipresearch(config)
-        return True
-    except cancel_exc:
-        # _login_spaceshipresearch raises SystemExit(130)/(1) on cancel/failure; the expired-session re-login
-        # path inside _model_flow_spaceshipresearch only catches Exception, so SystemExit would kill the CLI.
-        _info(*cancel_lines)
-    except Exception as exc:
-        logger.debug("_model_flow_spaceshipresearch error during %s: %s", context, exc)
-        print_error(exc)
-    return False
-
-
-def _run_portal_one_shot(config: dict) -> None:
-    """One-shot Scout Portal setup (``scout setup --portal`` / ``scout portal``)."""
-    from scout_cli.setup import _info, _print_banner, print_error, print_info, print_success
-    _print_banner("│     ✦ Scout Setup — Scout Portal (one-shot)             │")
-    _info(None, "  One subscription, 300+ models, plus the Tool Gateway:",
-          "    web search, image generation, TTS, browser automation",
-          "    — all routed through your Scout Portal sub.", None,
-          "  Sign up: https://portal.spaceshipresearch.com/manage-subscription", None)
-
-    def _on_error(exc: Exception) -> None:
-        from scout_cli.auth_error_copy import provider_setup_failure_lines
-        print()
-        lead, *rest = provider_setup_failure_lines(exc, retry_command="scout portal")
-        print_error(f"  {lead}")
-        for line in rest:
-            print_info(f"  {line}")
-
-    if not _run_spaceshipresearch_flow(config, context="`scout portal`", cancel_exc=(KeyboardInterrupt, EOFError, SystemExit),
-                          cancel_lines=(None, "  Setup cancelled.", "  You can retry later with `scout portal`."),
-                          print_error=_on_error):
-        return
-
-    # Re-sync from disk so a caller's later save_config(config) can't clobber the login save.
-    with contextlib.suppress(Exception):
-        _reload_config_into(config, dict_only=True)
-    print()
-    print_success("Portal setup complete.")
-    _info("  Run `scout portal info` to inspect routing.", "  Run `scout` to start chatting.")
-
-
 def _run_first_time_quick_setup(config: dict, scout_home, is_existing: bool):
-    """Streamlined first-time setup via Scout Portal: OAuth, model, terminal & messaging;
-    everything else gets defaults."""
+    """Streamlined first-time setup: provider + model, terminal & messaging; everything else gets
+    defaults."""
     from scout_cli.setup import (
-        _apply_default_agent_settings, _info, print_header, print_info, _print_setup_summary, print_success,
-        print_warning, prompt_choice, save_config, setup_gateway, setup_terminal_backend
+        _apply_default_agent_settings, _info, print_info, _print_setup_summary, print_success,
+        prompt_choice, save_config, setup_gateway, setup_model_provider, setup_terminal_backend
     )
-    # Step 1: Scout Portal — OAuth login + model selection (provider set to "spaceshipresearch" by the save).
-    print_header("Scout Portal", gap=True)
-    _info("One subscription, 300+ models, plus the Tool Gateway:",
-          "  web search, image generation, TTS, browser automation.",
-          "Sign up: https://portal.spaceshipresearch.com/manage-subscription", None)
-
-    def _on_error(exc: Exception) -> None:
-        from scout_cli.auth_error_copy import provider_setup_failure_lines
-        lead, *rest = provider_setup_failure_lines(exc, retry_command="scout model")
-        print_warning(lead)
-        for line in rest:
-            print_info(line)
-
-    _run_spaceshipresearch_flow(config, context="quick setup", cancel_exc=(KeyboardInterrupt, EOFError),
-                   cancel_lines=(None, "Scout Portal setup cancelled."), print_error=_on_error)
-    # The wizard's later save_config(config) must not clobber the login/model save.
+    # Step 1: provider + model through the ``scout model`` flow (it saves on its own).
+    setup_model_provider(config, quick=True)
+    # The wizard's later save_config(config) must not clobber the provider/model save.
     _reload_config_into(config)
 
     # Step 2: Terminal Backend; Step 3: defaults for everything else.

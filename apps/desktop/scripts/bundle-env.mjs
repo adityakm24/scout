@@ -3,7 +3,7 @@
 // Match scripts/releases/bundle_env.py and the channel request decoder.
 const ALLOWED_KEYS = new Set([
   'SCOUT_HOME', 'SCOUT_DATA_DIR_SUFFIX', 'SCOUT_DESKTOP_USER_DATA_DIR',
-  'SCOUT_SHARED_AUTH_DIR', 'SCOUT_GUEST_ONBOARDING', 'SCOUT_SKIP_INTRO'
+  'SCOUT_GUEST_ONBOARDING', 'SCOUT_SKIP_INTRO'
 ])
 
 /** Validate a bundle environment object: plain object of identifiers to

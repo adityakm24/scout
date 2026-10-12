@@ -18,7 +18,7 @@ FIXTURE_NO_PROVIDER = (
     "agent init failed: No LLM provider configured. Run `scout model` to select "
     "a provider, or run `scout setup` for first-time configuration."
 )
-FIXTURE_NO_TOKEN = "agent init failed: No access token found for Scout Portal login."
+FIXTURE_NO_TOKEN = "agent init failed: No access token found for Fixture Co login."
 
 
 

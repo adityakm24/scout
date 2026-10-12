@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for the suggestion! Before submitting, please consider:
 
-        - **Is this a new skill?** Most capabilities should be [skills, not tools](https://github.com/adityakm24/scout/blob/main/CONTRIBUTING.md#should-it-be-a-skill-or-a-tool). If it's a specialized integration (crypto, NFT, niche SaaS), it belongs on the Skills Hub, not bundled.
+        - **Is this a new skill?** Most capabilities should be [skills, not tools](https://github.com/adityakm24/scout/blob/main/AGENTS.md#the-footprint-ladder-new-capability-decision). If it's a specialized integration (crypto, NFT, niche SaaS), it belongs on the Skills Hub, not bundled.
         - **Search [existing issues](https://github.com/adityakm24/scout/issues)** — someone may have already proposed this.
 
   - type: textarea

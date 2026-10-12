@@ -17,7 +17,6 @@ def isolated_external_auth_stores(tmp_path, monkeypatch):
     from pathlib import Path
 
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    monkeypatch.setenv("SCOUT_SHARED_AUTH_DIR", str(tmp_path / "shared"))
 
 
 def _rows():
@@ -85,19 +84,16 @@ def test_refresh_uses_target_grant_and_preserves_sibling(monkeypatch, status):
         server.server_close()
 
 
-def test_add_priority_places_reauthenticated_row_in_multi_entry_pool(monkeypatch):
-    rows = _rows()
-    rows[1]["source"] = "device_code"
-    write_credential_pool("spaceshipresearch", rows)
-    monkeypatch.setattr(auth_commands.auth_mod, "_read_shared_spaceshipresearch_state", lambda: None)
-    monkeypatch.setattr(auth_commands.auth_mod, "_spaceshipresearch_device_code_login", lambda **_kwargs: {
+def test_add_priority_places_new_login_in_multi_entry_pool(monkeypatch):
+    write_credential_pool("minimax-oauth", _rows())
+    monkeypatch.setattr(auth_commands.auth_mod, "_minimax_oauth_login", lambda **_kwargs: {
         "access_token": "fixture-renewed", "refresh_token": "fixture-renewed-refresh",
-        "agent_key": "fixture-agent-key", "expires_at": time.time() + 3600,
+        "inference_base_url": "https://api.minimax.io/anthropic",
     })
     auth_commands.auth_add_command(SimpleNamespace(
-        provider="spaceshipresearch", auth_type="oauth", priority=0, label="reauthenticated"))
-    entries = read_credential_pool("spaceshipresearch")
-    assert [e["id"] for e in entries] == ["row1", "row0"]
+        provider="minimax-oauth", auth_type="oauth", priority=0, label="reauthenticated"))
+    entries = read_credential_pool("minimax-oauth")
+    assert [e["label"] for e in entries] == ["reauthenticated", "account0", "account1"]
     assert entries[0]["priority"] == 0
 
 
@@ -112,9 +108,3 @@ def test_refresh_rejects_ambiguous_and_non_oauth_targets():
     write_credential_pool("openrouter", rows[:1])
     with pytest.raises(SystemExit, match="not a refreshable"):
         auth_commands.auth_refresh_command(SimpleNamespace(provider="openrouter", target=None))
-    # SpaceshipResearch's resolver refreshes only its singleton, never an independent pool grant.
-    write_credential_pool("spaceshipresearch", _rows())
-    before = read_credential_pool("spaceshipresearch")
-    with pytest.raises(SystemExit, match="not a refreshable"):
-        auth_commands.auth_refresh_command(SimpleNamespace(provider="spaceshipresearch", target="row0"))
-    assert read_credential_pool("spaceshipresearch") == before

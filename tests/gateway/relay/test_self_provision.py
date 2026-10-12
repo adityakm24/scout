@@ -6,8 +6,8 @@ relay_route_keys() config readers. The connector HTTP POST is monkeypatched
 TRIGGER logic, in-process env wiring, and fail-soft boot behaviour.
 
 The trigger is deliberately NOT is_managed() (that means NixOS/package-manager-
-managed, which is False on a NAS-hosted Fly agent). The real gate is
-"relay_url set + no pinned secret + a resolvable NAS token".
+managed, which is False on a hosted agent). The real gate is
+"relay_url set + no pinned secret + a resolvable identity token".
 """
 
 from __future__ import annotations
@@ -54,15 +54,15 @@ def _stub_post(captured: dict):
     return _fake
 
 
-def _arm(monkeypatch, *, url="wss://connector.example/relay", token="nas-token"):
-    """Arm the real trigger: a relay URL + a resolvable NAS token.
+def _arm(monkeypatch, *, url="wss://connector.example/relay", token="idp-token"):
+    """Arm the real trigger: a relay URL + a resolvable identity token.
 
     Note there is intentionally no `managed` knob — self-provision no longer
-    consults is_managed(). A test that wants the "no NAS identity" branch
-    monkeypatches resolve_spaceshipresearch_access_token to raise instead.
+    consults is_managed(). A test that wants the "no identity" branch
+    monkeypatches _resolve_relay_identity_token to raise instead.
     """
     monkeypatch.setattr(relay, "relay_url", lambda: url)
-    monkeypatch.setattr("scout_cli.auth.resolve_spaceshipresearch_access_token", lambda: token)
+    monkeypatch.setattr(relay, "_resolve_relay_identity_token", lambda: token)
 
 
 # ─────────────────────────── config readers ───────────────────────────
@@ -110,7 +110,7 @@ def test_provisions_and_sets_env_in_process(monkeypatch):
     assert relay.self_provision_relay() is True
     # The connector POST carried the gateway-asserted endpoint + route keys.
     assert captured["provision_url"] == "https://connector.example/relay/provision"
-    assert captured["access_token"] == "nas-token"
+    assert captured["access_token"] == "idp-token"
     assert captured["gateway_endpoint"] == "https://gw.example.com/inbound"
     assert captured["route_keys"] == ["guild-1", "guild-2"]
     # Creds landed in os.environ (in-process), so register_relay_adapter() reads them.
@@ -207,16 +207,16 @@ def test_forwards_wake_url_to_provision(monkeypatch):
 
 # ─────────────────────────── fail-soft ───────────────────────────
 
-def test_no_nas_token_is_non_fatal(monkeypatch):
-    """A self-hosted box with a relay URL but no resolvable NAS identity skips
-    quietly (this is the branch that replaces the old is_managed() gate for the
-    non-NAS case)."""
+def test_no_identity_token_is_non_fatal(monkeypatch):
+    """A self-hosted box with a relay URL but no resolvable identity skips
+    quietly (this is the branch that replaces the old is_managed() gate)."""
     monkeypatch.setattr(relay, "relay_url", lambda: "wss://connector.example/relay")
 
     def _boom():
         raise RuntimeError("no token")
 
-    monkeypatch.setattr("scout_cli.auth.resolve_spaceshipresearch_access_token", _boom)
+    monkeypatch.setattr(relay, "_resolve_relay_identity_token", _boom)
+
     # Must not raise; returns False; no creds set.
     assert relay.self_provision_relay() is False
     assert relay.relay_connection_auth() == (None, None)

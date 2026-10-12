@@ -38,20 +38,20 @@ class TestReadChain:
         cfg = {
             "fallback_providers": [
                 {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.6"},
-                {"provider": "spaceshipresearch", "model": "Scout-4-Llama-3.1-405B"},
+                {"provider": "fixtureco", "model": "Model-4-Llama-3.1-405B"},
             ]
         }
         assert _read_chain(cfg) == [
             {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.6"},
-            {"provider": "spaceshipresearch", "model": "Scout-4-Llama-3.1-405B"},
+            {"provider": "fixtureco", "model": "Model-4-Llama-3.1-405B"},
         ]
 
     def test_returns_copies_not_aliases(self):
         from scout_cli.fallback_cmd import _read_chain
-        cfg = {"fallback_providers": [{"provider": "spaceshipresearch", "model": "foo"}]}
+        cfg = {"fallback_providers": [{"provider": "fixtureco", "model": "foo"}]}
         result = _read_chain(cfg)
         result[0]["provider"] = "mutated"
-        assert cfg["fallback_providers"][0]["provider"] == "spaceshipresearch"
+        assert cfg["fallback_providers"][0]["provider"] == "fixtureco"
 
 # ---------------------------------------------------------------------------
 # _extract_fallback_from_model_cfg
@@ -81,14 +81,14 @@ class TestListCommand:
             "model": {"provider": "anthropic", "default": "claude-sonnet-4-6"},
             "fallback_providers": [
                 {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.6"},
-                {"provider": "spaceshipresearch", "model": "Scout-4"},
+                {"provider": "fixtureco", "model": "Model-4"},
             ],
         })
         from scout_cli.fallback_cmd import cmd_fallback_list
         cmd_fallback_list(types.SimpleNamespace())
         out = capsys.readouterr().out
         assert "anthropic/claude-sonnet-4.6" in out
-        assert "Scout-4" in out
+        assert "Model-4" in out
         # Primary should be shown too
         assert "claude-sonnet-4-6" in out
 
@@ -275,12 +275,12 @@ class TestRemoveCommand:
         _write_config(isolated_home, {
             "fallback_providers": [
                 {"provider": "openrouter", "model": "gpt-5.4"},
-                {"provider": "spaceshipresearch", "model": "Scout-4"},
+                {"provider": "fixtureco", "model": "Model-4"},
                 {"provider": "anthropic", "model": "claude-sonnet-4-6"},
             ],
         })
 
-        # Picker returns index 1 (the middle entry, "spaceshipresearch / Scout-4")
+        # Picker returns index 1 (the middle entry, "fixtureco / Model-4")
         with patch("scout_cli.setup._curses_prompt_choice", return_value=1):
             from scout_cli.fallback_cmd import cmd_fallback_remove
             cmd_fallback_remove(types.SimpleNamespace())
@@ -301,7 +301,7 @@ class TestClearCommand:
         _write_config(isolated_home, {
             "fallback_providers": [
                 {"provider": "openrouter", "model": "gpt-5.4"},
-                {"provider": "spaceshipresearch", "model": "Scout-4"},
+                {"provider": "fixtureco", "model": "Model-4"},
             ],
         })
         monkeypatch.setattr("builtins.input", lambda *a, **kw: "y")

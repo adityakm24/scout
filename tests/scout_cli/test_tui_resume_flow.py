@@ -193,14 +193,14 @@ def test_launch_tui_exports_model_provider_and_toolsets(monkeypatch, main_mod):
 
     with pytest.raises(SystemExit):
         main_mod._launch_tui(
-            model="spaceshipresearch/scout-test", provider="spaceshipresearch", toolsets="web, terminal"
+            model="fixtureco/model-test", provider="fixtureco", toolsets="web, terminal"
         )
 
     env = captured["env"]
-    assert env["SCOUT_MODEL"] == "spaceshipresearch/scout-test"
-    assert env["SCOUT_INFERENCE_MODEL"] == "spaceshipresearch/scout-test"
-    assert env["SCOUT_TUI_PROVIDER"] == "spaceshipresearch"
-    assert env["SCOUT_INFERENCE_PROVIDER"] == "spaceshipresearch"
+    assert env["SCOUT_MODEL"] == "fixtureco/model-test"
+    assert env["SCOUT_INFERENCE_MODEL"] == "fixtureco/model-test"
+    assert env["SCOUT_TUI_PROVIDER"] == "fixtureco"
+    assert env["SCOUT_INFERENCE_PROVIDER"] == "fixtureco"
     assert env["SCOUT_TUI_TOOLSETS"] == "web,terminal"
     active_path = Path(env["SCOUT_TUI_ACTIVE_SESSION_FILE"])
     assert active_path.name.startswith("scout-tui-active-session-")

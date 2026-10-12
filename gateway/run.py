@@ -3755,14 +3755,6 @@ class GatewayRunner(
         self._gateway_started_at: float = time.time()
         self._loop_heartbeat_task: Optional[asyncio.Task] = None
         self._loop_floor_timer_handle = self._loop_liveness_watchdog = None
-        # scale-to-zero: gateway-scoped "last inbound seen" clock, stamped in _handle_message (the single
-        # inbound chokepoint) and seeded to "now" so a fresh gateway isn't idle from epoch.
-        self._last_inbound_at: float = time.time()
-        # Re-arm cooldown after a wake so we don't go dormant again before the drained backlog updates
-        # the clock; and a one-shot latch so the "platform owns the suspend" notice logs once.
-        self._scale_to_zero_cooldown_until: float = 0.0
-        self._scale_to_zero_no_suspend_logged: bool = False
-        self._scale_to_zero_direct_platform_logged: bool = False
 
     def _open_session_db_for_active_scope(self, raise_on_error: bool = False) -> Any:
         """AsyncSessionDB for the active profile scope, resolved per access (not in ``__init__``) since
@@ -4670,18 +4662,6 @@ def _housekeeping_curator() -> None:
     maybe_run_curator(idle_for_seconds=float("inf"), on_summary=lambda msg: logger.info("curator: %s", msg))
 
 
-def _housekeeping_skill_sync() -> None:
-    """Inert unless the access gate is open and a sync base URL is configured."""
-    from tools.skills_sync_client import maybe_pull_skills
-    maybe_pull_skills()
-
-
-def _housekeeping_org_skill_sync() -> None:
-    """Gated on real org membership (the token must carry an org role): solo accounts never reach the network."""
-    from tools.skills_sync_client_org import maybe_pull_org_skills
-    maybe_pull_org_skills()
-
-
 def _housekeeping_plugin_update_check() -> None:
     """Plugin update-check cadence (plugins_cadence): due-gated by
     plugins.auto_update_check_hours, read-only, receipt-surfaced; the
@@ -4811,7 +4791,7 @@ def _start_gateway_housekeeping(
     cron_thread=None,
 ):
     """Background thread for gateway-only periodic chores (NOT cron). Separate from the cron trigger
-    so chores run under any ``CronScheduler`` provider (external scale-to-zero has no 60s loop).
+    so chores run under any ``CronScheduler`` provider (an external one may have no 60s loop).
     Cadences are ticks of ``interval``; inner gates own the real cadence."""
     from gateway.run_delivery_queue_watch import DRAIN_LABEL, DeliveryQueueWatch, wait_for_next_tick
     from gateway.run_profile_reconcile import _mcp_config_reconciler, profile_scoped_chore
@@ -4836,11 +4816,8 @@ def _start_gateway_housekeeping(
         # already ended (#111010). Runs every tick so the outage is bounded by one housekeeping interval.
         chores.append((1, "Cron ticker supervisor", cron_thread.restart_if_dead))
     chores += [
-        # Per served profile: each profile has its own skills tree, curator state, SpaceshipResearch login
-        # and state.db.
+        # Per served profile: each profile has its own skills tree, curator state and state.db.
         (60, "Curator tick", profile_scoped_chore(runner, _housekeeping_curator)),
-        (60, "Sync pull tick", profile_scoped_chore(runner, _housekeeping_skill_sync)),
-        (60, "Org sync pull tick", profile_scoped_chore(runner, _housekeeping_org_skill_sync)),
         (60, "state.db maintenance tick", profile_scoped_chore(
             runner,
             # Default-bound now, i.e. OUTSIDE any profile scope: this is the launch home's override.
@@ -5777,12 +5754,6 @@ async def _start_gateway_shutdown_tail(
         except Exception:
             logger.debug("Control socket stop failed (non-fatal)", exc_info=True)
 
-    def _stop_keepalive() -> None:
-        from scout_cli.spaceshipresearch_auth_keepalive import stop_spaceshipresearch_auth_keepalive
-        stop_spaceshipresearch_auth_keepalive()
-
-    _best_effort(_stop_keepalive)
-
     # Never join(): an in-flight cron delivery is a coroutine on THIS loop; a sync join would drop it.
     # Stop cron scheduler + housekeeping cleanly. These MUST be awaited cooperatively, not join()ed. A cron
     # delivery in flight when the gateway restarts is a coroutine scheduled onto THIS event loop
@@ -5936,12 +5907,7 @@ async def start_gateway(config: Optional[GatewayConfig] = None, replace: bool = 
         from gateway.lifecycle_ledger import record_startup
         record_startup()
 
-    def _start_keepalive() -> None:
-        from scout_cli.spaceshipresearch_auth_keepalive import start_spaceshipresearch_auth_keepalive
-        start_spaceshipresearch_auth_keepalive()
-
     _best_effort(_lifecycle_record_startup, "Lifecycle ledger startup record failed: %s")
-    _best_effort(_start_keepalive, "SpaceshipResearch auth keepalive did not start: %s")
     _ensure_windows_gateway_venv_imports()
 
     # discover_mcp_tools() blocks up to 120s; on the loop thread it would freeze platform heartbeats.

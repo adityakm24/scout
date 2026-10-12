@@ -70,9 +70,8 @@ import { type FastControl, ModelEditSubmenu, resolveFastControl } from './model-
 export const ModelMenuCloseContext = createContext<() => void>(() => {})
 
 /** Compact per-row price: `$in/$out` per Mtok (cached read appended when the
- *  provider ships it), "free", and a sale tag when the portal reports a
- *  discounted list price. Rendered only when the provider's payload carries
- *  pricing (Scout Portal and others that ship it). */
+ *  provider ships it) or "free". Rendered only when the provider's payload
+ *  carries pricing. */
 function ModelPrice({ pricing }: { pricing: ModelPricing }) {
   const { t } = useI18n()
   const copy = t.shell.modelMenu
@@ -93,9 +92,6 @@ function ModelPrice({ pricing }: { pricing: ModelPricing }) {
     return null
   }
 
-  const discount =
-    typeof pricing.discount_percent === 'number' && pricing.discount_percent > 0 ? pricing.discount_percent : null
-
   return (
     <span
       className="flex shrink-0 items-center gap-1.5 pl-2 text-[0.625rem] tabular-nums text-(--ui-text-tertiary)"
@@ -108,9 +104,6 @@ function ModelPrice({ pricing }: { pricing: ModelPricing }) {
         <span className="text-(--ui-text-quaternary)" title={`${copy.cacheRead} ${cache}/Mtok`}>
           ·{cache}
         </span>
-      ) : null}
-      {discount ? (
-        <span className="rounded bg-(--ui-green)/10 px-1 py-px font-medium text-(--ui-green)">−{discount}%</span>
       ) : null}
     </span>
   )
@@ -687,8 +680,8 @@ export function ModelCatalogMenu({
                     const { name, tag } = modelDisplayParts(family.id)
                     const caps = group.provider.capabilities?.[family.id]
 
-                    // Live per-model $/Mtok pricing (Scout Portal and other
-                    // providers that ship it). A `-fast` sibling shares the
+                    // Live per-model $/Mtok pricing (for providers that ship
+                    // it). A `-fast` sibling shares the
                     // base id's price: the collapsed row fronts the base, so
                     // fall back to it when only the fast variant is unpriced.
                     const pricing =

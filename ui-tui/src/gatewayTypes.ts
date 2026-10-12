@@ -1,4 +1,3 @@
-import type { UsageModelData } from '@scout/shared/billing'
 import type {
   ConnectionRequestPayload,
   GatewayEvent,
@@ -52,23 +51,7 @@ export interface SlashExecResponse {
 // ── Remote Spending (Phase 2b) ───────────────────────────────────────
 
 // Wire shapes now live in @scout/shared for reuse by TypeScript clients.
-export type {
-  BillingAutoReload,
-  BillingBlock,
-  BillingCardInfo,
-  BillingChargeResponse,
-  BillingChargeStatusResponse,
-  BillingErrorPayload,
-  BillingMonthlyCap,
-  BillingMutationResponse,
-  BillingStateResponse,
-  SubscriptionPreviewResponse,
-  SubscriptionStateResponse,
-  SubscriptionTierOption,
-  SubscriptionUpgradeResponse,
-  UsageBarData,
-  UsageModelData
-} from '@scout/shared/billing'
+export type { BillingBlock } from '@scout/shared/gateway-events'
 
 // ── Config ───────────────────────────────────────────────────────────
 
@@ -245,6 +228,8 @@ export interface SessionUndoResponse {
 }
 
 export interface SessionUsageResponse {
+  /** Rendered provider account-limit lines (e.g. Codex quota windows). */
+  account_lines?: string[]
   active_subagents?: number
   avg_latency_s?: number
   avg_tps?: number
@@ -260,14 +245,10 @@ export interface SessionUsageResponse {
   context_used?: number
   cost_status?: 'estimated' | 'exact'
   cost_usd?: number
-  credits_lines?: string[]
   input?: number
   model?: string
   output?: number
   total?: number
-  // Shared dollar usage model (two-bar view) so /usage renders the same bars
-  // as /subscription. Dollars only — never "credits".
-  usage?: UsageModelData
 }
 
 export interface SessionStatusResponse {

@@ -2,7 +2,7 @@
 // Real desktop + real backend. Isolated identity; no copied credentials.
 // Adds a fixed Vite port and CDP (9344) so the run can be driven and read
 // from outside. When you only want to click through it yourself:
-//   D=$(mktemp -d) && env -u SCOUT_SHARED_AUTH_DIR SCOUT_GUEST_ONBOARDING=1 \
+//   D=$(mktemp -d) && SCOUT_GUEST_ONBOARDING=1 \
 //     SCOUT_HOME="$D/home" SCOUT_DESKTOP_USER_DATA_DIR="$D/userdata" scout desktop
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
@@ -24,10 +24,10 @@ await new Promise((resolve, reject) => {
   probe.once('error', () => reject(new Error(`Port ${port} is occupied; refusing to use another worktree server.`)))
   probe.listen(port, '127.0.0.1', () => probe.close(resolve))
 })
-for (const dir of ['.scout/shared', 'electron', 'work']) fs.mkdirSync(path.join(sandbox, dir), { recursive: true })
+for (const dir of ['.scout', 'electron', 'work']) fs.mkdirSync(path.join(sandbox, dir), { recursive: true })
 const env = Object.fromEntries(['PATH', 'TMPDIR', 'LANG', 'SHELL'].filter(key => process.env[key]).map(key => [key, process.env[key]]))
 Object.assign(env, {
-  HOME: sandbox, SCOUT_HOME: path.join(sandbox, '.scout'), SCOUT_SHARED_AUTH_DIR: path.join(sandbox, '.scout/shared'),
+  HOME: sandbox, SCOUT_HOME: path.join(sandbox, '.scout'),
   SCOUT_DESKTOP_USER_DATA_DIR: path.join(sandbox, 'electron'), SCOUT_DESKTOP_CWD: path.join(sandbox, 'work'),
   SCOUT_DESKTOP_SCOUT_ROOT: root, SCOUT_DESKTOP_PYTHON: python,
   SCOUT_DESKTOP_IGNORE_EXISTING: '1', SCOUT_DESKTOP_APP_NAME: 'Scout Connector Rehearsal',

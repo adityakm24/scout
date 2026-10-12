@@ -4,7 +4,7 @@ not raw substrings.
 Port of earendil-works/pi#7933's bug class (DeepSeek base-URL detection used a
 substring check, missing case variants and matching lookalike URLs). Scout
 had the same class at several sites: keyless-endpoint detection, /model
-catalog routing, local-endpoint detection, and Scout Portal cache-layout
+catalog routing, local-endpoint detection, and Fixture Co cache-layout
 detection all used ``"host" in base_url``. A proxy URL that merely *contains*
 a provider host in its path (``https://proxy.internal/openrouter.ai/v1``) or
 a lookalike domain (``https://openrouter.ai.evil.com``) must not be treated
@@ -85,10 +85,10 @@ def test_local_endpoint_hostname_detection():
 def test_scout_portal_host_detection():
     from utils import base_url_host_matches
 
-    assert base_url_host_matches("https://inference-api.spaceshipresearch.com/v1", "spaceshipresearch.com")
-    assert base_url_host_matches("https://portal.spaceshipresearch.com", "spaceshipresearch.com")
-    assert not base_url_host_matches("https://spaceshipresearch.com.evil.io/v1", "spaceshipresearch.com")
-    assert not base_url_host_matches("https://proxy.example/spaceshipresearch.com/v1", "spaceshipresearch.com")
+    assert base_url_host_matches("https://inference.fixtureco.example/v1", "fixtureco.example")
+    assert base_url_host_matches("https://portal.fixtureco.example", "fixtureco.example")
+    assert not base_url_host_matches("https://fixtureco.example.evil.io/v1", "fixtureco.example")
+    assert not base_url_host_matches("https://proxy.example/fixtureco.example/v1", "fixtureco.example")
 
 
 # ── Widened class coverage (follow-up to #85737) ─────────────────────────────

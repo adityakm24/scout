@@ -24,7 +24,7 @@ def cmd_proxy_start(args: Any) -> int:
     if not AIOHTTP_AVAILABLE:
         _err("scout proxy requires aiohttp. Run `scout setup` to install it.")
         return 1
-    provider = getattr(args, "provider", None) or "spaceshipresearch"
+    provider = getattr(args, "provider", None) or "xai"
     try:
         adapter = get_adapter(provider)
     except ValueError as exc:
@@ -100,7 +100,7 @@ def cmd_proxy(args: Any) -> int:
         "OAuth-authenticated provider credentials to outbound requests.\n"
         "\n"
         "Subcommands:\n"
-        "  scout proxy start [--provider spaceshipresearch|xai] [--host 127.0.0.1] [--port 8645]\n"
+        "  scout proxy start [--provider xai] [--host 127.0.0.1] [--port 8645]\n"
         "      Run the proxy in the foreground.\n"
         "  scout proxy status\n"
         "      Show which upstream adapters are ready.\n"

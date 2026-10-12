@@ -53,7 +53,7 @@ def scout_auth_only_env(tmp_path, monkeypatch):
 
     for var in [
         "OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
-        "SPACESHIPRESEARCH_API_KEY", "DEEPSEEK_API_KEY",
+        "FIXTURECO_API_KEY", "DEEPSEEK_API_KEY",
     ]:
         monkeypatch.delenv(var, raising=False)
 
@@ -107,7 +107,7 @@ def claude_code_only_env(tmp_path, monkeypatch):
     for var in [
         "OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
         "ANTHROPIC_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN",
-        "SPACESHIPRESEARCH_API_KEY", "DEEPSEEK_API_KEY",
+        "FIXTURECO_API_KEY", "DEEPSEEK_API_KEY",
     ]:
         monkeypatch.delenv(var, raising=False)
 
@@ -146,7 +146,7 @@ def test_no_codex_when_no_credentials(tmp_path, monkeypatch):
 
     for var in [
         "OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
-        "SPACESHIPRESEARCH_API_KEY", "DEEPSEEK_API_KEY", "COPILOT_GITHUB_TOKEN",
+        "FIXTURECO_API_KEY", "DEEPSEEK_API_KEY", "COPILOT_GITHUB_TOKEN",
         "GH_TOKEN", "GEMINI_API_KEY",
     ]:
         monkeypatch.delenv(var, raising=False)

@@ -25,9 +25,7 @@
  *   - The registry PRIMARY and the v1 single-connection remote stay on the
  *     LEGACY shared partition, so existing signed-in users are not signed out
  *     by the upgrade.
- *   - `cloud` entries stay on the legacy partition: the silent per-agent
- *     cascade deliberately shares one jar with the Scout Portal session.
- *   - Token-auth remotes, portal URLs, and anything unmatched or malformed
+ *   - Token-auth remotes and anything unmatched or malformed
  *     fall back to the legacy partition (cookie-free flows are unaffected).
  *   - Login flows may name the connection explicitly (`connectionId`): the
  *     registry editor can sign a draft in BEFORE it is persisted, and the
@@ -79,7 +77,7 @@ export interface ResolveOauthPartitionOptions {
    * Draft entry shape for the pre-save login: the `kind`/`authMode` the save
    * will persist. The unknown-id shortcut below grants a private jar only
    * when the saved entry would earn one (a non-primary cookie-auth remote);
-   * cloud and token drafts keep the legacy shared jar, which is what they
+   * token drafts keep the legacy shared jar, which is what they
    * resolve to after the save. Absent/invalid values fail closed to the
    * legacy jar — never a private one a saved entry would not read.
    */
@@ -170,10 +168,8 @@ export function resolveOauthPartition(requestUrl: unknown, opts: ResolveOauthPar
       // eligibility the URL-match path applies after the save, so the jar the
       // login writes is always the jar the saved entry reads. Only a
       // non-primary cookie-auth remote earns its own partition (module
-      // header): cloud drafts must share the portal jar (the silent per-agent
-      // cloud cascade depends on it) and token drafts never ride cookies, so
-      // both sign in on the legacy jar — which is also what they resolve to
-      // once saved. A draft whose URL IS the v1 remote's lands on legacy for
+      // header): token drafts never ride cookies, so they sign in on the
+      // legacy jar — which is also what they resolve to once saved. A draft whose URL IS the v1 remote's lands on legacy for
       // the same reason a saved v1-migrated entry does. An unknown id cannot
       // be the registry primary (the primary is, by definition, persisted), so
       // no primary check is needed here. Missing/invalid pending shape (an
@@ -211,8 +207,7 @@ export function resolveOauthPartition(requestUrl: unknown, opts: ResolveOauthPar
     const id = typeof (entry as any).id === 'string' ? (entry as any).id.trim() : ''
 
     // Only NON-primary v2 `remote` entries with cookie-flow auth get their own
-    // jar. Cloud entries need the shared portal jar; token entries never use
-    // cookies; the primary (and the v1 remote it migrated from) keeps the
+    // jar. Token entries never use cookies; the primary (and the v1 remote it migrated from) keeps the
     // legacy jar so an upgrade does not sign the user out.
     if (!id || id === primaryId) {
       continue

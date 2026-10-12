@@ -3,11 +3,10 @@
 from typing import Dict, Type
 
 from scout_cli.proxy.adapters.base import UpstreamAdapter
-from scout_cli.proxy.adapters.scout_portal import ScoutPortalAdapter
 from scout_cli.proxy.adapters.xai import XAIGrokAdapter
 
 # Keyed by the ``scout proxy start --provider <name>`` value.
-ADAPTERS: Dict[str, Type[UpstreamAdapter]] = {"spaceshipresearch": ScoutPortalAdapter, "xai": XAIGrokAdapter}
+ADAPTERS: Dict[str, Type[UpstreamAdapter]] = {"xai": XAIGrokAdapter}
 
 
 def get_adapter(name: str) -> UpstreamAdapter:

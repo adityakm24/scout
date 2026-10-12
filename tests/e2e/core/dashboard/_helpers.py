@@ -39,7 +39,7 @@ PROVIDER_KEY_ENV = "DASH_PROVIDER_KEY"  # same NAME in every profile's .env, dis
 
 _STRIP_SUFFIXES = ("_API_KEY", "_TOKEN", "_BASE_URL", "_SECRET", "_ACCESS_KEY", "_KEY_ID", "_KEY")
 _STRIP_PREFIXES = ("SCOUT_", "OPENAI", "ANTHROPIC", "OPENROUTER", "AWS_", "AZURE_", "GOOGLE_", "GEMINI",
-                   "PYTEST_", "SPACESHIPRESEARCH_", "XAI_", "LLM_", "CUSTOM_", "TERMINAL_", "DASH_")
+                   "PYTEST_", "FIXTURECO_", "XAI_", "LLM_", "CUSTOM_", "TERMINAL_", "DASH_")
 _TOKEN_RE = re.compile(r'__SCOUT_SESSION_TOKEN__\s*=\s*"([^"]+)"')
 _READY_RE = re.compile(r"SCOUT_DASHBOARD_READY port=(\d+)")
 

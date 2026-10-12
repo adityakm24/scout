@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Palette, Check, Type } from "lucide-react";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { ListItem } from "@spaceshipresearch/ui/ui/components/list-item";
-import { BottomSheet } from "@spaceshipresearch/ui/ui/components/bottom-sheet";
-import { Typography } from "@spaceshipresearch/ui/ui/components/typography/index";
-import { useBelowBreakpoint } from "@spaceshipresearch/ui/hooks/use-below-breakpoint";
+import { Button } from "@/ui/components/button";
+import { ListItem } from "@/ui/components/list-item";
+import { BottomSheet } from "@/ui/components/bottom-sheet";
+import { Typography } from "@/ui/components/typography";
+import { useBelowBreakpoint } from "@/ui/hooks/use-below-breakpoint";
 import { BUILTIN_THEMES, THEME_DEFAULT_FONT_ID, useTheme } from "@/themes";
 import type { DashboardTheme, FontChoice, ThemeListEntry } from "@/themes";
 import { useI18n } from "@/i18n";

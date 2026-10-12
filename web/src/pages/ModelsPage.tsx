@@ -29,12 +29,12 @@ import {
   shouldCloseOuterModalOnEscape,
 } from "@/lib/dashboard-modal-shell";
 import { compactNumber } from "@scout/shared";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
-import { Stats } from "@spaceshipresearch/ui/ui/components/stats";
-import { Card, CardContent, CardHeader, CardTitle } from "@spaceshipresearch/ui/ui/components/card";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Switch } from "@spaceshipresearch/ui/ui/components/switch";
+import { Button } from "@/ui/components/button";
+import { Spinner } from "@/ui/components/spinner";
+import { Stats } from "@/ui/components/stats";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
+import { Badge } from "@/ui/components/badge";
+import { Switch } from "@/ui/components/switch";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useModalBehavior } from "@/hooks/useModalBehavior";
 import { usePageHeader } from "@/contexts/usePageHeader";
@@ -604,7 +604,7 @@ function AuxiliaryTasksModal({
           <div className="flex items-center justify-between gap-3 pr-8">
             <h2
               id="aux-modal-title"
-              className="font-mondwest text-display text-base tracking-wider"
+              className="font-display text-display text-base tracking-wider"
             >
               Auxiliary Tasks
             </h2>
@@ -823,7 +823,7 @@ function MoaModelsModal({
         <header className="p-5 pb-3 border-b border-border">
           <h2
             id="moa-modal-title"
-            className="font-mondwest text-display text-base tracking-wider"
+            className="font-display text-display text-base tracking-wider"
           >
             Configure Mixture of Agents presets
           </h2>

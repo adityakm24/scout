@@ -98,10 +98,10 @@ def _list_auth_returning(rows: list[dict]):
     )
 
 
-def _spaceshipresearch_row(model: str = "openai/gpt-5.5") -> dict:
+def _fixtureco_row(model: str = "openai/gpt-5.5") -> dict:
     return {
-        "slug": "spaceshipresearch",
-        "name": "SpaceshipResearch",
+        "slug": "fixtureco",
+        "name": "Fixture Co",
         "models": [model],
         "total_models": 1,
         "is_current": True,
@@ -204,7 +204,7 @@ def test_explicit_only_filters_ambient_credentials_but_keeps_current_and_custom_
         {"slug": "copilot", "name": "Copilot", "models": ["gpt-5.4"],
          "total_models": 1, "is_current": False, "is_user_defined": False,
          "source": "scout"},
-        {"slug": "spaceshipresearch", "name": "SpaceshipResearch", "models": ["anthropic/claude-sonnet-5"],
+        {"slug": "fixtureco", "name": "Fixture Co", "models": ["anthropic/claude-sonnet-5"],
          "total_models": 1, "is_current": False, "is_user_defined": False,
          "source": "scout"},
         {"slug": "custom:lab", "name": "Lab", "models": ["lab-1"],
@@ -535,7 +535,7 @@ def test_user_defined_rows_carry_alias_set_for_gui_current_match():
             "source": "user-config",
             "api_url": "http://localhost:8000/v1",
         },
-        _spaceshipresearch_row() | {"is_current": False},
+        _fixtureco_row() | {"is_current": False},
     ]
     ctx = _empty_ctx(provider="custom:myep", model="my-model")
 
@@ -548,7 +548,7 @@ def test_user_defined_rows_carry_alias_set_for_gui_current_match():
     assert "custom:myep" in aliases
     assert "myep" in aliases
     assert "custom:my-endpoint" in aliases
-    assert "aliases" not in by_slug["spaceshipresearch"]
+    assert "aliases" not in by_slug["fixtureco"]
 
 
 def test_aggregator_dedup_removes_overlapping_models():

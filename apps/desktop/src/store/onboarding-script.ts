@@ -14,7 +14,6 @@ export const PLAIN_SPEECH = `${VOICE_RULES} Keep every turn short. This is a cha
 
 export function buildChatOnboardingSeedMessages(
   greeting: string,
-  signedIn = false,
   capabilities = ''
 ): {
   content: string
@@ -23,7 +22,7 @@ export function buildChatOnboardingSeedMessages(
 }[] {
   return [
     {
-      content: buildChatOnboardingPrompt(machineUserName(), signedIn, capabilities),
+      content: buildChatOnboardingPrompt(machineUserName(), capabilities),
       display_kind: 'hidden',
       role: 'user'
     },
@@ -34,7 +33,7 @@ export function buildChatOnboardingSeedMessages(
 export const FIRST_USE_GUIDANCE = [
   'Assume this is their first AI agent app. Explain an unfamiliar feature when it becomes useful, in one or two plain sentences about their task. Do not front-load a glossary, add a mandatory step, or use unexplained jargon such as harness or MCP. Once they understand a feature, stop explaining it.',
   'Make the first meaningful learning save understandable. A memory carries a fact or preference into later chats in this profile; a skill holds reusable instructions for similar tasks. After a confirmed save, name the actual fact or procedure and its next-time benefit, not just "memory added" or "skill created". Mention once that they can ask to see, change, or remove it. Use the actual write result: failed or pending writes are not saved. Never invent learning, duplicate an onboarding save, create a demonstration skill, expose secrets, or claim the underlying model was retrained. Reuse relevant skills; do not repeat the primer on every write.',
-  'The model is what produces the answers; the model picker chooses which one. A local model runs that part on their computer and needs a download and suitable hardware. Web search and connected apps still use their own services. Local does not mean every tool is offline or free. When asked how search is set up, verify its available tools and configuration before naming a provider or account requirement; a SpaceshipResearch sign-in or chat model is not proof of the search route.',
+  'The model is what produces the answers; the model picker chooses which one. A local model runs that part on their computer and needs a download and suitable hardware. Web search and connected apps still use their own services. Local does not mean every tool is offline or free. When asked how search is set up, verify its available tools and configuration before naming a provider or account requirement; a provider sign-in or chat model is not proof of the search route.',
   'Machine age is a setup heuristic, not proof of when hardware was bought. Spark hardware alone never means a new device or fresh OS install. Accept a correction that this is an existing machine and stop the new-machine beat.'
 ].join(' ')
 
@@ -110,7 +109,7 @@ function installBeat(tasks: PluginTask[]): string {
   ].join(' ')
 }
 
-export function buildChatOnboardingPrompt(suggestedName?: string | null, signedIn = false, capabilities = ''): string {
+export function buildChatOnboardingPrompt(suggestedName?: string | null, capabilities = ''): string {
   const kind = machineKind()
   const machine = machineForkOption()
   const fallback = forkFallbackOptions()
@@ -144,14 +143,9 @@ export function buildChatOnboardingPrompt(suggestedName?: string | null, signedI
     '1. This turn is exactly four things and then you stop: a few warm words about their name, then ::onboarding{step="name" value="THEIR_NAME"} on a line of its own (THEIR_NAME being the name they actually gave; it renders as nothing and just saves it), then one short sentence about their colour, then ::onboarding{step="look"} on a line of its own. That is one turn, not two, and it is not a conflict with RULE 3: the name line is not a question, the look card is, and it is the last thing you write.',
     '2. Then the apps they already use, so Scout can connect to them later: one short sentence that makes clear what connecting means — you would read and act inside those apps for them (their inbox, their calendar, their repos), not message them there — then ::onboarding{step="connectors"} on a line of its own. The card may also lead with plugins: tools for this computer that Scout installs and runs locally; picking one only records it, so say that in the same sentence when the card could show one. Chat apps like Discord or Telegram are a different thing (how they reach you) and are not what this card is asking about; if they bring one up, say it lives in Messaging in the app’s settings and move on.',
     'CONNECTING, IF THEY ASK FOR IT HERE. The picks are preferences, not connections — but if at any point they ask you to connect an app, or say they want one wired up now, do it in this chat: call manage_connections action="status" once, then one action="connect" with EVERY app they named as a batch (connectors=["gmail","googlecalendar"], not one call per app). The app renders that as one card with a row per app and the call blocks until every app is connected, or the user presses Continue, or the deadline passes; never paste the links, never describe a settings page. The result lists each app as connected, skipped or not_connected; continue from that. Never call connect a second time for an app that already has a card. If an app is not in the status catalog, say so plainly. There is no Connectors page in Settings; do not send them to one.',
-    ...(signedIn
-      ? []
-      : [
-          'In that same turn, once, mention in ONE short clause that wiring those up later will want a model provider — a free SpaceshipResearch account is there if they want it, free tier, no card, and they can bring their own provider instead — then move straight on. Do not sell it, do not list providers, do not ask them to do it now, and do not repeat this sign-in nudge: they will be asked properly at the point it actually matters. Still explain the model picker and local option later; that is guidance, not another sign-in pitch.'
-        ]),
     'If they request a custom colour, resolve it to a hex colour and emit ::onboarding{step="look" value="#rrggbb"} on its own line. The existing picker applies and saves it when the turn settles; its Continue button advances normally. Custom colours are supported. No explanation or extra question is needed.',
     '3. Then their layout: one short sentence, then ::onboarding{step="layout"} on a line of its own.',
-    `4. The app has just arranged itself around this chat. In at most two short sentences, explain that the model picker chooses what answers them and they can ask to set up a local model on this computer after the initial free usage. Skip the filler acknowledgment; save download details for when they choose local setup. No download, model switch, extra question or mandatory setup now. Then offer a look around with the line ::ask{question="${TOUR_QUESTION}" options="${TOUR_OPTIONS.basics}|${TOUR_OPTIONS.tour}|${TOUR_OPTIONS.none}"} alone as its own paragraph. Branch on the answer, then go straight to step 5 IN THE SAME TURN whichever they picked — the tour overlay has its own Done button and ending your turn on it strands them with nothing to click next.`,
+    `4. The app has just arranged itself around this chat. In at most two short sentences, explain that the model picker chooses what answers them and they can ask to set up a local model on this computer. Skip the filler acknowledgment; save download details for when they choose local setup. No download, model switch, extra question or mandatory setup now. Then offer a look around with the line ::ask{question="${TOUR_QUESTION}" options="${TOUR_OPTIONS.basics}|${TOUR_OPTIONS.tour}|${TOUR_OPTIONS.none}"} alone as its own paragraph. Branch on the answer, then go straight to step 5 IN THE SAME TURN whichever they picked — the tour overlay has its own Done button and ending your turn on it strands them with nothing to click next.`,
     `   - "${TOUR_OPTIONS.basics}": three steps, the essentials only — where their conversations live, where they ask for a job, and how to start a fresh one. Point at each and say one useful thing about it.`,
     `   - "${TOUR_OPTIONS.tour}": 4 to 6 steps, a proper look around — the essentials plus whatever else the layout they just picked actually gives them.`,
     `   Both of those run the tour tool the same way: call it with action="targets" FIRST and build only out of what it actually reports, preferring the targets marked stable — never invent a selector, and if a piece you wanted is not in the list, drop that step rather than guessing at it. Then ONE action="start" call, each step a few words of title and one plain sentence of body. Name the visible control and its purpose, not only "this" or "over here". If the highlight is hard to see, describe its location from the reported target; never guess a selector or claim you fixed contrast. The longer tour can include the model picker if actually reported; keep the quick tour at its existing three steps. One short line before the call; after it returns, the fork (step 5) follows in this same turn so the ask is waiting under the tour when they close it.`,

@@ -9,30 +9,18 @@ Proven here:
 * a primary that answers turn 1 and then every request with 503 is tried on turn 2
   (a ``--resume``), then that turn is answered by the configured fallback, which receives
   the FULL conversation (system prompt, turn 1's prompt and answer, turn 2's prompt) and is
-  reported as the model that served the turn;
-* a primary whose credentials cannot be resolved walks ``fallback_providers`` at
-  resolution time: a Scout Portal OAuth refresh answered with 5xx (an ``AuthError``) does,
-  and one that cannot connect at all (an outage: connection refused) must too (#120608).
+  reported as the model that served the turn.
 """
 
 from __future__ import annotations
 
-import base64
-import json
-import socket
 import sys
-import threading
-import time
-from contextlib import contextmanager
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Iterator
 
 import pytest
 
 from tests.e2e.core.providers._openai_helpers import (
     Home,
     bounded_turn,
-    bug_assertions,
     chat_messages,
     custom_chat_config,
     db_messages,
@@ -42,19 +30,11 @@ from tests.fakes.providers.chat_variants import CError, CText, FakeChatVariantSe
 
 pytestmark = pytest.mark.skipif(not sys.platform.startswith("linux"), reason="subprocess harness is Linux-gated")
 
-# Scenario -> (pattern, "#issue one-line symptom") for scenarios red on origin/main: a
-# KnownBugError from bug_assertions() matching the pattern XFAILs the cell (known_gate).
-KNOWN: dict[str, tuple[str, str]] = {
-    "unreachable_portal_falls_back": (
-        r"(?s)fallback_providers never consulted: .*agent failed: \[Errno 111\] Connection refused",
-        "#120608 transport error during credential resolution skips fallback_providers"),
-}
-
 FALLBACK_MODEL = "fallback-model"
 PROMPT = "CANARY-PROMPT say hello"
 FIRST_PROMPT = "CANARY-FIRST what is two plus two"
 # A primary that is never abandoned for the fallback keeps backing off for minutes, so a
-# turn overrunning this is a HarnessError (a real failure even under a KNOWN entry).
+# turn overrunning this is a HarnessError.
 TURN_BUDGET = 45.0
 
 
@@ -106,98 +86,3 @@ def test_persistent_primary_503_is_answered_by_fallback_with_full_conversation(t
     answers = [r for r in db_messages(h, run.session_id)
                if r["role"] == "assistant" and "FROM-FALLBACK" in (r.get("content") or "")]
     assert len(answers) == 1, db_messages(h, run.session_id)
-
-
-# Scout Portal credential-resolution outage (#120608) ------------------------------------
-
-
-def _jwt(claims: dict) -> str:
-    def seg(obj: dict) -> str:
-        return base64.urlsafe_b64encode(json.dumps(obj).encode()).rstrip(b"=").decode()
-    return f"{seg({'alg': 'none', 'typ': 'JWT'})}.{seg(claims)}.sig"
-
-
-def _expired_spaceshipresearch_auth() -> dict:
-    """An auth.json whose SpaceshipResearch invoke JWT expired an hour ago but whose refresh token is fine:
-    the next turn must redeem it against the Portal before any inference call."""
-    past = int(time.time()) - 3600
-    iso = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(past))
-    return {"version": 1, "active_provider": "spaceshipresearch", "providers": {"spaceshipresearch": {
-        "portal_base_url": "https://portal.spaceshipresearch.com",
-        "inference_base_url": "https://inference-api.spaceshipresearch.com/v1",
-        "client_id": "scout-cli", "token_type": "Bearer", "scope": "inference:invoke",
-        "access_token": _jwt({"sub": "e2e-user", "scope": "inference:invoke", "exp": past}),
-        "refresh_token": "refresh-e2e", "obtained_at": iso, "expires_in": 3600, "expires_at": iso,
-        "agent_key": None, "agent_key_id": None, "agent_key_expires_at": None,
-        "agent_key_expires_in": None, "agent_key_reused": None, "agent_key_obtained_at": None,
-    }}}
-
-
-def _closed_port() -> int:
-    """A loopback port nothing listens on: connecting is refused immediately."""
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
-
-class _Portal5xx(BaseHTTPRequestHandler):
-    """A Portal that is up but failing: every token refresh gets a 503 OAuth error body."""
-
-    hits: list[str] = []
-
-    def log_message(self, *_a: object) -> None:
-        pass
-
-    def do_POST(self) -> None:  # noqa: N802
-        self.hits.append(self.path)
-        body = json.dumps({"error": "server_error", "error_description": "portal overloaded"}).encode()
-        self.send_response(503)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-
-@contextmanager
-def _portal(kind: str) -> Iterator[tuple[str, list[str]]]:
-    """``(portal_base_url, refresh_paths_hit)``: a 5xx-answering Portal or a refused port."""
-    if kind == "refused":
-        yield f"http://127.0.0.1:{_closed_port()}", []
-        return
-    handler = type("Portal", (_Portal5xx,), {"hits": []})
-    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    try:
-        yield f"http://127.0.0.1:{server.server_address[1]}", handler.hits
-    finally:
-        server.shutdown()
-        server.server_close()
-
-
-@pytest.mark.parametrize("portal_kind", [
-    pytest.param("5xx", id="portal_5xx"),
-    pytest.param("refused", id="portal_refused"),
-])
-def test_primary_credential_resolution_failure_falls_back(tmp_path, portal_kind: str) -> None:
-    dead = f"http://127.0.0.1:{_closed_port()}"
-    with _portal(portal_kind) as (portal_url, portal_hits), FakeLLMServer(default_text="FROM-FALLBACK") as fallback:
-        env = {
-            "SCOUT_PORTAL_BASE_URL": portal_url,
-            # Nothing may reach a real vendor host; the loopback fakes stay direct.
-            "HTTPS_PROXY": dead, "HTTP_PROXY": dead, "NO_PROXY": "127.0.0.1,localhost",
-            "SCOUT_SPACESHIPRESEARCH_TIMEOUT_SECONDS": "5",
-        }
-        cfg = {"model": {"provider": "spaceshipresearch", "default": "Scout-4-70B", "context_length": 128000},
-               "fallback_providers": _fallback_entry(fallback)}
-        h = Home(tmp_path).write(cfg, {"OPENAI_API_KEY": "sk-fake"}, auth=_expired_spaceshipresearch_auth())
-        run = bounded_turn(h, PROMPT, TURN_BUDGET, env=env)
-        fallback_mains = fallback.main_requests()
-
-    if portal_kind == "5xx":
-        assert "/api/oauth/token" in portal_hits, f"precondition: the expired token was never refreshed: {run.describe()}"
-    scenario = "unreachable_portal_falls_back" if portal_kind == "refused" else f"portal_{portal_kind}"
-    with bug_assertions(KNOWN, scenario):
-        assert fallback_mains, f"fallback_providers never consulted: {run.describe()}"
-        assert any(PROMPT in t for t in _user_texts(fallback_mains[0])), fallback_mains[0].get("messages")
-        assert run.proc.returncode == 0 and run.stdout.strip() == "FROM-FALLBACK", run.describe()
-        assert run.usage.get("model") == FALLBACK_MODEL, run.describe()

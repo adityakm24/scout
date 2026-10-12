@@ -475,11 +475,11 @@ class SessionUsageParams(SessionParams):
 
 
 class SessionUsageResult(Usage):
-    credits_lines: list[str] | None = None
+    account_lines: list[str] | None = None
 
 
 method("session.usage", params=SessionUsageParams, result=SessionUsageResult,
-       doc="Token / context / cost counters for the session (+ SpaceshipResearch credit lines when available).")
+       doc="Token / context / cost counters for the session (+ provider account limit lines when available).")
 
 
 class SessionContextBreakdownParams(SessionParams):

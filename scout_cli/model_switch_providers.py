@@ -443,66 +443,6 @@ def _aws_live_or_curated_ids(slug: str, curated: dict, *fallback_keys: str,
         return _first_curated(curated, fallback_keys or (slug,)) or []
 
 
-def _spaceshipresearch_picker_model_ids(curated: dict, force_fresh_spaceshipresearch_tier: bool) -> list:
-    """SpaceshipResearch serves a huge live catalog; the picker shows ONLY the curated agentic list, augmented
-    with the Portal's free/paid recommendations (new models surface without a CLI release) and
-    narrowed by org policy. Mirrors ``_model_flow_spaceshipresearch`` so GUI pickers match the CLI. A failed
-    recommendation fetch still yields a policy-filtered curated list."""
-    model_ids = curated.get("spaceshipresearch", [])
-    try:
-        from scout_cli.models_pricing import get_pricing_for_provider
-        from scout_cli.models import (
-            check_spaceshipresearch_free_tier,
-            union_with_portal_free_recommendations,
-            union_with_portal_paid_recommendations,
-        )
-        from scout_cli.auth import get_provider_auth_state
-        # Cache-only: both Portal unions below discard the pricing map (``model_ids, _ = ...``);
-        # only the appended ids matter, so a live catalog fetch here buys nothing but latency.
-        pricing = get_pricing_for_provider("spaceshipresearch", cached_only=True) or {}
-        try:
-            portal = (get_provider_auth_state("spaceshipresearch") or {}).get("portal_base_url", "") or ""
-        except Exception:
-            portal = ""
-        if check_spaceshipresearch_free_tier(force_fresh=force_fresh_spaceshipresearch_tier):
-            model_ids, _ = union_with_portal_free_recommendations(model_ids, pricing, portal)
-        else:
-            model_ids, _ = union_with_portal_paid_recommendations(model_ids, pricing, portal)
-    except Exception:
-        pass
-    try:
-        from scout_cli.models_pricing import spaceshipresearch_policy_allowed_ids, restrict_to_spaceshipresearch_policy
-        model_ids = restrict_to_spaceshipresearch_policy(model_ids, spaceshipresearch_policy_allowed_ids(), rescue_empty=True)
-    except Exception:
-        pass
-    return model_ids
-
-
-def _free_tier_spaceshipresearch_row(row: dict) -> dict | None:
-    """The one free-tier rule for a SpaceshipResearch picker row, shared by every row builder.
-
-    ``row`` carries at least ``name`` and ``models``. A guest identity carrying inference turns
-    it into "SpaceshipResearch · free tier" with the single model ``spaceshipresearch/welcome`` (the welcome host serves
-    nothing else). A guest that ``spaceshipresearch.guest: false`` has switched off yields ``None``: no SpaceshipResearch
-    row at all, since there is nothing selectable. A real account (or no SpaceshipResearch state) passes the
-    row through untouched. Builders that compute the full catalog lazily should pass
-    ``models=[]`` and only compute when the returned row still has no models."""
-    from scout_cli import anon_auth
-    if not anon_auth.has_guest():
-        return row
-    if not anon_auth.guest_enabled():
-        return None
-    out = dict(row)
-    out["name"] = anon_auth.FREE_TIER_LABEL
-    out["models"] = [anon_auth.GUEST_MODEL]
-    out["total_models"] = 1
-    # The explicit flag every consumer keys on (pricing, badges): never the display name. It also
-    # tells the picker this is the free tier's identity, distinct from ``free_tier`` (an account on
-    # the free plan) which pricing sets from the Portal's entitlement read.
-    out["free_tier_row"] = True
-    return out
-
-
 def _cap_models(model_ids: list, max_models: int | None, slug: str = "") -> list:
     """Apply ``max_models``; aggregators in ``_UNCAPPED_PICKER_PROVIDERS`` show everything."""
     if slug in _UNCAPPED_PICKER_PROVIDERS or max_models is None:
@@ -674,9 +614,7 @@ def _collect_authed_provider_slugs(
         if has_creds or _auth_store_has_provider(cp.slug) or _pool_usable(cp.slug):
             _emit(cp.slug, cp.slug)
 
-    # SpaceshipResearch excluded: its picker branch builds from the curated list and never reads the
-    # api_key-only cache entry a prefetch would write.
-    return [s for s in slugs if s != "spaceshipresearch"]
+    return slugs
 
 
 @dataclass
@@ -690,7 +628,6 @@ class _PickerBuild:
     current_model: str
     max_models: int | None
     for_picker: bool
-    force_fresh_spaceshipresearch_tier: bool
     probe_custom_providers: bool
     probe_current_custom_provider: bool
     refresh: bool
@@ -735,12 +672,7 @@ class _PickerBuild:
             "slug": slug, "name": name, "is_current": is_current, "is_user_defined": False,
             "models": _cap_models(model_ids, self.max_models, slug if uncapped_ok else ""),
             "total_models": len(model_ids), "source": source}
-        if slug == "spaceshipresearch":
-            # Free-tier identity: one row "SpaceshipResearch · free tier" / spaceshipresearch/welcome, or no row when
-            # spaceshipresearch.guest is off. Still marks the slug seen so a later lap cannot re-emit it.
-            row = _free_tier_spaceshipresearch_row(row)
-        if row is not None:
-            self.results.append(row)
+        self.results.append(row)
         self.seen_slugs.add(slug.lower())
         self.record_builtin_endpoint(slug)
 
@@ -888,7 +820,7 @@ def _overlay_has_creds(b: _PickerBuild, pid: str, scout_slug: str, overlay) -> b
 
 
 def _lap_overlay_rows(b: _PickerBuild, data: dict, user_providers: dict) -> None:
-    """Section 2: Scout-only providers (spaceshipresearch, openai-codex, copilot, opencode-go, ...)."""
+    """Section 2: Scout-only providers (openai-codex, copilot, opencode-go, ...)."""
     from agent.models_dev import PROVIDER_TO_MODELS_DEV
     from scout_cli.model_switch import _declared_model_ids
     from scout_cli.providers import SCOUT_OVERLAYS
@@ -910,12 +842,6 @@ def _lap_overlay_rows(b: _PickerBuild, data: dict, user_providers: dict) -> None
         elif overlay.auth_type == "aws_sdk":
             model_ids = _aws_live_or_curated_ids(scout_slug, b.curated, scout_slug, pid,
                                                  non_blocking=b.non_blocking_catalogs)
-        elif scout_slug == "spaceshipresearch":
-            # A guest identity never needs the Portal catalog: add_builtin_row pins spaceshipresearch/welcome
-            # (or drops the row when spaceshipresearch.guest is off), so only a real account fetches.
-            tier_row = _free_tier_spaceshipresearch_row({"name": get_label(scout_slug), "models": []})
-            real_account = tier_row is not None and not tier_row["models"]
-            model_ids = _spaceshipresearch_picker_model_ids(b.curated, b.force_fresh_spaceshipresearch_tier) if real_account else []
         else:
             model_ids = _live_or_curated_ids(scout_slug, b.curated, scout_slug, pid,
                                              non_blocking=b.non_blocking_catalogs)
@@ -1139,10 +1065,10 @@ def _lap_custom_provider_rows(b: _PickerBuild, custom_providers: list) -> None:
 
 def _build_curated_lists(current_provider: str, current_base_url: str, current_model: str,
                         non_blocking: bool = False) -> dict[str, list[str]]:
-    """Curated model lists keyed by scout provider id, plus the dynamic ones (spaceshipresearch manifest,
-    Ollama Cloud, LM Studio live probe). ``non_blocking`` (GUI read path) takes cached Ollama Cloud
+    """Curated model lists keyed by scout provider id, plus the dynamic ones (Ollama Cloud, LM Studio
+    live probe). ``non_blocking`` (GUI read path) takes cached Ollama Cloud
     ids and warms them in the background rather than waiting on an 8s probe (#114215)."""
-    from scout_cli.models import OPENROUTER_MODELS, _PROVIDER_MODELS, get_curated_spaceshipresearch_model_ids
+    from scout_cli.models import OPENROUTER_MODELS, _PROVIDER_MODELS
     curated: dict[str, list[str]] = dict(_PROVIDER_MODELS)
     curated["openrouter"] = [mid for mid, _ in OPENROUTER_MODELS]
     # Plugin profiles without a static row: their fallback_models are the curated floor, so the
@@ -1151,8 +1077,6 @@ def _build_curated_lists(current_provider: str, current_base_url: str, current_m
     for _pp in list_providers():
         if _pp.fallback_models and not curated.get(_pp.name):
             curated[_pp.name] = list(_pp.fallback_models)
-    # Remote manifest so new Portal models surface without a release; in-repo snapshot fallback.
-    curated["spaceshipresearch"] = get_curated_spaceshipresearch_model_ids()
     if "ollama-cloud" not in curated:
         from scout_cli.models import fetch_ollama_cloud_models
         # Read path: cache only; the row's own SWR refresh (cached_provider_model_ids) warms it.
@@ -1182,7 +1106,7 @@ def _build_curated_lists(current_provider: str, current_base_url: str, current_m
 
 def list_authenticated_providers(
     current_provider: str = "", current_base_url: str = "", user_providers: dict = None,
-    custom_providers: list | None = None, *, force_fresh_spaceshipresearch_tier: bool = False,
+    custom_providers: list | None = None, *,
     max_models: int | None = None, current_model: str = "", refresh: bool = False,
     probe_custom_providers: bool = True, probe_current_custom_provider: bool = False,
     for_picker: bool = False, excluded_providers: list | None = None,
@@ -1192,7 +1116,6 @@ def list_authenticated_providers(
     Returns dicts with ``slug`` (the --provider value), ``name``, ``is_current``,
     ``is_user_defined``, ``models`` (up to max_models), ``total_models``, ``source``
     ("built-in", "scout", "canonical", "user-config", "model-config").
-    ``force_fresh_spaceshipresearch_tier`` bypasses the short SpaceshipResearch tier cache (account-sensitive flows only);
     ``refresh`` busts the model-id disk cache up front (explicit user action only);
     ``probe_custom_providers`` enables live ``/models`` discovery for saved custom endpoints (CLI
     true, GUI false); ``probe_current_custom_provider`` probes only the selected custom endpoint.
@@ -1228,7 +1151,7 @@ def list_authenticated_providers(
     # as (scout_id / mdev_id / canonical slug).
     b = _PickerBuild(
         current_provider=current_provider, current_base_url=current_base_url, current_model=current_model,
-        max_models=max_models, for_picker=for_picker, force_fresh_spaceshipresearch_tier=force_fresh_spaceshipresearch_tier,
+        max_models=max_models, for_picker=for_picker,
         probe_custom_providers=probe_custom_providers, probe_current_custom_provider=probe_current_custom_provider,
         refresh=refresh, excluded={str(p).strip().lower() for p in (excluded_providers or []) if p},
         non_blocking_catalogs=non_blocking_catalogs,

@@ -19,7 +19,6 @@ import { ConfirmHost } from '@/components/confirm-host'
 import { DesktopInstallOverlay } from '@/components/desktop-install-overlay'
 import { ExternalOpenFailedDialog } from '@/components/external-open-failed-dialog'
 import { FindBar } from '@/components/find-bar'
-import { FreeTierSignInDialog } from '@/components/free-tier/sign-in-dialog'
 import { GatewayConnectingOverlay } from '@/components/gateway-connecting-overlay'
 import { NotificationStack } from '@/components/notifications'
 import { DesktopOnboardingOverlay } from '@/components/onboarding'
@@ -33,14 +32,12 @@ import {
 } from '@/components/pane-shell/workspace-scope'
 import { FloatingPet } from '@/components/pet/floating-pet'
 import { RemoteDisplayBanner } from '@/components/remote-display-banner'
-import { SendDiagnosticsHost } from '@/components/send-diagnostics-dialog'
 import { TipHost } from '@/components/tips'
 import { emitGatewayEvent } from '@/contrib/events'
 import { translateNow } from '@/i18n'
 import { type ChatMessage, chatMessageText } from '@/lib/chat-messages'
 import { isMessagingSource } from '@/lib/session-source'
 import { IS_PHONE } from '@/platform/phone'
-import { $billingSettingsRequest } from '@/store/billing-block'
 import { $desktopBoot } from '@/store/boot'
 import { $activeConnectionId } from '@/store/connections'
 import { $cronReviewRequest } from '@/store/cron'
@@ -191,10 +188,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
 
   const busyRef = useRef(false)
   const creatingSessionRef = useRef(false)
-  // Billing recovery routes to Settings → Billing from surfaces without router
-  // context (the sticky toast). The shell owns `navigate`, so it consumes the
-  // intent counter here; the ref skips the initial mount value.
-  const billingSettingsSeenRef = useRef(0)
   const poolLimitsSettingsSeenRef = useRef(0)
   const routeRequestSeenRef = useRef(0)
   const backendRestartSeenRef = useRef(0)
@@ -207,7 +200,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
 
   const gatewayState = useStore($gatewayState)
   const activeSessionId = useStore($activeSessionId)
-  const billingSettingsRequest = useStore($billingSettingsRequest)
   const poolLimitsSettingsRequest = useStore($poolLimitsSettingsRequest)
   const routeRequest = useStore($routeRequest)
   const backendRestartRequest = useStore($backendRestartRequest)
@@ -250,19 +242,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
         .catch(err => notifyError(err, translateNow('notifications.errors.restartScoutFailed')))
     }
   }, [backendRestartRequest])
-
-  // eslint-disable-next-line no-restricted-syntax -- one-shot request-seen sentinel, not an atom mirror
-  useEffect(() => {
-    if (billingSettingsRequest === billingSettingsSeenRef.current) {
-      return
-    }
-
-    billingSettingsSeenRef.current = billingSettingsRequest
-
-    if (billingSettingsRequest > 0) {
-      navigate(`${SETTINGS_ROUTE}?tab=billing`)
-    }
-  }, [billingSettingsRequest, navigate])
 
   // Pool-cap recovery is fired by the notification action, which has no router
   // context. Keep navigation user-initiated: the counter changes only when the
@@ -450,23 +429,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
 
     return () => window.removeEventListener('scout:open-keybinds', onOpenKeybinds)
   }, [navigate])
-
-  // Dev-only: install the credit-notice demo trigger (Ctrl+Shift+C / ⌘K palette
-  // / window.__creditsDemo). Dynamic import inside the DEV guard so the module
-  // is dropped from production builds.
-  useEffect(() => {
-    if (!import.meta.env.DEV) {
-      return
-    }
-
-    let dispose: (() => void) | undefined
-
-    void import('./dev/credits-notice-demo').then(m => {
-      dispose = m.installCreditsNoticeDemo()
-    })
-
-    return () => dispose?.()
-  }, [])
 
   // Post-turn rehydrate from stored history (same behavior as DesktopController,
   // including finished-todos restoration).
@@ -1270,11 +1232,7 @@ export function ContribWiring({ children }: { children: ReactNode }) {
       <RemoteDisplayBanner />
       {!isAuxiliaryWindow() && <DesktopInstallOverlay />}
       {!isAuxiliaryWindow() && (
-        <OnboardingChatGate
-          enabled={gatewayState === 'open'}
-          onKickoff={kickoffFirstChat}
-          requestGateway={ambientRequestGateway}
-        />
+        <OnboardingChatGate enabled={gatewayState === 'open'} onKickoff={kickoffFirstChat} />
       )}
       {!isAuxiliaryWindow() && (
         <DesktopOnboardingOverlay
@@ -1288,10 +1246,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
           requestGateway={requestGateway}
         />
       )}
-      {/* One host for every free-tier sign-in entry point (Settings › Billing,
-          the statusbar chip, the first-launch intro). It owns the flow; the
-          entry points only record the intent. */}
-      {!isAuxiliaryWindow() && <FreeTierSignInDialog onSelectModel={selectModel} />}
       <SessionPickerOverlay onResume={sessionId => openSessionFromPicker(sessionId, navigate)} />
       <UpdatesOverlay />
       <GatewayConnectingOverlay />
@@ -1384,10 +1338,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
 
       {/* Backs confirm() from @/store/confirm — renders only while one is open. */}
       <ConfirmHost />
-
-      {/* Send Diagnostics consent/upload dialog — driven by $sendDiagnostics
-          (error card action); renders nothing until requested. */}
-      <SendDiagnosticsHost />
 
       {/* Fallback modal when opening an external URL fails — carries the URL
           so a dead system-browser click is never silent. */}

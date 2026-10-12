@@ -113,7 +113,6 @@ def handle_api_error(
         model=getattr(agent, "model", "") or "", approx_tokens=approx_tokens,
         context_length=_ctx_len, num_messages=len(api_messages) if api_messages else 0,
         base_url=str(getattr(agent, "base_url", "") or ""),
-        api_key=getattr(agent, "api_key", None),
     )
     logger.debug(
         "Error classified: reason=%s status=%s retryable=%s compress=%s rotate=%s fallback=%s",
@@ -129,7 +128,7 @@ def handle_api_error(
         reason=classified.reason.value,
     )
 
-    _recovered, recovered_with_pool = recover_after_classification(
+    _recovered = recover_after_classification(
         agent, api_error, classified, _retry, status_code=status_code, error_context=error_context,
         messages=messages, api_messages=api_messages,
     )
@@ -162,7 +161,7 @@ def handle_api_error(
 
     _ce = route_classified_error(
         agent, api_error, classified, _retry, error_msg=error_msg, error_context=error_context,
-        recovered_with_pool=recovered_with_pool, base_url=_base, model=_model, messages=messages,
+        base_url=_base, model=_model, messages=messages,
         api_messages=api_messages, system_message=system_message,
         active_system_prompt=active_system_prompt, conversation_history=conversation_history,
         retry_count=retry_count, max_retries=max_retries, compression_attempts=compression_attempts,

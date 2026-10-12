@@ -147,7 +147,7 @@ def _allowlist_migrator(mod, tmp_path: Path, existing_config: str):
 
 
 MALFORMED_SCOUT_CONFIG = """\
-model: scout-4-405b
+model: model-4-405b
 api_key_env: OPENROUTER_API_KEY
 command_allowlist:
   - /usr/bin/*
@@ -204,7 +204,7 @@ def test_readable_config_keeps_every_pre_existing_key(tmp_path: Path):
     migrator, config_path = _allowlist_migrator(
         mod,
         tmp_path,
-        "model: scout-4-405b\n"
+        "model: model-4-405b\n"
         "api_key_env: OPENROUTER_API_KEY\n"
         "command_allowlist:\n  - /usr/bin/*\n",
     )
@@ -214,7 +214,7 @@ def test_readable_config_keeps_every_pre_existing_key(tmp_path: Path):
     import scout_yaml as yaml
 
     merged = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-    assert merged["model"] == "scout-4-405b"
+    assert merged["model"] == "model-4-405b"
     assert merged["api_key_env"] == "OPENROUTER_API_KEY"
     assert "/usr/bin/*" in merged["command_allowlist"]
     assert "/home/test/**" in merged["command_allowlist"]
@@ -256,7 +256,7 @@ def test_symlinked_config_stays_a_symlink(tmp_path: Path):
     mod = load_module()
     real = tmp_path / "dotfiles" / "config.yaml"
     real.parent.mkdir(parents=True)
-    real.write_text("model: scout-4-405b\ncommand_allowlist:\n  - /usr/bin/*\n",
+    real.write_text("model: model-4-405b\ncommand_allowlist:\n  - /usr/bin/*\n",
                     encoding="utf-8")
     migrator, config_path = _allowlist_migrator(mod, tmp_path, "placeholder: true\n")
     config_path.unlink()
@@ -267,7 +267,7 @@ def test_symlinked_config_stays_a_symlink(tmp_path: Path):
     assert config_path.is_symlink()
     assert config_path.resolve() == real.resolve()
     assert "/home/test/**" in real.read_text(encoding="utf-8")
-    assert "scout-4-405b" in real.read_text(encoding="utf-8")
+    assert "model-4-405b" in real.read_text(encoding="utf-8")
 
 
 def test_unreadable_config_refused_by_model_config_too(tmp_path: Path):

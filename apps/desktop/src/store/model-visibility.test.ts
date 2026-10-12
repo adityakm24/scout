@@ -48,42 +48,42 @@ describe('model visibility', () => {
   })
 
   it('shows a model that appeared after the user curated its provider, unless the provider is hidden', () => {
-    // User curated claude-sub (kept sonnet, hid haiku) and hid all of spaceshipresearch; then a plugin update adds opus.
-    const stored = new Set([modelVisibilityKey('claude-sub', 'sonnet'), emptyProviderSentinelKey('spaceshipresearch')])
+    // User curated claude-sub (kept sonnet, hid haiku) and hid all of fixtureco; then a plugin update adds opus.
+    const stored = new Set([modelVisibilityKey('claude-sub', 'sonnet'), emptyProviderSentinelKey('fixtureco')])
 
     const known = new Set([
       modelVisibilityKey('claude-sub', 'sonnet'),
       modelVisibilityKey('claude-sub', 'haiku'),
-      modelVisibilityKey('spaceshipresearch', 'scout-4')
+      modelVisibilityKey('fixtureco', 'model-4')
     ])
 
     const providers = [
       provider('claude-sub', ['sonnet', 'haiku', 'opus']),
-      provider('spaceshipresearch', ['scout-4', 'scout-5'])
+      provider('fixtureco', ['model-4', 'model-5'])
     ]
     const visible = effectiveVisibleKeys(stored, providers, known)
 
     expect(visible.has(modelVisibilityKey('claude-sub', 'opus'))).toBe(true)
     expect(visible.has(modelVisibilityKey('claude-sub', 'haiku'))).toBe(false)
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'scout-5'))).toBe(false)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'model-5'))).toBe(false)
 
     // No snapshot yet (pre-upgrade store): nothing counts as new, hide choices stay verbatim.
     expect(effectiveVisibleKeys(stored, providers, null).has(modelVisibilityKey('claude-sub', 'opus'))).toBe(false)
   })
 
   it('preserves hidden-provider sentinel without re-adding defaults', () => {
-    // User explicitly hid all models for "spaceshipresearch" — sentinel marks this choice.
-    const stored = new Set([emptyProviderSentinelKey('spaceshipresearch')])
+    // User explicitly hid all models for "fixtureco" — sentinel marks this choice.
+    const stored = new Set([emptyProviderSentinelKey('fixtureco')])
 
     const visible = effectiveVisibleKeys(stored, [
-      provider('spaceshipresearch', ['scout-3-llama-3.1-70b', 'scout-3-llama-3.1-8b']),
+      provider('fixtureco', ['llama-3.1-70b-instruct', 'llama-3.1-8b-instruct']),
       provider('ollama', ['qwen3:latest'])
     ])
 
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'scout-3-llama-3.1-70b'))).toBe(false)
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'scout-3-llama-3.1-8b'))).toBe(false)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'llama-3.1-70b-instruct'))).toBe(false)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'llama-3.1-8b-instruct'))).toBe(false)
     // Sentinel itself is stripped from the result.
-    expect(visible.has(emptyProviderSentinelKey('spaceshipresearch'))).toBe(false)
+    expect(visible.has(emptyProviderSentinelKey('fixtureco'))).toBe(false)
     // Other providers still get defaults.
     expect(visible.has(modelVisibilityKey('ollama', 'qwen3:latest'))).toBe(true)
   })
@@ -107,22 +107,22 @@ describe('model visibility', () => {
   })
 
   it('resolveVisibleKeys preserves sentinels that effectiveVisibleKeys strips', () => {
-    const stored = new Set([emptyProviderSentinelKey('spaceshipresearch')])
-    const providers = [provider('spaceshipresearch', ['scout-x', 'scout-y']), provider('ollama', ['qwen3:latest'])]
+    const stored = new Set([emptyProviderSentinelKey('fixtureco')])
+    const providers = [provider('fixtureco', ['scout-x', 'scout-y']), provider('ollama', ['qwen3:latest'])]
 
     const resolved = resolveVisibleKeys(stored, providers)
-    expect(resolved.has(emptyProviderSentinelKey('spaceshipresearch'))).toBe(true)
-    expect(resolved.has(modelVisibilityKey('spaceshipresearch', 'scout-x'))).toBe(false)
+    expect(resolved.has(emptyProviderSentinelKey('fixtureco'))).toBe(true)
+    expect(resolved.has(modelVisibilityKey('fixtureco', 'scout-x'))).toBe(false)
     // Un-customized providers still expand to their defaults.
     expect(resolved.has(modelVisibilityKey('ollama', 'qwen3:latest'))).toBe(true)
 
     // Display variant drops the sentinel.
-    expect(effectiveVisibleKeys(stored, providers).has(emptyProviderSentinelKey('spaceshipresearch'))).toBe(false)
+    expect(effectiveVisibleKeys(stored, providers).has(emptyProviderSentinelKey('fixtureco'))).toBe(false)
   })
 })
 
 describe('toggleModelVisibility', () => {
-  const providers = [provider('openai', ['gpt-a', 'gpt-b']), provider('spaceshipresearch', ['scout-x', 'scout-y'])]
+  const providers = [provider('openai', ['gpt-a', 'gpt-b']), provider('fixtureco', ['scout-x', 'scout-y'])]
 
   // Drive the handler the way the dialog does: feed each result back in as the
   // next `stored`, so the persisted set is what the next toggle starts from.
@@ -140,38 +140,38 @@ describe('toggleModelVisibility', () => {
   })
 
   it('keeps a hidden provider hidden when a different provider is toggled (regression for #43485)', () => {
-    // Hide ALL of spaceshipresearch — its sentinel is now stored.
+    // Hide ALL of fixtureco — its sentinel is now stored.
     let stored: Set<string> | null = null
-    stored = apply(stored, 'spaceshipresearch', 'scout-x')
-    stored = apply(stored, 'spaceshipresearch', 'scout-y')
-    expect(stored.has(emptyProviderSentinelKey('spaceshipresearch'))).toBe(true)
+    stored = apply(stored, 'fixtureco', 'scout-x')
+    stored = apply(stored, 'fixtureco', 'scout-y')
+    expect(stored.has(emptyProviderSentinelKey('fixtureco'))).toBe(true)
 
-    // Toggle a model in another provider. spaceshipresearch must NOT snap back on.
+    // Toggle a model in another provider. fixtureco must NOT snap back on.
     stored = apply(stored, 'openai', 'gpt-a')
 
-    expect(stored.has(emptyProviderSentinelKey('spaceshipresearch'))).toBe(true)
+    expect(stored.has(emptyProviderSentinelKey('fixtureco'))).toBe(true)
     const visible = effectiveVisibleKeys(stored, providers)
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'scout-x'))).toBe(false)
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'scout-y'))).toBe(false)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'scout-x'))).toBe(false)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'scout-y'))).toBe(false)
   })
 
   it('clears only the toggled provider sentinel when a model is re-enabled', () => {
     let stored: Set<string> | null = new Set([
       emptyProviderSentinelKey('openai'),
-      emptyProviderSentinelKey('spaceshipresearch')
+      emptyProviderSentinelKey('fixtureco')
     ])
 
     stored = apply(stored, 'openai', 'gpt-a')
 
     expect(stored.has(emptyProviderSentinelKey('openai'))).toBe(false)
-    expect(stored.has(emptyProviderSentinelKey('spaceshipresearch'))).toBe(true)
+    expect(stored.has(emptyProviderSentinelKey('fixtureco'))).toBe(true)
     const visible = effectiveVisibleKeys(stored, providers)
     expect(visible.has(modelVisibilityKey('openai', 'gpt-a'))).toBe(true)
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'scout-x'))).toBe(false)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'scout-x'))).toBe(false)
   })
 
   it('re-enabling one model of a hidden-all provider restores ONLY that model, not the curated defaults', () => {
-    // openai hidden-all, spaceshipresearch untouched.
+    // openai hidden-all, fixtureco untouched.
     let stored: Set<string> | null = new Set([emptyProviderSentinelKey('openai')])
 
     stored = apply(stored, 'openai', 'gpt-a')
@@ -203,7 +203,7 @@ describe('toggleModelVisibility', () => {
     expect(next.has(modelVisibilityKey('openai', 'gpt-a'))).toBe(true)
     // No curated defaults were expanded for any provider.
     expect(next.has(modelVisibilityKey('openai', 'gpt-b'))).toBe(false)
-    expect(next.has(modelVisibilityKey('spaceshipresearch', 'scout-x'))).toBe(false)
+    expect(next.has(modelVisibilityKey('fixtureco', 'scout-x'))).toBe(false)
   })
 
   it('toggling off one default model from null stored keeps the rest of the curated defaults', () => {
@@ -212,7 +212,7 @@ describe('toggleModelVisibility', () => {
 
     expect(next.has(modelVisibilityKey('openai', 'gpt-a'))).toBe(false)
     expect(next.has(modelVisibilityKey('openai', 'gpt-b'))).toBe(true)
-    expect(next.has(modelVisibilityKey('spaceshipresearch', 'scout-x'))).toBe(true)
+    expect(next.has(modelVisibilityKey('fixtureco', 'scout-x'))).toBe(true)
     // Other models remain, so no sentinel.
     expect(next.has(emptyProviderSentinelKey('openai'))).toBe(false)
   })
@@ -228,7 +228,7 @@ describe('toggleModelVisibility', () => {
 })
 
 describe('resolveVisibleKeys', () => {
-  const providers = [provider('openai', ['gpt-a', 'gpt-b']), provider('spaceshipresearch', ['scout-x', 'scout-y'])]
+  const providers = [provider('openai', ['gpt-a', 'gpt-b']), provider('fixtureco', ['scout-x', 'scout-y'])]
 
   it('returns the curated defaults verbatim for null stored', () => {
     expect(resolveVisibleKeys(null, providers)).toEqual(defaultVisibleKeys(providers))
@@ -248,19 +248,19 @@ describe('featured defaults', () => {
   })
 
   it('defaults to the featured shortlist when a provider publishes one', () => {
-    const spaceshipresearch = featuredProvider(
-      'spaceshipresearch',
+    const fixtureco = featuredProvider(
+      'fixtureco',
       ['anthropic/opus', 'anthropic/haiku', 'google/gemini', 'x-ai/grok'],
       ['anthropic/opus', 'google/gemini', 'x-ai/grok']
     )
 
-    const visible = defaultVisibleKeys([spaceshipresearch])
+    const visible = defaultVisibleKeys([fixtureco])
 
     // Featured are visible; the non-featured model is hidden by default.
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'anthropic/opus'))).toBe(true)
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'google/gemini'))).toBe(true)
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'x-ai/grok'))).toBe(true)
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'anthropic/haiku'))).toBe(false)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'anthropic/opus'))).toBe(true)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'google/gemini'))).toBe(true)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'x-ai/grok'))).toBe(true)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'anthropic/haiku'))).toBe(false)
   })
 
   it('falls back to top-N when a provider ships no featured list', () => {
@@ -341,16 +341,16 @@ describe('seedKnownModels', () => {
   })
 
   it('honours an explicit hide-all sentinel: its defaults stay unknown, not re-admitted', async () => {
-    window.localStorage.setItem('scout.desktop.visible-models', JSON.stringify(['spaceshipresearch::']))
+    window.localStorage.setItem('scout.desktop.visible-models', JSON.stringify(['fixtureco::']))
 
     const store = await loadStore()
-    const providers = [featuredProvider('spaceshipresearch', ['scout-4', 'scout-5'], ['scout-4', 'scout-5'])]
+    const providers = [featuredProvider('fixtureco', ['model-4', 'model-5'], ['model-4', 'model-5'])]
 
     store.seedKnownModels(providers)
 
     const visible = store.effectiveVisibleKeys(store.$visibleModels.get(), providers)
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'scout-4'))).toBe(false)
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'scout-5'))).toBe(false)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'model-4'))).toBe(false)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'model-5'))).toBe(false)
   })
 
   it('leaves a fresh install unseeded: no stored set, nothing to adopt', async () => {
@@ -369,7 +369,7 @@ describe('seedKnownModels', () => {
 })
 
 describe('setProviderVisibility', () => {
-  const providers = [provider('openai', ['gpt-a', 'gpt-b']), provider('spaceshipresearch', ['scout-x', 'scout-y'])]
+  const providers = [provider('openai', ['gpt-a', 'gpt-b']), provider('fixtureco', ['scout-x', 'scout-y'])]
 
   it('enabling a provider makes every one of its models visible', () => {
     // Start from a hidden-all openai; flip it on.
@@ -394,14 +394,14 @@ describe('setProviderVisibility', () => {
   })
 
   it('leaves other providers untouched (their sentinels survive)', () => {
-    const stored = new Set([emptyProviderSentinelKey('spaceshipresearch')])
+    const stored = new Set([emptyProviderSentinelKey('fixtureco')])
 
-    // Turn openai fully on; spaceshipresearch must stay hidden.
+    // Turn openai fully on; fixtureco must stay hidden.
     const next = setProviderVisibility(stored, providers, 'openai', true)
 
-    expect(next.has(emptyProviderSentinelKey('spaceshipresearch'))).toBe(true)
+    expect(next.has(emptyProviderSentinelKey('fixtureco'))).toBe(true)
     const visible = effectiveVisibleKeys(next, providers)
-    expect(visible.has(modelVisibilityKey('spaceshipresearch', 'scout-x'))).toBe(false)
+    expect(visible.has(modelVisibilityKey('fixtureco', 'scout-x'))).toBe(false)
     expect(visible.has(modelVisibilityKey('openai', 'gpt-a'))).toBe(true)
   })
 
@@ -416,13 +416,13 @@ describe('setProviderVisibility', () => {
 
   it('collapses model families to one key per family when enabling', () => {
     // A base + its -fast sibling collapse to a single family row/key.
-    const ps = [provider('spaceshipresearch', ['model', 'model-fast'])]
+    const ps = [provider('fixtureco', ['model', 'model-fast'])]
 
-    const next = setProviderVisibility(null, ps, 'spaceshipresearch', true)
+    const next = setProviderVisibility(null, ps, 'fixtureco', true)
 
-    expect(next.has(modelVisibilityKey('spaceshipresearch', 'model'))).toBe(true)
+    expect(next.has(modelVisibilityKey('fixtureco', 'model'))).toBe(true)
     // The -fast sibling is represented by its base family, not its own key.
-    expect(next.has(modelVisibilityKey('spaceshipresearch', 'model-fast'))).toBe(false)
+    expect(next.has(modelVisibilityKey('fixtureco', 'model-fast'))).toBe(false)
   })
 })
 

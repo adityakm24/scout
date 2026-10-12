@@ -26,12 +26,12 @@ const REQUEST: ConnectionRequest = {
   settledBy: null,
   targets: [
     {
-      action: 'connect',
+      action: 'authorize',
       connectUrl: 'https://connect.example/gmail',
       connectionId: '',
       detail: '',
       discoveryError: null,
-      kind: 'connector',
+      kind: 'mcp',
       instructions: null,
       name: 'gmail',
       requiredEnv: [],
@@ -39,12 +39,12 @@ const REQUEST: ConnectionRequest = {
       tools: []
     },
     {
-      action: 'connect',
+      action: 'authorize',
       connectUrl: 'https://connect.example/notion',
       connectionId: '',
       detail: '',
       discoveryError: null,
-      kind: 'connector',
+      kind: 'mcp',
       instructions: null,
       name: 'notion',
       requiredEnv: [],
@@ -55,7 +55,7 @@ const REQUEST: ConnectionRequest = {
 }
 
 function props(): ToolCallMessagePartProps {
-  const args = { action: 'connect', connectors: ['gmail', 'notion'] }
+  const args = { action: 'authorize', connectors: ['gmail', 'notion'] }
 
   return {
     addResult: vi.fn(),

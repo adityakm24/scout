@@ -6,7 +6,6 @@ Covers `_plugin_image_gen_providers`, `_visible_providers`, and
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 
 import pytest
 
@@ -70,8 +69,6 @@ class TestPluginPickerInjection:
         assert "someimg" in plugin_names
 
 
-
-
 class TestPluginCatalog:
     def test_plugin_catalog_returns_models(self):
         from scout_cli import tools_config
@@ -125,32 +122,6 @@ class TestConfigWriting:
 
         assert config["image_gen"]["provider"] == "noenv"
         assert config["image_gen"]["model"] == "noenv-model-v1"
-
-
-    def test_plugin_provider_active_overrides_managed_spaceshipresearch_active_label(self, monkeypatch):
-        from scout_cli import tools_config
-
-        monkeypatch.setattr(
-            tools_config,
-            "get_spaceshipresearch_subscription_features",
-            lambda config, **kwargs: SimpleNamespace(
-                features={"image_gen": SimpleNamespace(managed_by_spaceshipresearch=True)}
-            ),
-        )
-
-        config = {"image_gen": {"provider": "openai", "use_gateway": False}}
-        spaceshipresearch_row = {
-            "name": "SpaceshipResearch Subscription",
-            "managed_spaceshipresearch_feature": "image_gen",
-        }
-        openai_row = {
-            "name": "OpenAI",
-            "image_gen_plugin_name": "openai",
-        }
-
-        assert tools_config._is_provider_active(openai_row, config) is True
-        assert tools_config._is_provider_active(spaceshipresearch_row, config) is False
-
 
 
 class TestCodexOAuthBootstrapHook:

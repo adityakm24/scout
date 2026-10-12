@@ -3201,8 +3201,7 @@ class TelegramAdapter(BasePlatformAdapter):
         if not webhook_secret:
             raise RuntimeError(
                 "TELEGRAM_WEBHOOK_SECRET is required when TELEGRAM_WEBHOOK_URL is set. Without it, the "
-                "webhook endpoint accepts forged updates from anyone who can reach it — see "
-                "https://github.com/adityakm24/scout/security/advisories/GHSA-3vpc-7q5r-276h.\n\n"
+                "webhook endpoint accepts forged updates from anyone who can reach it.\n\n"
                 "Generate a secret and set it in your .env:\n  export TELEGRAM_WEBHOOK_SECRET=\"$(openssl rand -hex 32)\"\n\n"
                 "Then register it with Telegram when setting the webhook via setWebhook's secret_token parameter.")
         from urllib.parse import urlparse

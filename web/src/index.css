@@ -1,16 +1,5 @@
 @import 'tailwindcss';
-/* `fonts.css` must come BEFORE `globals.css`: as of @spaceshipresearch/ui 0.14.x,
-   `globals.css` only declares the `--font-*` CSS variables (Collapse, Rules
-   Compressed/Expanded, Mondwest). The `@font-face` registrations live in
-   `fonts.css`, so without this import the DS variables resolve to font
-   families the browser never loads and components fall back to a system
-   stack (Tabs, Segmented, Typography, Buttons, etc. all look unstyled). */
-@import '@spaceshipresearch/ui/styles/fonts.css';
-@import '@spaceshipresearch/ui/styles/globals.css';
-
-/* Scan the published design-system bundle so its utility classes survive
-   Tailwind's JIT purge. */
-@source '../node_modules/@spaceshipresearch/ui/dist';
+@import './ui/styles.css';
 
 /* ------------------------------------------------------------------ */
 /* JetBrains Mono — bundled for the embedded TUI (/chat tab).          */
@@ -43,14 +32,13 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Scout Agent — SpaceshipResearch DS with the LENS_0 (Scout teal) palette applied
-   statically as the default dashboard theme. */
+/* Scout Agent — the Scout Teal palette applied statically as the default
+   dashboard theme. */
 /* ------------------------------------------------------------------ */
 
 :root {
-  /* LENS_0 — from design-language/src/ui/components/overlays/index.tsx.
-     These are the defaults for the `default` (Scout Teal) dashboard theme;
-     ThemeProvider rewrites them as inline styles when a user switches themes. */
+  /* Defaults for the `default` (Scout Teal) dashboard theme; ThemeProvider
+     rewrites them as inline styles when a user switches themes. */
   --foreground: color-mix(in srgb, #ffffff 0%, transparent);
   --foreground-base: #ffffff;
   --foreground-alpha: 0;
@@ -80,7 +68,7 @@
 
   /* Data-series accents — consumed by Analytics + Models pages for the
      input-vs-output token visualisations (chart bars, table values,
-     legend swatches). Defaults are tuned for the Scout-teal LENS_0
+     legend swatches). Defaults are tuned for the Scout Teal
      look: cream input + emerald-400 output read as warm/cool against
      the dark canvas. Themes override via ThemeProvider, which emits
      these as `--series-input-token` / `--series-output-token`. */
@@ -141,19 +129,17 @@ code, kbd, pre, samp, .font-mono, .font-mono-ui {
   }
 }
 
-/* SpaceshipResearchnet's scout-agent layout bumps `small` and `code` to readable
-   dashboard sizes. Keep in sync. */
+/* Readable dashboard sizes for `small` and `code`. */
 small { font-size: 1.0625rem; }
 code { font-size: 0.875rem; }
 
 /* Shadcn-compat tokens.
-   The dashboard's page code predates the SpaceshipResearch DS and uses shadcn-style
-   utility classes (bg-card, text-muted-foreground, border-border, etc.)
-   extensively. Rather than rewrite every call site, we expose those
-   tokens on top of the SpaceshipResearch palette so classes continue to resolve. */
+   Page code uses shadcn-style utility classes (bg-card, text-muted-foreground,
+   border-border, etc.) extensively; these tokens resolve them on top of the
+   three-slot theme palette. */
 @theme inline {
   /* Remap foreground to midground so `text-foreground` / `bg-foreground`
-     stay visible — in LENS_0, `--foreground` itself has alpha 0. */
+     stay visible — in Scout Teal, `--foreground` itself has alpha 0. */
   --color-foreground: var(--midground);
 
   --color-card: color-mix(in srgb, var(--midground-base) 4%, var(--background-base));

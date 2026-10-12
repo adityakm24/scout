@@ -40,7 +40,6 @@ import {
   htmlResponseError,
   httpStatusError,
   jsonAgentFor,
-  readJsonErrorBody,
   readStatusCode,
   withRetry
 } from './api-transport'
@@ -119,9 +118,6 @@ import { detectBundleSwap, readBundleSwapStamp } from './bundle-swap'
 import { registerChatOnboardingWindow } from './chat-onboarding-window'
 import { provisionCliLinks } from './cli-provision'
 import { closeStopFailureMessage, finishWindowsCloseStop, type RuntimeLock } from './close-stop-kill'
-import { shouldAttemptCloudBootCascade } from './cloud-boot-cascade'
-import { discoverWithTeamFallback } from './cloud-discovery'
-import { createCloudSessionRecovery } from './cloud-session-recovery'
 import { installCommandScreenshot } from './command-screenshot'
 import { composerImageTimestamp } from './composer-image-name'
 import { writeComposerPaste } from './composer-paste'
@@ -197,7 +193,6 @@ import {
   type SharedRegistryProfileScope,
   shouldDeferLocalEnumeration,
   shouldRetrySshInventory,
-  updateEligibility,
   upsertConnection
 } from './connection-registry'
 import type { RosterProfileMetadata } from './connection-registry'
@@ -269,7 +264,7 @@ import { resolveGatewayVersion } from './gateway-version'
 import { probeGatewayWebSocket, spawnedBackendProbeOptions } from './gateway-ws-probe'
 import { windowsGitCandidates } from './git-binary-candidates'
 import { registerGitIpc } from './git-ipc'
-import { desktopBackendSpawnEnv, guestOnboardingEnabled } from './guest-onboarding'
+import { guestOnboardingEnabled } from './guest-onboarding'
 import { readAndConsumeHandoffResult } from './handoff-result'
 import {
   assertExistingPathForOpen,
@@ -408,7 +403,6 @@ import {
 } from './pool-spawn-coordinator'
 import { createPoolStopper } from './pool-stop'
 import { poolTouchKeys } from './pool-touch-scope'
-import { createPortalSession } from './portal-session'
 import { createKeepAwake } from './power-save'
 import { readPreUpdateBackupEnabled } from './pre-update-backup-config'
 import { capturePreviewContents } from './preview-capture'
@@ -1902,7 +1896,6 @@ let nativeThemeListenerInstalled = false
 let bootProgressState = {
   error: null,
   fakeMode: BOOT_FAKE_MODE,
-  isCloudBackendDown: false,
   message: 'Waiting to start Scout backend',
   phase: 'idle',
   progress: 0,
@@ -4999,10 +4992,7 @@ async function resolveScoutBackend(backendArgs: string[]): Promise<ResolvedScout
 
         const shellForProbe: boolean = isCommandScript(scoutCommand)
 
-        if (
-          shouldTrustScoutOverride(scoutOverride) ||
-          (await verifyScoutCli(scoutCommand, { shell: shellForProbe }))
-        ) {
+        if (shouldTrustScoutOverride(scoutOverride) || (await verifyScoutCli(scoutCommand, { shell: shellForProbe }))) {
           return {
             label: `existing Scout CLI at ${scoutCommand}`,
             command: scoutCommand,
@@ -6422,37 +6412,9 @@ async function buildReadinessHealthProbe(baseUrl, authMode, token) {
   return { probeHealth: fetchPublicJson, probeIsCredentialed: false }
 }
 
-// Boot-time readiness for a remote connection object. For a Scout Cloud agent
-// whose own session cookie has expired, `waitForScout` ends in the terminal
-// reauth error even though the portal session that can silently re-mint that
-// cookie is still live: the per-agent cascade (`cloudAgentSilentSignIn`) was
-// only ever driven by the settings UI, never by boot, so every relaunch needed
-// a manual "Use gateway" click. Run the cascade once and retry once; anything
-// that is not that exact case surfaces unchanged.
+// Boot-time readiness for a remote connection object.
 async function waitForRemoteScout(remote) {
-  try {
-    await waitForScout(remote.baseUrl, remote.token, undefined, remote.authMode, remote.headers)
-  } catch (error) {
-    if (!shouldAttemptCloudBootCascade(remote, error)) {
-      throw error
-    }
-
-    if (!(await hasLivePortalSession())) {
-      throw error
-    }
-
-    rememberLog('[cloud] boot: agent session rejected but portal session is live, running silent sign-in')
-
-    try {
-      await cloudAgentSilentSignIn(remote.baseUrl)
-    } catch (cascadeError) {
-      rememberLog(`[cloud] boot: silent sign-in did not complete: ${cascadeError?.message || cascadeError}`)
-
-      throw error
-    }
-
-    await waitForScout(remote.baseUrl, remote.token, undefined, remote.authMode, remote.headers)
-  }
+  await waitForScout(remote.baseUrl, remote.token, undefined, remote.authMode, remote.headers)
 }
 
 async function waitForScout(
@@ -7306,9 +7268,8 @@ function installMediaPermissions() {
 //   * WebSocket upgrades require a single-use ``?ticket=`` minted at
 //     ``POST /api/auth/ws-ticket`` (cookie-authed). The legacy ``?token=``
 //     path is unconditionally rejected by gated gateways.
-//   * Scout Portal now issues a 24h ROTATING, reuse-detected refresh token
-//     alongside the ~15-min access token (Portal NAS #293 / scout #37247).
-//     Both are set as HttpOnly cookies (``scout_session_at`` ~15 min,
+//   * Gated gateways issue a 24h ROTATING, reuse-detected refresh token
+//     alongside the ~15-min access token. Both are set as HttpOnly cookies (``scout_session_at`` ~15 min,
 //     ``scout_session_rt`` 24h). When the AT cookie lapses but the RT cookie
 //     is still alive, the gateway middleware transparently rotates a fresh AT
 //     on the next authenticated request — so connectivity must NOT be gated on
@@ -7335,8 +7296,8 @@ function getOauthSession() {
 // cookie auth rides its own partition so two registered gateways can never
 // evict — or be handed — each other's session cookies (Chromium jars ignore
 // the port, so two dashboards on one VPN host used to collide in the shared
-// jar above). The primary / v1 remote / cloud / portal flows keep the legacy
-// shared partition; see oauth-partition.ts for the full rules.
+// jar above). The primary / v1 remote flows keep the legacy shared partition;
+// see oauth-partition.ts for the full rules.
 const oauthSessionsByPartition = new Map()
 
 function resolveOauthPartitionForUrl(url, { connectionId = '', pendingAuthMode = '', pendingKind = '' } = {}) {
@@ -7565,18 +7526,17 @@ async function clearOauthSession(baseUrl) {
 //     route, so loading it NEVER triggers the gate's auto-SSO and always shows
 //     the chooser. Loading a protected page with no session cookie makes the
 //     gate run ``_auto_sso_response``: single registered provider + a live
-//     portal session in this partition → a silent 302 through
-//     ``/auth/login`` → portal ``/oauth/authorize`` (auto-approves org members)
-//     → ``/auth/callback``, which sets the gateway cookie with NO interactive
-//     prompt. This is the per-agent cloud cascade (decisions.md Q5).
+//     identity-provider session in this partition → a silent 302 through
+//     ``/auth/login`` → the IdP → ``/auth/callback``, which sets the gateway
+//     cookie with NO interactive prompt.
 function openOauthLoginWindow(
   baseUrl,
-  { silent = false, background = false, connectionId = '', pendingAuthMode = '', pendingKind = '' } = {}
+  { silent = false, connectionId = '', pendingAuthMode = '', pendingKind = '' } = {}
 ) {
   return new Promise((resolve, reject) => {
-    // Background roster work may silently renew a Cloud session, but must
-    // never turn an expired saved gateway into a visible login window.
-    const hiddenRecovery = background || !canShowInteractiveOauthLogin()
+    // Background work may silently renew a session, but must never turn an
+    // expired saved gateway into a visible login window.
+    const hiddenRecovery = !canShowInteractiveOauthLogin()
 
     if (!app.isReady()) {
       reject(new Error('Desktop is not ready to start an OAuth login.'))
@@ -7653,12 +7613,12 @@ function openOauthLoginWindow(
       win = new BrowserWindow({
         width: 520,
         height: 720,
-        title: silent ? 'Connecting to Scout Cloud agent…' : 'Sign in to Scout gateway',
+        title: silent ? 'Reconnecting to Scout gateway…' : 'Sign in to Scout gateway',
         autoHideMenuBar: true,
         // Silent cascade: start HIDDEN. The auto-SSO 302 chain completes in
         // well under a second, so the window normally never needs to show. We
         // only reveal it as a fallback if the cascade DOESN'T complete quickly
-        // (e.g. the portal session lapsed and the gate fell through to the
+        // (e.g. the IdP session lapsed and the gate fell through to the
         // interactive chooser) — see the reveal timer below.
         show: !silent && !hiddenRecovery,
         webPreferences: {
@@ -7688,7 +7648,7 @@ function openOauthLoginWindow(
     pollTimer = setInterval(() => void checkCookie(), 750)
 
     // Silent-mode reveal fallback: if the cascade hasn't settled shortly, the
-    // auto-SSO didn't go through silently (no portal session, multi-provider,
+    // auto-SSO didn't go through silently (no IdP session, multi-provider,
     // loop-guard tripped, etc.) and the window is now showing an interactive
     // page. Reveal it so the user can complete sign-in manually rather than
     // staring at nothing. Cleared on finish().
@@ -7705,7 +7665,7 @@ function openOauthLoginWindow(
     }
 
     if (hiddenRecovery) {
-      deadlineTimer = setTimeout(() => finish(new Error('Cloud session recovery requires sign-in.')), 12_000)
+      deadlineTimer = setTimeout(() => finish(new Error('Gateway session recovery requires sign-in.')), 12_000)
     }
 
     win.on('closed', () => {
@@ -8083,40 +8043,16 @@ async function readGatewayFileDataUrl(connection: GatewayFileConnection, request
   return dataUrl
 }
 
-// Recover a Cloud cookie only after a confirmed cookie-auth ticket 401.
-// Each caller still mints its own single-use ticket after the shared recovery.
-const recoverCloudCookieSession = createCloudSessionRecovery({
-  hasNativeSession,
-  onRecovered: baseUrl => rememberLog(`[cloud] saved gateway session recovered for ${hostLabelFromBaseUrl(baseUrl)}`),
-  restoreCookieSession: async baseUrl => {
-    // The saved portal identity is the authority for cookie agent sessions.
-    // Roster polling must never reveal an interactive sign-in window.
-    if (!(await hasLivePortalSession())) {
-      return false
-    }
-
-    if (!(await hasPortalAccessToken()) && !(await renewPortalAccessSilently())) {
-      return false
-    }
-
-    await openOauthLoginWindow(baseUrl, { silent: true, background: true })
-
-    return true
-  }
-})
-
 // Native bearer first (including one forced 401 rotation), OAuth cookie second.
-// Transient ticket POST failures keep their bounded retry before Cloud recovery.
+// Transient ticket POST failures keep their bounded retry.
 async function mintGatewayWsTicket(baseUrl: string, headers: Record<string, string> = {}): Promise<string> {
-  return recoverCloudCookieSession(baseUrl, () =>
-    withTransientRetries(
-      (): Promise<string> =>
-        mintOauthGatewayWsTicket(baseUrl, { ensureNativeAccessToken, fetchJson, fetchJsonViaOauthSession }, headers),
-      {
-        isRetryable: (error: Error): boolean =>
-          !(error instanceof NativeAuthChangedError) && !isGatewayAuthRejection(error)
-      }
-    )
+  return withTransientRetries(
+    (): Promise<string> =>
+      mintOauthGatewayWsTicket(baseUrl, { ensureNativeAccessToken, fetchJson, fetchJsonViaOauthSession }, headers),
+    {
+      isRetryable: (error: Error): boolean =>
+        !(error instanceof NativeAuthChangedError) && !isGatewayAuthRejection(error)
+    }
   )
 }
 
@@ -8148,218 +8084,6 @@ async function freshGatewayWsUrl(profile) {
   rememberRemoteWsHeaders(connection.wsUrl, connection.headers)
 
   return connection.wsUrl
-}
-
-// --- Scout Cloud discovery + silent per-agent sign-in (cloud-auto-discovery
-// Phase 3) ---------------------------------------------------------------
-//
-// The "cloud" connection mode lets a user sign in to the Scout portal ONCE in
-// the OAuth session partition, then (a) discover their hosted agents and (b)
-// connect to any of them with no second interactive sign-in. Both ride the one
-// portal session cookie living in `persist:scout-remote-oauth`:
-//   - discovery  → GET {portal}/api/agents over the partition-bound net; the
-//     portal session cookie authenticates it (NAS Phase 2.5 accepts the cookie).
-//   - cascade    → opening an agent's own /login in the same partition hits the
-//     portal's silent auto-approve (org member, existing session) and 302s back
-//     with that agent's session cookie — no prompt. Each agent still completes
-//     its own PKCE exchange; SSO removes the human click, not a security check.
-
-// Canonical Scout portal base URL, overridable for staging/dev. Mirrors the CLI
-// convention (scout_cli/auth.py DEFAULT_SCOUT_PORTAL_URL + the same env names)
-// so a single override flips every Scout surface to the same portal.
-const DEFAULT_SCOUT_PORTAL_URL = 'https://portal.spaceshipresearch.com'
-
-function resolvePortalBaseUrl() {
-  const raw = process.env.SCOUT_PORTAL_BASE_URL || process.env.SCOUT_PORTAL_BASE_URL || DEFAULT_SCOUT_PORTAL_URL
-
-  return String(raw).trim().replace(/\/+$/, '')
-}
-
-const { hasLivePortalSession, hasPortalAccessToken, renewPortalAccessSilently, openPortalLoginWindow } =
-  createPortalSession({
-    isReady: () => app.isReady(),
-    getOauthSession,
-    resolvePortalBaseUrl,
-    warmOauthCookieStore,
-    createWindow: options => new BrowserWindow(options),
-    rememberLog
-  })
-
-// Discover the hosted (Scout Cloud) agents the signed-in user can see. Calls
-// the NAS trimmed-summary endpoint over the partition-bound net, so the portal
-// session cookie is attached automatically (no bearer needed — NAS accepts the
-// cookie). Returns { agents } on success, or { needsOrgSelection: true, orgs }
-// when the user belongs to multiple orgs and hasn't picked one yet (NAS 409
-// org_selection_required). Pass `org` (a slug/id from a prior org list) to
-// scope discovery to that org. Throws a needsCloudLogin-tagged error when no
-// portal session is present.
-async function discoverCloudAgents(org?: string) {
-  const portalBaseUrl = resolvePortalBaseUrl()
-
-  if (!(await hasLivePortalSession())) {
-    const err = new Error(
-      'You are not signed in to Scout Cloud. Open Settings → Gateway, choose Scout Cloud, and sign in.'
-    ) as any
-
-    err.needsCloudLogin = true
-    throw err
-  }
-
-  // Access cookies expire before refresh credentials. Let the portal renew
-  // whichever session this browser currently holds before discovery.
-  if (!(await hasPortalAccessToken())) {
-    await renewPortalAccessSilently()
-  }
-
-  let body
-
-  const fetchAgents = () =>
-    discoverWithTeamFallback(
-      selectedOrg =>
-        fetchJsonViaOauthSession(
-          `${portalBaseUrl}/api/agents${selectedOrg ? `?org=${encodeURIComponent(selectedOrg)}` : ''}`,
-          {
-            method: 'GET',
-            timeoutMs: 15_000
-          }
-        ),
-      org
-    )
-
-  try {
-    body = (await fetchAgents()) as any
-  } catch (initialError) {
-    let error = initialError as any
-
-    // A 401 with renewal material still in the jar: attempt ONE bounded silent
-    // renewal and retry, so a lapsed access token doesn't surface as a full
-    // interactive re-login while a 30-day refresh session sits unused. Only a
-    // rejected/failed renewal (or a second 401 on genuinely fresh access)
-    // falls through to needsCloudLogin.
-    if (error && error.statusCode === 401 && (await renewPortalAccessSilently({ force: true }))) {
-      try {
-        body = (await fetchAgents()) as any
-      } catch (retryError) {
-        error = retryError
-      }
-    }
-
-    if (body === undefined) {
-      // A 401 means the portal session lapsed (and silent renewal could not
-      // recover it) — surface it as a re-login, not a generic failure.
-      if (error && error.statusCode === 401) {
-        const err = new Error(
-          'Your Scout Cloud session has expired. Open Settings → Gateway and sign in again.'
-        ) as any
-
-        err.needsCloudLogin = true
-        err.cause = error
-        throw err
-      }
-
-      // A 409 means we're a multi-org user who hasn't picked an org. The body
-      // carries the user's org list; surface it so the renderer shows a picker
-      // and re-calls discovery with the chosen org. (fetchJsonViaOauthSession
-      // throws on >=400 with err.statusCode + err.message "409: <json body>".)
-      if (error && error.statusCode === 409) {
-        const orgs = parseOrgSelectionError(error)
-
-        if (orgs) {
-          return { needsOrgSelection: true, orgs }
-        }
-      }
-
-      throw error
-    }
-  }
-
-  return { agents: trimCloudAgents(body), org: trimCloudOrg(body?.org) }
-}
-
-// Project a NAS response org ({ id, slug, name, isPersonal }) to the trimmed
-// shape the renderer persists, or null when absent/malformed.
-function trimCloudOrg(org) {
-  if (!org || typeof org !== 'object' || typeof org.id !== 'string') {
-    return null
-  }
-
-  return {
-    id: org.id,
-    slug: typeof org.slug === 'string' ? org.slug : null,
-    name: typeof org.name === 'string' ? org.name : org.id,
-    isPersonal: Boolean(org.isPersonal),
-    role: typeof org.role === 'string' ? org.role : 'MEMBER'
-  }
-}
-
-// Extract the org list from a 409 org_selection_required error body. Parse
-// defensively and return null if it isn't the shape we expect (caller then
-// rethrows).
-function parseOrgSelectionError(error) {
-  const parsed = readJsonErrorBody(error)
-
-  if (parsed?.error !== 'org_selection_required' || !Array.isArray(parsed.orgs)) {
-    return null
-  }
-
-  return parsed.orgs
-    .filter(o => o && typeof o === 'object' && typeof o.id === 'string')
-    .map(o => ({
-      id: o.id,
-      slug: typeof o.slug === 'string' ? o.slug : null,
-      name: typeof o.name === 'string' ? o.name : o.id,
-      isPersonal: Boolean(o.isPersonal),
-      role: typeof o.role === 'string' ? o.role : 'MEMBER'
-    }))
-}
-
-// Project NAS's agent rows to the trimmed DTO the renderer consumes.
-function trimCloudAgents(body) {
-  const agents = Array.isArray(body?.agents) ? body.agents : []
-
-  return agents
-    .filter(a => a && typeof a === 'object' && typeof a.id === 'string')
-    .map(a => ({
-      id: a.id,
-      name: typeof a.name === 'string' ? a.name : a.id,
-      status: typeof a.status === 'string' ? a.status : 'unknown',
-      dashboardUrl: typeof a.dashboardUrl === 'string' ? a.dashboardUrl : null,
-      dashboardGatewayState: typeof a.dashboardGatewayState === 'string' ? a.dashboardGatewayState : 'unknown'
-    }))
-}
-
-// Silent per-agent sign-in: open the selected agent dashboard's /login in the
-// SAME OAuth partition. Because the user already holds a live portal session
-// there, the agent's /oauth/authorize auto-approves (org member) and 302s back,
-// setting that agent's gateway session cookie WITHOUT a second interactive
-// prompt. Reuses openOauthLoginWindow — the window self-closes the instant the
-// agent's session cookie lands (a silent flow finishes in well under a second;
-// if the portal session were absent it would fall through to an interactive
-// login, which the discovery gate already prevents). Returns once the agent's
-// gateway session cookie is present.
-async function cloudAgentSilentSignIn(dashboardUrl) {
-  const baseUrl = normalizeRemoteBaseUrl(dashboardUrl)
-
-  // Pre-req: a live portal session must exist, or this would surface an
-  // interactive prompt rather than a silent cascade. Discovery already gates on
-  // this, but a selection can arrive after the session lapsed.
-  if (!(await hasLivePortalSession())) {
-    const err = new Error('Your Scout Cloud session has expired. Sign in to Scout Cloud again.') as any
-    err.needsCloudLogin = true
-    throw err
-  }
-
-  // The cascade rides the portal's auto-approve, which needs the short-lived
-  // access state just like discovery. If only renewal material survived the
-  // restart, mint a fresh access token first so the hidden cascade window
-  // auto-SSOs instead of stalling on an interactive chooser (#73495).
-  if (!(await hasPortalAccessToken())) {
-    await renewPortalAccessSilently()
-  }
-
-  await openOauthLoginWindow(baseUrl, { silent: true })
-
-  return { baseUrl, connected: await hasOauthSessionCookie(baseUrl) }
 }
 
 // ---------------------------------------------------------------------------
@@ -8809,13 +8533,11 @@ function sanitizeConnectionProfiles(raw: Record<string, any>) {
     }
 
     const cleaned: {
-      mode: 'remote' | 'local' | 'cloud'
+      mode: 'remote' | 'local'
       url?: string
       authMode?: string
       token?: object
       headers?: object
-      org?: string
-      name?: string
       remoteProfile?: string
       savedSsh?: object
     } = {
@@ -8842,7 +8564,7 @@ function sanitizeConnectionProfiles(raw: Record<string, any>) {
       cleaned.token = entry.token
     }
 
-    // A URL-remote/cloud per-profile override can map its Desktop routing label
+    // A URL-remote per-profile override can map its Desktop routing label
     // onto the backend's profile namespace (same contract as SSH remoteProfile).
     const remoteProfileName = normalizeRemoteProfileName((entry as any).remoteProfile)
 
@@ -8854,22 +8576,6 @@ function sanitizeConnectionProfiles(raw: Record<string, any>) {
 
     if (Object.keys(headers).length > 0) {
       cleaned.headers = headers
-    }
-
-    // Preserve the Scout Cloud org tag on cloud-mode entries so Settings can
-    // reopen into the same org for a per-profile cloud connection.
-    if (cleaned.mode === 'cloud') {
-      const cloudName = String(entry.name || '').trim()
-
-      if (cloudName) {
-        cleaned.name = cloudName
-      }
-
-      const org = String(entry.org || '').trim()
-
-      if (org) {
-        cleaned.org = org
-      }
     }
 
     out[name] = cleaned
@@ -9148,7 +8854,7 @@ function sanitizeConnectionsRegistry(registry = readDesktopConnectionsRegistry()
 /**
  * Save (create or edit) a registry connection from a renderer payload.
  * Edits merge over the stored entry (mergeConnectionInput) so fields the
- * editor doesn't carry — cloud `org`, ssh `remoteScoutPath`/`remoteProfile` —
+ * editor doesn't carry — ssh `remoteScoutPath`/`remoteProfile` —
  * survive a rename. Token handling mirrors coerceDesktopConnectionConfig: an
  * incoming plaintext token is encrypted (honoring the same allowPlainTextToken
  * opt-in seam as Settings → Gateway); an absent token field inherits the
@@ -9182,8 +8888,8 @@ async function saveRegistryConnection(input: any = {}) {
   const merged = mergeConnectionInput({ ...input, token, headers }, existing)
   const entry = normalizeConnectionInput(merged, registry)
 
-  // Token-auth remotes must actually have a token to be dialable. OAuth and
-  // cloud entries authenticate via cookies/native tokens instead.
+  // Token-auth remotes must actually have a token to be dialable. OAuth
+  // entries authenticate via cookies/native tokens instead.
   if (entry.kind === 'remote' && entry.authMode !== 'oauth' && !decryptDesktopSecret(entry.token)) {
     throw new Error('Remote gateway session token is required.')
   }
@@ -9368,9 +9074,6 @@ async function sanitizeDesktopConnectionConfig(config = readDesktopConnectionCon
     remoteAuthMode: authMode,
     remoteOauthConnected,
     remoteUrl,
-    // The persisted Scout Cloud org (slug/id) for a cloud connection, or '' for
-    // remote/local. Lets Settings → Gateway reopen into the same org.
-    cloudOrg: mode === 'cloud' ? String(block.org || '') : '',
     remoteTokenPreview: tokenPreview(remoteToken),
     remoteTokenSet: Boolean(remoteToken),
     // Whether the OS keyring can encrypt a token; drives the plain-text opt-in
@@ -9394,18 +9097,7 @@ async function sanitizeDesktopConnectionConfig(config = readDesktopConnectionCon
 // Build + validate a `{ url, authMode, token }` remote block. OAuth gateways
 // authenticate via the login-window session cookie (verified at connect time in
 // resolveRemoteBackend), so only token-auth remotes require a saved token.
-// `org` (optional) is the Scout Cloud org slug/id the instance was discovered
-// under — persisted so Settings can reopen into the same org; omitted from the
-// block when empty so plain remote connections stay unchanged.
-function buildRemoteBlock(
-  remoteUrl,
-  authMode,
-  token,
-  org?: string,
-  headers?: object,
-  name?: string,
-  remoteProfile?: string
-) {
+function buildRemoteBlock(remoteUrl, authMode, token, headers?: object, remoteProfile?: string) {
   if (authMode !== 'oauth' && !decryptDesktopSecret(token)) {
     throw new Error('Remote gateway session token is required.')
   }
@@ -9415,8 +9107,6 @@ function buildRemoteBlock(
     authMode: string
     token: object
     headers?: object
-    org?: string
-    name?: string
     remoteProfile?: string
   } = {
     url: normalizeRemoteBaseUrl(remoteUrl),
@@ -9428,18 +9118,6 @@ function buildRemoteBlock(
 
   if (Object.keys(remoteHeaders).length > 0) {
     block.headers = remoteHeaders
-  }
-
-  const nameValue = typeof name === 'string' ? name.trim() : ''
-
-  if (nameValue) {
-    block.name = nameValue
-  }
-
-  const orgValue = typeof org === 'string' ? org.trim() : ''
-
-  if (orgValue) {
-    block.org = orgValue
   }
 
   const remoteProfileName = normalizeRemoteProfileName(remoteProfile)
@@ -9454,44 +9132,20 @@ function buildRemoteBlock(
 function coerceDesktopConnectionConfig(input: any = {}, existing = readDesktopConnectionConfig(), options: any = {}) {
   const persistToken = options.persistToken !== false
   const key = connectionScopeKey(input.profile)
-  // 'cloud' and 'remote' both persist a remote-shaped block; 'cloud' is
-  // remembered as its own provenance (Q6) and resolves to remote downstream.
-  // Anything else collapses to local.
+  // 'remote' persists a remote-shaped block; anything else collapses to local.
   const mode = input.mode === 'ssh' ? 'ssh' : modeIsRemoteLike(input.mode) ? input.mode : 'local'
   const remoteLike = modeIsRemoteLike(mode)
 
   // The block being edited: a per-profile entry or the global remote block.
   const rawExistingBlock = key ? existing.profiles?.[key] || {} : existing.remote || {}
-  // Leaving a CLOUD connection unselects it: a cloud block's url/org/token
-  // describe a discovered Scout Cloud instance, NOT a user-owned remote gateway,
-  // so switching to local or remote must NOT inherit them (otherwise the stale
-  // cloud URL lingers and re-selecting Cloud looks "already connected"). When the
-  // saved block was cloud and the new mode is not cloud, start from an empty
-  // block. (remote↔local toggles still preserve a real remote URL as before.)
+  // remote↔local toggles preserve a real remote URL; leaving SSH for a remote
+  // starts from an empty block.
   const existingMode = key ? existing.profiles?.[key]?.mode : existing.mode
-  const leavingCloud = existingMode === 'cloud' && mode !== 'cloud'
   const leavingSsh = rawExistingBlock.mode === 'ssh' && mode !== 'ssh' && mode !== 'local'
-  const existingBlock = leavingCloud || leavingSsh ? {} : rawExistingBlock
+  const existingBlock = leavingSsh ? {} : rawExistingBlock
   const remoteUrl = String(input.remoteUrl ?? existingBlock.url ?? '').trim()
   // authMode: explicit input wins; otherwise inherit the saved value, default 'token'.
   const authMode = resolveAuthMode(input.remoteAuthMode, existingBlock.authMode)
-  // Cloud org: only meaningful for 'cloud' mode. Explicit input wins; otherwise
-  // inherit the saved org. A plain 'remote' connection never carries an org
-  // (switching cloud→remote drops it), so it stays unset unless mode is cloud.
-  const cloudOrg = mode === 'cloud' ? String(input.cloudOrg ?? existingBlock.org ?? '').trim() : ''
-
-  // A saved name belongs to this exact gateway, not another instance in the same org.
-  const cloudName =
-    mode === 'cloud'
-      ? String(
-          input.cloudName ??
-            (existingBlock.url && normalizeRemoteBaseUrl(remoteUrl) === normalizeRemoteBaseUrl(existingBlock.url)
-              ? existingBlock.name
-              : '') ??
-            ''
-        ).trim()
-      : ''
-
   const incomingToken = typeof input.remoteToken === 'string' ? input.remoteToken.trim() : ''
 
   const remoteHeaders =
@@ -9527,15 +9181,14 @@ function coerceDesktopConnectionConfig(input: any = {}, existing = readDesktopCo
   }
 
   if (key) {
-    // Per-profile scope: a remote/cloud entry pins this profile to its own
-    // backend; a local entry clears the override so the profile inherits the
-    // default. The mode tag (remote vs cloud) is preserved on the entry.
+    // Per-profile scope: a remote entry pins this profile to its own backend; a
+    // local entry clears the override so the profile inherits the default.
     const profiles = { ...(existing.profiles || {}) }
 
     if (remoteLike) {
       profiles[key] = {
         mode,
-        ...buildRemoteBlock(remoteUrl, authMode, nextToken, cloudOrg, remoteHeaders, cloudName, input.remoteProfile)
+        ...buildRemoteBlock(remoteUrl, authMode, nextToken, remoteHeaders, input.remoteProfile)
       }
     } else {
       const localEntry = localProfileEntry(rawExistingBlock)
@@ -9555,7 +9208,7 @@ function coerceDesktopConnectionConfig(input: any = {}, existing = readDesktopCo
   }
 
   const nextRemote = remoteLike
-    ? buildRemoteBlock(remoteUrl, authMode, nextToken, cloudOrg, remoteHeaders, cloudName)
+    ? buildRemoteBlock(remoteUrl, authMode, nextToken, remoteHeaders)
     : existingMode === 'ssh'
       ? rawExistingBlock
       : { url: remoteUrl ? normalizeRemoteBaseUrl(remoteUrl) : remoteUrl, authMode, token: nextToken }
@@ -10033,7 +9686,7 @@ async function resetPreviewReach(webContentsId?: number) {
  * Rewrite a gateway-loopback URL into one this machine can actually load.
  *
  * Returns the URL unchanged when no rewrite is needed or possible — a local
- * backend (the address is already true), a non-loopback host, or a url/cloud
+ * backend (the address is already true), a non-loopback host, or a url
  * remote with no tunnel to borrow. Callers must not treat an unchanged URL as
  * failure; the pane explains an unreachable one on its own.
  */
@@ -10515,7 +10168,7 @@ async function resolveRemoteBackend(
       token,
       route.source,
       undefined,
-      route.kind === 'cloud' ? 'cloud' : 'url',
+      'url',
       undefined,
       route.headers
     )
@@ -10539,8 +10192,8 @@ function configuredRemoteProfileNames() {
 }
 
 // True when the app is in app-global remote mode (Settings → "All profiles" →
-// Remote/Cloud, or the env override): a SINGLE remote backend serves every
-// profile via ?profile=. Cloud counts — it resolves to a remote backend (Q6).
+// Remote, or the env override): a SINGLE remote backend serves every
+// profile via ?profile=.
 // Distinct from per-profile overrides — here there's one host for all.
 function globalRemoteActive() {
   if (process.env.SCOUT_DESKTOP_REMOTE_URL) {
@@ -10553,7 +10206,7 @@ function globalRemoteActive() {
     return true
   }
 
-  // Registry-primary transport (#91564/#90316): a registered remote/cloud/ssh
+  // Registry-primary transport (#91564/#90316): a registered remote/ssh
   // gateway promoted to primary via connections.json makes the primary
   // backend remote even while the v1 config.mode still says 'local'. Every
   // consumer of this flag ("one remote host serves every profile") must see
@@ -10570,13 +10223,13 @@ function registryPrimaryIsRemote() {
     const registry = readDesktopConnectionsRegistry()
     const entry = registry.connections.find(c => c.id === registry.primary)
 
-    return Boolean(entry && (entry.kind === 'remote' || entry.kind === 'cloud' || entry.kind === 'ssh'))
+    return Boolean(entry && (entry.kind === 'remote' || entry.kind === 'ssh'))
   } catch {
     return false
   }
 }
 
-// True when the PRIMARY profile's backend resolves to a remote/cloud host —
+// True when the PRIMARY profile's backend resolves to a remote host —
 // i.e. resolveRemoteBackend(primaryProfileKey()) would return a descriptor
 // rather than null. Mirrors that function's precedence (per-profile override →
 // env → global) so a startScout() failure can be classified as remote (never
@@ -10601,7 +10254,7 @@ async function requestJsonForProfile(profile: string, path: string, method: stri
 async function probeRemoteAuthMode(rawUrl) {
   // Determine how a remote gateway expects callers to authenticate, WITHOUT
   // sending any credentials. ``/api/status`` is public on every Scout
-  // gateway (it backs the portal liveness probe) and reports:
+  // gateway (it backs the liveness probe) and reports:
   //   auth_required: true  → OAuth gate is engaged (cookie + ws-ticket auth)
   //   auth_required: false → loopback/--insecure: legacy session-token auth
   // ``/api/auth/providers`` (also public, only meaningful when gated) gives
@@ -10898,7 +10551,7 @@ function sendConnectionApplied() {
 
 // Registry lifecycle push: a connection was removed or materially edited, so
 // every window must tear down (and, for edits, re-dial) its secondary sockets
-// scoped to that connection. Without this, a removed remote/cloud source keeps
+// scoped to that connection. Without this, a removed remote source keeps
 // its renderer WebSocket open and streaming as a ghost, and an edited one
 // keeps talking to the OLD endpoint until idle-reap.
 function broadcastConnectionsChanged(payload: { connectionId: string; reason: 'removed' | 'saved' | 'updated' }) {
@@ -10933,7 +10586,7 @@ function profileRouteOptions(
   return {
     // A desktop profile can be only a client-side routing alias. Keep backend
     // endpoint filters in the target's namespace (e.g. mara → default for a
-    // managed SSH, gris → main-gris for a URL-remote/cloud per-profile host).
+    // managed SSH, gris → main-gris for a URL-remote per-profile host).
     backendProfile: sshOverride?.remoteProfile || urlOverride?.remoteProfile,
     globalRemote: globalRemoteActive(),
     primaryProfile: primaryProfileKey(),
@@ -11393,7 +11046,7 @@ async function connectRegistryBackend(
     }
   }
 
-  // remote / cloud: one gateway host serves every profile of that source,
+  // remote: one gateway host serves every profile of that source,
   // scoped per request — the descriptor carries the profile + connectionId so
   // renderer-side WS minting and REST scoping target the right agent.
   const token = source.authMode === 'oauth' ? null : decryptDesktopSecret(source.token)
@@ -11404,7 +11057,7 @@ async function connectRegistryBackend(
     token,
     `registry:${source.id}`,
     undefined,
-    source.kind === 'cloud' ? 'cloud' : 'url',
+    'url',
     undefined,
     source.headers
   )
@@ -11412,7 +11065,7 @@ async function connectRegistryBackend(
   await waitForRemoteScout(connection)
   poolEntry.remoteBaseUrl = connection.baseUrl
 
-  // Remote/cloud backends live on another host too — disable the WSL path
+  // Remote backends live on another host too — disable the WSL path
   // bridge for their profiles for the same reason as the SSH branch above.
   setWslBridgeProfileState(profileKey, false)
 
@@ -11982,7 +11635,7 @@ function touchPoolBackend(profile, options: { activeTurn?: boolean } = {}) {
 // but only ever evict backends without a live renderer socket (stale beyond the
 // keepalive window). When every backend is actively kept alive we let the pool
 // exceed the soft cap rather than kill a running session. Process-less
-// descriptor entries (remote/cloud registry sources, per-profile remote
+// descriptor entries (remote registry sources, per-profile remote
 // overrides — `entry.process === null`) are excluded from the cap entirely:
 // they hold no local process, so counting them used to let a roster refresh
 // across N registered remote connections LRU-evict a REAL local backend that
@@ -12248,29 +11901,26 @@ async function runPoolBackendStart(
     backend.args,
     hiddenWindowsChildOptions({
       cwd: scoutCwd,
-      env: desktopBackendSpawnEnv(
-        {
-          // Never another profile's dotenv credentials from the Desktop env (#68367).
-          ...profileBackendParentEnv({ scoutHome: SCOUT_HOME, profile }),
-          SCOUT_HOME,
-          ...backend.env,
-          // Pin the gateway's tool/terminal cwd to the same directory we chose for
-          // the child process. Inherited TERMINAL_CWD (or a stale config bridge)
-          // can still point at the install dir even when spawn cwd is home.
-          TERMINAL_CWD: scoutCwd,
-          SCOUT_DASHBOARD_SESSION_TOKEN: token,
-          // Marks this dashboard backend as desktop-spawned so it runs the cron
-          // scheduler tick loop (the gateway isn't running under the app).
-          SCOUT_DESKTOP: '1',
-          // Exact parent identity lets the backend self-exit after an unclean
-          // Desktop death without mistaking a reused PID for its owner. If the
-          // optional marker probe fails, retain legacy PID-only tracking.
-          ...parentIdentityEnv,
-          SCOUT_WEB_DIST: webDist,
-          ...(readyFile ? { SCOUT_DESKTOP_READY_FILE: readyFile } : {})
-        },
-        GUEST_ONBOARDING
-      ),
+      env: {
+        // Never another profile's dotenv credentials from the Desktop env (#68367).
+        ...profileBackendParentEnv({ scoutHome: SCOUT_HOME, profile }),
+        SCOUT_HOME,
+        ...backend.env,
+        // Pin the gateway's tool/terminal cwd to the same directory we chose for
+        // the child process. Inherited TERMINAL_CWD (or a stale config bridge)
+        // can still point at the install dir even when spawn cwd is home.
+        TERMINAL_CWD: scoutCwd,
+        SCOUT_DASHBOARD_SESSION_TOKEN: token,
+        // Marks this dashboard backend as desktop-spawned so it runs the cron
+        // scheduler tick loop (the gateway isn't running under the app).
+        SCOUT_DESKTOP: '1',
+        // Exact parent identity lets the backend self-exit after an unclean
+        // Desktop death without mistaking a reused PID for its owner. If the
+        // optional marker probe fails, retain legacy PID-only tracking.
+        ...parentIdentityEnv,
+        SCOUT_WEB_DIST: webDist,
+        ...(readyFile ? { SCOUT_DESKTOP_READY_FILE: readyFile } : {})
+      },
       shell: backend.shell,
       stdio: ['ignore', 'pipe', 'pipe']
     })
@@ -13141,34 +12791,31 @@ async function runScoutStart({ supervisorRecovery = false }: { supervisorRecover
       backend.args,
       hiddenWindowsChildOptions({
         cwd: scoutCwd,
-        env: desktopBackendSpawnEnv(
-          {
-            // Never another profile's dotenv credentials from the Desktop env (#68367).
-            ...profileBackendParentEnv({ scoutHome: SCOUT_HOME, profile: activeProfile }),
-            // Explicitly pin SCOUT_HOME for the child so Python's get_scout_home()
-            // resolves to the SAME location our resolveScoutHome() picked. Without
-            // this pin, Python falls back to ~/.scout on every platform — fine on
-            // mac/linux (where our default matches), but on Windows our default is
-            // %LOCALAPPDATA%\scout, which differs from C:\Users\<u>\.scout.
-            // Mismatch would split config / sessions / .env / logs across two
-            // directories. install.ps1 sets SCOUT_HOME via setx; the desktop
-            // can't reliably do that, so we set it inline for every spawn.
-            SCOUT_HOME,
-            ...backend.env,
-            TERMINAL_CWD: scoutCwd,
-            SCOUT_DASHBOARD_SESSION_TOKEN: token,
-            // Marks this dashboard backend as desktop-spawned so it runs the cron
-            // scheduler tick loop (the gateway isn't running under the app).
-            SCOUT_DESKTOP: '1',
-            // Exact parent identity lets the backend self-exit after an unclean
-            // Desktop death without mistaking a reused PID for its owner. If the
-            // optional marker probe fails, retain legacy PID-only tracking.
-            ...parentIdentityEnv,
-            SCOUT_WEB_DIST: webDist,
-            ...(readyFile ? { SCOUT_DESKTOP_READY_FILE: readyFile } : {})
-          },
-          GUEST_ONBOARDING
-        ),
+        env: {
+          // Never another profile's dotenv credentials from the Desktop env (#68367).
+          ...profileBackendParentEnv({ scoutHome: SCOUT_HOME, profile: activeProfile }),
+          // Explicitly pin SCOUT_HOME for the child so Python's get_scout_home()
+          // resolves to the SAME location our resolveScoutHome() picked. Without
+          // this pin, Python falls back to ~/.scout on every platform — fine on
+          // mac/linux (where our default matches), but on Windows our default is
+          // %LOCALAPPDATA%\scout, which differs from C:\Users\<u>\.scout.
+          // Mismatch would split config / sessions / .env / logs across two
+          // directories. install.ps1 sets SCOUT_HOME via setx; the desktop
+          // can't reliably do that, so we set it inline for every spawn.
+          SCOUT_HOME,
+          ...backend.env,
+          TERMINAL_CWD: scoutCwd,
+          SCOUT_DASHBOARD_SESSION_TOKEN: token,
+          // Marks this dashboard backend as desktop-spawned so it runs the cron
+          // scheduler tick loop (the gateway isn't running under the app).
+          SCOUT_DESKTOP: '1',
+          // Exact parent identity lets the backend self-exit after an unclean
+          // Desktop death without mistaking a reused PID for its owner. If the
+          // optional marker probe fails, retain legacy PID-only tracking.
+          ...parentIdentityEnv,
+          SCOUT_WEB_DIST: webDist,
+          ...(readyFile ? { SCOUT_DESKTOP_READY_FILE: readyFile } : {})
+        },
         shell: backend.shell,
         stdio: ['ignore', 'pipe', 'pipe']
       })
@@ -13401,12 +13048,6 @@ async function runScoutStart({ supervisorRecovery = false }: { supervisorRecover
     const hostKeyChanged = isHostKeyChangedBootFailure(error)
     const sshAuthFailed = isSshAuthFailedBootFailure(error)
 
-    // Carry structured Cloud-down metadata through the boot-progress / IPC
-    // boundary when present, so the renderer overlay can key on it rather than
-    // re-classifying the message string. main owns classification; the renderer
-    // only consumes the structured result (#85335).
-    const isCloudBackendDown = Boolean(error && typeof error === 'object' && (error as any).isCloudBackendDown === true)
-
     const statusCode = Number(
       error && typeof error === 'object' && Number.isInteger((error as any).statusCode)
         ? (error as any).statusCode
@@ -13450,7 +13091,6 @@ async function runScoutStart({ supervisorRecovery = false }: { supervisorRecover
     updateBootProgress(
       {
         error: message,
-        isCloudBackendDown: isCloudBackendDown || undefined,
         message: `Desktop boot failed: ${message}`,
         phase: 'backend.error',
         // Renderer contract for the self-heal loop (#82679): a transient
@@ -15762,7 +15402,7 @@ ipcMain.handle('scout:plugin-profile-routes', async (_event, rawProfileNames) =>
     ]
   }
 
-  // A local enumeration can fail while remote/cloud sources succeed. Preserve
+  // A local enumeration can fail while remote sources succeed. Preserve
   // cached v1 profile names as explicitly-local rows so those valid routes do
   // not disappear and duplicate names remain source-qualified.
   const localSource = registry.connections.find(source => source.kind === 'local')
@@ -15869,7 +15509,7 @@ ipcMain.handle('scout:connections:remove', async (_event, id) => {
   // gets `mac-mini` back — with the removed machine's profile list still cached under it.
   evictConnectionCaches(key)
   // And the renderer side: without this push, secondaries scoped to the
-  // removed connection keep their WebSocket open (remote/cloud have no local
+  // removed connection keep their WebSocket open (remote has no local
   // process to kill) and stream ghost events until page reload.
   broadcastConnectionsChanged({ connectionId: key, reason: 'removed' })
   desktopProfilePreferences.connectionRemoved(key)
@@ -15925,7 +15565,7 @@ ipcMain.handle('scout:connections:test', async (_event, id) => {
     return result
   }
 
-  // Remote/cloud/local probe built DIRECTLY from the registry entry. Routing
+  // Remote/local probe built DIRECTLY from the registry entry. Routing
   // through coerceDesktopConnectionConfig would use v1 connection.json as the
   // `existing` base: an entry with a broken/absent token would inherit the v1
   // global remote's token and send it to THIS entry's URL (cross-host
@@ -16369,9 +16009,8 @@ async function requestManagedSshUpdate(rawId) {
 
 ipcMain.handle('scout:connections:update-managed', async (_event, rawId) => requestManagedSshUpdate(rawId))
 
-// Fan out `scout update` to every eligible registered connection at once.
-// Cloud entries are excluded (platform-managed); each dispatch reports
-// independently so one dead LAN box can't wedge the batch. Local reuses the
+// Fan out `scout update` to every registered connection at once. Each
+// dispatch reports independently so one dead LAN box can't wedge the batch. Local reuses the
 // app's own update pipeline; Desktop-managed SSH uses the transactional
 // drain/update/restore lifecycle; URL remotes POST their backend updater.
 ipcMain.handle('scout:connections:update-all', async (_event, payload) => {
@@ -16391,11 +16030,6 @@ ipcMain.handle('scout:connections:update-all', async (_event, payload) => {
       .filter(connection => !excludeIds.has(connection.id))
       .map(async connection => {
         const base = { connectionId: connection.id, label: connection.label, kind: connection.kind }
-        const eligibility = updateEligibility(connection)
-
-        if (!eligibility.eligible) {
-          return { ...base, ok: false, skipped: true, reason: eligibility.reason }
-        }
 
         try {
           if (connection.kind === 'local') {
@@ -16532,7 +16166,7 @@ ipcMain.handle('scout:connection-config:oauth-login', async (_event, rawUrl, raw
   // The draft's intended entry shape (kind/authMode the save will persist).
   // The identity branch in oauth-partition.ts gates the pre-save private jar
   // on it: only a cookie-auth remote draft earns its own jar up front; a
-  // cloud or token draft signs in on the legacy jar — the jar the saved
+  // token draft signs in on the legacy jar — the jar the saved
   // entry reads — so login and read can never disagree. Invalid or missing
   // values fail closed to the legacy jar in the resolver.
   const pendingKind = typeof rawOpts?.kind === 'string' ? rawOpts.kind : ''
@@ -16648,34 +16282,6 @@ ipcMain.handle('scout:connection-config:oauth-logout', async (_event, rawUrl) =>
   return { ok: true, connected }
 })
 
-// --- Scout Cloud (cloud-auto-discovery Phase 3) ---
-// One portal login in the OAuth partition powers both discovery and the silent
-// per-agent cascade. See the discovery/cascade helpers above.
-ipcMain.handle('scout:cloud:status', async () => ({
-  portalBaseUrl: resolvePortalBaseUrl(),
-  signedIn: await hasLivePortalSession()
-}))
-ipcMain.handle('scout:cloud:login', async () => {
-  await openPortalLoginWindow()
-
-  return { ok: true, signedIn: await hasLivePortalSession() }
-})
-ipcMain.handle('scout:cloud:logout', async () => {
-  await clearOauthSession(resolvePortalBaseUrl())
-
-  return { ok: true, signedIn: await hasLivePortalSession() }
-})
-ipcMain.handle('scout:cloud:discover', async (_event, org) => {
-  // Returns { agents } or { needsOrgSelection: true, orgs }. `org` (optional)
-  // scopes discovery to a chosen org for multi-org users.
-  return discoverCloudAgents(typeof org === 'string' && org ? org : undefined)
-})
-ipcMain.handle('scout:cloud:agent-sign-in', async (_event, dashboardUrl) => {
-  // Silent per-agent sign-in via the shared portal session. Returns the agent's
-  // gateway baseUrl + whether its session cookie landed; the renderer then
-  // saves a cloud-mode connection pointed at this dashboardUrl.
-  return cloudAgentSilentSignIn(dashboardUrl)
-})
 ipcMain.handle('scout:connection-config:save', async (_event, payload) => {
   assertCanMutateManagedPrimaryRouting()
   const config = coerceDesktopConnectionConfig(payload)
@@ -17132,7 +16738,7 @@ async function mergeRemoteProfileSessions(searchParams, remoteProfiles, registry
 
 // Every CONNECTED registry gateway as a session source: resolved descriptors
 // straight from the backend pool, never dialing. SSH sources contribute one
-// backend per pooled (connection, profile) scope; remote/cloud sources are one
+// backend per pooled (connection, profile) scope; remote sources are one
 // shared host (any pooled scope's descriptor serves the cross-profile read).
 // The primary local connection is excluded for the legacy unpinned path — the
 // primary aggregate carries local rows there. A registry-pinned aggregate opts
@@ -17247,7 +16853,7 @@ async function handleScoutApiRequest(request) {
   // run sessions included — lives in THAT host's state.db, not any local
   // profile's. Resolve the backend through the registry (same pool the job
   // list and WS traffic use) instead of the legacy profile route; a shared
-  // remote/cloud host serves every profile via ?profile=, so scope the path.
+  // remote host serves every profile via ?profile=, so scope the path.
   // An absent/empty id falls through to the byte-identical v1 route below.
   // Explicit `local` stays registry-pinned so it cannot inherit a v1 remote.
   const registryConnectionId = apiRequestRegistryConnectionId(request)
@@ -18908,7 +18514,6 @@ app.whenReady().then(() => {
     }
   })
 
-
   // The popped-out pet must never be stranded on a disconnected display: when
   // the topology changes, pull an off-screen overlay back onto the display
   // that holds the main window (and persist the corrected spot). Unlike the
@@ -18981,7 +18586,7 @@ function configureSpellChecker() {
 // A route we can't resolve counts as owned: the lost-work warning is the safe
 // side to be wrong on.
 function quitStopsBackendWork(): boolean {
-  let primaryRouteKind: 'cloud' | 'remote' | 'ssh' | null
+  let primaryRouteKind: 'remote' | 'ssh' | null
 
   try {
     primaryRouteKind =

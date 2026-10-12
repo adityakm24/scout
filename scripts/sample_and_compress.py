@@ -6,13 +6,13 @@ Downloads trajectories from multiple HuggingFace datasets, randomly samples them
 and runs trajectory compression to fit within a target token budget.
 
 Usage:
-    python scripts/sample_and_compress.py
-    
+    python scripts/sample_and_compress.py --datasets=org/dataset-a,org/dataset-b
+
     # Custom sample size
-    python scripts/sample_and_compress.py --total_samples=5000
-    
+    python scripts/sample_and_compress.py --datasets=org/dataset-a --total_samples=5000
+
     # Custom output name
-    python scripts/sample_and_compress.py --output_name=compressed_16k
+    python scripts/sample_and_compress.py --datasets=org/dataset-a --output_name=compressed_16k
 """
 
 import json
@@ -26,22 +26,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-# Default datasets to sample from
-DEFAULT_DATASETS = [
-    "SpaceshipResearch/swe-terminus-agent-glm-kimi-minimax",
-    "adityakm24/scout-megascience-sft1",
-    "SpaceshipResearch/Scout-Agent-Thinking-GLM-4.7-SFT2",
-    "SpaceshipResearch/Scout-Agent-Thinking-GLM-4.7-SFT1",
-    "SpaceshipResearch/terminal-tasks-glm-scout-agent"
-]
-
-
 def load_dataset_from_hf(dataset_name: str) -> List[Dict[str, Any]]:
     """
     Load a dataset from HuggingFace.
     
     Args:
-        dataset_name: HuggingFace dataset name (e.g., "SpaceshipResearch/dataset-name")
+        dataset_name: HuggingFace dataset name (e.g., "org/dataset-name")
         
     Returns:
         List of trajectory entries
@@ -330,7 +320,7 @@ def main(
     Args:
         total_samples: Total number of samples to collect (default: 2500)
         output_name: Name for output directory/file (default: "compressed_agentic")
-        datasets: Comma-separated list of dataset names (uses defaults if not provided)
+        datasets: Comma-separated list of HuggingFace dataset names (required)
         config: Path to compression config YAML
         seed: Random seed for reproducibility
         batch_size: Number of entries per JSONL file during processing
@@ -342,11 +332,9 @@ def main(
     print("📊 TRAJECTORY SAMPLING AND COMPRESSION")
     print("=" * 70)
     
-    # Parse datasets
-    if datasets:
-        dataset_list = [d.strip() for d in datasets.split(",")]
-    else:
-        dataset_list = DEFAULT_DATASETS
+    dataset_list = [d.strip() for d in (datasets or "").split(",") if d.strip()]
+    if not dataset_list:
+        raise SystemExit("--datasets is required: a comma-separated list of HuggingFace dataset names")
     
     print("\n📋 Configuration:")
     print(f"   Total samples: {total_samples:,}")
@@ -402,7 +390,7 @@ def main(
     print(f"📁 Compressed batches: {compressed_dir}")
     print(f"📁 Final output:       {final_output}")
     print("\nTo upload to HuggingFace:")
-    print(f"   huggingface-cli upload SpaceshipResearch/{output_name} {final_output}")
+    print(f"   huggingface-cli upload <your-org>/{output_name} {final_output}")
 
 
 if __name__ == "__main__":

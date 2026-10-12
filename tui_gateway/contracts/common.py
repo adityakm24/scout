@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Literal
 
 from pydantic import Field
 
@@ -39,7 +39,6 @@ class Usage(OpenModel):
     avg_latency_s: float | None = None
     avg_tps: float | None = None
     active_subagents: int | None = None
-    dev_credits_spent_micros: int | None = None
     cost_usd: float | None = None
     cost_status: str | None = None
 
@@ -136,7 +135,6 @@ class StoredSessionRow(OpenModel):
 class ToolLabelKind(WireEnum):
     """Which surface one inner call of a bridged ``tool_call`` runs on."""
 
-    connector = "connector"
     mcp = "mcp"
     tool = "tool"
 
@@ -239,11 +237,7 @@ class SessionOwner(Params):
     session_id: str = Field(min_length=1)
 
 
-class AccountOwner(Params):
-    type: Literal["account"]
-
-
-ConnectorOwner = Annotated[SessionOwner | AccountOwner, Field(discriminator="type")]
+ConnectorOwner = SessionOwner
 
 
 class OkResult(Result):
@@ -263,7 +257,7 @@ class EmptyPayload(Payload):
 
 
 __all__ = [
-    "TERMINAL_SUBAGENT_STATUSES", "AccountOwner", "ConnectorOwner", "EmptyPayload", "EmptyResult", "McpServerStatus",
+    "TERMINAL_SUBAGENT_STATUSES", "ConnectorOwner", "EmptyPayload", "EmptyResult", "McpServerStatus",
     "MessageReaction", "OkResult", "OpenModel", "PendingApproval",
     "ProfileParams", "ProjectRef", "SessionLiveInfo", "SessionOwner", "SessionParams", "StatusResult", "StoredSessionRow",
     "SubagentStatus", "ToolLabel", "ToolLabelKind", "TranscriptMessage", "Usage",

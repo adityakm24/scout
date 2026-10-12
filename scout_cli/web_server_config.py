@@ -193,7 +193,7 @@ _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
 
 # Small categories fold into a bigger tab to avoid one-field orphan tabs. Several sources
 # (models_dev, onboarding, mcp, computer_use, telemetry, plugins, doctor, runtime, session,
-# spaceshipresearch, telegram) currently surface a single schema field each.
+# telegram) currently surface a single schema field each.
 _CATEGORY_MERGE: Dict[str, str] = {
     "privacy": "security",
     "context": "agent",
@@ -220,7 +220,6 @@ _CATEGORY_MERGE: Dict[str, str] = {
     # agent tab rather than spawning a one-field orphan category.
     "runtime": "agent",
     "session": "general",
-    "spaceshipresearch": "agent",
     "connections": "agent",
     "auth": "security",
     # `fallback.min_switch_reset_seconds` is the only schema-surfaced fallback field.
@@ -620,21 +619,6 @@ def _resolve_assignment_credentials(model_cfg: dict, provider: str, provider_ent
         model_cfg["api_key"] = raw_key if raw_key.startswith("${") and raw_key.endswith("}") else provider_entry["api_key"]
 
 
-def _apply_spaceshipresearch_gateway_defaults(cfg: dict) -> list:
-    """Mirror the CLI's post-model-selection behaviour when switching main to SpaceshipResearch: route
-    *unconfigured* tools through the SpaceshipResearch Tool Gateway. Purely additive — tools with a direct
-    key or explicit backend are skipped. Failures never block saving the assignment."""
-    try:
-        from scout_cli.spaceshipresearch_subscription import apply_spaceshipresearch_managed_defaults
-        from scout_cli.tools_config import _get_platform_tools
-
-        enabled = _get_platform_tools(cfg, "cli", include_default_mcp_servers=False)
-        return sorted(apply_spaceshipresearch_managed_defaults(cfg, enabled_toolsets=enabled, force_fresh=True))
-    except Exception:
-        _log.debug("apply_spaceshipresearch_managed_defaults skipped", exc_info=True)
-        return []
-
-
 def _register_custom_endpoint(base_url: str, api_key: str, model: str) -> None:
     """Register a named ``custom_providers`` entry for a custom/local endpoint (mirrors the
     ``scout model`` custom flow) so the picker gets a proper ready row instead of a "needs
@@ -698,7 +682,6 @@ def _prepare_main_assignment(cfg: dict, provider: str, model: str, base_url: str
 def _apply_main_assignment_sync(cfg: dict, provider: str, model: str, base_url: str, api_key: str,
                                 prepared: "Optional[tuple[str, ModelSwitchResult]]" = None) -> dict:
     from scout_cli.config import save_config
-    from scout_cli.free_tier_bootstrap import reconcile_record
     base_url, result = prepared or _prepare_main_assignment(cfg, provider, model, base_url, api_key)
     provider, model = result.target_provider, result.new_model
     provider_entry = _provider_entry(cfg, provider)
@@ -707,12 +690,9 @@ def _apply_main_assignment_sync(cfg: dict, provider: str, model: str, base_url: 
     cfg["model"] = model_cfg
 
     new_provider = provider.strip().lower()
-    gateway_tools = _apply_spaceshipresearch_gateway_defaults(cfg) if new_provider == "spaceshipresearch" else []
     save_config(cfg)
     if new_provider in {"custom", "local"} and base_url:
         _register_custom_endpoint(base_url, api_key, model)
-    # The serve process's boot record may still say "nothing configured"; the chat gates on it.
-    reconcile_record()
 
     return {
         "ok": True,
@@ -720,7 +700,6 @@ def _apply_main_assignment_sync(cfg: dict, provider: str, model: str, base_url: 
         "provider": provider,
         "model": model,
         "base_url": model_cfg.get("base_url", ""),
-        "gateway_tools": gateway_tools,
         "stale_aux": _stale_aux_pins(cfg, new_provider),
     }
 

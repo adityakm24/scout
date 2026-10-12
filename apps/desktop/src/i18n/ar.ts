@@ -99,28 +99,6 @@ export const ar = defineLocale({
     continue: 'المتابعة في Scout',
     importError: 'تعذر استيراد هذه المحادثة.'
   },
-  sendDiagnostics: {
-    title: 'إرسال التشخيصات إلى SpaceshipResearch',
-    privacyNotice:
-      'سيؤدي هذا إلى رفع حزمة تصحيح إلى التخزين الداخلي لدى SpaceshipResearch (ليست لصيقة عامة). تتضمن معلومات النظام (نظام التشغيل، الإصدارات، المزوّد، وأنواع مفاتيح API المُهيأة — وليس المفاتيح نفسها أبداً) والسجلات الكاملة للوكيل والبوابة وسطح المكتب (حتى 512 كيلوبايت لكل منها، ومن المرجح أن تحتوي على محتوى المحادثات ومخرجات الأدوات ومسارات الملفات). تُحجب الأسرار قبل الرفع. لا يمكن الاطلاع عليها إلا لموظفي SpaceshipResearch ومشرفي Discord المعتمدين، وتُحذف تلقائياً بعد 14 يوماً.',
-    upload: 'رفع',
-    uploading: 'جارٍ الرفع…',
-    cancel: 'إلغاء',
-    close: 'إغلاق',
-    copyLink: 'نسخ الرابط',
-    uploadIdFallback: id => `لم يتم إرجاع رابط عرض — اذكر معرّف الرفع ${id} للدعم`,
-    doneTitle: 'تم إرسال التشخيصات',
-    doneDescription: 'تم رفع الحزمة بشكل خاص. شارك الرابط أدناه في محادثة الدعم لكي يتمكن الفريق من رؤية سجلاتك.',
-    failedTitle: 'فشل الرفع',
-    failedHint:
-      'يمكنك أيضاً تشغيل `scout debug share --spaceshipresearch` من الطرفية، أو `scout debug share --local` لعرض التقرير دون رفعه.',
-    handoffLead: 'تابع النقاش في:',
-    links: {
-      github: 'GitHub Issues',
-      portal: 'دعم بوابة SpaceshipResearch',
-      discord: 'Discord'
-    }
-  },
   common: {
     apply: 'تطبيق',
     back: 'رجوع',
@@ -209,12 +187,6 @@ export const ar = defineLocale({
       retry: 'إعادة المحاولة',
       repairInstall: 'إصلاح التثبيت',
       useLocalGateway: 'استخدام البوابة المحلية',
-      cloudDownTitle: 'عامل SpaceshipResearch Cloud معطّل',
-      cloudDownDescription:
-        'يعيد عامل السحابة المُدار من SpaceshipResearch الذي يتصل به هذا البوابة خطأً من الخادم. لا يمكن إعادة تشغيله من هنا — تحقق من حالته، أو بدّل إلى البوابة المحلية، أو احصل على الدعم.',
-      cloudDownHint: 'تفتح الأزرار أدناه بوابة SpaceshipResearch (حالة المثيل وعناصر التحكم) أو Discord للحصول على الدعم.',
-      cloudDownCheckPortal: 'التحقق من حالة البوابة',
-      cloudDownDiscord: 'الحصول على مساعدة عبر Discord',
       openLogs: 'فتح السجلات',
       repairHint: 'يعيد الإصلاح تشغيل المثبت وقد يستغرق بضع دقائق على جهاز جديد.',
       remoteSignInHint: signInLabel =>
@@ -464,9 +436,7 @@ export const ar = defineLocale({
       vaultCredentials: 'بيانات الاعتماد المحفوظة',
       vaultSources: 'مديرو كلمات المرور',
       appUpdates: 'الإصدار والتحديثات',
-      uninstall: 'إلغاء التثبيت',
-      billingOverview: 'نظرة عامة',
-      billingPlans: 'الخطط'
+      uninstall: 'إلغاء التثبيت'
     },
     closeSettings: 'إغلاق الإعدادات',
     exportConfig: 'تصدير الإعدادات',
@@ -1225,7 +1195,6 @@ export const ar = defineLocale({
       noProviderOptions: 'لا تحتوي مجموعة الأدوات هذه على خيارات مزوّد — فعّلها لتعمل مع إعدادك الحالي.',
       noProviders: 'لا يوجد مزوّدون متاحون لمجموعة الأدوات هذه الآن.',
       ready: 'جاهز',
-      spaceshipResearchIncluded: 'مُضمّن مع اشتراك SpaceshipResearch — سجّل الدخول إلى Scout Portal للتفعيل.',
       noApiKeyRequired: 'لا يلزم مفتاح API.',
       postSetupHint: step =>
         `تحتاج هذه الخلفية إلى تثبيت لمرة واحدة (${step}). يعمل على هذا الجهاز — قد يستغرق بضع دقائق.`,
@@ -2239,8 +2208,6 @@ export const ar = defineLocale({
       '/browser': 'إدارة اتصال المتصفح عبر CDP [connect|disconnect|status] (بوابة محلية فقط)',
       '/palette': 'فتح لوحة الأوامر',
       '/usage': 'عرض استخدام الرموز وحدود الطلبات؛ reset يسترد إعادة ضبط محفوظة لحدود Codex',
-      '/subscription': 'عرض خطة SpaceshipResearch وتغييرها في المتصفح',
-      '/topup': 'عرض رصيد SpaceshipResearch وإدارة الفواتير',
       '/platform': 'إيقاف منصة بوابة متعثرة مؤقتًا أو استئنافها أو عرضها',
       '/version': 'عرض إصدار Scout Agent',
       '/debug': 'رفع تقرير تصحيح يتضمن معلومات النظام والسجلات للحصول على رابط قابل للمشاركة',
@@ -2670,7 +2637,6 @@ export const ar = defineLocale({
     chooseLater: 'سأختار مزوّدا لاحقا',
     recommended: 'موصى به',
     connected: 'متصل',
-    featuredPitch: 'اشتراك واحد، أكثر من 300 نموذج متقدم — الطريقة الموصى بها لتشغيل Scout',
     fireworksPitch: 'نماذج مفتوحة سريعة مع استضافة Fireworks.',
     openRouterPitch: 'مفتاح واحد لمئات النماذج — خيار افتراضي جيد',
     apiKeyOptions: {
@@ -2724,7 +2690,6 @@ export const ar = defineLocale({
     pasteAuthCode: 'ألصق رمز التفويض',
     reopenAuthPage: 'إعادة فتح صفحة التفويض',
     autoBrowser: provider => `فتحنا ${provider} في المتصفح. صرّح لـ Scout هناك وسيتم الاتصال تلقائياً دون نسخ أو لصق.`,
-    reopenSignInPage: 'إعادة فتح صفحة تسجيل الدخول',
     waitingAuthorize: 'بانتظار التفويض...',
     externalPending: provider =>
       `${provider} يسجل الدخول عبر أداة سطر الأوامر الخاصة به. شغّل هذا الأمر في الطرفية، ثم عد واختر "سجلت الدخول":`,
@@ -2733,8 +2698,6 @@ export const ar = defineLocale({
     reopenVerification: 'إعادة فتح صفحة التحقق',
     copy: 'نسخ',
     defaultModel: 'النموذج الافتراضي',
-    freeTier: 'الطبقة المجانية',
-    pro: 'مدفوع',
     free: 'مجاني',
     price: (input, output) => `${input} إدخال / ${output} إخراج لكل مليون رمز`,
     change: 'تغيير',
@@ -2750,10 +2713,7 @@ export const ar = defineLocale({
     addProvider: 'إضافة مزود',
     loadFailed: 'فشل تحميل النماذج',
     noAuthenticatedProviders: 'لا توجد مزودات مصادق عليها',
-    pro: 'Pro',
-    proNeedsSubscription: 'يتطلب اشتراكا',
     free: 'مجاني',
-    freeTier: 'طبقة مجانية',
     priceTitle: 'السعر',
     customModel: 'نموذج مخصص',
     addCustomModelAction: 'إضافة نموذج مخصص…',
@@ -3151,7 +3111,6 @@ export const ar = defineLocale({
       errorOpenLogsFailed: 'تعذّر فتح مجلد السجلات',
       errorOpenDesktopLogs: 'فتح سجلات سطح المكتب',
       errorCopyDiagnostics: 'نسخ تفاصيل الخطأ',
-      errorSendDiagnostics: 'إرسال التشخيصات',
       filesChanged: count => `${count} ملفات تم تغييرها`,
       reviewChanges: 'مراجعة',
       readAloudFailed: 'فشلت القراءة بصوت عال',

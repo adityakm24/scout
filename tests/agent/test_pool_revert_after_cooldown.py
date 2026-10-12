@@ -47,7 +47,6 @@ class _LiveAgent:
     def _swap_credential(self, entry):
         self.api_key = entry.runtime_api_key
         self._credential_pool_entry_id = entry.id
-        return True
 
     def _is_entitlement_failure(self, error_context, status_code):
         return False

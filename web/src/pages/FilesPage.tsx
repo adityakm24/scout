@@ -16,9 +16,9 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Card, CardContent } from "@spaceshipresearch/ui/ui/components/card";
+import { Badge } from "@/ui/components/badge";
+import { Button } from "@/ui/components/button";
+import { Card, CardContent } from "@/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -26,11 +26,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@spaceshipresearch/ui/ui/components/dialog";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
-import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
-import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
+} from "@/ui/components/dialog";
+import { Input } from "@/ui/components/input";
+import { Spinner } from "@/ui/components/spinner";
+import { Toast } from "@/ui/components/toast";
+import { useToast } from "@/ui/hooks/use-toast";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { usePageHeader } from "@/contexts/usePageHeader";
 import { api } from "@/lib/api";

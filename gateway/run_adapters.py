@@ -420,8 +420,6 @@ class GatewayAdapterLifecycleMixin:
         _started = time.monotonic()
         # No create_task kwargs (test doubles mock a narrow signature); Context().run isolates instead.
         task = Context().run(lambda: asyncio.create_task(coro_factory()))
-        # PERMANENT watcher: the scale-to-zero idle check ignores it (else busy forever).
-        task._scout_supervised_watcher = True  # type: ignore[attr-defined]
         self._retain_background_task(task)
         if on_spawn is not None:
             # Record the live handle NOW so external trackers don't point at a dead prior task.

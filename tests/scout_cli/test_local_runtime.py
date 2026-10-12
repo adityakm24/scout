@@ -681,8 +681,8 @@ def test_switch_model_explicit_llamacpp_provider(tmp_path, monkeypatch, stub_ser
 
     result = switch_model(
         "stub-model-a",
-        current_provider="spaceshipresearch",
-        current_model="Scout-4.5",
+        current_provider="fixtureco",
+        current_model="Model-4.5",
         current_base_url="",
         explicit_provider="llamacpp",
     )
@@ -787,8 +787,8 @@ def test_staged_local_model_resolves_without_a_running_server(tmp_path, monkeypa
 
     from scout_cli.model_switch import switch_model
 
-    result = switch_model("Qwen3.8-27B-IQ3_S-mtp", current_provider="spaceshipresearch",
-                          current_model="Scout-4.5", current_base_url="",
+    result = switch_model("Qwen3.8-27B-IQ3_S-mtp", current_provider="fixtureco",
+                          current_model="Model-4.5", current_base_url="",
                           explicit_provider=LLAMACPP_PROVIDER_ID)
     assert result.success is False  # no server anywhere; the seam reports it
     error = result.error_message or ""
@@ -813,7 +813,7 @@ def test_external_server_on_a_configured_detect_port_is_used(tmp_path, monkeypat
 
     from scout_cli.model_switch import switch_model
 
-    result = switch_model("ext-model", current_provider="spaceshipresearch", current_model="Scout-4.5",
+    result = switch_model("ext-model", current_provider="fixtureco", current_model="Model-4.5",
                           current_base_url="", explicit_provider="llamacpp")
     assert result.success, result.error_message
     assert result.base_url == f"http://127.0.0.1:{port}/v1"

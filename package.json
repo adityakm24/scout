@@ -27,13 +27,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SpaceshipResearch/Scout-Agent.git"
+    "url": "git+https://github.com/adityakm24/scout.git"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/SpaceshipResearch/Scout-Agent/issues"
+    "url": "https://github.com/adityakm24/scout/issues"
   },
-  "homepage": "https://github.com/SpaceshipResearch/Scout-Agent#readme",
+  "homepage": "https://github.com/adityakm24/scout#readme",
   "devDependencies": {
     "@eslint/js": "9.39.5",
     "eslint-plugin-perfectionist": "5.10.0",

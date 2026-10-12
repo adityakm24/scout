@@ -3,7 +3,7 @@
 import logging
 from typing import Any
 
-from agent.portal_tags import get_affinity_scope, get_conversation_context
+from agent.conversation_scope import get_affinity_scope, get_conversation_context
 from agent.prompt_cache_scope import GROK_AGGREGATOR_MODEL_PREFIXES, is_fork_cache_scope
 from agent.transports.codex import _cache_scope_from_session_id
 from providers import register_provider
@@ -43,10 +43,10 @@ def _sticky_key(session_id: str | None) -> str | None:
     return _cache_scope_from_session_id(get_affinity_scope() or get_conversation_context() or session_id)
 
 
-# OpenAI speed tiers. Scout Portal serves them as distinct slugs (``-fast``/``-flex``); OpenRouter
+# OpenAI speed tiers. The picker carries them as distinct slugs (``-fast``/``-flex``); OpenRouter
 # serves them as ENDPOINTS of the base model (tags ``openai/fast``, ``openai/flex``) and silently
-# routes an unknown suffix to the standard tier at standard price. So the picker carries the SpaceshipResearch
-# slugs for both providers, and here the wire model becomes the base slug with ``provider.only``
+# routes an unknown suffix to the standard tier at standard price. So here the wire model becomes
+# the base slug with ``provider.only``
 # pinned to that tier's endpoints; the base slug is pinned to the standard endpoints so default
 # routing never lands on flex/fast.
 _SPEED_TIER_ENDPOINTS = {"": ("openai", "azure", "azure/us"), "-fast": ("openai/fast",), "-flex": ("openai/flex",)}
@@ -86,7 +86,7 @@ class OpenRouterProfile(ProviderProfile):
                 return cfg
             # A reasoning-mandatory route 400s on a disable ("Reasoning is
             # mandatory for this endpoint and cannot be disabled") — omit
-            # the field and let the model think, same as the SpaceshipResearch profile.
+            # the field and let the model think.
             if disabled:
                 return None if caps.get("mandatory") else cfg
             clamped = clamp_reasoning_effort_to_supported(

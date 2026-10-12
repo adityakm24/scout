@@ -141,7 +141,7 @@ function startLabel(from, to) {
 export const SPEC = {
   windows: {
     install: [
-      // irm https://scout.spaceshipresearch.com/install.ps1 | iex
+      // scripts/install.ps1 from a checkout
       { method: 'installer-script' },
       // The same one-liner with -IncludeDesktop: builds Scout.exe AND
       // registers Start Menu / Desktop shortcuts, so it is a second real

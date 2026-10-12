@@ -903,7 +903,7 @@ class TestConfigSupportFloor:
 
     _V20_FIXTURE = {
         "_config_version": 20,
-        "model": {"default": "anthropic/claude-fable-5", "provider": "spaceshipresearch"},
+        "model": {"default": "anthropic/claude-fable-5", "provider": "fixtureco"},
         "plugins": {"disabled": ["foo"]},
         "skills": {"write_mode": "on"},
         "model_catalog": {"ttl_hours": 24},
@@ -914,7 +914,7 @@ class TestConfigSupportFloor:
         # v31 writes verify_on_stop=False, but False now equals the schema
         # default (opt-in) so the write invariant strips it, and the emptied
         # section goes with it (it survived only as the phantom `agent: {}`).
-        "model": {"default": "anthropic/claude-fable-5", "provider": "spaceshipresearch"},
+        "model": {"default": "anthropic/claude-fable-5", "provider": "fixtureco"},
         "model_catalog": {},
         "plugins": {"disabled": ["foo"], "enabled": []},
     }

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agent.credits_tracker import AgentNotice
+from agent.notices import AgentNotice
 from agent.status_output import StatusOutputMixin
 from gateway.config import Platform
 from gateway.run import GatewayRunner, _load_gateway_config
@@ -82,7 +82,7 @@ def test_warning_opt_out_preserves_other_delivery(tmp_path, monkeypatch, platfor
         ("lifecycle", "Content filter terminated stream; switching to fallback..."),
         ("lifecycle", "🔐 Authentication failed and could not be refreshed — switching to fallback provider..."),
         ("lifecycle", "ℹ️ Estimated cost of these empty attempts: ~$1.25"),
-        ("lifecycle", "⏳ Your SpaceshipResearch account has hit its rate limit; it resets in 1m."),
+        ("lifecycle", "⏳ Your Fixture Co account has hit its rate limit; it resets in 1m."),
         ("lifecycle", "📐 Compression could not reduce the request further — removed retained vision payloads and retrying..."),
     ]
     for kind, text in diagnostics:

@@ -195,7 +195,7 @@ declare global {
       getSecretStorageEncryption: () => Promise<{ on: boolean }>
       setSecretStorageEncryption: (on: boolean) => Promise<{ on: boolean }>
       // v2 multi-connection registry: named agent sources, all persisted
-      // together (local + any number of remote/cloud/ssh instances).
+      // together (local + any number of remote/ssh instances).
       connections: {
         list: () => Promise<DesktopConnectionsRegistry>
         save: (
@@ -209,10 +209,10 @@ declare global {
         setLastUsed?: (id: string) => Promise<{ ok: boolean; registry: DesktopConnectionsRegistry }>
         test: (id: string) => Promise<DesktopConnectionTestResult>
         // Drain/update/restore one Desktop-managed SSH install. External URL
-        // and cloud sources are refused without touching their processes.
+        // sources are refused without touching their processes.
         updateManaged?: (id: string) => Promise<DesktopManagedConnectionUpdateResult>
-        // Fan out `scout update` to every eligible registered connection;
-        // cloud entries are skipped (platform-managed), each row independent.
+        // Fan out `scout update` to every registered connection; each row is
+        // independent.
         // excludeIds skips connections the caller updates through another
         // path (the everything-update flow's active backend + local client).
         updateAll?: (options?: {
@@ -234,15 +234,6 @@ declare global {
         options?: DesktopOauthLoginOptions
       ) => Promise<DesktopOauthLoginResult>
       oauthLogoutConnectionConfig: (remoteUrl: string) => Promise<DesktopOauthLogoutResult>
-      // Scout Cloud: one portal login powers discovery + silent per-agent
-      // sign-in (cloud-auto-discovery Phase 3).
-      cloud: {
-        status: () => Promise<DesktopCloudStatus>
-        login: () => Promise<DesktopCloudStatus & { ok: boolean }>
-        logout: () => Promise<DesktopCloudStatus & { ok: boolean }>
-        discover: (org?: string) => Promise<DesktopCloudDiscoverResult>
-        agentSignIn: (dashboardUrl: string) => Promise<DesktopCloudAgentSignInResult>
-      }
       profile: {
         getDefault: () => Promise<DesktopProfileRoute | null>
         setDefault: (route: DesktopProfileRoute) => Promise<DesktopProfileRoute>
@@ -900,14 +891,12 @@ export interface ScoutConnection {
   darwinMajor?: number
   isFullscreen: boolean
   isMaximized?: boolean
-  // The live, RESOLVED connection mode. Only ever 'local' or 'remote' — a
-  // 'cloud' saved-config entry resolves to a 'remote' connection under the hood
-  // (cloud-auto-discovery Q3/Q6), so this never carries 'cloud'.
+  // The live, RESOLVED connection mode.
   mode?: 'local' | 'remote'
   authMode?: 'oauth' | 'token'
   remoteHost?: string
   remoteIdentity?: string
-  remoteKind?: 'cloud' | 'ssh' | 'url'
+  remoteKind?: 'ssh' | 'url'
   remoteScoutVersion?: string
   nativeOverlayWidth: number
   source?: 'env' | 'local' | 'settings'
@@ -929,7 +918,7 @@ export interface ScoutConnection {
   // A pooled backend also carries `profile`, so presence alone cannot identify
   // the shared-primary routing case.
   sharedPrimary?: boolean
-  // True when `profile` is a request scope on a SHARED registry remote/cloud
+  // True when `profile` is a request scope on a SHARED registry remote
   // backend (one host, many profiles) — the registry analogue of sharedPrimary.
   sharedRemote?: boolean
   windowButtonPosition: { x: number; y: number } | null
@@ -970,12 +959,8 @@ export interface DesktopActiveProfile {
 
 export interface DesktopConnectionConfig {
   envOverride: boolean
-  // The saved connection mode. 'cloud' is a Scout Cloud connection: it carries
-  // a remote-shaped block (remoteUrl = the selected agent's dashboardUrl,
-  // remoteAuthMode 'oauth') but is remembered as cloud so settings reopens into
-  // the cloud picker. Resolution treats cloud exactly as remote
-  // (cloud-auto-discovery Q3/Q6).
-  mode: 'local' | 'remote' | 'cloud' | 'ssh'
+  // The saved connection mode.
+  mode: 'local' | 'remote' | 'ssh'
   // The profile this config describes, or null for the global/default
   // connection. Per-profile entries let a profile point at its own backend.
   profile: null | string
@@ -993,10 +978,6 @@ export interface DesktopConnectionConfig {
   // encryption is opted out — plain text is the chosen mode there.
   remoteTokenPlainText: boolean
   remoteUrl: string
-  // For a 'cloud' connection: the persisted Scout Cloud org (slug or id) the
-  // connected instance was discovered under, so Settings → Gateway can reopen
-  // into that org. Empty string for remote/local.
-  cloudOrg: string
   sshHost: string
   sshUser: string
   sshPort: number | null
@@ -1006,7 +987,7 @@ export interface DesktopConnectionConfig {
 }
 
 export interface DesktopConnectionConfigInput {
-  mode: 'local' | 'remote' | 'cloud' | 'ssh'
+  mode: 'local' | 'remote' | 'ssh'
   // When set, the save/apply/test targets this profile's per-profile remote
   // override instead of the global connection.
   profile?: null | string
@@ -1017,17 +998,13 @@ export interface DesktopConnectionConfigInput {
   // user opt-in from the renderer.
   allowPlainTextToken?: boolean
   remoteUrl?: string
-  // For a 'cloud' connection: the selected Scout Cloud org (slug or id) to
-  // persist so Settings can reopen into it. Ignored for remote/local modes.
-  cloudOrg?: string
-  cloudName?: string
   sshHost?: string
   sshUser?: string
   sshPort?: number | null
   sshKeyPath?: string
   sshRemoteScoutPath?: string
   sshRemoteProfile?: string
-  // For a URL-remote/cloud per-profile override: the profile name on the remote
+  // For a URL-remote per-profile override: the profile name on the remote
   // host when it differs from this Desktop routing label.
   remoteProfile?: string
 }
@@ -1056,7 +1033,7 @@ export interface DesktopConnectionTestResult {
 
 // ── v2 multi-connection registry (named agent sources) ─────────────────────
 
-export type DesktopConnectionKind = 'cloud' | 'local' | 'remote' | 'ssh'
+export type DesktopConnectionKind = 'local' | 'remote' | 'ssh'
 
 // A registered agent source as the renderer sees it: token bytes never cross
 // the IPC boundary (preview + set flag instead, like DesktopConnectionConfig).
@@ -1067,7 +1044,6 @@ export interface DesktopRegistryConnection {
   label: string
   url?: string
   authMode?: 'oauth' | 'token'
-  org?: string
   host?: string
   user?: string
   port?: number
@@ -1113,12 +1089,11 @@ export interface DesktopRegistryConnectionInput {
   // Plaintext token to store (encrypted at rest); omit to keep the saved one.
   token?: string
   allowPlainTextToken?: boolean
-  // Extra gateway headers for remote/cloud entries (access proxies such as
+  // Extra gateway headers for remote entries (access proxies such as
   // Cloudflare Access). The map is authoritative when present: name → new
   // plaintext value (encrypted at rest), or null to keep the stored secret
   // for that name. Omit the field entirely to keep the saved set unchanged.
   headers?: Record<string, null | string>
-  org?: string
   host?: string
   user?: string
   port?: null | number
@@ -1245,8 +1220,8 @@ export interface DesktopOauthLoginOptions {
   /**
    * Draft entry kind — the kind the save will persist. Together with
    * `authMode` it gates the pre-save cookie jar: only a cookie-auth remote
-   * draft gets its own jar; cloud and token drafts sign in on the legacy
-   * shared jar, which is what they read after the save.
+   * draft gets its own jar; token drafts sign in on the legacy shared jar,
+   * which is what they read after the save.
    */
   kind?: DesktopConnectionKind
   /** Draft auth mode ('oauth' | 'token') the save will persist. */
@@ -1270,59 +1245,9 @@ export interface DesktopOauthLogoutResult {
   connected: boolean
 }
 
-// --- Scout Cloud (cloud-auto-discovery Phase 3) ---
-
-export interface DesktopCloudStatus {
-  // The portal base URL the desktop talks to (default or env-overridden).
-  portalBaseUrl: string
-  // Whether the OAuth partition holds portal access or renewal credentials
-  // (Privy or NAS). Discovery validates them with the portal.
-  signedIn: boolean
-}
-
-// A discovered Scout Cloud agent — the trimmed DTO from NAS GET /api/agents.
-export interface DesktopCloudAgent {
-  id: string
-  name: string
-  status: string
-  // null until the agent has a provisioned dashboard (show "provisioning…").
-  dashboardUrl: string | null
-  // "active" | "degraded" | "down" | "unknown".
-  dashboardGatewayState: string
-}
-
-// An org the signed-in user belongs to — for the org picker shown when a
-// multi-org user's discovery call needs disambiguation (NAS 409).
-export interface DesktopCloudOrg {
-  id: string
-  slug: string | null
-  name: string
-  isPersonal: boolean
-  // "OWNER" | "MEMBER".
-  role: string
-}
-
-// Discovery result: either the agent list, OR a request to pick an org first
-// (multi-org user, no org chosen yet). The renderer shows a picker on the
-// latter and re-calls discover(org). On the agents branch, `org` echoes the
-// authoritatively-resolved org the list was scoped to (from NAS), so the
-// desktop persists it without relying on transient picker state.
-export type DesktopCloudDiscoverResult =
-  | { agents: DesktopCloudAgent[]; org?: DesktopCloudOrg | null; needsOrgSelection?: false }
-  | { needsOrgSelection: true; orgs: DesktopCloudOrg[] }
-
-export interface DesktopCloudAgentSignInResult {
-  // The agent gateway base URL the silent sign-in targeted.
-  baseUrl: string
-  // Whether the agent's gateway session cookie landed (silent cascade done).
-  connected: boolean
-}
-
 export interface DesktopBootProgress {
   error: string | null
   fakeMode: boolean
-  /** True when the boot failure is a SpaceshipResearch Cloud agent that is down (HTTP 502/503/504). */
-  isCloudBackendDown?: boolean
   message: string
   phase: string
   progress: number

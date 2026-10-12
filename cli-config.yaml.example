@@ -77,8 +77,6 @@ model:
   # Inference provider selection:
   #   "auto"         - Auto-detect from credentials (default)
   #   "openrouter"   - OpenRouter (requires: OPENROUTER_API_KEY or OPENAI_API_KEY)
-  #   "spaceshipresearch"         - Scout Portal OAuth (requires: scout auth add spaceshipresearch)
-  #   "spaceshipresearch-api"     - Scout Portal API key (requires: SPACESHIPRESEARCH_API_KEY)
   #   "anthropic"    - Direct Anthropic API (requires: ANTHROPIC_API_KEY)
   #   "openai-codex" - OpenAI Codex (requires: scout auth)
   #   "copilot"      - GitHub Copilot / GitHub Models (requires: GITHUB_TOKEN)
@@ -459,7 +457,7 @@ terminal:
 #   cwd: "/workspace"  # Path INSIDE the container (default: /)
 #   timeout: 180
 #   lifetime_seconds: 300
-#   docker_image: "spaceshipresearch/scout-sandbox:desktop"
+#   docker_image: "ghcr.io/adityakm24/scout-sandbox:desktop"
 #   docker_mount_cwd_to_workspace: true   # Explicit opt-in: mount your launch cwd into /workspace
 #   # Optional: run the container as your host user's uid:gid so files written
 #   # into bind-mounted dirs are owned by you, not root. Drops SETUID/SETGID
@@ -489,7 +487,7 @@ terminal:
 #   cwd: "/workspace"  # Path INSIDE the container (default: /root)
 #   timeout: 180
 #   lifetime_seconds: 300
-#   singularity_image: "docker://spaceshipresearch/scout-sandbox:desktop"
+#   singularity_image: "docker://ghcr.io/adityakm24/scout-sandbox:desktop"
 
 # -----------------------------------------------------------------------------
 # OPTION 5: Modal cloud execution
@@ -501,7 +499,7 @@ terminal:
 #   cwd: "/workspace"  # Path INSIDE the sandbox (default: /root)
 #   timeout: 180
 #   lifetime_seconds: 300
-#   modal_image: "spaceshipresearch/scout-sandbox:desktop"
+#   modal_image: "ghcr.io/adityakm24/scout-sandbox:desktop"
 
 # -----------------------------------------------------------------------------
 # OPTION 6: Daytona cloud execution
@@ -514,7 +512,7 @@ terminal:
 #   cwd: "~"
 #   timeout: 180
 #   lifetime_seconds: 300
-#   daytona_image: "spaceshipresearch/scout-sandbox:desktop"
+#   daytona_image: "ghcr.io/adityakm24/scout-sandbox:desktop"
 #   container_disk: 10240          # Daytona max is 10GB per sandbox
 
 #
@@ -862,11 +860,11 @@ prompt_caching:
 # browser screenshot analysis, web page summarization, TTS audio-tag insertion,
 # and context compression.
 #
-# By default these use Gemini Flash via OpenRouter or Scout Portal and are
+# By default these use Gemini Flash via OpenRouter and are
 # auto-detected from your credentials.  You do NOT need to change anything
 # here for normal usage.
 #
-# WARNING: Overriding these with providers other than OpenRouter or Scout Portal
+# WARNING: Overriding these with providers other than OpenRouter
 # is EXPERIMENTAL and may not work.  Not all models/providers support vision,
 # produce usable summaries, or accept the same API format.  Change at your own
 # risk — if things break, reset to "auto" / empty values.
@@ -876,9 +874,8 @@ prompt_caching:
 # local endpoint for compression (just needs text).
 #
 # Provider options:
-#   "auto"       - Best available: OpenRouter → Scout Portal → main endpoint (default)
+#   "auto"       - Best available: OpenRouter → main endpoint (default)
 #   "openrouter" - Force OpenRouter (requires OPENROUTER_API_KEY)
-#   "spaceshipresearch"       - Force Scout Portal (requires: scout auth add spaceshipresearch)
 #   "gemini"      - Force Google AI Studio direct (requires: GOOGLE_API_KEY or GEMINI_API_KEY)
 #   "ollama-cloud" - Ollama Cloud (requires: OLLAMA_API_KEY)
 #   "codex"       - Force Codex OAuth (requires: scout model → Codex).
@@ -888,7 +885,7 @@ prompt_caching:
 #                  endpoint.  Also falls back to Codex OAuth and API-key providers.
 #
 # Model: leave empty to use the provider's default.  When empty, OpenRouter
-# uses "google/gemini-3-flash-preview" and SpaceshipResearch uses "gemini-3-flash".
+# uses "google/gemini-3-flash-preview".
 # Other providers pick a sensible default automatically.
 #
 # Native vision embeds (vision_analyze / browser screenshots when the MAIN model
@@ -1295,7 +1292,7 @@ agent:
   # Enable verbose logging
   verbose: false
   
-  # Reasoning effort level (OpenRouter and Scout Portal)
+  # Reasoning effort level (OpenRouter and other reasoning-capable providers)
   # Controls how much "thinking" the model does before responding.
   # Options: "xhigh" (max), "high", "medium", "low", "minimal", "none" (disable)
   # Providers with bespoke thinking tiers (a relay serving fast/thinking): use the
@@ -1805,7 +1802,7 @@ delegation:
   # model: "google/gemini-3-flash-preview"    # Override model for subagents (empty = inherit parent)
   # provider: "openrouter"                    # Override provider for subagents (empty = inherit parent)
   #                                           # Resolves full credentials (base_url, api_key) automatically.
-  #                                           # Supported: openrouter, spaceshipresearch, zai, kimi-coding, minimax
+  #                                           # Supported: openrouter, zai, kimi-coding, minimax
   #                                           # Cost tip: keep the parent on a frontier model and pin
   #                                           # delegation.model to an inexpensive one — children carry the
   #                                           # vast majority of tokens, so this is where spend is cut while
@@ -2141,27 +2138,19 @@ updates:
 # =============================================================================
 # Web Dashboard
 # =============================================================================
-# OAuth gate configuration for `scout dashboard --host <non-loopback>`.
-# The bundled Scout Portal plugin reads these on startup; settings here are
-# the canonical surface. Each can be overridden by an environment variable:
+# Public-URL configuration for `scout dashboard --host <non-loopback>`.
+# Settings here are the canonical surface; each can be overridden by an
+# environment variable:
 #
-#   dashboard.oauth.client_id   <-  SCOUT_DASHBOARD_OAUTH_CLIENT_ID
-#   dashboard.oauth.portal_url  <-  SCOUT_DASHBOARD_PORTAL_URL
 #   dashboard.public_url        <-  SCOUT_DASHBOARD_PUBLIC_URL
 #
-# Env wins when set to a non-empty value. This is what Fly.io's platform-
-# secret injection uses to push per-deploy client_ids without needing to
-# bake a config.yaml into the image. Empty env values are treated as unset
-# so a provisioned-but-not-populated secret can't shadow a valid entry here.
+# Env wins when set to a non-empty value. Empty env values are treated as
+# unset so a provisioned-but-not-populated secret can't shadow a valid entry.
 #
 # Local dev / on-prem deploys should typically set these via config.yaml
 # (the ~/.scout/.env file is reserved for API keys and secrets).
 #
 # dashboard:
-#   oauth:
-#     client_id: ""    # agent:{instance_id}; Portal provisions this at deploy
-#     portal_url: ""   # blank → default https://portal.spaceshipresearch.com
-#
 #   # Force the absolute base URL the OAuth callback (and any other public
 #   # URL the dashboard hands to external systems) is built from. Set this
 #   # for deploys behind reverse proxies that don't reliably forward
@@ -2192,8 +2181,8 @@ updates:
 #
 # -----------------------------------------------------------------------------
 # Self-hosted OIDC dashboard auth (generic OpenID Connect — Authentik,
-# Keycloak, Zitadel, Authelia, Auth0, Okta, Google, …). Use this INSTEAD of the
-# spaceshipresearch block above when gating the dashboard with your own identity provider.
+# Keycloak, Zitadel, Authelia, Auth0, Okta, Google, …). Use this when gating the
+# dashboard with your own identity provider.
 # Each setting can be overridden by an environment variable:
 #
 #   dashboard.oauth.self_hosted.issuer         <-  SCOUT_DASHBOARD_OIDC_ISSUER

@@ -32,7 +32,6 @@ interface RemoteSetupFieldsProps {
   disabled?: boolean
   /** Pins only the URL input: an env-owned remote (SCOUT_DESKTOP_REMOTE_URL) still signs in here. */
   urlDisabled?: boolean
-  urlOnly?: boolean
   onUrlChange?: () => void
 }
 
@@ -40,7 +39,6 @@ export function RemoteSetupFields({
   setup,
   disabled = false,
   urlDisabled = false,
-  urlOnly = false,
   onUrlChange
 }: RemoteSetupFieldsProps): ReactElement {
   const { t } = useI18n()
@@ -90,7 +88,7 @@ export function RemoteSetupFields({
           {copy.probeError}
         </div>
       ) : null}
-      {registry && !urlOnly ? (
+      {registry ? (
         <Field stacked={false} title={g.authTitle}>
           <div className="flex gap-2">
             {(['token', 'oauth'] as const).map(mode => (
@@ -107,7 +105,7 @@ export function RemoteSetupFields({
           </div>
         </Field>
       ) : null}
-      {!urlOnly && setup.authResolved && credentials.authMode === 'oauth' ? (
+      {setup.authResolved && credentials.authMode === 'oauth' ? (
         <Field description={authDescription} stacked={firstRun} title={copy.authTitle}>
           {credentials.oauthConnected ? (
             <div className="flex items-center gap-2">
@@ -133,7 +131,7 @@ export function RemoteSetupFields({
           )}
         </Field>
       ) : null}
-      {!urlOnly && setup.authResolved && credentials.authMode === 'token' ? (
+      {setup.authResolved && credentials.authMode === 'token' ? (
         <Field description={copy.tokenDesc} stacked={firstRun} title={copy.tokenTitle}>
           <Input
             aria-label={copy.tokenTitle}

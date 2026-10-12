@@ -13,8 +13,13 @@ vi.mock('@/scout', async importOriginal => ({
   ...(await importOriginal<typeof ScoutApi>()),
   getGlobalModelOptions: async () => ({
     providers: [
-      { free_tier: false, models: ['gpt-5.6-terra'], name: 'OpenAI OAuth (ChatGPT)', slug: 'openai' },
-      { models: ['deepseek/deepseek-v4-flash-0731'], name: 'Scout Portal', slug: 'spaceshipresearch' }
+      {
+        models: ['gpt-5.6-terra'],
+        name: 'OpenAI OAuth (ChatGPT)',
+        pricing: { 'gpt-5.6-terra': { cache: null, free: false, input: '$1.00', output: '$4.00' } },
+        slug: 'openai'
+      },
+      { models: ['deepseek/deepseek-v4-flash-0731'], name: 'DeepSeek', slug: 'deepseek' }
     ]
   })
 }))
@@ -30,8 +35,8 @@ vi.mock('@/components/model-picker', () => ({
     open: boolean
   }) =>
     open ? (
-      <button onClick={() => onSelect({ model: 'deepseek/deepseek-v4-flash-0731', provider: 'spaceshipresearch' })} type="button">
-        pick-spaceshipresearch-model
+      <button onClick={() => onSelect({ model: 'deepseek/deepseek-v4-flash-0731', provider: 'deepseek' })} type="button">
+        pick-deepseek-model
       </button>
     ) : null
 }))
@@ -55,7 +60,6 @@ function confirmingModelState(): DesktopOnboardingState {
     firstRunSkipped: false,
     manual: false,
     localEndpoint: false,
-    freeTierReady: false
   }
 }
 
@@ -89,7 +93,7 @@ describe('ConfirmingModelPanel model pick', () => {
           calls.push({ body, path })
 
           if (path === '/api/model/set') {
-            return { ok: true, provider: 'spaceshipresearch', model: 'deepseek/deepseek-v4-flash-0731' }
+            return { ok: true, provider: 'deepseek', model: 'deepseek/deepseek-v4-flash-0731' }
           }
 
           throw new Error(`unexpected api path: ${path}`)
@@ -99,20 +103,20 @@ describe('ConfirmingModelPanel model pick', () => {
 
     render(<Harness />)
 
-    // The Pro badge only renders once the catalog query has resolved — the
+    // The price line only renders once the catalog query has resolved — the
     // relabel below reads the picked provider's name from that catalog.
-    await screen.findByText('Pro')
+    await screen.findByText('$1.00 in / $4.00 out per Mtok')
 
-    // The user signed in with OpenAI OAuth; the picker offers a deepseek
-    // model that only Scout Portal serves.
+    // The user signed in with OpenAI OAuth; the picker offers a model that
+    // only DeepSeek serves.
     fireEvent.click(screen.getByRole('button', { name: 'Change' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'pick-spaceshipresearch-model' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'pick-deepseek-model' }))
 
     await waitFor(() => expect(calls.some(c => c.path === '/api/model/set')).toBe(true))
 
     expect(calls.find(c => c.path === '/api/model/set')?.body).toMatchObject({
       scope: 'main',
-      provider: 'spaceshipresearch',
+      provider: 'deepseek',
       model: 'deepseek/deepseek-v4-flash-0731'
     })
 
@@ -120,8 +124,8 @@ describe('ConfirmingModelPanel model pick', () => {
     expect(flow.status).toBe('confirming_model')
 
     if (flow.status === 'confirming_model') {
-      expect(flow.providerSlug).toBe('spaceshipresearch')
-      expect(flow.label).toBe('Scout Portal')
+      expect(flow.providerSlug).toBe('deepseek')
+      expect(flow.label).toBe('DeepSeek')
     }
   })
 })

@@ -9,22 +9,22 @@ const slots = (entries: Array<[string, string, string, string?]>): StaleAuxAssig
 
 describe('staleAuxFingerprint', () => {
   it('binds the acknowledgement to the main provider and the pinned slots', () => {
-    const a = staleAuxFingerprint('spaceshipresearch', slots([['vision', 'alibaba', 'qwen3.6-flash']]))
-    const same = staleAuxFingerprint('spaceshipresearch', slots([['vision', 'alibaba', 'qwen3.6-flash']]))
+    const a = staleAuxFingerprint('fixtureco', slots([['vision', 'alibaba', 'qwen3.6-flash']]))
+    const same = staleAuxFingerprint('fixtureco', slots([['vision', 'alibaba', 'qwen3.6-flash']]))
 
     expect(a).toBe(same)
     expect(a).not.toBe(staleAuxFingerprint('openrouter', slots([['vision', 'alibaba', 'qwen3.6-flash']])))
-    expect(a).not.toBe(staleAuxFingerprint('spaceshipresearch', slots([['vision', 'alibaba', 'qwen3.6-flash-v2']])))
-    expect(a).not.toBe(staleAuxFingerprint('spaceshipresearch', slots([['triage_specifier', 'alibaba', 'qwen3.6-flash']])))
+    expect(a).not.toBe(staleAuxFingerprint('fixtureco', slots([['vision', 'alibaba', 'qwen3.6-flash-v2']])))
+    expect(a).not.toBe(staleAuxFingerprint('fixtureco', slots([['triage_specifier', 'alibaba', 'qwen3.6-flash']])))
   })
 
   it('is order-insensitive across slots', () => {
-    const first = staleAuxFingerprint('spaceshipresearch', [
+    const first = staleAuxFingerprint('fixtureco', [
       { task: 'vision', provider: 'alibaba', model: 'm1' },
       { task: 'curator', provider: 'kimi', model: 'm2' }
     ])
 
-    const second = staleAuxFingerprint('spaceshipresearch', [
+    const second = staleAuxFingerprint('fixtureco', [
       { task: 'curator', provider: 'kimi', model: 'm2' },
       { task: 'vision', provider: 'alibaba', model: 'm1' }
     ])
@@ -34,27 +34,27 @@ describe('staleAuxFingerprint', () => {
 
   it('includes the slot endpoint, so a repointed base_url re-arms the banner', () => {
     const pinned = staleAuxFingerprint(
-      'spaceshipresearch',
+      'fixtureco',
       slots([['vision', 'openai', 'gpt-4o-mini', 'https://api.example.com/v1']])
     )
 
     // Same task/provider/model on a different endpoint: different billing
     // surface, so a stored acknowledgement must not cover it.
     expect(pinned).not.toBe(
-      staleAuxFingerprint('spaceshipresearch', slots([['vision', 'openai', 'gpt-4o-mini', 'https://proxy.example.com/v1']]))
+      staleAuxFingerprint('fixtureco', slots([['vision', 'openai', 'gpt-4o-mini', 'https://proxy.example.com/v1']]))
     )
     // Trailing slashes are the same endpoint, not a re-arm.
     expect(pinned).toBe(
-      staleAuxFingerprint('spaceshipresearch', slots([['vision', 'openai', 'gpt-4o-mini', 'https://api.example.com/v1/']]))
+      staleAuxFingerprint('fixtureco', slots([['vision', 'openai', 'gpt-4o-mini', 'https://api.example.com/v1/']]))
     )
     // Absent and empty endpoints agree (switch echoes carry no base_url).
-    expect(staleAuxFingerprint('spaceshipresearch', slots([['vision', 'openai', 'gpt-4o-mini']]))).toBe(
-      staleAuxFingerprint('spaceshipresearch', slots([['vision', 'openai', 'gpt-4o-mini', '']]))
+    expect(staleAuxFingerprint('fixtureco', slots([['vision', 'openai', 'gpt-4o-mini']]))).toBe(
+      staleAuxFingerprint('fixtureco', slots([['vision', 'openai', 'gpt-4o-mini', '']]))
     )
   })
 
   it('normalizes the main provider casing and surrounding whitespace', () => {
-    expect(staleAuxFingerprint('  SpaceshipResearch ', slots([]))).toBe(staleAuxFingerprint('spaceshipresearch', slots([])))
+    expect(staleAuxFingerprint('  FixtureCo ', slots([]))).toBe(staleAuxFingerprint('fixtureco', slots([])))
   })
 })
 
@@ -64,16 +64,16 @@ describe('stale-aux dismissal persistence', () => {
   })
 
   it('persists per profile and re-arms when the pin configuration changes', () => {
-    dismissStaleAux('research', 'spaceshipresearch', slots([['vision', 'alibaba', 'qwen3.6-flash']]))
+    dismissStaleAux('research', 'fixtureco', slots([['vision', 'alibaba', 'qwen3.6-flash']]))
 
     expect(readStaleAuxDismissal('research')).toBe(
-      staleAuxFingerprint('spaceshipresearch', slots([['vision', 'alibaba', 'qwen3.6-flash']]))
+      staleAuxFingerprint('fixtureco', slots([['vision', 'alibaba', 'qwen3.6-flash']]))
     )
     // A different profile never sees the acknowledgement.
     expect(readStaleAuxDismissal('default')).toBeNull()
     // A different pin configuration is not the acknowledged one.
     expect(readStaleAuxDismissal('research')).not.toBe(
-      staleAuxFingerprint('spaceshipresearch', slots([['vision', 'alibaba', 'qwen3.6-flash-2']]))
+      staleAuxFingerprint('fixtureco', slots([['vision', 'alibaba', 'qwen3.6-flash-2']]))
     )
   })
 })

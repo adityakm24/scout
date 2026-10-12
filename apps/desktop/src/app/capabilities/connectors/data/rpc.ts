@@ -1,11 +1,4 @@
-import type {
-  AccountOwner,
-  ConnectionAnswer,
-  ConnectorChange,
-  ConnectorErrorReason,
-  RpcMethods,
-  ToolsChange
-} from '@scout/shared'
+import type { ConnectorErrorReason, RpcMethods } from '@scout/shared'
 import { JsonRpcGatewayError } from '@scout/shared'
 
 import type { ProfileScope } from '@/scout'
@@ -61,8 +54,6 @@ export function isConnectorReason(cause: unknown, ...reasons: readonly Connector
   return reason !== undefined && reasons.includes(reason)
 }
 
-const ACCOUNT_OWNER: AccountOwner = { type: 'account' }
-
 const CONNECTOR_TIMEOUT_MS = 45_000
 
 interface GatewayRoute {
@@ -110,39 +101,6 @@ async function call<M extends keyof RpcMethods>(
     throw asConnectorError(error)
   }
 }
-
-export const listConnectors = (scope: ProfileScope) => call(scope, 'connectors.list', { owner: ACCOUNT_OWNER })
-
-export const connectorCatalog = (scope: ProfileScope) => call(scope, 'connectors.catalog', {})
-
-export const connectorAccounts = (scope: ProfileScope, connector?: string) =>
-  call(scope, 'connectors.accounts', connector === undefined ? {} : { connector })
-
-export const connectorPolicy = (scope: ProfileScope) => call(scope, 'connectors.policy.get', {})
-
-export const connectorTools = (scope: ProfileScope, slug: string, refresh = false) =>
-  call(scope, 'connectors.tools', { refresh, slug })
-
-export const accountOperationStatus = (scope: ProfileScope, opId: string) =>
-  call(scope, 'connectors.operation.status', { op_id: opId, owner: ACCOUNT_OWNER })
-
-export const setConnectorPolicy = (
-  scope: ProfileScope,
-  change: ConnectorChange | ToolsChange,
-  expectedRevision: string
-) => call(scope, 'connectors.policy.set', { change, expected_revision: expectedRevision }, 'foreground')
-
-export const removeConnectorAccount = (scope: ProfileScope, connectionId: string) =>
-  call(scope, 'connectors.accounts.remove', { connection_id: connectionId }, 'foreground')
-
-export const connectAccountConnectors = (scope: ProfileScope, connectors: readonly string[], reconnect = false) =>
-  call(scope, 'connectors.connect', { connectors: [...connectors], owner: ACCOUNT_OWNER, reconnect }, 'foreground')
-
-export const wakeAccountOperation = (scope: ProfileScope, opId: string) =>
-  call(scope, 'connectors.operation.wake', { op_id: opId, owner: ACCOUNT_OWNER }, 'foreground')
-
-export const respondToAccountOperation = (scope: ProfileScope, opId: string, result: ConnectionAnswer) =>
-  call(scope, 'connection.respond', { op_id: opId, owner: ACCOUNT_OWNER, result }, 'foreground')
 
 export const setMcpBearerToken = (scope: ProfileScope, name: string, value: string) =>
   call(scope, 'mcp.servers.set_api_key', { name, value }, 'foreground')

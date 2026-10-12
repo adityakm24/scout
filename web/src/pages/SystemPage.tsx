@@ -9,7 +9,6 @@ import {
   Cpu,
   Database,
   Download,
-  Globe,
   HardDrive,
   KeyRound,
   Link2,
@@ -27,19 +26,19 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
-import { H2 } from "@spaceshipresearch/ui/ui/components/typography/h2";
-import { Card, CardContent } from "@spaceshipresearch/ui/ui/components/card";
-import { Checkbox } from "@spaceshipresearch/ui/ui/components/checkbox";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
-import { Select, SelectOption } from "@spaceshipresearch/ui/ui/components/select";
-import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
-import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
-import { useConfirmDelete } from "@spaceshipresearch/ui/hooks/use-confirm-delete";
-import { ConfirmDialog } from "@spaceshipresearch/ui/ui/components/confirm-dialog";
+import { Badge } from "@/ui/components/badge";
+import { Button } from "@/ui/components/button";
+import { Spinner } from "@/ui/components/spinner";
+import { H2 } from "@/ui/components/typography";
+import { Card, CardContent } from "@/ui/components/card";
+import { Checkbox } from "@/ui/components/checkbox";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
+import { Select, SelectOption } from "@/ui/components/select";
+import { Toast } from "@/ui/components/toast";
+import { useToast } from "@/ui/hooks/use-toast";
+import { useConfirmDelete } from "@/ui/hooks/use-confirm-delete";
+import { ConfirmDialog } from "@/ui/components/confirm-dialog";
 import { useModalBehavior } from "@/hooks/useModalBehavior";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { ScoutConsoleModal } from "@/components/ScoutConsoleModal";
@@ -66,7 +65,6 @@ import type {
   SystemStats,
   UpdateCheckResponse,
   CuratorStatus,
-  PortalStatus,
   DebugShareResponse,
   GatewayMigratePlan,
 } from "@/lib/api";
@@ -213,7 +211,6 @@ export default function SystemPage() {
   );
   const [hooks, setHooks] = useState<HooksResponse | null>(null);
   const [curator, setCurator] = useState<CuratorStatus | null>(null);
-  const [portal, setPortal] = useState<PortalStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [activeAction, setActiveAction] = useState<string | null>(null);
@@ -274,13 +271,12 @@ export default function SystemPage() {
       api.getCheckpoints(),
       api.getHooks(),
       api.getCurator(),
-      api.getPortal(),
       // Cached (non-forced) check so the version row shows update status on
       // load without a separate effect / a forced network round-trip.
       api.checkScoutUpdate(false),
       api.getGatewayMigratePlan(),
     ])
-      .then(([s, st, m, p, c, h, cur, prt, upd, mig]) => {
+      .then(([s, st, m, p, c, h, cur, upd, mig]) => {
         if (s.status === "fulfilled") setStatus(s.value);
         if (st.status === "fulfilled") setStats(st.value);
         if (m.status === "fulfilled") setMemory(m.value);
@@ -288,7 +284,6 @@ export default function SystemPage() {
         if (c.status === "fulfilled") setCheckpoints(c.value);
         if (h.status === "fulfilled") setHooks(h.value);
         if (cur.status === "fulfilled") setCurator(cur.value);
-        if (prt.status === "fulfilled") setPortal(prt.value);
         if (upd.status === "fulfilled") setUpdateInfo(upd.value);
         if (mig.status === "fulfilled") setMigratePlan(mig.value);
       })
@@ -805,7 +800,7 @@ export default function SystemPage() {
               <X />
             </Button>
             <header className="p-5 pb-3 border-b border-border">
-              <h2 className="font-mondwest text-display text-base tracking-wider">
+              <h2 className="font-display text-display text-base tracking-wider">
                 New shell hook
               </h2>
             </header>
@@ -1027,53 +1022,6 @@ export default function SystemPage() {
                   </span>
                 )}
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* ── Portal ────────────────────────────────────────────────── */}
-      <section className="flex flex-col gap-3">
-        <H2 variant="sm" className="flex items-center gap-2 text-muted-foreground">
-          <Globe className="h-4 w-4" /> Scout Portal
-        </H2>
-        <Card>
-          <CardContent className="flex flex-col gap-3 py-4">
-            <div className="flex items-center gap-3">
-              <Badge tone={portal?.logged_in ? "success" : "secondary"}>
-                {portal?.logged_in ? "logged in" : "not logged in"}
-              </Badge>
-              {portal?.provider && (
-                <span className="text-sm text-muted-foreground">
-                  inference provider: {portal.provider}
-                </span>
-              )}
-              <a
-                href={portal?.subscription_url || "https://portal.spaceshipresearch.com/manage-subscription"}
-                target="_blank"
-                rel="noreferrer"
-                className="ml-auto text-xs text-primary underline"
-              >
-                Manage subscription
-              </a>
-            </div>
-            {portal?.features && portal.features.length > 0 && (
-              <div className="flex flex-col gap-1 border-t border-border pt-3">
-                <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Tool Gateway routing
-                </span>
-                {portal.features.map((f) => (
-                  <div key={f.label} className="flex items-center justify-between text-sm">
-                    <span>{f.label}</span>
-                    <span className="text-muted-foreground">{f.state}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {!portal?.logged_in && (
-              <p className="text-xs text-muted-foreground">
-                Log in with <span className="font-mono">scout portal</span>.
-              </p>
             )}
           </CardContent>
         </Card>

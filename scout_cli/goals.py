@@ -922,7 +922,7 @@ def judge_goal(
     try:
         raw = _call_goal_judge_llm(call_llm, JUDGE_SYSTEM_PROMPT, prompt, timeout)
     except AuxiliaryClientUnavailable as exc:
-        # No client at all (e.g. a dead SpaceshipResearch refresh token): name the cause so the user is sent to
+        # No client at all (e.g. a dead OAuth refresh token): name the cause so the user is sent to
         # re-authenticate, not to context-length / model debugging (#42177). Still fails open.
         logger.info("goal judge: auxiliary client unavailable (%s) — falling through to continue", exc)
         return "continue", f"goal_judge auxiliary client unavailable: {exc}", False, None, True
@@ -1655,7 +1655,7 @@ def run_kanban_goal_loop(
 
         # The between-turns judge runs outside any agent turn: bind the per-task relay-affinity
         # scope (same shape as the handoff gates) so the relay does not reject the call (#113669).
-        from agent.portal_tags import get_affinity_scope, reset_affinity_scope, set_affinity_scope
+        from agent.conversation_scope import get_affinity_scope, reset_affinity_scope, set_affinity_scope
         affinity_token = None if get_affinity_scope() else set_affinity_scope(f"kanban:{task_id}")
         try:
             verdict, reason, _parse_failed, _wait, _transport_failed = judge_goal(goal_text, last_response)

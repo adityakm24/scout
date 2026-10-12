@@ -28,7 +28,6 @@ class TestDeepSeekAnthropicPreservesThinking:
     """convert_messages_to_anthropic must replay DeepSeek thinking blocks."""
 
 
-
     def test_signed_anthropic_thinking_block_is_stripped(self) -> None:
         """Anthropic-signed blocks (that leaked through) must still be stripped.
 
@@ -103,15 +102,6 @@ class TestDeepSeekAnthropicPreservesThinking:
             for b in m["content"]:
                 if isinstance(b, dict) and b.get("type") in {"thinking", "redacted_thinking"}:
                     assert "cache_control" not in b
-
-
-@pytest.mark.parametrize("url", [None, "https://api.anthropic.com", "https://inference-api.spaceshipresearch.com/anthropic"])
-def test_deepseek_model_name_does_not_override_native_signature_contract(url):
-    from agent.anthropic_message_convert import _manage_thinking_signatures
-    block = {"type": "thinking", "thinking": "signed native reasoning", "signature": "sig"}
-    messages = [{"role": "assistant", "content": [dict(block), {"type": "text", "text": "answer"}]}]
-    _manage_thinking_signatures(messages, url, "deepseek-v4")
-    assert messages[0]["content"][0] == block
 
 
 @pytest.mark.parametrize(("model", "kept"), [

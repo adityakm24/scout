@@ -7,7 +7,7 @@ import json
 # Keep this list aligned with the Desktop bundle banner and channel decoder.
 _ALLOWED = frozenset({
     "SCOUT_HOME", "SCOUT_DATA_DIR_SUFFIX", "SCOUT_DESKTOP_USER_DATA_DIR",
-    "SCOUT_SHARED_AUTH_DIR", "SCOUT_GUEST_ONBOARDING", "SCOUT_SKIP_INTRO",
+    "SCOUT_GUEST_ONBOARDING", "SCOUT_SKIP_INTRO",
 })
 
 

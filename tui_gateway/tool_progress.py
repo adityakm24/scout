@@ -233,15 +233,12 @@ def _tool_labels(name: str, args: dict) -> list[dict] | None:
 
 
 def _connector_tool_lifecycle(name: str, args: dict) -> bool:
-    from tools.connectors import is_connector_name
-
-    if name == "manage_connections" or is_connector_name(name):
+    if name == "manage_connections":
         return True
     if name != "tool_call" or not isinstance(args, dict):
         return False
     calls = args.get("calls") if isinstance(args.get("calls"), list) else [args]
-    return any(isinstance(call, dict) and (call.get("name") == "manage_connections"
-               or is_connector_name(call.get("name"))) for call in calls)
+    return any(isinstance(call, dict) and call.get("name") == "manage_connections" for call in calls)
 
 
 def _connector_lifecycle_is_stale(sid: str, name: str, args: dict) -> bool:

@@ -45,18 +45,18 @@ describe('refreshProfileRemoteOverrides', () => {
         return { mode: 'remote', remoteUrl: 'https://work.example.com' }
       }
 
-      if (profile === 'cloudy') {
-        return { mode: 'cloud', remoteUrl: 'https://cloud.example.com:8443' }
+      if (profile === 'lab') {
+        return { mode: 'remote', remoteUrl: 'https://lab.example.com:8443' }
       }
 
       return { mode: 'local', remoteUrl: '' }
     })
 
-    await refreshProfileRemoteOverrides(['work', 'cloudy', 'home'])
+    await refreshProfileRemoteOverrides(['work', 'lab', 'home'])
 
     expect($profileRemoteOverrides.get()).toEqual({
       work: { host: 'work.example.com', url: 'https://work.example.com' },
-      cloudy: { host: 'cloud.example.com:8443', url: 'https://cloud.example.com:8443' }
+      lab: { host: 'lab.example.com:8443', url: 'https://lab.example.com:8443' }
     })
   })
 

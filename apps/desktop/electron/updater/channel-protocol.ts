@@ -369,7 +369,6 @@ function request(fields: Fields): ChannelRequest {
     'SCOUT_HOME',
     'SCOUT_DATA_DIR_SUFFIX',
     'SCOUT_DESKTOP_USER_DATA_DIR',
-    'SCOUT_SHARED_AUTH_DIR',
     'SCOUT_GUEST_ONBOARDING',
     'SCOUT_SKIP_INTRO'
   ])

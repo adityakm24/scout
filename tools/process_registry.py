@@ -2546,11 +2546,6 @@ class ProcessRegistry(ProcessCheckpointMixin):
             lambda s: s.session_key == session_key
             and (max_active_age is None or (now - s.started_at) < max_active_age))
 
-    def has_any_active(self) -> bool:
-        """Whether ANY background process is running — scale-to-zero must not
-        suspend a gateway with live background work or the process is lost."""
-        return self._any_running(lambda s: True)
-
     def snapshot_running_ids(self, task_id: str) -> frozenset[str]:
         """Running IDs owned by ``task_id`` — a turn-boundary marker: on timeout
         only processes absent from the starting snapshot belong to the abandoned

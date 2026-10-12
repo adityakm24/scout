@@ -33,17 +33,17 @@ describe('custom models', () => {
   })
 
   it('appends each remembered id under its own provider and keeps the input when nothing applies', () => {
-    const providers = [provider('openrouter', ['openai/gpt-5']), provider('spaceshipresearch', ['scout-4'])]
+    const providers = [provider('openrouter', ['openai/gpt-5']), provider('fixtureco', ['model-4'])]
 
     const customs = [
       { model: 'acme/model-x', provider: 'openrouter' },
-      { model: 'scout-4', provider: 'spaceshipresearch' },
+      { model: 'model-4', provider: 'fixtureco' },
       { model: 'ghost', provider: 'missing' }
     ]
 
     const merged = withCustomModels(providers, customs)
 
-    expect(merged.map(row => row.models)).toEqual([['openai/gpt-5', 'acme/model-x'], ['scout-4']])
+    expect(merged.map(row => row.models)).toEqual([['openai/gpt-5', 'acme/model-x'], ['model-4']])
     expect(merged[1]).toBe(providers[1])
     expect(withCustomModels(providers, [])).toBe(providers)
   })

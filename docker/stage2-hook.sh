@@ -448,14 +448,9 @@ seed_one "SOUL.md" "docker/SOUL.md"
 # --- Ensure a gateway api_server key exists (loopback control plane) ---
 # The gateway's aiohttp api_server refuses to start without a strong
 # API_SERVER_KEY (>=16 chars; startup guard in gateway/platforms/api_server.py).
-# Hosted deployments need that listener on loopback so the dashboard — the
-# container's only public HTTP door — can forward Chronos cron fires into the
-# GATEWAY process, where the live platform adapters (relay, E2EE) live. The
-# cron-fire route itself is NAS-JWT-authed, not key-authed; the key gates the
-# rest of the api_server surface. Generate once, persist in .env (mounted
-# volume), never overwrite an operator-provided value. Loopback-only: the
-# default bind host is 127.0.0.1 and the Fly service only exposes the
-# dashboard's port, so this listener is never publicly reachable.
+# Generate once, persist in .env (mounted volume), never overwrite an
+# operator-provided value. Loopback-only: the default bind host is 127.0.0.1,
+# so this listener is not publicly reachable unless the operator rebinds it.
 #
 # CREATE .env when it is missing rather than requiring it to exist (OOF-285):
 # the first-boot seed above depends on /opt/scout/.env.example being present
@@ -477,17 +472,17 @@ if [ -n "${API_SERVER_KEY:-}" ]; then
         # The env key is the effective key on this boot (no .env key wins
         # over it). The api_server startup guard refuses keys shorter than
         # 16 chars; since this branch skips generation, a weak operator key
-        # means the server stays DOWN (cron fires lost), not just 401s.
+        # means the server stays DOWN, not just 401s.
         # Warn where the operator will look — the boot log. Checked only in
         # this branch: when a strong .env key wins at runtime, the warning
         # would be false (the server does start).
         if [ "${#API_SERVER_KEY}" -lt 16 ]; then
-            echo "[stage2] Warning: container-provided API_SERVER_KEY is shorter than 16 characters — the gateway api_server will refuse to start (cron fires unavailable). Generate a strong secret, e.g. \`openssl rand -hex 32\`."
+            echo "[stage2] Warning: container-provided API_SERVER_KEY is shorter than 16 characters — the gateway api_server will refuse to start. Generate a strong secret, e.g. \`openssl rand -hex 32\`."
         fi
         # A stale empty `API_SERVER_KEY=` line (left by an old seed) would
         # clobber the container-provided key at runtime: .env is loaded with
         # override=True and python-dotenv sets the empty string, which fails
-        # the api_server's startup guard — the exact silent-cron-loss symptom
+        # the api_server's startup guard — the exact silent-outage symptom
         # this hook exists to prevent. Drop it so the operator key wins.
         if [ -f "$SCOUT_HOME/.env" ] && ! refuse_symlinked_path "clean" "$SCOUT_HOME/.env"; then
             sed -i '/^API_SERVER_KEY=$/d' "$SCOUT_HOME/.env" 2>/dev/null || true
@@ -518,86 +513,15 @@ elif ! grep -q '^API_SERVER_KEY=..*' "$SCOUT_HOME/.env" 2>/dev/null; then
                 if printf 'API_SERVER_KEY=%s\n' "$_gen_key" >> "$SCOUT_HOME/.env" 2>/dev/null; then
                     echo "[stage2] Generated API_SERVER_KEY for the loopback gateway api_server"
                 else
-                    echo "[stage2] Warning: could not write API_SERVER_KEY to $SCOUT_HOME/.env (read-only volume?) — gateway api_server (cron fires) will be unavailable"
+                    echo "[stage2] Warning: could not write API_SERVER_KEY to $SCOUT_HOME/.env (read-only volume?) — gateway api_server will be unavailable"
                 fi
             fi
             unset _gen_key
         else
-            echo "[stage2] Warning: could not create $SCOUT_HOME/.env — gateway api_server (cron fires) will be unavailable"
+            echo "[stage2] Warning: could not create $SCOUT_HOME/.env — gateway api_server will be unavailable"
         fi
     fi
 fi
-
-# --- Sync deploy-injected SpaceshipResearch routing overrides into every profile .env ---
-# Under multiplex, scout_cli.auth_spaceshipresearch reads SCOUT_PORTAL_BASE_URL (or its
-# SCOUT_PORTAL_BASE_URL alias) and SPACESHIPRESEARCH_INFERENCE_BASE_URL through the profile
-# secret scope (agent.secret_scope.get_secret, #108319 / #111809), built from
-# <profile>/.env with no os.environ fallback — a value that lives only in the
-# container env is invisible on every routed turn, the Portal URL heals to
-# production and a non-production login is quarantined. The deploy therefore
-# carries the value into $SCOUT_HOME/.env and every profiles/*/.env: the
-# container wins over a stale line, an already-correct line is left alone, and
-# lines written here carry a marker so a boot WITHOUT the variable removes them
-# again (a hand-set line is never touched). Known gap: a profile created while the container
-# runs is synced on the next boot. Interim until the managed scope
-# (/etc/scout/.env) composition reverted by #111600 is restored.
-_ROUTING_MARK='# stage2-managed'
-# rewrite_env_var FILE NAME DROP_PATTERN [LINE]: drop the lines matching DROP_PATTERN (a BRE),
-# append LINE when given. Rewritten through the existing inode (owner and mode kept — sed -i would
-# re-create the file). `grep -v` exits 1 when nothing remains (fine) and 2 when the file could not
-# be read (then a rewrite would wipe every other secret — refuse). A read-only volume degrades to a
-# warning, never a boot abort.
-rewrite_env_var() {
-    _rc=0
-    _rest=$(grep -v -- "$3" "$1" 2>/dev/null) || _rc=$?
-    if [ "$_rc" -gt 1 ]; then
-        echo "[stage2] Warning: could not read $1 — leaving $2 untouched"
-        return 1
-    fi
-    if [ $# -ge 4 ]; then
-        _rest="${_rest:+$_rest
-}$4"
-    fi
-    if printf '%s' "${_rest:+$_rest
-}" 2>/dev/null > "$1"; then
-        return 0
-    fi
-    echo "[stage2] Warning: could not write $2 to $1 (read-only volume?) — routed turns will fall back to the production Portal"
-    return 1
-}
-sync_routing_overrides() {
-    _file="$1"
-    if refuse_symlinked_path "sync" "$_file"; then
-        return 0
-    fi
-    for _name in SCOUT_PORTAL_BASE_URL SCOUT_PORTAL_BASE_URL SPACESHIPRESEARCH_INFERENCE_BASE_URL; do
-        eval "_value=\${$_name:-}"
-        _managed="^$_name=.* $_ROUTING_MARK\$"
-        if [ -z "$_value" ]; then
-            if grep -q -- "$_managed" "$_file" 2>/dev/null && rewrite_env_var "$_file" "$_name" "$_managed"; then
-                echo "[stage2] Removed $_name from $_file (no longer set in the container environment)"
-            fi
-            continue
-        fi
-        _line="$_name=$_value $_ROUTING_MARK"
-        if grep -qxF -- "$_line" "$_file" 2>/dev/null; then
-            continue
-        fi
-        if [ ! -f "$_file" ] && ! (umask 077 && as_scout touch "$_file") 2>/dev/null; then
-            echo "[stage2] Warning: could not create $_file — the SpaceshipResearch routing overrides will not reach this profile's secret scope"
-            return 0
-        fi
-        if rewrite_env_var "$_file" "$_name" "^$_name=" "$_line"; then
-            echo "[stage2] Synced $_name from the container environment into $_file"
-        fi
-    done
-}
-sync_routing_overrides "$SCOUT_HOME/.env"
-for _profile_dir in "$SCOUT_HOME"/profiles/*/; do
-    [ -d "$_profile_dir" ] || continue
-    sync_routing_overrides "${_profile_dir}.env"
-done
-unset _profile_dir _file _name _value _managed _line _rest _rc
 
 # .env holds API keys and secrets — restrict to owner-only access. Applied
 # unconditionally (not only on first-seed) so a host-mounted .env that was
@@ -608,29 +532,6 @@ if [ -f "$SCOUT_HOME/.env" ]; then
     else
         chown scout:scout "$SCOUT_HOME/.env" 2>/dev/null || true
         chmod 600 "$SCOUT_HOME/.env" 2>/dev/null || true
-    fi
-fi
-
-# --- Grant the gateway access to the Fly Machines API socket (scale-to-zero) ---
-# On Fly, flyd mounts the local Machines API ("flaps") unix socket at /.fly/api
-# owned root:root 0755. The gateway's scale-to-zero self-suspend
-# (gateway/scale_to_zero.py suspend_self) must POST to it, but the gateway runs
-# as the unprivileged `scout` user — without this it gets EACCES on every
-# suspend attempt and the machine can never sleep (fail-awake; verified live on
-# staging 2026-08-20: "flaps suspend request failed: [Errno 13]"). This hook
-# runs as root before user services (the gateway) start, so grant group access
-# here. Scope note: group-write exposes the WHOLE local Machines API to the
-# scout group (any group member could e.g. stop/suspend this machine), not
-# just the suspend endpoint — accepted because the agent already executes
-# arbitrary user code as that same principal and the socket only controls THIS
-# machine. No-op off Fly (socket absent).
-if [ -S /.fly/api ]; then
-    if refuse_symlinked_path "chgrp/chmod" /.fly/api; then
-        :
-    elif chgrp scout /.fly/api 2>/dev/null && chmod g+w /.fly/api 2>/dev/null; then
-        echo "[stage2] Granted scout group access to the Fly Machines API socket"
-    else
-        echo "[stage2] Warning: could not grant group access to /.fly/api — scale-to-zero self-suspend will fail EACCES (fail-awake)"
     fi
 fi
 
@@ -676,32 +577,6 @@ if [ ! -f "$SCOUT_HOME/auth.json" ] && [ -n "${SCOUT_AUTH_JSON_BOOTSTRAP:-}" ]; 
         printf '%s' "$SCOUT_AUTH_JSON_BOOTSTRAP" > "$SCOUT_HOME/auth.json"
         chown scout:scout "$SCOUT_HOME/auth.json" 2>/dev/null || true
         chmod 600 "$SCOUT_HOME/auth.json"
-    fi
-fi
-
-# auth.json: re-seed a TERMINALLY-DEAD SpaceshipResearch bootstrap session (self-heal).
-#
-# The [ ! -f ] guard above deliberately refuses to clobber an existing
-# auth.json, so a container whose SpaceshipResearch bootstrap session took a terminal
-# invalid_grant (tokens cleared, providers.spaceshipresearch.last_auth_error.relogin_required
-# stamped) can NOT recover from a plain restart — it stays unauthenticated until
-# the credential is replaced. An orchestrator that manages the container can
-# supply a freshly-issued session via SCOUT_AUTH_JSON_REBOOTSTRAP (distinct
-# from the create-only *_BOOTSTRAP var); this helper swaps ONLY the
-# providers.spaceshipresearch entry when the on-disk entry is provably terminal OR the
-# orchestrator seed has a later obtained_at timestamp. The latter covers the
-# stop/update/start sequence where NAS already revoked the still-healthy-looking
-# local session. Older/incomparable seeds remain no-ops, so leaving the env set
-# cannot roll a healthy rotated token backward. Runs as its own stdlib-only
-# subprocess (no app imports) and always exits 0.
-if [ -f "$SCOUT_HOME/auth.json" ] && [ -n "${SCOUT_AUTH_JSON_REBOOTSTRAP:-}" ]; then
-    if refuse_symlinked_path "reseed" "$SCOUT_HOME/auth.json"; then
-        :
-    else
-        s6-setuidgid scout "$INSTALL_DIR/.venv/bin/python" \
-            "$INSTALL_DIR/scripts/docker_rebootstrap_spaceshipresearch_session.py" \
-            "$SCOUT_HOME/auth.json" \
-            || echo "[stage2] Warning: docker_rebootstrap_spaceshipresearch_session.py failed; continuing"
     fi
 fi
 

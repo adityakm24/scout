@@ -2,13 +2,10 @@
 
 import logging
 import subprocess
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 
-from scout_cli.spaceshipresearch_account import ScoutPortalAccountInfo, SpaceshipResearchToolAccessInfo
-from scout_cli.spaceshipresearch_subscription import SpaceshipResearchSubscriptionFeatures
 from scout_cli.tools_config import (
     _DEFAULT_OFF_TOOLSETS,
     _RECENTLY_SHIPPED_TOOLSETS,
@@ -19,12 +16,7 @@ from scout_cli.tools_config import (
     _save_platform_tools,
     _toolset_has_keys,
     CONFIGURABLE_TOOLSETS,
-    TOOL_CATEGORIES,
-    _visible_providers,
-    tools_command,
 )
-
-
 
 
 def test_all_invalid_platform_toolsets_logs_runtime_warning(caplog):
@@ -121,12 +113,6 @@ def test_malformed_list_string_platform_toolsets_warns_then_falls_back(caplog):
             and "expected a YAML list" in r.getMessage()]
 
 
-
-
-
-
-
-
 def test_get_platform_tools_homeassistant_toolset_enabled_for_cron_when_hass_token_set(monkeypatch):
     """HA toolset is runtime-gated by check_fn (requires HASS_TOKEN).
 
@@ -179,12 +165,6 @@ def test_discord_toolsets_do_not_leak_to_other_platforms():
     assert "discord_admin" not in enabled
 
 
-
-
-
-
-
-
 def test_toolset_has_keys_for_vision_accepts_codex_auth(tmp_path, monkeypatch):
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     (tmp_path / "auth.json").write_text(
@@ -227,85 +207,6 @@ def test_save_platform_tools_preserves_mcp_server_names():
     assert "browser" in saved_toolsets
     assert "terminal" not in saved_toolsets
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def test_first_install_spaceshipresearch_auto_configures_video_gen(monkeypatch):
-    """When a SpaceshipResearch subscriber checks video_gen in the toolset checklist,
-    apply_spaceshipresearch_managed_defaults must write video_gen.provider and
-    video_gen.use_gateway so the FAL plugin can route through the gateway
-    at runtime.  Regression test for the bug where video_gen was marked as
-    auto-configured but no config was actually written."""
-    monkeypatch.setattr("tools.tool_backend_helpers.managed_spaceshipresearch_tools_enabled", lambda: True)
-    config = {
-        "model": {"provider": "spaceshipresearch"},
-        "platform_toolsets": {"cli": []},
-    }
-    for env_var in (
-        "VOICE_TOOLS_OPENAI_KEY",
-        "OPENAI_API_KEY",
-        "ELEVENLABS_API_KEY",
-        "FIRECRAWL_API_KEY",
-        "FIRECRAWL_API_URL",
-        "KEENABLE_API_KEY",
-        "TAVILY_API_KEY",
-        "PARALLEL_API_KEY",
-        "BROWSERBASE_API_KEY",
-        "BROWSERBASE_PROJECT_ID",
-        "BROWSER_USE_API_KEY",
-        "FAL_KEY",
-    ):
-        monkeypatch.delenv(env_var, raising=False)
-
-    monkeypatch.setattr(
-        "scout_cli.tools_config._prompt_toolset_checklist",
-        lambda *args, **kwargs: {"video_gen"},
-    )
-    monkeypatch.setattr("scout_cli.tools_config.save_config", lambda config: None)
-    monkeypatch.setattr(
-        "scout_cli.tools_config._get_enabled_platforms",
-        lambda: ["cli"],
-    )
-    monkeypatch.setattr(
-        "scout_cli.spaceshipresearch_subscription.get_scout_portal_account_info",
-        lambda *args, **kwargs: ScoutPortalAccountInfo(
-            logged_in=True,
-            source="jwt",
-            fresh=False,
-            paid_service_access=True,
-        ),
-    )
-
-    configured = []
-    monkeypatch.setattr(
-        "scout_cli.tools_config._configure_toolset",
-        lambda ts_key, config: configured.append(ts_key),
-    )
-
-    tools_command(first_install=True, config=config)
-
-    assert config["video_gen"]["provider"] == "spaceshipresearch"
-    assert "use_gateway" not in config["video_gen"]
-    # video_gen should NOT appear in the manual configure list — it's auto-configured
-    assert "video_gen" not in configured
 
 # ── Platform / toolset consistency ────────────────────────────────────────────
 
@@ -388,11 +289,6 @@ def test_numeric_mcp_server_name_does_not_crash_sorted():
 # ─── Imagegen Backend Picker Wiring ────────────────────────────────────────
 
 
-
-
-
-
-
 class TestAgentBrowserPostSetup:
     """Cloud isolation, image ownership, and failed setup remain observable."""
 
@@ -405,7 +301,6 @@ class TestAgentBrowserPostSetup:
     def _stub_package_install(self):
         with patch("pm.ensure") as ensure:
             yield ensure
-
 
 
     @pytest.mark.parametrize("failure", ["pm", "timeout"])
@@ -465,7 +360,6 @@ class TestBrowserUseCliInstalledForAllNonCamofoxBackends:
 
 class TestImagegenBackendRegistry:
     """IMAGEGEN_BACKENDS tags drive the model picker flow in tools_config."""
-
 
 
     def test_image_gen_providers_tagged_with_registered_backend(self):
@@ -555,10 +449,6 @@ class TestImagegenModelPicker:
         assert config["image_gen"]["model"] == "openai/gpt-5.4-image-2"
 
 
-
-
-
-
 def test_get_effective_configurable_toolsets_dedupes_bundled_plugins():
     """Bundled plugins (plugins/spotify) share their toolset key with the
     built-in CONFIGURABLE_TOOLSETS entry. The effective list must not list
@@ -579,10 +469,6 @@ def test_get_effective_configurable_toolsets_dedupes_bundled_plugins():
     # Built-in label wins over the plugin label.
     builtin_label = next(label for key, label, _ in CONFIGURABLE_TOOLSETS if key == "spotify")
     assert spotify_rows[0][1] == builtin_label
-
-
-
-
 
 
 # Kanban now participates in the checklist: an explicit deselection must be
@@ -620,137 +506,6 @@ def test_vision_picker_custom_endpoint(tmp_path, monkeypatch):
     # provider pinned to "custom" so the resolver routes through base_url.
     assert v.get("provider") == "custom"
     save_env.assert_called_once_with("OPENAI_API_KEY", "sk-secret")
-
-
-
-
-def test_visible_providers_reuses_logged_out_feature_snapshot(monkeypatch):
-    import scout_cli.tools_config as tools_config
-
-    account = ScoutPortalAccountInfo(
-        logged_in=False,
-        source="none",
-        fresh=False,
-        paid_service_access=None,
-    )
-    features = SpaceshipResearchSubscriptionFeatures(
-        subscribed=False,
-        spaceshipresearch_auth_present=False,
-        provider_is_spaceshipresearch=False,
-        features={},
-        account_info=account,
-    )
-    monkeypatch.setattr(
-        tools_config,
-        "get_spaceshipresearch_subscription_features",
-        lambda *args, **kwargs: pytest.fail("feature snapshot was resolved again"),
-    )
-
-    providers = _visible_providers(
-        TOOL_CATEGORIES["image_gen"], {}, features=features
-    )
-
-    assert any(
-        provider.get("managed_spaceshipresearch_feature") == "image_gen"
-        for provider in providers
-    )
-
-
-def test_visible_providers_reuses_pool_video_feature_snapshot(monkeypatch):
-    import scout_cli.tools_config as tools_config
-
-    account = ScoutPortalAccountInfo(
-        logged_in=True,
-        source="jwt",
-        fresh=False,
-        paid_service_access=False,
-        tool_access=SpaceshipResearchToolAccessInfo(
-            enabled=True,
-            coverage={"fal-video": False},
-        ),
-    )
-    features = SpaceshipResearchSubscriptionFeatures(
-        subscribed=True,
-        spaceshipresearch_auth_present=True,
-        provider_is_spaceshipresearch=False,
-        features={},
-        account_info=account,
-    )
-    monkeypatch.setattr(
-        tools_config,
-        "get_spaceshipresearch_subscription_features",
-        lambda *args, **kwargs: pytest.fail("feature snapshot was resolved again"),
-    )
-
-    providers = _visible_providers(
-        TOOL_CATEGORIES["video_gen"], {}, features=features
-    )
-
-    assert not any(
-        provider.get("managed_spaceshipresearch_feature") == "video_gen"
-        for provider in providers
-    )
-
-
-
-
-# ── One managed image row ─────────────────────────────────────────────────────
-#
-# FAL, Krea and Portal models all live behind the single "SpaceshipResearch Subscription" row; the stored
-# model id picks the gateway. Before, the Portal plugin rendered its own row that also wrote
-# `provider: spaceshipresearch`, so two rows read active at once and the Portal pick generated on FAL.
-
-
-def _managed_image_row() -> dict:
-    return next(p for p in TOOL_CATEGORIES["image_gen"]["providers"] if p.get("managed_spaceshipresearch_feature") == "image_gen")
-
-
-def test_exactly_one_image_row_is_active_for_a_managed_selection(monkeypatch):
-    import scout_cli.tools_config as tools_config
-    from scout_cli.tools_config_providers import _plugin_image_gen_providers
-
-    monkeypatch.setattr(
-        tools_config, "get_spaceshipresearch_subscription_features",
-        lambda config, **kwargs: SimpleNamespace(features={"image_gen": SimpleNamespace(managed_by_spaceshipresearch=True)}),
-    )
-    rows = TOOL_CATEGORIES["image_gen"]["providers"] + _plugin_image_gen_providers()
-    for model in ("fal-ai/flux-2/klein/9b", "krea-2-medium", "google/gemini-3-pro-image"):
-        config = {"image_gen": {"provider": "spaceshipresearch", "model": model}}
-        active = [r["name"] for r in rows if tools_config._is_provider_active(r, config)]
-        assert active == [_managed_image_row()["name"]], (model, active)
-
-
-def test_gui_model_catalog_for_the_managed_row_spans_every_managed_gateway(monkeypatch):
-    import scout_cli.tools_config as tools_config
-    from scout_cli.web_routers.tools import _resolve_toolset_model_plugin, _toolset_model_catalog
-    from plugins.image_gen.krea import KREA_MODEL_IDS
-    from tools.image_generation_catalog import FAL_MODELS
-
-    paid = ScoutPortalAccountInfo(logged_in=True, source="jwt", fresh=False, paid_service_access=True)
-    monkeypatch.setattr(
-        tools_config, "get_spaceshipresearch_subscription_features",
-        lambda *args, **kwargs: SimpleNamespace(features={}, account_info=paid))
-    plugin = _resolve_toolset_model_plugin("image_gen", _managed_image_row())
-    catalog, default_model = _toolset_model_catalog("image_gen", plugin, {})
-
-    assert default_model in catalog and default_model in FAL_MODELS
-    assert KREA_MODEL_IDS <= set(catalog)
-    assert not any(mid.startswith("fal-ai/krea/") for mid in catalog), "Krea 2 must appear once, natively"
-
-
-def test_pool_only_account_is_offered_fal_models_only(monkeypatch):
-    import scout_cli.tools_config as tools_config
-    from scout_cli.tools_config_providers import _managed_image_catalog
-
-    pool = ScoutPortalAccountInfo(
-        logged_in=True, source="jwt", fresh=False, paid_service_access=False,
-        tool_access=SpaceshipResearchToolAccessInfo(enabled=True, coverage={"fal": True, "krea": False}))
-    monkeypatch.setattr(
-        tools_config, "get_spaceshipresearch_subscription_features",
-        lambda *args, **kwargs: SimpleNamespace(features={}, account_info=pool))
-    catalog, _ = _managed_image_catalog({})
-
-    assert catalog and {meta["backend"] for meta in catalog.values()} == {"fal"}
 
 
 # ── Toolsets that shipped after a platform's last `scout tools` save ────────

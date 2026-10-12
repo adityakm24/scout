@@ -9,7 +9,6 @@ export const chromeEn = {
     running: 'running…',
     mcpReloaded: 'MCP reloaded after config change',
     compacting: 'compacting',
-    devCredits: ' (dev credits)',
     sessionCount: (count: number) => `${count} ${count === 1 ? 'session' : 'sessions'}`,
     paused: '⏸ paused',
     resumesWhenSubagentFinishes: '↩ resumes when subagent finishes',

@@ -18,8 +18,7 @@ replay). Do not add the modeled figures to the observed ones; see §5 of #103563
 
 ## Requirements
 
-- A Scout checkout with its venv (`.venv/bin/python`). NeMo Relay is not required for the forensics;
-  it is what the run itself used for the wire captures in `live_ab/cache_prefix_wire.py`.
+- A Scout checkout with its venv (`.venv/bin/python`).
 - For forensics: a **copy** of `~/.scout/state.db` (never point at the live file; `sqlite3 state.db ".backup copy.db"`
   or `cp` while Scout is idle) and, optionally, the rotated `~/.scout/logs/agent.log*`.
 - For `--live` probes: real credentials in `SCOUT_HOME` (they spend cents per run).
@@ -80,39 +79,14 @@ the peak-concurrency window). The tracking issue quotes the second and says so.
 | `review_probes/scanner_bypass_probe.py` | #103492 | public guard `approved: False`, 0 callbacks, harmless Bash witness not executed |
 | `live_ab/subagent_context_cap.py` | #103513 | child trigger `200,000` on a 1M model; parent untouched |
 | `review_probes/context_cap_probe.py` | #103513 | cap holds through repeated compression + persistence; config validation |
-| `live_ab/nested_delegate_deadline.py` | #103486 | 40 s deadline + 75 s leaf: result delivered (main: lost) |
 | `review_probes/deadline_probe.py` | #103486 | same through actual dispatch |
-| `live_ab/auth_stampede.py <repo> 40` | #103526 | `401s=0` (main: 40) |
-| `review_probes/credential_identity_probe.py <repo> pr` | #103526 | explicit account-A key stays A (v1: became B) |
 | `live_ab/batch_failure_notice.py` | #103549 | `TASK_FAILURE_NOTICE` at t+0.3 s, `BATCH_FINAL` after |
 | `review_probes/notice_delivery_probe.py` | #103549 | gateway receives notice, notice, final; busy-parent final claim succeeds |
-| `review_probes/cache_estimator_probe.py` | #103476 | preflight ≈ wire estimate; `should_compress` agrees |
-| `live_ab/cache_prefix_wire.py <repo> B` (live) | #103476 | 0 mutated prefixes across 6 calls |
 | `live_ab/goal_judge_wait.py <repo> 3` (live) | #103534 | `wait` ×3 on the run's "waiting on workers" response (main: `continue` ×3) |
 | `review_probes/goal_scope_probe.py` | #103496/#103534 | judge sees own processes; delegation WAIT lifts on batch return |
 | `review_probes/goal_repaste_probe.py` | #103553 | near-whole re-paste → pointer; `ship the API` ≠ `ship the UI` |
 | `review_probes/rewrite_hint_probe.py` | #103551 | remote backend: no host-derived hint; FIFO: returns; 460 KB repeated-line file: skipped, not 22 s |
 | `review_probes/finalizer_schedule_probe.py` | #103507 | pytest plugin: `-p evals.postmortem.review_probes.finalizer_schedule_probe --finalizer-probe=consumer-first` on `tests/e2e/test_relay_native_openai_stream.py` → 2 passed |
-
-## Cache concurrency probe (`live_ab/cache_concurrency_probe.py`)
-
-The instrument behind #104284 / #104421 and SpaceshipResearch/api#227. N concurrent real `AIAgent`
-sessions run the same growing tool loop against a route; every call's cache_read / cache_creation,
-response id, upstream provider and prefix shas are logged, and consecutive pairs are classified
-`ideal` / `stuck` (previous write not visible: routing) / `collapse` (whole context re-written).
-
-```bash
-# ~$50 per 20x6 arm on Fable 5.1 at the 5m tier
-python -m evals.postmortem.live_ab.cache_concurrency_probe --repo . --provider spaceshipresearch --workers 20 --calls 6 --out /tmp/p.jsonl
-python -m evals.postmortem.live_ab.cache_concurrency_probe --repo . --provider spaceshipresearch --wire native --workers 20 --calls 6 --out /tmp/p.jsonl
-python -m evals.postmortem.live_ab.cache_concurrency_probe --repo . --provider openrouter --pin anthropic --workers 20 --calls 6 --out /tmp/p.jsonl
-```
-
-Reference results (2026-09-05/06): SpaceshipResearch native wire 13.9% stuck (14–20% over 4 runs, unchanged by the
-portal's provider pin or a 2 s settle); SpaceshipResearch chat wire 0/320; OpenRouter pinned 0/161; OpenRouter
-unpinned 9.8% collapse. Use this to clear a new upstream before flipping
-`agent/spaceshipresearch_wire.py::GMI_NATIVE_WIRE_CLEARED`. `--ttl 1h` reproduces the 2× write price
-(#104168). The `.summary.json` carries the bad pairs with both response ids for the provider's logs.
 
 ## What is NOT here, and why
 

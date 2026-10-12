@@ -122,11 +122,6 @@ apps/desktop/release/
 apps/desktop/.staging-*/
 *.tsbuildinfo
 
-# Web UI assets — synced from @spaceshipresearch/ui at build time via
-# `npm run sync-assets` (see web/package.json).
-web/public/fonts/
-web/public/ds-assets/
-
 # Release script temp files
 .release_notes.md
 mini-swe-agent/

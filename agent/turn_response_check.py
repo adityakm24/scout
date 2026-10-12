@@ -201,14 +201,6 @@ def check_api_response(
         _last_preflight_pressure = None
 
     _retry.has_retried_429 = False
-    # Clearing SpaceshipResearch rate-limit state proves the limit reset so other sessions may resume.
-    if agent.provider == "spaceshipresearch":
-        try:
-            from agent.spaceshipresearch_rate_guard import clear_spaceshipresearch_rate_limit
-            from scout_cli.anon_auth import is_anonymous_agent
-            clear_spaceshipresearch_rate_limit(anonymous=is_anonymous_agent(agent))
-        except Exception:
-            pass
     from agent import relay_llm
 
     relay_llm.complete_logical_call(api_request_id, outcome="success")

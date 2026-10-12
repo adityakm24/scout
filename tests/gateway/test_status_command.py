@@ -175,8 +175,8 @@ async def test_status_command_uses_most_recent_persisted_model_route(tmp_path):
         db.update_token_counts(
             "sess-1",
             model="upstage/solar-pro4:free",
-            billing_provider="spaceshipresearch",
-            billing_base_url="https://inference-api.spaceshipresearch.com/v1/",
+            billing_provider="fixtureco",
+            billing_base_url="https://inference.fixtureco.example/v1/",
             input_tokens=60,
             api_call_count=6,
         )
@@ -184,13 +184,13 @@ async def test_status_command_uses_most_recent_persisted_model_route(tmp_path):
         db.update_session_model("sess-1", "z-ai/glm-5.2")
         db.update_session_billing_route(
             "sess-1",
-            provider="spaceshipresearch",
-            base_url="https://inference-api.spaceshipresearch.com/v1/",
+            provider="fixtureco",
+            base_url="https://inference.fixtureco.example/v1/",
         )
 
         result = await runner._handle_message(_make_event("/status"))
 
-        assert "**Model:** `upstage/solar-pro4:free` (spaceshipresearch)" in result
+        assert "**Model:** `upstage/solar-pro4:free` (fixtureco)" in result
         assert "**Model:** `z-ai/glm-5.2` (nvidia)" not in result
     finally:
         db.close()

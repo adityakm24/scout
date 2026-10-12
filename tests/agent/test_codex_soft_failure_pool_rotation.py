@@ -53,7 +53,6 @@ class _Agent:
     def _swap_credential(self, entry):
         self.swapped_to.append(entry.id)
         self.api_key = entry.access_token
-        return True
 
     def _has_pending_fallback(self):
         return False

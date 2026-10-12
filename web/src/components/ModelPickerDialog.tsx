@@ -1,9 +1,9 @@
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Checkbox } from "@spaceshipresearch/ui/ui/components/checkbox";
-import { ListItem } from "@spaceshipresearch/ui/ui/components/list-item";
-import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
+import { Button } from "@/ui/components/button";
+import { Checkbox } from "@/ui/components/checkbox";
+import { ListItem } from "@/ui/components/list-item";
+import { Spinner } from "@/ui/components/spinner";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { GatewayClient } from "@/lib/gatewayClient";
 import type { ModelOptionProvider, ModelOptionsResult } from "@scout/shared";
@@ -358,7 +358,7 @@ export function ModelPickerDialog(props: Props) {
         <header className="p-5 pb-3 border-b border-border">
           <h2
             id="model-picker-title"
-            className="font-mondwest text-display text-base tracking-wider"
+            className="font-display text-display text-base tracking-wider"
           >
             {title}
           </h2>
@@ -432,7 +432,7 @@ export function ModelPickerDialog(props: Props) {
               />
 
               <Label
-                className="font-mondwest normal-case tracking-normal text-xs text-muted-foreground cursor-pointer"
+                className="font-display normal-case tracking-normal text-xs text-muted-foreground cursor-pointer"
                 htmlFor="model-picker-persist-global"
               >
                 Persist globally (otherwise this session only)

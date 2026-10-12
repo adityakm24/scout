@@ -212,8 +212,8 @@ describe('PluginsTab', () => {
       {
         description: '',
         has_desktop_half: true,
-        key: 'spaceshipresearch-prices',
-        name: 'spaceshipresearch-prices',
+        key: 'fixtureco-prices',
+        name: 'fixtureco-prices',
         source: 'catalog',
         status: 'enabled',
         version: '1'
@@ -222,7 +222,7 @@ describe('PluginsTab', () => {
 
     renderPlugins({ profile: null })
 
-    const detail = within(screen.getByRole('row', { name: /^spaceshipresearch-prices/ }))
+    const detail = within(screen.getByRole('row', { name: /^fixtureco-prices/ }))
     expect(detail.getByText('unavailable (remote backend)')).toBeTruthy()
     expect(detail.queryByText('copying…')).toBeNull()
   })
@@ -232,8 +232,8 @@ describe('PluginsTab', () => {
       {
         description: '',
         has_desktop_half: true,
-        key: 'spaceshipresearch-prices',
-        name: 'spaceshipresearch-prices',
+        key: 'fixtureco-prices',
+        name: 'fixtureco-prices',
         source: 'catalog',
         status: 'enabled',
         version: '1'
@@ -242,7 +242,7 @@ describe('PluginsTab', () => {
 
     renderPlugins({ profile: null })
 
-    const detail = within(screen.getByRole('row', { name: /^spaceshipresearch-prices/ }))
+    const detail = within(screen.getByRole('row', { name: /^fixtureco-prices/ }))
     expect(detail.getByText('copying…')).toBeTruthy()
     expect(detail.queryByText('unavailable (remote backend)')).toBeNull()
   })
@@ -279,7 +279,7 @@ describe('PluginsTab', () => {
         kind: 'disk',
         status: 'loaded',
         packageName: 'scout-media-studio',
-        packageOrigin: { repo: 'https://github.com/SpaceshipResearch/scout-media-studio.git', sha: 'abc' }
+        packageOrigin: { repo: 'https://github.com/example-org/scout-media-studio.git', sha: 'abc' }
       }
     })
 
@@ -292,7 +292,7 @@ describe('PluginsTab', () => {
       expect($pluginInstallRequest.get()).toMatchObject({
         legacyHint: 'agent',
         profile: 'workbot',
-        repo: 'https://github.com/SpaceshipResearch/scout-media-studio.git',
+        repo: 'https://github.com/example-org/scout-media-studio.git',
         sha: 'abc'
       })
     })

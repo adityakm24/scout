@@ -185,11 +185,6 @@ MODEL_STRATEGIES = {
             ),
         },
     },
-    # SpaceshipResearch/Scout models — already uncensored, just needs clean prompt
-    "scout": {
-        "order": ["prefill_only"],
-        "system_templates": {},
-    },
     # DeepSeek — keyword-based classifiers, parseltongue effective
     "deepseek": {
         "order": ["parseltongue", "refusal_inversion", "prefill_only"],
@@ -312,8 +307,6 @@ def _detect_model_family(model: str) -> str:
         return "gemini"
     if "grok" in model_lower or "x-ai" in model_lower:
         return "grok"
-    if "scout" in model_lower or "spaceshipresearch" in model_lower:
-        return "scout"
     if "deepseek" in model_lower:
         return "deepseek"
     if "llama" in model_lower or "meta" in model_lower:

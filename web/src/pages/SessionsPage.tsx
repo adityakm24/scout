@@ -49,17 +49,17 @@ import type {
 import { timeAgo } from "@/lib/utils";
 import { Markdown } from "@/components/Markdown";
 import { PlatformsCard } from "@/components/PlatformsCard";
-import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Checkbox } from "@spaceshipresearch/ui/ui/components/checkbox";
-import { ListItem } from "@spaceshipresearch/ui/ui/components/list-item";
-import { Segmented } from "@spaceshipresearch/ui/ui/components/segmented";
-import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@spaceshipresearch/ui/ui/components/card";
+import { Toast } from "@/ui/components/toast";
+import { Button } from "@/ui/components/button";
+import { Checkbox } from "@/ui/components/checkbox";
+import { ListItem } from "@/ui/components/list-item";
+import { Segmented } from "@/ui/components/segmented";
+import { Spinner } from "@/ui/components/spinner";
+import { Badge } from "@/ui/components/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { useConfirmDelete } from "@spaceshipresearch/ui/hooks/use-confirm-delete";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
+import { useConfirmDelete } from "@/ui/hooks/use-confirm-delete";
+import { Input } from "@/ui/components/input";
 import {
   Dialog,
   DialogContent,
@@ -67,9 +67,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@spaceshipresearch/ui/ui/components/dialog";
+} from "@/ui/components/dialog";
 import { useSystemActions } from "@/contexts/useSystemActions";
-import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
+import { useToast } from "@/ui/hooks/use-toast";
 import { useI18n } from "@/i18n";
 import { usePageHeader } from "@/contexts/usePageHeader";
 import { PluginSlot } from "@/plugins";
@@ -192,7 +192,7 @@ function SnippetHighlight({ snippet }: { snippet: string }) {
     parts.push(snippet.slice(last));
   }
   return (
-    <p className="font-mondwest normal-case mt-0.5 min-w-0 max-w-full truncate text-xs text-text-secondary">
+    <p className="font-display normal-case mt-0.5 min-w-0 max-w-full truncate text-xs text-text-secondary">
       {parts}
     </p>
   );
@@ -686,7 +686,7 @@ function SessionRow({
                   </div>
                 ) : (
                   <span
-                    className={`font-mondwest normal-case min-w-0 flex-1 truncate text-sm ${hasTitle ? "font-medium" : "text-muted-foreground italic"}`}
+                    className={`font-display normal-case min-w-0 flex-1 truncate text-sm ${hasTitle ? "font-medium" : "text-muted-foreground italic"}`}
                   >
                     {hasTitle
                       ? session.title
@@ -1787,7 +1787,7 @@ export default function SessionsPage() {
                 <Spinner className="shrink-0 text-[0.875rem] text-muted-foreground" />
               )}
 
-              <span className="text-xs font-mondwest tracking-[0.12em] truncate">
+              <span className="text-xs font-display tracking-[0.12em] truncate">
                 {activeAction === "restart"
                   ? t.status.restartGateway
                   : t.status.updateScout}
@@ -1987,7 +1987,7 @@ export default function SessionsPage() {
                 title={t.sessions.deleteEmpty}
                 prefix={<Eraser />}
               >
-                <span className="font-mondwest normal-case text-xs">
+                <span className="font-display normal-case text-xs">
                   {t.sessions.deleteEmpty} ({emptyCount})
                 </span>
               </Button>
@@ -2004,7 +2004,7 @@ export default function SessionsPage() {
                 title="Import exported session JSON or JSONL"
                 prefix={importingSessions ? <Spinner /> : <Upload />}
               >
-                <span className="font-mondwest normal-case text-xs">
+                <span className="font-display normal-case text-xs">
                   Import sessions
                 </span>
               </Button>
@@ -2032,7 +2032,7 @@ export default function SessionsPage() {
             String(selectedIds.size),
           )}
         >
-          <span className="font-mondwest normal-case text-xs text-primary tabular-nums">
+          <span className="font-display normal-case text-xs text-primary tabular-nums">
             {t.sessions.selectedCount.replace(
               "{count}",
               String(selectedIds.size),
@@ -2046,7 +2046,7 @@ export default function SessionsPage() {
               aria-label={t.sessions.selectAllOnPage}
               title={t.sessions.selectAllOnPage}
             >
-              <span className="font-mondwest normal-case text-xs">
+              <span className="font-display normal-case text-xs">
                 {t.sessions.selectAllOnPage}
               </span>
             </Button>
@@ -2058,7 +2058,7 @@ export default function SessionsPage() {
             aria-label={t.sessions.clearSelection}
             title={t.sessions.clearSelection}
           >
-            <span className="font-mondwest normal-case text-xs">
+            <span className="font-display normal-case text-xs">
               {t.sessions.clearSelection}
             </span>
           </Button>
@@ -2078,7 +2078,7 @@ export default function SessionsPage() {
             )}
             prefix={<Trash2 />}
           >
-            <span className="font-mondwest normal-case text-xs">
+            <span className="font-display normal-case text-xs">
               {t.sessions.deleteSelected.replace(
                 "{count}",
                 String(selectedIds.size),
@@ -2164,7 +2164,7 @@ export default function SessionsPage() {
                   >
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <span
-                        className={`font-mondwest normal-case min-w-0 truncate text-sm ${s.title ? "font-medium" : "text-muted-foreground italic"}`}
+                        className={`font-display normal-case min-w-0 truncate text-sm ${s.title ? "font-medium" : "text-muted-foreground italic"}`}
                       >
                         {s.title ??
                           (s.preview
@@ -2186,7 +2186,7 @@ export default function SessionsPage() {
                       </span>
 
                       {s.preview && s.title && (
-                        <p className="font-mondwest normal-case min-w-0 max-w-full text-xs leading-snug text-text-tertiary [overflow-wrap:anywhere]">
+                        <p className="font-display normal-case min-w-0 max-w-full text-xs leading-snug text-text-tertiary [overflow-wrap:anywhere]">
                           {s.preview}
                         </p>
                       )}

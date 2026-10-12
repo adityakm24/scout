@@ -22,12 +22,12 @@ const OWNER = { connectionId: 'connection-1', profile: 'default' }
 const PRIMARY_OWNER = { connectionId: null, profile: 'default' }
 
 const GMAIL: ConnectionTarget = {
-  action: 'connect',
+  action: 'authorize',
   connectUrl: 'https://connect.example/gmail',
   connectionId: '',
   detail: '',
   discoveryError: null,
-  kind: 'connector',
+  kind: 'mcp',
   instructions: null,
   name: 'gmail',
   requiredEnv: [],
@@ -47,7 +47,7 @@ const REQUEST: ConnectionRequest = {
 }
 
 function props(): ToolCallMessagePartProps {
-  const args = { action: 'connect', connectors: ['gmail'] }
+  const args = { action: 'authorize', connectors: ['gmail'] }
 
   return {
     addResult: vi.fn(),

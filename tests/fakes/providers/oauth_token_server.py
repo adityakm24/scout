@@ -15,7 +15,7 @@ flows Scout drives but does not own:
   approving, recording the arrival time of every poll so a test can assert the
   client honoured ``interval`` and the ``slow_down`` +5 s back-off (§3.5).
 
-Both the Anthropic (``/v1/oauth/token``) and Scout Portal (``/api/oauth/token``)
+Both the Anthropic (``/v1/oauth/token``) and Fixture Co (``/api/oauth/token``)
 paths are served; request bodies may be form-encoded or JSON.
 
 :class:`TLSInterceptProxy` lets a client whose token URL is a hardcoded

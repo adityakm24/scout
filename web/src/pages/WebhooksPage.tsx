@@ -9,22 +9,22 @@ import {
   Webhook,
   X,
 } from "lucide-react";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Select, SelectOption } from "@spaceshipresearch/ui/ui/components/select";
-import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
-import { H2 } from "@spaceshipresearch/ui/ui/components/typography/h2";
+import { Badge } from "@/ui/components/badge";
+import { Button } from "@/ui/components/button";
+import { Select, SelectOption } from "@/ui/components/select";
+import { Spinner } from "@/ui/components/spinner";
+import { H2 } from "@/ui/components/typography";
 import { api } from "@/lib/api";
 import type { WebhookRoute, WebhooksResponse } from "@/lib/api";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
-import { useConfirmDelete } from "@spaceshipresearch/ui/hooks/use-confirm-delete";
+import { useToast } from "@/ui/hooks/use-toast";
+import { useConfirmDelete } from "@/ui/hooks/use-confirm-delete";
 import { useModalBehavior } from "@/hooks/useModalBehavior";
-import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
-import { Card, CardContent } from "@spaceshipresearch/ui/ui/components/card";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
+import { Toast } from "@/ui/components/toast";
+import { Card, CardContent } from "@/ui/components/card";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
 import { usePageHeader } from "@/contexts/usePageHeader";
 import { cn, themedBody } from "@/lib/utils";
 import { errorMessage } from "@/lib/api-error";
@@ -323,7 +323,7 @@ export default function WebhooksPage() {
             <header className="p-5 pb-3 border-b border-border">
               <h2
                 id="create-webhook-title"
-                className="font-mondwest text-display text-base tracking-wider"
+                className="font-display text-display text-base tracking-wider"
               >
                 New subscription
               </h2>

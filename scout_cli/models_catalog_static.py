@@ -53,15 +53,6 @@ OPENROUTER_MODELS: list[tuple[str, str]] = [
     )
 ]
 
-# OpenRouter entries the Scout Portal does not carry (routing/fast variants, free tier —
-# ``stealth/union-alpha`` is a $0 stealth SKU without the ``:free`` suffix).
-_OPENROUTER_ONLY = {
-    "anthropic/claude-opus-5-fast", "anthropic/claude-opus-4.8-fast", "meta/muse-spark-1.2",
-    "meta/muse-spark-1.2-contributor", "meta/muse-spark-1.3", "meta/muse-spark-1.3-contributor", "openrouter/pareto-code",
-    "stealth/union-alpha",
-}
-
-
 # Fallback Vercel AI Gateway snapshot (open-weight first, then closed-source by family). Slugs
 # match Vercel's /v1/models catalog (``alibaba/`` for Qwen, ``zai/`` and ``xai/`` without hyphens).
 VERCEL_AI_GATEWAY_MODELS: list[tuple[str, str]] = [("moonshotai/kimi-k2.6", "recommended")] + [
@@ -162,7 +153,6 @@ _XAI_MODELS = _xai_curated_models()
 # Curated per-provider lists. ``-cn`` twins share the international catalog on a domestic endpoint.
 _PROVIDER_MODELS: dict[str, list[str]] = {
     "moa": ["default"],
-    "spaceshipresearch": [mid for mid, _ in OPENROUTER_MODELS if mid not in _OPENROUTER_ONLY and not mid.endswith(":free")],
     # Used by /model counts and provider_model_ids fallback when /v1/models is unavailable.
     "openai": list(_OPENAI_CHAT_MODELS),
     "openai-api": [
@@ -315,7 +305,6 @@ class ProviderEntry(NamedTuple):
 
 
 CANONICAL_PROVIDERS: list[ProviderEntry] = [ProviderEntry(*row) for row in (
-    ("spaceshipresearch", "Scout Portal", "Scout Portal (Everything your agent needs, 300+ models with bundled tool use)"),
     ("fireworks", "Fireworks AI", "Fireworks AI (OpenAI-compatible direct model API)"),
     ("openrouter", "OpenRouter", "OpenRouter (Pay-per-use API aggregator)"),
     ("moa", "Mixture of Agents", "Mixture of Agents (named presets; aggregator acts after reference models)"),
@@ -525,10 +514,8 @@ PREFERRED_SILENT_DEFAULT_MODEL = "z-ai/glm-5.2"
 # (``get_preferred_silent_default_model``) instead of curated entry [0]. Metered aggregators order
 # best-first, so [0] is the priciest flagship; a profile that sets a provider with no model would
 # otherwise silently bill the most expensive model (863 Opus requests before one user noticed).
-# Network-free (cache-only) on purpose — this is the hot resolution path. The *interactive* default
-# (GUI onboarding / ``scout model``) uses the tier-aware ``get_recommended_default_model`` in
-# scout_cli/web_server.py + ``partition_spaceshipresearch_models_by_tier``, which may hit the Portal.
-_SILENT_DEFAULT_PROVIDERS: frozenset[str] = frozenset({"spaceshipresearch", "openrouter"})
+# Network-free (cache-only) on purpose — this is the hot resolution path.
+_SILENT_DEFAULT_PROVIDERS: frozenset[str] = frozenset({"openrouter"})
 
 
 # Retired model IDs kept for /model auto-detect only — not shown in pickers. DeepSeek cut these
@@ -538,7 +525,7 @@ _PROVIDER_RETIRED_ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 
-_AGGREGATOR_PROVIDERS = frozenset({"spaceshipresearch", "openrouter", "ai-gateway", "copilot", "kilocode"})
+_AGGREGATOR_PROVIDERS = frozenset({"openrouter", "ai-gateway", "copilot", "kilocode"})
 
 
 # Subscription/OAuth providers whose catalogs RE-EXPOSE other vendors' models; tried only as a last
@@ -565,8 +552,7 @@ _OPENAI_FAST_MODE_PREFIXES: tuple[str, ...] = ("gpt-", "o1", "o3", "o4")
 # Providers where models.dev is authoritative: the curated list is an offline fallback plus custom
 # additions the registry lacks, merged fresh-first (curated-only names appended) for both the CLI
 # and the gateway /model picker. DELIBERATELY EXCLUDED: "openrouter" (curated list is a hand-picked
-# agentic subset of 400+ models — merging would dump everything), "spaceshipresearch" (curated list + Portal
-# /models are the subscription-tier source of truth), and providers with dedicated live-endpoint
+# agentic subset of 400+ models — merging would dump everything), and providers with dedicated live-endpoint
 # branches (copilot, anthropic, ai-gateway, ollama-cloud, custom, stepfun, openai-codex).
 _MODELS_DEV_PREFERRED: frozenset[str] = frozenset({
     "opencode-go", "opencode-zen", "kilocode", "fireworks", "mistral", "togetherai", "cohere",

@@ -74,12 +74,6 @@ export interface SelectToolsetProviderResponse {
   provider: string
   /** Present when the selection was scoped to one web capability. */
   capability?: string
-  /** Present (true) when a managed SpaceshipResearch row was selected but the Portal
-   *  entitlement is missing — the row won't activate until the user signs
-   *  in to Scout Portal. */
-  needs_spaceshipresearch_auth?: boolean
-  /** The managed feature key (e.g. "browser") when needs_spaceshipresearch_auth is set. */
-  feature?: string
 }
 
 export function selectToolsetProvider(

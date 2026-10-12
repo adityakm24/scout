@@ -7,8 +7,8 @@ from tools.connectors import contract as c
 from tools.connectors import operation as op
 
 
-def _two(kind="connector"):
-    return [op.Target("gmail", kind, "connect"), op.Target("notion", kind, "connect")]
+def _two(kind="mcp"):
+    return [op.Target("gmail", kind, "install"), op.Target("notion", kind, "install")]
 
 
 
@@ -77,12 +77,12 @@ def test_target_keeps_the_link_and_the_mint_detail_across_transitions():
 
 def test_request_payload_carries_the_live_target_snapshot():
     operation = op.ConnectionOperation(
-        [op.Target("gmail", "connector", "reconnect", instructions="Finish setup")],
+        [op.Target("gmail", "mcp", "authorize", instructions="Finish setup")],
         tool_call_id="call-1")
     operation.transition("gmail", c.TargetState.initiated, c.Actor.backend_watcher, connect_url="https://l/gmail")
     payload = operation.request_payload()
     (target,) = payload["targets"]
-    assert target == {"name": "gmail", "kind": "connector", "action": "reconnect", "state": "initiated",
+    assert target == {"name": "gmail", "kind": "mcp", "action": "authorize", "state": "initiated",
                       "instructions": "Finish setup", "connect_url": "https://l/gmail"}
     # The model's own id keys the card to its tool row; a later op for the same apps gets a new one.
     assert payload["tool_call_id"] == "call-1"

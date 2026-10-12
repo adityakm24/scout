@@ -56,7 +56,6 @@ import {
   Loader2Icon,
   RefreshCwIcon,
   SmilePlusIcon,
-  Upload,
   VolumeXIcon,
   XIcon
 } from '@/lib/icons'
@@ -65,12 +64,10 @@ import { markAssistantIdSpoken } from '@/lib/spoken-reply'
 import { useEnterAnimation } from '@/lib/use-enter-animation'
 import { cn } from '@/lib/utils'
 import { playSpeechText, stopVoicePlayback } from '@/lib/voice-playback'
-import { openFreeTierSignIn } from '@/store/free-tier-sign-in'
 import { notifyError } from '@/store/notifications'
 import { startManualProviderOAuth } from '@/store/onboarding'
 import { $activeGatewayProfile, normalizeProfileKey, requestFreshSession } from '@/store/profile'
 import { sessionApprovalRequest } from '@/store/prompts'
-import { requestSendDiagnostics } from '@/store/send-diagnostics'
 import { $connection, $currentModel } from '@/store/session'
 import { sessionTileDelegate } from '@/store/session-states'
 import { notifyThreadEditOpen } from '@/store/thread-scroll'
@@ -798,13 +795,6 @@ const ErrorRecoveryActions: FC = () => {
     startManualProviderOAuth(surface.provider, key === 'default' ? undefined : key)
   }, [gatewayProfile, surface])
 
-  // The free tier's door: the same dialog the status-bar chip and the first-launch
-  // intro open. Signing in is free and lifts every free-tier refusal.
-  const signInFreeTier = useCallback(() => {
-    triggerHaptic('submit')
-    openFreeTierSignIn()
-  }, [])
-
   // Reveal a local folder through Electron; `logsRoot` is the profile's
   // SCOUT_HOME/logs, and its parent is the Scout data folder itself (what
   // the user needs to see to free space after a disk-full failure). Resolved
@@ -880,12 +870,6 @@ const ErrorRecoveryActions: FC = () => {
           {copy.errorSignInAgain(surface.providerLabel || surface.provider)}
         </button>
       )}
-      {plan.signInFreeTier && (
-        <button className="aui-error-action" onClick={signInFreeTier} type="button">
-          <KeyRound className="size-3" />
-          {copy.errorSignInFreeTier}
-        </button>
-      )}
       {plan.updateApiKey && inRouter && (
         <SettingsLinkAction
           icon={<KeyRound className="size-3" />}
@@ -923,10 +907,6 @@ const ErrorRecoveryActions: FC = () => {
           {remoteConnection ? copy.errorOpenDesktopLogs : copy.errorOpenLogs}
         </button>
       )}
-      <button className="aui-error-action" onClick={() => requestSendDiagnostics(diagnosticsText())} type="button">
-        <Upload className="size-3" />
-        {copy.errorSendDiagnostics}
-      </button>
       <CopyButton
         appearance="inline"
         className="aui-error-action"

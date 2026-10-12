@@ -385,8 +385,6 @@ type BotsMessages = {
     portalNotInstalled: string
     portalUnsupported: string
     portalUnavailable: string
-    /** Managed runtimes (Scout Cloud): updates are the platform's job, not the user's. */
-    portalUnavailableManaged: string
     unavailableTitle: string
     autoOpenMenu: string
     autoOpenOnToast: (name: string) => string
@@ -824,7 +822,6 @@ const en: BotsMessages = {
     portalNotInstalled: 'Not installed on host',
     portalUnsupported: 'Not available on this host',
     portalUnavailable: 'Update the bot\u2019s Scout to use Screen',
-    portalUnavailableManaged: 'Screen is not available on this managed Scout release yet',
     unavailableTitle: 'Screen needs a newer Scout',
     autoOpenMenu: 'Open Screen when the bot uses it',
     autoOpenOnToast: name => `${name}’s Screen opens when it starts using its desktop`,
@@ -1263,7 +1260,6 @@ const ja: BotsMessages = {
     portalNotInstalled: 'ホストに未インストール',
     portalUnsupported: 'このホストでは利用できません',
     portalUnavailable: 'Screen を使うにはボットの Scout を更新してください',
-    portalUnavailableManaged: 'この管理された Scout リリースではまだ Screen を利用できません',
     unavailableTitle: 'Screen には新しい Scout が必要です',
     autoOpenMenu: 'ボットが画面を使い始めたら Screen を開く',
     autoOpenOnToast: name => `${name} がデスクトップを使い始めると Screen が開きます`,
@@ -1686,7 +1682,6 @@ const zh: BotsMessages = {
     portalNotInstalled: '主机未安装',
     portalUnsupported: '此主机不可用',
     portalUnavailable: '更新机器人的 Scout 以使用屏幕',
-    portalUnavailableManaged: '此托管 Scout 版本尚不支持屏幕',
     unavailableTitle: '屏幕需要更新版的 Scout',
     autoOpenMenu: '机器人使用屏幕时自动打开',
     autoOpenOnToast: name => `${name} 开始使用桌面时会自动打开屏幕`,
@@ -2109,7 +2104,6 @@ const zhHant: BotsMessages = {
     portalNotInstalled: '主機未安裝',
     portalUnsupported: '此主機不可用',
     portalUnavailable: '更新機器人的 Scout 以使用螢幕',
-    portalUnavailableManaged: '此託管 Scout 版本尚不支援螢幕',
     unavailableTitle: '螢幕需要較新版的 Scout',
     autoOpenMenu: '機器人使用螢幕時自動開啟',
     autoOpenOnToast: name => `${name} 開始使用桌面時會自動開啟螢幕`,

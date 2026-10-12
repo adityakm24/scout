@@ -60,7 +60,7 @@ def _gateway_cfg() -> dict:
 
 
 def _env_or_cfg(env_var: str, cfg_key: str) -> str:
-    """Env var first (Docker/NAS stamp), then ``gateway.<cfg_key>``; stripped, ``""`` when unset."""
+    """Env var first (deploy stamp), then ``gateway.<cfg_key>``; stripped, ``""`` when unset."""
     value = os.environ.get(env_var, "").strip()
     return value or str(_gateway_cfg().get(cfg_key, "") or "").strip()
 
@@ -186,7 +186,7 @@ def relay_route_keys() -> list[str]:
 def relay_instance_id() -> Optional[str]:
     """Stable per-instance id forwarded at provision (``GATEWAY_RELAY_INSTANCE_ID`` /
     ``gateway.relay_instance_id``): binds the connector's ``gatewayId -> instanceId``
-    so inbound routes per-instance rather than tenant-broadcast (NAS stamps its
+    so inbound routes per-instance rather than tenant-broadcast (the deploy stamps its
     ``AgentInstance.id``). Tenant-scoped like ``relay_endpoint()``; absent -> null."""
     return _env_or_cfg("GATEWAY_RELAY_INSTANCE_ID", "relay_instance_id") or None
 
@@ -336,7 +336,7 @@ def _post_provision(
     timeout: float = _HTTP_TIMEOUT_S,
 ) -> dict:
     """POST ``/relay/provision``; return ``{secret, deliveryKey, tenant, gatewayId,
-    routeKeys}`` (the connector validates ``access_token`` against NAS, derives the
+    routeKeys}`` (the connector validates ``access_token`` against its IdP, derives the
     tenant, mints the per-gateway secret and upserts route rows). Raises RuntimeError
     with a user-facing message on any non-2xx / transport failure."""
     body: dict = {
@@ -409,10 +409,9 @@ def _resolve_relay_identity_token() -> str:
           ``$DOMINO_API_PROXY/access-token``): a plain GET whose body IS the token,
           raw JWT or a JSON envelope with ``access_token``. Possession of the
           (typically loopback) endpoint is the credential.
-      2.  Scout Portal (default): ``resolve_spaceshipresearch_access_token()``.
 
-    Raises on failure; callers decide whether that's fatal (enroll CLI) or a graceful
-    boot no-op (self-provision).
+    Raises on failure (including when no ``token_url`` is configured); callers decide whether
+    that's fatal (enroll CLI) or a graceful boot no-op (self-provision).
     """
     env = {k: os.environ.get(f"GATEWAY_RELAY_IDP_{k.upper()}", "").strip() for k in _IDP_KEYS}
     if not env["token_url"]:
@@ -425,9 +424,9 @@ def _resolve_relay_identity_token() -> str:
     token_url, client_id, client_secret, scope = (env[k] for k in _IDP_KEYS)
 
     if not token_url:
-        from scout_cli.auth import resolve_spaceshipresearch_access_token
-
-        return resolve_spaceshipresearch_access_token()
+        raise RuntimeError(
+            "no relay identity provider configured: set gateway.idp.token_url "
+            "(or GATEWAY_RELAY_IDP_TOKEN_URL)")
 
     if not client_id and not client_secret:
         # Mode 1b — plain GET; the body is the token, raw or JSON-enveloped.
@@ -493,7 +492,7 @@ def self_provision_relay() -> bool:
     ``register_relay_adapter()``. Creds live ONLY in process memory (never
     ``~/.scout/.env``), so a hosted container re-provisions every boot; the
     connector's rotation window covers a still-connected prior instance. The trigger
-    is deliberately NOT ``is_managed()`` (False on a NAS-hosted Fly agent): "pointed
+    is deliberately NOT ``is_managed()`` (False on a hosted agent): "pointed
     at a connector without a pinned secret" is the real signal and self-guards (an
     enrolled gateway has a PINNED secret -> skipped; no resolvable identity -> no-op).
     Returns True iff it provisioned. NEVER raises: a failure logs and returns False so

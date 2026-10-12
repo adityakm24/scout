@@ -194,7 +194,7 @@ _ECHO_ARGS_MAX_CHARS = 1500
 
 
 def local_batch_error(entries: List[Dict[str, Any]]) -> str:
-    """Rejection for a multi-entry batch that names a local tool. Restates the valid
+    """Rejection for a multi-entry batch. Restates the valid
     shape with the caller's OWN first entry: small models re-send an identical batch
     when told only the constraint, and the echoed payload is what gets them unstuck."""
     first = entries[0]
@@ -205,8 +205,8 @@ def local_batch_error(entries: List[Dict[str, Any]]) -> str:
     remaining = (f" then issue the remaining {len(entries) - 1} call(s) as separate tool_call invocations"
                  if len(entries) > 1 else "")
     return (
-        f"tool_call takes exactly one entry for local tools; you sent {len(entries)}. "
-        f"Retry with only: {retry}{remaining}. Only connectors__ names may be batched together."
+        f"tool_call takes exactly one entry; you sent {len(entries)}. "
+        f"Retry with only: {retry}{remaining}."
     )
 
 

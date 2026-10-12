@@ -27,7 +27,6 @@ function baseState(overrides: Partial<DesktopOnboardingState> = {}): DesktopOnbo
     firstRunSkipped: false,
     manual: false,
     localEndpoint: false,
-    freeTierReady: false,
     ...overrides
   }
 }
@@ -408,7 +407,7 @@ describe('OAuth onboarding', () => {
     installApiMock(async ({ body, path }: { body?: unknown; path: string }) => {
       calls.push({ body, path })
 
-      if (path === '/api/providers/oauth/spaceshipresearch/submit') {
+      if (path === '/api/providers/oauth/fixtureco/submit') {
         return { ok: true, status: 'approved' }
       }
 
@@ -416,8 +415,8 @@ describe('OAuth onboarding', () => {
         return {
           providers: [
             {
-              name: 'Scout Portal',
-              slug: 'spaceshipresearch',
+              name: 'Fixture Co',
+              slug: 'fixtureco',
               models: [model]
             }
           ]
@@ -425,11 +424,11 @@ describe('OAuth onboarding', () => {
       }
 
       if (path.startsWith('/api/model/recommended-default?')) {
-        return { provider: 'spaceshipresearch', model, free_tier: false }
+        return { provider: 'fixtureco', model }
       }
 
       if (path === '/api/model/set') {
-        return { ok: true, provider: 'spaceshipresearch', model, gateway_tools: [] }
+        return { ok: true, provider: 'openrouter', model }
       }
 
       throw new Error(`unexpected api path: ${path}`)
@@ -445,7 +444,7 @@ describe('OAuth onboarding', () => {
       }
 
       if (method === 'setup.runtime_check') {
-        expect(params).toEqual({ provider: 'spaceshipresearch' })
+        expect(params).toEqual({ provider: 'fixtureco' })
 
         return { ok: true } as never
       }
@@ -457,7 +456,7 @@ describe('OAuth onboarding', () => {
       baseState({
         flow: {
           status: 'awaiting_user',
-          provider: makeOAuthProvider('spaceshipresearch', 'Scout Portal'),
+          provider: makeOAuthProvider('fixtureco', 'Fixture Co'),
           start: {
             auth_url: 'https://portal.example/auth',
             expires_in: 600,
@@ -467,7 +466,7 @@ describe('OAuth onboarding', () => {
           code: 'fresh-code'
         },
         reason:
-          'No access token found for Scout Portal login. setup.status reports configured credentials, but runtime resolution still failed.',
+          'No access token found for Fixture Co login. setup.status reports configured credentials, but runtime resolution still failed.',
         requested: true
       })
     )
@@ -479,7 +478,7 @@ describe('OAuth onboarding', () => {
     expect(state.flow.status).toBe('confirming_model')
 
     if (state.flow.status === 'confirming_model') {
-      expect(state.flow.label).toBe('Scout Portal')
+      expect(state.flow.label).toBe('Fixture Co')
       expect(state.flow.currentModel).toBe(model)
     }
 
@@ -497,22 +496,22 @@ describe('OAuth onboarding', () => {
   it('does not advance when the default model assignment is not persisted', async () => {
     const model = 'openai/gpt-5.5-pro'
     installApiMock(async ({ path }: { path: string }) => {
-      if (path === '/api/providers/oauth/spaceshipresearch/submit') {
+      if (path === '/api/providers/oauth/fixtureco/submit') {
         return { ok: true, status: 'approved' }
       }
 
       if (path.startsWith('/api/model/options')) {
-        return { providers: [{ name: 'Scout Portal', slug: 'spaceshipresearch', models: [model] }] }
+        return { providers: [{ name: 'Fixture Co', slug: 'fixtureco', models: [model] }] }
       }
 
       if (path.startsWith('/api/model/recommended-default?')) {
-        return { provider: 'spaceshipresearch', model, free_tier: false }
+        return { provider: 'fixtureco', model }
       }
 
       if (path === '/api/model/set') {
         return {
           ok: false,
-          provider: 'spaceshipresearch',
+          provider: 'fixtureco',
           model,
           confirm_required: true,
           confirm_message: 'Confirm this expensive model.'
@@ -535,7 +534,7 @@ describe('OAuth onboarding', () => {
       baseState({
         flow: {
           status: 'awaiting_user',
-          provider: makeOAuthProvider('spaceshipresearch', 'Scout Portal'),
+          provider: makeOAuthProvider('fixtureco', 'Fixture Co'),
           start: {
             auth_url: 'https://portal.example/auth',
             expires_in: 600,
@@ -871,7 +870,7 @@ describe('device-code poll expiry', () => {
   function deviceCodeProvider() {
     // makeOAuthProvider builds a pkce provider; device-code flows need the
     // device_code branch instead.
-    return { ...makeOAuthProvider('spaceshipresearch', 'Scout Portal'), flow: 'device_code' as const }
+    return { ...makeOAuthProvider('fixtureco', 'Fixture Co'), flow: 'device_code' as const }
   }
 
   function deviceStart(expiresIn: number) {
@@ -888,11 +887,11 @@ describe('device-code poll expiry', () => {
   it('lapses to an error with actionable guidance when the window expires still pending', async () => {
     vi.useFakeTimers()
     installApiMock(async ({ path }: { path: string }) => {
-      if (path === '/api/providers/oauth/spaceshipresearch/start') {
+      if (path === '/api/providers/oauth/fixtureco/start') {
         return deviceStart(2)
       }
 
-      if (path === '/api/providers/oauth/spaceshipresearch/poll/device-sess-1') {
+      if (path === '/api/providers/oauth/fixtureco/poll/device-sess-1') {
         return { status: 'pending' }
       }
 
@@ -915,11 +914,11 @@ describe('device-code poll expiry', () => {
   it('keeps polling while the window is open and clears the expiry on cancel', async () => {
     vi.useFakeTimers()
     installApiMock(async ({ path }: { path: string }) => {
-      if (path === '/api/providers/oauth/spaceshipresearch/start') {
+      if (path === '/api/providers/oauth/fixtureco/start') {
         return deviceStart(600)
       }
 
-      if (path === '/api/providers/oauth/spaceshipresearch/poll/device-sess-1') {
+      if (path === '/api/providers/oauth/fixtureco/poll/device-sess-1') {
         return { status: 'pending' }
       }
 
@@ -980,7 +979,7 @@ describe('setOnboardingModel', () => {
     })
     $desktopOnboarding.set(confirmingModelState())
 
-    await setOnboardingModel('deepseek/deepseek-v4-flash-0731', 'spaceshipresearch', 'Scout Portal')
+    await setOnboardingModel('deepseek/deepseek-v4-flash-0731', 'fixtureco', 'Fixture Co')
 
     const flow = $desktopOnboarding.get().flow
     expect(flow.status).toBe('confirming_model')

@@ -14,9 +14,9 @@
  * changed at any time and applies on the next "New chat".
  */
 
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Select, SelectOption } from "@spaceshipresearch/ui/ui/components/select";
+import { Button } from "@/ui/components/button";
+import { Input } from "@/ui/components/input";
+import { Select, SelectOption } from "@/ui/components/select";
 import { FolderGit2, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 

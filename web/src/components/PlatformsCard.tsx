@@ -1,8 +1,8 @@
 import { AlertTriangle, PowerOff, Radio, Wifi, WifiOff } from "lucide-react";
 import type { PlatformStatus } from "@/lib/api";
 import { isoTimeAgo } from "@/lib/utils";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@spaceshipresearch/ui/ui/components/card";
+import { Badge } from "@/ui/components/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { useI18n } from "@/i18n";
 
 export function PlatformsCard({ platforms }: PlatformsCardProps) {
@@ -62,13 +62,13 @@ export function PlatformsCard({ platforms }: PlatformsCardProps) {
                 />
 
                 <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="font-mondwest normal-case text-sm font-medium capitalize truncate">
+                  <span className="font-display normal-case text-sm font-medium capitalize truncate">
                     {name}
                   </span>
 
                   {info.error_message && (
                     <span
-                      className={`font-mondwest normal-case text-xs ${
+                      className={`font-display normal-case text-xs ${
                         info.state === "disabled"
                           ? "text-muted-foreground"
                           : "text-destructive"
@@ -79,7 +79,7 @@ export function PlatformsCard({ platforms }: PlatformsCardProps) {
                   )}
 
                   {info.updated_at && (
-                    <span className="font-mondwest normal-case text-xs text-muted-foreground">
+                    <span className="font-display normal-case text-xs text-muted-foreground">
                       {t.status.lastUpdate}: {isoTimeAgo(info.updated_at)}
                     </span>
                   )}

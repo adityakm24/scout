@@ -11,8 +11,8 @@
 export const chatBitsEn = {
   chatBits: {
     branding: {
-      tagFull: 'SpaceshipResearch · Messenger of the Digital Gods',
-      tagMid: 'Messenger of the Digital Gods',
+      tagFull: 'SpaceshipResearch · Your personal AI agent',
+      tagMid: 'Your personal AI agent',
       scanningSkills: 'scanning skills',
       moreCategories: (count: number) => `(and ${count} more categories…)`,
       moreToolsets: (count: number) => `(and ${count} more toolsets…)`,

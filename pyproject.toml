@@ -245,14 +245,12 @@ edge-tts = ["edge-tts==7.2.7"]
 # setup requests report unavailable rather than succeeding with an empty set.
 neutts = ["neutts[all]==1.4.1; python_version < '3.14'"]
 kittentts = [
-  "kittentts @ https://github.com/KittenML/KittenTTS/releases/download/0.8.1/kittentts-0.8.1-py3-none-any.whl ; (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or sys_platform != 'darwin')",
-  # KittenTTS requires misaki[en]>=0.9.4, and PyPI's misaki 0.9.4 caps Python
-  # below 3.13. The SpaceshipResearch fork is the same 0.9.4 code with the cap
-  # raised to <3.15. Declaring it here makes KittenTTS's transitive
-  # requirement resolve to the fork. Drop this line when upstream misaki
-  # publishes a release that allows 3.14.
-  "misaki[en] @ git+https://github.com/SpaceshipResearch/misaki.git@f03fd2be7346952a83d3d4845c217fc7667f322d ; (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or sys_platform != 'darwin')",
-  "soundfile==0.14.0; (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or sys_platform != 'darwin')",
+  # KittenTTS requires misaki[en]>=0.9.4, and every misaki release caps Python below the managed
+  # 3.14 interpreter, so the extra is gated like neutts: bundles omit it, explicit setup reports
+  # unavailable. Upstream main (pinned) lifts the cap to 3.13; drop the gate when misaki allows 3.14.
+  "kittentts @ https://github.com/KittenML/KittenTTS/releases/download/0.8.1/kittentts-0.8.1-py3-none-any.whl ; python_version < '3.14' and (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or sys_platform != 'darwin')",
+  "misaki[en] @ git+https://github.com/hexgrad/misaki.git@fba1236595f2d2bf21d414ba6e57d25256afada3 ; python_version < '3.14' and (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or sys_platform != 'darwin')",
+  "soundfile==0.14.0; python_version < '3.14' and (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or sys_platform != 'darwin')",
 ]
 # onnxruntime has no Intel macOS wheel. Piper has no Windows ARM64 wheel.
 piper = [
@@ -605,9 +603,9 @@ wake-openwakeword = "(platform_machine != 'ARM64' or sys_platform != 'win32') an
 stt-whisper = "(platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or platform_system != 'Darwin')"
 # NeuTTS excludes Python 3.14.
 neutts = "python_version < '3.14'"
-# KittenTTS: onnxruntime has no Intel macOS wheel; misaki[en]'s torch has no
-# Windows ARM64 wheel.
-kittentts = "(platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or sys_platform != 'darwin')"
+# KittenTTS: misaki caps Python below 3.14; onnxruntime has no Intel macOS wheel;
+# misaki[en]'s torch has no Windows ARM64 wheel.
+kittentts = "python_version < '3.14' and (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or sys_platform != 'darwin')"
 piper = "(platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or sys_platform != 'darwin')"
 
 [tool.uv]
@@ -632,13 +630,6 @@ override-dependencies = [
   # replace that requirement too, not only the vendor's upper bound.
   # Remove this line when alibabacloud-tea-openapi lifts the cap.
   "cryptography==50.0.1",
-  # misaki[en] (pulled by [kittentts]) lists spacy-curated-transformers.
-  # The newest release that fits spacy 3.8 (2.x needs thinc 9), 0.3.1, caps
-  # Python below 3.14, so PM's `uv pip check` rejects the venv. Nothing
-  # imports it: only transformer spaCy models (trf=True) do, and KittenTTS
-  # never builds a misaki G2P. The never-true marker removes it from the lock.
-  # Remove this line when misaki drops it or a 3.14-capable release fits.
-  "spacy-curated-transformers; sys_platform == 'never'",
 ]
 exclude-newer = "14 days"
 # h2: temporary exclude-newer exception for the CVE-2026-71554 (GHSA-6hr6-w5qg-qmwg,

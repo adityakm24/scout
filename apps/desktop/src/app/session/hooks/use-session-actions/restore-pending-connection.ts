@@ -68,8 +68,8 @@ export function connectionRequestToolPayload(request: ConnectionRequest): Gatewa
 
   return {
     args: {
-      action: request.targets[0]?.action ?? (request.targets[0]?.kind === 'connector' ? 'connect' : 'install'),
-      connectors: request.targets.map(target => ({ mcp: target.kind === 'mcp', name: target.name }))
+      action: request.targets[0]?.action ?? 'install',
+      connectors: request.targets.map(target => target.name)
     },
     name: 'manage_connections',
     tool_id: request.toolCallId

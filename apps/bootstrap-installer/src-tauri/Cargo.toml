@@ -2,7 +2,7 @@
 name = "scout-bootstrap"
 version = "0.0.0"
 description = "Scout Setup — signed installer that drives scripts/install.ps1"
-authors = ["SpaceshipResearch <info@spaceshipresearch.com>"]
+authors = ["SpaceshipResearch"]
 edition = "2021"
 rust-version = "1.77"
 

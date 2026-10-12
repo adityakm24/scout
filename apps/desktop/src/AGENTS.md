@@ -27,7 +27,7 @@ The backend the app spawns is a **pooled `scout serve --port 0` per (connection,
 launch home is that profile, `SCOUT_DESKTOP=1` is set, and its in-process cron ticker stands down
 for homes a running gateway already serves. One process may still host sessions from several homes
 (`tui_gateway/AGENTS.md` § Profile scope); the first non-launch home flips `set_multiplex_active`.
-Remote connections (SSH, URL+token, Cloud) reach a backend with no desktop env var that may serve
+Remote connections (SSH, URL+token) reach a backend with no desktop env var that may serve
 several profiles from one process. Every lifecycle/status/settings REST call against a pooled
 backend carries `?profile=` (or the `profile` param) and every new-session tile records an owner
 route; a backend-side scope fix is probed twice — with the profile as the launch home of a pooled
@@ -97,13 +97,3 @@ in `src/plugins/scout-bots/`: `canonical-chat-registry.test.ts` (tripwire: the o
 reads/writes a stored pointer), `canonical-chat-creation.test.ts`, `canonical-chat-adopt-on-conflict.test.ts`,
 `bot-row-opens-canonical-chat.test.ts`, `hide-bot-chats.test.ts`; plus repo-root
 `tests/tui_gateway/test_profiles_list_canonical_session.py`.
-
-## Free tier surfaces (`src/store/free-tier*.ts`, Billing, statusbar chip, onboarding ready screen)
-
-`$freeTierStatus` mirrors `free_tier.status` (pull; refreshed with the status snapshot and after a
-sign-in). `deriveBillingView` branches on `billing.free_tier_account` BEFORE `logged_in` (status
-`free_tier`: notice + one Sign in, Plan/Model/Connectors summary, no payment or usage rows); the
-`logged_out` notice's Sign in opens the same dialog, never a portal link (a link writes no
-credential). The sign-in dialog is a single claimed owner (first mount wins, like the
-real-profile consent prompt); its states map 1:1 to the poll route's `status` + `reason`. Copy is the ruled free-tier copy: never
-"guest", "anonymous", "claim" or "Scout Portal" in user-facing text.

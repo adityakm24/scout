@@ -307,7 +307,6 @@ _CLI_FAMILIES: dict[str, tuple[_CliSurface, str]] = {
         "list, show, info, *create, *use, *describe, *rename, *delete, *export, *import, "
         "*install, *update"),
     "cron": (_sub("cron", "build_cron_parser", "cmd_cron"), "*create, *edit, *remove, *tick"),
-    "portal": (_CliSurface("adder", "scout_cli.portal_cli", "add_parser"), "info, tools"),
     "project": (
         _CliSurface("builder", "scout_cli.projects_cmd", "build_parser", "cmd_project"),
         "list, show, *create, *add-folder, *remove-folder, *rename, *set-primary, *use, "
@@ -360,8 +359,6 @@ _BLOCKED_PAIRS = {
     ("profile", "alias"): "`profile alias` creates shell wrappers and is not available in Scout Console.",
     ("skills", "config"): "`skills config` is interactive and is not available in Scout Console.",
     ("skills", "publish"): "`skills publish` is not available in Scout Console.",
-    ("portal", "login"): "`portal login` is interactive and is not available in Scout Console.",
-    ("portal", "open"): "`portal open` opens a browser and is not available in Scout Console.",
     ("kanban", "tail"): "`kanban tail` streams output and is not available in Scout Console.",
     ("kanban", "watch"): "`kanban watch` streams output and is not available in Scout Console.",
     ("kanban", "daemon"): "`kanban daemon` starts a service and is not available in Scout Console.",

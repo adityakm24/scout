@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 # (observed: staging stranded at `draining`); map them to `running`, mirroring gateway/run.py.
 # `starting` / `startup_failed` are excluded: auto-restarting a mid-boot death is the crash-loop.
 # A gateway only ever reaches these while it is up and serving, so they are NOT an operator stop and NOT a
-# failed boot: - `draining`  — written by the drain watcher / scale-to-zero go-dormant path when an
+# failed boot: - `draining`  — written by the drain watcher when an
 # in-flight quiesce begins (gateway/run.py). - `degraded`  — written when the gateway comes up with some
 # platforms queued for retry, then "falls through to the normal running state" (gateway/run.py #5196): the
 # process is up, serving cron + whatever platforms connected, and the reconnect watcher takes the rest from

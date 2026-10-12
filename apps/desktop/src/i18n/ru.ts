@@ -292,8 +292,7 @@ export const ru = defineLocale({
       turnDoneBody: '',
       turnErrorTitle: 'Ход не удался',
       backgroundDoneTitle: 'Фоновая задача завершена',
-      backgroundFailedTitle: 'Фоновая задача не удалась',
-      creditsTitle: 'Кредиты'
+      backgroundFailedTitle: 'Фоновая задача не удалась'
     }
   },
   remoteDisplayBanner: {
@@ -302,10 +301,8 @@ export const ru = defineLocale({
   },
 
   billingBlock: {
-    titleSpaceshipResearch: 'Кредиты SpaceshipResearch закончились',
     titleProvider: provider => `Кредиты закончились — ${provider}`,
     fallbackMessage: 'В вашем аккаунте закончились кредиты. Пополните баланс, чтобы продолжить.',
-    openBilling: 'Открыть биллинг',
     addCredits: 'Пополнить кредиты',
     dismiss: 'Скрыть'
   },
@@ -500,9 +497,7 @@ export const ru = defineLocale({
       vaultCredentials: 'Сохранённые учётные данные',
       vaultSources: 'Менеджеры паролей',
       appUpdates: 'Версия и обновления',
-      uninstall: 'Удаление',
-      billingOverview: 'Обзор',
-      billingPlans: 'Тарифы'
+      uninstall: 'Удаление'
     },
     closeSettings: 'Закрыть настройки',
     exportConfig: 'Экспорт конфигурации',
@@ -525,7 +520,6 @@ export const ru = defineLocale({
       archivedChats: 'Архив чатов',
       sessions: 'Сеансы',
       about: 'О программе',
-      billing: 'Оплата',
       notifications: 'Уведомления'
     },
     plugins: {
@@ -613,10 +607,6 @@ export const ru = defineLocale({
         backgroundDone: {
           label: 'Фоновая задача завершена',
           description: 'Фоновая команда терминала выполнена.'
-        },
-        credits: {
-          label: 'Оповещения о кредитах',
-          description: 'Доступ к кредитам приостановлен или восстановлен.'
         },
         plugin: {
           label: 'Уведомления плагинов',
@@ -1184,7 +1174,7 @@ export const ru = defineLocale({
     connections: {
       title: 'Зарегистрированные шлюзы',
       intro:
-        'Управляйте этим устройством и всеми шлюзами Scout, до которых можно дотянуться через удалённые, SSH или Cloud-соединения.',
+        'Управляйте этим устройством и всеми шлюзами Scout, до которых можно дотянуться через удалённые или SSH-соединения.',
       stagedNote:
         'Переключайтесь между шлюзами из раздела «Сеансы». Профили, чаты, мессенджеры и cron-задачи остаются за своим шлюзом; работа на других шлюзах продолжается.',
       launchModeTitle: 'При запуске возвращаться к «Сеансам» на последнем шлюзе',
@@ -1211,14 +1201,11 @@ export const ru = defineLocale({
       updateAllRunning: 'Обновление всех инстансов…',
       updateAllDone: 'Обновления разосланы',
       updateAllFailed: 'Не удалось разослать обновления',
-      updateSkippedCloud: 'Управляется Scout Cloud',
       kindLocal: 'Локальный',
       kindRemote: 'Удалённый шлюз',
-      kindCloud: 'Scout Cloud',
       kindSsh: 'SSH',
       kindLocalDesc: 'Рантайм Scout, которым управляет это приложение.',
       kindRemoteDesc: 'Шлюз Scout, доступный по HTTP(S) — LAN, Tailscale или интернет.',
-      kindCloudDesc: 'Хостинговая инстанция, обнаруженная через ваш аккаунт Scout Cloud.',
       kindSshDesc: 'Установка Scout, доступная по SSH.',
       labelTitle: 'Имя',
       labelDesc:
@@ -1238,8 +1225,6 @@ export const ru = defineLocale({
       duplicateSsh: label => `Соединение с этим SSH-хостом уже есть («${label}»).`,
       sameBackendHint: label => `Тот же бэкенд, что и «${label}»`,
       localAddHint: 'Локальное недоступно: управляемое локальное соединение уже существует (их всегда только одно).',
-      cloudAddHint:
-        'Подсказка: вход в Scout Cloud выше автоматически обнаруживает ваших агентов — эту форму используйте только для ручной регистрации известного URL инстанса.',
       save: 'Сохранить соединение',
       saving: 'Сохранение…',
       cancel: 'Отмена',
@@ -1263,42 +1248,6 @@ export const ru = defineLocale({
       remoteDesc: 'Подключает это приложение к удалённому бэкенду Scout.',
       remoteAuthHint:
         'Хостинговые шлюзы используют OAuth или логин/пароль; самохостинговые могут использовать токен сессии.',
-      cloudTitle: 'Scout Cloud',
-      cloudDesc: 'Войдите в Scout Cloud один раз и выбирайте агентов из своего аккаунта — без вставки URL.',
-      cloudSignInTitle: 'Scout Cloud',
-      cloudSignIn: 'Войти в Scout Cloud',
-      cloudSignedIn: 'Вы вошли в Scout Cloud',
-      cloudNeedsSignIn: 'Войдите в Scout Cloud, чтобы обнаружить агентов в вашем аккаунте.',
-      cloudSignedInDesc: 'Вы вошли. Выберите агента ниже; сессия обновляется автоматически.',
-      cloudAgentsTitle: 'Ваши агенты',
-      cloudOrgPickerTitle: 'Выберите организацию',
-      cloudOrgSelect: 'Выбрать',
-      cloudOrgChange: 'Сменить организацию',
-      cloudOrgRole: role => `Роль: ${role}`,
-      cloudLoadingAgents: 'Загрузка ваших агентов…',
-      cloudNoAgents: {
-        before: 'Агенты на этом аккаунте не найдены. Создайте агента в',
-        linkText: 'портале SpaceshipResearch',
-        after: ', затем обновите страницу.'
-      },
-      cloudRefresh: 'Обновить',
-      cloudConnect: 'Подключиться',
-      cloudSavedTitle: 'Сохранённые облачные шлюзы',
-      cloudSavedDesc:
-        'Используйте сохранённый шлюз без изменения шлюза по умолчанию. Войдите ниже, чтобы добавить экземпляры. Имена и вход — в списке сохранённых подключений.',
-      cloudUseSaved: 'Использовать шлюз',
-      cloudActive: 'Активен в этом окне',
-      cloudConnecting: 'Подключение…',
-      cloudDiscoverFailed: 'Не удалось загрузить агентов Scout Cloud',
-      cloudConnectFailed: 'Не удалось подключиться к этому агенту',
-      cloudSignInFailed: 'Не удалось войти в Scout Cloud',
-      cloudSignedOutTitle: 'Выход из Scout Cloud',
-      cloudSignedOutMessage: 'Сессия Scout Cloud сброшена.',
-      cloudConnectedTitle: 'Подключено',
-      cloudConnectedPill: 'Подключено',
-      cloudConnectedTo: name => `Подключено к ${name}.`,
-      cloudAgentProvisioning: 'Развёртывание…',
-      cloudStatusLabel: status => `Статус: ${status}`,
       remoteUrlTitle: 'Удалённый URL',
       remoteUrlDesc: 'Базовый URL удалённого бэкенда дашборда. Поддерживаются префиксы пути, например /scout.',
       probing: 'Проверяем, как аутентифицируется этот шлюз…',
@@ -1561,13 +1510,6 @@ export const ru = defineLocale({
       activeBackend: 'Активен',
       activeBackendHint: 'Это ваш активный бэкенд',
       useBackend: 'Использовать этот бэкенд',
-      spaceshipResearchIncluded: 'Входит в подписку SpaceshipResearch — войдите в Scout Portal, чтобы активировать.',
-      spaceshipResearchAuthNeededTitle: 'Войдите в Scout Portal',
-      spaceshipResearchAuthNeededMessage: provider => `${provider} сохранён, но не активируется, пока вы не войдёте в Scout Portal.`,
-      spaceshipResearchAuthSignIn: 'Войти',
-      spaceshipResearchAuthDoneTitle: 'Scout Portal подключён',
-      spaceshipResearchAuthDoneMessage: 'Ваши бэкенды по подписке теперь активны.',
-      spaceshipResearchAuthFailed: 'Вход в Scout Portal не завершён',
       noApiKeyRequired: 'API-ключ не требуется.',
       postSetupHint: step =>
         `Этому бэкенду нужна однократная установка (${step}). Выполняется на этой машине — может занять несколько минут.`,
@@ -2816,8 +2758,6 @@ export const ru = defineLocale({
       '/browser': 'Управлять CDP-подключением браузера [connect|disconnect|status] (только локальный шлюз)',
       '/palette': 'Открыть палитру команд',
       '/usage': 'Показать расход токенов и лимиты; reset использует накопленный сброс лимита Codex',
-      '/subscription': 'Показать план SpaceshipResearch и изменить его в браузере',
-      '/topup': 'Показать баланс SpaceshipResearch и управлять оплатой',
       '/platform': 'Приостановить, возобновить или перечислить сбоящие платформы шлюза',
       '/version': 'Показать версию Scout Agent',
       '/debug': 'Загрузить отчёт отладки с данными системы и журналами и получить ссылку',
@@ -3312,7 +3252,6 @@ export const ru = defineLocale({
     chooseLater: 'Выберу провайдера позже',
     recommended: 'Рекомендуется',
     connected: 'Подключено',
-    featuredPitch: 'Одна подписка, 300+ передовых моделей — рекомендуемый способ запускать Scout',
     fireworksPitch: 'Прямой API моделей — передовые модели на хостинге Fireworks',
     openRouterPitch: 'Один ключ, сотни моделей — надёжный вариант по умолчанию',
     apiKeyOptions: {
@@ -3360,7 +3299,6 @@ export const ru = defineLocale({
     reopenAuthPage: 'Открыть страницу авторизации снова',
     autoBrowser: provider =>
       `Мы открыли ${provider} в вашем браузере. Авторизуйте Scout там, и подключение произойдёт автоматически — ничего копировать и вставлять не нужно.`,
-    reopenSignInPage: 'Открыть страницу входа снова',
     waitingAuthorize: 'Ждём вашей авторизации...',
     externalPending: provider =>
       `${provider} входит через собственный CLI. Выполните эту команду в терминале, затем вернитесь и выберите «Я вошёл»:`,
@@ -3369,8 +3307,6 @@ export const ru = defineLocale({
     reopenVerification: 'Открыть страницу подтверждения снова',
     copy: 'Копировать',
     defaultModel: 'Модель по умолчанию',
-    freeTier: 'Бесплатный тариф',
-    pro: 'Pro',
     free: 'Free',
     price: (input, output) => `${input} вход / ${output} выход за Mtok`,
     change: 'Изменить',
@@ -3386,12 +3322,8 @@ export const ru = defineLocale({
     addProvider: 'Добавить провайдера',
     loadFailed: 'Не удалось загрузить модели',
     noAuthenticatedProviders: 'Нет провайдеров с аутентификацией.',
-    pro: 'Pro',
-    proNeedsSubscription: 'Модели Pro требуют платной подписки SpaceshipResearch.',
     free: 'Free',
-    freeTier: 'Бесплатный тариф',
     priceTitle: 'Цена вход / выход за миллион токенов',
-    wasPrice: 'было',
     customModel: 'Своя модель',
     addCustomModelAction: 'Добавить свою модель…',
     customModelPlaceholder: 'Введите id модели, например openai/gpt-5'
@@ -3478,8 +3410,6 @@ export const ru = defineLocale({
       clientLabel: version => `клиент v${version}`,
       connectionSsh: host => `SSH: ${host}`,
       connectionRemote: host => `Удалённый: ${host}`,
-      connectionCloud: host => `Облако: ${host}`,
-      connectionCloudTooltip: host => `Scout Cloud · ${host}`,
       connectionSshTooltip: host => `SSH · ${host}`,
       connectionRemoteTooltip: host => `Удалённый · ${host}`,
       backendLabel: version => `бэкенд v${version}`,

@@ -48,7 +48,7 @@ def assert_routing(problems: list[str], ctx: str) -> None:
 # Env that could route or authenticate a child Scout outside the fake fleet.
 _STRIP_SUFFIXES = ("_API_KEY", "_TOKEN", "_BASE_URL", "_SECRET", "_ACCESS_KEY", "_KEY_ID")
 _STRIP_PREFIXES = ("SCOUT_", "OPENAI", "ANTHROPIC", "OPENROUTER", "AWS_", "AZURE_", "GOOGLE_",
-                   "GEMINI", "PYTEST_", "SPACESHIPRESEARCH_", "XAI_", "LLM_", "CUSTOM_")
+                   "GEMINI", "PYTEST_", "FIXTURECO_", "XAI_", "LLM_", "CUSTOM_")
 
 
 def hermetic_env(home: Path, scout_home: Path | None = None, proxy: str | None = None) -> dict[str, str]:

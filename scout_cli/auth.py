@@ -6,7 +6,7 @@
   only I/O primitives (cross-process flock, atomic 0o600 writes).
 - ``resolve_provider()`` picks the active provider via the documented priority chain.
 - ``OAUTH_PROVIDER_FLOWS`` maps each OAuth provider to its resolver/status builder; the flows live in
-  ``auth_spaceshipresearch``/``auth_codex``/``auth_xai``/``auth_qwen``/``auth_minimax``/``auth_spotify``/``auth_openrouter`` and are
+  ``auth_codex``/``auth_xai``/``auth_qwen``/``auth_minimax``/``auth_spotify``/``auth_openrouter`` and are
   re-imported here so ``scout_cli.auth.<name>`` stays the public/patchable surface."""
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, FrozenSet, Iterable, List, Optional, Tuple
 from urllib.parse import urlparse
 
-from scout_constants import OPENROUTER_BASE_URL, scout_home_key, secure_parent_dir
+from scout_constants import OPENROUTER_BASE_URL, secure_parent_dir
 from agent.credential_persistence import sanitize_borrowed_credential_payload
 from utils import atomic_json_write, env_float, file_signature, is_truthy_value  # noqa: F401  (env_float: agent.credential_pool reads auth_mod.env_float)
 from scout_cli.auth_zai_kimi import (  # noqa: F401  re-exported
@@ -39,28 +39,14 @@ from scout_cli.auth_model_picker import (  # noqa: F401  re-exported
     _prompt_model_selection, _save_model_choice)
 from scout_cli.auth_device_flow import (  # noqa: F401  re-exported
     _can_open_graphical_browser, _default_verify, _is_remote_session,
-    _spaceshipresearch_device_auth_timeout_message, _offer_existing_oauth_credentials,
-    _poll_device_token_generic, _poll_for_token, _print_device_code_instructions,
-    _print_login_success, _print_loopback_ssh_hint, _prompt_yes_no, _request_device_code,
+    _offer_existing_oauth_credentials, _poll_device_token_generic, _print_device_code_instructions,
+    _print_login_success, _print_loopback_ssh_hint, _prompt_yes_no,
     _resolve_verify, _ssh_user_at_host)
 from scout_cli.auth_oauth_grants import (  # noqa: F401  re-exported
     SINGLE_USE_REFRESH_POOL_PROVIDERS, _oauth_heal_clean_marks, _oauth_heal_notices,
     consume_oauth_heal_notices, heal_forked_single_use_oauth_grants,
     strip_cloned_single_use_oauth_grants)
-from scout_cli.auth_spaceshipresearch import (  # noqa: F401  re-exported
-    SPACESHIPRESEARCH_SESSION_TERMINAL, SPACESHIPRESEARCH_SESSION_UNKNOWN, SPACESHIPRESEARCH_SESSION_VALID, _ALLOWED_SPACESHIPRESEARCH_INFERENCE_HOSTS,
-    _agent_key_is_usable, _apply_spaceshipresearch_refreshed_tokens, _assert_spaceshipresearch_inference_jwt_usable,
-    _compute_spaceshipresearch_auth_status, _format_spaceshipresearch_entitlement_auth_error, _healed_spaceshipresearch_inference_url,
-    _login_spaceshipresearch, _merge_shared_spaceshipresearch_oauth_state, _migrate_stale_scout_portal_url,
-    _spaceshipresearch_device_code_login, _spaceshipresearch_inference_env_override, _spaceshipresearch_invoke_jwt_is_usable,
-    _spaceshipresearch_invoke_jwt_status, _scout_portal_env_override, _spaceshipresearch_shared_store_lock,
-    _spaceshipresearch_shared_store_path, _pool_first_oauth_status, _quarantine_spaceshipresearch_oauth_state,
-    _quarantine_spaceshipresearch_pool_entries, _read_shared_spaceshipresearch_state, _refresh_access_token,
-    _refresh_spaceshipresearch_or_quarantine, _select_spaceshipresearch_invoke_jwt, _sync_spaceshipresearch_pool_from_auth_store,
-    _token_fingerprint, _try_import_shared_spaceshipresearch_state, _validate_spaceshipresearch_inference_url_from_network,
-    _write_shared_spaceshipresearch_state, fetch_spaceshipresearch_models, get_spaceshipresearch_auth_status_local,
-    get_spaceshipresearch_session_validity, persist_spaceshipresearch_credentials, refresh_spaceshipresearch_oauth_from_state,
-    resolve_spaceshipresearch_runtime_credentials, step_up_spaceshipresearch_billing_scope)
+from scout_cli.auth_oauth_status import _pool_first_oauth_status  # noqa: F401  re-exported
 from scout_cli.auth_minimax import (  # noqa: F401  re-exported
     _MINIMAX_OAUTH_ERROR_BODY_LIMIT, _login_minimax_oauth, _minimax_oauth_login, _minimax_pkce_pair,
     _minimax_poll_token, _minimax_post_form, _minimax_request_user_code,
@@ -89,10 +75,7 @@ from scout_cli.auth_qwen import (  # noqa: F401  re-exported
     _refresh_qwen_cli_tokens, _save_qwen_cli_tokens, get_qwen_auth_status,
     resolve_qwen_runtime_credentials)
 from scout_cli.auth_constants import (  # noqa: F401  re-exported
-    _decode_jwt_claims, AUTH_STORE_VERSION, AUTH_LOCK_TIMEOUT_SECONDS, DEFAULT_SCOUT_PORTAL_URL,
-    DEFAULT_SPACESHIPRESEARCH_INFERENCE_URL, DEFAULT_SPACESHIPRESEARCH_CLIENT_ID, SPACESHIPRESEARCH_BILLING_MANAGE_SCOPE,
-    DEFAULT_SPACESHIPRESEARCH_SCOPE, SPACESHIPRESEARCH_DEVICE_CODE_SOURCE, SPACESHIPRESEARCH_AUTH_PATH_INVOKE_JWT,
-    ACCESS_TOKEN_REFRESH_SKEW_SECONDS, SPACESHIPRESEARCH_INVOKE_JWT_MIN_TTL_SECONDS, DEFAULT_CODEX_BASE_URL,
+    _decode_jwt_claims, AUTH_STORE_VERSION, AUTH_LOCK_TIMEOUT_SECONDS, DEFAULT_CODEX_BASE_URL,
     DEFAULT_XAI_OAUTH_BASE_URL, MINIMAX_OAUTH_CLIENT_ID, MINIMAX_OAUTH_SCOPE,
     MINIMAX_OAUTH_GLOBAL_BASE, MINIMAX_OAUTH_CN_BASE, MINIMAX_OAUTH_GLOBAL_INFERENCE,
     MINIMAX_OAUTH_CN_INFERENCE, MINIMAX_OAUTH_REFRESH_SKEW_SECONDS, DEFAULT_QWEN_BASE_URL,
@@ -103,7 +86,7 @@ from scout_cli.auth_constants import (  # noqa: F401  re-exported
     XAI_ACCESS_TOKEN_REFRESH_SKEW_SECONDS, QWEN_ACCESS_TOKEN_REFRESH_SKEW_SECONDS,
     DEFAULT_SPOTIFY_ACCOUNTS_BASE_URL, DEFAULT_SPOTIFY_API_BASE_URL, SPOTIFY_DOCS_URL,
     DEFAULT_SPOTIFY_SCOPE, SERVICE_PROVIDER_NAMES, LMSTUDIO_NOAUTH_PLACEHOLDER,
-    ACTUAL_LOCAL_NOAUTH_PLACEHOLDER, CODEX_RATE_LIMITED_CODE, AuthError, _spaceshipresearch_err, httpx)
+    ACTUAL_LOCAL_NOAUTH_PLACEHOLDER, CODEX_RATE_LIMITED_CODE, AuthError, httpx)
 
 logger = logging.getLogger(__name__)
 
@@ -172,10 +155,6 @@ def _api_key_provider(
 # row is ``_api_key_provider(id, name, inference_base_url, api_key_env_vars[, base_url_env_var
 # [, auth_type]])``; OAuth / bespoke rows are full ``ProviderConfig`` objects.
 _REGISTRY_ROWS: Tuple[Any, ...] = (
-    ProviderConfig(
-        "spaceshipresearch", "Scout Portal", "oauth_device_code", portal_base_url=DEFAULT_SCOUT_PORTAL_URL,
-        inference_base_url=DEFAULT_SPACESHIPRESEARCH_INFERENCE_URL, client_id=DEFAULT_SPACESHIPRESEARCH_CLIENT_ID,
-        scope=DEFAULT_SPACESHIPRESEARCH_SCOPE),
     ProviderConfig("openai-codex", "OpenAI Codex", "oauth_external", inference_base_url=DEFAULT_CODEX_BASE_URL),
     ("openai-api", "OpenAI API", "https://api.openai.com/v1", ("OPENAI_API_KEY",), "OPENAI_BASE_URL"),
     ProviderConfig(
@@ -456,8 +435,8 @@ def primary_failure_wording(error: Exception) -> tuple[str, str]:
     return "auth failed", "Primary auth failed"
 
 
-# Entitlement failures: SpaceshipResearch gets a Portal-aware message; other providers a fixed generic one (or
-# the raw error when no generic text exists for the code).
+# Entitlement failures: a fixed generic message per code (or the raw error when no generic text
+# exists for the code).
 _GENERIC_ENTITLEMENT_MESSAGES = {
     "subscription_required": "No active paid subscription found. Please purchase/activate a subscription, then retry.",
     "insufficient_credits": "Subscription credits are exhausted. Top up/renew credits, then retry."}
@@ -476,8 +455,6 @@ def format_auth_error(error: Exception) -> str:
 
         return f"{error} Run `scout {profile_cli_selector()}model` to re-authenticate."
     if error.code in _ENTITLEMENT_ERROR_CODES:
-        if error.provider == "spaceshipresearch":
-            return _format_spaceshipresearch_entitlement_auth_error(error)
         generic = _GENERIC_ENTITLEMENT_MESSAGES.get(error.code)
         if generic:
             return generic
@@ -607,8 +584,8 @@ def _file_lock(
     """Cross-process advisory flock helper, reentrant per-thread via ``holder.depth``.
 
     Falls back to a depth-only guard when neither ``fcntl`` nor ``msvcrt`` is available. Callers
-    supply their own ``threading.local`` so independent locks (profile store vs global root vs the
-    shared SpaceshipResearch store) track reentrancy separately."""
+    supply their own ``threading.local`` so independent locks (profile store vs global root) track
+    reentrancy separately."""
     if getattr(holder, "depth", 0) > 0:
         holder.depth += 1
         try:
@@ -659,8 +636,7 @@ def _auth_store_lock(
     """Cross-process advisory lock for one auth.json read/write transaction.
 
     ``target_path`` is required for profile-to-global write-throughs: each path has its own
-    reentrancy tracker and kernel lock. Lock ordering invariant: ``_auth_store_lock`` FIRST (outer),
-    ``_spaceshipresearch_shared_store_lock`` SECOND (inner), else deadlock against a concurrent shared import."""
+    reentrancy tracker and kernel lock."""
     auth_path = target_path if target_path is not None else _auth_file_path()
     with _file_lock(
         auth_path.with_suffix(".lock"), _auth_lock_holder_for(auth_path), timeout_seconds,
@@ -708,15 +684,7 @@ def _load_auth_store(auth_file: Optional[Path] = None) -> Dict[str, Any]:
     if isinstance(raw, dict) and (
         isinstance(raw.get("providers"), dict) or isinstance(raw.get("credential_pool"), dict)):
         raw.setdefault("providers", {})
-        if isinstance(raw.get("providers"), dict):
-            _migrate_stale_scout_portal_url(raw["providers"])
         return raw
-
-    if isinstance(raw, dict) and isinstance(raw.get("systems"), dict):  # legacy "systems" format
-        systems = raw["systems"]
-        providers = {"spaceshipresearch": systems["scout_portal"]} if "scout_portal" in systems else {}
-        return {**_empty_auth_store(), "providers": providers,
-                "active_provider": "spaceshipresearch" if providers else None}
     return _empty_auth_store()
 
 
@@ -834,8 +802,8 @@ def _save_provider_state_to_source(
     """Persist provider state back to the auth store it was read from.
 
     A token refresh rewrites credentials, not the user's choice of provider: ``active_provider`` is
-    left as it is (a SpaceshipResearch free-tier identity refreshed for a connector call must not become the
-    inference provider of an install that has its own key)."""
+    left as it is (a credential refreshed for a side call must not become the inference provider
+    of an install that uses another one)."""
     if source_path is None or _same_path(source_path, _auth_file_path()):
         _store_provider_state(auth_store, provider_id, state, set_active=False)
         _save_auth_store(auth_store)
@@ -913,10 +881,9 @@ _POOL_STATUS_FIELDS = (
     "last_error_reset_at", "status_cleared_at")
 _POOL_TOKEN_GENERATION_FIELDS = (
     "access_token", "refresh_token", "expires_at", "expires_at_ms", "expires_in", "obtained_at",
-    "last_refresh", "agent_key", "agent_key_expires_at", "agent_key_expires_in", "agent_key_id",
-    "agent_key_obtained_at", "agent_key_reused",
-    # Refresh-coupled metadata: a SpaceshipResearch refresh rewrites scope and the validated
-    # inference route together with the new pair, so they travel with it.
+    "last_refresh",
+    # Refresh-coupled metadata: a refresh may rewrite scope and the validated inference route
+    # together with the new pair, so they travel with it.
     "scope", "inference_base_url",
 )
 
@@ -1127,24 +1094,6 @@ def unsuppress_credential_source(provider_id: str, source: str) -> bool:
 def get_provider_auth_state(provider_id: str) -> Optional[Dict[str, Any]]:
     """Persisted auth state for a provider (profile first, global-root fallback), or None."""
     return _load_provider_state(_load_auth_store(), provider_id)
-
-
-def spaceshipresearch_token_has_billing_scope() -> bool:
-    """Return True if the currently-held SpaceshipResearch token carries ``billing:manage``.
-
-    Reads the persisted ``scope`` string saved at login (``_save_provider_state``
-    stores ``token_data.get("scope") or scope``). A space-delimited match. Used by
-    the lazy step-up: if False, the first billing call will 403 ``insufficient_scope``
-    anyway, but checking up front lets a surface skip a doomed round-trip.
-    """
-    try:
-        state = get_provider_auth_state("spaceshipresearch") or {}
-    except Exception:
-        return False
-    scope = state.get("scope")
-    if not isinstance(scope, str):
-        return False
-    return SPACESHIPRESEARCH_BILLING_MANAGE_SCOPE in scope.split()
 
 
 def get_active_provider() -> Optional[str]:
@@ -1475,14 +1424,10 @@ def _openrouter_auto_detected(scoped_key_env: Callable[[str], str]) -> bool:
         return False
 
 
-def _logged_in_oauth_active_provider(*, skip_free_tier: bool = False) -> Optional[str]:
+def _logged_in_oauth_active_provider() -> Optional[str]:
     """auth.json ``active_provider`` when it is a registry provider that reports logged in."""
     try:
         _maybe = _load_auth_store().get("active_provider")
-        if _maybe == "spaceshipresearch":
-            from scout_cli.anon_auth import guest_enabled, has_guest
-            if has_guest() and (skip_free_tier or not guest_enabled()):
-                return None  # the free tier is off (or being discounted), so a guest is not a login
         if _maybe and _maybe in PROVIDER_REGISTRY and get_auth_status(_maybe).get("logged_in"):
             return _maybe
     except Exception as e:
@@ -1498,8 +1443,7 @@ def _config_model_provider() -> Tuple[Any, Optional[str]]:
     The normal chat/gateway path resolves config.provider upstream in resolve_requested_provider();
     this is the safety net for the direct ``resolve_provider("auto")`` callers. A configured custom
     endpoint is explicit intent like any registry pin: without this rung the boot inventory
-    (``free_tier_bootstrap``) read a llama.cpp/vLLM install as "nothing configured" and the
-    dashboard's Ink chat parked every session on Setup Required while ``scout chat`` worked
+    read a llama.cpp/vLLM install as "nothing configured" and the dashboard's Ink chat parked every session on Setup Required while ``scout chat`` worked
     (#108383)."""
     try:
         from scout_cli.config import load_config
@@ -1566,22 +1510,14 @@ def resolve_provider(
     requested: Optional[str] = None,
     *,
     explicit_api_key: Optional[str] = None,
-    explicit_base_url: Optional[str] = None,
-    skip_free_tier: bool = False) -> str:
+    explicit_base_url: Optional[str] = None) -> str:
     """Determine which inference provider to use.
 
     "auto" priority (explicit intent beats a stale OAuth login): 1. CLI api_key/base_url ->
     "openrouter"; 2. config.yaml ``model.provider``; 3. OPENROUTER_API_KEY (or an sk-or- key in
-    OPENAI_API_KEY) -> "openrouter"; 4. OpenRouter pool; 5. provider env keys; 6. auth.json ``active_provider``;
-    7. SpaceshipResearch free tier when it is on and its identity exists (never created here);
-    8. AWS Bedrock chain; 9. AuthError(no_provider_configured).
-
-    ``skip_free_tier`` hides rungs 6-for-a-free-tier-identity and 7: the boot bootstrap asks
-    "what would carry inference if the free tier did not exist?" to decide whether a fresh identity
-    may become ``active_provider``.
-
-    1. 3. 4. 5. Provider-specific API keys (GLM, Kimi, MiniMax, ...) -> that provider 7. 8. Error (no
-    provider configured) See #29285.
+    OPENAI_API_KEY) -> "openrouter"; 4. OpenRouter pool; 5. provider env keys (GLM, Kimi, MiniMax,
+    ...) -> that provider; 6. auth.json ``active_provider``; 7. AWS Bedrock chain;
+    8. AuthError(no_provider_configured). See #29285.
     """
     normalized = (requested or "auto").strip().lower()
     normalized = _plugin_aliases().get(normalized, normalized)
@@ -1608,7 +1544,7 @@ def resolve_provider(
 
     # Determined up front so the env-key tier can warn when an exported key preempts it; the actual
     # OAuth fallback still happens after the env-key tier.
-    _oauth_active = _logged_in_oauth_active_provider(skip_free_tier=skip_free_tier)
+    _oauth_active = _logged_in_oauth_active_provider()
     env_pid = _env_key_auto_detected(_scoped_key_env, _oauth_active)
     if env_pid:
         return env_pid
@@ -1626,21 +1562,8 @@ def resolve_provider(
                 _oauth_active)
         return _oauth_active
 
-    # SpaceshipResearch free tier, when it is on and its identity already exists. This rung sits ABOVE the Bedrock
-    # chain on purpose: every rung above this line is explicit user intent (CLI creds, config, env
-    # keys, a sign-in); the boto chain below is implicit host state, and a leftover ~/.aws profile
-    # used to win the first turn of a fresh install (NS-829). The rung never CREATES the identity:
-    # that is the boot bootstrap's job (free_tier_bootstrap), so provider resolution stays free of
-    # network and a fresh install without the bootstrap resolves exactly as upstream does.
-    if not skip_free_tier:
-        try:
-            from scout_cli.anon_auth import guest_enabled, has_guest
-            if guest_enabled() and has_guest():
-                return "spaceshipresearch"
-        except Exception as exc:
-            logger.debug("free tier check during provider resolution skipped: %s", exc)
     # AWS Bedrock via the boto3 credential chain (IAM roles, SSO, env vars): implicit host state,
-    # below explicit keys and below the free tier.
+    # below every explicit rung so a leftover ~/.aws profile never wins over the user's choice.
     try:
         from agent.bedrock_adapter import has_aws_credentials
         if has_aws_credentials():
@@ -1649,8 +1572,8 @@ def resolve_provider(
         pass  # boto3 not installed
     from scout_constants import display_scout_home
     raise AuthError(
-        "Scout is not connected to any AI provider yet. Run `scout model` to pick one (the free "
-        "SpaceshipResearch tier needs no API key), type `/login` in chat, or add a key with "
+        "Scout is not connected to any AI provider yet. Run `scout model` to pick one, type "
+        "`/login` in chat, or add a key with "
         f"`scout auth add <provider>`. (Advanced: put an API key such as OPENROUTER_API_KEY in "
         f"{display_scout_home()}/.env.)",
         code="no_provider_configured")
@@ -1703,7 +1626,7 @@ _FLAT_OAUTH_TOKEN_KEYS = ("access_token", "refresh_token", "expires_at", "expire
 
 def _quarantine_flat_oauth_state(state: Dict[str, Any], provider: str, exc: "AuthError") -> None:
     """Strip dead tokens from a flat OAuth state after a terminal runtime refresh failure so
-    subsequent calls fail fast without a network retry (mirrors the SpaceshipResearch / xAI / Codex pattern)."""
+    subsequent calls fail fast without a network retry (mirrors the xAI / Codex pattern)."""
     for _k in _FLAT_OAUTH_TOKEN_KEYS:
         state.pop(_k, None)
     state["last_auth_error"] = _last_auth_error_marker(
@@ -1722,167 +1645,10 @@ def _optional_base_url(value: Any) -> Optional[str]:
     return cleaned or None
 
 
-# Valid Scout Portal hosts; a stored portal_base_url outside this set is a misconfiguration and falls
-# back to the default. localhost / 127.0.0.1 are for local development and testing.
-_SCOUT_PORTAL_ALLOWED_HOSTS: FrozenSet[str] = frozenset({
-    "portal.spaceshipresearch.com", "localhost", "127.0.0.1"})
-
-# Per-process memo for resolve_spaceshipresearch_access_token: startup runs one check_fn per managed tool and
-# each would trigger its own ~15s blocking refresh of an expired token; a short-TTL memo collapses
-# the burst into one round-trip. Callers needing freshness use force_fresh/refresh_spaceshipresearch_oauth_pure.
-# Keyed by scout_home_key(): the resolution itself is profile-scoped (_auth_file_path reads the
-# per-turn SCOUT_HOME override a multiplex gateway sets), so a single slot would hand profile A's
-# Portal bearer to profile B for up to the TTL.
-_RESOLVE_TOKEN_CACHE_LOCK = threading.Lock()
-_RESOLVE_TOKEN_CACHE: "dict[str, tuple[float, str]]" = {}
-_RESOLVE_TOKEN_CACHE_TTL_S = 5.0
-
-
-def _scout_portal_base_url(state: Dict[str, Any]) -> str:
-    """SCOUT_PORTAL_BASE_URL / SCOUT_PORTAL_BASE_URL is the trusted operator override and wins
-    OUTRIGHT, bypassing the host allowlist (which exists to reject an untrusted network-provided
-    value, not one the operator configured). Otherwise the stored/default value, allowlist-gated."""
-    env_portal_override = _scout_portal_env_override()
-    if env_portal_override:
-        return env_portal_override.rstrip("/")
-    portal_base_url = _optional_base_url(state.get("portal_base_url")) or DEFAULT_SCOUT_PORTAL_URL
-    portal_base_url = portal_base_url.rstrip("/")
-    host = urlparse(portal_base_url).hostname
-    if host and host not in _SCOUT_PORTAL_ALLOWED_HOSTS:
-        logger.warning(
-            "auth: ignoring invalid portal_base_url %r (host %r not in allowlist), using default",
-            portal_base_url, host)
-        return DEFAULT_SCOUT_PORTAL_URL
-    return portal_base_url
-
-
-def resolve_spaceshipresearch_access_token(
-    *,
-    timeout_seconds: float = 15.0,
-    insecure: Optional[bool] = None,
-    ca_bundle: Optional[str] = None,
-    refresh_skew_seconds: int = ACCESS_TOKEN_REFRESH_SKEW_SECONDS) -> str:
-    """Resolve a refresh-aware Scout Portal access token for managed tool gateways."""
-    # Only a default-TLS resolution is memoised; error paths never populate the memo.
-    memoable = not insecure and ca_bundle is None
-    cache_key = scout_home_key()
-    if memoable:
-        with _RESOLVE_TOKEN_CACHE_LOCK:
-            cached = _RESOLVE_TOKEN_CACHE.get(cache_key)
-        if cached is not None and (time.monotonic() - cached[0]) < _RESOLVE_TOKEN_CACHE_TTL_S:
-            return cached[1]
-
-    def _memo(token: str) -> str:
-        if memoable:
-            with _RESOLVE_TOKEN_CACHE_LOCK:
-                _RESOLVE_TOKEN_CACHE[cache_key] = (time.monotonic(), token)
-        return token
-
-    with _provider_state_transaction("spaceshipresearch") as (auth_store, state, state_source_path):
-        if not state:
-            raise _spaceshipresearch_err("Scout is not logged into Scout Portal.", "spaceshipresearch_auth_missing", relogin=True)
-        portal_base_url = _scout_portal_base_url(state)
-        client_id = str(state.get("client_id") or DEFAULT_SPACESHIPRESEARCH_CLIENT_ID)
-        verify = _resolve_verify(insecure=insecure, ca_bundle=ca_bundle, auth_state=state)
-        persist = lambda: _save_provider_state_to_source(  # noqa: E731
-            auth_store, "spaceshipresearch", state, state_source_path)
-
-        lock_timeout = max(timeout_seconds + 5.0, AUTH_LOCK_TIMEOUT_SECONDS)
-        with _spaceshipresearch_shared_store_lock(timeout_seconds=lock_timeout):
-            from scout_cli.anon_auth import is_guest_state, refresh_guest_state
-            if is_guest_state(state):
-                # Guest seam: the anon_ credential is the identity; a first use has no access token
-                # yet and an expired one is re-exchanged. No refresh token, no quarantine.
-                access_token = state.get("access_token")
-                if isinstance(access_token, str) and access_token and not _is_expiring(
-                        state.get("expires_at"), refresh_skew_seconds):
-                    return _memo(access_token)
-                with httpx.Client(timeout=httpx.Timeout(timeout_seconds or 15.0),
-                                  headers={"Accept": "application/json"}, verify=verify) as client:
-                    refresh_guest_state(state, client)
-                persist()
-                _write_shared_spaceshipresearch_state(state)
-                return _memo(state["access_token"])
-
-            merged_shared = _merge_shared_spaceshipresearch_oauth_state(state)
-            access_token = state.get("access_token")
-            refresh_token = state.get("refresh_token")
-            if not isinstance(access_token, str) or not access_token:
-                raise _spaceshipresearch_err(
-                    "No access token found for Scout Portal login.", "spaceshipresearch_auth_missing_access_token", relogin=True)
-
-            if not _is_expiring(state.get("expires_at"), refresh_skew_seconds):
-                if merged_shared:
-                    persist()
-                # Memoise the valid-token fast path too: each check_fn otherwise pays two
-                # cross-process file locks to get here. The token has >= refresh_skew_seconds (>=
-                # 120s) of life, so a 5s memo can never serve an expired token.
-                return _memo(access_token)
-
-            if not isinstance(refresh_token, str) or not refresh_token:
-                raise _spaceshipresearch_err(
-                    "Session expired and no refresh token is available.", "spaceshipresearch_auth_missing_refresh_token",
-                    relogin=True)
-
-            with httpx.Client(timeout=httpx.Timeout(timeout_seconds or 15.0),
-                              headers={"Accept": "application/json"}, verify=verify) as client:
-                refreshed = _refresh_spaceshipresearch_or_quarantine(
-                    client=client, auth_store=auth_store, state=state, portal_base_url=portal_base_url,
-                    client_id=client_id, refresh_token=refresh_token,
-                    reason="managed_access_token_refresh_failure", persist=persist)
-
-            _apply_spaceshipresearch_refreshed_tokens(state, refreshed, refresh_token)
-            state["portal_base_url"] = portal_base_url
-            state["client_id"] = client_id
-            state["tls"] = _tls_state_from_verify(verify)
-            persist()
-            _write_shared_spaceshipresearch_state(state)
-            return _memo(state["access_token"])
-
-
 # ── Status helpers ──────────────────────────────────────────────────────────────────────────────────
-
-# Process-level memo for get_spaceshipresearch_auth_status(): it validates via a synchronous refresh POST
-# (~350ms) and read-only UI surfaces call it many times per render (~31x per menu paint), burning
-# single-use refresh tokens. Keyed on auth.json path + mtime so profile switches don't share a memo
-# and login/logout/add/remove invalidate naturally.
-_SPACESHIPRESEARCH_AUTH_STATUS_CACHE_TTL = 15.0  # seconds
-_spaceshipresearch_auth_status_cache: Optional[Tuple[float, str, Optional[float], Dict[str, Any]]] = None
 
 # mtime-keyed memo for _load_global_auth_store(): (path, mtime_ns, store); same invalidation rule.
 _global_auth_store_cache: Optional[Tuple[str, int, Dict[str, Any]]] = None
-
-
-def _auth_file_cache_key() -> Tuple[str, Optional[float]]:
-    auth_file = _auth_file_path()
-    try:
-        return _resolved_key(auth_file), auth_file.stat().st_mtime
-    except Exception:  # missing file included: key without an mtime
-        return _resolved_key(auth_file), None
-
-
-def invalidate_spaceshipresearch_auth_status_cache() -> None:
-    """Clear the get_spaceshipresearch_auth_status() memo (for code paths that mutate SpaceshipResearch auth state without
-    touching auth.json, e.g. tests; login/logout invalidate via the mtime check automatically)."""
-    global _spaceshipresearch_auth_status_cache
-    _spaceshipresearch_auth_status_cache = None
-
-
-def get_spaceshipresearch_auth_status() -> Dict[str, Any]:
-    """Status snapshot for SpaceshipResearch auth, memoised ~15s keyed on the auth.json mtime.
-
-    Prefers the auth-store provider state (the live source of truth for refresh) and validates it by
-    resolving runtime credentials so revoked refresh sessions do not show up as a healthy login."""
-    global _spaceshipresearch_auth_status_cache
-    now = time.monotonic()
-    auth_file_key, mtime = _auth_file_cache_key()
-    cached = _spaceshipresearch_auth_status_cache
-    if (cached is not None and cached[1:3] == (auth_file_key, mtime)
-            and (now - cached[0]) < _SPACESHIPRESEARCH_AUTH_STATUS_CACHE_TTL):
-        return dict(cached[3])
-    status = _compute_spaceshipresearch_auth_status()
-    _spaceshipresearch_auth_status_cache = (now, auth_file_key, mtime, dict(status))
-    return status
 
 
 @dataclass(frozen=True)
@@ -1913,15 +1679,7 @@ class OAuthProviderFlow:
 
 _OAUTH_GRANT_DEAD_CODES = frozenset({"invalid_grant", "invalid_token", "refresh_token_reused"})
 
-# SpaceshipResearch state-shape failures raised BEFORE any refresh POST (no login, no token pair): retrying
-# cannot succeed either, so the pool must not bench them as a transient outage (#113718).
-_SPACESHIPRESEARCH_AUTH_MISSING_CODES = frozenset({
-    "spaceshipresearch_auth_missing", "spaceshipresearch_auth_missing_access_token", "spaceshipresearch_auth_missing_refresh_token"})
-
 OAUTH_PROVIDER_FLOWS: Dict[str, OAuthProviderFlow] = {
-    "spaceshipresearch": OAuthProviderFlow(
-        "spaceshipresearch", "resolve_spaceshipresearch_runtime_credentials", "get_spaceshipresearch_auth_status",
-        terminal_refresh_codes=_OAUTH_GRANT_DEAD_CODES | _SPACESHIPRESEARCH_AUTH_MISSING_CODES, logout_from_config=True),
     "openai-codex": OAuthProviderFlow(
         "openai-codex", "resolve_codex_runtime_credentials", "get_codex_auth_status",
         terminal_refresh_codes=_OAUTH_GRANT_DEAD_CODES | {"codex_refresh_failed", "codex_auth_missing_refresh_token"},
@@ -1942,7 +1700,6 @@ def _is_terminal_refresh_error(exc: Exception, provider: str) -> bool:
     return OAUTH_PROVIDER_FLOWS[provider].is_terminal_refresh_error(exc)
 
 
-_is_terminal_spaceshipresearch_refresh_error = partial(_is_terminal_refresh_error, provider="spaceshipresearch")
 _is_terminal_xai_oauth_refresh_error = partial(_is_terminal_refresh_error, provider="xai-oauth")
 _is_terminal_codex_oauth_refresh_error = partial(
     _is_terminal_refresh_error, provider="openai-codex")
@@ -2407,21 +2164,11 @@ def logout_command(args) -> None:
     if not target:
         print("No provider is currently logged in.")
         return
-    if target == "spaceshipresearch":
-        from scout_cli.anon_auth import FREE_TIER_NOT_SIGNED_IN, is_guest_state
-        if is_guest_state(get_provider_auth_state("spaceshipresearch")):
-            # Free tier is not a login; there is nothing to log out of and nothing is cleared.
-            print(FREE_TIER_NOT_SIGNED_IN)
-            return
     should_reset_config = _should_reset_config_provider_on_logout(target)
     provider_name = get_auth_provider_display_name(target)
     if not (clear_provider_auth(target) or should_reset_config):
         print(f"No auth state found for {provider_name}.")
         return
-    if target == "spaceshipresearch":
-        # A profile logout must not be re-adopted from the cross-profile store on the next boot.
-        from scout_cli.auth_spaceshipresearch import _clear_shared_spaceshipresearch_state
-        _clear_shared_spaceshipresearch_state("logout")
     if should_reset_config:
         _reset_config_provider()
     print(f"Logged out of {provider_name}.")

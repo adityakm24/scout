@@ -1,4 +1,4 @@
-import { Typography } from "@spaceshipresearch/ui/ui/components/typography/index";
+import { Typography } from "@/ui/components/typography";
 import type { StatusResponse } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n";
@@ -21,7 +21,7 @@ export function SidebarFooter({ status }: SidebarFooterProps) {
       </Typography>
 
       <a
-        href="https://spaceshipresearch.com"
+        href="https://github.com/adityakm24/scout"
         target="_blank"
         rel="noopener noreferrer"
         className={cn(

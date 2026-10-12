@@ -96,11 +96,11 @@ class TestFallbackChainInit:
             "fallback_providers": [
                 {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.6"},
             ],
-            "fallback_model": {"provider": "spaceshipresearch", "model": "Scout-4"},
+            "fallback_model": {"provider": "fixtureco", "model": "Model-4"},
         })
         assert cli._fallback_model == [
             {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.6"},
-            {"provider": "spaceshipresearch", "model": "Scout-4"},
+            {"provider": "fixtureco", "model": "Model-4"},
         ]
 
 
@@ -425,13 +425,13 @@ class TestNestedDictModelDefaultPairing:
     def test_nested_dict_default_keeps_provider_paired(self):
         cli = _make_cli(config_overrides={
             "model": {
-                "default": {"provider": "spaceshipresearch", "model": "nested-default-model"},
+                "default": {"provider": "fixtureco", "model": "nested-default-model"},
                 "provider": "auto",
             },
         })
         assert cli.model == "nested-default-model"
-        assert cli.requested_provider == "spaceshipresearch"
-        assert cli.provider == "spaceshipresearch"
+        assert cli.requested_provider == "fixtureco"
+        assert cli.provider == "fixtureco"
 
     def test_nested_dict_model_alias_keeps_provider_paired(self):
         cli = _make_cli(config_overrides={
@@ -459,7 +459,7 @@ class TestNestedDictModelDefaultPairing:
         cli = _make_cli(
             config_overrides={
                 "model": {
-                    "default": {"provider": "spaceshipresearch", "model": "nested-default-model"},
+                    "default": {"provider": "fixtureco", "model": "nested-default-model"},
                     "provider": "auto",
                 },
             },
@@ -492,16 +492,16 @@ class TestNestedDictModelDefaultPairing:
                     "provider": "anthropic",
                 },
                 "providers": {
-                    "spaceshipresearch": {
-                        "base_url": "https://inference-api.spaceshipresearch.com/v1",
+                    "fixtureco": {
+                        "base_url": "https://inference.fixtureco.example/v1",
                     },
                 },
             },
-            model="spaceshipresearch/deepseek-v4-pro",
+            model="fixtureco/deepseek-v4-pro",
         )
 
         assert cli.model == "deepseek-v4-pro"
-        assert cli.requested_provider == "spaceshipresearch"
+        assert cli.requested_provider == "fixtureco"
 
 
 class TestRootLevelProviderOverride:
@@ -676,11 +676,11 @@ class TestRootLevelProviderOverride:
 
         result = _normalize_root_model_keys({
             "model": {
-                "default": {"provider": "spaceshipresearch", "model": "nested-default-model"},
+                "default": {"provider": "fixtureco", "model": "nested-default-model"},
             },
         })
         assert result["model"]["default"] == "nested-default-model"
-        assert result["model"]["provider"] == "spaceshipresearch"
+        assert result["model"]["provider"] == "fixtureco"
 
     def test_nested_dict_default_provider_wins_over_auto(self):
         """Nested provider replaces the merged default "auto"."""
@@ -688,12 +688,12 @@ class TestRootLevelProviderOverride:
 
         result = _normalize_root_model_keys({
             "model": {
-                "default": {"provider": "spaceshipresearch", "model": "nested-default-model"},
+                "default": {"provider": "fixtureco", "model": "nested-default-model"},
                 "provider": "auto",
             },
         })
         assert result["model"]["default"] == "nested-default-model"
-        assert result["model"]["provider"] == "spaceshipresearch"
+        assert result["model"]["provider"] == "fixtureco"
 
     def test_nested_dict_default_never_overrides_explicit_provider(self):
         """An explicitly configured model.provider beats the nested provider."""
@@ -701,7 +701,7 @@ class TestRootLevelProviderOverride:
 
         result = _normalize_root_model_keys({
             "model": {
-                "default": {"provider": "spaceshipresearch", "model": "nested-default-model"},
+                "default": {"provider": "fixtureco", "model": "nested-default-model"},
                 "provider": "anthropic",
             },
         })

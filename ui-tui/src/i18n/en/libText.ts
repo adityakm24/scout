@@ -70,9 +70,6 @@ export const libTextEn = {
     // lib/billingDialog.ts — the out-of-credits confirm dialog.
     billingDialog: {
       dismiss: 'Dismiss',
-      topUp: 'Top up',
-      spaceshipResearchDetail: 'Your SpaceshipResearch credit balance is exhausted — top up to keep going.',
-      spaceshipResearchTitle: 'Out of SpaceshipResearch credits',
       yourProvider: 'your provider',
       openBillingPage: 'Open billing page',
       switchProvider: 'Switch provider',

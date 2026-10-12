@@ -14,15 +14,15 @@ import {
   X,
 } from "lucide-react";
 import * as QRCode from "qrcode";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Card, CardContent } from "@spaceshipresearch/ui/ui/components/card";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
-import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
-import { Switch } from "@spaceshipresearch/ui/ui/components/switch";
-import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
-import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
+import { Badge } from "@/ui/components/badge";
+import { Button } from "@/ui/components/button";
+import { Card, CardContent } from "@/ui/components/card";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
+import { Spinner } from "@/ui/components/spinner";
+import { Switch } from "@/ui/components/switch";
+import { Toast } from "@/ui/components/toast";
+import { useToast } from "@/ui/hooks/use-toast";
 import { api } from "@/lib/api";
 import type {
   MessagingPlatform,
@@ -382,7 +382,7 @@ export default function ChannelsPage() {
             <header className="p-5 pb-3 border-b border-border">
               <h2
                 id="channel-config-title"
-                className="font-mondwest text-display text-base tracking-wider"
+                className="font-display text-display text-base tracking-wider"
               >
                 {editing.id === "telegram"
                   ? "Use your own Telegram bot"
@@ -554,7 +554,7 @@ export default function ChannelsPage() {
                     />
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mondwest normal-case text-sm font-medium">
+                        <span className="font-display normal-case text-sm font-medium">
                           {platform.name}
                         </span>
                         <Badge tone={badge.tone}>{badge.label}</Badge>

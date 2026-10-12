@@ -264,7 +264,7 @@ class PassthroughForward:
     # slash-command/button/modal fell back to agent:main even when the equivalent
     # plain message routed to the right profile.
     # Mirrors the ``profile`` field _event_from_wire already carries on the ``inbound`` frame's
-    # SessionSource (#60586) — the connector stamps it when NAS resolves the target profile for a
+    # SessionSource (#60586) — the connector stamps it when it resolves the target profile for a
     # Team-Gateway interaction; absent for a single-profile gateway, where it stays None and session keys
     # keep the legacy ``agent:main`` namespace.
     profile: Optional[str] = None
@@ -297,12 +297,6 @@ async def _await_bounded(aw: Awaitable[Any]) -> None:
         await asyncio.wait_for(aw, timeout=_TEARDOWN_AWAIT_TIMEOUT_S)
     except (asyncio.TimeoutError, asyncio.CancelledError, Exception):  # noqa: BLE001
         pass
-
-
-# Ceiling on the brokered-suspend redial hold. Must outlast the client's own
-# broker deadline (scale_to_zero.BROKERED_SUSPEND_TIMEOUT_S) or the supervisor
-# reconnects while the stop is still in flight.
-REDIAL_HOLD_MAX_S = 60.0
 
 
 class WebSocketRelayTransport:
@@ -348,19 +342,6 @@ class WebSocketRelayTransport:
         self._reconnect_backoff_s = reconnect_backoff_s
         self._reconnect_max_backoff_s = reconnect_max_backoff_s
         self._supervisor: Optional[asyncio.Task[None]] = None
-        # Dormant close (go_dormant) is distinct from disconnect() (terminal) and
-        # an unexpected close (fast re-dial): the socket closes WITHOUT _closing,
-        # so the reader still arms the supervisor, but it polls on the dormant
-        # cadence so it does not fight the platform's suspend window. Cleared on
-        # a successful re-dial. A suspended machine's event loop is frozen, so the
-        # timer only advances once awake; it just needs to re-dial promptly then.
-        self._dormant = False
-        self._dormant_redial_s = 1.0
-        # Set while a NAS-brokered suspend is in flight. See _await_redial_hold.
-        self._redial_held = False
-        self._redial_release = asyncio.Event()
-        # Ceiling, so a suspend that never lands cannot strand us offline.
-        self._redial_hold_max_s = REDIAL_HOLD_MAX_S
 
         self._ws: Any = None
         self._reader: Optional[asyncio.Task[None]] = None
@@ -382,7 +363,7 @@ class WebSocketRelayTransport:
         self._auth_revoked = False
         # Expired-vs-revoked ambiguity: the connector closes 4401 for BOTH a
         # revoked secret and a merely EXPIRED upgrade token (make_upgrade_token
-        # TTL is 300s). A scale-to-zero suspend that lands between minting the
+        # TTL is 300s). A machine suspend that lands between minting the
         # token and the connector verifying it produces exactly that (incident
         # 2026-09-02: dial froze mid-flight, resumed with a stale token, got
         # 4401, and the gateway latched "revoked" -> relay_disabled until a
@@ -420,8 +401,6 @@ class WebSocketRelayTransport:
         # descriptor per hello, so stale descriptors must not survive.
         self._descriptor = None
         self._descriptors_by_platform = {}
-        # A successful (re-)dial ends any dormant state.
-        self._dormant = False
         # WAN-friendly keepalive: the library default (20s pong deadline) produces
         # spurious `1011 keepalive ping timeout` closes under transient latency /
         # event-loop stalls; 60s tolerates them while detecting a dead link ~90s.
@@ -603,33 +582,6 @@ class WebSocketRelayTransport:
         finally:
             self._going_idle_ack = None
 
-    async def go_dormant(self, timeout_s: float = 10.0) -> bool:
-        """Quiesce for a scale-to-zero suspend: go_idle, then close the socket
-        WITHOUT setting ``_closing``.
-
-        disconnect() cancels the supervisor (never re-dials on wake, stranding the
-        backlog); an unexpected close re-dials immediately (the platform proxy never
-        sees load drop, never suspends). Here the reader's fall-through still arms
-        the supervisor on the dormant cadence; on resume the re-dial makes the
-        connector drain the buffered backlog. Returns the go_idle ack result; on a
-        MISSED ack it returns WITHOUT closing — the caller refuses to suspend without
-        one, so closing would only cost a needless reconnect. No-op (False) when
-        never connected.
-        """
-        if self._ws is None:
-            return False
-        acked = await self.go_idle(timeout_s=timeout_s)
-        if not acked:
-            # Nothing will suspend us, so stay connected and keep serving.
-            return False
-        # Mark dormant BEFORE closing so the supervisor takes the dormant cadence.
-        self._dormant = True
-        try:
-            await asyncio.wait_for(self._ws.close(), timeout=_TEARDOWN_AWAIT_TIMEOUT_S)
-        except Exception:  # noqa: BLE001 - best-effort; the reader still ends + arms reconnect
-            logger.debug("relay go_dormant: ws.close() raised or timed out", exc_info=True)
-        return acked
-
     async def _send_inbound_ack(self, buffer_id: str) -> None:
         """Ack durable receipt of a replayed buffered inbound; the connector only
         advances its buffer cursor after this (drain-without-dup)."""
@@ -714,7 +666,7 @@ class WebSocketRelayTransport:
                             await self._handle_frame(line)
             except Exception as exc:  # noqa: BLE001 - log + let the task end; reconnection handled below
                 # A post-handshake 4401 is a revocation ONLY if it also hits a fresh
-                # token: an EXPIRED token gets the same 4401 (a scale-to-zero suspend
+                # token: an EXPIRED token gets the same 4401 (a machine suspend
                 # mid-dial makes that routine), so the first one is provisional —
                 # re-dial once, now, with a fresh token. Reason "expired" is never a
                 # revocation.
@@ -811,7 +763,7 @@ class WebSocketRelayTransport:
         """One-shot, immediate re-dial after a provisional post-handshake 4401.
 
         Bypasses the reconnect backoff on purpose: the suspected cause is an
-        upgrade token that aged past its TTL (scale-to-zero suspend mid-dial),
+        upgrade token that aged past its TTL (a machine suspend mid-dial),
         and _dial_and_start() mints a fresh one on every call. Outcomes:
         - dial + handshake succeed: the new reader takes over, nothing else
           changes;
@@ -860,15 +812,10 @@ class WebSocketRelayTransport:
 
     async def _reconnect_loop(self) -> None:
         """Re-dial with capped exponential backoff until a dial succeeds (its reader
-        takes over) or disconnect(). Never raises out. After go_dormant() start from
-        the dormant cadence; a successful dial clears _dormant so any LATER
-        unexpected drop uses the fast backoff."""
-        backoff = self._dormant_redial_s if self._dormant else self._reconnect_backoff_s
+        takes over) or disconnect(). Never raises out."""
+        backoff = self._reconnect_backoff_s
         while not self._closing:
             await asyncio.sleep(backoff)
-            if self._closing:
-                return
-            await self._await_redial_hold()
             if self._closing:
                 return
             try:
@@ -880,31 +827,6 @@ class WebSocketRelayTransport:
                     return
                 logger.warning("relay ws reconnect failed: %s", exc)
                 backoff = min(backoff * 2, self._reconnect_max_backoff_s)
-
-    def hold_redial(self) -> None:
-        """Park the reconnect supervisor until release_redial() or the hold cap."""
-        self._redial_release.clear()
-        self._redial_held = True
-
-    def release_redial(self) -> None:
-        """Let the supervisor re-dial again (a brokered suspend that failed)."""
-        self._redial_held = False
-        self._redial_release.set()
-
-    async def _await_redial_hold(self) -> None:
-        """Block a pending re-dial while a brokered suspend is in flight: it would
-        clear the dormant flip. Bounded, so a lost suspend still reconnects."""
-        if not self._redial_held:
-            return
-        try:
-            await asyncio.wait_for(
-                self._redial_release.wait(), timeout=self._redial_hold_max_s
-            )
-        except asyncio.TimeoutError:
-            logger.info("relay: brokered suspend did not land, reconnecting")
-        finally:
-            self._redial_held = False
-            self._redial_release.clear()
 
     # ── inbound frame dispatch ───────────────────────────────────────────
     async def _handle_frame(self, line: str) -> None:

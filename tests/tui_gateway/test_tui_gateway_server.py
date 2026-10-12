@@ -4228,10 +4228,10 @@ def test_resolve_model_strips_config_model(monkeypatch):
     monkeypatch.delenv("SCOUT_MODEL", raising=False)
     monkeypatch.delenv("SCOUT_INFERENCE_MODEL", raising=False)
     monkeypatch.setattr(
-        server, "_load_cfg", lambda: {"model": {"default": " spaceshipresearch/scout-test "}}
+        server, "_load_cfg", lambda: {"model": {"default": " openrouter/test-model "}}
     )
 
-    assert server._resolve_model() == "spaceshipresearch/scout-test"
+    assert server._resolve_model() == "openrouter/test-model"
 
 
 def _sync_test_session(**extra):
@@ -4253,8 +4253,8 @@ def _patch_config_model(monkeypatch, model, provider=""):
 
 
 def test_config_sync_switches_unpinned_session(monkeypatch):
-    _patch_config_model(monkeypatch, "new/model", provider="spaceshipresearch")
-    session = _sync_test_session(config_model_seen=("old/model", "spaceshipresearch"))
+    _patch_config_model(monkeypatch, "new/model", provider="openrouter")
+    session = _sync_test_session(config_model_seen=("old/model", "openrouter"))
     calls = []
     monkeypatch.setattr(
         server,
@@ -4267,7 +4267,7 @@ def test_config_sync_switches_unpinned_session(monkeypatch):
     assert calls == [
         (
             "sid",
-            "new/model --provider spaceshipresearch",
+            "new/model --provider openrouter",
             {
                 "confirm_expensive_model": True,
                 "pin_session_override": False,
@@ -4275,7 +4275,7 @@ def test_config_sync_switches_unpinned_session(monkeypatch):
             },
         )
     ]
-    assert session["config_model_seen"] == ("new/model", "spaceshipresearch")
+    assert session["config_model_seen"] == ("new/model", "openrouter")
 
 
 def test_config_sync_treats_auto_provider_as_unset(monkeypatch):
@@ -4337,7 +4337,7 @@ def test_config_sync_adopts_baseline_when_agent_already_on_target(monkeypatch):
 
 
 def test_config_sync_switches_when_only_provider_differs(monkeypatch):
-    _patch_config_model(monkeypatch, "old/model", provider="spaceshipresearch")
+    _patch_config_model(monkeypatch, "old/model", provider="openrouter")
     session = _sync_test_session(config_model_seen=("old/model", ""))
     calls = []
     monkeypatch.setattr(
@@ -4348,7 +4348,7 @@ def test_config_sync_switches_when_only_provider_differs(monkeypatch):
 
     server._sync_agent_model_with_config("sid", session)
 
-    assert calls == ["old/model --provider spaceshipresearch"]
+    assert calls == ["old/model --provider openrouter"]
 
 
 def test_config_sync_failure_emits_error_once_per_edit(monkeypatch):
@@ -4425,7 +4425,7 @@ def test_apply_model_switch_persist_override_false_never_persists(monkeypatch):
     result = _types.SimpleNamespace(
         success=True,
         new_model="new/model",
-        target_provider="spaceshipresearch",
+        target_provider="openrouter",
         base_url="",
         api_key="key",
         api_mode="chat_completions",
@@ -4451,7 +4451,7 @@ def test_apply_model_switch_persist_override_false_never_persists(monkeypatch):
     session = {"agent": None}
 
     out = server._apply_model_switch(
-        "sid", session, "new/model --provider spaceshipresearch", persist_override=False
+        "sid", session, "new/model --provider openrouter", persist_override=False
     )
 
     assert out["value"] == "new/model"
@@ -4459,23 +4459,23 @@ def test_apply_model_switch_persist_override_false_never_persists(monkeypatch):
 
 
 def test_startup_runtime_uses_tui_provider_env(monkeypatch):
-    monkeypatch.setenv("SCOUT_MODEL", "spaceshipresearch/scout-test")
-    monkeypatch.setenv("SCOUT_TUI_PROVIDER", "spaceshipresearch")
+    monkeypatch.setenv("SCOUT_MODEL", "openrouter/test-model")
+    monkeypatch.setenv("SCOUT_TUI_PROVIDER", "openrouter")
     monkeypatch.delenv("SCOUT_INFERENCE_PROVIDER", raising=False)
 
-    assert server._resolve_startup_runtime() == ("spaceshipresearch/scout-test", "spaceshipresearch")
+    assert server._resolve_startup_runtime() == ("openrouter/test-model", "openrouter")
 
 
 def test_startup_runtime_does_not_treat_inference_provider_as_explicit(monkeypatch):
-    monkeypatch.setenv("SCOUT_MODEL", "spaceshipresearch/scout-test")
+    monkeypatch.setenv("SCOUT_MODEL", "openrouter/test-model")
     monkeypatch.delenv("SCOUT_TUI_PROVIDER", raising=False)
-    monkeypatch.setenv("SCOUT_INFERENCE_PROVIDER", "spaceshipresearch")
+    monkeypatch.setenv("SCOUT_INFERENCE_PROVIDER", "openrouter")
     monkeypatch.setattr(
         "scout_cli.models.detect_static_provider_for_model",
         lambda model, provider: None,
     )
 
-    assert server._resolve_startup_runtime() == ("spaceshipresearch/scout-test", None)
+    assert server._resolve_startup_runtime() == ("openrouter/test-model", None)
 
 
 
@@ -9134,36 +9134,6 @@ def test_enable_gateway_prompts_sets_gateway_env(monkeypatch):
 
 
 
-def test_setup_status_answers_from_the_bootstrap_record_once_it_exists(monkeypatch):
-    """Under ``scout serve`` the boot bootstrap owns the free-tier identity; ``setup.status`` reports
-    its record (blocking for it while it is in flight) instead of re-probing, so a client's first poll
-    sees the identity that exists rather than racing the mint."""
-    import threading
-    from scout_cli import free_tier_bootstrap as fb
-    fb.reset_for_tests()
-    monkeypatch.setattr("scout_cli.main._has_any_provider_configured",
-                        lambda **_kw: pytest.fail("setup.status must read the record, not re-probe"))
-    release = threading.Event()
-
-    def slow_bootstrap():
-        release.wait(5)
-        with fb._lock:
-            fb._record = fb.SetupRecord(provider_configured=True, inference_provider="spaceshipresearch", free_tier_account=True,
-                                        has_identity=True, other_providers=False)
-            fb._done.set()
-    with fb._lock:
-        fb._started = True
-    threading.Thread(target=slow_bootstrap, daemon=True).start()
-    try:
-        release.set()
-        resp = server.handle_request({"id": "1", "method": "setup.status", "params": {}})
-        assert resp["result"]["provider_configured"] is True
-        assert resp["result"]["ready"] is True and resp["result"]["free_tier_account"] is True
-        assert resp["result"]["inference_provider"] == "spaceshipresearch"
-    finally:
-        fb.reset_for_tests()
-
-
 def test_invalid_params_and_unknown_method_name_the_version_skew_fix():
     """The only signal of a TUI/backend version mismatch; the lead phrases stay for clients."""
     resp = server.handle_request({"id": "1", "method": "no.such.method", "params": {}})
@@ -9250,11 +9220,11 @@ def test_setup_runtime_check_honors_requested_provider(monkeypatch):
     monkeypatch.setattr("scout_cli.main._has_any_provider_configured", lambda **_kw: True)
 
     def fake_resolve(requested=None, **kwargs):
-        if requested == "spaceshipresearch":
+        if requested == "openrouter":
             return {
-                "provider": "spaceshipresearch",
-                "api_key": "invoke-jwt",
-                "source": "portal",
+                "provider": "openrouter",
+                "api_key": "sk-or-test",
+                "source": "env",
             }
         return {
             "provider": "anthropic",
@@ -9268,10 +9238,10 @@ def test_setup_runtime_check_honors_requested_provider(monkeypatch):
     )
 
     scoped = server.handle_request(
-        {"id": "1", "method": "setup.runtime_check", "params": {"provider": "spaceshipresearch"}}
+        {"id": "1", "method": "setup.runtime_check", "params": {"provider": "openrouter"}}
     )
     assert scoped["result"]["ok"] is True
-    assert scoped["result"]["provider"] == "spaceshipresearch"
+    assert scoped["result"]["provider"] == "openrouter"
 
     default = server.handle_request({"id": "1", "method": "setup.runtime_check", "params": {}})
     assert default["result"]["ok"] is False
@@ -9357,7 +9327,6 @@ def test_setup_runtime_check_scopes_launch_profile_in_multiplex_backend(monkeypa
         "provider": "openai-codex",
         "model": "gpt-5.3-codex",
         "source": "credential-pool",
-        "free_tier_route": False,
     }
 
 
@@ -9388,7 +9357,7 @@ def test_setup_readiness_scopes_to_requested_profile(monkeypatch, tmp_path):
         status = server.handle_request(
             {"id": "1", "method": "setup.status", "params": {"profile": "bot"}}
         )
-        assert status["result"] == {"provider_configured": False, "profile": "bot"}
+        assert status["result"] == {"provider_configured": False, "ready": True, "profile": "bot"}
 
         (bot_home / ".env").write_text("OPENROUTER_API_KEY=sk-or-bot-profile-secret-00001\n", encoding="utf-8")
         status = server.handle_request(
@@ -9400,7 +9369,7 @@ def test_setup_readiness_scopes_to_requested_profile(monkeypatch, tmp_path):
     finally:
         secret_scope.set_multiplex_active(False)
 
-    assert status["result"] == {"provider_configured": True, "profile": "bot"}
+    assert status["result"] == {"provider_configured": True, "ready": True, "profile": "bot"}
     assert runtime["result"]["ok"] is True
     assert runtime["result"]["profile"] == "bot"
     assert seen == {"home": bot_home.resolve(), "secret": "sk-or-bot-profile-secret-00001"}
@@ -16836,13 +16805,13 @@ def test_model_options_does_not_overwrite_curated_models(monkeypatch):
     Regression: earlier versions of this handler unconditionally replaced
     each provider's curated ``models`` field with ``provider_model_ids()``
     (live /models catalog).  That pulled in hundreds of non-agentic models
-    for providers like SpaceshipResearch whose /models endpoint returns image/video
+    for aggregators whose /models endpoint returns image/video
     generators, rerankers, embeddings, and TTS models alongside chat models.
     """
     curated_providers = [
         {
-            "slug": "spaceshipresearch",
-            "name": "SpaceshipResearch",
+            "slug": "openrouter",
+            "name": "OpenRouter",
             "models": ["moonshotai/kimi-k2.5", "anthropic/claude-opus-4.7"],
             "total_models": 30,
             "source": "built-in",
@@ -16869,13 +16838,13 @@ def test_model_options_does_not_overwrite_curated_models(monkeypatch):
 
     assert "result" in resp, resp
     providers = resp["result"]["providers"]
-    spaceshipresearch = next((p for p in providers if p.get("slug") == "spaceshipresearch"), None)
-    assert spaceshipresearch is not None
-    assert spaceshipresearch["models"] == [
+    openrouter = next((p for p in providers if p.get("slug") == "openrouter"), None)
+    assert openrouter is not None
+    assert openrouter["models"] == [
         "moonshotai/kimi-k2.5",
         "anthropic/claude-opus-4.7",
     ]
-    assert spaceshipresearch["total_models"] == 30
+    assert openrouter["total_models"] == 30
     # Handler must not consult the live catalog — curated is the truth.
     live_fetch.assert_not_called()
 
@@ -17016,43 +16985,6 @@ def test_model_save_key_uses_credential_lifecycle_and_picker_context(monkeypatch
     assert "result" in resp, resp
     assert resp["result"]["provider"] == {**provider, "authenticated": True}
     save_credential.assert_called_once_with(env_var, fake_key)
-
-
-def test_model_save_key_reconciles_the_launch_profiles_stale_setup_record(monkeypatch, tmp_path):
-    """The gated picker's own chat waits on ``setup.status``, which answers from the boot record:
-    a key saved for the launch profile must flip a ``False`` record (+ ``setup.ready``) at once;
-    a key saved for another profile (``profile`` param) must leave the launch record alone."""
-    from scout_cli import free_tier_bootstrap as fb
-
-    monkeypatch.setattr("scout_cli.auth.PROVIDER_REGISTRY", {"test-provider": types.SimpleNamespace(
-        name="Test Provider", auth_type="api_key", api_key_env_vars=("TEST_PROVIDER_API_KEY",))})
-    monkeypatch.setattr("scout_cli.config.is_managed", lambda: False)
-    monkeypatch.setattr("scout_cli.credential_lifecycle.save_provider_env_credential", Mock())
-    monkeypatch.setattr("scout_cli.inventory.build_models_payload", Mock(return_value={"providers": []}))
-    monkeypatch.setenv("TEST_PROVIDER_API_KEY", "previous-value")  # save_key exports the new key
-    monkeypatch.setattr(fb, "_inventory_other_providers", lambda: True)
-    monkeypatch.setattr(fb, "_resolve_inference", lambda: "test-provider")
-    broadcasts = []
-    monkeypatch.setattr(fb, "_broadcast", broadcasts.append)
-    other_home = tmp_path / "profiles" / "other"  # model.save_key is profile scoped: "other" must exist
-    other_home.mkdir(parents=True)
-    monkeypatch.setattr(server, "_profile_home", lambda name: other_home if name == "other" else None)
-    fb.reset_for_tests()
-    stale = fb.SetupRecord(provider_configured=False, inference_provider="", free_tier_account=False,
-                           has_identity=False, other_providers=False)
-    with fb._lock:
-        fb._record, fb._started = stale, True
-        fb._done.set()
-    try:
-        params = {"slug": "test-provider", "api_key": "k-" + "1"}
-        assert "result" in server._methods["model.save_key"](104, {**params, "profile": "other"})
-        assert fb.current_record() is stale and broadcasts == [], "another profile's key is not ours"
-        assert "result" in server._methods["model.save_key"](105, params)
-        record = fb.current_record()
-        assert record.provider_configured is True and record.inference_provider == "test-provider"
-        assert broadcasts == [record]
-    finally:
-        fb.reset_for_tests()
 
 
 # ---------------------------------------------------------------------------
@@ -20030,9 +19962,6 @@ def test_start_agent_build_passes_session_model_override(
         server._sessions.clear()
 
 
-# ── billing/subscription state + error serialization ─────────────────
-
-
 def test_reset_session_agent_clears_session_overrides(monkeypatch):
     """/new is a full conversation boundary: session-scoped /model, /reasoning,
     and /fast overrides do NOT carry into the fresh agent — it re-derives
@@ -20077,228 +20006,6 @@ def test_reset_session_agent_clears_session_overrides(monkeypatch):
     assert session["agent"] is new_agent
 
 
-@pytest.mark.parametrize(
-    "card,expected",
-    [
-        ("canonical", {"kind": "canonical"}),
-        (
-            "distinct",
-            {
-                "kind": "distinct",
-                "payment_method_id": "pm_auto",
-                "brand": None,
-                "last4": None,
-            },
-        ),
-        ("none", {"kind": "none"}),
-    ],
-)
-def test_billing_state_serializes_auto_reload_card_union(monkeypatch, card, expected):
-    from agent.billing_view import AutoReload, AutoReloadCard, BillingState
-
-    monkeypatch.setattr(server, "_usage_payload", lambda state: {"available": False})
-    auto_reload_card = AutoReloadCard(
-        kind=card,
-        payment_method_id="pm_auto" if card == "distinct" else None,
-    )
-    state = BillingState(
-        logged_in=True,
-        auto_reload=AutoReload(enabled=True, card=auto_reload_card),
-    )
-
-    result = server._serialize_billing_state(state)
-
-    assert result["auto_reload"]["card"] == expected
-
-
-def test_billing_state_serializes_server_plan_capability(monkeypatch):
-    from agent.billing_view import BillingState
-
-    monkeypatch.setattr(server, "_usage_payload", lambda state: {"available": False})
-    state = BillingState(
-        logged_in=True,
-        role="MEMBER",
-        can_change_plan_raw=True,
-    )
-
-    result = server._serialize_billing_state(state)
-
-    assert result["is_admin"] is False
-    assert result["can_change_plan"] is True
-
-
-class _BillingHeaders:
-    def __init__(self, values):
-        self._values = values
-
-    def get(self, key):
-        return self._values.get(key)
-
-
-@pytest.mark.parametrize(
-    "status,error,retry_after",
-    [
-        (503, "stripe_unavailable", 75),
-        (429, "upgrade_cap_exceeded", None),
-        (429, "rate_limited", None),
-    ],
-)
-def test_billing_error_serialization_preserves_server_code(
-    status, error, retry_after
-):
-    import scout_cli.spaceshipresearch_billing as nb
-
-    headers = _BillingHeaders({"Retry-After": str(retry_after)}) if retry_after else None
-    with pytest.raises(nb.BillingTransient) as ei:
-        nb._raise_for_error(status, {"error": error}, headers)
-
-    result = server._serialize_billing_error(ei.value)
-
-    assert result["error"] == error
-    assert ei.value.error == error
-    assert result["retry_after"] == retry_after
-
-
-def test_billing_rate_limit_without_error_defaults_wire_code():
-    import scout_cli.spaceshipresearch_billing as nb
-
-    exc = nb.BillingRateLimited("slow down", status=429, retry_after=10)
-
-    result = server._serialize_billing_error(exc)
-
-    assert result["error"] == "rate_limited"
-
-
-# ── subscription change RPCs (V3): preview + pending-change + upgrade ──
-
-
-def _sub_rpc(method, params):
-    # These RPCs are in _LONG_HANDLERS (pool-routed → dispatch returns None and the
-    # worker writes via the transport), so drive the inline handler directly.
-    return server.handle_request({"id": "1", "method": method, "params": params})["result"]
-
-
-def test_subscription_preview_serializes_quote(monkeypatch):
-    import scout_cli.spaceshipresearch_billing as nb
-
-    monkeypatch.setattr(
-        nb,
-        "post_subscription_preview",
-        lambda subscription_type_id: {
-            "effect": "charge_now",
-            "reason": None,
-            "currentTierId": "plus",
-            "currentTierName": "Plus",
-            "targetTierId": "ultra",
-            "targetTierName": "Ultra",
-            "monthlyCreditsDelta": "6000",
-            "amountDueNowCents": 1234,
-            "effectiveAt": None,
-        },
-    )
-    res = _sub_rpc("subscription.preview", {"subscription_type_id": "ultra"})
-    assert res["ok"] is True
-    assert res["effect"] == "charge_now"
-    assert res["amount_due_now_cents"] == 1234
-    assert res["target_tier_name"] == "Ultra"
-    assert res["monthly_credits_delta"] == "6000"
-
-
-def test_subscription_preview_requires_tier():
-    res = _sub_rpc("subscription.preview", {})
-    assert res["ok"] is False
-    assert res["error"] == "invalid_request"
-
-
-def test_subscription_preview_scope_error_maps_to_step_up(monkeypatch):
-    import scout_cli.spaceshipresearch_billing as nb
-
-    def _raise(subscription_type_id):
-        raise nb.BillingScopeRequired("billing:manage required")
-
-    monkeypatch.setattr(nb, "post_subscription_preview", _raise)
-    res = _sub_rpc("subscription.preview", {"subscription_type_id": "ultra"})
-    assert res["ok"] is False
-    assert res["error"] == "insufficient_scope"
-
-
-def test_subscription_change_cancellation(monkeypatch):
-    import scout_cli.spaceshipresearch_billing as nb
-
-    seen = {}
-
-    def _put(*, subscription_type_id=None, cancel=False):
-        seen["tier"] = subscription_type_id
-        seen["cancel"] = cancel
-        return {"rail": "stripe", "cancelAtPeriodEnd": True, "message": "Scheduled to cancel."}
-
-    monkeypatch.setattr(nb, "put_subscription_pending_change", _put)
-    res = _sub_rpc("subscription.change", {"cancel": True})
-    assert res["ok"] is True
-    assert seen == {"tier": None, "cancel": True}
-    assert res["message"] == "Scheduled to cancel."
-
-
-def test_subscription_change_tier_downgrade(monkeypatch):
-    import scout_cli.spaceshipresearch_billing as nb
-
-    seen = {}
-
-    def _put(*, subscription_type_id=None, cancel=False):
-        seen["tier"] = subscription_type_id
-        seen["cancel"] = cancel
-        return {"rail": "stripe", "changeType": "downgrade", "targetTierName": "Plus", "message": "Scheduled."}
-
-    monkeypatch.setattr(nb, "put_subscription_pending_change", _put)
-    res = _sub_rpc("subscription.change", {"subscription_type_id": "plus"})
-    assert res["ok"] is True
-    assert seen == {"tier": "plus", "cancel": False}
-
-
-def test_subscription_change_requires_tier_or_cancel():
-    res = _sub_rpc("subscription.change", {})
-    assert res["ok"] is False
-    assert res["error"] == "invalid_request"
-
-
-
-
-def test_subscription_upgrade_echoes_status_and_idempotency(monkeypatch):
-    import scout_cli.spaceshipresearch_billing as nb
-
-    seen = {}
-
-    def _upgrade(*, subscription_type_id, idempotency_key):
-        seen["key"] = idempotency_key
-        return {"status": "upgraded", "targetTierId": "ultra", "targetTierName": "Ultra"}
-
-    monkeypatch.setattr(nb, "post_subscription_upgrade", _upgrade)
-    res = _sub_rpc("subscription.upgrade", {"subscription_type_id": "ultra", "idempotency_key": "k-1"})
-    assert res["ok"] is True
-    assert res["status"] == "upgraded"
-    assert res["target_tier_name"] == "Ultra"
-    assert res["idempotency_key"] == "k-1"
-    assert seen["key"] == "k-1"
-
-
-def test_subscription_upgrade_requires_action_surfaces_recovery(monkeypatch):
-    import scout_cli.spaceshipresearch_billing as nb
-
-    monkeypatch.setattr(
-        nb,
-        "post_subscription_upgrade",
-        lambda *, subscription_type_id, idempotency_key: {
-            "status": "requires_action",
-            "reason": "authentication_required",
-            "recoveryUrl": "https://portal.example/subscription?org_id=o",
-        },
-    )
-    res = _sub_rpc("subscription.upgrade", {"subscription_type_id": "ultra"})
-    # The RPC succeeds; the CHARGE needs 3DS → status + recovery_url for the portal.
-    assert res["ok"] is True
-    assert res["status"] == "requires_action"
-    assert res["recovery_url"].startswith("https://portal.example")
-    assert res["idempotency_key"]  # minted when the caller omits one
 # ── _get_usage active_subagents (TUI status-bar ⛓ indicator) ──────────────
 # Mirrors the classic CLI status bar: _get_usage embeds a live count of
 # background/async subagents from tools.async_delegation.active_count() so the

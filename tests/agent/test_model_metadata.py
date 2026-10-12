@@ -886,11 +886,11 @@ class TestFetchEndpointModelMetadata:
 
 
 # =========================================================================
-# Scout Portal context-window resolution (provider="spaceshipresearch")
+# Fixture Co context-window resolution (provider="fixtureco")
 # =========================================================================
 
 class TestScoutPortalContextResolution:
-    """Scout Portal /v1/models is authoritative for what SpaceshipResearch infra enforces
+    """Fixture Co /v1/models is authoritative for what Fixture Co infra enforces
     and may diverge from the OpenRouter catalog.
 
     Invariants this class pins down:
@@ -923,97 +923,17 @@ class TestScoutPortalContextResolution:
             "x-ai/grok-4.6": {"context_length": 500_000},
         }
         assert mm._resolve_endpoint_context_length(
-            "", "https://inference-api.spaceshipresearch.com/v1"
+            "", "https://inference.fixtureco.example/v1"
         ) is None
         # Non-empty names still fuzzy-match.
         assert mm._resolve_endpoint_context_length(
-            "grok-4.6", "https://inference-api.spaceshipresearch.com/v1"
+            "grok-4.6", "https://inference.fixtureco.example/v1"
         ) == 500_000
         # Single-model endpoints still resolve even with an empty name.
         mock_fetch.return_value = {"only-model": {"context_length": 131_072}}
         assert mm._resolve_endpoint_context_length(
             "", "http://localhost:8080/v1"
         ) == 131_072
-
-    @patch("agent.model_metadata.fetch_endpoint_model_metadata")
-    @patch("agent.model_metadata.fetch_model_metadata")
-    def test_openrouter_fallback_is_not_persisted(
-        self, mock_or, mock_portal, tmp_path, monkeypatch
-    ):
-        """When the portal can't resolve a model (network blip, auth glitch,
-        model not yet listed) we fall back to the OR catalog so the agent
-        keeps working — but we must NOT write the OR value to disk.  Once
-        cached on disk, step-1 short-circuits forever and the user is stuck
-        with the wrong number until they manually clear the cache."""
-        import agent.model_metadata as mm
-        cache_file = tmp_path / "context_length_cache.yaml"
-        monkeypatch.setattr(mm, "_get_context_cache_path", lambda: cache_file)
-
-        mock_portal.return_value = {}  # portal unreachable / model unknown
-        mock_or.return_value = {
-            "qwen/qwen3.6-plus": {"context_length": 1_000_000},
-        }
-
-        base_url = "https://inference-api.spaceshipresearch.com/v1"
-        ctx = mm.get_model_context_length(
-            model="qwen3.6-plus",
-            base_url=base_url,
-            api_key="fake",
-            provider="spaceshipresearch",
-        )
-        assert ctx == 1_000_000, "OR fallback should still serve the request"
-        assert not cache_file.exists() or not yaml.safe_load(
-            cache_file.read_text(encoding="utf-8")
-        ).get("context_lengths", {}), (
-            "OR-fallback values must NOT be persisted — a single portal blip "
-            "would otherwise freeze the wrong value in via step-1 cache hit"
-        )
-
-    @patch("agent.model_metadata.fetch_endpoint_model_metadata")
-    @patch("agent.model_metadata.fetch_model_metadata")
-    def test_stale_cache_is_bypassed_and_overwritten_by_portal(
-        self, mock_or, mock_portal, tmp_path, monkeypatch
-    ):
-        """Users upgrading from pre-fix builds have ``qwen3.6-plus@…spaceshipresearch… =
-        1000000`` (OR-derived) sitting in their cache file.  Step 1 must
-        NOT short-circuit on that entry — step 5b reconciles against the
-        portal and overwrites the persistent value with 262144."""
-        import agent.model_metadata as mm
-        cache_file = tmp_path / "context_length_cache.yaml"
-        monkeypatch.setattr(mm, "_get_context_cache_path", lambda: cache_file)
-
-        base_url = "https://inference-api.spaceshipresearch.com/v1"
-        stale_key = f"qwen3.6-plus@{base_url}"
-        other_key = "other-model@https://api.openai.com/v1"
-        cache_file.write_text(yaml.safe_dump({"context_lengths": {
-            stale_key: 1_000_000,     # pre-fix OR-derived value
-            other_key: 128_000,       # unrelated, must survive
-        }}))
-
-        mock_portal.return_value = {
-            "qwen3.6-plus": {"context_length": 262_144},
-        }
-        mock_or.return_value = {}
-
-        ctx = mm.get_model_context_length(
-            model="qwen3.6-plus",
-            base_url=base_url,
-            api_key="fake",
-            provider="spaceshipresearch",
-        )
-        assert ctx == 262_144, (
-            f"Stale OR-derived cache entry should not have leaked through; got {ctx}"
-        )
-
-        remaining = yaml.safe_load(cache_file.read_text(encoding="utf-8")).get(
-            "context_lengths", {}
-        )
-        assert remaining.get(stale_key) == 262_144, (
-            "Portal value should have overwritten the stale entry on disk"
-        )
-        assert remaining.get(other_key) == 128_000, (
-            "Unrelated cache entries must not be touched"
-        )
 
 
 # =========================================================================

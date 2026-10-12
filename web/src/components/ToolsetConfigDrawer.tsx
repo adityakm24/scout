@@ -7,14 +7,14 @@ import type {
   ToolsetInfo,
   ToolsetProvider,
 } from "@/lib/api";
-import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Switch } from "@spaceshipresearch/ui/ui/components/switch";
-import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
-import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
+import { useToast } from "@/ui/hooks/use-toast";
+import { Button } from "@/ui/components/button";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
+import { Badge } from "@/ui/components/badge";
+import { Switch } from "@/ui/components/switch";
+import { Spinner } from "@/ui/components/spinner";
+import { Toast } from "@/ui/components/toast";
 import { cn, themedBody } from "@/lib/utils";
 
 interface Props {
@@ -239,7 +239,7 @@ export function ToolsetConfigDrawer({ toolset, profile, onClose, onChanged }: Pr
         {/* Header — toolset identity + enable toggle */}
         <header className="p-5 pb-3 border-b border-border">
           <div className="flex items-center gap-3 pr-8">
-            <span className="font-mondwest text-display text-base tracking-wider">
+            <span className="font-display text-display text-base tracking-wider">
               {labelText}
             </span>
             <Badge tone={enabled ? "success" : "outline"} className="text-xs">
@@ -298,11 +298,6 @@ export function ToolsetConfigDrawer({ toolset, profile, onClose, onChanged }: Pr
                       {provider.badge && (
                         <Badge tone="secondary" className="text-xs">
                           {provider.badge}
-                        </Badge>
-                      )}
-                      {provider.requires_spaceshipresearch_auth && (
-                        <Badge tone="outline" className="text-xs">
-                          Scout Portal
                         </Badge>
                       )}
                     </div>

@@ -170,11 +170,11 @@ def build_gateway_parser(
     gateway_enroll = gateway_subparsers.add_parser("enroll",
         help="Enroll this gateway with a relay connector (writes relay auth creds to .env)",
         description="Redeem a single-use enrollment token with a relay connector. "
-            "Authenticates as your Scout Portal account (the connector derives the "
-            "authoritative tenant from it), mints this gateway's per-gateway secret "
+            "Authenticates through the identity provider configured under gateway.idp "
+            "(the connector derives the authoritative tenant from it), mints this gateway's per-gateway secret "
             "and per-tenant delivery key, and writes GATEWAY_RELAY_ID / "
             "GATEWAY_RELAY_SECRET / GATEWAY_RELAY_DELIVERY_KEY into ~/.scout/.env. "
-            "Requires being logged in (scout setup). Not available in managed installs.")
+            "Not available in managed installs.")
     gateway_enroll.add_argument("--token", default=None,
         help="The single-use enrollment token from the connector (delivered with "
             "your gateway config). Also settable via GATEWAY_RELAY_ENROLL_TOKEN.")
@@ -199,14 +199,14 @@ def build_gateway_parser(
     proxy_parser = subparsers.add_parser(
         "proxy", help="Local OpenAI-compatible proxy to OAuth providers",
         description="Run a local HTTP server that forwards OpenAI-compatible requests "
-            "to an OAuth-authenticated provider (e.g. Scout Portal). External "
+            "to an OAuth-authenticated provider (e.g. xAI Grok). External "
             "apps can point at the proxy with any bearer token; the proxy "
             "attaches your real credentials.")
     proxy_subparsers = proxy_parser.add_subparsers(dest="proxy_command")
 
     proxy_start = proxy_subparsers.add_parser("start", help="Run the proxy in the foreground")
-    proxy_start.add_argument("--provider", default="spaceshipresearch",
-        help="Upstream provider: spaceshipresearch or xai (default: spaceshipresearch). See `scout proxy providers`.")
+    proxy_start.add_argument("--provider", default="xai",
+        help="Upstream provider: xai (default: xai). See `scout proxy providers`.")
     proxy_start.add_argument("--host", default=None,
         help="Bind address (default: 127.0.0.1). Use 0.0.0.0 to expose on LAN.")
     proxy_start.add_argument("--port", type=int, default=None, help="Bind port (default: 8645)")

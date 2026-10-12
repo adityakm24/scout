@@ -26,7 +26,6 @@ export type NativeNotificationKind =
   | 'activity'
   | 'approval'
   | 'backgroundDone'
-  | 'credits'
   | 'heartbeat'
   | 'input'
   | 'plugin'
@@ -41,7 +40,6 @@ export const NATIVE_NOTIFICATION_KINDS: readonly NativeNotificationKind[] = [
   'turnDone',
   'turnError',
   'backgroundDone',
-  'credits',
   'plugin',
   'reminder',
   'heartbeat'
@@ -68,7 +66,6 @@ const DEFAULT_PREFS: NativeNotificationPrefs = {
     activity: true,
     approval: true,
     backgroundDone: true,
-    credits: true,
     input: true,
     heartbeat: true,
     plugin: true,

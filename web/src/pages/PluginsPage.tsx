@@ -15,18 +15,18 @@ import type {
   MemoryProviderSetupResult,
   PluginsHubResponse,
 } from "@/lib/api";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Select, SelectOption } from "@spaceshipresearch/ui/ui/components/select";
-import { Switch } from "@spaceshipresearch/ui/ui/components/switch";
-import { Spinner } from "@spaceshipresearch/ui/ui/components/spinner";
-import { CommandBlock, CopyButton } from "@spaceshipresearch/ui/ui/components/command-block";
-import { Card, CardContent, CardHeader, CardTitle } from "@spaceshipresearch/ui/ui/components/card";
-import { ConfirmDialog } from "@spaceshipresearch/ui/ui/components/confirm-dialog";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
-import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
-import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
+import { Button } from "@/ui/components/button";
+import { Badge } from "@/ui/components/badge";
+import { Select, SelectOption } from "@/ui/components/select";
+import { Switch } from "@/ui/components/switch";
+import { Spinner } from "@/ui/components/spinner";
+import { CommandBlock, CopyButton } from "@/ui/components/command-block";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
+import { ConfirmDialog } from "@/ui/components/confirm-dialog";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
+import { useToast } from "@/ui/hooks/use-toast";
+import { Toast } from "@/ui/components/toast";
 import { useI18n } from "@/i18n";
 import { en } from "@/i18n/en";
 import { PluginSlot } from "@/plugins";
@@ -877,7 +877,7 @@ export default function PluginsPage() {
 
         <div className="flex flex-col gap-3" data-testid="plugin-catalog-section">
 
-          <h3 className="font-mondwest text-display text-xs tracking-[0.12em] text-text-secondary">
+          <h3 className="font-display text-display text-xs tracking-[0.12em] text-text-secondary">
             {t.pluginsPage.catalogHeading ?? "Plugin catalog"}
           </h3>
 
@@ -930,7 +930,7 @@ export default function PluginsPage() {
 
         <div className="flex flex-col gap-3">
 
-          <h3 className="font-mondwest text-display text-xs tracking-[0.12em] text-text-secondary">
+          <h3 className="font-display text-display text-xs tracking-[0.12em] text-text-secondary">
             {t.pluginsPage.pluginListHeading}
           </h3>
 
@@ -968,7 +968,7 @@ export default function PluginsPage() {
 
           <div className="flex flex-col gap-3 opacity-95">
 
-            <h3 className="font-mondwest text-display text-xs tracking-[0.12em] text-text-secondary">
+            <h3 className="font-display text-display text-xs tracking-[0.12em] text-text-secondary">
               {t.pluginsPage.orphanHeading}
             </h3>
 
@@ -1146,7 +1146,7 @@ function PluginRowCard(props: PluginRowCardProps) {
                 className={cn(
                   "inline-flex items-center rounded-none px-3 py-1.5",
                   "border border-current/25 hover:bg-current/10",
-                  "font-mondwest text-display text-xs tracking-[0.1em]",
+                  "font-display text-display text-xs tracking-[0.1em]",
                 )}
                 to={tabPath}
               >

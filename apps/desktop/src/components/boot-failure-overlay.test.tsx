@@ -61,8 +61,7 @@ const remoteToken = {
   remoteOauthConnected: false,
   remoteTokenPreview: null,
   remoteTokenSet: true,
-  remoteUrl: 'http://100.116.104.53:9191',
-  cloudOrg: ''
+  remoteUrl: 'http://100.116.104.53:9191'
 }
 
 beforeEach(() => {
@@ -77,8 +76,7 @@ beforeEach(() => {
     requested: false,
     firstRunSkipped: false,
     manual: false,
-    localEndpoint: false,
-    freeTierReady: false
+    localEndpoint: false
   })
   failBoot()
 })
@@ -249,92 +247,6 @@ describe('BootFailureOverlay', () => {
     }
   })
 
-  it('recovers a cloud connection through the portal cascade instead of native OAuth', async () => {
-    const gatewayUrl = 'https://agent-1.agents.spaceshipresearch.com'
-    const logout = vi.fn().mockResolvedValue({ ok: true, connected: false })
-    const nativeLogin = vi.fn().mockResolvedValue({ ok: true, connected: false })
-    const cloudStatus = vi
-      .fn()
-      .mockResolvedValue({ portalBaseUrl: 'https://portal.spaceshipresearch.com', signedIn: false })
-
-    const cloudLogin = vi.fn().mockResolvedValue({
-      ok: true,
-      portalBaseUrl: 'https://portal.spaceshipresearch.com',
-      signedIn: true
-    })
-
-    const cloudAgentSignIn = vi.fn().mockResolvedValue({ baseUrl: gatewayUrl, connected: false })
-
-    const restore = stubDesktop(
-      {
-        ...remoteToken,
-        mode: 'cloud',
-        remoteAuthMode: 'oauth',
-        remoteOauthConnected: false,
-        remoteTokenSet: false,
-        remoteUrl: gatewayUrl
-      },
-      {
-        cloud: { status: cloudStatus, login: cloudLogin, agentSignIn: cloudAgentSignIn },
-        oauthLoginConnectionConfig: nativeLogin,
-        oauthLogoutConnectionConfig: logout,
-        probeConnectionConfig: vi.fn().mockResolvedValue({ providers: [{ id: 'spaceshipresearch', type: 'oauth' }] })
-      }
-    )
-
-    try {
-      render(<BootFailureOverlay />)
-      fireEvent.click(await screen.findByRole('button', { name: /sign in/i }))
-
-      await waitFor(() => expect(cloudAgentSignIn).toHaveBeenCalledWith(gatewayUrl))
-      // The ladder owns the logout: exactly one drop of this gateway's cookies.
-      expect(logout).toHaveBeenCalledExactlyOnceWith(gatewayUrl)
-      expect(cloudStatus).toHaveBeenCalledTimes(1)
-      expect(cloudLogin).toHaveBeenCalledTimes(1)
-      expect(nativeLogin).not.toHaveBeenCalled()
-    } finally {
-      restore()
-    }
-  })
-
-  it('shows the SpaceshipResearch Cloud down recovery when the backend flags isCloudBackendDown', async () => {
-    const restore = stubDesktop(remoteToken)
-    $desktopBoot.set({
-      error:
-        'SpaceshipResearch Cloud agent ares-3009.agents.spaceshipresearch.com is down (HTTP 503: server-side fault).',
-      fakeMode: false,
-      isCloudBackendDown: true,
-      message: 'boot failed',
-      phase: 'renderer.error',
-      progress: 40,
-      running: false,
-      statusCode: 503,
-      timestamp: Date.now(),
-      visible: true
-    })
-
-    try {
-      render(<BootFailureOverlay />)
-      // Cloud-specific title + actionable recovery instead of the generic
-      // remote-failure copy.
-      expect(await screen.findByText(/SpaceshipResearch Cloud agent is down/i)).toBeTruthy()
-      // Portal and Discord are dedicated action buttons (localized labels
-      // can't drift the URLs, which live in code).
-      expect(screen.getByRole('button', { name: /check portal status/i })).toBeTruthy()
-      expect(screen.getByRole('button', { name: /get help on discord/i })).toBeTruthy()
-      // Cloud-down is a remote failure: local-only Repair is dropped; the
-      // actionable paths are Gateway settings + Use local gateway.
-      expect(screen.queryByRole('button', { name: /repair/i })).toBeNull()
-      expect(screen.getByRole('button', { name: /gateway settings/i })).toBeTruthy()
-      expect(screen.getByRole('button', { name: /use local gateway/i })).toBeTruthy()
-      // The electron-built error message (portal / local mode / Discord) is
-      // still surfaced in the error box.
-      expect(screen.getByText(/ares-3009\.agents\.spaceshipresearch\.com/i)).toBeTruthy()
-    } finally {
-      restore()
-    }
-  })
-
   const bundledState = {
     active: false,
     manifest: null,
@@ -367,9 +279,7 @@ describe('BootFailureOverlay', () => {
       expect(screen.getByText(/reinstall the app to restore/i)).toBeTruthy()
 
       fireEvent.click(screen.getByRole('button', { name: /reinstall the app/i }))
-      await waitFor(() =>
-        expect(openExternal).toHaveBeenCalledWith('https://github.com/adityakm24/scout')
-      )
+      await waitFor(() => expect(openExternal).toHaveBeenCalledWith('https://github.com/adityakm24/scout'))
     } finally {
       restore()
     }

@@ -24,10 +24,10 @@ def profile_home(tmp_path, monkeypatch):
 
 
 def test_audit_writes_jsonlines(profile_home):
-    audit_log(AuditEvent.LOGIN_START, provider="spaceshipresearch", ip="1.2.3.4")
+    audit_log(AuditEvent.LOGIN_START, provider="fixtureco", ip="1.2.3.4")
     audit_log(
         AuditEvent.LOGIN_SUCCESS,
-        provider="spaceshipresearch", user_id="u1",
+        provider="fixtureco", user_id="u1",
         email="a@b.com", ip="1.2.3.4",
     )
 
@@ -38,7 +38,7 @@ def test_audit_writes_jsonlines(profile_home):
 
     second = json.loads(lines[1])
     assert second["event"] == "login_success"
-    assert second["provider"] == "spaceshipresearch"
+    assert second["provider"] == "fixtureco"
     assert second["user_id"] == "u1"
     assert second["email"] == "a@b.com"
     assert "ts" in second  # ISO-8601 timestamp
@@ -47,7 +47,7 @@ def test_audit_writes_jsonlines(profile_home):
 def test_audit_redacts_token_like_fields(profile_home):
     audit_log(
         AuditEvent.LOGIN_SUCCESS,
-        provider="spaceshipresearch", access_token="should-not-appear",
+        provider="fixtureco", access_token="should-not-appear",
         refresh_token="also-not", code="not-this", state="nope",
     )
     raw = (profile_home / "logs" / "dashboard-auth.log").read_text()

@@ -47,7 +47,6 @@ class TestKimiParity:
     """Kimi: OMIT temperature, max_tokens=32000, thinking + reasoning_effort."""
 
 
-
     def test_thinking_enabled(self, transport):
         # xor contract (fix ce4e74b3): an explicit recognized effort sends
         # reasoning_effort ONLY — never paired with extra_body.thinking.
@@ -63,10 +62,6 @@ class TestKimiParity:
         assert "reasoning_effort" not in kw.get("extra_body", {})
 
 
-
-
-
-
 class TestOpenRouterParity:
     """OpenRouter: provider preferences, reasoning in extra_body."""
 
@@ -80,26 +75,6 @@ class TestOpenRouterParity:
             provider_preferences=prefs,
         )
         assert kw["extra_body"]["provider"] == prefs
-
-
-
-
-
-class TestSpaceshipResearchParity:
-    """SpaceshipResearch: product tags, reasoning passthrough (disable included)."""
-
-    def test_tags(self, transport):
-        from agent.portal_tags import scout_portal_tags
-        kw = transport.build_kwargs(
-            model="scout-3-llama-3.1-405b",
-            messages=_simple_messages(),
-            tools=None,
-            provider_profile=get_provider_profile("spaceshipresearch"),
-        )
-        assert kw["extra_body"]["tags"] == scout_portal_tags()
-
-
-
 
 
 class TestQwenParity:

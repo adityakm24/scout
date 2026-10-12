@@ -220,7 +220,6 @@ export const esOverrides = {
     filterCategory: 'Categoría',
     categoryAll: 'Todas las categorías',
     uncategorised: 'Sin categoría',
-    residencyLocal: 'En este dispositivo',
     segment: {
       all: 'Todos',
       available: 'Disponibles',
@@ -235,26 +234,18 @@ export const esOverrides = {
       offNote: 'Los inicios de sesión se conservan.'
     },
     card: {
-      kindManaged: 'Administrado',
       kindCatalog: 'MCP · Catálogo',
       kindCustom: 'MCP · Personalizado',
       kindPlugin: (plugin: string) => `MCP · Plugin ${plugin}`,
       inCatalog: 'En el catálogo de Scout',
-      hostedTwin: 'Versión administrada disponible',
-      alsoLocal: 'También se ejecuta en este dispositivo',
       open: (name: string) => `Abrir ${name}`,
       turnServerOn: (name: string) => `Activar ${name}`,
       turnServerOff: (name: string) => `Desactivar ${name}`,
       reload: (name: string) => `Recargar ${name}`,
       state: {
-        accessExpired: 'Acceso caducado',
         available: 'Disponible',
         connected: 'Conectado',
         connecting: 'Conectando',
-        connectionUnknown: 'Estado desconocido',
-        couldNotConnect: 'No se pudo conectar',
-        offByYourOrganisation: 'Desactivado por tu organización',
-        offForYou: 'Desactivado para ti',
         serverConnecting: 'Conectando…',
         serverError: 'Error',
         serverNeedsAuth: 'Requiere autenticación',
@@ -271,17 +262,10 @@ export const esOverrides = {
       },
       verb: {
         authenticate: 'Autenticar',
-        connect: 'Conectar',
         install: 'Instalar',
-        openLogs: 'Abrir registros',
-        reconnect: 'Volver a conectar',
-        stopWaiting: 'Dejar de esperar',
-        tryAgain: 'Reintentar',
-        turnBackOn: 'Volver a activar'
+        openLogs: 'Abrir registros'
       },
       reason: {
-        finishSignIn: 'Termina de iniciar sesión en tu navegador.',
-        reconnect: 'Vuelve a conectar para que esta app siga funcionando.',
         serverError: 'El servidor rechazó la conexión.',
         serverNeedsAuth: 'Inicia sesión para que este servidor pueda responder.'
       }
@@ -292,21 +276,10 @@ export const esOverrides = {
       noMatchTitle: 'No hay apps que coincidan',
       noMatchBody: 'No hay coincidencias. Indica a Scout tu propio servidor MCP para añadirlo.',
       clearSearch: 'Borrar la búsqueda',
-      hostedFailedTitle: 'No se pudo acceder a las apps alojadas.',
-      hostedFailedBody: 'Los servidores de este equipo no se ven afectados y siguen funcionando. No se desactivó nada.',
       retry: 'Reintentar',
       matchesElsewhere: (count: number) => `${count} coincidencia${count === 1 ? '' : 's'} más en otros grupos.`,
       showAllMatches: 'Mostrar todas las coincidencias',
-      segmentNoMatch: (segment: string) => `No hay coincidencias en ${segment}, así que se muestran todas.`,
-      freeTierNote: 'Las conexiones se quedan en este equipo hasta que inicies sesión.',
-      signInLine: 'Inicia sesión en SpaceshipResearch para usar las apps administradas.',
-      signIn: 'Iniciar sesión',
-      writeFailed: 'No se guardó ese cambio.',
-      refreshFailed: 'No se actualizó la lista de herramientas.',
-      disconnectNoAccount:
-        'Scout no tiene ninguna cuenta que desconectar aquí. Actualiza la página e inténtalo de nuevo.',
-      disconnectRefused:
-        'SpaceshipResearch no pudo quitar este inicio de sesión ahora. Desactiva la app con el interruptor o inténtalo más tarde.'
+      segmentNoMatch: (segment: string) => `No hay coincidencias en ${segment}, así que se muestran todas.`
     },
     add: {
       action: 'Añadir el tuyo',
@@ -342,29 +315,12 @@ export const esOverrides = {
       saveFailed: 'No se guardó ese servidor.'
     },
     dialog: {
-      disconnect: 'Desconectar',
-      disconnectTitle: (name: string) => `¿Desconectar ${name}?`,
-      disconnectBody: 'Scout deja de actuar con esta cuenta. Puedes volver a conectarla cuando quieras.',
       menuRefreshTools: 'Actualizar herramientas',
       moreActions: 'Más acciones',
       removeServerTitle: (name: string) => `¿Quitar ${name}?`,
       removeServerBody: 'La entrada se quita de mcp.json en este equipo. No se elimina nada más.',
-      appSwitch: (name: string) => `Scout puede usar ${name}`,
-      waysTitle: (name: string) => `Dónde se ejecuta ${name}`,
-      wayNotConnected: (name: string) => `Aún no está conectado. Inicia sesión en ${name} desde tu navegador.`,
-      wayHosted: 'Administrado',
-      bothOn: (name: string) => `Ambos están activados, así que Scout ve cada herramienta de ${name} dos veces.`,
-      turnOffLocal: 'Desactivar el servidor local',
       providedByPlugin: (plugin: string) => `Proporcionado por el plugin ${plugin}`,
       openPlugins: 'Abrir la pestaña Plugins',
-      spaceshipResearchLine: 'Las apps de SpaceshipResearch siguen a tu cuenta, no al perfil.',
-      rulesReadOnly: 'Las reglas no se pueden cambiar ahora.',
-      rulesAppOff: (name: string) => `Activa ${name} para cambiar sus herramientas.`,
-      rulesSignIn: 'Inicia sesión para cambiar lo que Scout puede hacer aquí.',
-      orgNote: (count: number) => `Tu organización desactivó ${count} herramienta${count === 1 ? '' : 's'}.`,
-      orgLink: 'Abrir la administración de conectores',
-      connectEnded: 'El inicio de sesión no terminó.',
-      connectOpenAgain: 'Abrir el enlace de nuevo',
       tokensPerCall: 'tokens por llamada',
       usesPerMonth: 'usos en 30 días',
       advanced: 'Avanzado',
@@ -387,7 +343,6 @@ export const esOverrides = {
       showSummary: 'Mostrar resumen',
       facetSwitch: (facet: string) => `Activar o desactivar las herramientas de ${facet}`,
       moreHints: (count: number) => `+${count}`,
-      staleSignIn: 'Inicia sesión para leer la lista de herramientas más reciente.',
       searchCountPlaceholder: (count: number) => `Buscar entre ${count} herramientas`,
       toolList: (name: string) => `Herramientas de ${name}`,
       categorySelect: (count: number) => `${count} categoría${count === 1 ? '' : 's'}`,
@@ -396,7 +351,6 @@ export const esOverrides = {
       quickReadOnly: 'Solo lectura',
       quickNoDestructive: 'Desactivar las destructivas',
       quickEverythingOn: 'Todo activado',
-      lockedHint: 'desactivada por tu organización',
       turnToolOn: (tool: string) => `Activar ${tool}`,
       turnToolOff: (tool: string) => `Desactivar ${tool}`,
       showDetails: (tool: string) => `Mostrar qué hace ${tool}`,
@@ -412,23 +366,6 @@ export const esOverrides = {
       remove: 'Quitar',
       offTitle: (name: string) => `${name} está desactivado.`,
       offBody: 'Actívalo con el interruptor de arriba para leer las herramientas que incluye.',
-      signedOutTitle: 'Inicia sesión en SpaceshipResearch para leer la lista de herramientas.',
-      signedOutBody: 'Tus servidores en este equipo no se ven afectados.',
-      conflictTitle: 'Alguien cambió esta regla mientras la editabas.',
-      conflictBody: (theyOff: number, theyOn: number) => {
-        const they = [
-          theyOff > 0
-            ? `desactivó ${theyOff} herramienta${theyOff === 1 ? '' : 's'} que tienes activada${theyOff === 1 ? '' : 's'}`
-            : '',
-          theyOn > 0
-            ? `dejó activada${theyOn === 1 ? '' : 's'} ${theyOn} herramienta${theyOn === 1 ? '' : 's'} que desactivaste`
-            : ''
-        ].filter(Boolean)
-
-        return `${they.length > 0 ? `Esa persona ${they.join(' y ')}. ` : ''}Tus cambios siguen en pantalla; no se escribió nada.`
-      },
-      conflictReload: 'Recargar su versión',
-      conflictSave: 'Guardar sobre su versión',
       saveFailed: 'No se guardaron esas reglas de herramientas.',
       footerDirty: (off: number, backOn: number) =>
         `${off} herramienta${off === 1 ? '' : 's'} desactivada${off === 1 ? '' : 's'}, ${backOn === 0 ? 'ninguna' : backOn} reactivada${backOn === 1 ? '' : 's'}`,
@@ -638,13 +575,6 @@ export const esOverrides = {
         `Cierra la sesión guardada del navegador remoto y abre ${signInLabel}. Usa el gateway local para cambiar al backend incluido.`,
       signOutAndSignIn: 'Cerrar sesión e iniciar sesión',
       remoteFailureHint: 'Revisa la URL e inicia sesión en Configuración del gateway, o cambia al gateway local.',
-      cloudDownTitle: 'El agente de SpaceshipResearch Cloud no está disponible',
-      cloudDownDescription:
-        'El agente en la nube administrado por SpaceshipResearch al que se conecta este gateway devuelve un error de servidor. No se puede reiniciar desde aquí: revisa su estado, cambia al gateway local o pide ayuda.',
-      cloudDownHint:
-        'Los botones de abajo abren el Scout Portal (estado y controles de la instancia) y nuestro Discord para obtener ayuda.',
-      cloudDownCheckPortal: 'Ver el estado en el Portal',
-      cloudDownDiscord: 'Pedir ayuda en Discord',
       hideRecentLogs: 'Ocultar registros recientes',
       showRecentLogs: 'Mostrar registros recientes',
       signedInTitle: 'Sesión iniciada',
@@ -731,8 +661,7 @@ export const esOverrides = {
       turnDoneBody: '',
       turnErrorTitle: 'El turno falló',
       backgroundDoneTitle: 'Tarea en segundo plano finalizada',
-      backgroundFailedTitle: 'La tarea en segundo plano falló',
-      creditsTitle: 'Créditos'
+      backgroundFailedTitle: 'La tarea en segundo plano falló'
     }
   },
   remoteDisplayBanner: {
@@ -740,35 +669,10 @@ export const esOverrides = {
       `Renderizado por software activo — se detectó una pantalla remota (${reason}). Se desactivó la aceleración por GPU para evitar parpadeos.`
   },
   billingBlock: {
-    titleSpaceshipResearch: 'Sin créditos de SpaceshipResearch',
     titleProvider: provider => `Sin créditos — ${provider}`,
     fallbackMessage: 'Tu cuenta se quedó sin créditos. Añade créditos para continuar.',
-    openBilling: 'Abrir facturación',
     addCredits: 'Añadir créditos',
     dismiss: 'Descartar'
-  },
-  sendDiagnostics: {
-    title: 'Enviar diagnóstico a SpaceshipResearch',
-    privacyNotice:
-      'Esto sube un paquete de depuración a un almacenamiento interno de SpaceshipResearch (no a un sitio público). Incluye información del sistema (SO, versiones, proveedor y qué claves API están configuradas, nunca las claves en sí) y los registros completos del agente, del gateway y de la app de escritorio (hasta 512 KB cada uno), que probablemente contengan contenido de conversaciones, salidas de herramientas y rutas de archivos. Los secretos se ocultan antes de subirlo. Solo el personal de SpaceshipResearch y los moderadores autorizados de Discord pueden ver el paquete, que se elimina automáticamente a los 14 días.',
-    upload: 'Subir',
-    uploading: 'Subiendo…',
-    cancel: 'Cancelar',
-    close: 'Cerrar',
-    copyLink: 'Copiar enlace',
-    uploadIdFallback: id => `No se devolvió un enlace para verlo: indica el ID de subida ${id} al equipo de soporte`,
-    doneTitle: 'Diagnóstico enviado',
-    doneDescription:
-      'Tu paquete se subió de forma privada. Comparte el enlace de abajo en tu hilo de soporte para que el equipo pueda ver tus registros.',
-    failedTitle: 'Error al subir',
-    failedHint:
-      'También puedes ejecutar `scout debug share --spaceshipresearch` desde una terminal, o `scout debug share --local` para mostrar el informe sin subirlo.',
-    handoffLead: 'Continúa la conversación en:',
-    links: {
-      github: 'Issues de GitHub',
-      portal: 'Soporte de Scout Portal',
-      discord: 'Discord'
-    }
   },
   titlebar: {
     hideSidebar: 'Ocultar barra lateral',
@@ -967,9 +871,7 @@ export const esOverrides = {
       vaultCredentials: 'Credenciales guardadas',
       vaultSources: 'Gestores de contraseñas',
       appUpdates: 'Versión y actualizaciones',
-      uninstall: 'Desinstalar',
-      billingOverview: 'Resumen',
-      billingPlans: 'Planes'
+      uninstall: 'Desinstalar'
     },
     closeSettings: 'Cerrar configuración',
     exportConfig: 'Exportar configuración',
@@ -993,7 +895,6 @@ export const esOverrides = {
       archivedChats: 'Chats archivados',
       sessions: 'Sesiones',
       about: 'Acerca de',
-      billing: 'Facturación',
       notifications: 'Notificaciones',
       vault: 'Contraseñas e inicios de sesión'
     },
@@ -1193,10 +1094,6 @@ export const esOverrides = {
         backgroundDone: {
           label: 'Tarea en segundo plano finalizada',
           description: 'Se completó un comando de terminal en segundo plano.'
-        },
-        credits: {
-          label: 'Avisos de crédito',
-          description: 'El acceso a los créditos se pausa o se restablece.'
         },
         plugin: {
           label: 'Notificaciones de complementos',
@@ -1893,7 +1790,7 @@ export const esOverrides = {
     connections: {
       title: 'Gateways registrados',
       intro:
-        'Gestiona este dispositivo y cada gateway de Scout al que puede llegar mediante conexiones remotas, SSH o Cloud.',
+        'Gestiona este dispositivo y cada gateway de Scout al que puede llegar mediante conexiones remotas o SSH.',
       stagedNote:
         'Cambia de gateway desde Sesiones. Los perfiles, chats, mensajería y tareas cron se quedan con su gateway; el trabajo en otros gateways sigue ejecutándose.',
       launchModeTitle: 'Al iniciar, volver a Sesiones en el último gateway usado',
@@ -1920,14 +1817,11 @@ export const esOverrides = {
       updateAllRunning: 'Actualizando todas las instancias…',
       updateAllDone: 'Actualizaciones enviadas',
       updateAllFailed: 'Falló el envío de actualizaciones',
-      updateSkippedCloud: 'Administrado por Scout Cloud',
       kindLocal: 'Local',
       kindRemote: 'Gateway remoto',
-      kindCloud: 'Scout Cloud',
       kindSsh: 'SSH',
       kindLocalDesc: 'El entorno de ejecución de Scout administrado por esta app.',
       kindRemoteDesc: 'Un gateway de Scout accesible por HTTP(S): LAN, Tailscale o internet.',
-      kindCloudDesc: 'Una instancia alojada detectada a través de tu cuenta de Scout Cloud.',
       kindSshDesc: 'Una instalación de Scout accesible por SSH.',
       labelTitle: 'Nombre',
       labelDesc:
@@ -1947,8 +1841,6 @@ export const esOverrides = {
       duplicateSsh: (label: string) => `Ya existe una conexión a este host SSH (“${label}”).`,
       sameBackendHint: (label: string) => `Mismo backend que “${label}”`,
       localAddHint: 'Local no está disponible: la conexión local administrada ya existe (solo puede haber una).',
-      cloudAddHint:
-        'Consejo: al iniciar sesión en Scout Cloud arriba, tus agentes se detectan automáticamente; usa este formulario solo para registrar a mano la URL de una instancia conocida.',
       save: 'Guardar conexión',
       saving: 'Guardando…',
       cancel: 'Cancelar',
@@ -1991,43 +1883,6 @@ export const esOverrides = {
       remoteDesc: 'Conecta esta shell de escritorio a un backend remoto de Scout.',
       remoteAuthHint:
         'Los gateways alojados usan OAuth o usuario y contraseña; los autohospedados pueden usar un token de sesión.',
-      cloudTitle: 'Scout Cloud',
-      cloudDesc:
-        'Inicia sesión una vez en Scout Cloud y elige uno de los agentes de tu cuenta; no tienes que pegar ninguna URL.',
-      cloudSignInTitle: 'Scout Cloud',
-      cloudSignIn: 'Iniciar sesión en Scout Cloud',
-      cloudSignedIn: 'Sesión iniciada en Scout Cloud',
-      cloudNeedsSignIn: 'Inicia sesión en Scout Cloud para descubrir los agentes de tu cuenta.',
-      cloudSignedInDesc: 'Has iniciado sesión. Elige un agente de abajo; la sesión se actualiza automáticamente.',
-      cloudAgentsTitle: 'Tus agentes',
-      cloudOrgPickerTitle: 'Elige una organización',
-      cloudOrgSelect: 'Seleccionar',
-      cloudOrgChange: 'Cambiar organización',
-      cloudOrgRole: role => `Rol: ${role}`,
-      cloudLoadingAgents: 'Cargando tus agentes…',
-      cloudNoAgents: {
-        before: 'No se encontraron agentes en esta cuenta. Crea uno en el ',
-        linkText: 'Portal de SpaceshipResearch',
-        after: ', y luego actualiza.'
-      },
-      cloudRefresh: 'Actualizar',
-      cloudConnect: 'Conectar',
-      cloudSavedTitle: 'Gateways de Cloud guardados',
-      cloudSavedDesc:
-        'Usa un gateway guardado sin cambiar el predeterminado. Inicia sesión abajo para añadir instancias. Gestiona los nombres y el inicio de sesión en la lista de conexiones guardadas.',
-      cloudUseSaved: 'Usar gateway',
-      cloudActive: 'Activo en esta ventana',
-      cloudConnecting: 'Conectando…',
-      cloudDiscoverFailed: 'No se pudieron cargar tus agentes de Scout Cloud',
-      cloudConnectFailed: 'No se pudo conectar con ese agente',
-      cloudSignInFailed: 'Falló el inicio de sesión en Scout Cloud',
-      cloudSignedOutTitle: 'Sesión cerrada en Scout Cloud',
-      cloudSignedOutMessage: 'Se borró la sesión de Scout Cloud.',
-      cloudConnectedTitle: 'Conectado',
-      cloudConnectedPill: 'Conectado',
-      cloudConnectedTo: name => `Conectado a ${name}.`,
-      cloudAgentProvisioning: 'Preparando…',
-      cloudStatusLabel: status => `Estado: ${status}`,
       remoteUrlTitle: 'URL remota',
       remoteUrlDesc: 'URL base del backend del dashboard remoto. Se admiten prefijos de ruta, por ejemplo /scout.',
       probing: 'Comprobando cómo se autentica este gateway…',
@@ -2362,286 +2217,6 @@ export const esOverrides = {
       deleted: (model: string) => `${model} eliminado.`,
       deleteFailed: 'Error al eliminar'
     },
-    billing: {
-      perMonth: (amount: string) => `${amount}/mes`,
-      creditsPerMonth: (amount: string) => `${amount} créditos/mes`,
-      usageLabel: (label: string) => `Uso de ${label}`,
-      freeTier: {
-        signIn: 'Iniciar sesión',
-        title: 'Estás en el plan gratuito de SpaceshipResearch',
-        message: 'Inicia sesión con una cuenta de SpaceshipResearch para desbloquear más modelos y herramientas.',
-        caption:
-          'Funciona con spaceshipresearch/welcome, con conectores incluidos. Al iniciar sesión conservas tus conectores y se añaden las herramientas que requieren cuenta y todos los demás modelos.',
-        name: 'SpaceshipResearch · plan gratuito',
-        footnote:
-          'El plan gratuito no tiene saldo ni nada que pagar. El pago y el uso aparecen al iniciar sesión con una cuenta de SpaceshipResearch.',
-        plan: 'Plan gratuito',
-        model: 'Modelo',
-        connectors: 'Conectores',
-        included: 'Incluidos'
-      },
-      amountValidation: {
-        reloadTo: 'Recargar hasta',
-        greaterThanThreshold: 'El importe de recarga debe ser mayor que el umbral.',
-        decimal: (label: string) => `${label}: introduce un importe en dólares con 2 decimales como máximo.`,
-        positive: (label: string) => `${label}: el importe debe ser mayor que 0 $.`,
-        minimum: (label: string, amount: string) => `${label}: el mínimo es ${amount}.`,
-        maximum: (label: string, amount: string) => `${label}: el máximo es ${amount}.`
-      },
-      stepUp: {
-        openVerification: 'Abrir la página de verificación',
-        dismiss: 'Descartar',
-        waiting: 'Esperando el enlace de verificación…',
-        verify: 'Verifica para continuar',
-        deniedTitle: 'La verificación no se aprobó',
-        deniedBody: 'La verificación terminó sin permitir el gasto remoto para este terminal.',
-        successTitle: 'Verificación completada',
-        successBody: 'El gasto remoto está permitido para este terminal.'
-      },
-      charge: {
-        added: (amount?: string) => (amount ? `Se añadieron ${amount} $.` : 'Créditos añadidos.'),
-        failedTitle: 'Falló el cargo',
-        unconfirmedTitle: 'Resultado del cargo sin confirmar',
-        unconfirmedBody: (message: string) =>
-          `${message} El resultado de tu último cargo no está confirmado: revisa tu saldo/historial antes de reintentarlo.`,
-        checkTitle: 'No se pudo comprobar el cargo',
-        checkBody: 'No se pudo comprobar el cargo.',
-        untrackedTitle: 'No se pudo seguir el cargo',
-        untrackedBody: 'El servicio de facturación aceptó la solicitud, pero no devolvió un ID de cargo.',
-        timeoutTitle: 'Sigue procesándose tras 5 minutos',
-        timeoutBody: 'Es posible que el cargo todavía se complete. Revisa el portal antes de reintentarlo.',
-        authenticationRequired:
-          'Tu banco requiere verificación (3DS). Complétala en el portal para terminar esta compra.',
-        expired: 'Tu tarjeta ha caducado. Actualízala en el portal.',
-        declined: 'Tu tarjeta fue rechazada. Prueba otra tarjeta en el portal.',
-        failedBody: (reason: string) => `El cargo no se completó (${reason}).`
-      },
-      title: 'Facturación',
-      preview: 'vista previa',
-      summary: {
-        balance: 'Saldo',
-        plan: 'Plan',
-        autoRefill: 'Recarga automática'
-      },
-      sections: {
-        invoices: 'Facturas',
-        plan: 'Plan',
-        paymentAndCredits: 'Pago y créditos',
-        usage: 'Uso'
-      },
-      usage: {
-        title: 'Uso'
-      },
-      buyCredits: {
-        customAmount: 'Importe de créditos personalizado',
-        title: 'Comprar créditos ahora',
-        buyButton: 'Comprar',
-        processing: 'Procesando… comprobando la liquidación',
-        added: (amount: string) => `Se añadieron ${amount}. El saldo se está actualizando.`,
-        retry: 'Reintentar',
-        openPortal: 'Abrir el portal'
-      },
-      plan: {
-        title: 'Planes',
-        changePlan: 'Cambiar de plan',
-        viewPlans: 'Ver planes',
-        backAria: 'Volver a facturación',
-        current: 'Plan actual',
-        scheduled: 'Programado',
-        empty: 'Ahora mismo no hay planes disponibles a los que cambiar.',
-        undo: 'Deshacer',
-        undoing: 'Deshaciendo…',
-        downgrade: 'Bajar de plan',
-        confirmDowngrade: 'Confirmar el cambio a un plan inferior',
-        tryAgain: 'Volver a intentarlo',
-        checkingChange: 'Comprobando este cambio…',
-        cannotChange: 'Ese cambio no se puede hacer aquí.',
-        alreadyOn: (name: string) => `Ya tienes el plan ${name}; no hay nada que cambiar.`,
-        notScheduleable: 'Este cambio no se puede programar aquí.',
-        scheduling: 'Programando…',
-        cancel: 'Cancelar',
-        effectScheduled: (targetName: string, effectiveAt: string, creditsDelta?: string) =>
-          `Cambio a ${targetName}: entra en vigor ${effectiveAt}. No se cobra nada ahora; conservas tu plan actual hasta entonces.${creditsDelta ? ` Cambio de créditos mensuales: ${creditsDelta}.` : ''}`
-      },
-      autoReload: {
-        threshold: 'Umbral',
-        thresholdAria: 'Umbral de recarga automática',
-        reloadTo: 'Recargar hasta',
-        reloadToAria: 'Importe objetivo de la recarga automática',
-        turnOffConfirm: '¿Desactivar la recarga automática?',
-        turnOff: 'Desactivar',
-        disable: 'Desactivar',
-        updated: 'Recarga automática actualizada.',
-        turnedOff: 'Recarga automática desactivada.',
-        manage: 'Gestionar',
-        save: 'Guardar',
-        saving: 'Guardando…',
-        cancel: 'Cancelar'
-      },
-      state: {
-        notice: {
-          loggedOut: {
-            title: 'Conecta tu cuenta de SpaceshipResearch',
-            message: 'Inicia sesión con tu cuenta de SpaceshipResearch para ver aquí tu saldo, plan y uso.',
-            action: 'Iniciar sesión'
-          },
-          openPortal: 'Abrir el portal ↗',
-          noCard: {
-            title: 'No hay ningún método de pago registrado',
-            message:
-              'La compra de créditos y la recarga automática siguen desactivadas hasta que registres una tarjeta. Añade una en el portal.',
-            action: 'Añadir tarjeta ↗'
-          }
-        },
-        paymentMethod: {
-          title: 'Método de pago',
-          description: 'Gestiona la tarjeta que se usa para recargas y renovaciones de la suscripción.',
-          addAction: 'Añadir método de pago',
-          updateAction: 'Actualizar',
-          provenance: {
-            autoRefill: 'tarjeta de recarga automática',
-            customerDefault: 'predeterminada del cliente',
-            subPin: 'tarjeta de la suscripción',
-            suffix: (label: string) => ` - ${label}`
-          }
-        },
-        buyCredits: {
-          description: 'Un único cargo en tu tarjeta que se añade hoy a tu saldo.'
-        },
-        autoRefill: {
-          title: 'Recargar cuando quede poco saldo',
-          genericDescription: 'Mantén tu saldo recargado cuando baje de tu umbral.',
-          offPill: 'Desactivada',
-          enabledPill: 'Activada',
-          notAvailablePill: '—',
-          manageCaption: 'Gestiona la recarga automática desde el portal.',
-          turnOnCaption: 'Activa la recarga automática desde el portal',
-          chargesDescription: (reloadTo: string, threshold: string) =>
-            `Cobra ${reloadTo} automáticamente cuando tu saldo baja de ${threshold}.`,
-          distinctCardCaption: (cardLabel: string) =>
-            `La recarga automática cobra a ${cardLabel}: concílialo en el portal`,
-          distinctCardFallback: 'otra tarjeta',
-          reconcileAction: 'Conciliar ↗'
-        },
-        usage: {
-          subscriptionCredits: {
-            title: 'Créditos de la suscripción',
-            barLabel: 'Créditos de la suscripción restantes',
-            captionResets: (date: string) => `Se restablece ${date}`,
-            valueOf: (remaining: string, monthly: string) => `Quedan ${remaining} de ${monthly}`,
-            valueOver: (remaining: string, monthly: string, over: string) =>
-              `Quedan ${remaining} de ${monthly} · ${over} de exceso`
-          },
-          topupCredits: {
-            title: 'Créditos de recarga',
-            caption: 'No caducan'
-          },
-          monthlyCap: {
-            title: 'Límite de gasto mensual',
-            barLabel: 'Límite de gasto mensual usado',
-            captionDefault: 'Límite predeterminado',
-            captionSpending: 'Gasto remoto mensual',
-            valueUsed: (spent: string, limit: string) => `${spent} de ${limit} usados`
-          }
-        },
-        planCard: {
-          freeTier: 'Gratis',
-          chooseAction: 'Elegir ↗',
-          adjustPlanAction: 'Ajustar plan ↗',
-          unavailableCaption: 'Los detalles de la suscripción no están disponibles; aún puedes abrir el portal.',
-          downgradeCaption: (tierName: string, when: string) => `Cambia a ${tierName} el ${when}.`,
-          cancellationCaption: (when: string) => `Se cancela el ${when}.`,
-          renewsCaption: (date: string) => `Se renueva ${date}`,
-          noSubscriptionCaption: 'No hay suscripción activa: los modelos de pago consumen créditos de recarga.'
-        }
-      },
-      errors: {
-        consentRequired: {
-          title: 'Hace falta confirmar la tarjeta',
-          message: 'Confirma esta tarjeta para los cargos del terminal en el portal'
-        },
-        insufficientScope: {
-          title: 'El gasto remoto necesita aprobación',
-          message: 'Esto requiere permitir el gasto remoto. Inicia una recarga para permitirlo y vuelve a intentarlo.'
-        },
-        remoteSpendingRevoked: {
-          title: 'Se detuvo el gasto remoto',
-          messageByAdmin: 'Un administrador detuvo el gasto remoto para este terminal.',
-          messageBySelf: 'Detuviste el gasto remoto para este terminal.'
-        },
-        remoteSpendingReconnect: (who: string) =>
-          `${who} Vuelve a conectarte desde Configuración -> Gateway para autorizar de nuevo este dispositivo.`,
-        sessionRevoked: {
-          title: 'Sesión cerrada',
-          message: 'Se cerró tu sesión. Vuelve a iniciar sesión desde Configuración → Gateway.'
-        },
-        cliBillingDisabled: {
-          title: 'El gasto remoto está desactivado',
-          message:
-            'El gasto remoto está desactivado para esta cuenta; un administrador de facturación puede activarlo desde la página de Scout Agent del portal.'
-        },
-        roleRequired: {
-          title: 'Se requiere rol de administrador',
-          message:
-            'Para añadir fondos hace falta un administrador o propietario de la organización. Pide ayuda a un administrador o gestiónalo en el portal.'
-        },
-        idempotencyConflict: {
-          title: 'Inicia una nueva recarga',
-          message: '🔴 Esa clave de cargo ya se usó para otro importe. Inicia una nueva recarga.'
-        },
-        noPaymentMethod: {
-          title: 'No hay tarjeta guardada',
-          message:
-            '💳 Todavía no hay una tarjeta guardada para cargos del terminal. Configura una en el portal ' +
-            '(las compras únicas de créditos no guardan una tarjeta reutilizable).'
-        },
-        orgAccessDenied: {
-          title: 'Acceso a la organización denegado',
-          message: 'Este token no está vinculado a una organización que puedas gestionar'
-        },
-        monthlyCapExceeded: {
-          title: 'Se alcanzó el límite de gasto mensual',
-          messageReached: '🔴 Se alcanzó el límite de gasto mensual.',
-          messageHeadroom: (remaining: string) =>
-            `🔴 Se alcanzó el límite de gasto mensual: quedan ${remaining} $ de margen.`
-        },
-        rateLimited: {
-          title: 'Demasiados cargos ahora mismo',
-          message: (mins: number) =>
-            mins > 0
-              ? `🟡 Demasiados cargos ahora mismo (reinténtalo en ~${mins} min). No es un fallo de pago.`
-              : '🟡 Demasiados cargos ahora mismo. No es un fallo de pago.'
-        },
-        stripeUnavailable: {
-          title: 'Stripe tiene problemas',
-          message: (mins: number) =>
-            mins > 0
-              ? `Stripe tiene problemas: reinténtalo en ~${mins} min`
-              : 'Stripe tiene problemas: reinténtalo en breve'
-        },
-        upgradeCapExceeded: {
-          title: 'Se alcanzó el límite diario de cambios de plan',
-          message: 'Se alcanzó el límite diario de cambios de plan: reinténtalo mañana'
-        },
-        endpointUnavailable: {
-          title: 'Endpoint de facturación no disponible',
-          message:
-            'El endpoint de facturación devolvió una respuesta que no es JSON (puede que no esté disponible en este despliegue).'
-        },
-        timeout: {
-          title: 'Se agotó el tiempo de la solicitud de facturación',
-          message: 'Se agotó el tiempo de la solicitud de facturación.'
-        },
-        transport: {
-          title: 'Falló la conexión de facturación',
-          message: 'La solicitud de facturación falló antes de llegar al gateway.'
-        },
-        default: {
-          title: 'Falló la solicitud de facturación',
-          message: 'Falló la solicitud de facturación.'
-        }
-      }
-    },
     providers: {
       connectAccount: 'Conectar una cuenta',
       haveApiKey: '¿Tienes una clave API?',
@@ -2731,17 +2306,6 @@ export const esOverrides = {
       activeBackend: 'Activo',
       activeBackendHint: 'Este es tu backend activo',
       useBackend: 'Usar este backend',
-      spaceshipResearchIncluded:
-        'Incluido con una suscripción de SpaceshipResearch: inicia sesión con tu cuenta de SpaceshipResearch para activarlo.',
-      spaceshipResearchAuthNeededTitle: 'Inicia sesión con tu cuenta de SpaceshipResearch',
-      spaceshipResearchAuthNeededMessage: (provider: string) =>
-        `${provider} está guardado, pero solo funcionará cuando inicies sesión con tu cuenta de SpaceshipResearch.`,
-      spaceshipResearchAuthSignIn: 'Iniciar sesión',
-      spaceshipResearchAuthDoneTitle: 'Cuenta de SpaceshipResearch conectada',
-      spaceshipResearchAuthDoneMessage: 'Los backends de tu suscripción ya están activos.',
-      spaceshipResearchAuthFailed: 'No se completó el inicio de sesión en SpaceshipResearch',
-      spaceshipResearchAuthFailedMessage: 'Vuelve a intentarlo.',
-      spaceshipResearchAuthTryAgain: 'Reintentar',
       noApiKeyRequired: 'No se requiere clave API.',
       postSetupHint: step =>
         `Este backend necesita una instalación única (${step}). Se ejecuta en esta máquina y puede tardar unos minutos.`,
@@ -4015,8 +3579,7 @@ export const esOverrides = {
       title: 'La base de datos de sesiones está dañada',
       body: (profiles: string) =>
         `Scout no puede leer todo el historial de sesiones de ${profiles}. Los chats que faltan en esta lista no se eliminaron; el archivo donde se guardan está dañado.`,
-      action: 'Sal de Scout en este perfil y luego inspecciona el archivo sin modificarlo, o restaura una instantánea:',
-      guide: 'Guía de recuperación'
+      action: 'Sal de Scout en este perfil y luego inspecciona el archivo sin modificarlo, o restaura una instantánea:'
     },
     noFilterMatches: 'Ninguna sesión coincide con estos filtros',
     projects: {
@@ -4276,8 +3839,6 @@ export const esOverrides = {
       '/palette': 'Abrir la paleta de comandos aproximada (también Ctrl+P)',
       '/usage':
         'Mostrar el uso de tokens y los límites de frecuencia; `reset` canjea un restablecimiento de límite de Codex acumulado',
-      '/subscription': 'Ver tu plan de SpaceshipResearch y cambiarlo en el navegador',
-      '/topup': 'Mostrar tu saldo de SpaceshipResearch y gestionar la facturación en el portal',
       '/platform': 'Pausar, reanudar o listar una plataforma del gateway que falla',
       '/version': 'Mostrar la versión de Scout Agent',
       '/debug': 'Subir un informe de depuración (información del sistema + registros) y obtener enlaces para compartir',
@@ -4823,7 +4384,6 @@ export const esOverrides = {
     chooseLater: 'Elegiré un proveedor más tarde',
     recommended: 'Recomendado',
     connected: 'Conectado',
-    featuredPitch: 'Una suscripción, más de 300 modelos frontier: la forma recomendada de usar Scout',
     fireworksPitch: 'API directa de modelos: modelos frontier alojados en Fireworks',
     localModelsTitle: 'Ejecutar modelos localmente',
     localModelsPitch: 'Sin cuenta: descarga un modelo y ejecútalo en este equipo',
@@ -4891,7 +4451,6 @@ export const esOverrides = {
     reopenAuthPage: 'Volver a abrir página de autorización',
     autoBrowser: provider =>
       `Abrimos ${provider} en tu navegador. Autoriza Scout allí y te conectarás automáticamente; no hay nada que copiar o pegar.`,
-    reopenSignInPage: 'Volver a abrir página de inicio de sesión',
     waitingAuthorize: 'Esperando tu autorización...',
     externalPending: provider =>
       `${provider} inicia sesión con su propia CLI. Ejecuta este comando en una terminal y luego vuelve y elige "Ya inicié sesión":`,
@@ -4900,82 +4459,11 @@ export const esOverrides = {
     reopenVerification: 'Volver a abrir página de verificación',
     copy: 'Copiar',
     defaultModel: 'Modelo predeterminado',
-    freeTier: 'Nivel gratis',
-    pro: 'Pro',
     free: 'Gratis',
     price: (input, output) => `${input} entrada / ${output} salida por Mtok`,
     change: 'Cambiar',
     startChatting: 'Empezar',
     docs: provider => `Docs de ${provider}`
-  },
-  freeTier: {
-    providerRowTitle: 'SpaceshipResearch · plan gratuito',
-    providerRowPitch: 'Inicia sesión con una cuenta de SpaceshipResearch para desbloquear más modelos y herramientas.',
-    readyTitle: 'Scout está listo.',
-    readyCaption: 'Gratis · conectores incluidos',
-    begin: 'Empezar',
-    signInInstead: 'Iniciar sesión con una cuenta de SpaceshipResearch',
-    otherProviders: 'Otros proveedores',
-    stripTitle: 'Ya están disponibles la inferencia y los conectores gratuitos de SpaceshipResearch.',
-    stripBody: 'Abre el selector de modelos para probarlos o inicia sesión con una cuenta de SpaceshipResearch.',
-    dismiss: 'Descartar',
-    providerName: 'SpaceshipResearch',
-    statusLabel: (model: string) => `SpaceshipResearch · ${model}`,
-    signIn: 'Iniciar sesión',
-    signInHeading: 'Inicia sesión con una cuenta de SpaceshipResearch para desbloquear más modelos y herramientas.',
-    settingUp: 'Configurando la inferencia gratuita…',
-    codeBody: 'Introduce este código en tu navegador para terminar de iniciar sesión.',
-    copyLink: 'Copiar enlace',
-    doNotShare: 'No compartas este código.',
-    waiting: 'Esperando el inicio de sesión…',
-    finishingHeading: 'Terminando el inicio de sesión…',
-    finishingBody: 'Aprobado en el navegador. Obteniendo los tokens de tu cuenta.',
-    signedInAs: (email: string) => `Sesión iniciada como ${email}`,
-    signedIn: 'Sesión iniciada.',
-    completedBody: 'Tu cuenta ya incluye inferencia y herramientas.',
-    defaultModel: 'Modelo predeterminado',
-    change: 'Cambiar',
-    done: 'Listo',
-    notNow: 'Ahora no',
-    tryAgain: 'Reintentar',
-    startAgain: 'Empezar de nuevo',
-    didNotComplete: 'No se completó el inicio de sesión',
-    rejectedBody: 'No pasa nada, sigues en el servicio gratuito de SpaceshipResearch. Inicia sesión cuando quieras.',
-    supersededBody:
-      'Un código de inicio de sesión más reciente sustituyó a este. Usa el más reciente o empieza de nuevo.',
-    timedOutHeading: 'Ese enlace de inicio de sesión caducó',
-    timedOutBody: 'Empieza de nuevo cuando quieras. Sigues en el servicio gratuito de SpaceshipResearch.',
-    retiredBody:
-      'Tu sesión terminó antes de completar el inicio de sesión. Scout iniciará una nueva; luego vuelve a iniciar sesión cuando quieras.',
-    errorBody: 'No se completó el inicio de sesión. Vuelve a intentarlo cuando quieras.',
-    busyHeading: 'Ya casi está',
-    busyBody: (wait: string) =>
-      `Scout no pudo terminar de iniciar tu sesión porque el servicio de SpaceshipResearch está ocupado. Vuelve a intentarlo en ${wait}. Mientras tanto, tu sesión sigue aquí.`,
-    unreachableBody:
-      'Scout no pudo llegar al servicio de SpaceshipResearch para terminar de iniciar tu sesión. Comprueba tu conexión a internet y vuelve a intentarlo. Tu sesión sigue aquí.',
-    alreadySignedInHeading: 'Ya has iniciado sesión.',
-    alreadySignedInBody: 'Este Scout ya tiene la sesión iniciada en una cuenta de SpaceshipResearch.',
-    setupFailed: {
-      gateClosed:
-        'Esta versión de Scout no puede iniciarse sin una cuenta de SpaceshipResearch. Inicia sesión o crea una: es gratis y solo lleva un minuto.',
-      paused:
-        'El uso de Scout sin iniciar sesión está en pausa por un momento. Scout seguirá comprobándolo. Iniciar sesión es gratis y te permite empezar ahora mismo.',
-      rateLimited: (wait: string) =>
-        `Mucha gente está empezando ahora mismo, así que Scout volverá a intentarlo en ${wait}. Iniciar sesión es gratis y te ahorra la espera.`,
-      unreachable:
-        'Scout no pudo llegar al servicio de SpaceshipResearch. Comprueba tu conexión a internet y pulsa Reintentar. O conecta otro proveedor por ahora.',
-      serverError:
-        'El servicio de SpaceshipResearch tuvo un fallo. Pulsa Reintentar en un momento o conecta otro proveedor por ahora.',
-      powRequired:
-        'El servidor de SpaceshipResearch pidió una prueba de trabajo, pero tu agente todavía no la implementa. Inicia sesión o crea una cuenta gratuita de SpaceshipResearch para continuar.',
-      locked:
-        'Esta sesión no puede continuar sin iniciar sesión. Inicia sesión o crea una cuenta gratuita de SpaceshipResearch para seguir.',
-      generic:
-        'Scout no pudo configurar el acceso gratuito sin iniciar sesión. Iniciar sesión es gratis; también puedes conectar otro proveedor.',
-      signInBelow: 'Iniciar sesión es gratis. Elige SpaceshipResearch abajo.',
-      tryAgain: 'Reintentar',
-      retrying: 'Reintentando…'
-    }
   },
   modelPicker: {
     title: 'Cambiar modelo',
@@ -4989,12 +4477,8 @@ export const esOverrides = {
     downloading: 'Descargando',
     localDownloadsHeading: 'Local',
     noAuthenticatedProviders: 'No hay proveedores autenticados.',
-    pro: 'Pro',
-    proNeedsSubscription: 'Los modelos Pro necesitan una suscripción de SpaceshipResearch de pago.',
     free: 'Gratis',
-    freeTier: 'Nivel gratis',
     priceTitle: 'Precio de entrada / salida por millón de tokens',
-    wasPrice: 'antes',
     customModel: 'Modelo personalizado',
     addCustomModelAction: 'Añadir modelo personalizado…',
     customModelPlaceholder: 'Escribe un ID de modelo, p. ej., openai/gpt-5'
@@ -5080,8 +4564,6 @@ export const esOverrides = {
       clientLabel: version => `cliente v${version}`,
       connectionSsh: host => `SSH: ${host}`,
       connectionRemote: host => `Remoto: ${host}`,
-      connectionCloud: host => `Nube: ${host}`,
-      connectionCloudTooltip: host => `Scout Cloud · ${host}`,
       connectionSshTooltip: host => `SSH · ${host}`,
       connectionRemoteTooltip: host => `Remoto · ${host}`,
       backendLabel: version => `backend v${version}`,
@@ -5113,7 +4595,6 @@ export const esOverrides = {
       toggleTerminal: 'Terminal',
       toggleTokensPerSecond: 'Tokens por segundo',
       toggleVersion: 'Versión y actualizaciones',
-      toggleFreeTier: 'Plan gratuito',
       toggleWorkspace: 'Espacio de trabajo',
       cacheHitRateTitle:
         'Tasa de aciertos de la caché de prompts en esta sesión: los tokens en caché cuestan menos, así que cuanto más alta, más barato',
@@ -5566,34 +5047,6 @@ export const esOverrides = {
         disk_full: {
           title: 'Disco lleno',
           body: 'Tu disco está lleno, así que Scout no pudo guardar esta conversación. Libera espacio y reinténtalo.'
-        },
-        free_tier_disabled: {
-          title: 'El uso de Scout sin iniciar sesión está desactivado ahora mismo',
-          body: 'Inicia sesión con una cuenta de SpaceshipResearch para seguir chateando; es gratis.'
-        },
-        free_tier_rate_limited: {
-          title: 'Agotaste el cupo para chatear sin iniciar sesión',
-          body: 'Se renueva en breve. Inicia sesión con una cuenta de SpaceshipResearch para tener un cupo mayor; es gratis.'
-        },
-        free_tier_at_capacity: {
-          title: 'Chatear sin iniciar sesión está muy solicitado ahora mismo',
-          body: 'Inicia sesión para saltarte la cola (es gratis) o vuelve a intentarlo dentro de un rato.'
-        },
-        free_tier_model_not_free: {
-          title: 'Ese modelo no está disponible sin iniciar sesión',
-          body: 'Por ahora Scout usa el modelo gratuito. Inicia sesión con una cuenta de SpaceshipResearch para tener más modelos; es gratis.'
-        },
-        free_tier_route: {
-          title: 'Scout no pudo llegar al modelo gratuito por esta ruta',
-          body: 'Inicia sesión con una cuenta de SpaceshipResearch (es gratis) o revisa el ajuste SPACESHIPRESEARCH_INFERENCE_BASE_URL.'
-        },
-        free_tier_outage: {
-          title: 'El modelo gratuito tiene problemas para responder ahora mismo',
-          body: 'Vuelve a enviar el mensaje dentro de un minuto.'
-        },
-        free_tier_refused: {
-          title: 'Scout no pudo enviarlo sin iniciar sesión',
-          body: 'Iniciar sesión con una cuenta de SpaceshipResearch es gratis.'
         }
       },
       errorAuthKinds: {
@@ -5621,14 +5074,12 @@ export const esOverrides = {
       errorOpenScoutFolderFailed: 'No se pudo abrir la carpeta de Scout',
       errorUpdateApiKey: 'Actualizar clave API',
       errorSignInAgain: (provider: string) => `Volver a iniciar sesión en ${provider}`,
-      errorSignInFreeTier: 'Iniciar sesión con una cuenta de SpaceshipResearch',
       errorOauthExpired: (provider: string) =>
         `Tu sesión de ${provider} caducó o se revocó. Vuelve a iniciar sesión para seguir chateando.`,
       errorOpenLogs: 'Abrir registros',
       errorOpenLogsFailed: 'No se pudo abrir la carpeta de registros',
       errorOpenDesktopLogs: 'Abrir registros de Desktop',
       errorCopyDiagnostics: 'Copiar detalles del error',
-      errorSendDiagnostics: 'Enviar diagnóstico',
       filesChanged: count => (count === 1 ? '1 archivo cambiado' : `${count} archivos cambiados`),
       reviewChanges: 'Revisar',
       readAloudFailed: 'Falló la lectura en voz alta',
@@ -6128,7 +5579,6 @@ export const esOverrides = {
     boundaryTitle: 'Algo se rompió en la interfaz',
     boundaryDesc: 'La vista encontró un error inesperado. Tus chats y configuración están a salvo.',
     boundaryDetails: 'Detalles',
-    sendDiagnostics: 'Enviar diagnóstico',
     reloadWindow: 'Recargar ventana',
     openLogs: 'Abrir registros'
   },

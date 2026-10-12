@@ -306,11 +306,6 @@ COMMAND_REGISTRY: list[CommandDef] = [
                gateway_only=True, busy_policy="dispatch", desktop="terminal"),
     CommandDef("usage", "Show token usage and rate limits; `reset` redeems a banked Codex limit reset", "Info",
                args_hint="[reset [--force]]"),
-    CommandDef("subscription", "View your SpaceshipResearch plan and change it in the browser", "Info",
-               cli_only=True, aliases=("upgrade",)),
-    CommandDef("login", "Sign in with a SpaceshipResearch account (keeps your connectors)", "Info",
-               busy_policy="dispatch", desktop="settings"),
-    CommandDef("topup", "Show your SpaceshipResearch balance and manage billing on the portal", "Info"),
     CommandDef("insights", "Show usage insights and analytics", "Info",
                args_hint="[days]", desktop="advanced"),
     CommandDef("platforms", "Show gateway/messaging platform status", "Info",
@@ -328,7 +323,7 @@ COMMAND_REGISTRY: list[CommandDef] = [
     CommandDef("version", "Show Scout Agent version", "Info", aliases=("v",),
                busy_policy="dispatch", execute="version"),
     CommandDef("debug", "Upload debug report (system info + logs) and get shareable links", "Info",
-               args_hint="[spaceshipresearch|local]"),
+               args_hint="[local]"),
 
     # Exit
     CommandDef("quit", "Exit the CLI (use --delete to also remove session history)", "Exit",

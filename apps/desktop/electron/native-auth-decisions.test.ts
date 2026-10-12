@@ -115,10 +115,10 @@ test('oauthGuardMayHardFail is false only when EVERY provider is password-based'
 })
 
 test('oauthGuardMayHardFail keeps the strict guard for oauth and mixed deployments', () => {
-  assert.equal(oauthGuardMayHardFail([{ name: 'spaceshipresearch', supportsPassword: false }]), true)
+  assert.equal(oauthGuardMayHardFail([{ name: 'fixtureco', supportsPassword: false }]), true)
   assert.equal(
     oauthGuardMayHardFail([
-      { name: 'spaceshipresearch', supportsPassword: false },
+      { name: 'fixtureco', supportsPassword: false },
       { name: 'basic', supportsPassword: true }
     ]),
     true
@@ -141,8 +141,8 @@ test('oauthGuardMayHardFail treats status-shaped string basic as password-only',
 })
 
 test('oauthGuardMayHardFail keeps the strict guard for string oauth providers', () => {
-  assert.equal(oauthGuardMayHardFail(['spaceshipresearch'] as any), true)
-  assert.equal(oauthGuardMayHardFail(['spaceshipresearch', 'basic'] as any), true)
+  assert.equal(oauthGuardMayHardFail(['fixtureco'] as any), true)
+  assert.equal(oauthGuardMayHardFail(['fixtureco', 'basic'] as any), true)
 })
 
 test('normalizeAdvertisedAuthProviders maps snake_case supports_password', () => {

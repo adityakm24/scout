@@ -235,12 +235,6 @@ export const zh = defineLocale({
         `先退出已保存的远程浏览器会话，然后打开${signInLabel}。也可以使用本地网关切换到随应用提供的后端。`,
       signOutAndSignIn: '退出并重新登录',
       remoteFailureHint: '在“网关设置”中检查网关 URL 和登录，或切换到本地网关。',
-      cloudDownTitle: 'SpaceshipResearch Cloud 代理已宕机',
-      cloudDownDescription:
-        '此网关连接的 SpaceshipResearch 托管云代理正在返回服务器错误。无法在此处重启——请检查其状态、切换到本地网关或获取支持。',
-      cloudDownHint: '使用下方按钮打开 Scout Portal（查看实例状态与操作）或加入 Discord 获取支持。',
-      cloudDownCheckPortal: '查看 Portal 状态',
-      cloudDownDiscord: '在 Discord 获取帮助',
       hideRecentLogs: '隐藏最近日志',
       showRecentLogs: '显示最近日志',
       signedInTitle: '已登录',
@@ -315,8 +309,7 @@ export const zh = defineLocale({
       turnDoneBody: '',
       turnErrorTitle: '本轮失败',
       backgroundDoneTitle: '后台任务已完成',
-      backgroundFailedTitle: '后台任务失败',
-      creditsTitle: '额度'
+      backgroundFailedTitle: '后台任务失败'
     }
   },
 
@@ -325,35 +318,10 @@ export const zh = defineLocale({
   },
 
   billingBlock: {
-    titleSpaceshipResearch: 'SpaceshipResearch 额度已用尽',
     titleProvider: provider => `额度已用尽 — ${provider}`,
     fallbackMessage: '您的账户额度已用尽。请充值以继续使用。',
-    openBilling: '打开账单',
     addCredits: '添加额度',
     dismiss: '忽略'
-  },
-
-  sendDiagnostics: {
-    title: '向 SpaceshipResearch 发送诊断信息',
-    privacyNotice:
-      '这会将调试包上传到 SpaceshipResearch 内部存储（并非公开粘贴板）。内容包括系统信息（操作系统、版本、服务商、已配置的 API 密钥种类 — 绝不包含密钥本身）以及完整的 agent、gateway 和桌面端日志（每个最多 512 KB，很可能包含对话内容、工具输出与文件路径）。上传前会先脱敏。仅 SpaceshipResearch 员工与获准的 Discord 版主可查看，14 天后自动删除。',
-    upload: '上传',
-    uploading: '上传中…',
-    cancel: '取消',
-    close: '关闭',
-    copyLink: '复制链接',
-    uploadIdFallback: id => `未返回查看链接 — 请向支持人员提供上传 ID ${id}`,
-    doneTitle: '诊断信息已发送',
-    doneDescription: '调试包已私密上传。在您的支持会话中分享以下链接，团队即可查看您的日志。',
-    failedTitle: '上传失败',
-    failedHint:
-      '您也可以在终端运行 `scout debug share --spaceshipresearch`，或运行 `scout debug share --local` 在不上传的情况下查看报告。',
-    handoffLead: '在以下位置继续讨论:',
-    links: {
-      github: 'GitHub Issues',
-      portal: 'Scout Portal 支持',
-      discord: 'Discord'
-    }
   },
 
   titlebar: {
@@ -541,9 +509,7 @@ export const zh = defineLocale({
       vaultCredentials: '已保存的凭据',
       vaultSources: '密码管理器',
       appUpdates: '版本与更新',
-      uninstall: '卸载',
-      billingOverview: '概览',
-      billingPlans: '套餐'
+      uninstall: '卸载'
     },
     closeSettings: '关闭设置',
     exportConfig: '导出配置',
@@ -567,7 +533,6 @@ export const zh = defineLocale({
       archivedChats: '已归档对话',
       sessions: '会话',
       about: '关于',
-      billing: '账单',
       notifications: '通知',
       vault: '密码与登录'
     },
@@ -739,10 +704,6 @@ export const zh = defineLocale({
         backgroundDone: {
           label: '后台任务完成',
           description: '后台终端命令已完成。'
-        },
-        credits: {
-          label: '额度提醒',
-          description: '额度访问被暂停或恢复。'
         },
         plugin: {
           label: '插件通知',
@@ -1389,7 +1350,7 @@ export const zh = defineLocale({
     // v2 多连接注册表：设置 → 网关。
     connections: {
       title: '已注册网关',
-      intro: '管理本机以及通过远程、SSH 或 Scout Cloud 连接可访问的每个 Scout 网关。',
+      intro: '管理本机以及通过远程或 SSH 连接可访问的每个 Scout 网关。',
       stagedNote:
         '可在“会话”侧边栏切换网关。配置档案、聊天、消息和定时任务归属于各自网关；其他网关上的工作会继续运行。',
       launchModeTitle: '启动时返回上次使用网关的会话视图',
@@ -1415,14 +1376,11 @@ export const zh = defineLocale({
       updateAllRunning: '正在更新所有实例…',
       updateAllDone: '更新已分发',
       updateAllFailed: '批量更新失败',
-      updateSkippedCloud: '由 Scout Cloud 托管',
       kindLocal: '本地',
       kindRemote: '远程网关',
-      kindCloud: 'Scout Cloud',
       kindSsh: 'SSH',
       kindLocalDesc: '由本应用管理的 Scout 运行时。',
       kindRemoteDesc: '可通过 HTTP(S) 访问的 Scout 网关——局域网、Tailscale 或互联网。',
-      kindCloudDesc: '通过你的 Scout Cloud 账户发现的托管实例。',
       kindSshDesc: '通过 SSH 访问的 Scout 安装。',
       labelTitle: '名称',
       labelDesc: '必填。此实例出现的所有位置都会显示该名称；必须唯一（例如“家庭服务器”、“工作笔记本”）。',
@@ -1441,7 +1399,6 @@ export const zh = defineLocale({
       duplicateSsh: (label: string) => `已存在指向此 SSH 主机的连接（“${label}”）。`,
       sameBackendHint: (label: string) => `与“${label}”是同一后端`,
       localAddHint: '“本地”不可用：应用管理的本地连接已存在（永远只有一个）。',
-      cloudAddHint: '提示：在上方登录 Scout Cloud 可自动发现你的智能体——此表单仅用于手动注册已知的实例 URL。',
       save: '保存连接',
       saving: '保存中…',
       cancel: '取消',
@@ -1481,41 +1438,6 @@ export const zh = defineLocale({
       remoteTitle: '远程网关',
       remoteDesc: '将此桌面外壳连接到远程 Scout 后端。',
       remoteAuthHint: '托管网关使用 OAuth 或用户名密码；自托管网关也可能使用会话 token。',
-      cloudTitle: 'Scout Cloud',
-      cloudDesc: '只需登录 Scout Cloud 一次，即可从你账户下的智能体中选择——无需粘贴 URL。',
-      cloudSignInTitle: 'Scout Cloud',
-      cloudSignIn: '登录 Scout Cloud',
-      cloudSignedIn: '已登录 Scout Cloud',
-      cloudNeedsSignIn: '登录 Scout Cloud 以发现你账户下的智能体。',
-      cloudSignedInDesc: '你已登录。在下方选择一个智能体；会话会自动刷新。',
-      cloudAgentsTitle: '你的智能体',
-      cloudOrgPickerTitle: '选择一个组织',
-      cloudOrgSelect: '选择',
-      cloudOrgChange: '切换组织',
-      cloudOrgRole: role => `角色：${role}`,
-      cloudLoadingAgents: '正在加载你的智能体…',
-      cloudNoAgents: {
-        before: '此账户下未找到智能体。请在',
-        linkText: 'SpaceshipResearch 门户',
-        after: '中创建一个，然后刷新。'
-      },
-      cloudRefresh: '刷新',
-      cloudConnect: '连接',
-      cloudSavedTitle: '已保存的云网关',
-      cloudSavedDesc: '使用已保存的网关，不更改默认网关。在下方登录以添加实例。在已保存的连接列表中管理名称和登录。',
-      cloudUseSaved: '使用网关',
-      cloudActive: '当前窗口正在使用',
-      cloudConnecting: '正在连接…',
-      cloudDiscoverFailed: '无法加载你的 Scout Cloud 智能体',
-      cloudConnectFailed: '无法连接到该智能体',
-      cloudSignInFailed: 'Scout Cloud 登录失败',
-      cloudSignedOutTitle: '已退出 Scout Cloud',
-      cloudSignedOutMessage: '已清除 Scout Cloud 会话。',
-      cloudConnectedTitle: '已连接',
-      cloudConnectedPill: '已连接',
-      cloudConnectedTo: name => `已连接到 ${name}。`,
-      cloudAgentProvisioning: '正在配置…',
-      cloudStatusLabel: status => `状态：${status}`,
       remoteUrlTitle: '远程 URL',
       remoteUrlDesc: '远程 dashboard 后端的基础 URL。支持路径前缀，例如 /scout。',
       probing: '正在检查此网关的认证方式…',
@@ -1807,230 +1729,6 @@ export const zh = defineLocale({
       deleted: model => `已删除 ${model}。`,
       deleteFailed: '删除失败'
     },
-    billing: {
-      perMonth: amount => `${amount}/月`,
-      creditsPerMonth: amount => `${amount} 额度/月`,
-      usageLabel: label => `${label}用量`,
-      freeTier: {
-        signIn: '登录',
-        title: '你正在使用 SpaceshipResearch 免费服务',
-        message: '登录 SpaceshipResearch 账户以解锁更多模型和工具。',
-        caption: '使用 spaceshipresearch/welcome，包含连接器。登录后会保留连接器，并增加需要账户的工具和其他所有模型。',
-        name: 'SpaceshipResearch · 免费服务',
-        footnote: '免费服务没有余额，无需支付。登录 SpaceshipResearch 账户后才会显示支付与用量。',
-        plan: '免费服务',
-        model: '模型',
-        connectors: '连接器',
-        included: '已包含'
-      },
-      amountValidation: {
-        reloadTo: '充值金额',
-        greaterThanThreshold: '充值金额必须大于阈值。',
-        decimal: label => `${label}：请输入最多含两位小数的美元金额。`,
-        positive: label => `${label}：金额必须大于 $0。`,
-        minimum: (label, amount) => `${label}：最低金额为 ${amount}。`,
-        maximum: (label, amount) => `${label}：最高金额为 ${amount}。`
-      },
-      stepUp: {
-        openVerification: '打开验证页面',
-        dismiss: '关闭',
-        waiting: '正在等待验证链接…',
-        verify: '验证以继续',
-        deniedTitle: '验证未获批准',
-        deniedBody: '验证已结束，但未允许此终端进行远程支出。',
-        successTitle: '验证完成',
-        successBody: '此终端已获准进行远程支出。'
-      },
-      charge: {
-        added: amount => (amount ? `已添加 $${amount}。` : '已添加额度。'),
-        failedTitle: '扣款失败',
-        unconfirmedTitle: '扣款结果尚未确认',
-        unconfirmedBody: message => `${message} 上次扣款结果尚未确认，请在重试前检查余额和历史记录。`,
-        checkTitle: '无法检查扣款',
-        checkBody: '无法检查扣款。',
-        untrackedTitle: '无法跟踪扣款',
-        untrackedBody: '账单服务已接受请求，但未返回扣款标识。',
-        timeoutTitle: '5 分钟后仍在处理',
-        timeoutBody: '扣款仍可能结算，请在重试前检查门户。',
-        authenticationRequired: '银行要求验证（3DS）。请在门户完成验证以完成本次购买。',
-        expired: '银行卡已过期。请在门户中更新。',
-        declined: '银行卡被拒绝。请在门户中尝试另一张卡。',
-        failedBody: reason => `扣款未成功（${reason}）。`
-      },
-      title: '账单',
-      preview: '预览',
-      summary: { balance: '余额', plan: '套餐', autoRefill: '自动充值' },
-      sections: {
-        invoices: '发票',
-        plan: '套餐',
-        paymentAndCredits: '支付与额度',
-        usage: '用量'
-      },
-      usage: { title: '用量' },
-      buyCredits: {
-        customAmount: '自定义充值金额',
-        title: '立即购买额度',
-        buyButton: '购买',
-        processing: '处理中…正在确认结算',
-        added: amount => `已添加 ${amount}，正在刷新余额。`,
-        retry: '重试',
-        openPortal: '打开门户'
-      },
-      plan: {
-        title: '套餐',
-        changePlan: '更改套餐',
-        viewPlans: '查看套餐',
-        backAria: '返回账单',
-        current: '当前套餐',
-        scheduled: '已安排',
-        empty: '目前没有可切换的套餐。',
-        undo: '撤销',
-        undoing: '正在撤销…',
-        downgrade: '降级',
-        confirmDowngrade: '确认降级',
-        tryAgain: '重试',
-        checkingChange: '正在检查此变更…',
-        cannotChange: '无法在此进行该变更。',
-        alreadyOn: name => `你已使用 ${name}，无需更改。`,
-        notScheduleable: '无法在此安排该变更。',
-        scheduling: '正在安排…',
-        cancel: '取消',
-        effectScheduled: (targetName, effectiveAt, creditsDelta) =>
-          `更改为 ${targetName}，于 ${effectiveAt} 生效。现在不扣费；在此之前保留当前套餐。${creditsDelta ? `每月额度变化：${creditsDelta}。` : ''}`
-      },
-      autoReload: {
-        threshold: '阈值',
-        thresholdAria: '自动充值阈值',
-        reloadTo: '充值金额',
-        reloadToAria: '自动充值金额',
-        turnOffConfirm: '关闭自动充值？',
-        turnOff: '关闭',
-        disable: '禁用',
-        updated: '自动充值已更新。',
-        turnedOff: '自动充值已关闭。',
-        manage: '管理',
-        save: '保存',
-        saving: '正在保存…',
-        cancel: '取消'
-      },
-      state: {
-        notice: {
-          loggedOut: {
-            title: '连接你的 SpaceshipResearch 账户',
-            message: '登录你的 SpaceshipResearch 账户，即可在此查看余额、套餐和用量。',
-            action: '登录'
-          },
-          openPortal: '打开门户 ↗',
-          noCard: {
-            title: '尚未添加支付方式',
-            message: '添加银行卡后才能购买额度和使用自动充值。请在门户中添加。',
-            action: '添加银行卡 ↗'
-          }
-        },
-        paymentMethod: {
-          title: '支付方式',
-          description: '管理用于充值和订阅续费的银行卡。',
-          addAction: '添加支付方式',
-          updateAction: '更新',
-          provenance: {
-            autoRefill: '自动充值卡',
-            customerDefault: '账户默认卡',
-            subPin: '订阅卡',
-            suffix: label => ` - ${label}`
-          }
-        },
-        buyCredits: { description: '从银行卡一次性扣款，今天即可计入余额。' },
-        autoRefill: {
-          title: '余额不足时充值',
-          genericDescription: '余额低于阈值时自动补充额度。',
-          offPill: '已关闭',
-          enabledPill: '已启用',
-          notAvailablePill: '—',
-          manageCaption: '在门户中管理自动充值。',
-          turnOnCaption: '在门户中开启自动充值',
-          chargesDescription: (reloadTo, threshold) => `余额低于 ${threshold} 时自动扣款 ${reloadTo}。`,
-          distinctCardCaption: cardLabel => `自动充值使用 ${cardLabel} 扣款，请在门户中核对`,
-          distinctCardFallback: '另一张银行卡',
-          reconcileAction: '核对 ↗'
-        },
-        usage: {
-          subscriptionCredits: {
-            title: '订阅额度',
-            barLabel: '剩余订阅额度',
-            captionResets: date => `于 ${date} 重置`,
-            valueOf: (remaining, monthly) => `${monthly} 中剩余 ${remaining}`,
-            valueOver: (remaining, monthly, over) => `${monthly} 中剩余 ${remaining} · 超出 ${over}`
-          },
-          topupCredits: { title: '充值额度', caption: '不会过期' },
-          monthlyCap: {
-            title: '每月支出上限',
-            barLabel: '已用每月支出限额',
-            captionDefault: '默认上限',
-            captionSpending: '每月远程支出',
-            valueUsed: (spent, limit) => `${limit} 中已用 ${spent}`
-          }
-        },
-        planCard: {
-          freeTier: '免费',
-          chooseAction: '选择 ↗',
-          adjustPlanAction: '调整套餐 ↗',
-          unavailableCaption: '订阅详情暂不可用，仍可打开门户。',
-          downgradeCaption: (tierName, when) => `于 ${when} 更改为 ${tierName}。`,
-          cancellationCaption: when => `于 ${when} 取消。`,
-          renewsCaption: date => `于 ${date} 续费`,
-          noSubscriptionCaption: '没有有效订阅，付费模型会扣除充值额度。'
-        }
-      },
-      errors: {
-        consentRequired: { title: '需要确认银行卡', message: '请在门户中确认此卡可用于终端扣款' },
-        insufficientScope: {
-          title: '需要批准远程支出',
-          message: '此操作需要远程支出权限。请发起一次充值以授权，然后重试。'
-        },
-        remoteSpendingRevoked: {
-          title: '远程支出已停止',
-          messageByAdmin: '管理员已停止此终端的远程支出。',
-          messageBySelf: '你已停止此终端的远程支出。'
-        },
-        remoteSpendingReconnect: who => `${who} 请从“设置 → 网关”重新连接以重新授权此设备。`,
-        sessionRevoked: { title: '会话已登出', message: '你的会话已登出。请从“设置 → 网关”重新登录。' },
-        cliBillingDisabled: {
-          title: '远程支出已关闭',
-          message: '此账户的远程支出已关闭，账单管理员可在门户的 Scout Agent 页面开启。'
-        },
-        roleRequired: {
-          title: '需要管理员权限',
-          message: '添加资金需要组织管理员或所有者权限。请联系管理员，或在门户中管理。'
-        },
-        idempotencyConflict: { title: '请发起新的充值', message: '🔴 此扣款标识已用于另一金额。请发起新的充值。' },
-        noPaymentMethod: {
-          title: '没有已保存的银行卡',
-          message: '💳 尚未保存用于终端扣款的银行卡。请在门户中设置（一次性购买额度不会保存可重复使用的卡）。'
-        },
-        orgAccessDenied: { title: '组织访问被拒绝', message: '此令牌未绑定到你可管理的组织' },
-        monthlyCapExceeded: {
-          title: '已达每月支出上限',
-          messageReached: '🔴 已达每月支出上限。',
-          messageHeadroom: remaining => `🔴 已达每月支出上限，剩余额度为 $${remaining}。`
-        },
-        rateLimited: {
-          title: '当前扣款请求过多',
-          message: mins => `🟡 当前扣款请求过多${mins > 0 ? `（请约 ${mins} 分钟后重试）` : ''}。这不是支付失败。`
-        },
-        stripeUnavailable: {
-          title: 'Stripe 遇到问题',
-          message: mins => (mins > 0 ? `Stripe 遇到问题，请约 ${mins} 分钟后重试` : 'Stripe 遇到问题，请稍后重试')
-        },
-        upgradeCapExceeded: { title: '已达每日套餐变更次数上限', message: '已达每日套餐变更次数上限，请明天重试' },
-        endpointUnavailable: {
-          title: '账单端点不可用',
-          message: '账单端点返回了非 JSON 响应（此部署可能不支持该端点）。'
-        },
-        timeout: { title: '账单请求超时', message: '账单请求超时。' },
-        transport: { title: '账单连接失败', message: '账单请求在到达网关前失败。' },
-        default: { title: '账单请求失败', message: '账单请求失败。' }
-      }
-    },
     providers: {
       connectAccount: '连接账号',
       haveApiKey: '改用 API 密钥？',
@@ -2113,13 +1811,6 @@ export const zh = defineLocale({
       activeBackend: '当前后端',
       activeBackendHint: '这是你当前使用的后端',
       useBackend: '使用此后端',
-      spaceshipResearchIncluded: '包含在 SpaceshipResearch 订阅中；登录 Scout Portal 即可激活。',
-      spaceshipResearchAuthNeededTitle: '登录 Scout Portal',
-      spaceshipResearchAuthNeededMessage: provider => `已保存 ${provider}，但在登录 Scout Portal 之前不会激活。`,
-      spaceshipResearchAuthSignIn: '登录',
-      spaceshipResearchAuthDoneTitle: '已连接 Scout Portal',
-      spaceshipResearchAuthDoneMessage: '订阅后端现已激活。',
-      spaceshipResearchAuthFailed: 'Scout Portal 登录未完成',
       noApiKeyRequired: '不需要 API 密钥。',
       postSetupHint: step => `此后端需要一次性安装 (${step})。将在此机器上执行，可能需要几分钟。`,
       postSetupInstalledHint: '已安装。仅在出现问题时才需要重新运行安装。',
@@ -3468,8 +3159,6 @@ export const zh = defineLocale({
       '/browser': '管理浏览器 CDP 连接 [connect|disconnect|status]（仅限本地 gateway）',
       '/palette': '打开模糊搜索命令面板（也可使用 Ctrl+P）',
       '/usage': '显示 Token 用量与速率限制；`reset` 可兑换保留的 Codex 限额重置',
-      '/subscription': '查看你的 SpaceshipResearch 方案，并在浏览器中更改',
-      '/topup': '显示你的 SpaceshipResearch 余额，并在 Portal 管理账务',
       '/platform': '暂停、恢复或列出故障的网关平台',
       '/version': '显示 Scout Agent 版本',
       '/debug': '上传调试报告（系统信息与日志），并获取可分享链接',
@@ -3981,7 +3670,6 @@ export const zh = defineLocale({
     chooseLater: '稍后再选择提供方',
     recommended: '推荐',
     connected: '已连接',
-    featuredPitch: '一个订阅，300+ 前沿模型 — 运行 Scout 的推荐方式',
     fireworksPitch: '直接模型 API — Fireworks 托管的前沿模型',
     localModelsTitle: '本地运行模型',
     localModelsPitch: '无需账号——下载模型，在本机运行',
@@ -4026,7 +3714,6 @@ export const zh = defineLocale({
     pasteAuthCode: '粘贴授权码',
     reopenAuthPage: '重新打开授权页面',
     autoBrowser: provider => `已在浏览器中打开 ${provider}。请在那里授权 Scout，连接会自动完成，无需复制或粘贴。`,
-    reopenSignInPage: '重新打开登录页面',
     waitingAuthorize: '等待你授权...',
     externalPending: provider => `${provider} 通过自己的 CLI 登录。请在终端运行此命令，然后回来选择“我已登录”：`,
     signedIn: '我已登录',
@@ -4034,57 +3721,11 @@ export const zh = defineLocale({
     reopenVerification: '重新打开验证页面',
     copy: '复制',
     defaultModel: '默认模型',
-    freeTier: '免费层',
-    pro: 'Pro',
     free: '免费',
     price: (input, output) => `${input} 输入 / ${output} 输出每 Mtok`,
     change: '更改',
     startChatting: '开始',
     docs: provider => `${provider} 文档`
-  },
-
-  // Not yet translated — English fallbacks so the free-tier surfaces stay
-  // readable until a zh pass lands.
-  freeTier: {
-    providerRowTitle: 'SpaceshipResearch · 免费层',
-    providerRowPitch: '登录 SpaceshipResearch 账户以解锁更多模型和工具。',
-    readyTitle: 'Scout 已就绪。',
-    readyCaption: '免费 · 含连接器',
-    begin: '开始',
-    signInInstead: '改为登录 SpaceshipResearch 账户',
-    otherProviders: '其他提供方',
-    stripTitle: '免费的 SpaceshipResearch 推理和连接器现已可用。',
-    stripBody: '打开模型选择器试用，或登录 SpaceshipResearch 账户。',
-    dismiss: '关闭',
-    providerName: 'SpaceshipResearch',
-    statusLabel: model => `SpaceshipResearch · ${model}`,
-    signIn: '登录',
-    signInHeading: '登录 SpaceshipResearch 账户以解锁更多模型和工具。',
-    settingUp: '正在设置免费推理…',
-    codeBody: '在浏览器中输入此代码以完成登录。',
-    copyLink: '复制链接',
-    doNotShare: '请勿分享此代码。',
-    waiting: '等待登录…',
-    finishingHeading: '正在完成登录…',
-    finishingBody: '已在浏览器中批准。正在获取账户令牌。',
-    signedInAs: email => `已登录为 ${email}`,
-    signedIn: '已登录。',
-    completedBody: '现在由你的账户提供推理和工具。',
-    defaultModel: '默认模型',
-    change: '更改',
-    done: '完成',
-    notNow: '暂不',
-    tryAgain: '重试',
-    startAgain: '重新开始',
-    didNotComplete: '登录未完成',
-    rejectedBody: '登录在浏览器中被拒绝。你仍在免费层。',
-    supersededBody: '一个更新的登录代码替换了此代码。',
-    timedOutHeading: '登录超时',
-    timedOutBody: '代码未在有效期内使用。你仍在免费层。',
-    retiredBody: '此免费层身份已被使用或已过期；下次启动时会重新设置。',
-    errorBody: '登录未完成；请重试。',
-    alreadySignedInHeading: '已登录。',
-    alreadySignedInBody: '此 Scout 已登录 SpaceshipResearch 账户。'
   },
 
   modelPicker: {
@@ -4099,12 +3740,8 @@ export const zh = defineLocale({
     downloading: '下载中',
     localDownloadsHeading: '本地',
     noAuthenticatedProviders: '没有已认证的提供方。',
-    pro: 'Pro',
-    proNeedsSubscription: 'Pro 模型需要付费 SpaceshipResearch 订阅。',
     free: '免费',
-    freeTier: '免费层',
     priceTitle: '每百万 token 的输入/输出价格',
-    wasPrice: '原价',
     customModel: '自定义模型',
     addCustomModelAction: '添加自定义模型…',
     customModelPlaceholder: '输入模型 ID，例如 openai/gpt-5'
@@ -4192,8 +3829,6 @@ export const zh = defineLocale({
       clientLabel: version => `客户端 v${version}`,
       connectionSsh: host => `SSH: ${host}`,
       connectionRemote: host => `远程: ${host}`,
-      connectionCloud: host => `云端: ${host}`,
-      connectionCloudTooltip: host => `Scout Cloud · ${host}`,
       connectionSshTooltip: host => `SSH · ${host}`,
       connectionRemoteTooltip: host => `Remote · ${host}`,
       backendLabel: version => `后端 v${version}`,
@@ -4225,7 +3860,6 @@ export const zh = defineLocale({
       toggleTerminal: '终端',
       toggleTokensPerSecond: '每秒 token 数',
       toggleVersion: '版本与更新',
-      toggleFreeTier: 'Free tier',
       toggleWorkspace: '工作区',
       cacheHitRateTitle: '本会话的提示缓存命中率 — 缓存 token 更便宜，越高越省',
       tokensPerSecondTitle: '每秒输出 token 数，取最近 10 次模型调用的平均值',
@@ -4617,7 +4251,6 @@ export const zh = defineLocale({
       errorOpenLogsFailed: '无法打开日志文件夹',
       errorOpenDesktopLogs: '打开桌面端日志',
       errorCopyDiagnostics: '复制错误详情',
-      errorSendDiagnostics: '发送诊断信息',
       filesChanged: count => `${count} 个文件已更改`,
       reviewChanges: '查看',
       readAloudFailed: '朗读失败',

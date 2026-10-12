@@ -70,7 +70,7 @@ class TestCollectInventory:
         monkeypatch.setattr("scout_cli.config.detect_install_method", lambda *a, **k: "docker")
         monkeypatch.setattr(
             "scout_cli.config.recommended_update_command_for_method",
-            lambda m: "docker pull spaceshipresearch/scout-agent:latest",
+            lambda m: "docker pull ghcr.io/adityakm24/scout-agent:latest",
         )
         plan = ui.collect_runtime_inventory()
         assert plan.install_method == "docker"

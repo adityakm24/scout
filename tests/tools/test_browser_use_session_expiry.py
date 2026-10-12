@@ -3,6 +3,7 @@
 from unittest.mock import Mock
 
 import tools.browser_tool as browser_tool
+from plugins.browser import _common as browser_common
 from plugins.browser.browser_use import provider as browser_use_provider
 from tools import browser_tool_session as bt_session
 from tools import browser_tool_cloud as bt_cloud
@@ -33,10 +34,9 @@ def test_browser_use_preserves_provider_timeout(monkeypatch):
         lambda: {
             "api_key": "test-key",
             "base_url": "https://api.browser-use.example/api/v3",
-            "managed_mode": False,
         },
     )
-    monkeypatch.setattr(browser_use_provider.requests, "post", Mock(return_value=response))
+    monkeypatch.setattr(browser_common.requests, "post", Mock(return_value=response))
 
     session = provider.create_session("task-1")
 

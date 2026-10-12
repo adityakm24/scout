@@ -3,281 +3,470 @@
 // tests/tui_gateway/contracts/test_generated.py fails when this file is stale.
 /* eslint-disable */
 // ── Types ──
+/** ``key`` selects one getter from ``_CONFIG_GETTERS``; ``cwd`` feeds the ``project`` getter, ``session_id`` lets ``reasoning`` / ``fast`` answer with the session's live pin. */
+export interface ConfigGetParams {
+  profile?: string | null
+  key: string
+  cwd?: string | null
+  session_id?: string | null
+}
+/** Union of every getter's payload: ``value`` for the simple words, ``config`` for ``full``, ``mtime`` / ``mcp_rev`` for the poller, ``model`` / ``provider`` / ``providers`` for ``provider``, ``home`` / ``display`` for ``profile``, ``cwd`` / ``branch`` for ``project``, ``prompt``. */
+export interface ConfigGetResult {
+  value?: string | null
+  display?: string | null
+  tool_progress?: string | null
+  model?: string | null
+  provider?: string | null
+  providers?: ConfigProviderRef[] | null
+  home?: string | null
+  cwd?: string | null
+  branch?: string | null
+  config?: Record<string, unknown> | null
+  prompt?: string | null
+  mtime?: number | null
+  mcp_rev?: string | null
+}
+/** ``scout_cli/models.py::list_available_providers`` row. */
+export interface ConfigProviderRef {
+  id: string
+  label: string
+  aliases?: string[]
+  authenticated?: boolean
+  [key: string]: unknown
+}
+/** ``key`` picks the setter (``_CONFIG_SETTERS``, ``details_mode.<section>``, display toggles); ``value`` is the raw word/string the setter normalises (falsy non-strings are reported back in the error). ``scope`` applies to ``yolo`` / ``reasoning``; ``confirm_expensive_model`` to ``model``. */
+export interface ConfigSetParams {
+  profile?: string | null
+  key: string
+  value?: unknown
+  session_id?: string | null
+  scope?: string | null
+  confirm_expensive_model?: boolean
+}
+/** ``{key, value}`` plus the setter's extras: model switches add ``warning`` / ``confirm_required`` / ``confirm_message`` / ``scope`` / ``deferred``; ``focus`` adds ``tool_progress``; ``cwd`` adds ``cwd`` / ``branch``; ``personality`` adds ``history_reset`` / ``info``; ``yolo`` reports its ``scope``. ``value`` is a bool only for the display toggles. */
+export interface ConfigSetResult {
+  key: string
+  value?: string | boolean | null
+  warning?: string | null
+  confirm_required?: boolean | null
+  confirm_message?: string | null
+  scope?: string | null
+  deferred?: boolean | null
+  tool_progress?: string | null
+  cwd?: string | null
+  branch?: string | null
+  history_reset?: boolean | null
+  info?: SessionLiveInfo | null
+}
+/** ``tui_gateway/server.py::_session_info`` — the ``session.info`` event and the ``info`` field of ``session.create`` / ``session.resume`` / ``session.activate`` results. */
+export interface SessionLiveInfo {
+  model?: string
+  provider?: string
+  reasoning_effort?: string
+  reasoning_effort_wire?: string
+  service_tier?: string
+  fast?: boolean
+  yolo?: boolean
+  approval_mode?: string
+  tools?: Record<string, string[]>
+  skills?: Record<string, string[]>
+  cwd?: string
+  branch?: string | null
+  project?: ProjectRef | null
+  terminal_backend?: string
+  personality?: string
+  running?: boolean
+  turn_started_at?: number | null
+  title?: string
+  stored_session_id?: string
+  desktop_contract?: number | string | null
+  version?: string
+  release_date?: string
+  update_behind?: unknown | null
+  update_command?: string
+  usage?: Usage | null
+  profile_name?: string | null
+  mcp_servers?: McpServerStatus[]
+  system_prompt?: string | null
+  credential_warning?: string | null
+  lazy?: boolean | null
+  [key: string]: unknown
+}
+/** ``tui_gateway/server.py::_project_info_for_cwd``. */
+export interface ProjectRef {
+  id: string
+  slug: string
+  name: string
+  primary_path?: string | null
+}
+/** ``tui_gateway/server.py::_get_usage`` + ``agent/context_breakdown.py::context_usage_fields``. */
+export interface Usage {
+  model?: string
+  input?: number
+  output?: number
+  reasoning?: number
+  prompt?: number
+  completion?: number
+  total?: number
+  calls?: number
+  compressions?: number | null
+  context_used?: number | null
+  context_max?: number | null
+  context_percent?: number | null
+  context_source?: string | null
+  context_estimated?: boolean | null
+  cache_hit_pct?: number | null
+  cache_read?: number | null
+  cache_write?: number | null
+  avg_latency_s?: number | null
+  avg_tps?: number | null
+  active_subagents?: number | null
+  cost_usd?: number | null
+  cost_status?: string | null
+  [key: string]: unknown
+}
+export interface McpServerStatus {
+  name?: string
+  status?: string | null
+  tool_count?: number | null
+  error?: string | null
+  [key: string]: unknown
+}
 /** Any method the desktop may route to a named profile (``requestGatewayForProfile`` adds ``profile``). */
 export interface ProfileParams {
   profile?: string | null
 }
-/** ``_serialize_usage_model`` — also embedded as ``usage`` in the billing / subscription states, where the fail-open form is a bare ``{available: false}`` (no ``ok``). */
-export interface UsageModel {
+/** ``provider_configured`` is the loose answer; ``ready`` is always true. An unknown ``profile`` answers ``ok=False`` + ``error``. */
+export interface SetupStatusResult {
+  provider_configured?: boolean | null
+  ready?: boolean | null
+  profile?: string | null
   ok?: boolean | null
-  available: boolean
-  status?: string | null
-  plan_name?: string | null
-  renews_at?: string | null
-  renews_display?: string | null
-  subscription_remaining_display?: string | null
-  topup_remaining_display?: string | null
-  total_spendable_display?: string | null
-  has_topup?: boolean | null
-  plan_bar?: UsageBar | null
-  topup_bar?: UsageBar | null
-}
-/** ``_serialize_usage_bar``: one bar, magnitudes pre-formatted; ``pct_used`` only for ``plan``. */
-export interface UsageBar {
-  kind: UsageBarKind
-  remaining_display: string
-  total_display: string
-  spent_display: string
-  pct_used?: number | null
-  fill_fraction: number
-}
-export type UsageBarKind = 'plan' | 'topup'
-/** ``_serialize_billing_state`` (money as strings); the ``except`` fallback emits only ``ok / logged_in / free_tier_account / error``, so everything else is optional. */
-export interface BillingStateResult {
-  ok: boolean
-  logged_in: boolean
-  free_tier_account?: boolean
-  free_tier_model?: string | null
-  org_name?: string | null
-  org_slug?: string | null
-  role?: string | null
-  is_admin?: boolean | null
-  can_change_plan?: boolean | null
-  can_charge?: boolean | null
-  balance_usd?: string | null
-  balance_display?: string | null
-  cli_billing_enabled?: boolean | null
-  charge_presets?: string[] | null
-  charge_presets_display?: string[] | null
-  min_usd?: string | null
-  max_usd?: string | null
-  card?: BillingCardInfo | null
-  payment_method?: BillingPaymentMethod | null
-  monthly_cap?: BillingMonthlyCap | null
-  auto_reload?: BillingAutoReload | null
-  portal_url?: string | null
   error?: string | null
-  usage?: UsageModel | null
 }
-export interface BillingCardInfo {
-  brand: string
-  last4: string
-  masked: string
-  display?: string | null
-  resolved_via?: string | null
-}
-/** ``_serialize_payment_method``: each kind emits only its own fields (a ``card`` never carries ``email``; ``unknown`` carries what the server called it in ``raw_kind``). */
-export interface BillingPaymentMethod {
-  kind: PaymentMethodKind
-  brand?: string | null
-  last4?: string | null
-  wallet?: string | null
-  email?: string | null
-  raw_kind?: string | null
-  resolved_via?: string | null
-}
-export type PaymentMethodKind = 'card' | 'link' | 'unknown'
-export interface BillingMonthlyCap {
-  limit_usd?: string | null
-  limit_display: string
-  spent_this_month_usd?: string | null
-  spent_display: string
-  is_default_ceiling: boolean
-}
-export interface BillingAutoReload {
-  enabled: boolean
-  threshold_usd?: string | null
-  threshold_display: string
-  reload_to_usd?: string | null
-  reload_to_display: string
-  card?: BillingAutoReloadCard | null
-}
-/** Only ``distinct`` carries the payment-method identity. */
-export interface BillingAutoReloadCard {
-  kind: AutoReloadCardKind
-  payment_method_id?: string | null
-  brand?: string | null
-  last4?: string | null
-}
-export type AutoReloadCardKind = 'canonical' | 'distinct' | 'none'
-/** ``_serialize_subscription_state``; the view's fallback emits only ``ok / logged_in / error``. */
-export interface SubscriptionStateResult {
-  ok: boolean
-  logged_in: boolean
-  is_admin?: boolean | null
-  can_change_plan?: boolean | null
-  org_name?: string | null
-  org_id?: string | null
-  role?: string | null
-  context?: SubscriptionContext | null
-  current?: CurrentSubscription | null
-  tiers?: SubscriptionTierOption[] | null
-  portal_url?: string | null
-  error?: string | null
-  usage?: UsageModel | null
-}
-export type SubscriptionContext = 'personal' | 'team'
-export interface CurrentSubscription {
-  tier_id?: string | null
-  tier_name?: string | null
-  monthly_credits?: string | null
-  credits_remaining?: string | null
-  cycle_ends_at?: string | null
-  pending_downgrade_tier_name?: string | null
-  pending_downgrade_at?: string | null
-  pending_downgrade_display?: string | null
-  cancel_at_period_end: boolean
-  cancellation_effective_at?: string | null
-  cancellation_effective_display?: string | null
-}
-export interface SubscriptionTierOption {
-  tier_id: string
-  name: string
-  tier_order: number
-  dollars_per_month_display: string
-  monthly_credits?: string | null
-  is_current: boolean
-  is_enabled: boolean
-}
-export interface SubscriptionPreviewParams {
+export interface SetupRuntimeCheckParams {
   profile?: string | null
-  subscription_type_id?: string | null
+  provider?: string | null
 }
-/** ``_serialize_subscription_preview`` on success; ``effect`` drives the confirm copy. */
-export interface SubscriptionPreviewResult {
+/** ``ok=False`` + ``error`` when the resolved model can't be served. */
+export interface SetupRuntimeCheckResult {
   ok: boolean
+  provider?: string | null
+  model?: string | null
+  source?: string | null
   error?: string | null
-  message?: string | null
-  portal_url?: string | null
-  retry_after?: number | null
-  payload?: Record<string, unknown> | null
-  actor?: string | null
-  code?: string | null
-  recovery?: string | null
-  effect?: SubscriptionChangeEffect | null
-  reason?: string | null
-  current_tier_id?: string | null
-  current_tier_name?: string | null
-  target_tier_id?: string | null
-  target_tier_name?: string | null
-  monthly_credits_delta?: string | null
-  amount_due_now_cents?: number | null
-  effective_at?: string | null
-}
-export type SubscriptionChangeEffect = 'charge_now' | 'scheduled' | 'no_op' | 'blocked'
-/** Either a target tier (downgrade / same-price change) or ``cancel`` (period-end cancellation). */
-export interface SubscriptionChangeParams {
   profile?: string | null
-  subscription_type_id?: string | null
-  cancel?: boolean
 }
-/** ``_billing_pending_change``: ``message`` + the raw NAS body in ``payload`` on success. */
-export interface BillingPendingChangeResult {
-  ok: boolean
-  error?: string | null
-  message?: string | null
-  portal_url?: string | null
-  retry_after?: number | null
-  payload?: Record<string, unknown> | null
-  actor?: string | null
-  code?: string | null
-  recovery?: string | null
-}
-export interface SubscriptionUpgradeParams {
-  profile?: string | null
-  subscription_type_id?: string | null
-  idempotency_key?: string | null
-}
-/** The money route: ``status`` separates a completed upgrade from an SCA / decline that must finish in the portal at ``recovery_url``; ``idempotency_key`` is echoed (also on error) so a retry reuses it. */
-export interface SubscriptionUpgradeResult {
-  ok: boolean
-  error?: string | null
-  message?: string | null
-  portal_url?: string | null
-  retry_after?: number | null
-  payload?: Record<string, unknown> | null
-  actor?: string | null
-  code?: string | null
-  recovery?: string | null
-  status?: string | null
-  target_tier_name?: string | null
-  recovery_url?: string | null
-  reason?: string | null
-  idempotency_key?: string | null
-}
-export interface BillingChargeParams {
-  profile?: string | null
-  amount_usd?: number | string | null
-  idempotency_key?: string | null
-}
-/** ``202 {chargeId}`` — money is not confirmed yet; poll ``billing.charge_status``. */
-export interface BillingChargeResult {
-  ok: boolean
-  error?: string | null
-  message?: string | null
-  portal_url?: string | null
-  retry_after?: number | null
-  payload?: Record<string, unknown> | null
-  actor?: string | null
-  code?: string | null
-  recovery?: string | null
-  charge_id?: string | null
-  idempotency_key?: string | null
-}
-export interface BillingChargeStatusParams {
-  profile?: string | null
-  charge_id?: string | null
-}
-/** Single status read (pending | settled | failed); the caller drives the poll cadence. */
-export interface BillingChargeStatusResult {
-  ok: boolean
-  error?: string | null
-  message?: string | null
-  portal_url?: string | null
-  retry_after?: number | null
-  payload?: Record<string, unknown> | null
-  actor?: string | null
-  code?: string | null
-  recovery?: string | null
-  status?: string | null
-  amount_usd?: string | number | null
-  settled_at?: string | null
-  reason?: string | null
-}
-export interface BillingAutoReloadParams {
-  profile?: string | null
-  enabled?: boolean
-  threshold?: number | string | null
-  top_up_amount?: number | string | null
-}
-/** A write with no success payload beyond ``ok``. */
-export interface BillingMutationResult {
-  ok: boolean
-  error?: string | null
-  message?: string | null
-  portal_url?: string | null
-  retry_after?: number | null
-  payload?: Record<string, unknown> | null
-  actor?: string | null
-  code?: string | null
-  recovery?: string | null
-}
-export interface BillingStepUpParams {
+export interface ModelOptionsParams {
   profile?: string | null
   session_id?: string | null
+  explicit_only?: boolean
+  include_unconfigured?: boolean
+  refresh?: boolean
 }
-/** ``granted`` false when the server downscopes (also on every error envelope). */
-export interface BillingStepUpResult {
-  ok: boolean
+export interface ModelOptionsResult {
+  providers: ModelOptionProvider[]
+  model?: string
+  provider?: string
+}
+/** One ``scout_cli/inventory.py::build_models_payload`` provider row (the union of every field the builder sets). */
+export interface ModelOptionProvider {
+  slug: string
+  name: string
+  models?: string[]
+  total_models?: number | null
+  is_current?: boolean | null
+  is_user_defined?: boolean | null
+  source?: string | null
+  aliases?: string[] | null
+  api_url?: string | null
+  auth_type?: string | null
+  authenticated?: boolean | null
+  key_env?: string | null
+  warning?: string | null
+  featured_models?: string[] | null
+  capabilities?: Record<string, ModelCapabilities> | null
+  pricing?: Record<string, ModelPricing> | null
+  [key: string]: unknown
+}
+/** ``scout_cli/inventory.py::_apply_capabilities``. */
+export interface ModelCapabilities {
+  fast: boolean
+  reasoning: boolean
+  can_disable_reasoning?: boolean | null
+}
+/** ``scout_cli/inventory.py::_apply_pricing`` — formatted $/Mtok strings (``""`` unknown, ``"free"``). */
+export interface ModelPricing {
+  input: string
+  output: string
+  cache?: string | null
+  free: boolean
+}
+export interface ImageGenerateParams {
+  prompt?: string | null
+  aspect_ratio?: string | null
+  probe?: unknown | null
+  max_bytes?: number | null
+}
+/** ``probe`` answers ``{available}`` alone; ``image_data`` (data URL) is omitted when the download failed or exceeded ``max_bytes`` so callers fall back to ``image``. */
+export interface ImageGenerateResult {
+  available: boolean
+  success?: boolean | null
+  image?: string | null
+  image_data?: string | null
   error?: string | null
-  message?: string | null
-  portal_url?: string | null
-  retry_after?: number | null
-  payload?: Record<string, unknown> | null
-  actor?: string | null
-  code?: string | null
-  recovery?: string | null
-  granted?: boolean | null
+}
+export interface SessionControlReadParams {
+  profile?: string | null
+  session_id: string
+}
+export interface SessionControlReadResult {
+  control: SessionControlSnapshot
+}
+/** ``_snapshot_control`` — ``revision`` is a hash of the visible state (``""`` when empty); ``updated_at`` is the newest persisted timestamp (``0`` when none). */
+export interface SessionControlSnapshot {
+  goal: GoalSnapshot | null
+  loop: LoopSnapshot | null
+  heartbeat: HeartbeatSnapshot | null
+  revision: string
+  updated_at: number
+}
+/** ``methods_session_control.py::_safe_goal_snapshot`` — the frontend-safe GoalState subset. */
+export interface GoalSnapshot {
+  title: string
+  status: string
+  turns_used: number
+  max_turns: number
+  contract: GoalContractSnapshot
+  subgoals: string[]
+  gates: GoalGateSnapshot[]
+  created_at?: number | null
+  updated_at?: number | null
+  paused_reason?: string | null
+  last_verdict?: string | null
+  last_reason?: string | null
+  wait_barrier?: WaitBarrierUntil | WaitBarrierTarget | null
+}
+/** ``scout_cli/goals.py::GoalContract.to_dict``. */
+export interface GoalContractSnapshot {
+  outcome?: string
+  verification?: string
+  constraints?: string
+  boundaries?: string
+  stop_when?: string
+}
+export interface GoalGateSnapshot {
+  command: string
+  timeout_seconds: number
+  max_retries: number
+  attempts: number
+  last_exit_code?: number | null
+}
+export interface WaitBarrierUntil {
+  type: 'until'
+  until_at: number
+  reason?: string
+}
+export interface WaitBarrierTarget {
+  type: 'session' | 'pid'
+  target: string | number
+  reason?: string
+}
+/** ``_safe_loop_snapshot`` — persisted LoopState fields, never its route. */
+export interface LoopSnapshot {
+  prompt: string
+  status: string
+  mode: string
+  interval_seconds: number
+  current_delay: number
+  times: number
+  until: string
+  max_ticks: number
+  ticks_fired: number
+  created_at: number
+  last_fired_at: number
+  next_due_at: number
+  awaiting_response: boolean
+  deferred_by_goal: boolean
+  paused_reason?: string | null
+  last_stop_reason?: string | null
+}
+export interface HeartbeatSnapshot {
+  prompt: string
+  status: string
+  interval_seconds: number
+  created_at: number
+  last_fired_at: number
+  fire_count: number
+}
+/** ``action`` is validated by the handler (unknown / gate actions answer ``4004``), so it stays a string on the wire; ``SessionControlAction`` lists the accepted set. */
+export interface SessionControlParams {
+  profile?: string | null
+  session_id: string
+  action: string
+  args?: SessionControlArgs | null
+}
+/** ``subgoal.add`` reads ``text``; ``subgoal.remove`` reads the 1-based ``index``. */
+export interface SessionControlArgs {
+  text?: string | null
+  index?: number | null
+}
+export interface SessionControlResult {
+  control: SessionControlSnapshot
+  dispatch: SessionControlDispatch
+}
+/** ``_dispatch_envelope`` — the command result's user-visible envelope, every key always present. */
+export interface SessionControlDispatch {
+  type: string | null
+  output: string | null
+  notice: string | null
+  message: string | null
+  display: string | null
+}
+export interface VerificationStatusParams {
+  profile?: string | null
+  session_id?: string | null
+  session_key?: string | null
+  cwd?: string | null
+}
+export interface VerificationStatusResult {
+  verification: VerificationStatusInfo
+}
+/** ``verification_status()``: ``disabled`` / ``not_applicable`` / ``unverified`` / ``stale`` or the latest event's own status; ``root`` and friends only once a workspace was identified. */
+export interface VerificationStatusInfo {
+  status: string
+  evidence?: VerificationEvidenceRow | null
+  root?: string | null
+  session_id?: string | null
+  changed_paths?: string[] | null
+}
+/** One ``verification_events`` row (``agent/verification_evidence.py``). */
+export interface VerificationEvidenceRow {
+  id?: number | null
+  created_at?: string | null
+  session_id?: string | null
+  cwd?: string | null
+  root?: string | null
+  command?: string | null
+  canonical_command?: string | null
+  kind?: string | null
+  scope?: string | null
+  status?: string | null
+  exit_code?: number | null
+  output_summary?: string | null
+  [key: string]: unknown
+}
+export interface ConnectionOperationParams {
+  profile?: string | null
+  owner: SessionOwner
+  op_id: string
+}
+export interface SessionOwner {
+  type: 'session'
+  session_id: string
+}
+/** ``methods_connectors._operation_view``: the operation's full snapshot. */
+export interface ConnectionOperationStatus {
+  op_id: string
+  seq: number
+  deadline_at: number
+  settled: boolean
+  settled_at?: number | null
+  settled_by?: ConnectionSettleReason | null
+  targets: ConnectionOperationTarget[]
+}
+/** ``tools/connectors/contract.py::SettleReason``. */
+export type ConnectionSettleReason = 'all_resolved' | 'continue' | 'deadline' | 'interrupt'
+/** ``Target.snapshot``: the link minted up front rides here, never in the model result. ``extra`` keys a leg records (``tools``, ``hint``) are typed here as they appear. */
+export interface ConnectionOperationTarget {
+  name: string
+  kind: ConnectionTargetKind
+  action: ConnectionTargetAction
+  state: ConnectionTargetState
+  detail?: string | null
+  instructions?: string | null
+  discovery_error?: string | null
+  connect_url?: string | null
+  connection_id?: string | null
+  attempt?: string | null
+  required_env?: ConnectionTargetEnvField[] | null
+  tools?: string[] | null
+  hint?: string | null
+  display?: string | null
+  description?: string | null
+  tier?: CatalogTier | null
+  platforms?: string[] | null
+  repo?: string | null
+  sha?: string | null
+  subdir?: string | null
+  scan?: CatalogScan | null
+  requirements?: string[] | null
+  has_desktop_half?: boolean | null
+  target_profile?: string | null
+  app_state?: CatalogAppState | null
+  skill?: string | null
+}
+export type ConnectionTargetKind = 'mcp' | 'plugin' | 'skill'
+export type ConnectionTargetAction = 'authorize' | 'enable' | 'install'
+/** ``tools/connectors/contract.py::TargetState``. */
+export type ConnectionTargetState = 'pending' | 'initiated' | 'connected' | 'skipped' | 'failed' | 'not_connected'
+/** One credential an MCP install still needs; the card renders a field per entry and sends the values back with the approval. */
+export interface ConnectionTargetEnvField {
+  name: string
+  required: boolean
+  secret: boolean
+  default: string
+  prompt?: string | null
+}
+export type CatalogTier = 'official' | 'community'
+/** The catalog's security scan of the pinned commit; read-only on the card. */
+export interface CatalogScan {
+  status: CatalogScanStatus
+  summary: string
+}
+export type CatalogScanStatus = 'passed' | 'warnings' | 'failed'
+/** The desktop app a catalog plugin drives, from its ``scout_platform`` declaration. */
+export type CatalogAppState = 'present' | 'missing_app' | 'app_not_running' | 'unknown'
+export interface ConnectionRespondParams {
+  profile?: string | null
+  owner: SessionOwner
+  op_id: string
+  result: ConnectionAnswer
+}
+/** The card's answer: per-target outcomes and an optional Continue (``settled_by: "continue"``). Settlement is derived from target states afterwards. */
+export interface ConnectionAnswer {
+  targets?: ConnectionAnswerTarget[]
+  settled_by?: ConnectionSettleReason | null
+}
+/** One row's answer from the card. ``env`` carries the credential values an install asked for through ``required_env``. */
+export interface ConnectionAnswerTarget {
+  name: string
+  status: ConnectionAnswerStatus
+  detail?: string | null
+  env?: Record<string, string> | null
+}
+/** What the card says about one row: ``tools/connectors/mcp.py::apply_answer``. */
+export type ConnectionAnswerStatus = 'approved' | 'skipped'
+export interface ConnectionRespondResult {
+  status: 'ok'
+  settled: boolean
+}
+export interface ConnectorsConnectParams {
+  profile?: string | null
+  owner: SessionOwner
+  connectors: string[]
+}
+/** ``methods_connectors._reissue``: the open operation after its failed targets were run again. */
+export interface ConnectorsConnectResult {
+  op_id: string
+  seq: number
+  deadline_at: number
+  settled: boolean
+  settled_at?: number | null
+  settled_by?: ConnectionSettleReason | null
+  targets: ConnectionOperationTarget[]
+  status?: 'initiated' | 'settled' | null
+  note?: string | null
 }
 export interface DelegationStatusResult {
   active: ActiveSubagent[]
@@ -457,689 +646,6 @@ export interface ProjectFacts {
   packageManagers: string[]
   verifyCommands: string[]
   contextFiles: string[]
-}
-/** ``key`` selects one getter from ``_CONFIG_GETTERS``; ``cwd`` feeds the ``project`` getter, ``session_id`` lets ``reasoning`` / ``fast`` answer with the session's live pin. */
-export interface ConfigGetParams {
-  profile?: string | null
-  key: string
-  cwd?: string | null
-  session_id?: string | null
-}
-/** Union of every getter's payload: ``value`` for the simple words, ``config`` for ``full``, ``mtime`` / ``mcp_rev`` for the poller, ``model`` / ``provider`` / ``providers`` for ``provider``, ``home`` / ``display`` for ``profile``, ``cwd`` / ``branch`` for ``project``, ``prompt``. */
-export interface ConfigGetResult {
-  value?: string | null
-  display?: string | null
-  tool_progress?: string | null
-  model?: string | null
-  provider?: string | null
-  providers?: ConfigProviderRef[] | null
-  home?: string | null
-  cwd?: string | null
-  branch?: string | null
-  config?: Record<string, unknown> | null
-  prompt?: string | null
-  mtime?: number | null
-  mcp_rev?: string | null
-}
-/** ``scout_cli/models.py::list_available_providers`` row. */
-export interface ConfigProviderRef {
-  id: string
-  label: string
-  aliases?: string[]
-  authenticated?: boolean
-  [key: string]: unknown
-}
-/** ``key`` picks the setter (``_CONFIG_SETTERS``, ``details_mode.<section>``, display toggles); ``value`` is the raw word/string the setter normalises (falsy non-strings are reported back in the error). ``scope`` applies to ``yolo`` / ``reasoning``; ``confirm_expensive_model`` to ``model``. */
-export interface ConfigSetParams {
-  profile?: string | null
-  key: string
-  value?: unknown
-  session_id?: string | null
-  scope?: string | null
-  confirm_expensive_model?: boolean
-}
-/** ``{key, value}`` plus the setter's extras: model switches add ``warning`` / ``confirm_required`` / ``confirm_message`` / ``scope`` / ``deferred``; ``focus`` adds ``tool_progress``; ``cwd`` adds ``cwd`` / ``branch``; ``personality`` adds ``history_reset`` / ``info``; ``yolo`` reports its ``scope``. ``value`` is a bool only for the display toggles. */
-export interface ConfigSetResult {
-  key: string
-  value?: string | boolean | null
-  warning?: string | null
-  confirm_required?: boolean | null
-  confirm_message?: string | null
-  scope?: string | null
-  deferred?: boolean | null
-  tool_progress?: string | null
-  cwd?: string | null
-  branch?: string | null
-  history_reset?: boolean | null
-  info?: SessionLiveInfo | null
-}
-/** ``tui_gateway/server.py::_session_info`` — the ``session.info`` event and the ``info`` field of ``session.create`` / ``session.resume`` / ``session.activate`` results. */
-export interface SessionLiveInfo {
-  model?: string
-  provider?: string
-  reasoning_effort?: string
-  reasoning_effort_wire?: string
-  service_tier?: string
-  fast?: boolean
-  yolo?: boolean
-  approval_mode?: string
-  tools?: Record<string, string[]>
-  skills?: Record<string, string[]>
-  cwd?: string
-  branch?: string | null
-  project?: ProjectRef | null
-  terminal_backend?: string
-  personality?: string
-  running?: boolean
-  turn_started_at?: number | null
-  title?: string
-  stored_session_id?: string
-  desktop_contract?: number | string | null
-  version?: string
-  release_date?: string
-  update_behind?: unknown | null
-  update_command?: string
-  usage?: Usage | null
-  profile_name?: string | null
-  mcp_servers?: McpServerStatus[]
-  system_prompt?: string | null
-  credential_warning?: string | null
-  lazy?: boolean | null
-  [key: string]: unknown
-}
-/** ``tui_gateway/server.py::_project_info_for_cwd``. */
-export interface ProjectRef {
-  id: string
-  slug: string
-  name: string
-  primary_path?: string | null
-}
-/** ``tui_gateway/server.py::_get_usage`` + ``agent/context_breakdown.py::context_usage_fields``. */
-export interface Usage {
-  model?: string
-  input?: number
-  output?: number
-  reasoning?: number
-  prompt?: number
-  completion?: number
-  total?: number
-  calls?: number
-  compressions?: number | null
-  context_used?: number | null
-  context_max?: number | null
-  context_percent?: number | null
-  context_source?: string | null
-  context_estimated?: boolean | null
-  cache_hit_pct?: number | null
-  cache_read?: number | null
-  cache_write?: number | null
-  avg_latency_s?: number | null
-  avg_tps?: number | null
-  active_subagents?: number | null
-  dev_credits_spent_micros?: number | null
-  cost_usd?: number | null
-  cost_status?: string | null
-  [key: string]: unknown
-}
-export interface McpServerStatus {
-  name?: string
-  status?: string | null
-  tool_count?: number | null
-  error?: string | null
-  [key: string]: unknown
-}
-/** ``provider_configured`` is the loose answer; the boot record's fields (``ready``, ``free_tier_account``, ``free_tier_route``, ``other_providers``, ``inference_provider``) ride along on the launch profile. An unknown ``profile`` answers ``ok=False`` + ``error``. */
-export interface SetupStatusResult {
-  provider_configured?: boolean | null
-  ready?: boolean | null
-  free_tier_account?: boolean | null
-  free_tier_route?: boolean | null
-  other_providers?: boolean | null
-  inference_provider?: string | null
-  profile?: string | null
-  ok?: boolean | null
-  error?: string | null
-  error_code?: string | null
-  retryable?: boolean | null
-  retry_after?: number | null
-}
-export interface SetupRuntimeCheckParams {
-  profile?: string | null
-  provider?: string | null
-}
-/** ``ok=False`` + ``error`` when the resolved model can't be served; ``free_tier_route`` says the selected route is the welcome host. */
-export interface SetupRuntimeCheckResult {
-  ok: boolean
-  provider?: string | null
-  model?: string | null
-  source?: string | null
-  error?: string | null
-  free_tier_route?: boolean | null
-  profile?: string | null
-}
-export interface DiagnosticsShareSpaceshipResearchParams {
-  error_context?: string | null
-  extra_files?: Record<string, string> | null
-  log_lines?: number | null
-}
-/** Structured envelope: ``ok=False`` + ``error`` renders inline instead of failing the RPC. */
-export interface DiagnosticsShareSpaceshipResearchResult {
-  ok: boolean
-  view_url?: string | null
-  upload_id?: string | null
-  expires_at?: string | null
-  error?: string | null
-}
-/** ``available`` = an identity exists AND the tier is on; whether inference runs on it is ``setup.runtime_check.free_tier_route``'s question. */
-export interface FreeTierStatusResult {
-  has_guest: boolean
-  enabled: boolean
-  available: boolean
-  notice_pending: boolean
-  model: string
-  label: string
-  error?: string | null
-  error_code?: string | null
-  retryable?: boolean | null
-  retry_after?: number | null
-}
-export interface FreeTierProvisionResult {
-  has_guest: boolean
-  enabled: boolean
-  error?: string | null
-  error_code?: string | null
-  retryable?: boolean | null
-  retry_after?: number | null
-}
-export interface FreeTierAckNoticeResult {
-  acked: boolean
-}
-export interface ModelOptionsParams {
-  profile?: string | null
-  session_id?: string | null
-  explicit_only?: boolean
-  include_unconfigured?: boolean
-  refresh?: boolean
-}
-export interface ModelOptionsResult {
-  providers: ModelOptionProvider[]
-  model?: string
-  provider?: string
-}
-/** One ``scout_cli/inventory.py::build_models_payload`` provider row (the union of every field the builder sets; ``pricing_pending`` / ``free_tier_pending`` mark the cached-only path). */
-export interface ModelOptionProvider {
-  slug: string
-  name: string
-  models?: string[]
-  total_models?: number | null
-  is_current?: boolean | null
-  is_user_defined?: boolean | null
-  source?: string | null
-  aliases?: string[] | null
-  api_url?: string | null
-  auth_type?: string | null
-  authenticated?: boolean | null
-  key_env?: string | null
-  warning?: string | null
-  featured_models?: string[] | null
-  capabilities?: Record<string, ModelCapabilities> | null
-  pricing?: Record<string, ModelPricing> | null
-  pricing_pending?: boolean | null
-  free_tier?: boolean | null
-  free_tier_pending?: boolean | null
-  free_tier_row?: boolean | null
-  unavailable_models?: string[] | null
-  [key: string]: unknown
-}
-/** ``scout_cli/inventory.py::_apply_capabilities``. */
-export interface ModelCapabilities {
-  fast: boolean
-  reasoning: boolean
-  can_disable_reasoning?: boolean | null
-}
-/** ``scout_cli/inventory.py::_apply_pricing`` — formatted $/Mtok strings (``""`` unknown, ``"free"``); the sale fields are Scout Portal-only. */
-export interface ModelPricing {
-  input: string
-  output: string
-  cache?: string | null
-  free: boolean
-  discount_percent?: number | null
-  was_input?: string | null
-  was_output?: string | null
-}
-export interface ImageGenerateParams {
-  prompt?: string | null
-  aspect_ratio?: string | null
-  probe?: unknown | null
-  max_bytes?: number | null
-}
-/** ``probe`` answers ``{available}`` alone; ``image_data`` (data URL) is omitted when the download failed or exceeded ``max_bytes`` so callers fall back to ``image``. */
-export interface ImageGenerateResult {
-  available: boolean
-  success?: boolean | null
-  image?: string | null
-  image_data?: string | null
-  error?: string | null
-}
-export interface SessionControlReadParams {
-  profile?: string | null
-  session_id: string
-}
-export interface SessionControlReadResult {
-  control: SessionControlSnapshot
-}
-/** ``_snapshot_control`` — ``revision`` is a hash of the visible state (``""`` when empty); ``updated_at`` is the newest persisted timestamp (``0`` when none). */
-export interface SessionControlSnapshot {
-  goal: GoalSnapshot | null
-  loop: LoopSnapshot | null
-  heartbeat: HeartbeatSnapshot | null
-  revision: string
-  updated_at: number
-}
-/** ``methods_session_control.py::_safe_goal_snapshot`` — the frontend-safe GoalState subset. */
-export interface GoalSnapshot {
-  title: string
-  status: string
-  turns_used: number
-  max_turns: number
-  contract: GoalContractSnapshot
-  subgoals: string[]
-  gates: GoalGateSnapshot[]
-  created_at?: number | null
-  updated_at?: number | null
-  paused_reason?: string | null
-  last_verdict?: string | null
-  last_reason?: string | null
-  wait_barrier?: WaitBarrierUntil | WaitBarrierTarget | null
-}
-/** ``scout_cli/goals.py::GoalContract.to_dict``. */
-export interface GoalContractSnapshot {
-  outcome?: string
-  verification?: string
-  constraints?: string
-  boundaries?: string
-  stop_when?: string
-}
-export interface GoalGateSnapshot {
-  command: string
-  timeout_seconds: number
-  max_retries: number
-  attempts: number
-  last_exit_code?: number | null
-}
-export interface WaitBarrierUntil {
-  type: 'until'
-  until_at: number
-  reason?: string
-}
-export interface WaitBarrierTarget {
-  type: 'session' | 'pid'
-  target: string | number
-  reason?: string
-}
-/** ``_safe_loop_snapshot`` — persisted LoopState fields, never its route. */
-export interface LoopSnapshot {
-  prompt: string
-  status: string
-  mode: string
-  interval_seconds: number
-  current_delay: number
-  times: number
-  until: string
-  max_ticks: number
-  ticks_fired: number
-  created_at: number
-  last_fired_at: number
-  next_due_at: number
-  awaiting_response: boolean
-  deferred_by_goal: boolean
-  paused_reason?: string | null
-  last_stop_reason?: string | null
-}
-export interface HeartbeatSnapshot {
-  prompt: string
-  status: string
-  interval_seconds: number
-  created_at: number
-  last_fired_at: number
-  fire_count: number
-}
-/** ``action`` is validated by the handler (unknown / gate actions answer ``4004``), so it stays a string on the wire; ``SessionControlAction`` lists the accepted set. */
-export interface SessionControlParams {
-  profile?: string | null
-  session_id: string
-  action: string
-  args?: SessionControlArgs | null
-}
-/** ``subgoal.add`` reads ``text``; ``subgoal.remove`` reads the 1-based ``index``. */
-export interface SessionControlArgs {
-  text?: string | null
-  index?: number | null
-}
-export interface SessionControlResult {
-  control: SessionControlSnapshot
-  dispatch: SessionControlDispatch
-}
-/** ``_dispatch_envelope`` — the command result's user-visible envelope, every key always present. */
-export interface SessionControlDispatch {
-  type: string | null
-  output: string | null
-  notice: string | null
-  message: string | null
-  display: string | null
-}
-export interface VerificationStatusParams {
-  profile?: string | null
-  session_id?: string | null
-  session_key?: string | null
-  cwd?: string | null
-}
-export interface VerificationStatusResult {
-  verification: VerificationStatusInfo
-}
-/** ``verification_status()``: ``disabled`` / ``not_applicable`` / ``unverified`` / ``stale`` or the latest event's own status; ``root`` and friends only once a workspace was identified. */
-export interface VerificationStatusInfo {
-  status: string
-  evidence?: VerificationEvidenceRow | null
-  root?: string | null
-  session_id?: string | null
-  changed_paths?: string[] | null
-}
-/** One ``verification_events`` row (``agent/verification_evidence.py``). */
-export interface VerificationEvidenceRow {
-  id?: number | null
-  created_at?: string | null
-  session_id?: string | null
-  cwd?: string | null
-  root?: string | null
-  command?: string | null
-  canonical_command?: string | null
-  kind?: string | null
-  scope?: string | null
-  status?: string | null
-  exit_code?: number | null
-  output_summary?: string | null
-  [key: string]: unknown
-}
-export interface ConnectionOperationParams {
-  profile?: string | null
-  owner: SessionOwner | AccountOwner
-  op_id: string
-}
-export interface SessionOwner {
-  type: 'session'
-  session_id: string
-}
-export interface AccountOwner {
-  type: 'account'
-}
-/** ``methods_connectors._operation_view``: the operation's full snapshot. */
-export interface ConnectionOperationStatus {
-  op_id: string
-  seq: number
-  deadline_at: number
-  settled: boolean
-  settled_at?: number | null
-  settled_by?: ConnectionSettleReason | null
-  targets: ConnectionOperationTarget[]
-}
-/** ``tools/connectors/contract.py::SettleReason``. */
-export type ConnectionSettleReason = 'all_resolved' | 'continue' | 'deadline' | 'interrupt'
-/** ``Target.snapshot``: the link minted up front rides here, never in the model result. ``extra`` keys a leg records (``tools``, ``hint``) are typed here as they appear. */
-export interface ConnectionOperationTarget {
-  name: string
-  kind: ConnectionTargetKind
-  action: ConnectionTargetAction
-  state: ConnectionTargetState
-  detail?: string | null
-  instructions?: string | null
-  discovery_error?: string | null
-  connect_url?: string | null
-  connection_id?: string | null
-  attempt?: string | null
-  required_env?: ConnectionTargetEnvField[] | null
-  tools?: string[] | null
-  hint?: string | null
-  display?: string | null
-  description?: string | null
-  tier?: CatalogTier | null
-  platforms?: string[] | null
-  repo?: string | null
-  sha?: string | null
-  subdir?: string | null
-  scan?: CatalogScan | null
-  requirements?: string[] | null
-  has_desktop_half?: boolean | null
-  target_profile?: string | null
-  app_state?: CatalogAppState | null
-  skill?: string | null
-}
-export type ConnectionTargetKind = 'connector' | 'mcp' | 'plugin' | 'skill'
-export type ConnectionTargetAction = 'authorize' | 'connect' | 'enable' | 'install' | 'reconnect'
-/** ``tools/connectors/contract.py::TargetState``. */
-export type ConnectionTargetState = 'pending' | 'initiated' | 'connected' | 'skipped' | 'failed' | 'expired' | 'not_connected'
-/** One credential an MCP install still needs; the card renders a field per entry and sends the values back with the approval. */
-export interface ConnectionTargetEnvField {
-  name: string
-  required: boolean
-  secret: boolean
-  default: string
-  prompt?: string | null
-}
-export type CatalogTier = 'official' | 'community'
-/** The catalog's security scan of the pinned commit; read-only on the card. */
-export interface CatalogScan {
-  status: CatalogScanStatus
-  summary: string
-}
-export type CatalogScanStatus = 'passed' | 'warnings' | 'failed'
-/** The desktop app a catalog plugin drives, from its ``scout_platform`` declaration. */
-export type CatalogAppState = 'present' | 'missing_app' | 'app_not_running' | 'unknown'
-export interface ConnectionWakeResult {
-  status: 'ok'
-}
-export interface ConnectionRespondParams {
-  profile?: string | null
-  owner: SessionOwner | AccountOwner
-  op_id: string
-  result: ConnectionAnswer
-}
-/** The card's answer: per-target outcomes and an optional Continue (``settled_by: "continue"``). Settlement is derived from target states afterwards. */
-export interface ConnectionAnswer {
-  targets?: ConnectionAnswerTarget[]
-  settled_by?: ConnectionSettleReason | null
-}
-/** One row's answer from the card. ``env`` carries the credential values an install asked for through ``required_env``. */
-export interface ConnectionAnswerTarget {
-  name: string
-  status: ConnectionAnswerStatus
-  detail?: string | null
-  env?: Record<string, string> | null
-}
-/** What the card says about one row: ``tools/connectors/mcp.py::apply_answer``. */
-export type ConnectionAnswerStatus = 'approved' | 'skipped'
-export interface ConnectionRespondResult {
-  status: 'ok'
-  settled: boolean
-}
-export interface ConnectorsListParams {
-  profile?: string | null
-  owner: SessionOwner | AccountOwner
-}
-export interface ConnectorsListResult {
-  available: boolean
-  connectors: ConnectorRow[]
-}
-export interface ConnectorRow {
-  connector: string
-  enabled: boolean
-  connected: boolean
-  connection_status: 'pending' | 'active' | 'failed' | 'expired' | 'revoked' | 'inactive' | null
-  status_reason: string | null
-  gateway_disabled_tools: string[]
-}
-export interface ConnectorsConnectParams {
-  profile?: string | null
-  owner: SessionOwner | AccountOwner
-  connectors: string[]
-  reconnect?: boolean
-}
-/** ``methods_connectors._reissue`` / ``managed._off_desktop_result``: the operation the connect opened; ``status``/``note`` ride along from the tool result. */
-export interface ConnectorsConnectResult {
-  op_id: string
-  seq: number
-  deadline_at: number
-  settled: boolean
-  settled_at?: number | null
-  settled_by?: ConnectionSettleReason | null
-  targets: ConnectionOperationTarget[]
-  status?: 'initiated' | 'settled' | null
-  note?: string | null
-}
-export interface ConnectorToolsParams {
-  profile?: string | null
-  slug: string
-  refresh?: boolean
-}
-export interface ConnectorToolsResult {
-  connector: string
-  toolkit_version: string
-  etag: string
-  fetched_at: number
-  source: ConnectorToolsSource
-  stale: boolean
-  tools: ConnectorToolRow[]
-}
-export type ConnectorToolsSource = 'cache' | 'network' | 'revalidated'
-export interface ConnectorToolRow {
-  slug: string
-  name: string
-  description: string
-  facet: ConnectorToolFacet
-  hints: string[]
-  categories: string[]
-  no_auth: boolean
-  deprecated: boolean
-}
-export type ConnectorToolFacet = 'read' | 'write' | 'destructive' | 'unclassified'
-export interface ConnectorsCatalogResult {
-  connectors: ConnectorCatalogRow[]
-}
-export interface ConnectorCatalogRow {
-  slug: string
-  name: string
-  description: string
-  category: string
-  logo_url?: string | null
-}
-export interface ConnectorAccountsParams {
-  profile?: string | null
-  connector?: string | null
-}
-export interface ConnectorAccountsResult {
-  accounts: ConnectorAccountRow[]
-}
-export interface ConnectorAccountRow {
-  connection_id: string
-  connector: string
-  status: ConnectorAccountStatus
-  status_reason?: string | null
-  label: string
-  alias?: string | null
-  active: boolean
-  created_at: string
-  updated_at: string
-}
-export type ConnectorAccountStatus = 'pending' | 'active' | 'failed' | 'expired' | 'revoked' | 'inactive'
-export interface ConnectorAccountsRemoveParams {
-  profile?: string | null
-  connection_id: string
-}
-export interface ConnectorAccountsRemoveResult {
-  connection_id: string
-  connector: string
-  status: 'removed'
-}
-export interface ConnectorPolicyGetResult {
-  layers: ConnectorPolicyLayer[]
-  effective: ConnectorPolicyEffectiveUnrestricted | ConnectorPolicyEffectiveDenyAll | ConnectorPolicyEffectiveAllow | ConnectorPolicyEffectiveDeny
-}
-export interface ConnectorPolicyLayer {
-  kind: ConnectorPolicyLayerKind
-  revision: string
-  body: ConnectorPolicyUnrestrictedBody | ConnectorPolicyDenyAllBody | ConnectorPolicyAllowBody | ConnectorPolicyDenyBody
-}
-export type ConnectorPolicyLayerKind = 'org' | 'role' | 'member'
-export interface ConnectorPolicyUnrestrictedBody {
-  mode: 'unrestricted'
-}
-export interface ConnectorPolicyDenyAllBody {
-  mode: 'deny-all'
-}
-export interface ConnectorPolicyAllowBody {
-  mode: 'allow'
-  connectors: string[]
-  tools: Record<string, string[]>
-  tags?: ConnectorPolicyTags | null
-}
-export interface ConnectorPolicyTags {
-  enable?: string[] | null
-  disable?: string[] | null
-}
-export interface ConnectorPolicyDenyBody {
-  mode: 'deny'
-  disabled_connectors: string[]
-  tools: Record<string, string[]>
-  tags?: ConnectorPolicyTags | null
-}
-export interface ConnectorPolicyEffectiveUnrestricted {
-  version: 1
-  revision: string
-  issued_at_ms: number
-  mode: 'unrestricted'
-}
-export interface ConnectorPolicyEffectiveDenyAll {
-  version: 1
-  revision: string
-  issued_at_ms: number
-  mode: 'deny-all'
-}
-export interface ConnectorPolicyEffectiveAllow {
-  version: 1
-  revision: string
-  issued_at_ms: number
-  mode: 'allow'
-  connectors: string[]
-  tools: Record<string, string[]>
-  tags?: ConnectorPolicyTags | null
-}
-export interface ConnectorPolicyEffectiveDeny {
-  version: 1
-  revision: string
-  issued_at_ms: number
-  mode: 'deny'
-  disabled_connectors: string[]
-  tools: Record<string, string[]>
-  tags?: ConnectorPolicyTags | null
-}
-export interface ConnectorPolicySetParams {
-  profile?: string | null
-  change: ToolsChange | ConnectorChange
-  expected_revision: string
-}
-export interface ToolsChange {
-  type: 'tools'
-  connector: string
-  disabled_tools: string[]
-}
-export interface ConnectorChange {
-  type: 'connector'
-  connector: string
-  enabled: boolean
-}
-export interface ConnectorPolicySetResult {
-  revision: string
-  effective: ConnectorPolicyEffectiveUnrestricted | ConnectorPolicyEffectiveDenyAll | ConnectorPolicyEffectiveAllow | ConnectorPolicyEffectiveDeny
 }
 /** ``tools/bot_desktop/runtime.py::DesktopStatus`` plus the lease and the profile it speaks for. */
 export interface DisplayStatus {
@@ -2970,7 +2476,7 @@ export interface ToolLabel {
   preview?: string
 }
 /** Which surface one inner call of a bridged ``tool_call`` runs on. */
-export type ToolLabelKind = 'connector' | 'mcp' | 'tool'
+export type ToolLabelKind = 'mcp' | 'tool'
 export interface SessionBranchStoredParams {
   profile?: string | null
   parent_session_id: string
@@ -3315,10 +2821,9 @@ export interface SessionUsageResult {
   avg_latency_s?: number | null
   avg_tps?: number | null
   active_subagents?: number | null
-  dev_credits_spent_micros?: number | null
   cost_usd?: number | null
   cost_status?: string | null
-  credits_lines?: string[] | null
+  account_lines?: string[] | null
   [key: string]: unknown
 }
 export interface SessionContextBreakdownParams {
@@ -4417,7 +3922,7 @@ export interface ConnectionUpdatePayload {
   settled_at?: number | null
   settled_by?: ConnectionSettleReason | null
   targets: ConnectionOperationTarget[]
-  owner: SessionOwner | AccountOwner
+  owner: SessionOwner
   target?: string | null
   from?: ConnectionTargetState | null
   to?: ConnectionTargetState | null
@@ -4425,7 +3930,7 @@ export interface ConnectionUpdatePayload {
   detail?: string | null
 }
 /** ``tools/connectors/contract.py::Actor``. */
-export type ConnectionActor = 'user' | 'backend_watcher' | 'clock'
+export type ConnectionActor = 'user' | 'backend_watcher'
 export interface RequestCancelPayload {
   id: string
   method: string
@@ -4485,21 +3990,6 @@ export interface SkinPayload {
   help_header?: string
   [key: string]: unknown
 }
-/** ``scout_cli/free_tier_bootstrap.py::SetupRecord.as_payload``. */
-export interface SetupReadyPayload {
-  provider_configured: boolean
-  inference_provider: string
-  free_tier_account: boolean
-  free_tier_route: boolean
-  has_identity: boolean
-  other_providers: boolean
-  error?: string
-  error_code?: string | null
-  retryable?: boolean | null
-  retry_after?: number | null
-  finished_at: number
-  [key: string]: unknown
-}
 /** Every ``_emit("error", …)`` site sets exactly ``message``. */
 export interface ErrorPayload {
   message: string
@@ -4545,7 +4035,6 @@ export interface BillingBlock {
   provider_label: string
   model: string
   billing_url: string | null
-  is_spaceshipresearch: boolean
   message: string
   unverified?: boolean | null
 }
@@ -4630,7 +4119,7 @@ export interface TodoUpdatedPayload {
   todos: unknown[]
   revision: number
 }
-/** ``agent/credits_tracker.py::AgentNotice`` via notice_callback, and ``server._await_agent_ready``'s slow-build notice. ``level``: info | warn | error | success; ``kind``: sticky | ttl | agent. */
+/** ``agent/notices.py::AgentNotice`` via notice_callback, and ``server._await_agent_ready``'s slow-build notice. ``level``: info | warn | error | success; ``kind``: sticky | ttl | agent. */
 export interface NotificationShowPayload {
   text: string
   level: string
@@ -4665,11 +4154,6 @@ export interface SessionReclaimedPayload {
 }
 export interface SessionControlUpdatePayload {
   control: SessionControlSnapshot
-}
-/** ``methods_session`` billing.step_up on_verification. */
-export interface BillingStepUpVerificationPayload {
-  verification_url: string
-  user_code: string
 }
 /** ``methods_prompt._spawn_side_agent``: ``{task_id, **extra, text}``; btw adds ``question``. */
 export interface SideAgentCompletePayload {
@@ -4834,7 +4318,7 @@ export interface PetHatchProgressPayload {
 }
 /** ``change_watcher._CHANGE_WATCHES`` payload fn — ``{}`` for every watch except pet.changed. */
 export type ChangeSignalPayload = Record<string, unknown>
-export type ConnectorErrorReason = 'INVALID_PARAMS' | 'NOT_OWNER' | 'UNSUPPORTED_RUNTIME' | 'CONNECTOR_REQUEST_FAILED' | 'INVALID_CONNECTOR_RESPONSE' | 'UNKNOWN_TARGET' | 'LINK_STILL_VALID' | 'REISSUE_REFUSED' | 'UNKNOWN_OPERATION' | 'INVALID_ANSWER' | 'NEEDS_SPACESHIPRESEARCH_AUTH' | 'CONNECTOR_NOT_FOUND' | 'TOOLS_UNAVAILABLE' | 'CONNECTORS_UNAVAILABLE' | 'CATALOG_UNAVAILABLE' | 'ACCOUNTS_UNAVAILABLE' | 'CONNECTION_NOT_FOUND' | 'POLICY_UNAVAILABLE' | 'POLICY_CONFLICT' | 'FORBIDDEN_SCOPE' | 'ORG_REQUIRED' | 'ORG_ACCESS_DENIED' | 'INVALID_POLICY'
+export type ConnectorErrorReason = 'INVALID_PARAMS' | 'NOT_OWNER' | 'UNSUPPORTED_RUNTIME' | 'CONNECTOR_REQUEST_FAILED' | 'UNKNOWN_TARGET' | 'LINK_STILL_VALID' | 'REISSUE_REFUSED' | 'UNKNOWN_OPERATION' | 'INVALID_ANSWER' | 'CONNECTORS_UNAVAILABLE'
 
 // ── Client→server methods ──
 export interface RpcMethods {
@@ -4846,16 +4330,6 @@ export interface RpcMethods {
   'approval.received': { params: ApprovalReceivedParams; result: ApprovalReceivedResult }
   /** Deliver the user's decision on a dangerous command (falls back to durable identity on a stale sid). */
   'approval.respond': { params: ApprovalRespondParams; result: ApprovalRespondResult }
-  /** Enable/disable auto top-up with its threshold and reload amount (billing:manage). */
-  'billing.auto_reload': { params: BillingAutoReloadParams; result: BillingMutationResult }
-  /** Start a one-off top-up charge (billing:manage, idempotent). */
-  'billing.charge': { params: BillingChargeParams; result: BillingChargeResult }
-  /** Poll one charge by id. */
-  'billing.charge_status': { params: BillingChargeStatusParams; result: BillingChargeStatusResult }
-  /** Read-only billing view (no scope); the SpaceshipResearch free tier is answered locally without a portal call. */
-  'billing.state': { params: ProfileParams; result: BillingStateResult }
-  /** Run the billing:manage device flow; the URL/code arrive via billing.step_up.verification. */
-  'billing.step_up': { params: BillingStepUpParams; result: BillingStepUpResult }
   /** Deliver a relayed DM into a Bot Chat on this gateway and return the one-turn reply (blocking). */
   'bot_relay.deliver': { params: BotRelayDeliverParams; result: BotRelayDeliverResult }
   /** Atomically claim every pending cross-connection envelope queued on this gateway. */
@@ -4900,34 +4374,16 @@ export interface RpcMethods {
   'config.show': { params: ConfigShowParams; result: ConfigShowResult }
   /** Per-target outcomes from the card, and an optional Continue. */
   'connection.respond': { params: ConnectionRespondParams; result: ConnectionRespondResult }
-  /** The scoped member's hosted connector accounts, optionally filtered by connector slug. */
-  'connectors.accounts': { params: ConnectorAccountsParams; result: ConnectorAccountsResult }
-  /** Remove one hosted connector account owned by the scoped member. */
-  'connectors.accounts.remove': { params: ConnectorAccountsRemoveParams; result: ConnectorAccountsRemoveResult }
-  /** The hosted connector catalog available to the scoped member. */
-  'connectors.catalog': { params: ProfileParams; result: ConnectorsCatalogResult }
-  /** Start or re-initiate authorization for named connectors on a session or account operation. */
+  /** Run the named failed targets of the session's open connection operation again. */
   'connectors.connect': { params: ConnectorsConnectParams; result: ConnectorsConnectResult }
-  /** Connector catalog + connection state for one session or profile account owner. */
-  'connectors.list': { params: ConnectorsListParams; result: ConnectorsListResult }
-  /** The current snapshot of one open session or account operation. */
+  /** The current snapshot of one open session operation. */
   'connectors.operation.status': { params: ConnectionOperationParams; result: ConnectionOperationStatus }
-  /** The browser leg came back (scout://connections/done): read the accounts now, not at the next tick. */
-  'connectors.operation.wake': { params: ConnectionOperationParams; result: ConnectionWakeResult }
-  /** Policy layers for the scoped member, from organization to member scope. */
-  'connectors.policy.get': { params: ProfileParams; result: ConnectorPolicyGetResult }
-  /** Apply one scoped member connector or tool-list policy change. */
-  'connectors.policy.set': { params: ConnectorPolicySetParams; result: ConnectorPolicySetResult }
-  /** The scoped profile's cached or current tool list for one connector. */
-  'connectors.tools': { params: ConnectorToolsParams; result: ConnectorToolsResult }
   /** List/add/remove/pause/resume cron jobs in the (optionally profile-scoped) cron store. */
   'cron.manage': { params: CronManageParams; result: CronManageResult }
   /** Block/unblock NEW spawns globally (active children keep running); returns the new state. */
   'delegation.pause': { params: DelegationPauseParams; result: DelegationPauseResult }
   /** Running subagent tree plus the spawn pause flag and limits. */
   'delegation.status': { params: ProfileParams; result: DelegationStatusResult }
-  /** Upload a force-redacted debug bundle to SpaceshipResearch-internal diagnostics storage. */
-  'diagnostics.share_spaceshipresearch': { params: DiagnosticsShareSpaceshipResearchParams; result: DiagnosticsShareSpaceshipResearchResult }
   /** Run the distro package install on the gateway host; progress streams as display.install.log/.done. */
   'display.install': { params: ProfileParams; result: DisplayInstallResult }
   /** Take over: the human named by a viewer id this connection minted controls the screen. */
@@ -4948,12 +4404,6 @@ export interface RpcMethods {
   'display.thumbnail': { params: ProfileParams; result: DisplayThumbnailResult }
   /** Stage a non-image file into the session workspace and hand back its @file: ref. */
   'file.attach': { params: FileAttachParams; result: FileAttachResult }
-  /** Mark the one-time availability notice as shown on the free-tier identity. */
-  'free_tier.ack_notice': { params: ProfileParams; result: FreeTierAckNoticeResult }
-  /** Explicit retry of the free-tier identity mint when the boot bootstrap could not create it. */
-  'free_tier.provision': { params: ProfileParams; result: FreeTierProvisionResult }
-  /** Pure read of the focused profile's free-tier identity state (no network, no side effects). */
-  'free_tier.status': { params: ProfileParams; result: FreeTierStatusResult }
   /** What THIS build enforces (a client withholds a feature unless advertised). */
   'gateway.capabilities': { params: PingParams; result: GatewayCapabilitiesResult }
   /** Resolve one exact pending approval raised by a local or peer room member. */
@@ -5236,7 +4686,7 @@ export interface RpcMethods {
   'session.title': { params: SessionTitleParams; result: SessionTitleResult }
   /** Drop the last user turn (and everything after it) from an idle session. */
   'session.undo': { params: SessionParams; result: SessionUndoResult }
-  /** Token / context / cost counters for the session (+ SpaceshipResearch credit lines when available). */
+  /** Token / context / cost counters for the session (+ provider account limit lines when available). */
   'session.usage': { params: SessionUsageParams; result: SessionUsageResult }
   /** Re-home a stored session's workspace; git identity is replaced and a live agent follows. */
   'session.workspace.move': { params: SessionWorkspaceMoveParams; result: SessionWorkspaceMoveResult }
@@ -5266,16 +4716,6 @@ export interface RpcMethods {
   'subagent.steer': { params: SubagentSteerParams; result: SubagentSteerResult }
   /** Last 16KB of an owned child's live transcript. */
   'subagent.tail': { params: SubagentIdParams; result: SubagentTailResult }
-  /** Schedule a downgrade / same-price change or a period-end cancellation. */
-  'subscription.change': { params: SubscriptionChangeParams; result: BillingPendingChangeResult }
-  /** Chargeless quote of what a plan change would do (billing:manage). */
-  'subscription.preview': { params: SubscriptionPreviewParams; result: SubscriptionPreviewResult }
-  /** Clear a scheduled downgrade / cancellation (re-enables recurring spend). */
-  'subscription.resume': { params: ProfileParams; result: BillingPendingChangeResult }
-  /** Current plan, tier catalog and usage for the picker; fail-open when logged out. */
-  'subscription.state': { params: ProfileParams; result: SubscriptionStateResult }
-  /** Prorate, charge and flip the plan (billing:manage, idempotent). */
-  'subscription.upgrade': { params: SubscriptionUpgradeParams; result: SubscriptionUpgradeResult }
   /** Host battery for the status bar; always resolves, ``available: false`` when unreadable. */
   'system.battery': { params: SystemBatteryParams; result: SystemBatteryResult }
   /** Record the client's column width for server-side rendering. */
@@ -5288,8 +4728,6 @@ export interface RpcMethods {
   'tools.show': { params: _SessionScoped; result: ToolsShowResult }
   /** Toolset summaries (no tool names) for the desktop Toolsets tab. */
   'toolsets.list': { params: _SessionScoped; result: ToolsetsListResult }
-  /** Two-bar dollar usage view shared by /usage, /topup and /subscription; fail-open to unavailable. */
-  'usage.bars': { params: ProfileParams; result: UsageModel }
   /** Add a login / payment / address item to the local vault. */
   'vault.add': { params: VaultAddParams; result: VaultAddResult }
   /** Metadata-only listing across the local vault and every unlocked password manager. */
@@ -5331,11 +4769,6 @@ export const RPC_METHODS = [
   'approval.pending',
   'approval.received',
   'approval.respond',
-  'billing.auto_reload',
-  'billing.charge',
-  'billing.charge_status',
-  'billing.state',
-  'billing.step_up',
   'bot_relay.deliver',
   'bot_relay.outbox.drain',
   'bot_relay.reply',
@@ -5358,20 +4791,11 @@ export const RPC_METHODS = [
   'config.set',
   'config.show',
   'connection.respond',
-  'connectors.accounts',
-  'connectors.accounts.remove',
-  'connectors.catalog',
   'connectors.connect',
-  'connectors.list',
   'connectors.operation.status',
-  'connectors.operation.wake',
-  'connectors.policy.get',
-  'connectors.policy.set',
-  'connectors.tools',
   'cron.manage',
   'delegation.pause',
   'delegation.status',
-  'diagnostics.share_spaceshipresearch',
   'display.install',
   'display.lease.acquire',
   'display.lease.release',
@@ -5382,9 +4806,6 @@ export const RPC_METHODS = [
   'display.switchSandboxImage',
   'display.thumbnail',
   'file.attach',
-  'free_tier.ack_notice',
-  'free_tier.provision',
-  'free_tier.status',
   'gateway.capabilities',
   'groups.approve',
   'groups.capabilities',
@@ -5541,18 +4962,12 @@ export const RPC_METHODS = [
   'subagent.list',
   'subagent.steer',
   'subagent.tail',
-  'subscription.change',
-  'subscription.preview',
-  'subscription.resume',
-  'subscription.state',
-  'subscription.upgrade',
   'system.battery',
   'terminal.resize',
   'tools.configure',
   'tools.list',
   'tools.show',
   'toolsets.list',
-  'usage.bars',
   'vault.add',
   'vault.list',
   'vault.lock',
@@ -5627,8 +5042,6 @@ export interface BackendGatewayEventMap {
   'agent.terminal.output': TerminalOutputPayload
   /** A /background side agent finished. */
   'background.complete': SideAgentCompletePayload
-  /** Device-flow URL + code for the billing scope step-up; the client opens the browser. */
-  'billing.step_up.verification': BillingStepUpVerificationPayload
   /** A bot-relay outbox envelope is queued; drain it. */
   'bot_relay.outbox.pending': ChangeSignalPayload
   /** Withdraw a pending controller command. */
@@ -5731,8 +5144,6 @@ export interface BackendGatewayEventMap {
   'session.usage': SessionUsagePayload
   /** state.db moved; refetch the session list. */
   'sessions.changed': ChangeSignalPayload
-  /** The free-tier bootstrap finished (broadcast); the desktop's setup gate reads the record. */
-  'setup.ready': SetupReadyPayload
   /** The active skin moved (name switch or live colour edit); repaint from this palette. */
   'skin.changed': SkinPayload
   /** Transient status line (kind: status, lifecycle, compacting, goal, loop, heartbeat, process, …). */
@@ -5778,7 +5189,6 @@ export type BackendGatewayEventName = keyof BackendGatewayEventMap
 export const GATEWAY_EVENT_TYPES = [
   'agent.terminal.output',
   'background.complete',
-  'billing.step_up.verification',
   'bot_relay.outbox.pending',
   'browser.controller.cancel',
   'browser.controller.command',
@@ -5830,7 +5240,6 @@ export const GATEWAY_EVENT_TYPES = [
   'session.title',
   'session.usage',
   'sessions.changed',
-  'setup.ready',
   'skin.changed',
   'status.update',
   'subagent.complete',

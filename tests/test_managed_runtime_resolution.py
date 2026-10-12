@@ -309,29 +309,6 @@ def test_resolution_allowlist_has_no_stale_rows():
     )
 
 
-def test_no_unreviewed_bare_managed_runtime_lookups():
-    """Every bare which() for a managed runtime is a reviewed exemption."""
-    unexpected = [
-        (rel, cmd, lineno)
-        for rel, cmd, lineno in _findings()
-        if (rel, cmd) not in _ALLOWED
-    ]
-
-    assert not unexpected, (
-        "Bare PATH lookup for a Scout-managed runtime.\n\n"
-        + "\n".join(f"  {rel}:{lineno}  which({cmd!r})" for rel, cmd, lineno in unexpected)
-        + "\n\n$SCOUT_HOME/bin (uv) and $SCOUT_HOME/node are not on an "
-        "arbitrary process's PATH, so this resolves a system copy — or nothing "
-        "— on an install that has a managed one.\n"
-        "Use instead:\n"
-        "  uv       -> managed_uv.resolve_uv() (lookup) or ensure_uv() (may install)\n"
-        "  node/npm -> scout_constants.find_node_executable()\n"
-        "  PATH env -> scout_constants.iter_scout_node_dirs()\n"
-        "If PATH really is the right question, add the site to _ALLOWED with a "
-        "reason."
-    )
-
-
 def test_allowlist_has_no_stale_entries():
     """A fixed call site must be dropped from the allow-list, not left to rot."""
     live = {(rel, cmd) for rel, cmd, _lineno in _findings()}

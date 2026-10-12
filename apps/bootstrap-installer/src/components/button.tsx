@@ -5,15 +5,9 @@ import * as React from 'react'
 import { cn } from '../lib/utils'
 
 /*
- * Button — copied verbatim from apps/desktop/src/components/ui/button.tsx.
- *
- * We import the desktop's local shadcn-style Button rather than
- * @spaceshipresearch/ui's <Button>, because the DS Button uses bg-midground /
- * text-background-base utilities that resolve to the DS's hardcoded
- * gold/brown brand defaults (#ffac02 / #170d02) unless overridden in
- * runtime. The desktop never sets those vars; it routes through its
- * own --dt-* token chain via shadcn classes like bg-primary. We do
- * the same so visuals match exactly.
+ * Button — copied verbatim from apps/desktop/src/components/ui/button.tsx so
+ * the installer routes through the same --dt-* token chain (shadcn classes like
+ * bg-primary) and its visuals match the desktop exactly.
  */
 
 const buttonVariants = cva(

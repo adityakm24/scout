@@ -16,11 +16,11 @@ from typing import List, Any, Optional
 # Per-vendor client cache slots; plugins read/write these via tools.web_tools (tests reset them to None).
 _firecrawl_client = _firecrawl_client_config = _parallel_client = _async_parallel_client = _exa_client = None
 
-from plugins.web.firecrawl.provider import _is_tool_gateway_ready, check_firecrawl_api_key
+from plugins.web.firecrawl.provider import check_firecrawl_api_key
 from tools.debug_helpers import DebugSession
-from tools.tool_backend_helpers import SPACESHIPRESEARCH_MANAGED_PROVIDER, read_selection, selection_exists
+from tools.tool_backend_helpers import read_selection, selection_exists
 from tools.url_safety import async_is_safe_url
-from tools.web_tools_rescue import _managed_search_fallback, _rescue_eligible, _rescue_search
+from tools.web_tools_rescue import _rescue_eligible, _rescue_search
 from tools.web_tools_truncate import _effective_char_limit, _trim_results, _truncate_results, convert_base64_images_to_links
 from tools.web_tools_extract import (
     _extract_safe_urls, _merge_in_order, _no_provider_error, _resolve_extract_provider, _result_entry,
@@ -100,26 +100,23 @@ def _probe(provider, method: str, context: str = "") -> Optional[bool]:
 def _get_backend() -> str:
     """Shared web backend name. A stored ``web.backend`` is returned as-is — no availability probe, no
     fallback — so a broken selection surfaces the vendor's honest error rather than silently rerouting.
-    The managed ``use_gateway`` selection also resolves to firecrawl with no ladder. Autodetect runs
+    The removed hosted-gateway selection resolves to firecrawl, which reports it. Autodetect runs
     whenever no SHARED web selection was ever stored: per-capability keys (``web.search_backend``,
     ``web.extract_backend``) name only their own capability and never reroute the other (#113017)."""
     configured = _configured_backend()
     if configured:
-        # "spaceshipresearch" (managed subscription) is serviced by firecrawl, routed through the managed Tool Gateway.
-        return "firecrawl" if configured == SPACESHIPRESEARCH_MANAGED_PROVIDER else configured
+        return configured
     if read_selection("web") is not None:
-        # Shared selection exists (use_gateway) but no shared name: firecrawl, no ladder.
+        # Shared selection exists (legacy use_gateway) but no shared name: firecrawl reports it, no ladder.
         return "firecrawl"
 
-    # Never-configured install. Explicit user credentials beat the managed-gateway probe (a SpaceshipResearch OAuth
-    # token's tier may not grant web access; the gateway then fails at runtime with no fallback).
-    # Free tiers trail paid.
+    # Never-configured install. Free tiers trail paid.
     backend_candidates = (
         ("tavily", _has_env("TAVILY_API_KEY")), ("perplexity", _has_env("PERPLEXITY_API_KEY")),
         ("exa", _has_env("EXA_API_KEY")),
         ("parallel", _has_env("PARALLEL_API_KEY")), ("keenable", _has_env("KEENABLE_API_KEY")),
         ("firecrawl", _has_env("FIRECRAWL_API_KEY") or _has_env("FIRECRAWL_API_URL")),
-        ("firecrawl", _is_tool_gateway_ready()), ("searxng", _has_env("SEARXNG_URL")),
+        ("searxng", _has_env("SEARXNG_URL")),
         ("brave-free", _has_env("BRAVE_SEARCH_API_KEY")), ("ddgs", _ddgs_package_importable()),
     )
     for backend, available in backend_candidates:
@@ -151,22 +148,9 @@ def _keyless_backend() -> Optional[str]:
     return None
 
 
-def _managed_web_search() -> bool:
-    """True when web_search is on the managed SpaceshipResearch route: the stored ``spaceshipresearch`` selection, or a
-    never-configured install whose autodetect lands on the gateway. A stored vendor selection never is."""
-    if _configured_backend("search_backend"):
-        return False
-    selected = read_selection("web")
-    if selected is not None:
-        return selected == SPACESHIPRESEARCH_MANAGED_PROVIDER
-    return _get_backend() == "firecrawl" and not (_has_env("FIRECRAWL_API_KEY") or _has_env("FIRECRAWL_API_URL")) and _is_tool_gateway_ready()
-
-
 def _get_search_backend() -> str:
-    """Backend for web_search: ``web.search_backend`` (strict, no probe) > ``web.backend`` > autodetect.
-    The managed SpaceshipResearch route serves search from Perplexity (extract stays on Firecrawl); managed Firecrawl
-    is the per-call fallback, see ``_memoized_search``."""
-    return _configured_backend("search_backend") or ("perplexity" if _managed_web_search() else _get_backend())
+    """Backend for web_search: ``web.search_backend`` (strict, no probe) > ``web.backend`` > autodetect."""
+    return _configured_backend("search_backend") or _get_backend()
 
 
 def _get_extract_backend() -> str:
@@ -203,7 +187,7 @@ _BUILTIN_AVAILABILITY = {
     "firecrawl": lambda: check_firecrawl_api_key(),
     "tavily": lambda: _has_env("TAVILY_API_KEY")
     or any(_configured_backend(k) == "tavily" for k in ("backend", "search_backend", "extract_backend")),
-    "perplexity": lambda: _has_env("PERPLEXITY_API_KEY") or _managed_web_search(),
+    "perplexity": lambda: _has_env("PERPLEXITY_API_KEY"),
     "searxng": lambda: _has_env("SEARXNG_URL"),
     "brave-free": lambda: _has_env("BRAVE_SEARCH_API_KEY"),
     "ddgs": lambda: _ddgs_package_importable(),
@@ -234,13 +218,10 @@ def _is_backend_available(backend: str) -> bool:
 # firecrawl client, lazy SDK proxy, dual-auth config resolution, response normalizers, and
 # check_firecrawl_api_key() all live in plugins.web.firecrawl.provider.
 def _web_requires_env() -> list[str]:
-    """Tool-registry metadata env vars for the web backends. Gateway vars are always listed: gating them
-    on ``managed_spaceshipresearch_tools_enabled()`` cost a synchroscout portal HTTP refresh at every CLI startup.
-    Contract: set var -> tool sees it; extras are harmless for the not-logged-in."""
+    """Tool-registry metadata env vars for the web backends. Contract: set var -> tool sees it."""
     return [
         "EXA_API_KEY", "PARALLEL_API_KEY", "TAVILY_API_KEY", "PERPLEXITY_API_KEY", "KEENABLE_API_KEY", "FIRECRAWL_API_KEY",
-        "FIRECRAWL_API_URL", "FIRECRAWL_GATEWAY_URL", "PERPLEXITY_GATEWAY_URL", "TOOL_GATEWAY_DOMAIN", "TOOL_GATEWAY_SCHEME",
-        "TOOL_GATEWAY_USER_TOKEN",
+        "FIRECRAWL_API_URL",
     ]
 
 _debug = DebugSession("web_tools", env_var="WEB_TOOLS_DEBUG")
@@ -353,11 +334,7 @@ def _memoized_search(provider, query: str, limit: int) -> dict:
         return resp, False
 
     def _served_after_failure(error: str, fetch_limit: int) -> Optional[dict]:
-        """Managed Firecrawl for a failed managed Perplexity call, else the one-shot keyless rescue when
-        eligible; None means the vendor's own failure stands."""
-        fallback = _managed_search_fallback(provider, error, query, fetch_limit)
-        if fallback is not None:
-            return fallback
+        """The one-shot keyless rescue when eligible; None means the vendor's own failure stands."""
         return _rescue_search(provider.name, error, query, fetch_limit) if _rescue_eligible(provider) else None
 
     response_data = search_memo.lookup(provider.name, query, limit)

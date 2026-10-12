@@ -17,7 +17,7 @@ import { ZERO } from '../domain/usage.js'
 import { estimateTokensRough } from '../lib/text.js'
 import type { Msg } from '../types.js'
 
-// Mock the external-URL opener so the billing.step_up.verification test can
+// Mock the external-URL opener so the billing-page test can
 // assert it's invoked without spawning a real browser process.
 const openExternalUrlMock = vi.fn((_url: string) => true)
 vi.mock('../lib/openExternalUrl.js', () => ({
@@ -225,32 +225,6 @@ describe('createGatewayEventHandler', () => {
     expect(getTurnState().todos).toEqual([])
   })
 
-  it('opens a billing confirm dialog routing SpaceshipResearch to /topup', () => {
-    const appended: Msg[] = []
-    const ctx = buildCtx(appended)
-    const onEvent = createGatewayEventHandler(ctx)
-
-    onEvent({
-      payload: {
-        billing: {
-          billing_url: null,
-          is_spaceshipresearch: true,
-          message: 'out of credits',
-          model: 'm',
-          provider: 'spaceshipresearch',
-          provider_label: 'Scout Portal'
-        },
-        text: 'Billing or credits exhausted: ...'
-      },
-      type: 'message.complete'
-    } as any)
-
-    const { confirm } = getOverlayState()
-
-    confirm!.onConfirm()
-    expect(ctx.submission.submitRef.current).toHaveBeenCalledWith('/topup')
-  })
-
   it('deep-links a third-party provider billing page from the confirm dialog', () => {
     const appended: Msg[] = []
     const ctx = buildCtx(appended)
@@ -261,7 +235,6 @@ describe('createGatewayEventHandler', () => {
       payload: {
         billing: {
           billing_url: 'https://openrouter.ai/settings/credits',
-          is_spaceshipresearch: false,
           message: 'out of credits',
           model: 'm',
           provider: 'openrouter',
@@ -2256,36 +2229,6 @@ describe('createGatewayEventHandler', () => {
 
       onEvent({ payload: { key: 'credits.90', level: 'warn' }, type: 'notification.show' } as any)
       expect(getUiState().notice).toBeNull()
-    })
-  })
-
-  describe('billing.step_up.verification', () => {
-    beforeEach(() => {
-      openExternalUrlMock.mockClear()
-    })
-
-    it('renders the verification link + code and opens the browser', () => {
-      const ctx = buildCtx([])
-      const onEvent = createGatewayEventHandler(ctx)
-
-      onEvent({
-        payload: { user_code: 'WXYZ-9999', verification_url: 'https://portal.example/device?code=WXYZ' },
-        type: 'billing.step_up.verification'
-      } as any)
-
-      const printed = (ctx.system.sys as ReturnType<typeof vi.fn>).mock.calls.map(c => c[0]).join('\n')
-      expect(printed).toContain('https://portal.example/device?code=WXYZ')
-      expect(printed).toContain('WXYZ-9999')
-      expect(openExternalUrlMock).toHaveBeenCalledWith('https://portal.example/device?code=WXYZ')
-    })
-
-    it('no-ops on a missing verification_url (never opens a browser)', () => {
-      const ctx = buildCtx([])
-      const onEvent = createGatewayEventHandler(ctx)
-
-      onEvent({ payload: { verification_url: '' }, type: 'billing.step_up.verification' } as any)
-
-      expect(openExternalUrlMock).not.toHaveBeenCalled()
     })
   })
 

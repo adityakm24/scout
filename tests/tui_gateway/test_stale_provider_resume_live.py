@@ -66,7 +66,7 @@ def live_home(monkeypatch):
     # Neutralize ambient provider creds so resolution uses ONLY the config
     # above — this must behave the same on a dev box and a bare CI runner.
     for var in list(os.environ):
-        if var.endswith("_API_KEY") or var in ("OPENROUTER_KEY", "SPACESHIPRESEARCH_KEY"):
+        if var.endswith("_API_KEY") or var in ("OPENROUTER_KEY", "FIXTURECO_KEY"):
             monkeypatch.delenv(var, raising=False)
 
     import scout_cli.config as hconfig

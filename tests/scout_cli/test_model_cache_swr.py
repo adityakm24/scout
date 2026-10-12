@@ -188,8 +188,8 @@ class TestProviderModelsSWR:
         with patch.object(mod.threading, "Thread", FakeThread):
             mod._spawn_swr_refresh("openrouter")
             mod._spawn_swr_refresh("openrouter")  # deduped
-            mod._spawn_swr_refresh("spaceshipresearch")
-        assert started == ["model-cache-swr-openrouter", "model-cache-swr-spaceshipresearch"]
+            mod._spawn_swr_refresh("fixtureco")
+        assert started == ["model-cache-swr-openrouter", "model-cache-swr-fixtureco"]
 
     def test_swr_refresh_writes_cache_and_clears_inflight(self):
         import scout_cli.models as mod
@@ -223,7 +223,7 @@ class TestCatalogSWR:
     def test_stale_disk_catalog_served_with_background_refresh(self, tmp_path, monkeypatch):
         import scout_cli.model_catalog as mc
 
-        manifest = {"version": 1, "providers": {"spaceshipresearch": {"models": [{"id": "scout-4"}]}}}
+        manifest = {"version": 1, "providers": {"fixtureco": {"models": [{"id": "model-4"}]}}}
         monkeypatch.setattr(mc, "_catalog_cache", None)
         monkeypatch.setattr(mc, "_catalog_cache_source_mtime", 0.0)
         with patch.object(mc, "_load_catalog_config", return_value={

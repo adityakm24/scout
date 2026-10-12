@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { H2 } from "@spaceshipresearch/ui/ui/components/typography/h2";
-import { Card, CardContent } from "@spaceshipresearch/ui/ui/components/card";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
-import { Checkbox } from "@spaceshipresearch/ui/ui/components/checkbox";
-import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
-import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
+import { H2 } from "@/ui/components/typography";
+import { Card, CardContent } from "@/ui/components/card";
+import { Badge } from "@/ui/components/badge";
+import { Button } from "@/ui/components/button";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
+import { Checkbox } from "@/ui/components/checkbox";
+import { Toast } from "@/ui/components/toast";
+import { useToast } from "@/ui/hooks/use-toast";
 import { api } from "@/lib/api";
 import type {
   McpHttpAuth,
@@ -523,7 +523,7 @@ export default function ProfileBuilderPage() {
             <div className="space-y-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <h3 className="font-expanded text-base font-bold tracking-[0.04em]">
+                  <h3 className="font-display-wide text-base font-bold tracking-[0.04em]">
                     MCP servers
                   </h3>
                   <p className="text-sm text-muted-foreground">

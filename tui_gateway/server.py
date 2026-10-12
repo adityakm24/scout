@@ -155,7 +155,7 @@ _DETAIL_MODES = frozenset({"hidden", "collapsed", "expanded"})
 # ── Async RPC dispatch: slow handlers (seconds to minutes) would leave approval.respond and
 # session.interrupt unread in the stdin pipe, so only THESE go to a small thread pool; everything else
 # stays inline so fast-path ordering stays sane (write_json is _stdout_lock-guarded). Why each is slow:
-# billing/subscription/usage = blocking portal (+Stripe) round-trips; complete.* = git ls-files /
+# session.usage = provider account round-trips; complete.* = git ls-files /
 # prompt_toolkit import + skill scan; model.options = credential pool + pricing + provider probe;
 # pet.* = network or PNG decode (generate = several image-model round-trips); reload.mcp /
 # mcp.servers.* = rediscovery, cold npx spawn, ~30s OAuth wait; profiles.* = skill-tree walk + state.db
@@ -165,8 +165,7 @@ _DETAIL_MODES = frozenset({"hidden", "collapsed", "expanded"})
 # git subprocess probes on an arbitrary (maybe slow) mount.
 _LONG_HANDLERS = frozenset({
     "session.foreign.list", "session.foreign.preview", "session.foreign.import",
-    "billing.state", "subscription.state", "subscription.preview", "subscription.change",
-    "subscription.resume", "subscription.upgrade", "usage.bars", "session.usage", "billing.step_up",
+    "session.usage",
     "browser.manage", "cli.exec", "complete.path", "complete.slash", "llm.oneshot", "model.options",
     "pet.cells", "pet.gallery", "pet.generate", "pet.hatch", "pet.info", "pet.select", "pet.thumb",
     "learning.frames", "plugins.manage", "reload.mcp", "mcp.servers.test", "mcp.servers.oauth.start",
@@ -174,7 +173,7 @@ _LONG_HANDLERS = frozenset({
     "profiles.list", "profiles.set_asset", "bot_relay.roster.sync", "bot_relay.outbox.drain",
     "bot_relay.deliver", "bot_relay.reply", "image.generate", "projects.discover_repos",
     "projects.record_repos", "projects.for_cwd", "projects.tree", "projects.project_sessions",
-    "setup.runtime_check", "setup.status", "free_tier.provision", "voice.toggle", "voice.record", "voice.tts", "wake.start",
+    "setup.runtime_check", "setup.status", "voice.toggle", "voice.record", "voice.tts", "wake.start",
     "wake.status", "session.active_list", "session.branch", "session.compress", "session.list",
     "session.resume", "session.workspace.move", "shell.exec", "skills.manage", "slash.exec",
     "command.dispatch",  # /goal draft invokes the auxiliary model; never block the RPC reader
@@ -1070,11 +1069,7 @@ def _attach_built_agent(current: dict, agent) -> None:
 
 
 def _announce_built_agent(sid: str, key: str, current: dict, agent) -> None:
-    """Post-wiring tail of a build: credits seed, session services, session.info, late MCP catch-up."""
-    # Credits notices at session OPEN (notice_callback already wired) so depletion warnings show at "ready".
-    with contextlib.suppress(Exception):
-        from agent.credits_tracker import seed_credits_at_session_start
-        seed_credits_at_session_start(agent)
+    """Post-wiring tail of a build: session services, session.info, late MCP catch-up."""
     _start_session_services(sid, key, current)
     info = _session_info(agent, current)
     if cfg_warn := _probe_config_health(_load_cfg()):
@@ -1550,7 +1545,7 @@ def _stored_session_runtime_overrides(row: dict | None) -> dict:
     """Runtime fields persisted with a stored session (model column, ``billing_provider``, JSON ``model_config``):
     resume restores the model/provider/reasoning THAT chat used, not the global pick. Plugin-owned Bot-Mode
     sessions normally rebuild from the member profile's CURRENT config (a stale provider pin left room bots
-    "out of SpaceshipResearch credits" after a profile switch). A canonical Bot Chat may instead restore an explicit
+    "out of credits" after a profile switch). A canonical Bot Chat may instead restore an explicit
     composer pick while the profile model it diverged from remains unchanged."""
     if not row:
         return {}
@@ -2106,12 +2101,6 @@ def _get_usage(agent) -> dict:
     with contextlib.suppress(Exception):
         from tools.async_delegation import active_count as _async_active_count
         usage["active_subagents"] = _async_active_count()
-    # Dev-only live credits-spent readout, gated on SCOUT_DEV_CREDITS so the payload stays clean otherwise.
-    if is_truthy_value(os.environ.get("SCOUT_DEV_CREDITS")):
-        with contextlib.suppress(Exception):
-            spent = agent.get_credits_spent_micros()
-            if spent is not None:
-                usage["dev_credits_spent_micros"] = int(spent)
     return usage
 
 
@@ -2470,7 +2459,7 @@ def _resolve_agent_model_runtime(model_override, provider_override) -> tuple[str
 
 def _rederive_per_model_route(model: str, runtime: dict) -> None:
     """A row's persisted api_mode/base_url were written for whichever model the session last ran. Providers
-    that pick the wire per model (OpenCode Zen/Go, Copilot, SpaceshipResearch) must re-derive both from the target model,
+    that pick the wire per model (OpenCode Zen/Go, Copilot) must re-derive both from the target model,
     or a resumed opencode-go session keeps a MiniMax-era anthropic_messages route (and its /v1-stripped or
     other-family relay URL) for a chat_completions model like deepseek-v4-flash-vision-exp (#96066)."""
     from scout_cli.model_switch import model_derived_api_mode
@@ -3500,11 +3489,11 @@ from . import (  # noqa: E402
     methods_complete as _methods_complete, methods_config as _methods_config,
     methods_config_set as _methods_config_set, methods_images as _methods_images,
     methods_profiles as _methods_profiles, methods_prompt as _methods_prompt, methods_session as _methods_session,
-    methods_tools as _methods_tools, prompt_turn as _prompt_turn, billing_view as _billing_view,
+    methods_tools as _methods_tools, prompt_turn as _prompt_turn,
     methods_projects as _methods_projects, methods_session_foreign as _methods_session_foreign,
     methods_session_control as _methods_session_control, methods_subagents as _methods_subagents,
-    methods_vault as _methods_vault, methods_free_tier as _methods_free_tier,
-    methods_connectors as _methods_connectors, methods_connectors_account as _methods_connectors_account,
+    methods_vault as _methods_vault,
+    methods_connectors as _methods_connectors,
     methods_display as _methods_display, methods_display_watch as _methods_display_watch,
     methods_onboarding as _methods_onboarding, methods_i18n as _methods_i18n,
     methods_planner as _methods_planner)
@@ -3516,9 +3505,9 @@ for _m in (
     _methods_complete_helpers, _methods_slash, _methods_voice, _methods_browser,
     _methods_browser_control, _methods_session, _methods_prompt, _methods_config,
     _methods_config_set, _methods_complete, _methods_tools, _methods_profiles, _methods_images,
-    _methods_bot_relay, _prompt_turn, _billing_view, _methods_projects, _methods_session_foreign,
-    _methods_session_control, _methods_subagents, _methods_vault, _methods_free_tier, _methods_connectors,
-    _methods_connectors_account, _methods_display, _methods_display_watch, _methods_onboarding,
+    _methods_bot_relay, _prompt_turn, _methods_projects, _methods_session_foreign,
+    _methods_session_control, _methods_subagents, _methods_vault, _methods_connectors,
+    _methods_display, _methods_display_watch, _methods_onboarding,
     _methods_i18n, _methods_planner):
     _m.register(sys.modules[__name__])
 del _m

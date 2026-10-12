@@ -1,11 +1,10 @@
-"""``reasoning_details`` replay is route-scoped: OpenRouter/SpaceshipResearch read it, every other
+"""``reasoning_details`` replay is route-scoped: OpenRouter/Fixture Co read it, every other
 chat-completions route gets a wire copy without it (strict schemas 400/422 on the field,
 wedging the session after an in-session model switch — scout-agent#70233)."""
 
 from openai import OpenAI
 
 from agent.auxiliary_wire import prepare_chat_messages
-from agent.transports import get_transport
 
 _HISTORY = [
     {"role": "user", "content": "hi"},
@@ -24,8 +23,3 @@ def test_auxiliary_wire_drops_reasoning_details_only_for_non_replaying_routes():
     assert any("reasoning_details" in m for m in kwargs["messages"])
 
 
-def test_openrouter_and_spaceshipresearch_routes_keep_reasoning_details():
-    transport = get_transport("chat_completions")
-    for base_url in ("https://openrouter.ai/api/v1", "https://inference-api.spaceshipresearch.com/v1"):
-        kwargs = transport.build_kwargs("m", _HISTORY, base_url=base_url)
-        assert any("reasoning_details" in m for m in kwargs["messages"]), base_url

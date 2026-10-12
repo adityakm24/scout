@@ -1,5 +1,5 @@
-"""Status dashboard routes: health, /api/status, system stats, curator, learning graph,
-portal and diagnostics actions.
+"""Status dashboard routes: health, /api/status, system stats, curator, learning graph and
+diagnostics actions.
 
 Extracted from ``scout_cli.web_server``; app state and helpers are late-bound through
 :mod:`scout_cli.web_deps` (cycle-safe, monkeypatch-friendly).
@@ -383,18 +383,6 @@ def _auth_gate_status() -> Dict[str, Any]:
             "auth_flows": auth_flows}
 
 
-def _spaceshipresearch_session_validity() -> str:
-    """SpaceshipResearch bootstrap-session validity for the NAS health sweep: a hosted agent whose SpaceshipResearch
-    auth dies terminally looks HEALTHY to every liveness probe yet every inference turn
-    fails, and this is the ONLY signal that surfaces it (local auth-store state, no token
-    needed). Best-effort: never let auth classification break the probe."""
-    try:
-        from scout_cli.auth import get_spaceshipresearch_session_validity
-        return get_spaceshipresearch_session_validity()
-    except Exception:
-        return "unknown"
-
-
 async def _component_health(gateway: Dict[str, Any]) -> Dict[str, Any]:
     """Component-level health rollup: counts and status enums only (public payload — no
     messages, paths or other detail that could carry secrets). The storage probe reuses the
@@ -519,7 +507,7 @@ async def get_status(profile: Optional[str] = None):
             "gateway_drainable": derive_gateway_drainable(
                 gateway_running=gateway_running, gateway_state=gateway_state),
             "restart_drain_timeout": restart_drain_timeout, "active_sessions": active_sessions,
-            **auth, "spaceshipresearch_session_valid": _spaceshipresearch_session_validity()}
+            **auth}
 
         # Stable per-install identity (first call may touch disk). Omitted (not null) when
         # unpersistable so older-client behavior and the no-identity fallback stay identical.
@@ -537,8 +525,8 @@ async def get_status(profile: Optional[str] = None):
                              else "degraded")
         await _advisory_pressure(status, profile_dir if profile_dir else get_scout_home())
 
-        # Profile NAMES and ``gateway_mode`` are low-sensitivity product surface (Scout Cloud
-        # renders the profile list over a gated bind) so they survive the auth gate; the
+        # Profile NAMES and ``gateway_mode`` are low-sensitivity product surface (a remote
+        # client renders the profile list over a gated bind) so they survive the auth gate; the
         # per-gateway ``gateways[]`` carries host ports and stays gated below.
         status["profiles"] = topology["profiles"]
         status["parked_profiles"] = topology.get("parked_profiles", [])
@@ -716,56 +704,6 @@ async def update_learning_node(body: LearningNodeEdit):
     from agent.learning_mutations import edit_node
     return await _learning_mutation(
         body.profile, lambda: edit_node(body.id, body.content), 400, "edit failed")
-
-
-# Portal — Scout Portal auth + Tool Gateway routing status (read-only).
-
-
-@router.get("/api/portal")
-async def get_portal_status(profile: Optional[str] = None):
-    # load_config() + auth/subscription snapshots are disk reads on a polled endpoint —
-    # keep them off the event loop.
-    return await config_scoped_to_thread(profile, _get_portal_status_sync)
-
-
-def _feature_state(feat) -> str:
-    if getattr(feat, "managed_by_spaceshipresearch", False):
-        return "via Scout Portal"
-    if getattr(feat, "active", False):
-        return getattr(feat, "current_provider", None) or "active"
-    return "not configured"
-
-
-def _get_portal_status_sync():
-    cfg = load_config() or {}
-    auth: Dict[str, Any] = {}
-    try:
-        from scout_cli.auth import get_spaceshipresearch_auth_status_local
-        # Refresh-free snapshot so polling never performs an OAuth refresh.
-        auth = get_spaceshipresearch_auth_status_local() or {}
-    except Exception:
-        auth = {}
-
-    features = []
-    try:
-        from scout_cli.spaceshipresearch_subscription import get_spaceshipresearch_subscription_features
-        feats = get_spaceshipresearch_subscription_features(cfg)
-        if feats is not None:
-            features = [{"label": getattr(feat, "label", ""), "state": _feature_state(feat)}
-                        for feat in feats.items()]
-    except Exception:
-        _log.exception("portal features failed")
-
-    model_cfg = cfg.get("model") if isinstance(cfg.get("model"), dict) else {}
-    return {
-        "logged_in": bool(auth.get("logged_in")), "portal_url": auth.get("portal_base_url"),
-        "inference_url": auth.get("inference_base_url"),
-        "provider": str((model_cfg or {}).get("provider") or ""),
-        # Free tier: a token exists, so logged_in stays true for callers that only ask "is there a
-        # credential"; surfaces that render an account must branch on free_tier first.
-        "free_tier": bool(auth.get("free_tier")), "account_tier": auth.get("account_tier"),
-        "subscription_url": "https://portal.spaceshipresearch.com/manage-subscription",
-        "features": features}
 
 
 # Diagnostics: text-output actions spawned in the background, tailed via /api/actions/<name>.

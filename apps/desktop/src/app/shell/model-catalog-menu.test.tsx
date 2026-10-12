@@ -385,12 +385,12 @@ describe('the catalog renders per-model pricing', () => {
     getGlobalModelOptions.mockResolvedValue({
       providers: [
         {
-          models: ['anthropic/claude-sonnet-5', 'spaceshipresearch/scout-4'],
-          name: 'Scout Portal',
-          slug: 'spaceshipresearch',
+          models: ['anthropic/claude-sonnet-5', 'fixtureco/model-4'],
+          name: 'Fixture Co',
+          slug: 'fixtureco',
           pricing: {
             'anthropic/claude-sonnet-5': { input: '$1.60', output: '$8.00', cache: '$0.16', free: false },
-            'spaceshipresearch/scout-4': { input: 'free', output: 'free', cache: null, free: true }
+            'fixtureco/model-4': { input: 'free', output: 'free', cache: null, free: true }
           }
         }
       ]
@@ -407,20 +407,19 @@ describe('the catalog renders per-model pricing', () => {
     expect(screen.getByText('free')).not.toBeNull()
   })
 
-  it('shows $/Mtok input/output and the sale tag when the provider ships pricing', async () => {
+  it('shows $/Mtok input/output when the provider ships pricing', async () => {
     getGlobalModelOptions.mockResolvedValue({
       providers: [
         {
           models: ['anthropic/claude-sonnet-5'],
-          name: 'Scout Portal',
-          slug: 'spaceshipresearch',
+          name: 'Fixture Co',
+          slug: 'fixtureco',
           pricing: {
             'anthropic/claude-sonnet-5': {
               input: '$1.60',
               output: '$8.00',
               cache: '$0.16',
-              free: false,
-              discount_percent: 20
+              free: false
             }
           }
         }
@@ -429,19 +428,18 @@ describe('the catalog renders per-model pricing', () => {
 
     renderMenu()
 
-    await screen.findByText('$1.60/$8.00')
-    expect(screen.queryByText('−20%')).not.toBeNull()
+    expect(await screen.findByText('$1.60/$8.00')).not.toBeNull()
   })
 
   it('renders a free label for free-tier models', async () => {
     getGlobalModelOptions.mockResolvedValue({
       providers: [
         {
-          models: ['spaceshipresearch/scout-4'],
-          name: 'Scout Portal',
-          slug: 'spaceshipresearch',
+          models: ['fixtureco/model-4'],
+          name: 'Fixture Co',
+          slug: 'fixtureco',
           pricing: {
-            'spaceshipresearch/scout-4': { input: 'free', output: 'free', cache: null, free: true }
+            'fixtureco/model-4': { input: 'free', output: 'free', cache: null, free: true }
           }
         }
       ]
@@ -457,8 +455,8 @@ describe('the catalog renders per-model pricing', () => {
       providers: [
         {
           models: ['anthropic/claude-sonnet-5'],
-          name: 'Scout Portal',
-          slug: 'spaceshipresearch',
+          name: 'Fixture Co',
+          slug: 'fixtureco',
           pricing: {
             'anthropic/claude-sonnet-5': {
               input: '$1.60',
@@ -484,8 +482,8 @@ describe('the catalog renders per-model pricing', () => {
       providers: [
         {
           models: ['anthropic/claude-sonnet-5', 'anthropic/claude-sonnet-5-fast'],
-          name: 'Scout Portal',
-          slug: 'spaceshipresearch',
+          name: 'Fixture Co',
+          slug: 'fixtureco',
           pricing: {
             'anthropic/claude-sonnet-5-fast': {
               input: '$0.80',
@@ -508,8 +506,8 @@ describe('the catalog renders per-model pricing', () => {
       providers: [
         {
           models: ['anthropic/claude-sonnet-5'],
-          name: 'Scout Portal',
-          slug: 'spaceshipresearch'
+          name: 'Fixture Co',
+          slug: 'fixtureco'
         }
       ]
     })

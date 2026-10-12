@@ -400,11 +400,6 @@ def _resolve_api_mode(agent, api_mode, provider_name, base_url):
         host.startswith("bedrock-runtime.") and base_url_host_matches(url, "amazonaws.com")
     ):
         agent.api_mode = "bedrock_converse"
-    elif agent.provider in {"spaceshipresearch", "scout-portal", "spaceshipresearch"}:
-        # Portal is dual-wire (anthropic/* → Messages, else chat_completions); covers direct
-        # AIAgent construction without a resolved runtime.
-        from scout_cli.providers import spaceshipresearch_api_mode
-        agent.api_mode = spaceshipresearch_api_mode(agent.model)
     else:
         # Host-mandated wire check — LAST, so the provider-slug rewrites above always win.
         # Covers api.meta.ai → codex_responses (prompt caching: 0% on chat vs 93-99%).
@@ -442,17 +437,6 @@ def _finalize_routing(agent, api_mode, credential_pool):
     with suppress(Exception):
         agent._get_transport()
 
-    # The SpaceshipResearch agent key lives ~1 h. Without the proactive refresher every agent in the process
-    # discovers expiry reactively, on its own next request, all in the same minute: with 200
-    # in-process subagents that was a 401 storm each hour (620 in one run) and the credential
-    # pool benched the provider for all of them. The gateway and web server start this thread
-    # at boot; the CLI process (and everything spawned inside it) never did. Idempotent,
-    # process-wide, daemon.
-    if agent.provider == "spaceshipresearch":
-        with suppress(Exception):
-            from scout_cli.spaceshipresearch_auth_keepalive import start_spaceshipresearch_auth_keepalive
-            start_spaceshipresearch_auth_keepalive()
-
     with suppress(Exception):
         from scout_cli.model_normalize import (
             _AGGREGATOR_PROVIDERS, normalize_model_for_provider
@@ -460,11 +444,6 @@ def _finalize_routing(agent, api_mode, credential_pool):
 
         if agent.provider not in _AGGREGATOR_PROVIDERS:
             agent.model = normalize_model_for_provider(agent.model, agent.provider)
-
-    # SpaceshipResearch model policy follows the ROUTE (the welcome host serves one model); a credential-pool
-    # swap can change the route later, so ``_swap_credential`` applies the same helper again.
-    from scout_cli.anon_auth import pin_model_for_route
-    agent.model = pin_model_for_route(agent.provider, agent.base_url, agent.model)
 
     # Auto-upgrade to Responses for GPT-5.x-style models and direct OpenAI URLs, unless
     # api_mode was explicit, the runtime is ACP (`acp://` clients route themselves, no
@@ -576,10 +555,6 @@ _TURN_STATE: Dict[str, Any] = {
     # a stale rebuild instead of clobbering a newer one.
     "_tool_snapshot_generation": 0,
     "_rate_limit_state": None,  # from x-ratelimit-* headers; read by /usage
-    # Credits tracking (dev-only, SCOUT_DEV_CREDITS) from x-spaceshipresearch-credits-* headers; session
-    # start is latched on the first header so cumulative spend can be reported.
-    "_credits_state": None,
-    "_credits_session_start_micros": None,
     "_or_cache_hits": 0,  # X-OpenRouter-Cache-Status: HIT count
 }
 
@@ -692,8 +667,6 @@ def _init_turn_state(agent, run_budget_seconds):
     # Wall-clock run budget per turn: constructor arg wins, else agent.run_budget_seconds
     # (in _apply_agent_section). None = fully off (no clock reads, injection, or capping).
     agent.run_budget_seconds = _normalize_run_budget_seconds(run_budget_seconds)
-    from agent.credits_tracker import new_credits_latch
-    agent._credits_latch = new_credits_latch()  # threshold-notice latch (sticky keys + gates)
 
 
 def _setup_logging(agent):
@@ -2094,25 +2067,6 @@ def _enforce_minimum_context(agent):
         )
 
 
-def _warn_nonagentic_scout_model(agent):
-    # SpaceshipResearch Scout 3/4 are chat models, not tool-call-tuned. cli.py show_banner() already
-    # warns on the CLI, so skip platform=="cli"; non-quiet non-CLI surfaces still get it.
-    if agent.quiet_mode or (agent.platform or "cli") == "cli":
-        return
-    with suppress(Exception):
-        from scout_cli.model_switch import _check_scout_model_warning
-        _scout_warn = _check_scout_model_warning(agent.model or "")
-        if _scout_warn:
-            _user_msg = (
-                "⚠ SpaceshipResearch Scout 3 & 4 models are NOT agentic — they "
-                "lack reliable tool-calling for agent workflows (delegation, "
-                "cron, proactive tools). Consider an agentic model instead "
-                "(Claude, GPT, Gemini, Qwen-Coder, etc.)."
-            )
-            agent._emit_warning(_user_msg)
-            _ra().logger.warning(_scout_warn)
-
-
 def _inject_context_engine_tools(agent):
     # Context engine tool schemas (lcm_*), deduped against existing names (plugins may
     # register the same schemas; duplicates 400 provider-side) and gated on enabled_toolsets
@@ -2495,7 +2449,6 @@ def init_agent(
     _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_context_length, session_db)
     _configure_ollama_num_ctx(agent, _model_cfg, _config_context_length)
     _enforce_minimum_context(agent)
-    _warn_nonagentic_scout_model(agent)
     _inject_context_engine_tools(agent)
     _init_usage_state(agent)
     _clamp_compressor_to_ollama_num_ctx(agent)

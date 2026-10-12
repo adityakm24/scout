@@ -22,8 +22,8 @@ The default-off exposure assertion failed on base before implementation.
 
 ## Real-model N=1 child smoke
 
-Pinned to configured SpaceshipResearch `google/gemini-3.7-flash`; no provider fallback.
-A separate temporary home held only copied SpaceshipResearch authentication and minimal
+Pinned to a configured `google/gemini-3.7-flash` route; no provider fallback.
+A separate temporary home held only copied provider authentication and minimal
 explicit configuration (no personal skills/memory). One forced parent tool call
 using the real default-off registry schema produced a one-task array without
 `group`. The actual delegation handler then built and ran one real AIAgent child,

@@ -236,7 +236,7 @@ export const SETTINGS_MANIFEST = {
   gateway: {
     connectionMode: {
       subpage: 'connection',
-      keywords: ['gateway', 'connection', 'local', 'cloud', 'remote', 'ssh', 'url', 'token', 'host', 'port', 'key'],
+      keywords: ['gateway', 'connection', 'local', 'remote', 'ssh', 'url', 'token', 'host', 'port', 'key'],
       copy: t => ({ label: t.settings.gateway.modeTitle, description: t.settings.gateway.intro })
     },
     keychainEncryption: {

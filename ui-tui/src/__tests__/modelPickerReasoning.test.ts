@@ -7,23 +7,23 @@ import { applyLocale, messages, resetLocale } from '../i18n/runtime.js'
 
 const provider = (capabilities?: ModelOptionProvider['capabilities']): ModelOptionProvider => ({
   capabilities,
-  name: 'Scout Portal',
-  slug: 'spaceshipresearch'
+  name: 'Acme AI',
+  slug: 'acme'
 })
 
 describe('ModelPicker reasoning step', () => {
   it('emits one /model request carrying provider, effort and scope', () => {
-    expect(modelPickerCommand('gpt-5.6', 'spaceshipresearch', false, 'high')).toBe(
-      'gpt-5.6 --provider spaceshipresearch --reasoning high --tui-session'
+    expect(modelPickerCommand('gpt-5.6', 'acme', false, 'high')).toBe(
+      'gpt-5.6 --provider acme --reasoning high --tui-session'
     )
-    expect(modelPickerCommand('gpt-5.6', 'spaceshipresearch', true, 'none')).toBe(
-      'gpt-5.6 --provider spaceshipresearch --reasoning none --global'
+    expect(modelPickerCommand('gpt-5.6', 'acme', true, 'none')).toBe(
+      'gpt-5.6 --provider acme --reasoning none --global'
     )
     // "Keep current effort" (empty value) adds no flag at all.
-    expect(modelPickerCommand('gpt-5.6', 'spaceshipresearch', false, '')).toBe('gpt-5.6 --provider spaceshipresearch --tui-session')
+    expect(modelPickerCommand('gpt-5.6', 'acme', false, '')).toBe('gpt-5.6 --provider acme --tui-session')
     expect(reasoningPickerRows().at(-1)?.value).toBe('')
     // The new-session draft label strips the effort flag like it strips --provider.
-    expect(draftModelNameFromArg(modelPickerCommand('gpt-5.6', 'spaceshipresearch', false, 'low'))).toBe('gpt-5.6')
+    expect(draftModelNameFromArg(modelPickerCommand('gpt-5.6', 'acme', false, 'low'))).toBe('gpt-5.6')
   })
 
   it('skips the step only when the catalog says the route has no reasoning control', () => {

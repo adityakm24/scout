@@ -25,8 +25,8 @@ function mkdtemp(prefix: string) {
 
 describe('resolvePluginGitUrl', () => {
   it('maps owner/repo shorthand to github git url', () => {
-    expect(resolvePluginGitUrl('SpaceshipResearch/scout-example-plugins')).toEqual({
-      gitUrl: 'https://github.com/SpaceshipResearch/scout-example-plugins.git',
+    expect(resolvePluginGitUrl('example-org/scout-example-plugins')).toEqual({
+      gitUrl: 'https://github.com/example-org/scout-example-plugins.git',
       subdir: null
     })
   })

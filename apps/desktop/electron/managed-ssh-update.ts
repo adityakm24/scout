@@ -9,7 +9,7 @@
  *   -> correlated terminal marker + durable receipt -> restore every scope
  *   -> lift the gate
  *
- * A remote URL/cloud connection never enters this lifecycle. Only SSH scopes
+ * A remote URL connection never enters this lifecycle. Only SSH scopes
  * whose serve process is proved by the Desktop ownership record are supplied
  * by main.ts.
  */

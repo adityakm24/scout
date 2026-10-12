@@ -62,10 +62,6 @@ export const NO_CONFIRM_DESTRUCTIVE = truthy(process.env.SCOUT_TUI_NO_CONFIRM)
 // browser-embedded TUI has no healthy restart path after an idle exit.
 export const DASHBOARD_TUI_MODE = truthy(process.env.SCOUT_TUI_DASHBOARD)
 
-// SCOUT_DEV_CREDITS — dev-only live-spend readout (Δ status segment + "(dev credits)"
-// banner). Throwaway dev scaffolding; the whole readout gates on this one flag.
-export const DEV_CREDITS_MODE = truthy(process.env.SCOUT_DEV_CREDITS)
-
 const inlineOverride = parseToggle(process.env.SCOUT_TUI_INLINE)
 
 // Skip AlternateScreen — TUI renders into the primary buffer so the host

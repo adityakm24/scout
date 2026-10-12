@@ -19,23 +19,23 @@ import React, {
 } from "react";
 import { api, fetchJSON, authedFetch, buildWsUrl, buildWsAuthParam } from "@/lib/api";
 import { cn, timeAgo, isoTimeAgo } from "@/lib/utils";
-import { Badge } from "@spaceshipresearch/ui/ui/components/badge";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Checkbox } from "@spaceshipresearch/ui/ui/components/checkbox";
-import { ConfirmDialog } from "@spaceshipresearch/ui/ui/components/confirm-dialog";
+import { Badge } from "@/ui/components/badge";
+import { Button } from "@/ui/components/button";
+import { Checkbox } from "@/ui/components/checkbox";
+import { ConfirmDialog } from "@/ui/components/confirm-dialog";
 import {
   Dialog, DialogClose, DialogContent, DialogDescription,
   DialogFooter, DialogHeader, DialogTitle,
-} from "@spaceshipresearch/ui/ui/components/dialog";
-import { Toast } from "@spaceshipresearch/ui/ui/components/toast";
-import { useConfirmDelete } from "@spaceshipresearch/ui/hooks/use-confirm-delete";
-import { useToast } from "@spaceshipresearch/ui/hooks/use-toast";
-import { Select, SelectOption } from "@spaceshipresearch/ui/ui/components/select";
-import { Card, CardHeader, CardTitle, CardContent } from "@spaceshipresearch/ui/ui/components/card";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
-import { Separator } from "@spaceshipresearch/ui/ui/components/separator";
-import { Tabs, TabsList, TabsTrigger } from "@spaceshipresearch/ui/ui/components/tabs";
+} from "@/ui/components/dialog";
+import { Toast } from "@/ui/components/toast";
+import { useConfirmDelete } from "@/ui/hooks/use-confirm-delete";
+import { useToast } from "@/ui/hooks/use-toast";
+import { Select, SelectOption } from "@/ui/components/select";
+import { Card, CardHeader, CardTitle, CardContent } from "@/ui/components/card";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
+import { Separator } from "@/ui/components/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/components/tabs";
 import { useI18n } from "@/i18n";
 import { registerSlot, PluginSlot } from "./slots";
 
@@ -154,7 +154,7 @@ export function exposePluginSDK() {
     // plugins that need to build the WS URL themselves.
     buildWsAuthParam,
 
-    // UI components — SpaceshipResearch DS where available, shadcn/ui primitives elsewhere.
+    // UI components from the dashboard's own UI kit.
     components: {
       Card,
       CardHeader,

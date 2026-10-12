@@ -67,9 +67,8 @@ def test_setup_summary_local_browser_unavailable_without_chromium(
     """End-to-end: agent-browser present but no Chromium in local mode must
     render as unavailable with an install hint — not a false 'available'.
 
-    Unlike the mocked-feature tests above, this drives the real
-    ``get_spaceshipresearch_subscription_features`` so the surface stays aligned with the
-    runtime gate in ``tools.browser_tool_install.check_browser_requirements``.
+    Unlike the mocked-feature tests above, this drives the real setup summary so
+    the surface stays aligned with the runtime gate in ``tools.browser_tool_install.check_browser_requirements``.
     """
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     _clear_provider_env(monkeypatch)
@@ -83,11 +82,6 @@ def test_setup_summary_local_browser_unavailable_without_chromium(
     save_config(cfg)
 
     # Only stub the readiness probes; the feature resolver itself is real.
-    monkeypatch.setattr("scout_cli.spaceshipresearch_subscription._has_agent_browser", lambda: True)
-    monkeypatch.setattr(
-        "scout_cli.spaceshipresearch_subscription.get_scout_portal_account_info",
-        lambda *a, **k: None,
-    )
     monkeypatch.setattr("tools.browser_tool_install._chromium_installed", lambda: False)
     monkeypatch.setattr("tools.browser_tool_lightpanda_fallback._using_lightpanda_engine", lambda: False)
     monkeypatch.setattr(

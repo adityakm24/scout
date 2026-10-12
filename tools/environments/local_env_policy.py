@@ -40,13 +40,13 @@ _STATIC_PROVIDER_ENV_BLOCKLIST = frozenset({
     "DAYTONA_API_KEY", "GATEWAY_RELAY_ID", "GATEWAY_RELAY_SECRET",
     "GATEWAY_RELAY_DELIVERY_KEY", "VERCEL_OIDC_TOKEN", "VERCEL_TOKEN",
     "VERCEL_PROJECT_ID", "VERCEL_TEAM_ID",
-    # Keys the OAuth provider profiles (spaceshipresearch, qwen-oauth) also accept when pasted. The auth
-    # registry mirrors env_vars only for api_key profiles, and discovering the provider plugins
-    # from here, at import, would re-mirror them over a plugin's own registry entry.
-    "SPACESHIPRESEARCH_API_KEY", "QWEN_API_KEY",
-    # Scout's own secrets read in code: the anonymous-inference secret, dashboard auth
-    # (basic, OIDC, drain) and the Google Meet realtime key.
-    "SCOUT_ANON_API_SECRET", "SCOUT_DASHBOARD_BASIC_AUTH_PASSWORD",
+    # Keys the OAuth provider profiles (qwen-oauth) also accept when pasted. The auth registry
+    # mirrors env_vars only for api_key profiles, and discovering the provider plugins from here,
+    # at import, would re-mirror them over a plugin's own registry entry.
+    "QWEN_API_KEY",
+    # Scout's own secrets read in code: dashboard auth (basic, OIDC, drain) and the Google Meet
+    # realtime key.
+    "SCOUT_DASHBOARD_BASIC_AUTH_PASSWORD",
     "SCOUT_DASHBOARD_BASIC_AUTH_SECRET", "SCOUT_DASHBOARD_DRAIN_SECRET",
     "SCOUT_DASHBOARD_OIDC_CLIENT_SECRET", "SCOUT_MEET_REALTIME_KEY",
 })

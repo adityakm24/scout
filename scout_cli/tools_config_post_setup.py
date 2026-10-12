@@ -75,7 +75,7 @@ def _post_setup_agent_browser(post_setup_key: str) -> None:
         if docker and post_setup_key == "agent_browser" and not _chromium_installed():
             _print_warning("    Chromium is missing but you're running in Docker.")
             _info_lines("Pull the latest image to get the bundled Chromium:",
-                        "  docker pull ghcr.io/spaceshipresearch/scout-agent:latest")
+                        "  docker pull ghcr.io/adityakm24/scout-agent:latest")
         return
 
     try:
@@ -398,9 +398,14 @@ def _agent_browser_installed() -> bool:
     """True when everything ``_run_post_setup("agent_browser")`` installs is present: the agent-browser CLI
     *and* the Chromium build it drives (or the Lightpanda engine, which needs no Chromium), so "Run
     setup" flips to installed only when re-running it would be a no-op."""
-    from scout_cli.spaceshipresearch_subscription import _local_browser_runnable
-
-    return _local_browser_runnable()
+    if not _cloud_agent_browser_installed():
+        return False
+    try:
+        from tools.browser_tool_install import _chromium_installed
+        from tools.browser_tool_lightpanda_fallback import _using_lightpanda_engine
+    except Exception:
+        return True  # runtime probe unavailable: fall back to binary presence rather than crashing
+    return _using_lightpanda_engine() or _chromium_installed()
 
 
 def _camofox_installed() -> bool:
@@ -420,9 +425,14 @@ def _lightpanda_installed() -> bool:
 
 def _cloud_agent_browser_installed() -> bool:
     """Installed-check for the ``browserbase`` hook: cloud providers host their own Chromium, so
-    presence of the agent-browser CLI is the whole contract."""
-    from scout_cli.spaceshipresearch_subscription import _has_agent_browser
-    return _has_agent_browser()
+    presence of the agent-browser CLI is the whole contract. Reads the runtime's choice: a broken
+    resolver is not permission to advertise an unchecked binary through a second discovery ladder."""
+    try:
+        from tools.browser_tool_install import _find_agent_browser
+        _find_agent_browser(validate=False)
+    except (ImportError, OSError):
+        return False
+    return True
 
 
 # post_setup_key -> predicate(): True when the install side-effect is satisfied. Used by

@@ -54,7 +54,7 @@ function connectedExternal(patch: Partial<OAuthProvider> = {}): OAuthProvider {
 
 beforeEach(() => {
   listOAuthProviders.mockResolvedValue({ providers: [connectedExternal()] })
-  disconnectOAuthProvider.mockResolvedValue({ ok: false, provider: 'spaceshipresearch' })
+  disconnectOAuthProvider.mockResolvedValue({ ok: false, provider: 'fixtureco' })
   Object.defineProperty(window, 'scoutDesktop', {
     configurable: true,
     value: { terminal: {} }
@@ -97,19 +97,19 @@ describe('connected external provider row', () => {
     listOAuthProviders.mockResolvedValue({
       providers: [
         {
-          cli_command: 'scout auth add spaceshipresearch',
+          cli_command: 'scout auth add fixtureco',
           disconnectable: true,
           docs_url: '',
           flow: 'device_code',
-          id: 'spaceshipresearch',
-          name: 'Scout Portal',
+          id: 'fixtureco',
+          name: 'Fixture Co',
           status: { logged_in: true }
         }
       ]
     })
 
     await renderAccounts()
-    fireEvent.click(await screen.findByRole('button', { name: 'Remove Scout Portal' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Fixture Co' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Disconnect' }))
 
     await waitFor(() => expect(disconnectOAuthProvider).toHaveBeenCalled())

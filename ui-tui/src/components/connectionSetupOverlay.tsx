@@ -78,7 +78,7 @@ const phaseOf = (target: ConnectionOperationTarget): Phase => {
     return 'authorized'
   }
 
-  if (target.state === 'failed' || target.state === 'expired') {
+  if (target.state === 'failed') {
     return target.required_env?.length ? 'form' : 'retry'
   }
 
@@ -89,11 +89,7 @@ const phaseOf = (target: ConnectionOperationTarget): Phase => {
   return 'form'
 }
 
-const failureLine = (T: Translations, target: ConnectionOperationTarget): string =>
-  target.state === 'expired' ? T.connection.failure.expired : T.connection.failure.failed
-
-const hasFailed = (target: ConnectionOperationTarget): boolean =>
-  target.state === 'failed' || target.state === 'expired'
+const hasFailed = (target: ConnectionOperationTarget): boolean => target.state === 'failed'
 
 const initialDraft = (fields: ConnectionTargetEnvField[]): Record<string, string> =>
   Object.fromEntries(fields.map(field => [field.name, field.secret ? '' : field.default]))
@@ -295,7 +291,7 @@ function RetryPhase({ action, more, notice, sending, t, target }: RetryPhaseProp
   return (
     <Box flexDirection="column">
       <Header more={more} t={t} target={target} />
-      <Text color={t.color.muted}>{failureLine(T, target)}</Text>
+      <Text color={t.color.muted}>{T.connection.failure.failed}</Text>
       <DetailLine t={t} text={target.detail} />
       <Selector action={action} focused primary={T.connection.selector.tryAgain} t={t} />
       <DetailLine t={t} text={notice} />
@@ -327,7 +323,7 @@ function FormPhase(p: FormPhaseProps) {
   return (
     <Box flexDirection="column">
       <Header more={p.more} t={t} target={target} />
-      {reopened ? <Text color={t.color.muted}>{failureLine(T, target)}</Text> : null}
+      {reopened ? <Text color={t.color.muted}>{T.connection.failure.failed}</Text> : null}
       {reopened ? <DetailLine t={t} text={target.detail} /> : null}
       {p.fields.map((field, index) => (
         <FieldRow

@@ -16,7 +16,6 @@ from typing import Any, Dict, Mapping
 _PERSISTABLE_PROVIDER_SOURCES = frozenset({
     ("anthropic", "scout_pkce"),
     ("minimax-oauth", "oauth"),
-    ("spaceshipresearch", "device_code"),
     ("openai-codex", "device_code"),
     ("xai-oauth", "device_code"),
 })
@@ -24,15 +23,14 @@ _PERSISTABLE_PROVIDER_SOURCES = frozenset({
 # Metadata keys that look secret-ish by suffix but are safe to persist.
 _SAFE_SECRETISH_METADATA_KEYS = frozenset({
     "secret_fingerprint", "secret_source", "token_type", "scope", "client_id",
-    "agent_key_id", "agent_key_expires_at", "agent_key_expires_in",
-    "agent_key_reused", "agent_key_obtained_at", "expires_at", "expires_at_ms",
+    "expires_at", "expires_at_ms",
     "expires_in", "last_refresh", "last_status", "last_status_at",
     "last_error_code", "last_error_reason", "last_error_message",
     "last_error_reset_at",
 })
 
 _SECRET_VALUE_KEYS = frozenset({
-    "access_token", "refresh_token", "agent_key", "api_key", "apikey",
+    "access_token", "refresh_token", "api_key", "apikey",
     "api_token", "auth_token", "authorization", "bearer_token", "client_secret",
     "credential", "credentials", "id_token", "oauth_token", "private_key",
     "secret_key", "session_token", "password", "secret", "token", "tokens",
@@ -83,7 +81,7 @@ def fingerprint_secret_value(value: Any) -> str | None:
 
 
 def _credential_secret_fingerprint(payload: Mapping[str, Any]) -> str | None:
-    preferred = ("agent_key", "access_token", "refresh_token", "api_key", "token", "secret")
+    preferred = ("access_token", "refresh_token", "api_key", "token", "secret")
     candidates = [payload.get(k) for k in preferred]
     candidates += [v for k, v in payload.items() if _is_secret_payload_key(k)]
     for value in candidates:

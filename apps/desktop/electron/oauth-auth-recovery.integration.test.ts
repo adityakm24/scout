@@ -54,7 +54,7 @@ async function fixture(beforeRefreshResponse?: () => Promise<void>) {
 
     if (req.url === '/auth/native/refresh') {
       state.refreshes++
-      expect(JSON.parse(body)).toMatchObject({ refresh_token: 'old-rt', provider: 'spaceshipresearch' })
+      expect(JSON.parse(body)).toMatchObject({ refresh_token: 'old-rt', provider: 'fixtureco' })
       await beforeRefreshResponse?.()
       res.statusCode = state.refreshStatus
       res.end(
@@ -65,7 +65,7 @@ async function fixture(beforeRefreshResponse?: () => Promise<void>) {
                 access_token: 'fresh',
                 refresh_token: 'fresh-rt',
                 expires_at: 9_000,
-                provider: 'spaceshipresearch',
+                provider: 'fixtureco',
                 user_id: 'test'
               }
         )
@@ -143,7 +143,7 @@ async function fixture(beforeRefreshResponse?: () => Promise<void>) {
       accessToken: 'old',
       refreshToken: 'old-rt',
       expiresAt,
-      provider: 'spaceshipresearch',
+      provider: 'fixtureco',
       userId: 'test'
     })
 

@@ -221,7 +221,6 @@ export default defineConfig(({ command }) => ({
       '@/debug/dev-only': debugEntry(command, process.env as Record<string, string>),
       '@': path.resolve(__dirname, './src'),
       '@scout/plugin-sdk': path.resolve(__dirname, './src/sdk/index.ts'),
-      '@scout/shared/billing': path.resolve(__dirname, '../shared/src/billing-types.ts'),
       '@scout/shared/color': path.resolve(__dirname, '../shared/src/color.ts'),
       '@scout/shared': path.resolve(__dirname, '../shared/src'),
       // The tour tool's preview surface injects driver.js's prebuilt IIFE into

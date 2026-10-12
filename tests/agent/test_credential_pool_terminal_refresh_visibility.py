@@ -1,6 +1,6 @@
 """A terminally rejected OAuth refresh token must leave a trace at the default log level.
 
-The pool quarantines a dead ``openai-codex`` / ``xai-oauth`` / ``spaceshipresearch`` / ``anthropic`` refresh
+The pool quarantines a dead ``openai-codex`` / ``xai-oauth`` / ``fixtureco`` / ``anthropic`` refresh
 token — for the user this is the moment the login is lost, and a debug-only line made it look like
 "I signed in once and Scout keeps failing" (#113023). Two invariants: the WARNING carries the
 ``scout auth add <provider>`` hint, and a row the quarantine does not drop (an independent
@@ -15,7 +15,6 @@ import logging
 import threading
 import time
 
-import pytest
 
 from agent import anthropic_credentials as ac
 from agent import credential_pool as cp
@@ -38,37 +37,6 @@ def _pool(provider: str) -> CredentialPool:
 def _entry(provider: str, source: str = "device_code") -> PooledCredential:
     return PooledCredential(id="e1", provider=provider, auth_type="oauth", access_token="dead-access",
                             refresh_token="dead-refresh", label="e1", source=source, priority=0)
-
-
-@pytest.mark.parametrize(
-    ("provider", "terminal_predicate", "sync_name", "clear_name", "expected_hint"),
-    [
-        ("openai-codex", "_is_terminal_codex_oauth_refresh_error", "_sync_entry_from_auth_store",
-         "_clear_terminal_tokens_state", "scout auth add openai-codex"),
-        ("spaceshipresearch", "_is_terminal_spaceshipresearch_refresh_error", "_sync_spaceshipresearch_entry_from_auth_store",
-         "_clear_terminal_spaceshipresearch_state", "scout auth add spaceshipresearch"),
-    ],
-)
-def test_terminal_refresh_quarantine_warns_with_reauth_hint(
-    monkeypatch, caplog, provider, terminal_predicate, sync_name, clear_name, expected_hint,
-):
-    pool = _pool(provider)
-    entry = _entry(provider)
-    pool._entries = [entry]
-    cleared: list = []
-    monkeypatch.setattr(pool, sync_name, lambda e: e)  # no peer rotated in the meantime
-    monkeypatch.setattr(pool, clear_name, lambda e, exc: cleared.append(e.id))
-    monkeypatch.setattr(pool, "_quarantine_sources", lambda e, sources: None)
-    monkeypatch.setattr(cp.auth_mod, terminal_predicate, lambda exc: True)
-
-    with caplog.at_level(logging.INFO, logger=cp.logger.name):
-        result = pool._recover_failed_refresh(entry, RuntimeError("invalid_grant"))
-
-    assert result is None and cleared == ["e1"]
-    warnings = [r for r in caplog.records if r.levelno == logging.WARNING and "terminally invalid" in r.getMessage()]
-    assert len(warnings) == 1, [r.getMessage() for r in caplog.records]
-    assert expected_hint in warnings[0].getMessage()
-    assert "invalid_grant" in warnings[0].getMessage()
 
 
 def test_anthropic_dead_grant_warns_and_marks_dead(monkeypatch, caplog):
@@ -127,56 +95,3 @@ def _expired_invoke_jwt() -> str:
     return f"{_part({'alg': 'none'})}.{_part({'sub': 'u', 'scope': 'inference:invoke', 'exp': int(time.time()) - 60})}.sig"
 
 
-@pytest.mark.parametrize(
-    ("spaceshipresearch_state", "expected_code"),
-    [
-        (None, "spaceshipresearch_auth_missing"),
-        ({"client_id": "scout-cli", "scope": "inference:invoke", "access_token": _expired_invoke_jwt(),
-          "refresh_token": "", "expires_at": "2026-02-01T00:00:00+00:00"}, "spaceshipresearch_auth_missing_refresh_token"),
-    ],
-    ids=["not_logged_in", "expired_jwt_without_refresh_token"],
-)
-def test_spaceshipresearch_login_missing_refresh_failure_is_terminal(tmp_path, monkeypatch, caplog, spaceshipresearch_state, expected_code):
-    """A "needs a login" raise from the real resolver — no Portal login at all, or an unusable
-    access token with no refresh token to redeem — is terminal: retrying cannot succeed, so the row
-    leaves rotation with a WARNING naming the fix and the reason recorded, instead of an hour-long
-    bench with null error fields (#113718). Driven through ``_refresh_entry_impl`` against a temp
-    SCOUT_HOME so the production raise site's code is what reaches the classifier."""
-    monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
-    providers = {"spaceshipresearch": spaceshipresearch_state} if spaceshipresearch_state else {}
-    (tmp_path / "auth.json").write_text(json.dumps({"version": 1, "providers": providers}), encoding="utf-8")
-    pool = _pool("spaceshipresearch")
-    entry = _entry("spaceshipresearch", source="manual:device_code")
-    pool._entries = [entry]
-    cleared: list = []
-    monkeypatch.setattr(pool, "_clear_terminal_spaceshipresearch_state", lambda e, exc: cleared.append(e.id))
-    monkeypatch.setattr(pool, "_quarantine_sources", lambda e, sources: None)  # keep the row to inspect it
-
-    with caplog.at_level(logging.INFO, logger=cp.logger.name):
-        result = pool._refresh_entry_impl(entry, force=True)
-
-    assert result is None and cleared == ["e1"]
-    warnings = [r for r in caplog.records if r.levelno == logging.WARNING and "terminally invalid" in r.getMessage()]
-    assert len(warnings) == 1
-    assert "scout auth add spaceshipresearch" in warnings[0].getMessage()
-    row = pool._entries[0]
-    assert row.last_status == STATUS_DEAD
-    assert row.last_error_reason == expected_code and row.last_error_message  # no more null error fields
-
-
-def test_spaceshipresearch_transient_error_still_benched(monkeypatch, caplog):
-    """A failure that says nothing about the login stays transient: benched, not cleared."""
-    pool = _pool("spaceshipresearch")
-    entry = _entry("spaceshipresearch")
-    pool._entries = [entry]
-    cleared: list = []
-    benched: list = []
-    monkeypatch.setattr(pool, "_sync_spaceshipresearch_entry_from_auth_store", lambda e: e)
-    monkeypatch.setattr(pool, "_clear_terminal_spaceshipresearch_state", lambda e, exc: cleared.append(e.id))
-    monkeypatch.setattr(pool, "_mark_exhausted", lambda e, *a, **k: benched.append(e.id))
-
-    with caplog.at_level(logging.INFO, logger=cp.logger.name):
-        result = pool._recover_failed_refresh(entry, RuntimeError("boom"))
-
-    assert result is None and cleared == [] and benched == ["e1"]
-    assert not [r for r in caplog.records if r.levelno == logging.WARNING and "terminally invalid" in r.getMessage()]

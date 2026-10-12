@@ -3,8 +3,6 @@ import { useEffect, useState } from 'react'
 import { type I18nContextValue, useI18n } from '@/i18n'
 import { evaluateRuntimeReadiness, type RuntimeReadinessResult } from '@/lib/runtime-readiness'
 import { getStatus } from '@/scout'
-import { refreshFreeTierStatus, setFreeTierRoute } from '@/store/free-tier'
-import { $setupReadyTick } from '@/store/live-sync'
 import { dismissNotification, notify } from '@/store/notifications'
 import type { StatusResponse } from '@/types/scout'
 
@@ -56,22 +54,15 @@ export function useStatusSnapshot(
       // user is working in another app.
       document.visibilityState === 'visible' && document.hasFocus()
 
-    // Inference readiness + the free-tier verdict. Not on the periodic tick:
-    // both change only at seams the backend announces (`setup.ready` at boot)
-    // or that this window crosses (open, return from another app), so they
-    // run once per seam instead of every 60s.
+    // Inference readiness. Not on the periodic tick: it changes only at seams
+    // this window crosses (open, return from another app), so it runs once per
+    // seam instead of every 60s.
     const refreshReadiness = async () => {
       if (gatewayState !== 'open') {
         return
       }
 
-      // The free-tier verdict is a local, zero-network read that writes
-      // straight to its own store and swallows its failures — nothing here
-      // waits on it or reads the result.
-      const [inferenceResult] = await Promise.allSettled([
-        evaluateRuntimeReadiness(requestGateway),
-        refreshFreeTierStatus(requestGateway)
-      ])
+      const [inferenceResult] = await Promise.allSettled([evaluateRuntimeReadiness(requestGateway)])
 
       if (cancelled || inferenceResult.status !== 'fulfilled') {
         return
@@ -86,7 +77,6 @@ export function useStatusSnapshot(
         // became unconfigured. Keep the last authoritative result instead
         // of flashing "Inference not ready" during a gateway flap.
         setInferenceStatus(inference)
-        setFreeTierRoute(inference.freeTier)
       }
     }
 
@@ -144,19 +134,12 @@ export function useStatusSnapshot(
       }
     }
 
-    // `setup.ready` (routed by the gateway-event lifecycle handler for the
-    // active source only) says the boot bootstrap just settled the route: one
-    // readiness round now, so the chip/strip/onboarding move at once. Rides
-    // outside the status tick so it neither resets nor waits on the timer.
-    const unsubscribeSetupReady = $setupReadyTick.listen(() => void refreshReadiness())
-
     document.addEventListener('visibilitychange', onReturn)
     window.addEventListener('focus', onReturn)
     void refresh({ readiness: true })
 
     return () => {
       cancelled = true
-      unsubscribeSetupReady()
       document.removeEventListener('visibilitychange', onReturn)
       window.removeEventListener('focus', onReturn)
 

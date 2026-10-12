@@ -194,7 +194,6 @@ class TestSubprocessEnvironment:
         assert positions == sorted(positions)
 
 
-
 class TestToolSurfaceSwap:
     def test_legacy_browser_tools_hidden_in_cli_mode(self, monkeypatch):
         import tools.browser_tool as browser_tool
@@ -202,7 +201,6 @@ class TestToolSurfaceSwap:
         monkeypatch.setattr(browser_tool, "_is_browser_use_cli_mode", lambda: True)
         assert bt_install.check_browser_requirements() is False
         assert bt_install.check_browser_vision_requirements() is False
-
 
 
     def test_browser_exec_stripped_without_terminal(self, monkeypatch):
@@ -270,11 +268,10 @@ class TestVaultEgressRedaction:
         assert serialized.count("«redacted-vault-secret»") == 2
 
 
-
 class TestLegacyCloudMigration:
     """Pre-CLI direct-API Browser Use cloud configs (cloud_provider:
     "browser-use" + BROWSER_USE_API_KEY) auto-route to the CLI backend;
-    SpaceshipResearch-gateway users stay on the legacy provider path."""
+    Fixture Co-gateway users stay on the legacy provider path."""
 
     _LEGACY = {"browser": {"cloud_provider": "browser-use"}}
 
@@ -283,14 +280,6 @@ class TestLegacyCloudMigration:
         monkeypatch.setenv("BROWSER_USE_API_KEY", "bu-key")
         assert bu_cli.is_browser_use_cli_mode() is True
 
-    def test_gateway_config_stays_on_legacy_path(self, monkeypatch):
-        monkeypatch.setattr(
-            "scout_cli.config.read_raw_config",
-            lambda: {"browser": {"cloud_provider": "browser-use", "use_gateway": True}},
-        )
-        monkeypatch.setenv("BROWSER_USE_API_KEY", "bu-key")
-        monkeypatch.setattr(bu_cli, "_find_cli", lambda: None)
-        assert bu_cli.is_browser_use_cli_mode() is False
 
     def test_no_api_key_stays_on_legacy_path(self, monkeypatch):
         monkeypatch.setattr("scout_cli.config.read_raw_config", lambda: self._LEGACY)
@@ -523,42 +512,6 @@ class TestBackendCdpResolution:
         assert bu_cli._resolve_backend_cdp(env, "t1", session_name="r7k2") is None
         assert "BU_CDP_WS" not in env and "BU_CDP_URL" not in env
 
-    def test_picker_managed_selection_resolves_gateway_provider(self, monkeypatch):
-        """``cloud_provider: spaceshipresearch`` (the `scout tools` managed row) must resolve through the
-        provider: the picker never writes the legacy ``use_gateway`` flag, and the direct-API
-        branch leaves browser_exec with no CDP endpoint at all (#108310)."""
-        import tools.browser_tool as bt  # noqa: F401 — imported for parity with sibling tests
-
-        class _BUProvider:
-            name = "browser-use"
-
-        monkeypatch.setattr("tools.browser_tool_cdp._get_cdp_override", lambda: "")
-        monkeypatch.setattr(bt_cloud, "_get_cloud_provider", lambda: _BUProvider())
-        monkeypatch.setattr(
-            bt_session, "_get_session_info",
-            lambda task_id: {"cdp_url": "wss://gateway.example/cdp/managed"},
-        )
-        monkeypatch.setattr(bu_cli, "_read_browser_cfg", lambda: {"cloud_provider": "spaceshipresearch"})
-        env = {}
-        assert bu_cli._resolve_backend_cdp(env, "t1") is None
-        assert env["BU_CDP_WS"] == "wss://gateway.example/cdp/managed"
-
-    def test_legacy_use_gateway_flag_still_resolves_gateway_provider(self, monkeypatch):
-        """Regression guard for the pre-picker shape of the same selection."""
-        class _BUProvider:
-            name = "browser-use"
-
-        monkeypatch.setattr("tools.browser_tool_cdp._get_cdp_override", lambda: "")
-        monkeypatch.setattr(bt_cloud, "_get_cloud_provider", lambda: _BUProvider())
-        monkeypatch.setattr(
-            bt_session, "_get_session_info",
-            lambda task_id: {"cdp_url": "wss://gateway.example/cdp/legacy"},
-        )
-        monkeypatch.setattr(bu_cli, "_read_browser_cfg", lambda: {"use_gateway": True})
-        env = {}
-        assert bu_cli._resolve_backend_cdp(env, "t1") is None
-        assert env["BU_CDP_WS"] == "wss://gateway.example/cdp/legacy"
-
 
 class TestOwnTabPreamble:
     """Named sessions on SHARED browsers (a /browser connect CDP override) get the own-tab preamble
@@ -649,7 +602,7 @@ class TestProviderPickerIntegration:
 
         row = next(r for r in self._rows() if r.get("browser_backend"))
         config = {"browser": {"cloud_provider": "browserbase"}}
-        _write_provider_config(row, config, managed_feature=None)
+        _write_provider_config(row, config)
         assert config["browser"]["backend"] == "browser-use"
         assert config["browser"]["cloud_provider"] == "browserbase"
 
@@ -662,7 +615,7 @@ class TestProviderPickerIntegration:
             r for r in self._rows() if r.get("browser_provider") == "local"
         )
         config = {"browser": {"backend": "browser-use"}}
-        _write_provider_config(local_row, config, managed_feature=None)
+        _write_provider_config(local_row, config)
         assert config["browser"]["backend"] == "browser-use"
         assert config["browser"]["cloud_provider"] == "local"
 
@@ -870,7 +823,6 @@ class TestStepLabels:
         assert "new_tab" not in line
 
 
-
 class TestHeaderVariants:
 
     def test_text_only_header_teaches_text_workflow(self, monkeypatch):
@@ -900,8 +852,6 @@ class TestSkillTextDescription:
         overrides = bu_cli._dynamic_schema_overrides()
         assert overrides["description"].startswith(bu_cli._HEADER_BASE)
         assert overrides["description"].endswith(bu_cli._HELPERS_DIGEST)
-
-
 
 
 class TestBrowserExec:
@@ -944,8 +894,6 @@ class TestBrowserExec:
         assert result["success"] is False
         assert result["exit_code"] == 3
         assert "boom" in result["stderr"]
-
-
 
 
 class TestDefaultDowngradeNotice:
@@ -1122,7 +1070,7 @@ class TestLightpandaPickerRow:
         from scout_cli.tools_config import _write_provider_config
 
         config = {"browser": {"backend": "browser-use", "cloud_provider": "browserbase"}}
-        _write_provider_config(self._row("Lightpanda"), config, managed_feature=None)
+        _write_provider_config(self._row("Lightpanda"), config)
         assert config["browser"]["cloud_provider"] == "local"
         assert config["browser"]["engine"] == "lightpanda"
         assert config["browser"]["backend"] == "browser-use"
@@ -1131,7 +1079,7 @@ class TestLightpandaPickerRow:
         from scout_cli.tools_config import _write_provider_config
 
         config = {"browser": {"cloud_provider": "local", "engine": "lightpanda"}}
-        _write_provider_config(self._row("Local Browser"), config, managed_feature=None)
+        _write_provider_config(self._row("Local Browser"), config)
         assert config["browser"]["engine"] == "auto"
 
     def test_active_row_follows_engine(self):
@@ -1146,8 +1094,6 @@ class TestLightpandaPickerRow:
         assert _is_provider_active(local_row, default_cfg) is True
         cloud_cfg = {"browser": {"cloud_provider": "browserbase", "engine": "lightpanda"}}
         assert _is_provider_active(lp_row, cloud_cfg) is False
-
-
 
 
 class TestTimeoutProcessGroupKill:

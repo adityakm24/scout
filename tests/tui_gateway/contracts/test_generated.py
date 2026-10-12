@@ -44,7 +44,6 @@ _SIDE_AGENT = re.compile(r"_spawn_side_agent\((?:[^()]|\([^()]*\))*?\"([a-z_][a-
 _SUBAGENT_RELAY = re.compile(r"\"(subagent\.[a-z_]+)\"")
 _DESKTOP_UI_EMIT = re.compile(r"desktop_ui\.(?:emit|emit_or_error)\(\s*\"([a-z_][a-z0-9_.]*)\"")
 _BROKER_FRAME = re.compile(r"^FRAME_[A-Z_]+ = \"(browser\.controller\.[a-z_]+)\"", re.M)
-_SETUP_READY = re.compile(r"^SETUP_READY_EVENT = \"([a-z_.]+)\"", re.M)
 
 
 def _read(path: Path) -> str:
@@ -71,7 +70,6 @@ def emitted_event_names() -> set[str]:
     for src in _tool_module_candidates(REPO / "tools"):
         names.update(_DESKTOP_UI_EMIT.findall(_read(src)))
     names.update(_BROKER_FRAME.findall(_read(REPO / "gateway" / "browser_control_broker.py")))
-    names.update(_SETUP_READY.findall(_read(REPO / "scout_cli" / "free_tier_bootstrap.py")))
     return names
 
 

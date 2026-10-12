@@ -1400,38 +1400,6 @@ CONFIG_SCHEMA = ProviderConfigSchema(
         assert data["model"] == "moonshotai/kimi-k2.6"
 
 
-    def test_model_set_flips_a_stale_setup_record(self, monkeypatch):
-        """POST /api/model/set landed a provider on disk; the serve process's boot record
-        (``provider_configured: false`` since a failed boot-time mint) must follow at once, with
-        the ``setup.ready`` broadcast, or the web chat stays gated on "need setup" until a restart
-        (setup.status answers from the record)."""
-        from scout_cli import free_tier_bootstrap as fb
-
-        fb.reset_for_tests()
-        monkeypatch.setattr("scout_cli.model_cost_guard.expensive_model_warning", lambda *_a, **_k: None)
-        monkeypatch.setattr("agent.bedrock_adapter.has_aws_credentials", lambda: False)
-        broadcasts = []
-        monkeypatch.setattr(fb, "_broadcast", broadcasts.append)
-        with fb._lock:
-            fb._record = fb.SetupRecord(provider_configured=False, inference_provider="", free_tier_account=False,
-                                        has_identity=False, other_providers=False)
-            fb._started = True
-            fb._done.set()
-        try:
-            resp = self.client.post(
-                "/api/model/set",
-                json={"scope": "main", "provider": "custom", "model": "local-model",
-                      "base_url": "http://127.0.0.1:8081/v1", "api_key": "sk-local"},
-            )
-            assert resp.status_code == 200 and resp.json()["ok"] is True
-            record = fb.current_record()
-            assert record.provider_configured is True and record.other_providers is True
-            assert record.inference_provider == "custom"
-            assert broadcasts == [record]
-        finally:
-            fb.reset_for_tests()
-
-
     def test_reveal_env_var(self, tmp_path):
         """POST /api/env/reveal should return the real unredacted value."""
         from scout_cli.config import save_env_value
@@ -2907,20 +2875,11 @@ class TestNewEndpoints:
         """Each provider row carries a server-computed readiness `status`.
 
         Regression: the GUI pilled every zero-env-var row "Ready" — including
-        logged-out SpaceshipResearch Subscription rows, xAI TTS without Grok OAuth, and
-        never-installed KittenTTS/Piper. The endpoint now reports the honest
+        xAI TTS without Grok OAuth and never-installed KittenTTS/Piper. The endpoint now reports the honest
         state so keyless ≠ ready.
         """
         import scout_cli.tools_config as tools_config
-        from scout_cli.spaceshipresearch_account import ScoutPortalAccountInfo
 
-        # Logged out of Scout Portal → managed subscription rows need sign-in.
-        monkeypatch.setattr(
-            "scout_cli.spaceshipresearch_subscription.get_scout_portal_account_info",
-            lambda *a, **k: ScoutPortalAccountInfo(
-                logged_in=False, source="none", fresh=False, paid_service_access=None
-            ),
-        )
         # No xAI credentials → the Grok OAuth-backed row needs sign-in.
         import scout_cli.tools_config_post_setup as tools_config_post_setup
 
@@ -2939,48 +2898,11 @@ class TestNewEndpoints:
         # Genuinely-free keyless row stays Ready.
         assert by_name["Microsoft Edge TTS"]["status"] == "ready"
         # Keyless ≠ ready for gated rows:
-        assert by_name["SpaceshipResearch Subscription"]["status"] == "needs_auth"
         assert by_name["xAI TTS"]["status"] == "needs_auth"
         assert by_name["KittenTTS"]["status"] == "needs_setup"
         assert by_name["Piper"]["status"] == "needs_setup"
         # Keyed row with the key unset:
         assert by_name["ElevenLabs"]["status"] == "needs_keys"
-
-
-    def test_select_managed_spaceshipresearch_provider_reports_needs_spaceshipresearch_auth(self, monkeypatch):
-        """Selecting a managed SpaceshipResearch row while logged out flags needs_spaceshipresearch_auth.
-
-        Regression: the GUI PUT wrote browser.cloud_provider + use_gateway
-        but skipped the Portal entitlement handshake the CLI runs inline
-        (ensure_scout_portal_access) — so the row never activated and nothing
-        told the user to sign in. The endpoint now reports the entitlement
-        gap so the client can drive the existing SpaceshipResearch OAuth flow.
-        """
-        from scout_cli.spaceshipresearch_account import ScoutPortalAccountInfo
-
-        monkeypatch.setattr(
-            "scout_cli.spaceshipresearch_subscription.get_scout_portal_account_info",
-            lambda *a, **k: ScoutPortalAccountInfo(
-                logged_in=False, source="none", fresh=False, paid_service_access=None
-            ),
-        )
-
-        resp = self.client.put(
-            "/api/tools/toolsets/browser/provider",
-            json={"provider": "SpaceshipResearch Subscription (Browser Use cloud)"},
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["ok"] is True
-        assert data["needs_spaceshipresearch_auth"] is True
-        assert data["feature"] == "browser"
-        # The selection is still persisted — activation is what's gated.
-        # Managed rows store the single 'spaceshipresearch' provider string (the runtime
-        # maps it to the Browser Use cloud through the SpaceshipResearch Tool Gateway).
-        from scout_cli.config import load_config
-        cfg = load_config()
-        assert cfg["browser"]["cloud_provider"] == "spaceshipresearch"
-        assert "use_gateway" not in cfg["browser"]
 
 
     # -- Web capability split (search vs extract backends) ------------------
@@ -5278,7 +5200,7 @@ class TestHashedAssetCacheHeaders:
             "console.log('bundle');", encoding="utf-8"
         )
         (dist / "assets" / "index-abc123.css").write_text(
-            "body{background:url(/ds-assets/bg.png);"
+            "body{background:url(/assets/bg.png);"
             "font-family:url(/fonts-terminal/x.woff2)}",
             encoding="utf-8",
         )
@@ -5302,15 +5224,15 @@ class TestHashedAssetCacheHeaders:
         assert resp.status_code == 200
         assert resp.headers["cache-control"] == self._IMMUTABLE
 
-        # The proxy-prefix rewrite path (main's ds-assets/fonts-terminal
-        # handling) must survive the header change.
+        # The proxy-prefix rewrite path (assets/fonts-terminal handling)
+        # must survive the header change.
         prefixed = client.get(
             "/assets/index-abc123.css",
             headers={"X-Forwarded-Prefix": "/scout"},
         )
         assert prefixed.status_code == 200
         assert prefixed.headers["cache-control"] == self._IMMUTABLE
-        assert "url(/scout/ds-assets/bg.png)" in prefixed.text
+        assert "url(/scout/assets/bg.png)" in prefixed.text
         assert "url(/scout/fonts-terminal/x.woff2)" in prefixed.text
 
     def test_index_html_stays_no_store(self, tmp_path, monkeypatch):

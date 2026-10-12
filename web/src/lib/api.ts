@@ -118,7 +118,6 @@ const PROFILE_SCOPED_PREFIXES = [
   "/api/webhooks",
   "/api/ops",
   "/api/logs",
-  "/api/portal",
   // Pool entries live in the profile's home, and DELETE /api/credentials/pool/{provider}/{index}
   // is destructive — without this prefix the dashboard's remove button never named a profile and
   // a multi-profile host refused it outright.
@@ -1344,9 +1343,6 @@ export const api = {
   runCurator: () =>
     fetchJSON<ActionResponse>("/api/curator/run", { method: "POST" }),
 
-  // ── Admin: Portal ───────────────────────────────────────────────────
-  getPortal: () => fetchJSON<PortalStatus>("/api/portal"),
-
   // ── Admin: Diagnostics (backgrounded) ───────────────────────────────
   runPromptSize: () =>
     fetchJSON<ActionResponse>("/api/ops/prompt-size", { method: "POST" }),
@@ -1410,10 +1406,9 @@ export const api = {
 /** Identity payload returned by ``GET /api/auth/me`` (Phase 7).
  *
  * Returned by the dashboard's gated middleware when a valid session cookie
- * is attached. ``email`` and ``display_name`` are empty strings under the
- * Scout Portal contract V1 (the access token has no email/name claims —
- * see Contract Anchor C4 in the plan). The AuthWidget surfaces a
- * truncated ``user_id`` instead.
+ * is attached. ``email`` and ``display_name`` may be empty strings when the
+ * provider's access token carries no email/name claims; the AuthWidget then
+ * surfaces a truncated ``user_id`` instead.
  */
 export interface AuthMeResponse {
   user_id: string;
@@ -1897,20 +1892,6 @@ export interface CuratorStatus {
   archive_after_days: number | null;
 }
 
-export interface PortalFeature {
-  label: string;
-  state: string;
-}
-
-export interface PortalStatus {
-  logged_in: boolean;
-  portal_url: string | null;
-  inference_url: string | null;
-  provider: string;
-  subscription_url: string;
-  features: PortalFeature[];
-}
-
 export interface CheckpointSession {
   session: string;
   files: number;
@@ -1952,7 +1933,7 @@ export interface StatusResponse {
    * (public bind, no ``--insecure``). Read alongside ``auth_providers``
    * to render a "gated / loopback" badge. */
   auth_required?: boolean;
-  /** Phase 7: registered ``DashboardAuthProvider`` names (e.g. ``["spaceshipresearch"]``).
+  /** Phase 7: registered ``DashboardAuthProvider`` names (e.g. ``["github"]``).
    * Empty in loopback mode; empty + ``auth_required=true`` is a
    * fail-closed state (the dashboard will refuse to bind). */
   auth_providers?: string[];
@@ -2460,7 +2441,6 @@ export interface ToolsetProvider {
   tag: string;
   env_vars: ToolsetProviderEnvVar[];
   post_setup: string | null;
-  requires_spaceshipresearch_auth: boolean;
   is_active: boolean;
 }
 

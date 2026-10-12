@@ -1,7 +1,7 @@
-import { Select, SelectOption } from "@spaceshipresearch/ui/ui/components/select";
-import { Switch } from "@spaceshipresearch/ui/ui/components/switch";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
+import { Select, SelectOption } from "@/ui/components/select";
+import { Switch } from "@/ui/components/switch";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
 
 function FieldHint({ schema, schemaKey }: { schema: Record<string, unknown>; schemaKey: string }) {
   const keyPath = schemaKey.includes(".") ? schemaKey : "";

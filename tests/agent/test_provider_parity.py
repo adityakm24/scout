@@ -81,7 +81,7 @@ def _make_agent(monkeypatch, provider, api_mode="chat_completions", base_url="ht
     )
     if model:
         kwargs["model"] = model
-    elif provider == "spaceshipresearch":
+    elif provider == "fixtureco":
         kwargs["model"] = "gpt-5"
     return AIAgent(**kwargs)
 
@@ -270,12 +270,6 @@ class TestBuildApiKwargsOpenRouter:
         assert "extra_body" not in kwargs["extra_body"]
 
 
-
-
-
-
-
-
 class TestDeveloperRoleSwap:
     """GPT-5 and Codex models should get 'developer' instead of 'system' role."""
 
@@ -296,10 +290,6 @@ class TestDeveloperRoleSwap:
         assert kwargs["messages"][1]["role"] == "user"
 
 
-
-
-
-
 class TestBuildApiKwargsChatCompletionsServiceTier:
     """service_tier via request_overrides works on the chat_completions path."""
 
@@ -310,8 +300,6 @@ class TestBuildApiKwargsChatCompletionsServiceTier:
         messages = [{"role": "user", "content": "hi"}]
         kwargs = agent._build_api_kwargs(messages)
         assert kwargs["service_tier"] == "priority"
-
-
 
 
 class TestBuildApiKwargsKimiNoTemperatureOverride:
@@ -341,23 +329,6 @@ class TestBuildApiKwargsAIGateway:
         extra = kwargs.get("extra_body", {})
         assert "reasoning" in extra
         assert extra["reasoning"]["enabled"] is True
-
-
-
-class TestBuildApiKwargsScoutPortal:
-    def test_includes_spaceshipresearch_product_tags(self, monkeypatch):
-        from agent.portal_tags import scout_portal_tags
-        agent = _make_agent(
-            monkeypatch,
-            "spaceshipresearch",
-            base_url="https://inference-api.spaceshipresearch.com/v1",
-            model="gpt-5",
-        )
-        messages = [{"role": "user", "content": "hi"}]
-        kwargs = agent._build_api_kwargs(messages)
-        extra = kwargs.get("extra_body", {})
-        assert extra.get("tags") == scout_portal_tags(session_id=agent.session_id)
-
 
 
 class TestBuildApiKwargsCustomEndpoint:
@@ -433,7 +404,6 @@ class TestBuildApiKwargsCodex:
         assert kwargs["service_tier"] == "priority"
 
 
-
     def test_tools_converted_to_responses_format(self, monkeypatch):
         agent = _make_agent(monkeypatch, "openai-codex", api_mode="codex_responses",
                             base_url="https://chatgpt.com/backend-api/codex")
@@ -482,10 +452,6 @@ class TestChatMessagesToResponsesInput:
         assert fc_items[0]["call_id"] == "call_abc"
 
 
-
-
-
-
     def test_preflight_preserves_assistant_output_text(self, monkeypatch):
         """_preflight_codex_input_items must preserve output_text for assistant."""
         raw_input = [
@@ -517,9 +483,6 @@ class TestChatMessagesToResponsesInput:
 
 class TestChatContentToResponsesParts:
     """Unit tests for _chat_content_to_responses_parts role parameter (#15687)."""
-
-
-
 
 
     def test_assistant_role_with_mixed_input_output_text_types(self):
@@ -574,7 +537,6 @@ class TestNormalizeCodexResponse:
         assert msg.codex_reasoning_items[0]["id"] == "rs_456"
 
 
-
     def test_message_items_captured_with_id_and_phase(self, monkeypatch):
         """Exact message items (with id/phase) must be captured for cache replay."""
         response = SimpleNamespace(
@@ -601,7 +563,6 @@ class TestNormalizeCodexResponse:
         assert msg.codex_message_items[1]["id"] == "msg_def"
         assert msg.codex_message_items[1]["phase"] == "final_answer"
         assert msg.codex_message_items[1]["content"][0]["text"] == "Done!"
-
 
 
 class TestChatMessagesToResponsesInputMessageItems:
@@ -638,8 +599,7 @@ class TestChatMessagesToResponsesInputMessageItems:
         assert items == [{"role": "assistant", "content": "Hello world"}]
 
 
-
-# ── Chat completions response handling (OpenRouter/SpaceshipResearch) ─────────────────────
+# ── Chat completions response handling (OpenRouter/Fixture Co) ─────────────────────
 
 class TestBuildAssistantMessage:
     """Verify _build_assistant_message works for all provider response formats."""
@@ -703,7 +663,6 @@ class TestBuildAssistantMessage:
         ]
 
 
-
 # ── Auxiliary client provider resolution ─────────────────────────────────────
 
 class TestAuxiliaryClientProviderPriority:
@@ -717,21 +676,9 @@ class TestAuxiliaryClientProviderPriority:
         assert model == _OPENROUTER_MODEL
         assert "openrouter" in str(mock.call_args.kwargs["base_url"]).lower()
 
-    def test_spaceshipresearch_when_no_openrouter(self, monkeypatch):
-        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-        from agent.auxiliary_client import _SPACESHIPRESEARCH_MODEL, get_text_auxiliary_client
-        spaceshipresearch_auth = {
-            "access_token": _fake_invoke_jwt(),
-            "scope": "inference:invoke",
-        }
-        with patch("agent.auxiliary_client._read_spaceshipresearch_auth", return_value=spaceshipresearch_auth), \
-             patch("agent.auxiliary_client.OpenAI") as mock, \
-             patch("scout_cli.models.get_spaceshipresearch_recommended_aux_model", return_value=None):
-            client, model = get_text_auxiliary_client()
-        assert model == _SPACESHIPRESEARCH_MODEL
 
-    def test_custom_endpoint_when_no_spaceshipresearch(self, monkeypatch):
-        """Custom endpoint is used when no OpenRouter/SpaceshipResearch keys are available.
+    def test_custom_endpoint_when_no_fixtureco(self, monkeypatch):
+        """Custom endpoint is used when no OpenRouter/Fixture Co keys are available.
 
         Since the March 2026 config refactor, OPENAI_BASE_URL env var is no
         longer consulted — base_url comes from config.yaml via
@@ -740,7 +687,7 @@ class TestAuxiliaryClientProviderPriority:
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         monkeypatch.setenv("OPENAI_API_KEY", "local-key")
         from agent.auxiliary_client import get_text_auxiliary_client
-        with patch("agent.auxiliary_client._read_spaceshipresearch_auth", return_value=None), \
+        with \
              patch("agent.auxiliary_client._resolve_custom_runtime",
                    return_value=("http://localhost:1234/v1", "local-key", "openai-compatible")), \
              patch("agent.auxiliary_client.OpenAI") as mock:
@@ -760,7 +707,7 @@ class TestAuxiliaryClientProviderPriority:
         monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         from agent.auxiliary_client import get_text_auxiliary_client
-        with patch("agent.auxiliary_client._read_spaceshipresearch_auth", return_value=None), \
+        with \
              patch("agent.auxiliary_client._resolve_codex_credential_and_base",
                    return_value=("codex-tok", "https://chatgpt.com/backend-api/codex")), \
              patch("agent.auxiliary_client.OpenAI"):
@@ -779,14 +726,6 @@ class TestProviderRouting:
         agent.provider_sort = "throughput"
         kwargs = agent._build_api_kwargs([{"role": "user", "content": "hi"}])
         assert kwargs["extra_body"]["provider"]["sort"] == "throughput"
-
-
-
-
-
-
-
-
 
 
 # ── Codex reasoning items preflight tests ────────────────────────────────────

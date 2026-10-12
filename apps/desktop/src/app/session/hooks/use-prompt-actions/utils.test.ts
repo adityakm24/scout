@@ -457,7 +457,7 @@ describe('renderRpcResult', () => {
 
   describe('session.status', () => {
     it('passes through the multi-line plain-text output verbatim', () => {
-      const output = 'Scout TUI Status\n\nSession ID: s-1\nModel: spaceshipresearch-scout-3 (unknown)'
+      const output = 'Scout TUI Status\n\nSession ID: s-1\nModel: fixtureco-model-3 (unknown)'
       expect(renderRpcResult({ output }, 'status')).toBe(output)
     })
   })
@@ -471,15 +471,14 @@ describe('renderRpcResult', () => {
       )
     })
 
-    it('appends account_lines before credits_lines when present', () => {
+    it('appends account_lines when present', () => {
       const body = renderRpcResult(
         {
           calls: 1,
           input: 10,
           output: 20,
           total: 30,
-          account_lines: ['📈 Account limits', 'Provider: openai-codex (Plus)', 'Weekly: 12% used'],
-          credits_lines: ['SpaceshipResearch credits: 8,420 remaining', 'Resets: 2026-08-01']
+          account_lines: ['📈 Account limits', 'Provider: openai-codex (Plus)', 'Weekly: 12% used']
         },
         'usage'
       )
@@ -487,9 +486,7 @@ describe('renderRpcResult', () => {
       expect(body.split('\n').slice(1)).toEqual([
         '📈 Account limits',
         'Provider: openai-codex (Plus)',
-        'Weekly: 12% used',
-        'SpaceshipResearch credits: 8,420 remaining',
-        'Resets: 2026-08-01'
+        'Weekly: 12% used'
       ])
     })
   })

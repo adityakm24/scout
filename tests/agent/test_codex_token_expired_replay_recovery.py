@@ -83,14 +83,14 @@ def _recover(agent, err, retry, messages):
 def test_token_expired_strips_cached_reasoning_once_before_the_credential_path():
     agent, retry, messages = _Agent(), TurnRetryState(), _cached_history()
 
-    retried, _ = _recover(agent, _Codex401(), retry, messages)
+    retried = _recover(agent, _Codex401(), retry, messages)
 
     assert retried is True
     assert agent.refresh_calls == 0  # no refresh token burned on a session-state problem
     assert agent._codex_reasoning_replay_enabled is False
     assert not any("codex_reasoning_items" in m for m in messages)
     # A second identical 401 in the same turn is a real auth failure: refresh once, no second strip.
-    assert _recover(agent, _Codex401(), retry, messages) == (False, False)
+    assert _recover(agent, _Codex401(), retry, messages) is False
     assert agent.refresh_calls == 1
 
 
@@ -101,7 +101,7 @@ def test_token_expired_strips_cached_reasoning_once_before_the_credential_path()
 def test_token_expired_without_cached_reasoning_stays_on_auth_path(err, history):
     agent, retry = _Agent(), TurnRetryState()
 
-    assert _recover(agent, err, retry, history) == (False, False)
+    assert _recover(agent, err, retry, history) is False
     assert agent.refresh_calls == 1
     assert agent._codex_reasoning_replay_enabled is True
     assert retry.invalid_encrypted_content_retry_attempted is False
@@ -123,8 +123,6 @@ def test_pooled_token_expired_strips_cached_reasoning_before_benching_entries():
     agent._credential_pool = pool
     agent._recover_with_credential_pool = lambda **kw: recover_with_credential_pool(agent, **kw)
 
-    retried, recovered_with_pool = _recover(agent, _Codex401(), retry, messages)
-
-    assert (retried, recovered_with_pool) == (True, False)
+    assert _recover(agent, _Codex401(), retry, messages) is True
     assert not any("codex_reasoning_items" in m for m in messages)
     assert [e.last_status for e in pool.entries()] == [None, None]  # nobody benched

@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 import subprocess
 from typing import Dict, List, Optional
-from scout_cli.auth_constants import DEFAULT_SCOUT_PORTAL_URL
 
 logger = logging.getLogger("scout_cli.auth")
 
@@ -49,40 +48,29 @@ def _confirm_selection_guards(
 
 
 class _ModelPickerRows:
-    """Column-aligned picker rows (name + $/Mtok + SpaceshipResearch sale chrome).
-
-    Sale chrome is emitted as styled segments, not ANSI baked into one string — curses addnstr
-    would render escape bytes literally.
-    """
+    """Column-aligned picker rows (name + $/Mtok), emitted as styled segments rather than ANSI
+    baked into one string — curses addnstr would render escape bytes literally."""
 
     def __init__(
         self, all_models: List[str], pricing: Optional[Dict[str, Dict[str, str]]], *,
-        current_model: str, sale_chrome: bool, notes: Optional[Dict[str, str]] = None,
+        current_model: str, notes: Optional[Dict[str, str]] = None,
     ) -> None:
-        from scout_cli.models_pricing import _format_price_per_mtok, compute_sale_discount
+        from scout_cli.models_pricing import _format_price_per_mtok
         self.current_model = current_model
         # Per-model dim annotation (e.g. "usage credits"); the row stays selectable.
         self.notes = notes or {}
         self.has_pricing = bool(pricing and any(pricing.get(m) for m in all_models))
-        # Leave room for a leading "★ " on sale rows (SpaceshipResearch only).
-        name_pad = 3 if sale_chrome else 2
-        self.name_col = max((len(m) for m in all_models), default=0) + name_pad if self.has_pricing else 0
-        # (inp, out, cache, pct|None, was_inp, was_out)
-        self._price_cache: dict[str, tuple[str, str, str, int | None, str, str]] = {}
+        self.name_col = max((len(m) for m in all_models), default=0) + 2 if self.has_pricing else 0
+        # (inp, out, cache)
+        self._price_cache: dict[str, tuple[str, str, str]] = {}
         self.price_col = 3  # minimum width
         self.cache_col = 0  # only set if any model has cache pricing
         self.has_cache = False
-        self.any_on_sale = False
         if not self.has_pricing:
             return
 
-        def _was(raw: str) -> str:
-            return _format_price_per_mtok(raw) if raw != "" else "?"
-
         for mid in all_models:
             p = pricing.get(mid)  # type: ignore[union-attr]
-            pct: int | None = None
-            was_inp = was_out = ""
             inp, out, cache = "", "", ""
             if p:
                 inp = _format_price_per_mtok(p.get("prompt", ""))
@@ -91,44 +79,24 @@ class _ModelPickerRows:
                 cache = _format_price_per_mtok(cache_read) if cache_read else ""
                 if cache:
                     self.has_cache = True
-                sale = compute_sale_discount(p.get("prompt", ""), p.get("completion", ""), p.get("original")) if sale_chrome else None
-                if sale is not None:
-                    self.any_on_sale = True
-                    pct, was_prompt_raw, was_out_raw = sale
-                    # Natively-free models (no gateway original) carry empty was_* raws — leave
-                    # them empty so the row shows bare "-100%" with no "was ?/?" suffix.
-                    if was_prompt_raw != "" or was_out_raw != "":
-                        was_inp, was_out = _was(was_prompt_raw), _was(was_out_raw)
-            self._price_cache[mid] = (inp, out, cache, pct, was_inp, was_out)
+            self._price_cache[mid] = (inp, out, cache)
             self.price_col = max(self.price_col, len(inp), len(out))
             self.cache_col = max(self.cache_col, len(cache))
         if self.has_cache:
             self.cache_col = max(self.cache_col, 5)  # minimum: "Cache" header
 
     def segments(self, mid: str) -> list[tuple[str, str | None]]:
-        """Build a rich radiolist row: yellow ★/% , dim was, plain prices."""
+        """Build a rich radiolist row: name, plain prices, dim note."""
         current = [(_CURRENT_SUFFIX, None)] if mid == self.current_model else []
         note = [(f"  · {self.notes[mid]}", "dim")] if self.notes.get(mid) else []
         if not self.has_pricing:
             return [(mid, None), *note, *current]
 
-        inp, out, cache, pct, was_inp, was_out = self._price_cache.get(mid, ("", "", "", None, "", ""))
-        on_sale = pct is not None
-        # Reserve 2 columns for "★ " so sale and non-sale names share alignment.
-        if on_sale:
-            segs: list[tuple[str, str | None]] = [("★ ", "yellow"), (f"{mid:<{self.name_col - 2}}", None)]
-        else:
-            segs = [(f"{mid:<{self.name_col}}", None)]
-
+        inp, out, cache = self._price_cache.get(mid, ("", "", ""))
         price_part = f" {inp:>{self.price_col}}  {out:>{self.price_col}}"
         if self.has_cache:
             price_part += f"  {cache:>{self.cache_col}}"
-        segs.append((price_part, None))
-        if on_sale:
-            segs.append((f"  -{pct}%", "yellow"))
-            if was_inp or was_out:
-                segs.append((f"  was {was_inp}/{was_out}", "dim"))
-        return segs + note + current
+        return [(f"{mid:<{self.name_col}}", None), (price_part, None), *note, *current]
 
     def label(self, mid: str) -> str:
         return "".join(text for text, _style in self.segments(mid))
@@ -145,27 +113,20 @@ class _ModelPickerRows:
                 header += f"  {'Cache':>{self.cache_col}}"
             # Legend lives on the column-header line so it reads as a key, not a fake menu row.
             title += header + "  $/Mtok"
-            if self.any_on_sale:
-                title += "  ★ = on sale"
         return title
 
 
 def _prompt_model_selection(
     model_ids: List[str], current_model: str = "",
     pricing: Optional[Dict[str, Dict[str, str]]] = None,
-    unavailable_models: Optional[List[str]] = None, portal_url: str = "",
-    unavailable_message: str = "", confirm_provider: str = "", confirm_base_url: str = "",
+    confirm_provider: str = "", confirm_base_url: str = "",
     confirm_api_key: str = "", notes: Optional[Dict[str, str]] = None,
 ) -> Optional[str]:
     """Interactive model picker; current_model listed first. Returns the chosen model ID or None.
 
-    With *pricing* (``{model_id: {prompt, completion}}``) a compact price column is shown; models in
-    *unavailable_models* render grayed out and unselectable with an upgrade link to *portal_url*.
+    With *pricing* (``{model_id: {prompt, completion}}``) a compact price column is shown.
     """
     from scout_cli.cli_output import line_input
-    _unavailable = unavailable_models or []
-    # Sale chrome is Scout Portal-only, even if pricing.original is present for another provider.
-    sale_chrome = (confirm_provider or "").strip().lower() == "spaceshipresearch"
 
     def _confirmed_selection(mid: str) -> Optional[str]:
         if not mid:
@@ -189,13 +150,8 @@ def _prompt_model_selection(
         ([current_model] if current_model and current_model in model_ids else []) + list(model_ids)
     ))
 
-    # All models for column-width computation (selectable + unavailable)
-    rows = _ModelPickerRows(ordered + list(_unavailable), pricing, current_model=current_model, sale_chrome=sale_chrome, notes=notes)
-    _DIM = "\033[2m"
-    _RESET = "\033[0m"
-
+    rows = _ModelPickerRows(ordered, pricing, current_model=current_model, notes=notes)
     menu_title = rows.menu_title()
-    _upgrade_url = (portal_url or DEFAULT_SCOUT_PORTAL_URL).rstrip("/")
     n = len(ordered)
 
     # Try arrow-key menu first, fall back to number input.
@@ -203,15 +159,8 @@ def _prompt_model_selection(
         from scout_cli.curses_ui import curses_radiolist
         choices = [rows.segments(mid) for mid in ordered] + [_CUSTOM_LABEL, _SKIP_LABEL]
 
-        unavailable_footer = unavailable_message.strip()
-        if not unavailable_footer and _unavailable:
-            unavailable_footer = f"Upgrade at {_upgrade_url} for paid models"
-
-        # Header/legend + unavailable block go in the description so they survive the curses clear.
+        # Header/legend go in the description so they survive the curses clear.
         desc_lines: list[str] = menu_title.split("\n", 1)[1].splitlines() if rows.has_pricing else []
-        if _unavailable:
-            desc_lines.extend(f"   {rows.label(mid)}" for mid in _unavailable)
-            desc_lines.append(f"  ── {unavailable_footer} ──")
 
         # Search haystack = label + aliases for brand-less wire ids (Kimi `k3` ↔ "kimi"); skip when
         # model_search_text adds nothing beyond the bare id.
@@ -242,25 +191,15 @@ def _prompt_model_selection(
     except (ImportError, NotImplementedError, OSError, subprocess.SubprocessError):
         pass
 
-    # Fallback: numbered list (ANSI colors for sale chrome)
+    # Fallback: numbered list
     from scout_cli.curses_ui import format_radio_item_ansi
-    from scout_cli.colors import Colors, color
     for line in menu_title.splitlines():
-        print(line.replace("★", color("★", Colors.YELLOW), 1) if "★" in line else line)
+        print(line)
     num_width = len(str(n + 2))
     for i, mid in enumerate(ordered, 1):
         print(f"  {i:>{num_width}}. {format_radio_item_ansi(rows.segments(mid))}")
     print(f"  {n + 1:>{num_width}}. {_CUSTOM_LABEL}")
     print(f"  {n + 2:>{num_width}}. {_SKIP_LABEL}")
-
-    if _unavailable:
-        unavailable_footer = unavailable_message.strip() or (
-            f"Unavailable models (requires paid tier — upgrade at {_upgrade_url})"
-        )
-        print()
-        print(f"  {_DIM}── {unavailable_footer} ──{_RESET}")
-        for mid in _unavailable:
-            print(f"  {'':>{num_width}}  {_DIM}{rows.label(mid)}{_RESET}")
     print()
 
     while True:

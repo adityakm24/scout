@@ -137,7 +137,7 @@ def test_strip_helper_drops_device_code_blocks_and_reports(tmp_path):
     pdir.mkdir()
     (pdir / "auth.json").write_text(json.dumps({
         "version": 1,
-        "providers": {"openai-codex": {"access_token": "a", "refresh_token": "r"}, "spaceshipresearch": {"agent_key": "k"}},
+        "providers": {"openai-codex": {"access_token": "a", "refresh_token": "r"}, "fixtureco": {"agent_key": "k"}},
         "credential_pool": {
             "xai-oauth": [{"id": "x", "auth_type": "oauth", "access_token": "t", "refresh_token": "r"}],
             "anthropic": [
@@ -152,60 +152,7 @@ def test_strip_helper_drops_device_code_blocks_and_reports(tmp_path):
     assert summary["providers"] == ["openai-codex"]
     assert "xai-oauth" not in store["credential_pool"]
     assert [e["id"] for e in store["credential_pool"]["anthropic"]] == ["key"]
-    assert "openai-codex" not in store["providers"] and "spaceshipresearch" in store["providers"]
-
-
-def test_strip_helper_drops_cloned_spaceshipresearch_refresh_grant(tmp_path, fleet):
-    """SpaceshipResearch refresh tokens rotate on use: a cloned pool row or providers block is a fork (#121649).
-
-    agent_key-only spaceshipresearch rows carry no single-use grant and must survive both strip and heal.
-    """
-    from agent.credential_pool import load_pool
-    from scout_cli.auth import heal_forked_single_use_oauth_grants, strip_cloned_single_use_oauth_grants
-    grant = {"access_token": "AT1", "refresh_token": "RT1", "agent_key": "AK"}
-    root_store = json.loads((fleet["root"] / "auth.json").read_text())
-    root_store["providers"]["spaceshipresearch"] = dict(grant)
-    (fleet["root"] / "auth.json").write_text(json.dumps(root_store))
-    pdir = _profile(fleet, "nousstrip")
-    ak_row = {"id": "ak", "source": "device_code", "auth_type": "oauth", "agent_key": "PAK"}
-    (pdir / "auth.json").write_text(json.dumps({
-        "version": 1,
-        "providers": {"spaceshipresearch": dict(grant)},
-        "credential_pool": {"spaceshipresearch": [dict(grant, id="n", source="device_code", auth_type="oauth"), ak_row]},
-    }))
-    summary = strip_cloned_single_use_oauth_grants(pdir)
-    store = json.loads((pdir / "auth.json").read_text())
-    assert (summary["pool"], summary["providers"]) == (["spaceshipresearch"], ["spaceshipresearch"])
-    assert store["credential_pool"]["spaceshipresearch"] == [ak_row] and "spaceshipresearch" not in store["providers"]
-    # Mixed shape: the surviving ak row keeps the profile "owning" spaceshipresearch, so the next load must
-    # not re-seed root's single-use RT from the global-root providers fallback (fork again).
-    fleet["use"](pdir)
-    load_pool("spaceshipresearch")
-    rows = json.loads((pdir / "auth.json").read_text())["credential_pool"]["spaceshipresearch"]
-    assert all(row.get("refresh_token") != "RT1" for row in rows), rows
-
-    # Heal: a fork living only in the providers block (flat spaceshipresearch tokens, shared RT) is dropped.
-    (fleet["root"] / "auth.json").write_text(json.dumps({"version": 1, "providers": {"spaceshipresearch": dict(grant)}}))
-    kid = _profile(fleet, "nousfork")
-    (kid / "auth.json").write_text(json.dumps({"version": 1, "providers": {"spaceshipresearch": dict(grant)}}))
-    fleet["use"](kid)
-    assert heal_forked_single_use_oauth_grants("spaceshipresearch")["providers_block"] is True
-    assert "spaceshipresearch" not in json.loads((kid / "auth.json").read_text())["providers"]
-
-    # Heal: an agent_key-only profile row that copied root's id (and looks "fresher") is not a
-    # fork; heal_pool_rows must keep it rather than match it to root's refresh-bearing row.
-    rrow = dict(grant, id="r1", source="device_code", auth_type="oauth",
-                last_refresh="2026-01-01T00:00:00+00:00")
-    (fleet["root"] / "auth.json").write_text(json.dumps({"version": 1, "credential_pool": {"spaceshipresearch": [rrow]}}))
-    akid = _profile(fleet, "nousakid")
-    ak_copied = {"id": "r1", "source": "device_code", "auth_type": "oauth", "access_token": "",
-                 "agent_key": "PAK", "last_refresh": "2026-06-01T00:00:00+00:00"}
-    (akid / "auth.json").write_text(json.dumps({"version": 1, "credential_pool": {"spaceshipresearch": [ak_copied]}}))
-    fleet["use"](akid)
-    heal_forked_single_use_oauth_grants("spaceshipresearch")
-    assert json.loads((akid / "auth.json").read_text())["credential_pool"]["spaceshipresearch"] == [ak_copied]
-    root_rows = json.loads((fleet["root"] / "auth.json").read_text())["credential_pool"]["spaceshipresearch"]
-    assert [(r["id"], r.get("refresh_token"), r.get("agent_key")) for r in root_rows] == [("r1", "RT1", "AK")]
+    assert "openai-codex" not in store["providers"] and "fixtureco" in store["providers"]
 
 
 def test_strip_helper_is_a_noop_without_credentials(tmp_path):
@@ -745,8 +692,6 @@ def test_heal_leaves_an_aliased_anthropic_singleton_alone(fleet):
     assert (root / ".anthropic_oauth.json").read_text() == before
 
 
-
-
 # ── E. the clean mark outlives the process ──────────────────────────────
 #
 # The in-memory mark only silences the heal for one process, so every fresh
@@ -762,8 +707,6 @@ def _new_process(auth_mod):
     auth_mod._global_auth_store_cache = None
 
 
-
-
 def _kid_with_api_key_only(fleet, name="kid"):
     """Profile whose store exists and is genuinely fork-free, so the heal has
     to run its locked body to find that out (not the no-files fast path)."""
@@ -777,8 +720,6 @@ def _kid_with_api_key_only(fleet, name="kid"):
         }]},
     }))
     return pdir
-
-
 
 
 def test_persisted_mark_still_re_heals_when_the_root_store_gains_a_grant(fleet):
@@ -823,7 +764,6 @@ def test_persisted_mark_still_re_heals_when_the_root_store_gains_a_grant(fleet):
     _new_process(auth_mod)
     assert auth_mod.heal_forked_single_use_oauth_grants("anthropic") is None
     assert grants._oauth_heal_clean_mark_path().read_text() != marked
-
 
 
 # ── G. token generation is the authority boundary (#120815) ─────────────

@@ -20,9 +20,9 @@ function registryFor(source: RegistryConnection): ConnectionRegistry {
 }
 
 describe('primary-remote descriptor reuse keeps profile scope', (): void => {
-  it.each(['remote', 'cloud'] as const)(
+  it.each(['remote'] as const)(
     'reuses %s identity and routes each caller without mutating the primary',
-    async (kind: 'remote' | 'cloud'): Promise<void> => {
+    async (kind: 'remote'): Promise<void> => {
       const source: RegistryConnection = {
         id: 'shared',
         kind,
@@ -35,7 +35,7 @@ describe('primary-remote descriptor reuse keeps profile scope', (): void => {
 
       const descriptor: LiveDescriptor = {
         mode: 'remote',
-        remoteKind: kind === 'remote' ? 'url' : 'cloud',
+        remoteKind: 'url',
         baseUrl: source.url!,
         wsUrl: 'wss://gateway.example/ws?ticket=live',
         authMode: 'token'

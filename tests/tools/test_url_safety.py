@@ -350,7 +350,7 @@ class TestAllowPrivateUrlsIntegration:
     @pytest.mark.parametrize("ip, url", [
         ("192.168.1.1", "http://router.local"),
         # 198.18.x.x (benchmark / OpenWrt proxy range) must pass too
-        ("198.18.23.183", "https://spaceshipresearch.com"),
+        ("198.18.23.183", "https://fixtureco.example"),
     ])
     def test_private_ip_allowed_when_toggle_on(self, monkeypatch, ip, url):
         monkeypatch.setenv("SCOUT_ALLOW_PRIVATE_URLS", "true")

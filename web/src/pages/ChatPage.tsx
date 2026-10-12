@@ -22,8 +22,8 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
-import { Typography } from "@spaceshipresearch/ui/ui/components/typography/index";
+import { Button } from "@/ui/components/button";
+import { Typography } from "@/ui/components/typography";
 import { cn } from "@/lib/utils";
 import { Copy, PanelRight, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -1853,7 +1853,7 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
           role="complementary"
           aria-label={modelToolsLabel}
           className={cn(
-            "font-mondwest fixed top-0 right-0 z-[60] flex h-dvh max-h-dvh w-64 min-w-0 flex-col antialiased",
+            "font-display fixed top-0 right-0 z-[60] flex h-dvh max-h-dvh w-64 min-w-0 flex-col antialiased",
             "border-l border-current/20 text-midground",
             "bg-background-base/95",
             "transition-transform duration-200 ease-out",
@@ -1871,7 +1871,7 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
             )}
           >
             <Typography
-              mondwest
+              display
               className="text-display font-bold text-[1.125rem] leading-[0.95] tracking-[0.0525rem] text-midground"
             >
               {t.app.modelToolsSheetTitle}

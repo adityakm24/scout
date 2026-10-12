@@ -18,7 +18,7 @@ from scout_cli.models import provider_label
 from scout_cli.runtime_provider import resolve_requested_provider
 from scout_cli.vercel_auth import describe_vercel_auth
 from scout_cli.status_auth import (  # renderers wired into _SECTIONS below
-    _render_api_keys, _render_apikey_providers, _render_auth_providers, _render_spaceshipresearch_gateway)
+    _render_api_keys, _render_apikey_providers, _render_auth_providers)
 from scout_constants import OPENROUTER_MODELS_URL
 
 
@@ -353,16 +353,14 @@ def _render_footer(ctx):
 
 # Print order of `scout status`; each renderer takes the shared _StatusContext.
 _SECTIONS = (
-    _render_header, _render_environment, _render_api_keys, _render_auth_providers, _render_spaceshipresearch_gateway,
+    _render_header, _render_environment, _render_api_keys, _render_auth_providers,
     _render_apikey_providers, _render_terminal, _render_platforms, _render_gateway, _render_cron,
     _render_sessions, _render_deep, _render_footer)
 
 
 def show_status(args):
     """Show status of all Scout Agent components."""
-    # Shared by section renderers: config, --deep, and the SpaceshipResearch login facts Auth Providers derives
-    # for the later SpaceshipResearch Tool Gateway section.
-    ctx = SimpleNamespace(deep=getattr(args, 'deep', False), config={}, spaceshipresearch_logged_in=False,
-                          spaceshipresearch_inference_present=False, spaceshipresearch_account_info=None)
+    # Shared by section renderers: config and --deep.
+    ctx = SimpleNamespace(deep=getattr(args, 'deep', False), config={})
     for render in _SECTIONS:
         render(ctx)

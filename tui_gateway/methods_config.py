@@ -29,8 +29,7 @@ _profile_scoped = _registry.profile_scoped
 # * the first caller submits the probe and waits a bounded budget;
 # * an overlapping poll for a still-running probe waits a short join grace for
 #   it — the Desktop fires setup.status + setup.runtime_check from independent
-#   consumers at the same seam (boot, the post-assignment ``setup.ready``
-#   broadcast), and answering the retryable error AT ONCE made both legs of
+#   consumers at the same seam (boot, a provider assignment), and answering the retryable error AT ONCE made both legs of
 #   one consumer transiently unknown, which the onboarding gate read as
 #   not-ready and the overlay never closed. Fast (config-read) probes settle
 #   well inside the grace, so an overlapping poll reads the shared result; a
@@ -56,10 +55,6 @@ _READINESS_SHARE_WAIT_SECONDS = 4.0
 # Kept well under a second: a joiner occupies its shared RPC worker for at most
 # the grace, so overlapping polls still cannot starve the pool (#65151).
 _READINESS_JOIN_GRACE_SECONDS = 0.5
-# setup.status's probe legitimately blocks on the boot bootstrap's record
-# (free_tier_bootstrap.SETUP_READY_WAIT_SECONDS = 8s): its join budget must
-# cover that wait or every boot poll would answer the retryable error.
-_READINESS_STATUS_SHARE_WAIT_SECONDS = 12.0
 # Retryable-transient code for "the probe is still running / outlived its
 # budget"; the client treats an errored runtime_check as unknown readiness.
 _READINESS_IN_PROGRESS_ERR = 5097
@@ -320,8 +315,8 @@ def _readiness_share(rid, key, run_probe, wait_seconds):
 
     The first caller submits the probe and waits up to ``wait_seconds``; a caller that finds a
     still-running probe waits the short join grace for it first — the Desktop fires
-    setup.status + setup.runtime_check from independent consumers at the same seam (boot, the
-    post-assignment ``setup.ready`` broadcast), and answering the retryable error at once made
+    setup.status + setup.runtime_check from independent consumers at the same seam (boot, a
+    provider assignment), and answering the retryable error at once made
     both legs of one consumer transiently unknown, which its onboarding gate read as not-ready.
     Fast (config-read) probes settle well inside the grace, so an overlapping poll reads the
     shared result; one that outlives the grace answers a retryable error, freeing its shared RPC
@@ -381,42 +376,16 @@ def _readiness_check(rid, params, probe, *, probe_key, wait_seconds):
 
 @method("setup.status")
 def _(rid, params: dict) -> dict:
-    """Loose provider check; ``profile`` (optional) scopes it to that profile's home.
-
-    For the launch profile the answer is the boot bootstrap's record (``free_tier_bootstrap``):
-    the call blocks up to ``SETUP_READY_WAIT_SECONDS`` for it, so a client's first poll lands after
-    the free-tier identity exists (or has been refused) rather than racing the mint. A record that
-    says ``False`` is reconciled with the config files first (``reconcile_record``): a provider
-    added after boot — the Models page, a picker key, ``scout setup`` from a shell — flips it
-    without a restart. If the record
-    is still missing after the wait, or a named profile is asked about, today's live probe answers.
-    The record's fields ride along additively (``ready``, ``free_tier_account``, ``free_tier_route``,
-    ``other_providers``)."""
+    """Loose provider check; ``profile`` (optional) scopes it to that profile's home. ``ready`` is
+    always true: nothing has to settle before the answer is final."""
     try:
-        from scout_cli.anon_auth import free_tier_route
         from scout_cli.main import _has_any_provider_configured
-        from scout_cli.free_tier_bootstrap import wait_for_record
 
         def probe(profile, scoped):
-            record = None if profile else wait_for_record()
-            if record is None:
-                # ``ready`` = this process's boot bootstrap has settled (a named profile has no
-                # record of its own; the launch record says whether the free tier is minted).
-                # Since one host backend serves every profile (#118246), the desktop's
-                # setup-profile probe lands here, and its kickoff requires ``ready``.
-                launch = wait_for_record() if profile else None
-                return {"provider_configured": bool(_has_any_provider_configured(strict_profile_scope=bool(profile))),
-                        **({"ready": True, "free_tier_account": launch.free_tier_account,
-                            "free_tier_route": free_tier_route()} if launch is not None else {}),
-                        **scoped}
-            # ``failure_fields`` rides along only when the free-tier mint did not happen: the code,
-            # the sentence, and whether / when a retry can succeed (``free_tier.provision``).
-            return {"provider_configured": record.provider_configured, "ready": True,
-                    "free_tier_account": record.free_tier_account, "free_tier_route": record.free_tier_route,
-                    "other_providers": record.other_providers,
-                    "inference_provider": record.inference_provider, **record.failure_fields(), **scoped}
+            return {"provider_configured": bool(_has_any_provider_configured(strict_profile_scope=bool(profile))),
+                    "ready": True, **scoped}
         return _readiness_check(rid, params, probe, probe_key="status",
-                                wait_seconds=_READINESS_STATUS_SHARE_WAIT_SECONDS)
+                                wait_seconds=_READINESS_SHARE_WAIT_SECONDS)
     except Exception as e:
         return _err(rid, 5016, str(e))
 
@@ -459,59 +428,10 @@ def _(rid, params: dict) -> dict:
             if not (callable(api_key) or api_key_text in {"aws-sdk", "no-key-required"}
                     or has_usable_secret(api_key_text) or bool(runtime.get("command"))):
                 return fail(f"No usable credentials found for {provider}.", runtime.get("source"))
-            from scout_cli.anon_auth import route_is_welcome_host
-            # free_tier_route is keyed on the SELECTED route (the welcome host serves only spaceshipresearch/welcome), not
-            # on profile state: a paid SpaceshipResearch key beside a free-tier identity must not read as free.
             return {"ok": True, "provider": runtime.get("provider"), "model": model,
-                    "source": runtime.get("source"),
-                    "free_tier_route": provider == "spaceshipresearch" and route_is_welcome_host(runtime.get("base_url")),
-                    **scoped}
+                    "source": runtime.get("source"), **scoped}
         return _readiness_check(rid, params, probe, probe_key=f"runtime:{requested or ''}",
                                 wait_seconds=_READINESS_SHARE_WAIT_SECONDS)
-    except Exception as e:
-        return _ok(rid, {"ok": False, "error": str(e)})
-
-
-def _safe_client_label(label: str) -> str:
-    """Alnum/._- () only, ≤64 chars, dot-runs and leading dots collapsed (no traversal shapes)."""
-    safe = "".join(ch for ch in label if ch.isalnum() or ch in "._- ()").strip()[:64]
-    while ".." in safe:
-        safe = safe.replace("..", ".")
-    return safe.lstrip(".").strip()
-
-
-@method("diagnostics.share_spaceshipresearch")
-def _(rid, params: dict) -> dict:
-    """Upload a redacted debug bundle to SpaceshipResearch-internal diagnostics storage — same collection +
-    force-redaction pipeline as ``scout debug share --spaceshipresearch``; redaction is NOT client-controllable
-    and consent lives with the CALLER (privacy notice first). Structured ``ok``/``error`` envelope so
-    upload failures render inline. Optional: ``error_context`` (-> ``error-context.txt``),
-    ``extra_files`` ({label -> text}), ``log_lines`` (default 200); all force-redacted."""
-    try:
-        from scout_cli.debug import _redact_log_text, build_spaceshipresearch_bundle, collect_share_bundle
-        from scout_cli.diagnostics_upload import share_to_spaceshipresearch
-        log_lines = params.get("log_lines")
-        if not isinstance(log_lines, int) or not (10 <= log_lines <= 2000):
-            log_lines = 200
-        bundle = collect_share_bundle(log_lines=log_lines, redact=True)
-        # Client text goes through the SAME upload-safe redactor as backend logs (force secret
-        # redaction + email masking), never the weaker bare secret pass.
-        error_context = params.get("error_context")
-        if isinstance(error_context, str) and error_context.strip():
-            bundle["error-context.txt"] = _redact_log_text(error_context.strip()[:8_000])
-        # Bounded: at most 4 files, 512KB each, sanitized labels — not an arbitrary upload surface.
-        extra_files = params.get("extra_files")
-        for label, text in list(extra_files.items())[:4] if isinstance(extra_files, dict) else ():
-            safe_label = _safe_client_label(label) if isinstance(label, str) else ""
-            if safe_label and isinstance(text, str) and text.strip():
-                bundle[f"client/{safe_label}"] = _redact_log_text(text[:524_288])
-        res = share_to_spaceshipresearch(build_spaceshipresearch_bundle(bundle, redact=True))
-        view_url = res.get("viewUrl") or res.get("view_url")
-        upload_id = res.get("id")
-        if not view_url and not upload_id:  # an upload the user can't reference is useless to support
-            return _ok(rid, {"ok": False, "error": "upload succeeded but returned no view URL or id"})
-        return _ok(rid, {"ok": True, "view_url": view_url, "upload_id": upload_id,
-                         "expires_at": res.get("expiresAt") or res.get("expires_at")})
     except Exception as e:
         return _ok(rid, {"ok": False, "error": str(e)})
 

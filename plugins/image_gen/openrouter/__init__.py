@@ -1,10 +1,10 @@
-"""OpenRouter-compatible image generation backend (OpenRouter + Scout Portal).
+"""OpenRouter-compatible image generation backend.
 
-Both speak the OpenAI-style ``/chat/completions`` image protocol (``modalities:
+Speaks the OpenAI-style ``/chat/completions`` image protocol (``modalities:
 ["image","text"]``, references as ``image_url`` parts, output in
-``choices[0].message.images[].image_url.url``); only ``(base_url, api_key)`` differs,
-via :func:`scout_cli.runtime_provider.resolve_runtime_provider`. OpenRouter alone also
-has the Dedicated Image API (``POST /images/generations``, own catalog, exact ratios,
+``choices[0].message.images[].image_url.url``); ``(base_url, api_key)`` come from
+:func:`scout_cli.runtime_provider.resolve_runtime_provider`. OpenRouter also has the
+Dedicated Image API (``POST /images/generations``, own catalog, exact ratios,
 up to 16 references) — see :func:`_select_surface`.
 """
 
@@ -171,7 +171,7 @@ _IMAGE_API_INTS = (
 
 _ATTRIBUTION_HEADERS = {
     "Content-Type": "application/json",
-    # OpenRouter attribution headers (harmless against Scout Portal).
+    # OpenRouter attribution headers.
     "HTTP-Referer": "https://github.com/adityakm24/scout",
     "X-Title": "Scout Agent",
 }
@@ -500,8 +500,8 @@ def _image_api_extra(
 
 
 class OpenRouterCompatImageProvider(ImageGenProvider):
-    """One instance per backend (OpenRouter, Scout Portal); they differ only in the runtime
-    provider supplying ``(base_url, api_key)``, the config namespace, and Image API support."""
+    """One instance per OpenRouter-compatible backend: the runtime provider supplying
+    ``(base_url, api_key)``, the config namespace, and Image API support."""
 
     def __init__(
         self, *, provider_name: str, display_name: str, runtime_name: str, config_key: str,
@@ -551,8 +551,8 @@ class OpenRouterCompatImageProvider(ImageGenProvider):
         return {"modalities": ["text", "image"], "max_reference_images": max_refs}
 
     def list_models(self) -> List[Dict[str, Any]]:
-        """Live catalog: OpenRouter = ``GET /images/models`` ∪ chat-completions image models (new
-        releases selectable); Scout Portal = chat-completions only. Offline: default chain + snapshot."""
+        """Live catalog: ``GET /images/models`` (when the Image API is supported) ∪ chat-completions
+        image models (new releases selectable). Offline: default chain + snapshot."""
         merged: Dict[str, Dict[str, Any]] = {}
         if self._supports_image_api:
             merged = {entry["id"]: entry for entry in self._image_api_live_models()}
@@ -819,16 +819,10 @@ def _build_providers() -> List[OpenRouterCompatImageProvider]:
                     "key": "OPENROUTER_API_KEY", "prompt": "OpenRouter API key", "url": "https://openrouter.ai/keys",
                 }],
             }),
-        # No picker row: Portal models are offered inside the single managed "SpaceshipResearch Subscription" row
-        # (tools/image_generation_managed.py). A row of its own also wrote `provider: spaceshipresearch` and so
-        # read "active" alongside the managed FAL row while the runtime routed its pick to FAL.
-        OpenRouterCompatImageProvider(
-            provider_name="spaceshipresearch", display_name="Scout Portal", runtime_name="spaceshipresearch", config_key="spaceshipresearch",
-            model_env_var="SPACESHIPRESEARCH_IMAGE_MODEL", setup_schema=None),
     ]
 
 
 def register(ctx: Any) -> None:
-    """Register the OpenRouter + Scout Portal image gen providers."""
+    """Register the OpenRouter image gen provider."""
     for provider in _build_providers():
         ctx.register_image_gen_provider(provider)

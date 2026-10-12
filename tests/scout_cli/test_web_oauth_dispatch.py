@@ -46,13 +46,13 @@ def _make_profile_home(tmp_path, monkeypatch, profile="coder"):
     return profile_home
 
 
-def _fake_spaceshipresearch_device_data():
+def _fake_fixtureco_device_data():
     return {
         "device_code": "device-code",
         "user_code": "SPACESHIPRESEARCH-1234",
-        "verification_uri": "https://portal.spaceshipresearch.com/device",
+        "verification_uri": "https://portal.fixtureco.example/device",
         "verification_uri_complete": (
-            "https://portal.spaceshipresearch.com/device?user_code=SPACESHIPRESEARCH-1234"
+            "https://portal.fixtureco.example/device?user_code=SPACESHIPRESEARCH-1234"
         ),
         "expires_in": 600,
         "interval": 5,
@@ -60,7 +60,7 @@ def _fake_spaceshipresearch_device_data():
 
 
 def _invoke_scope_refusal():
-    request = httpx.Request("POST", "https://portal.spaceshipresearch.com/oauth/device/code")
+    request = httpx.Request("POST", "https://portal.fixtureco.example/oauth/device/code")
     response = httpx.Response(
         400,
         json={
@@ -110,8 +110,6 @@ def test_minimax_login_does_not_launch_anthropic_flow():
     assert "minimax" in body["verification_url"].lower()
     assert body["user_code"] == "ABCD-1234"
     assert body["expires_in"] == 600
-
-
 
 
 def test_minimax_start_route_honors_poller_mock_on_owning_module(tmp_path, monkeypatch):
@@ -263,10 +261,6 @@ def test_oauth_session_cannot_be_polled_or_cancelled_from_another_profile(
         assert correct_cancel.status_code == 200, correct_cancel.text
     finally:
         _web_server_oauth._oauth_sessions.pop(session_id, None)
-
-
-
-
 
 
 def test_codex_dashboard_worker_stops_polling_after_cancel(tmp_path, monkeypatch):
@@ -462,61 +456,6 @@ def test_codex_worker_final_save_is_atomic_with_cancel_delete(tmp_path, monkeypa
     assert sid not in _web_server_oauth._oauth_sessions
 
 
-
-
-def test_spaceshipresearch_dashboard_poller_preserves_effective_scope_when_token_omits_scope(monkeypatch):
-    from scout_cli import auth as auth_mod
-
-    session_id = "spaceshipresearch-effective-scope-test"
-    _web_server_oauth._oauth_sessions[session_id] = {
-        "session_id": session_id,
-        "provider": "spaceshipresearch",
-        "flow": "device_code",
-        "created_at": time.time(),
-        "status": "pending",
-        "error_message": None,
-        "portal_base_url": "https://portal.spaceshipresearch.com",
-        "client_id": "scout-cli",
-        "device_code": "device-code",
-        "interval": 5,
-        "expires_at": time.time() + 600,
-        "scope": auth_mod.DEFAULT_SPACESHIPRESEARCH_SCOPE,
-    }
-    captured_state = {}
-
-    def fake_refresh_spaceshipresearch_oauth_from_state(state, **kwargs):
-        captured_state.update(state)
-        return {**state, "agent_key": "jwt-agent-key"}
-
-    monkeypatch.setattr(
-        auth_mod,
-        "_poll_for_token",
-        lambda **kwargs: {
-            "access_token": "access-token",
-            "refresh_token": "refresh-token",
-            "expires_in": 3600,
-            "token_type": "Bearer",
-        },
-    )
-    monkeypatch.setattr(
-        auth_mod,
-        "refresh_spaceshipresearch_oauth_from_state",
-        fake_refresh_spaceshipresearch_oauth_from_state,
-    )
-    monkeypatch.setattr(auth_mod, "persist_spaceshipresearch_credentials", lambda state: None)
-
-    try:
-        _web_server_oauth._spaceshipresearch_plain_poller(session_id)
-        assert captured_state["scope"] == auth_mod.DEFAULT_SPACESHIPRESEARCH_SCOPE
-        assert _web_server_oauth._oauth_sessions[session_id]["status"] == "approved"
-    finally:
-        _web_server_oauth._oauth_sessions.pop(session_id, None)
-
-
-
-
-
-
 def test_anthropic_dashboard_oauth_is_removed_and_external():
     """Anthropic subscription OAuth is not minted by the dashboard anymore."""
 
@@ -559,10 +498,6 @@ def test_accounts_offers_every_oauth_provider_from_catalog():
                 f"{d.slug} is an accounts-tab provider in `scout model` but is "
                 f"missing from the desktop Accounts tab (/api/providers/oauth)"
             )
-
-
-
-
 
 
 def test_external_oauth_disconnect_rejected_before_auth_mutation(monkeypatch):
@@ -686,10 +621,6 @@ def test_xai_dashboard_poller_seeds_single_entry_and_clears_suppression(tmp_path
     )
 
 
-
-
-
-
 def test_status_falls_through_to_generic_dispatcher_for_catalog_only_provider():
     """Accounts-tab providers with no hardcoded branch reflect REAL status.
 
@@ -740,10 +671,6 @@ def test_qwen_status_card_carries_the_getter_expiry_token_and_auth_file():
     assert round(expires_at.timestamp() * 1000) == expires_at_ms
     assert out["source_label"] == "/home/u/.qwen/oauth_creds.json"
     assert out["token_preview"] and "qwen-access-token-secret-xyz" not in out["token_preview"]
-
-
-
-
 
 
 @pytest.mark.parametrize("provider", ["xai-oauth", "minimax-oauth"])

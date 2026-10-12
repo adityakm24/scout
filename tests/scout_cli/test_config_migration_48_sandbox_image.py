@@ -1,4 +1,4 @@
-"""Migration 47→48: the container sandbox default becomes spaceshipresearch/scout-sandbox:desktop.
+"""Migration 47→48: the container sandbox default becomes ghcr.io/adityakm24/scout-sandbox:desktop.
 
 Contract: a saved image still equal to the OLD default is dropped, so the file follows the new
 default at read time but the runtime still sees it as "not pinned" (an existing persisted Docker

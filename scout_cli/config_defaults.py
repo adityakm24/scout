@@ -9,7 +9,7 @@ docs of config.yaml.
 #: user pins one. LEGACY_SANDBOX_IMAGES are the plain defaults that preceded the desktop stack
 #: (the 3.14 pin shipped between the two without a migration); a saved config still holding one
 #: is the template copied, and the config migration unsets it, never a user's own pin.
-DEFAULT_SANDBOX_IMAGE = "spaceshipresearch/scout-sandbox:desktop"
+DEFAULT_SANDBOX_IMAGE = "ghcr.io/adityakm24/scout-sandbox:desktop"
 LEGACY_SANDBOX_IMAGES = ("nikolaik/python-nodejs:python3.11-nodejs20", "nikolaik/python-nodejs:python3.14-nodejs22")
 LEGACY_SANDBOX_IMAGE = LEGACY_SANDBOX_IMAGES[0]
 # Vercel Sandbox managed image (Vercel deprecated its `runtime` presets in Aug 2026).
@@ -687,7 +687,7 @@ DEFAULT_CONFIG = {
         "in_place": True,
         # Per-model threshold overrides: keys substring-match the model name (longest wins), values
         # replace the global `threshold`, e.g. {"glm-5.2": 0.40}. Prefix a key with "<provider>:" to
-        # scope it to one route ({"openai-codex:astra": 0.85} leaves Astra on OpenRouter/SpaceshipResearch at the
+        # scope it to one route ({"openai-codex:astra": 0.85} leaves Astra on OpenRouter at the
         # global value). The <512K floor (0.75) still applies raise-only on top.
         "model_thresholds": {},
         # Opt-in idle compaction (0 = off): a session resuming after this many idle seconds compacts
@@ -884,9 +884,6 @@ DEFAULT_CONFIG = {
         # and was never superseded by a successful write to the same path (catches "half the
         # parallel patches failed, model claims success").
         "file_mutation_verifier": True,
-        # SpaceshipResearch credits status-bar notices (usage bands, grant-spent, depleted/restored). False mutes
-        # them; balance data and /usage keep working.
-        "credits_notices": True,
         # Append a one-line explanation when a turn ends with no usable reply (empty after retries,
         # truncated stream, pending tool result, iteration/budget limit) instead of the bare
         # "(empty)" sentinel.
@@ -1035,13 +1032,6 @@ DEFAULT_CONFIG = {
         # leaves disconnected sessions ``ended_at IS NULL`` forever — phantom "active" rows in /resume and
         # dashboards. See #65194.
         "startup_orphan_sweep": True,
-        # OAuth gate (engaged when --host is set and --insecure is not), read by the Scout Portal
-        # plugin. Env SCOUT_DASHBOARD_OAUTH_CLIENT_ID / SCOUT_DASHBOARD_PORTAL_URL win when
-        # non-empty. Empty client_id = no provider; empty portal_url = production.
-        "oauth": {
-            "client_id": "",  # agent:{instance_id} — Portal provisions this
-            "portal_url": "",
-        },
         # Username/password gate (dashboard_auth/basic plugin, no OAuth IDP). Active when username
         # plus password_hash (preferred) or password (hashed in-memory) are set; empty username =
         # no-op. Env SCOUT_DASHBOARD_BASIC_AUTH_USERNAME / _PASSWORD_HASH / _PASSWORD / _SECRET /
@@ -1828,24 +1818,9 @@ DEFAULT_CONFIG = {
         # from global config.
         "model_provider": "",
         # Cron SCHEDULER provider (WHEN a due job fires). "" = built-in in-process 60s ticker. Name
-        # an installed provider (plugins/cron_providers/<name>/ or $SCOUT_HOME/plugins/ <name>/),
-        # e.g. "chronos" (NAS-mediated managed cron for scale-to-zero). An unknown or unavailable
-        # provider falls back to the built-in so cron never loses its trigger.
+        # an installed provider (plugins/cron_providers/<name>/ or $SCOUT_HOME/plugins/ <name>/). An
+        # unknown or unavailable provider falls back to the built-in so cron never loses its trigger.
         "provider": "",
-        # Chronos settings; consulted only when provider == "chronos". All non-secret — the agent
-        # holds NO scheduler credentials (provision reuses the Scout Portal token).
-        "chronos": {
-            # NAS/portal base URL that arms/cancels one-shots and mints the inbound fire JWT (used
-            # as the expected issuer).
-            "portal_url": "https://portal.spaceshipresearch.com",
-            # This agent's publicly reachable base URL; NAS POSTs {callback_url}/api/cron/fire. ""
-            # -> Chronos unavailable, resolver falls back to the built-in ticker.
-            "callback_url": "",
-            "expected_audience": "",  # Expected JWT audience (e.g. "agent:{instance_id}").
-            # NAS JWKS URL for verifying the fire JWT signature. "" -> the fire endpoint refuses all
-            # tokens (never an unsigned decode).
-            "nas_jwks_url": "",
-        },
         # Wrap delivered cron responses with a task-name header and "The agent cannot see this
         # message" footer. False = clean output.
         "wrap_response": True,
@@ -2035,17 +2010,16 @@ DEFAULT_CONFIG = {
                 "apply_layout", "read_terminal", "read_window_below", "focus_pane",
             ],
         },
-        # Remote connector discovery/lifecycle through the SpaceshipResearch tool gateway.
-        # The flag is the user's off switch; availability additionally requires
-        # the portal sign-in every managed tool gates on.
-        "connectors": {"enabled": True},
+        # Opt-in: lets the agent install, enable and authorize MCP servers from the bundled
+        # catalog (``manage_connections``) behind an approval card. Off = the tool is not offered.
+        "connectors": {"enabled": False},
     },
     "logging": {  # File logging to ~/.scout/logs/: agent.log captures INFO+, errors.log WARNING+.
         "level": "INFO",       # minimum level for agent.log: DEBUG, INFO, WARNING
         "max_size_mb": 5,      # max size per log file before rotation
         "backup_count": 3,     # rotated backups to keep
     },
-    # Remote model-catalog manifest: curated OpenRouter / Scout Portal model lists fetched from this
+    # Remote model-catalog manifest: curated OpenRouter model lists fetched from this
     # URL (falls back to the in-repo snapshot on network failure), so picker lists update without a
     # release. Default URL is served by the docs-site GitHub Pages deploy.
     "model_catalog": {
@@ -2190,12 +2164,6 @@ DEFAULT_CONFIG = {
         # (gateway/profile_routing.py): [{profile, platform, chat_id|user_id|guild_id|...}].
         # Most-specific match wins; only read by the multiplexing default gateway.
         "profile_routes": [],
-        # Scale-to-zero idle TIMEOUT only. When an instance is opted in via the NAS "Labs" toggle
-        # (SCOUT_SCALE_TO_ZERO env stamp) AND messaging is relay-only/absent AND a wakeUrl is
-        # registered, the relay transport goes dormant so the platform (e.g. Fly autostop) can
-        # suspend the machine; it wakes on the wakeUrl poke. Enablement is the Labs toggle, never a
-        # config key. 0/negative = default.
-        "scale_to_zero": {"idle_timeout_minutes": 2},
         # Auto-resume restart-loop breaker. A supervisor-revived gateway auto-resumes the
         # SIGTERM-interrupted session; if that turn keeps triggering the kill, boots no more than
         # `max_gap_seconds` apart (floored by `window_seconds`) chain, and after `max_restarts`
@@ -2536,7 +2504,7 @@ DEFAULT_CONFIG = {
         #   terminal  always inside the terminal backend (error when it cannot host one).
         #   gateway   always on the gateway host, even with a sandbox terminal: the agent's screen, browser
         #             and computer_use then act OUTSIDE the terminal sandbox. Explicit opt-in.
-        # The sandbox image needs the desktop stack: spaceshipresearch/scout-sandbox:desktop.
+        # The sandbox image needs the desktop stack: ghcr.io/adityakm24/scout-sandbox:desktop.
         "placement": "auto",
     },
     "computer_use": {
@@ -2667,26 +2635,6 @@ DEFAULT_CONFIG = {
         },
     },
 
-    "spaceshipresearch": {
-        # Upper bound (seconds) on the SpaceshipResearch auth keepalive tick, which derives from the
-        # server-issued credential lifetime (raising above it has no effect). 0 disables the
-        # keepalive thread.
-        "keepalive_interval_seconds": 900,
-        # anthropic_wire: which Portal route carries anthropic/* models. "chat" =
-        # /v1/chat/completions (default for now); "native" = /v1/messages, the Anthropic
-        # Messages wire (signed thinking passthrough, native cache_control scopes); "auto" =
-        # start on chat and, per session, switch to native from the first response when the
-        # Portal upstream serving the model is one where native is known clean. Native is the
-        # better wire but on the OpenRouter-served path it re-writes the previous turn's cache on
-        # 14-20% of consecutive calls in concurrent tool loops (measured 2026-09-06;
-        # SpaceshipResearch/api#227), so chat is the default until that is fixed.
-        "anthropic_wire": "chat",
-        # SpaceshipResearch free tier: with no other provider configured, Scout sets up a free SpaceshipResearch identity on
-        # first use (inference on spaceshipresearch/welcome + connectors) and offers `/login` (terminal:
-        # `scout auth upgrade`) to sign in. false turns the free tier off entirely: nothing is set
-        # up and nothing is used.
-        "guest": True,
-    },
     # Google Vertex AI (Gemini). Auth is OAuth2 from a service-account JSON or ADC, NOT an API key;
     # the credential path lives in .env (VERTEX_CREDENTIALS_PATH / GOOGLE_APPLICATION_CREDENTIALS).
     # Bridged to VERTEX_PROJECT_ID / VERTEX_REGION.
@@ -2760,12 +2708,6 @@ def _base_url(name, prompt_name=None):
 # tools=[...] lists the model tools the key unlocks.
 OPTIONAL_ENV_VARS = {
     # ── Provider (handled in provider selection, not shown in checklists) ──
-    "SPACESHIPRESEARCH_BASE_URL": _base_url("Scout Portal"),
-    "SCOUT_ANON_API_SECRET": _env(
-        "Shared secret for the SpaceshipResearch free-tier sign-up endpoints while they are in their gated "
-        "integration phase (not needed once the gate is removed)",
-        "SpaceshipResearch free-tier shared secret (leave empty unless given one)", password=True,
-        category="provider", advanced=True),
     "OPENROUTER_API_KEY": _env("OpenRouter API key (for vision, web scraping helpers, and MoA)",
         "OpenRouter API key", url="https://openrouter.ai/keys", password=True, tools=["vision_analyze"],
         category="provider", advanced=True),
@@ -2878,29 +2820,6 @@ OPTIONAL_ENV_VARS = {
         "https://firecrawl.dev/", tools=["web_search", "web_extract"]),
     "FIRECRAWL_API_URL": _tool("Firecrawl API URL for self-hosted instances (optional)",
         "Firecrawl API URL (leave empty for cloud)", None, password=False, advanced=True),
-    "FIRECRAWL_GATEWAY_URL": _tool(
-        "Exact Firecrawl tool-gateway origin override for SpaceshipResearch Subscribers only (optional)",
-        "Firecrawl gateway URL (leave empty to derive from domain)", None, password=False,
-        advanced=True),
-    "TOOL_GATEWAY_URL": _tool(
-        "Exact shared tool-gateway origin for on-origin vendors and media uploads (optional)",
-        "Shared tool-gateway URL (leave empty to derive from domain)", None,
-        password=False, advanced=True),
-    "CONNECTOR_GATEWAY_URL": _tool(
-        "Exact connector-gateway origin for the connectors API (optional)",
-        "Connector-gateway URL (leave empty to derive from domain)", None,
-        password=False, advanced=True),
-    "TOOL_GATEWAY_DOMAIN": _tool(
-        "Shared tool-gateway domain suffix for SpaceshipResearch Subscribers only, used to derive vendor "
-        "hosts, e.g. spaceshipresearch.com -> firecrawl-gateway.spaceshipresearch.com",
-        "Tool-gateway domain suffix", None, password=False, advanced=True),
-    "TOOL_GATEWAY_SCHEME": _tool(
-        "Shared tool-gateway URL scheme for SpaceshipResearch Subscribers only, used to derive vendor hosts "
-        "(`https` by default, set `http` for local gateway testing)", "Tool-gateway URL scheme",
-        None, password=False, advanced=True),
-    "TOOL_GATEWAY_USER_TOKEN": _tool(
-        "Explicit SpaceshipResearch Subscriber access token for tool-gateway requests (optional; otherwise "
-        "read from the Scout auth store)", "Tool-gateway user token", None, advanced=True),
     "TAVILY_API_KEY": _tool(
         "Tavily API key for AI-native web search and extract (optional — keyless works when "
         "Tavily is selected)", "Tavily API key", "https://app.tavily.com/home",

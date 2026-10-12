@@ -30,16 +30,6 @@ def test_dashboard_not_running_by_default(
     )
 
 
-
-
-
-
-
-
-
-
-
-
 # ---------------------------------------------------------------------------
 # OAuth auth-gate behaviour — regression guard for the dashboard-insecure
 # auto-injection bug. Pre-fix, the s6 run script appended `--insecure`
@@ -115,18 +105,17 @@ except urllib.error.HTTPError as h:
     )
 
 
-def test_dashboard_oauth_gate_engages_on_non_loopback_bind(
+def test_dashboard_auth_gate_engages_on_non_loopback_bind(
     built_image: str, container_name: str,
 ) -> None:
     """The s6 dashboard run script must NOT auto-add ``--insecure`` when the
-    dashboard binds to ``0.0.0.0``. The OAuth auth gate engages on its own
-    when a ``DashboardAuthProvider`` is registered (the bundled spaceshipresearch
-    provider activates whenever ``SCOUT_DASHBOARD_OAUTH_CLIENT_ID`` is
-    set).
+    dashboard binds to ``0.0.0.0``. The auth gate engages on its own when a
+    ``DashboardAuthProvider`` is registered (the bundled ``basic`` provider
+    activates whenever ``SCOUT_DASHBOARD_BASIC_AUTH_USERNAME`` and a
+    password are set).
 
-    Regression guard for the wildcard-subdomain rollout where every
-    portal-provisioned agent binds ``0.0.0.0`` and relies on the OAuth
-    gate to authenticate browser callers. Before this fix, the run script
+    Regression guard for deployments that bind ``0.0.0.0`` and rely on the
+    auth gate to authenticate browser callers. Before this fix, the run script
     flipped ``--insecure`` on for any non-loopback bind, which routed
     ``start_server`` straight back into the legacy ``allow_public=True``
     branch and disabled the gate every time.
@@ -135,14 +124,14 @@ def test_dashboard_oauth_gate_engages_on_non_loopback_bind(
     on:
 
     1. ``/api/auth/providers`` (publicly reachable through the gate so
-       the login page can bootstrap) returns 200 with ``spaceshipresearch`` in the
+       the login page can bootstrap) returns 200 with ``basic`` in the
        provider list — proves the bundled provider registered.
     2. ``/api/sessions`` (a gated route under both the legacy
        ``_SESSION_TOKEN`` middleware and the OAuth gate) returns 401
        to an unauthenticated caller — proves the OAuth gate is actively
        intercepting browser traffic. We deliberately probe a gated route
        here rather than ``/api/status``: status sits in the shared
-       ``PUBLIC_API_PATHS`` allowlist (portal liveness probe target) and
+       ``PUBLIC_API_PATHS`` allowlist (liveness probe target) and
        responds 200 without a cookie under both gates, so it cannot
        distinguish "gate on" from "gate off".
     """
@@ -150,7 +139,9 @@ def test_dashboard_oauth_gate_engages_on_non_loopback_bind(
         built_image, container_name,
         "SCOUT_DASHBOARD=1",
         "SCOUT_DASHBOARD_HOST=0.0.0.0",
-        "SCOUT_DASHBOARD_OAUTH_CLIENT_ID=agent:test-instance",
+        "SCOUT_DASHBOARD_BASIC_AUTH_USERNAME=admin",
+        "SCOUT_DASHBOARD_BASIC_AUTH_PASSWORD=correct-horse-battery-staple",
+        "SCOUT_DASHBOARD_BASIC_AUTH_SECRET=" + "s" * 64,
         cmd="sleep 120",
     )
 
@@ -162,9 +153,9 @@ def test_dashboard_oauth_gate_engages_on_non_loopback_bind(
     )
     payload = json.loads(body)
     provider_names = [p.get("name") for p in payload.get("providers", [])]
-    assert "spaceshipresearch" in provider_names, (
-        "Bundled dashboard_auth/spaceshipresearch provider should register when "
-        f"SCOUT_DASHBOARD_OAUTH_CLIENT_ID is set. Got: {payload!r}"
+    assert "basic" in provider_names, (
+        "Bundled dashboard_auth/basic provider should register when "
+        f"SCOUT_DASHBOARD_BASIC_AUTH_USERNAME and a password are set. Got: {payload!r}"
     )
 
     # (2) A gated route (``/api/sessions``) returns 401 to an
@@ -177,21 +168,19 @@ def test_dashboard_oauth_gate_engages_on_non_loopback_bind(
     )
 
     # (3) ``/api/status`` remains 200 under the gate — it's in the shared
-    #     ``PUBLIC_API_PATHS`` allowlist so NAS's wildcard-subdomain
-    #     liveness probe (``fly-provider.ts`` ``getInstanceRuntimeStatus``)
-    #     can reach it without a cookie. Regression guard: this allowlist
-    #     drifted once already and surfaced every healthy agent as
-    #     STARTING/down in the portal UI.
+    #     ``PUBLIC_API_PATHS`` allowlist so liveness probes can reach it
+    #     without a cookie. Regression guard: this allowlist drifted once
+    #     already and surfaced every healthy agent as down.
     status_code, body = _http_probe(container_name, "/api/status")
     assert status_code == 200, (
         "/api/status must remain publicly reachable under the OAuth gate "
-        "— the portal uses it as the wildcard-subdomain liveness probe. "
+        "— liveness probes depend on it. "
         f"Got: status={status_code} body={body!r}"
     )
     status = json.loads(body)
     assert status.get("auth_required") is True, (
         "/api/status must report auth_required=True when the OAuth gate "
-        f"is engaged so the SPA/portal can distinguish modes. Got: {status!r}"
+        f"is engaged so the SPA can distinguish modes. Got: {status!r}"
     )
 
 

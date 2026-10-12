@@ -111,8 +111,8 @@ def test_delegation_cfg_as_task_projection():
     """Projection renders empty provider as auto via _format_aux_current."""
     assert _format_aux_current(_delegation_cfg_as_task({})) == "auto"
     shaped = _delegation_cfg_as_task(
-        {"delegation": {"provider": "spaceshipresearch", "model": "Scout-4.5"}}
+        {"delegation": {"provider": "fixtureco", "model": "Model-4.5"}}
     )
-    assert _format_aux_current(shaped) == "spaceshipresearch · Scout-4.5"
+    assert _format_aux_current(shaped) == "fixtureco · Model-4.5"
     # Non-dict delegation section must not crash
     assert _format_aux_current(_delegation_cfg_as_task({"delegation": "bogus"})) == "auto"

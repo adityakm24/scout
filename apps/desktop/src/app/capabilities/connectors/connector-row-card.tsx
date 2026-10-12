@@ -1,16 +1,13 @@
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { ConnectorLogo } from '@/components/ui/connector-logo'
 import { Switch } from '@/components/ui/switch'
 import { useI18n } from '@/i18n'
 import type { Translations } from '@/i18n/types'
-import { connectorIconUrl } from '@/lib/connector-tools'
 import { cn } from '@/lib/utils'
 
 import { CatalogMark } from './catalog-mark'
 import { connectorKindWord, showsCatalogMark } from './connector-kind'
-import { twinPillOf } from './derive'
 import type { ConnectorCardModel, ConnectorFact, ConnectorState } from './types'
 
 const STATE_DOT = {
@@ -18,9 +15,7 @@ const STATE_DOT = {
   broken: 'bg-(--ui-red)',
   connected: 'bg-(--ui-green)',
   connecting: 'bg-(--ui-yellow)',
-  expired: 'bg-(--ui-orange)',
-  off: 'bg-(--ui-text-quaternary)',
-  unknown: 'bg-(--ui-text-quaternary)'
+  off: 'bg-(--ui-text-quaternary)'
 } satisfies Record<ConnectorState, string>
 
 const REASON_TONE = {
@@ -28,9 +23,7 @@ const REASON_TONE = {
   broken: 'text-(--ui-red)',
   connected: '',
   connecting: 'text-(--ui-text-secondary)',
-  expired: 'text-(--ui-orange)',
-  off: '',
-  unknown: ''
+  off: ''
 } satisfies Record<ConnectorState, string>
 
 function factText(copy: Translations['connectorsPage']['card'], fact: ConnectorFact): string {
@@ -53,7 +46,6 @@ export interface ConnectorRowCardProps {
   busy?: boolean
   card: ConnectorCardModel
   onOpen: () => void
-  onPrefetch?: () => void
   /** Offered only while the card is in trouble: re-check the server and bring it back. */
   onReload?: () => void
   onServerToggle?: (next: boolean) => void
@@ -65,7 +57,6 @@ export function ConnectorRowCard({
   busy = false,
   card,
   onOpen,
-  onPrefetch,
   onReload,
   onServerToggle,
   onVerb,
@@ -73,13 +64,12 @@ export function ConnectorRowCard({
 }: ConnectorRowCardProps) {
   const { t } = useI18n()
   const copy = t.connectorsPage.card
-  const local = card.residency === 'local'
   const unset = card.state === 'available'
+  const target = card.ways.local.target ?? ''
 
-  const stateLabel = local && card.fact ? factText(copy, card.fact) : copy.state[card.stateWord]
+  const stateLabel = card.fact ? factText(copy, card.fact) : copy.state[card.stateWord]
 
-  const reason = card.reason ? (card.reason.text ?? copy.reason[card.reason.key]) : undefined
-  const twin = twinPillOf(card)
+  const reason = card.reason ? copy.reason[card.reason.key] : undefined
 
   return (
     <div
@@ -91,8 +81,6 @@ export function ConnectorRowCard({
       )}
       data-connector={card.slug}
       data-slot="connector-row-card"
-      onFocus={onPrefetch}
-      onPointerEnter={onPrefetch}
     >
       {/* Tile: the logo and the live state share the top row; who it is and
           why it matters read below. */}
@@ -100,18 +88,17 @@ export function ConnectorRowCard({
         <ConnectorLogo
           className="size-11 shrink-0 rounded-xl"
           connector={{
-            iconUrl: local ? undefined : connectorIconUrl(card.slug),
             name: card.slug,
             title: card.name,
             // A remote server's endpoint names its vendor (mcp.zepto.co.in is Zepto); a command line names nothing.
-            url: local && /^https?:\/\//.test(card.ways.local?.target ?? '') ? card.ways.local?.target : undefined
+            url: /^https?:\/\//.test(target) ? target : undefined
           }}
         />
         <CardLane
           busy={busy}
           card={card}
-          onReload={card.state === 'broken' || card.state === 'expired' ? onReload : undefined}
-          onServerToggle={local && card.plugin === undefined ? onServerToggle : undefined}
+          onReload={card.state === 'broken' ? onReload : undefined}
+          onServerToggle={card.plugin === undefined ? onServerToggle : undefined}
           onVerb={onVerb}
           stateLabel={stateLabel}
           withDot={!unset}
@@ -132,12 +119,6 @@ export function ConnectorRowCard({
           <span className="shrink-0 text-[0.6875rem] text-(--ui-text-tertiary)">{connectorKindWord(card, copy)}</span>
 
           {showsCatalogMark(card) ? <CatalogMark /> : null}
-
-          {twin ? (
-            <Badge className="shrink-0" size="xs" variant="muted">
-              {twin === 'hostedTwin' ? copy.hostedTwin : copy.alsoLocal}
-            </Badge>
-          ) : null}
         </div>
 
         <SecondLine card={card} reason={reason} />
@@ -166,7 +147,6 @@ function CardLane({
   const { t } = useI18n()
   const copy = t.connectorsPage.card
   const server = card.ways.local
-  const fact = card.residency === 'hosted' && card.fact ? factText(copy, card.fact) : null
 
   return (
     <div className="relative z-10 flex w-[7.75rem] shrink-0 flex-col items-end gap-1">
@@ -188,7 +168,7 @@ function CardLane({
         ) : null}
       </span>
 
-      {server?.installed === true && onServerToggle ? (
+      {server.installed === true && onServerToggle ? (
         <Switch
           aria-label={server.serverEnabled ? copy.turnServerOff(card.name) : copy.turnServerOn(card.name)}
           checked={server.serverEnabled ?? false}
@@ -207,10 +187,6 @@ function CardLane({
         >
           {copy.verb[card.verb]}
         </Button>
-      ) : null}
-
-      {card.verb === undefined && fact !== null ? (
-        <span className="truncate text-[0.6875rem] text-(--ui-text-tertiary)">{fact}</span>
       ) : null}
     </div>
   )

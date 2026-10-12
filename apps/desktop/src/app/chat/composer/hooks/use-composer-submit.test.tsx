@@ -610,8 +610,8 @@ describe('useComposerSubmit with a connection card parked on the session', () =>
       targets: [
         {
           name: 'gmail',
-          kind: 'connector',
-          action: 'connect',
+          kind: 'mcp',
+          action: 'authorize',
           state: 'pending',
           detail: '',
           connectUrl: null,

@@ -12,7 +12,6 @@ import json
 import logging
 import socket
 import threading
-import time
 from typing import Any
 
 from tui_gateway import server
@@ -21,29 +20,6 @@ from tui_gateway.event_replay import replay_epoch
 from tui_gateway.transport import serialize_frame
 
 _log = logging.getLogger(__name__)
-
-# Scale-to-zero: tell the (separate) gateway process a dashboard/desktop/TUI client is attached via
-# the mtime of a marker file it reads in its idle predicate (gateway/scale_to_zero.py). Clients ping
-# every 15s; one write per 5s per process is plenty.
-_DASHBOARD_CLIENT_TOUCH_MIN_INTERVAL_S = 5.0
-_dashboard_client_touched_at = 0.0
-_dashboard_client_touch_lock = threading.Lock()
-
-
-def _note_dashboard_client_activity(*, force: bool = False) -> None:
-    """Refresh the dashboard-client liveness marker (throttled, best-effort)."""
-    global _dashboard_client_touched_at
-    now = time.monotonic()
-    with _dashboard_client_touch_lock:
-        if not force and now - _dashboard_client_touched_at < _DASHBOARD_CLIENT_TOUCH_MIN_INTERVAL_S:
-            return
-        _dashboard_client_touched_at = now
-    try:
-        from gateway.scale_to_zero import touch_dashboard_client_heartbeat
-        touch_dashboard_client_heartbeat()
-    except Exception:  # noqa: BLE001 - liveness garnish must never break the WS
-        _log.debug("dashboard client heartbeat touch failed", exc_info=True)
-
 
 def _sanitize_ws_text(text: str) -> str:
     """Return *text* that can be UTF-8 encoded for a WebSocket frame.
@@ -352,8 +328,6 @@ async def handle_ws(ws: Any, *, auth_identity: dict | None = None, subprotocol: 
     try:
         await (ws.accept(subprotocol=subprotocol) if subprotocol else ws.accept())
         disconnect_reason = "connected"
-        # Mark the client attached before the (possibly slow) ready/skin setup so scale-to-zero sees it.
-        _note_dashboard_client_activity(force=True)
         _disable_nagle(ws)
         _log.info("ws accepted peer=%s", peer)
         transport = WSTransport(ws, asyncio.get_running_loop(), peer=peer, auth_identity=auth_identity)
@@ -395,7 +369,6 @@ async def handle_ws(ws: Any, *, auth_identity: dict | None = None, subprotocol: 
         while True:
             try:
                 raw = await _unless_dispatch_failed(ws.receive_text())
-                _note_dashboard_client_activity()
             except _SendFailed:
                 raise
             except _WebSocketDisconnect as exc:

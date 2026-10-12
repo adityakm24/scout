@@ -52,7 +52,7 @@ function provider(id: string, loggedIn: boolean, patch: Partial<OAuthProvider> =
     docs_url: '',
     flow: 'device_code',
     id,
-    name: id === 'spaceshipresearch' ? 'Scout Portal' : 'MiniMax',
+    name: id === 'fixtureco' ? 'Fixture Co' : 'MiniMax',
     status: {
       logged_in: loggedIn
     },
@@ -82,11 +82,11 @@ function keyVar(patch: Partial<EnvVarInfo> = {}): EnvVarInfo {
 beforeEach(() => {
   onboarding.set({ manual: false })
   getEnvVars.mockResolvedValue({})
-  disconnectOAuthProvider.mockResolvedValue({ ok: true, provider: 'spaceshipresearch' })
+  disconnectOAuthProvider.mockResolvedValue({ ok: true, provider: 'fixtureco' })
   revealEnvVar.mockResolvedValue({ value: 'old-secret' })
   setEnvVar.mockResolvedValue({ ok: true })
   listOAuthProviders.mockResolvedValue({
-    providers: [provider('spaceshipresearch', true), provider('minimax-oauth', false)]
+    providers: [provider('fixtureco', true), provider('minimax-oauth', false)]
   })
 })
 
@@ -159,11 +159,11 @@ describe('ProvidersSettings', () => {
       await renderProvidersSettings()
       expect(getEnvVars).toHaveBeenCalledWith('beta')
       expect(listOAuthProviders).toHaveBeenCalledWith('beta')
-      fireEvent.click(await screen.findByText('Scout Portal'))
-      expect(startManualProviderOAuth).toHaveBeenCalledWith('spaceshipresearch', 'beta')
-      fireEvent.click(await screen.findByRole('button', { name: 'Remove Scout Portal' }))
+      fireEvent.click(await screen.findByText('Fixture Co'))
+      expect(startManualProviderOAuth).toHaveBeenCalledWith('fixtureco', 'beta')
+      fireEvent.click(await screen.findByRole('button', { name: 'Remove Fixture Co' }))
       fireEvent.click(await screen.findByRole('button', { name: 'Disconnect' }))
-      await waitFor(() => expect(disconnectOAuthProvider).toHaveBeenCalledWith('spaceshipresearch', 'beta'))
+      await waitFor(() => expect(disconnectOAuthProvider).toHaveBeenCalledWith('fixtureco', 'beta'))
     } finally {
       $settingsScopeOverride.set(null)
     }
@@ -172,7 +172,7 @@ describe('ProvidersSettings', () => {
   it('disconnects a connected provider account and refreshes the accounts list', async () => {
     await renderProvidersSettings()
 
-    const remove = await screen.findByRole('button', { name: 'Remove Scout Portal' })
+    const remove = await screen.findByRole('button', { name: 'Remove Fixture Co' })
     await act(async () => {
       fireEvent.click(remove)
     })
@@ -185,7 +185,7 @@ describe('ProvidersSettings', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
     })
 
-    await waitFor(() => expect(disconnectOAuthProvider).toHaveBeenCalledWith('spaceshipresearch', 'default'))
+    await waitFor(() => expect(disconnectOAuthProvider).toHaveBeenCalledWith('fixtureco', 'default'))
     expect(listOAuthProviders).toHaveBeenCalledTimes(2)
   })
 
@@ -193,7 +193,7 @@ describe('ProvidersSettings', () => {
     await renderProvidersSettings()
 
     await act(async () => {
-      fireEvent.click(await screen.findByRole('button', { name: 'Remove Scout Portal' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Remove Fixture Co' }))
     })
 
     await act(async () => {

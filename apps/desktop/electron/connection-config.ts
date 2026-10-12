@@ -28,7 +28,7 @@
 //     Max-Age tracks the access-token TTL, so the cookie jar drops it the
 //     instant the AT expires.
 //   - scout_session_rt: the OAuth refresh token. Long-lived (24h rotating,
-//     reuse-detected — Portal NAS #293 / scout #37247). When the AT cookie
+//     reuse-detected — scout #37247). When the AT cookie
 //     has lapsed but the RT cookie is still present, the gateway middleware
 //     transparently rotates a fresh AT on the next authenticated request
 //     (POST /api/auth/ws-ticket), so the session is still LIVE even with no
@@ -138,9 +138,8 @@ function gatewayTicketFailure(error, authMessage, transportMessage) {
   }
 
   // Preserve structured HTTP context when the source error carried an integer
-  // statusCode (the fetch layer attaches err.statusCode). Downstream Cloud
-  // classification (isServerSideHttpError / makeSpaceshipResearchCloudBackendDownError) and
-  // the renderer overlay depend on it surviving the ticket-error wrapper. Auth
+  // statusCode (the fetch layer attaches err.statusCode). The renderer overlay
+  // depends on it surviving the ticket-error wrapper. Auth
   // semantics are unchanged: 401/403 route to reauth, 5xx stays a transport
   // failure, everything else keeps current behavior.
   const sourceStatus = readStatusCode(error)
@@ -388,15 +387,9 @@ function remoteRequestMatchesBaseUrl(requestUrl, baseUrl) {
   }
 }
 
-// True for connection modes that resolve to a REMOTE backend. 'cloud' is a
-// Scout Cloud connection (cloud-auto-discovery Q3/Q6): it carries a
-// remote-shaped block and reuses the entire remote connect/probe/reconnect
-// path, so every resolution site treats it exactly like 'remote'. The only
-// places that distinguish cloud from remote are the settings UI (which card to
-// show) and config persistence (remembering the provenance). Centralized here
-// so no resolution site forgets the third arm.
+// True for connection modes that resolve to a REMOTE (URL) backend.
 function modeIsRemoteLike(mode) {
-  return mode === 'remote' || mode === 'cloud'
+  return mode === 'remote'
 }
 
 function normalizeSshConfig(entry) {
@@ -538,7 +531,7 @@ function hostLabelFromBaseUrl(baseUrl) {
  * when it has none (so the caller falls back to env → global remote → local).
  *
  * The config may carry a `profiles` map keyed by name; an entry counts as an
- * override only with a remote-like `mode` (remote or cloud) and a non-empty
+ * override only with `mode: 'remote'` and a non-empty
  * `url`. Pure: `token` and `headers` are raw stored secrets; main.ts decrypts
  * them. Returns `{ url, authMode, token, headers } | null`.
  */
@@ -563,7 +556,7 @@ function profileRemoteOverride(config, profile) {
     authMode: normAuthMode(entry.authMode),
     token: entry.token,
     ...(Object.keys(headers).length > 0 ? { headers } : {}),
-    // A URL-remote/cloud host serves every profile via ?profile=, so a Desktop
+    // A URL-remote host serves every profile via ?profile=, so a Desktop
     // profile that is only a routing label (e.g. `gris` for the backend's
     // `main-gris`) can map its explicit self-profile scope into the backend's
     // namespace — same contract as the managed-SSH `remoteProfile`.
@@ -665,7 +658,6 @@ const LOCAL_PRIMARY_SCOPED_ROUTES = new Set([
   'PUT /api/curator/paused',
   'POST /api/curator/run',
   'GET /api/logs',
-  'GET /api/portal',
   'GET /api/scout/update/check',
   'POST /api/local-models/activate',
   'GET /api/dashboard/themes',

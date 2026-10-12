@@ -1,8 +1,8 @@
 import { useCallback } from "react";
-import { Input } from "@spaceshipresearch/ui/ui/components/input";
-import { Label } from "@spaceshipresearch/ui/ui/components/label";
-import { Select, SelectOption } from "@spaceshipresearch/ui/ui/components/select";
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
+import { Input } from "@/ui/components/input";
+import { Label } from "@/ui/components/label";
+import { Select, SelectOption } from "@/ui/components/select";
+import { Button } from "@/ui/components/button";
 import { useI18n } from "@/i18n";
 import {
   buildScheduleString,

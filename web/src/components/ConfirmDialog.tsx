@@ -1,4 +1,4 @@
-import { Button } from "@spaceshipresearch/ui/ui/components/button";
+import { Button } from "@/ui/components/button";
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -85,7 +85,7 @@ export function ConfirmDialog({
           <div className="flex-1 min-w-0 flex flex-col gap-1">
             <h2
               id="confirm-dialog-title"
-              className="font-mondwest text-display text-base tracking-wider"
+              className="font-display text-display text-base tracking-wider"
             >
               {title}
             </h2>

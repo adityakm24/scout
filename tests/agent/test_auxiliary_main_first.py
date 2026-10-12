@@ -1,6 +1,6 @@
 """Regression tests for the ``auto`` → main-model-first policy.
 
-Prior to this change, aggregator users (OpenRouter / Scout Portal) had aux
+Prior to this change, aggregator users (OpenRouter / Fixture Co) had aux
 tasks routed through a cheap provider-side default (Gemini Flash) while
 non-aggregator users got their main model.  This made behavior inconsistent
 and surprising — users picked Claude but got Gemini Flash summaries.
@@ -264,129 +264,6 @@ class TestResolveVisionMainFirst:
         assert mock_resolve.call_args.args[1] == "anthropic/claude-sonnet-4.6"
         assert mock_resolve.call_args.kwargs.get("is_vision") is True
 
-    @staticmethod
-    def _stub_scout_portal(seen: dict):
-        """Stub the SpaceshipResearch network boundary, keeping the resolution chain real.
-
-        Returns a ``_try_spaceshipresearch`` replacement that answers with the Portal's
-        tier-aware slots: a vision model for ``vision=True``, the text chat
-        default otherwise.
-        """
-        spaceshipresearch_client = MagicMock()
-        spaceshipresearch_client.api_key = "jwt-test"
-        spaceshipresearch_client.base_url = "https://inference-api.spaceshipresearch.com/v1"
-
-        def fake_try_spaceshipresearch(vision=False):
-            seen["vision"] = vision
-            return spaceshipresearch_client, (
-                "stepfun/step-3.7-flash:free" if vision else "tencent/hy3:free"
-            )
-
-        return spaceshipresearch_client, fake_try_spaceshipresearch
-
-    def test_spaceshipresearch_main_vision_uses_portal_pick_not_text_chat_model(self):
-        """SpaceshipResearch main → vision runs the Portal's vision slot, not the chat model.
-
-        A SpaceshipResearch chat default is routinely text-only (e.g. a ``:free`` chat SKU).
-        Letting it reach the vision lane means the image goes to a model that
-        cannot accept one and the Portal 404s. Only the SpaceshipResearch network boundary
-        is stubbed — the strict vision backend, the provider router, and its
-        missing-model pre-fill all run for real, because that pre-fill is where
-        the chat model used to clobber the Portal's pick.
-        """
-        seen: dict = {}
-        spaceshipresearch_client, fake_try_spaceshipresearch = self._stub_scout_portal(seen)
-
-        with patch(
-            "agent.auxiliary_client._read_main_provider", return_value="spaceshipresearch",
-        ), patch(
-            "agent.auxiliary_client._read_main_model", return_value="tencent/hy3:free",
-        ), patch(
-            "agent.auxiliary_client._resolve_task_provider_model",
-            return_value=("auto", None, None, None, None),
-        ), patch(
-            "agent.auxiliary_client._try_spaceshipresearch", side_effect=fake_try_spaceshipresearch,
-        ):
-            from agent.auxiliary_client import resolve_vision_provider_client
-
-            provider, client, model = resolve_vision_provider_client()
-
-        assert provider == "spaceshipresearch"
-        assert client is spaceshipresearch_client
-        assert seen["vision"] is True
-        assert model == "stepfun/step-3.7-flash:free"
-
-    def test_spaceshipresearch_main_vision_honours_explicit_vision_model(self):
-        """An explicit auxiliary.vision.model still overrides the Portal pick."""
-        seen: dict = {}
-        _spaceshipresearch_client, fake_try_spaceshipresearch = self._stub_scout_portal(seen)
-
-        with patch(
-            "agent.auxiliary_client._read_main_provider", return_value="spaceshipresearch",
-        ), patch(
-            "agent.auxiliary_client._read_main_model", return_value="tencent/hy3:free",
-        ), patch(
-            "agent.auxiliary_client._resolve_task_provider_model",
-            return_value=("auto", "qwen/qwen3-vl-8b-instruct", None, None, None),
-        ), patch(
-            "agent.auxiliary_client._try_spaceshipresearch", side_effect=fake_try_spaceshipresearch,
-        ):
-            from agent.auxiliary_client import resolve_vision_provider_client
-
-            provider, _client, model = resolve_vision_provider_client()
-
-        assert provider == "spaceshipresearch"
-        assert model == "qwen/qwen3-vl-8b-instruct"
-
-    def test_spaceshipresearch_explicit_vision_provider_also_skips_chat_model(self):
-        """``auxiliary.vision.provider: spaceshipresearch`` takes the same Portal pick.
-
-        The explicit-provider branch reaches the strict vision backend with no
-        model too, so it has to resolve the same way the auto branch does.
-        """
-        seen: dict = {}
-        spaceshipresearch_client, fake_try_spaceshipresearch = self._stub_scout_portal(seen)
-
-        with patch(
-            "agent.auxiliary_client._read_main_provider", return_value="spaceshipresearch",
-        ), patch(
-            "agent.auxiliary_client._read_main_model", return_value="tencent/hy3:free",
-        ), patch(
-            "agent.auxiliary_client._resolve_task_provider_model",
-            return_value=("spaceshipresearch", None, None, None, None),
-        ), patch(
-            "agent.auxiliary_client._try_spaceshipresearch", side_effect=fake_try_spaceshipresearch,
-        ):
-            from agent.auxiliary_client import resolve_vision_provider_client
-
-            provider, client, model = resolve_vision_provider_client()
-
-        assert provider == "spaceshipresearch"
-        assert client is spaceshipresearch_client
-        assert model == "stepfun/step-3.7-flash:free"
-
-    def test_spaceshipresearch_text_aux_still_uses_main_chat_model(self):
-        """The vision carve-out must not leak into text aux resolution.
-
-        Text auxiliary work on a SpaceshipResearch main deliberately keeps the user's chat
-        model rather than dropping to the Portal's cheap default.
-        """
-        seen: dict = {}
-        _spaceshipresearch_client, fake_try_spaceshipresearch = self._stub_scout_portal(seen)
-
-        with patch(
-            "agent.auxiliary_client._read_main_provider", return_value="spaceshipresearch",
-        ), patch(
-            "agent.auxiliary_client._read_main_model", return_value="tencent/hy3:free",
-        ), patch(
-            "agent.auxiliary_client._try_spaceshipresearch", side_effect=fake_try_spaceshipresearch,
-        ):
-            from agent.auxiliary_client import resolve_provider_client
-
-            _client, model = resolve_provider_client("spaceshipresearch")
-
-        assert model == "tencent/hy3:free"
-
     def test_copilot_vision_sets_vision_header(self, monkeypatch):
         """Copilot vision requests include the header required for vision routing."""
         monkeypatch.setenv("COPILOT_GITHUB_TOKEN", "ghu_test-token")
@@ -475,7 +352,7 @@ class TestResolveVisionCustomProvider:
     Regression: a ``custom:<name>`` main provider resolves to the bare
     runtime provider id ``"custom"``.  ``resolve_provider_client("custom")``
     has no built-in endpoint, so without forwarding the live base_url/api_key
-    it returns ``(None, None)`` and vision falls through to OpenRouter / SpaceshipResearch,
+    it returns ``(None, None)`` and vision falls through to OpenRouter / Fixture Co,
     which an offline / aggregator-less user has never configured — breaking
     vision entirely with ``No LLM provider configured for task=vision
     provider=auto``.  The fix recovers the live endpoint that

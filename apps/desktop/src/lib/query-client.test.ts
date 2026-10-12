@@ -23,8 +23,6 @@ describe('invalidateProfileScopedQueries', () => {
     ]
 
     const global = [
-      ['billing', 'state'],
-      ['billing', 'subscription'],
       ['marketplace-themes', 'all'],
       ['marketplace-themes-settings', 'x'],
       ['onboarding-model-options', 'y'],

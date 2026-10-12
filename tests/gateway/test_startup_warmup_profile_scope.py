@@ -1,10 +1,10 @@
 """Boot probes run inside the launch profile's scope under multiplex.
 
-``get_tool_definitions`` runs every ``check_fn``; the vision probe resolves SpaceshipResearch runtime
-credentials, whose Portal / inference routing overrides read through ``agent.secret_scope.get_secret``.
-With multiplex active and no scope on the executor thread that read fails closed, the override is
-absent, and a non-production Portal's refresh token is POSTed to the production Portal. The warm-up
-must run under the same binding a routed turn gets, and the binding must reach the executor thread.
+``get_tool_definitions`` runs every ``check_fn``; probes resolve provider credentials and routing
+overrides through ``agent.secret_scope.get_secret``. With multiplex active and no scope on the
+executor thread that read fails closed, the override is absent, and the probe silently falls back to
+the default endpoint. The warm-up must run under the same binding a routed turn gets, and the
+binding must reach the executor thread.
 """
 from __future__ import annotations
 
@@ -17,17 +17,16 @@ from agent import secret_scope
 from gateway import run as gateway_run
 from gateway.run_startup import GatewayStartupMixin
 
-PORTAL = "https://portal.staging-spaceshipresearch.com"
+BASE_URL = "https://router.example/v1"
 
 
 @pytest.fixture
 def multiplex_home(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir()
-    (home / ".env").write_text(f"SCOUT_PORTAL_BASE_URL={PORTAL}\n")
+    (home / ".env").write_text(f"OPENROUTER_BASE_URL={BASE_URL}\n")
     monkeypatch.setenv("SCOUT_HOME", str(home))
-    monkeypatch.delenv("SCOUT_PORTAL_BASE_URL", raising=False)
-    monkeypatch.delenv("SCOUT_PORTAL_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENROUTER_BASE_URL", raising=False)
     secret_scope.set_multiplex_active(True)
     try:
         yield home
@@ -37,9 +36,8 @@ def multiplex_home(tmp_path, monkeypatch):
 
 def _probe(seen: dict):
     def probe() -> int:
-        from scout_cli.auth_spaceshipresearch import _scout_portal_env_override
         seen["scope_installed"] = secret_scope._SECRET_SCOPE.get() is not None
-        seen["portal_override"] = _scout_portal_env_override()
+        seen["base_url_override"] = secret_scope.get_secret("OPENROUTER_BASE_URL")
         return 1
     return probe
 
@@ -72,7 +70,7 @@ def test_multiplex_warmup_runs_check_fns_inside_the_launch_profile_scope(multipl
     binding is per activity: once the warm-up returns, the loop thread is unscoped again."""
     seen = _run_warmup(monkeypatch, multiplex=True)
     assert seen["scope_installed"] is True
-    assert seen["portal_override"] == PORTAL
+    assert seen["base_url_override"] == BASE_URL
     assert seen["scope_after"] is None
     assert seen["home_override_after"] is None
 
@@ -82,19 +80,8 @@ def test_single_profile_warmup_keeps_environ_semantics(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("SCOUT_HOME", str(home))
-    monkeypatch.setenv("SCOUT_PORTAL_BASE_URL", PORTAL)
+    monkeypatch.setenv("OPENROUTER_BASE_URL", BASE_URL)
     secret_scope.set_multiplex_active(False)
     seen = _run_warmup(monkeypatch, multiplex=False)
     assert seen["scope_installed"] is False
-    assert seen["portal_override"] == PORTAL
-
-
-def test_multiplex_free_tier_bootstrap_runs_inside_the_launch_profile_scope(multiplex_home, monkeypatch):
-    """The free-tier bootstrap mints the Portal identity at boot through the same override; it is the
-    sibling unscoped executor hop and gets the same binding."""
-    seen: dict = {}
-    runner = _Runner(multiplex=True)
-    runner._start_free_tier_bootstrap = _probe(seen)
-    asyncio.run(runner._run_free_tier_bootstrap())
-    assert seen["scope_installed"] is True
-    assert seen["portal_override"] == PORTAL
+    assert seen["base_url_override"] == BASE_URL

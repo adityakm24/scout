@@ -1,0 +1,159 @@
+/* Scout dashboard design tokens and utilities.
+   The palette is three theme-driven slots (background / midground / foreground)
+   that ThemeProvider rewrites on :root; everything below resolves against them. */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-base: var(--background-base);
+  --color-midground: var(--midground);
+  --color-midground-base: var(--midground-base);
+  --color-foreground: var(--foreground);
+  --color-foreground-base: var(--foreground-base);
+
+  --color-destructive: var(--destructive, #fb2c36);
+  --color-destructive-foreground: var(--destructive-foreground, #ffffff);
+  --color-success: var(--success, #4ade80);
+  --color-warning: var(--warning, #ffbd38);
+
+  /* Text hierarchy. Primary/secondary stay at or above 0.65 effective alpha
+     so stacked `/N` opacity is never needed for legibility. */
+  --color-text-primary: var(--text-primary, var(--midground));
+  --color-text-secondary: var(
+    --text-secondary,
+    color-mix(in srgb, var(--midground-base) 80%, transparent)
+  );
+  --color-text-tertiary: var(
+    --text-tertiary,
+    color-mix(in srgb, var(--midground-base) 65%, transparent)
+  );
+  --color-text-disabled: var(
+    --text-disabled,
+    color-mix(in srgb, var(--midground-base) 45%, transparent)
+  );
+  --color-text-on-accent: var(--text-on-accent, var(--background));
+  --color-text-display: var(--text-display, var(--midground));
+}
+
+:root {
+  --background: color-mix(in srgb, #041c1c 100%, transparent);
+  --background-base: #041c1c;
+  --background-alpha: 1;
+  --midground: color-mix(in srgb, #ffe6cb 100%, transparent);
+  --midground-base: #ffe6cb;
+  --midground-alpha: 1;
+  --foreground: color-mix(in srgb, #ffffff 0%, transparent);
+  --foreground-base: #ffffff;
+  --foreground-alpha: 0;
+}
+
+/* Display face for chrome (page titles, nav, section headers). Themes set
+   `--theme-font-display`; it falls back to the sans stack. */
+@utility font-display {
+  font-family: var(--theme-font-display, var(--font-sans));
+}
+
+/* Wide display variant for page headers. */
+@utility font-display-wide {
+  font-family: var(--theme-font-display, var(--font-sans));
+  font-stretch: expanded;
+}
+
+@utility font-courier {
+  font-family: 'Courier New', var(--font-mono), monospace;
+}
+
+/* Uppercase chrome style: buttons, badges, nav headings. Body copy never uses it. */
+@utility text-display {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@utility antialiased {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.group:hover .blink {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 6px)) scale(0.98);
+  }
+}
+
+@layer base {
+  * {
+    @apply antialiased;
+
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+
+    &:hover {
+      scrollbar-color: color-mix(in srgb, var(--midground) 20%, transparent)
+        transparent;
+    }
+  }
+
+  ::-webkit-scrollbar {
+    width: 0.25rem;
+    height: 0.25rem;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 1rem;
+    min-height: 1rem;
+  }
+
+  *:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--midground) 20%, transparent);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  *::selection {
+    background: var(--selection-bg, var(--midground));
+    color: var(--background-base);
+  }
+}

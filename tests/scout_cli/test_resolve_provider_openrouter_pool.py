@@ -24,7 +24,7 @@ def _clean_inference_env(monkeypatch):
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_TOKEN",
         "CLAUDE_CODE_OAUTH_TOKEN",
-        "SPACESHIPRESEARCH_API_KEY",
+        "FIXTURECO_API_KEY",
         "SCOUT_INFERENCE_PROVIDER",
     ):
         monkeypatch.delenv(key, raising=False)

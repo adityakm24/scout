@@ -4,7 +4,6 @@ import type { ConnectionTargetState, ConnectorsConnectResult } from '@scout/shar
 import { type RefObject, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useSessionView } from '@/app/chat/session-view'
-import { sessionRoute } from '@/app/routes'
 import { ToolFallback } from '@/components/assistant-ui/tool/fallback'
 import { Button } from '@/components/ui/button'
 import { ConnectorCard, ConnectorRow, type ConnectorRowMark, ConnectorSummary } from '@/components/ui/connector-card'
@@ -19,7 +18,6 @@ import {
   toolLabelTitle
 } from '@/lib/connector-tools'
 import {
-  $connectionRequests,
   type ConnectionOwner,
   connectionOwnerFor,
   type ConnectionRequest,
@@ -57,43 +55,6 @@ export function useConnectionOwner(sessionId: null | string, active: boolean): C
   }, [active, sessionId])
 
   return owner
-}
-
-/** The browser leg of a connection came back through `scout://connections/done`. Show the session
- *  that opened the operation and tell its backend to read the account now instead of at its next
- *  tick. Nothing in the link is trusted to move a row: the op id only names which card to show, and
- *  the backend reads the account itself. An operation this window holds no card for, or one that
- *  already settled, is ignored: the tab can come back long after Continue, and a stale link must
- *  not pull the user away from where they are. */
-export async function openConnectionDoneLink(
-  op: string,
-  navigate: (to: string) => void,
-  storedSessionIdFor: (runtimeSessionId: string) => string
-): Promise<void> {
-  const request = Object.values($connectionRequests.get()).find(entry => entry.opId === op)
-
-  if (!request?.sessionId || request.settled) {
-    return
-  }
-
-  const storedId = storedSessionIdFor(request.sessionId)
-  navigate(sessionRoute(storedId))
-
-  const owner = await connectionOwnerFor(storedId, 'connectors.operation.wake')
-
-  if (!owner) {
-    return
-  }
-
-  try {
-    await requestGatewayForAgent(owner.connectionId, owner.profile, 'connectors.operation.wake', {
-      op_id: op,
-      owner: { session_id: request.sessionId, type: 'session' }
-    })
-  } catch {
-    // The wake only shortens the wait. The operation can settle and leave the live registry between
-    // the link and this RPC (4004); the watcher reads the account at its next tick regardless.
-  }
 }
 
 /** Try again for one target of the open operation: one RPC, and the fresh link when the backend
@@ -190,7 +151,6 @@ const skipped = (copy: ConnectorCopy): SettledWord => ({ meta: copy.skipped })
 
 export const CONNECTOR_CARD_PHASES = {
   connected: { mark: 'connected', resolved: true, settled: connected, verb: 'none' },
-  expired: { mark: 'idle', resolved: false, settled: notConnected, verb: 'reissue' },
   failed: { mark: 'idle', resolved: false, settled: notConnected, verb: 'reissue' },
   initiated: { mark: 'waiting', resolved: false, settled: notConnected, verb: 'open' },
   not_connected: { mark: 'idle', resolved: false, settled: notConnected, verb: 'none' },

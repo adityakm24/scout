@@ -19,7 +19,7 @@ SCRIPT = REPO_ROOT / "scripts" / "validate_plugin_catalog.py"
 
 VALID_ENTRY = {
     "name": "example-plugin",
-    "repo": "https://github.com/SpaceshipResearch/scout-example-plugins",
+    "repo": "https://github.com/fixtureco/scout-example-plugins",
     "sha": "38fe0fb53eff98d477f807432e965429e665ca33",
     "subdir": "",
     "description": "One-line description.",

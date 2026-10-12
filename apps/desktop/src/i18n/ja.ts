@@ -207,13 +207,6 @@ export const ja = defineLocale({
       signOutAndSignIn: 'サインアウトして再サインイン',
       remoteFailureHint:
         '「ゲートウェイ設定」でゲートウェイの URL とサインインを確認するか、ローカルゲートウェイに切り替えてください。',
-      cloudDownTitle: 'SpaceshipResearch Cloud エージェントが停止しています',
-      cloudDownDescription:
-        'このゲートウェイが接続している SpaceshipResearch 管理のクラウドエージェントがサーバーエラーを返しています。ここから再起動することはできません。ステータスを確認するか、ローカルゲートウェイに切り替えるか、サポートに連絡してください。',
-      cloudDownHint:
-        '下のボタンから Scout Portal（インスタンスの状態と操作）を開くか、Discord でサポートを受けられます。',
-      cloudDownCheckPortal: 'Portal のステータスを確認',
-      cloudDownDiscord: 'Discord でサポートを受ける',
       hideRecentLogs: '最近のログを非表示',
       showRecentLogs: '最近のログを表示',
       signedInTitle: 'サインインしました',
@@ -291,8 +284,7 @@ export const ja = defineLocale({
       turnDoneBody: '',
       turnErrorTitle: 'ターンが失敗しました',
       backgroundDoneTitle: 'バックグラウンドタスクが完了しました',
-      backgroundFailedTitle: 'バックグラウンドタスクが失敗しました',
-      creditsTitle: 'クレジット'
+      backgroundFailedTitle: 'バックグラウンドタスクが失敗しました'
     }
   },
 
@@ -302,36 +294,10 @@ export const ja = defineLocale({
   },
 
   billingBlock: {
-    titleSpaceshipResearch: 'SpaceshipResearch クレジットが不足しています',
     titleProvider: provider => `クレジット不足 — ${provider}`,
     fallbackMessage: 'アカウントのクレジットが不足しています。続行するにはクレジットを追加してください。',
-    openBilling: '請求を開く',
     addCredits: 'クレジットを追加',
     dismiss: '閉じる'
-  },
-
-  sendDiagnostics: {
-    title: 'SpaceshipResearch に診断情報を送信',
-    privacyNotice:
-      'デバッグバンドルを SpaceshipResearch 内部ストレージにアップロードします（公開ペーストではありません）。システム情報（OS、バージョン、プロバイダー、設定済み API キーの種類 — キー自体は含まれません）と、エージェント/ゲートウェイ/デスクトップの完全なログ（各最大 512 KB。会話内容、ツール出力、ファイルパスを含む可能性が高い）が含まれます。シークレットはアップロード前にマスクされます。閲覧できるのは SpaceshipResearch スタッフと許可された Discord モデレーターのみで、14 日後に自動削除されます。',
-    upload: 'アップロード',
-    uploading: 'アップロード中…',
-    cancel: 'キャンセル',
-    close: '閉じる',
-    copyLink: 'リンクをコピー',
-    uploadIdFallback: id => `表示リンクが返されませんでした — サポートにアップロード ID ${id} をお伝えください`,
-    doneTitle: '診断情報を送信しました',
-    doneDescription:
-      'バンドルは非公開でアップロードされました。サポートスレッドで以下のリンクを共有すると、チームがログを確認できます。',
-    failedTitle: 'アップロードに失敗しました',
-    failedHint:
-      'ターミナルから `scout debug share --spaceshipresearch` を実行するか、`scout debug share --local` でアップロードせずにレポートを表示することもできます。',
-    handoffLead: '続きは次の場所で:',
-    links: {
-      github: 'GitHub Issues',
-      portal: 'Scout Portal サポート',
-      discord: 'Discord'
-    }
   },
 
   titlebar: {
@@ -434,9 +400,7 @@ export const ja = defineLocale({
       vaultCredentials: '保存済みの認証情報',
       vaultSources: 'パスワードマネージャー',
       appUpdates: 'バージョンと更新',
-      uninstall: 'アンインストール',
-      billingOverview: '概要',
-      billingPlans: 'プラン'
+      uninstall: 'アンインストール'
     },
     plugins: {
       openFolder: 'デスクトッププラグインフォルダーを開く',
@@ -476,7 +440,6 @@ export const ja = defineLocale({
       archivedChats: 'アーカイブ済みチャット',
       sessions: 'セッション',
       about: '情報',
-      billing: '請求',
       notifications: '通知',
       vault: 'パスワードとログイン'
     },
@@ -582,10 +545,6 @@ export const ja = defineLocale({
         backgroundDone: {
           label: 'バックグラウンドタスク完了',
           description: 'バックグラウンドのターミナルコマンドが完了しました。'
-        },
-        credits: {
-          label: 'クレジット通知',
-          description: 'クレジットの利用が停止または復旧しました。'
         },
         plugin: {
           label: 'プラグイン通知',
@@ -1507,14 +1466,6 @@ export const ja = defineLocale({
       activeBackend: '使用中',
       activeBackendHint: 'これが現在アクティブなバックエンドです',
       useBackend: 'このバックエンドを使う',
-      spaceshipResearchIncluded: 'SpaceshipResearch サブスクリプションに含まれています。有効にするには Scout Portal にサインインしてください。',
-      spaceshipResearchAuthNeededTitle: 'Scout Portal にサインイン',
-      spaceshipResearchAuthNeededMessage: provider =>
-        `${provider} は保存されましたが、Scout Portal にサインインするまで有効になりません。`,
-      spaceshipResearchAuthSignIn: 'サインイン',
-      spaceshipResearchAuthDoneTitle: 'Scout Portal に接続しました',
-      spaceshipResearchAuthDoneMessage: 'サブスクリプションのバックエンドが有効になりました。',
-      spaceshipResearchAuthFailed: 'Scout Portal のサインインが完了しませんでした',
       noApiKeyRequired: 'API キーは不要です。',
       postSetupHint: step =>
         `このバックエンドは一度だけインストールが必要です (${step})。このマシン上で実行され、数分かかる場合があります。`,
@@ -2628,8 +2579,6 @@ export const ja = defineLocale({
       '/browser': 'ローカルブラウザー接続を管理',
       '/palette': 'コマンドパレットを開く',
       '/usage': 'このセッションのトークン使用量を表示',
-      '/subscription': 'SpaceshipResearch のプランを確認し、ブラウザーで変更',
-      '/topup': 'SpaceshipResearch の残高を表示し、請求を管理',
       '/platform': '問題のあるゲートウェイプラットフォームを一時停止、再開、一覧表示',
       '/version': 'Scout Agent のバージョンを表示',
       '/debug': 'デバッグレポートを作成',
@@ -3093,7 +3042,6 @@ export const ja = defineLocale({
     chooseLater: '後でプロバイダーを選択します',
     recommended: '推奨',
     connected: '接続済み',
-    featuredPitch: '1 つのサブスクリプションで 300 以上の最先端モデル — Scout を実行するための推奨方法',
     fireworksPitch: '直接モデル API — Fireworks がホストする最先端モデル',
     localModelsTitle: 'モデルをローカルで実行',
     localModelsPitch: 'アカウント不要——モデルをダウンロードしてこのマシンで実行',
@@ -3144,7 +3092,6 @@ export const ja = defineLocale({
     reopenAuthPage: '認証ページを再度開く',
     autoBrowser: provider =>
       `${provider} をブラウザーで開きました。Scout をそこで承認すれば自動接続されます。コピーや貼り付けは不要です。`,
-    reopenSignInPage: 'サインインページを再度開く',
     waitingAuthorize: '承認を待っています...',
     externalPending: provider =>
       `${provider} は独自の CLI からサインインします。ターミナルでこのコマンドを実行してから、戻って「サインインしました」を選択してください:`,
@@ -3153,8 +3100,6 @@ export const ja = defineLocale({
     reopenVerification: '確認ページを再度開く',
     copy: 'コピー',
     defaultModel: 'デフォルトモデル',
-    freeTier: '無料プラン',
-    pro: 'Pro',
     free: '無料',
     price: (input, output) => `${input} 入力 / ${output} 出力 per Mtok`,
     change: '変更',
@@ -3173,12 +3118,8 @@ export const ja = defineLocale({
     downloading: 'ダウンロード中',
     localDownloadsHeading: 'ローカル',
     noAuthenticatedProviders: '認証済みプロバイダーがありません。',
-    pro: 'Pro',
-    proNeedsSubscription: 'Pro モデルには有料の SpaceshipResearch サブスクリプションが必要です。',
     free: '無料',
-    freeTier: '無料プラン',
     priceTitle: '100 万トークンあたりの入力/出力価格',
-    wasPrice: '旧価格',
     customModel: 'カスタムモデル',
     addCustomModelAction: 'カスタムモデルを追加…',
     customModelPlaceholder: 'モデル ID を入力（例: openai/gpt-5）'
@@ -3266,8 +3207,6 @@ export const ja = defineLocale({
       clientLabel: version => `クライアント v${version}`,
       connectionSsh: host => `SSH: ${host}`,
       connectionRemote: host => `リモート: ${host}`,
-      connectionCloud: host => `クラウド: ${host}`,
-      connectionCloudTooltip: host => `Scout Cloud · ${host}`,
       connectionSshTooltip: host => `SSH · ${host}`,
       connectionRemoteTooltip: host => `Remote · ${host}`,
       backendLabel: version => `バックエンド v${version}`,
@@ -3697,7 +3636,6 @@ export const ja = defineLocale({
       errorOpenLogsFailed: 'ログフォルダを開けませんでした',
       errorOpenDesktopLogs: 'デスクトップのログを開く',
       errorCopyDiagnostics: 'エラー詳細をコピー',
-      errorSendDiagnostics: '診断情報を送信',
       filesChanged: count => `${count} 件のファイルを変更`,
       reviewChanges: 'レビュー',
       readAloudFailed: '読み上げに失敗しました',

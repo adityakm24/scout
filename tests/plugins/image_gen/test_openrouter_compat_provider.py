@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for the OpenRouter-compatible image gen provider (OpenRouter + SpaceshipResearch)."""
+"""Tests for the OpenRouter-compatible image gen provider."""
 
 from __future__ import annotations
 
@@ -75,7 +75,6 @@ class TestProviderClass:
             assert _openrouter().is_available() is True
 
 
-
     def test_default_model_ignores_runtime_overrides(self, monkeypatch):
         """Catalog defaults must not inherit another provider's saved model."""
         from plugins.image_gen.openrouter import DEFAULT_MODEL
@@ -93,14 +92,6 @@ class TestProviderClass:
         assert _openrouter()._resolve_model() == "black-forest-labs/flux.2-pro"
         assert _openrouter()._resolve_model_chain() == ["black-forest-labs/flux.2-pro"]
 
-
-    def test_spaceshipresearch_honors_top_level_model(self):
-        from plugins.image_gen.openrouter import _build_providers
-
-        cfg = {"model": "openai/gpt-image-2"}
-        spaceshipresearch = {p.name: p for p in _build_providers()}["spaceshipresearch"]
-        with patch("plugins.image_gen.openrouter._load_image_gen_config", return_value=cfg):
-            assert spaceshipresearch._resolve_model_chain() == ["openai/gpt-image-2"]
 
     def test_explicit_model_kwarg_wins_over_config(self):
         cfg = {"model": "openai/gpt-image-2"}
@@ -219,18 +210,6 @@ class TestLiveCatalog:
         assert "bytedance-seed/seedream-4.5" in ids        # Image-API-only model present
         assert "google/gemini-3-pro-image" in ids          # chat-catalog model present
         assert len(ids) == len(set(ids))                   # deduped
-
-    def test_scout_portal_picker_excludes_image_api_catalog(self):
-        """Scout Portal has no /images route; its picker must not offer
-        Image-API-only models it cannot serve."""
-        from plugins.image_gen.openrouter import _build_providers
-
-        spaceshipresearch = {p.name: p for p in _build_providers()}["spaceshipresearch"]
-        with patch(_RUNTIME, side_effect=RuntimeError("no creds")):
-            ids = [m["id"] for m in spaceshipresearch.list_models()]
-        from plugins.image_gen.openrouter import DEFAULT_MODEL, _FALLBACK_MODEL
-
-        assert ids == [DEFAULT_MODEL, _FALLBACK_MODEL]
 
 
 # ---------------------------------------------------------------------------
@@ -362,22 +341,17 @@ class TestGenerate:
         assert mock_post.call_args.kwargs["json"]["model"] == "openai/gpt-image-2"
 
     def test_posts_to_resolved_base_url(self):
-        """SpaceshipResearch routes to its own base URL — proves the same code serves both."""
-        spaceshipresearch_runtime = _runtime_ok(
-            provider="spaceshipresearch", base_url="https://inference.spaceshipresearch.com/v1", api_key="spaceshipresearch-tok"
-        )
-        with patch(_RUNTIME, return_value=spaceshipresearch_runtime), \
+        """The request goes to the runtime-resolved base URL (a mirror here), never a hardcoded host."""
+        mirror_runtime = _runtime_ok(base_url="https://or-mirror.example/api/v1")
+        with patch(_RUNTIME, return_value=mirror_runtime), \
              patch("requests.post", return_value=_mock_chat_response([_PNG_DATA_URI])) as mock_post, \
              patch("plugins.image_gen.openrouter.save_b64_image", return_value=Path("/tmp/x.png")):
-            from plugins.image_gen.openrouter import _build_providers
-
-            spaceshipresearch = {p.name: p for p in _build_providers()}["spaceshipresearch"]
-            result = spaceshipresearch.generate(prompt="a pet")
+            result = _openrouter().generate(prompt="a pet")
 
         assert result["success"] is True
-        assert result["provider"] == "spaceshipresearch"
+        assert result["provider"] == "openrouter"
         url = mock_post.call_args[0][0]
-        assert url == "https://inference.spaceshipresearch.com/v1/chat/completions"
+        assert url == "https://or-mirror.example/api/v1/chat/completions"
 
     def test_api_error(self):
         import requests as req_lib
@@ -552,21 +526,6 @@ class TestImageApiSurface:
         assert result["success"] is True
         assert mock_post.call_args[0][0].endswith("/chat/completions")
 
-    def test_spaceshipresearch_never_uses_the_image_api(self):
-        """Scout Portal proxies chat-completions and has no /images route."""
-        from plugins.image_gen.openrouter import _build_providers
-
-        spaceshipresearch_runtime = _runtime_ok(
-            provider="spaceshipresearch", base_url="https://inference.spaceshipresearch.com/v1", api_key="spaceshipresearch-tok"
-        )
-        with patch(_RUNTIME, return_value=spaceshipresearch_runtime), \
-             patch("requests.post", return_value=_mock_chat_response([_PNG_DATA_URI])) as mock_post, \
-             patch("plugins.image_gen.openrouter.save_b64_image", return_value=Path("/tmp/x.png")):
-            spaceshipresearch = {p.name: p for p in _build_providers()}["spaceshipresearch"]
-            result = spaceshipresearch.generate(prompt="a pet", model="openai/gpt-image-2")
-
-        assert result["success"] is True
-        assert mock_post.call_args[0][0] == "https://inference.spaceshipresearch.com/v1/chat/completions"
 
     # -- per-model parameter filtering ------------------------------------
 
@@ -784,28 +743,27 @@ class TestImageApiSurface:
         assert result["error_type"] == "auth_error"
         assert "_retryable" not in result
 
-    def test_catalog_models_are_offered_only_by_openrouter(self):
-        from plugins.image_gen.openrouter import _IMAGE_API_MODELS, _build_providers
+    def test_catalog_models_are_offered_only_with_the_image_api_surface(self):
+        from plugins.image_gen.openrouter import _IMAGE_API_MODELS, _KNOWN_MODEL_META
 
-        by_name = {p.name: p for p in _build_providers()}
-        openrouter_ids = {m["id"] for m in by_name["openrouter"].list_models()}
-        spaceshipresearch_ids = {m["id"] for m in by_name["spaceshipresearch"].list_models()}
-        assert set(_IMAGE_API_MODELS) <= openrouter_ids
-        assert not (set(_IMAGE_API_MODELS) & spaceshipresearch_ids)
-
+        with patch("requests.get", side_effect=OSError("offline")):
+            surface_ids = {m["id"] for m in _openrouter_image_api().list_models()}
+            chat_only_ids = {m["id"] for m in _openrouter().list_models()}
+        image_api_only = set(_IMAGE_API_MODELS) - set(_KNOWN_MODEL_META)
+        assert set(_IMAGE_API_MODELS) <= surface_ids
+        assert image_api_only and not (image_api_only & chat_only_ids)
 
 
 class TestRegistration:
-    def test_register_both(self):
+    def test_register_openrouter(self):
         from plugins.image_gen.openrouter import register
 
         ctx = MagicMock()
         register(ctx)
         registered = [c.args[0].name for c in ctx.register_image_gen_provider.call_args_list]
-        assert set(registered) == {"openrouter", "spaceshipresearch"}
+        assert registered == ["openrouter"]
 
-    def test_both_are_reference_capable_for_pets(self):
+    def test_openrouter_is_reference_capable_for_pets(self):
         from agent.pet.generate.imagegen import _REF_CAPABLE
 
         assert "openrouter" in _REF_CAPABLE
-        assert "spaceshipresearch" in _REF_CAPABLE

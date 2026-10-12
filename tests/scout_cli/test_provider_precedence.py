@@ -6,9 +6,8 @@ over a stale logged-in OAuth `active_provider` in auth.json. Before the fix,
 explicit choice — e.g. a user OAuth-logged-into Anthropic but with
 OPENAI_API_KEY exported (or model.provider set) got routed to Anthropic.
 """
-import pytest
 
-from scout_cli.auth import resolve_provider, AuthError
+from scout_cli.auth import resolve_provider
 
 
 def _login(monkeypatch, provider_id):
@@ -63,8 +62,6 @@ class TestProviderPrecedence:
         assert resolve_provider("auto") == "anthropic"
 
 
-
-
     def test_openrouter_pool_beats_stale_oauth(self, monkeypatch):
         """An OpenRouter credential-pool entry (no env var) wins over a logged-in
         OAuth provider — the pool rung sits above OAuth (#42130 + #29285)."""
@@ -89,48 +86,5 @@ def _logged_out(monkeypatch):
 def _free_tier(monkeypatch, *, on=True, identity=False):
     """Free tier switch + whether a free-tier identity already exists. The resolver is a READ: any
     call into the creator from inside it is a bug, so the stub fails loudly."""
-    monkeypatch.setattr("scout_cli.anon_auth.guest_enabled", lambda: on)
-    monkeypatch.setattr("scout_cli.anon_auth.has_guest", lambda: identity)
-    monkeypatch.setattr("scout_cli.anon_auth.ensure_portal_identity",
-                        lambda **kw: (_ for _ in ()).throw(AssertionError("resolve_provider must not mint")))
 
 
-class TestFreeTierBeatsImplicitHostCredentials:
-    """NS-829: a leftover ~/.aws profile must not pre-empt the free tier on a fresh install.
-
-    The ladder: explicit intent still wins, an EXISTING free-tier identity sits above the implicit
-    Bedrock chain, the free tier off (or its identity absent) restores Bedrock. The resolver never
-    creates the identity; the boot bootstrap does, before any turn asks."""
-
-    @pytest.mark.parametrize("free_tier_on, identity, env_key, login, expected", [
-        (True, True, None, None, "spaceshipresearch"),                 # existing identity beats the AWS chain
-        (True, False, None, None, "bedrock"),             # no identity yet: Bedrock, nothing minted
-        (False, True, None, None, "bedrock"),             # free tier off: Bedrock as before
-        (True, True, "OPENAI_API_KEY", None, "openai-api"),  # env key still wins
-        (True, True, None, "anthropic", "anthropic"),        # a sign-in still wins
-    ])
-    def test_free_tier_sits_above_the_bedrock_chain(self, monkeypatch, free_tier_on, identity,
-                                                     env_key, login, expected):
-        _clear_provider_env(monkeypatch)
-        _config(monkeypatch, "")
-        if login:
-            _login(monkeypatch, login)
-        else:
-            _logged_out(monkeypatch)
-        if env_key:
-            monkeypatch.setenv(env_key, "sk-test-key")
-        monkeypatch.setattr("agent.bedrock_adapter.has_aws_credentials", lambda: True)
-        _free_tier(monkeypatch, on=free_tier_on, identity=identity)
-        assert resolve_provider("auto") == expected
-
-    def test_skip_free_tier_answers_what_else_would_carry_inference(self, monkeypatch):
-        """The bootstrap's question: with the free tier hidden, an existing identity is not an
-        answer and the ladder falls through to the next real rung."""
-        _clear_provider_env(monkeypatch)
-        _config(monkeypatch, "")
-        _logged_out(monkeypatch)
-        monkeypatch.setattr("agent.bedrock_adapter.has_aws_credentials", lambda: False)
-        _free_tier(monkeypatch, on=True, identity=True)
-        assert resolve_provider("auto") == "spaceshipresearch"
-        with pytest.raises(AuthError):
-            resolve_provider("auto", skip_free_tier=True)
