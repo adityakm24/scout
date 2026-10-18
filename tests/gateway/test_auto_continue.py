@@ -48,9 +48,7 @@ class TestInterruptedReplayFiltering:
             },
         ]
 
-        agent_history, observed_context = _build_gateway_agent_history(history)
-
-        assert observed_context is None
+        agent_history = _build_gateway_agent_history(history)
         assert agent_history[:2] == history[:2]
         assert agent_history[-1]["role"] == "tool"
         assert agent_history[-1]["tool_call_id"] == "call_1"
@@ -85,7 +83,7 @@ class TestInterruptedReplayFiltering:
             },
         ]
 
-        agent_history, _observed_context = _build_gateway_agent_history(history)
+        agent_history = _build_gateway_agent_history(history)
 
         assert agent_history[:2] == history
         assert agent_history[-1]["role"] == "tool"

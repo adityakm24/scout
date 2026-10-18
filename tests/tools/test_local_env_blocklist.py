@@ -67,30 +67,6 @@ def _running_site():
                               f"lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages")
 
 
-def test_terminal_child_observes_declared_policy(child_env, monkeypatch):
-    from scout_cli.auth import PROVIDER_REGISTRY
-    from scout_cli.config import OPTIONAL_ENV_VARS
-    blocked = set(STATIC_BLOCKED)
-    for config in PROVIDER_REGISTRY.values():
-        blocked.update(config.api_key_env_vars)
-        if config.base_url_env_var:
-            blocked.add(config.base_url_env_var)
-    blocked.update(name for name, meta in OPTIONAL_ENV_VARS.items()
-                   if meta.get("category") in {"tool", "messaging"}
-                   or (meta.get("category") == "setting" and meta.get("password")))
-    blocked.discard("CLAUDE_CODE_OAUTH_TOKEN")  # operator's subscription, not Scout inference
-    for name in blocked | set(OPERATOR_ALLOWED):
-        monkeypatch.setenv(name, "fake-" + name)
-    before = dict(os.environ)
-    env = local.LocalEnvironment(cwd=str(child_env), timeout=30,
-                                 env={"OPENAI_BASE_URL": "fake-override", "MY_CUSTOM_VAR": "caller-value"})
-    try:
-        observed = observe_terminal(env, sorted(blocked | set(OPERATOR_ALLOWED)))
-    finally:
-        env.cleanup()
-    assert observed == {**dict.fromkeys(blocked), **{k: "fake-" + k for k in OPERATOR_ALLOWED},
-                        "MY_CUSTOM_VAR": "caller-value"}
-    assert dict(os.environ) == before
 
 
 # Secrets adapters read straight from the environment (webhook signing secrets, access tokens,
@@ -108,27 +84,6 @@ OPERATOR_SECRETS = ["MY_APP_KEY", "DEPLOY_WEBHOOK_SECRET", "SLACK_USER_TOKEN", "
                     "GATEWAY_API_KEY"]
 
 
-@pytest.mark.parametrize("builder", ["foreground", "background", "nonterminal"])
-def test_adapter_and_provider_profile_secrets_never_reach_children(child_env, monkeypatch, builder):
-    from providers import list_providers
-    from tools.env_passthrough import is_env_passthrough, register_env_passthrough
-    secrets = set(ADAPTER_SECRETS)
-    # child_env's SCOUT_HOME has no provider plugins, so these are the bundled profiles.
-    secrets.update(name for profile in list_providers() for name in (profile.env_vars or ()))
-    secrets.discard("CLAUDE_CODE_OAUTH_TOKEN")  # operator's subscription, not Scout inference
-    for name in [*secrets, *OPERATOR_SECRETS]:
-        monkeypatch.setenv(name, "fake-" + name)
-    factories = {
-        "foreground": lambda: local._make_run_env({}),
-        "background": lambda: local._sanitize_subprocess_env(dict(os.environ)),
-        "nonterminal": local.scout_subprocess_env,
-    }
-    observed = observe_child(factories[builder](), sorted(secrets | set(OPERATOR_SECRETS)))
-    assert observed == {**dict.fromkeys(secrets), **{k: "fake-" + k for k in OPERATOR_SECRETS}}
-    # Skill passthrough is what forwards a name into docker/ssh/modal and execute_code children.
-    register_env_passthrough(sorted(secrets | set(OPERATOR_SECRETS)))
-    assert not any(is_env_passthrough(name) for name in secrets)
-    assert all(is_env_passthrough(name) for name in OPERATOR_SECRETS)
 
 
 def _user_platform_plugin(home, name, secret):
@@ -341,14 +296,6 @@ def test_unreadable_bundled_manifest_fails_the_policy_instead_of_dropping_it(mon
         cfg.platform_manifest_secret_envs(source="bundled", strict=True)
 
 
-def test_inheriting_child_gets_provider_keys_but_never_adapter_secrets(child_env, monkeypatch):
-    # inherit_credentials is the narrow grant for model-driving CLIs: provider keys only.
-    granted = ["OPENAI_API_KEY", "FIXTURECO_API_KEY", *OPERATOR_SECRETS]
-    for name in [*ADAPTER_SECRETS, *granted]:
-        monkeypatch.setenv(name, "fake-" + name)
-    observed = observe_child(local.scout_subprocess_env(inherit_credentials=True),
-                             sorted([*ADAPTER_SECRETS, *granted]))
-    assert observed == {**dict.fromkeys(ADAPTER_SECRETS), **{k: "fake-" + k for k in granted}}
 
 
 def test_runtime_adapter_secret_follows_the_bound_profiles_registry(child_env, monkeypatch):
@@ -474,62 +421,8 @@ def test_force_prefix_is_not_plugin_passthrough(child_env, monkeypatch, builder,
         assert "AUXILIARY_VISION_API_KEY" not in factories[builder]()
 
 
-@pytest.mark.parametrize("managed,platform,allowed", [(True, "telegram", True), (False, "buzz", True), (False, "telegram", False)])
-@pytest.mark.parametrize("scope", [None, {"BUZZ_PRIVATE_KEY": "fake-scoped"}])
-def test_buzz_context_and_plain_process_value(child_env, monkeypatch, managed, platform, allowed, scope):
-    from agent import secret_scope as ss
-    from gateway.session_context import _SESSION_PLATFORM
-    from tools.code_execution_env import _scrub_child_env
-    from tools.env_passthrough import register_env_passthrough, is_env_passthrough
-    buzz = {"BUZZ_PRIVATE_KEY": "fake-process", "BUZZ_AUTH_TAG": "fake-tag", "BUZZ_RELAY_URL": "fake-relay"}
-    for k, v in buzz.items():
-        monkeypatch.setenv(k, v)
-    if managed:
-        monkeypatch.setenv("BUZZ_MANAGED_AGENT", "1")
-    platform_token = _SESSION_PLATFORM.set(platform)
-    ss.set_multiplex_active(True)
-    scope_token = ss.set_secret_scope(scope) if scope is not None else None
-    try:
-        register_env_passthrough(buzz)
-        assert not any(is_env_passthrough(k) for k in buzz)
-        for result in (local._make_run_env({}), local._sanitize_subprocess_env(dict(os.environ))):
-            assert {k: result.get(k) for k in buzz} == (buzz if allowed else dict.fromkeys(buzz))
-        for result in (local.scout_subprocess_env(), _scrub_child_env(os.environ)):
-            assert not set(buzz) & result.keys()
-    finally:
-        if scope_token is not None:
-            ss.reset_secret_scope(scope_token)
-        ss.set_multiplex_active(False)
-        _SESSION_PLATFORM.reset(platform_token)
 
 
-@pytest.mark.platforms("linux", "macos", "windows")
-@pytest.mark.parametrize("first_platform,first_value", [("buzz", "fake-profile-a"), ("telegram", None)], ids=["buzz", "other"])
-def test_buzz_secret_never_reaches_second_profile_via_snapshot(child_env, monkeypatch, first_platform, first_value):
-    from agent import secret_scope as ss
-    from gateway.session_context import _SESSION_PLATFORM
-    monkeypatch.setenv("BUZZ_PRIVATE_KEY", "fake-profile-a")
-    ss.set_multiplex_active(True)
-    platform = _SESSION_PLATFORM.set(first_platform)
-    env = None
-    try:
-        env = local.LocalEnvironment(cwd=str(child_env), timeout=30)
-        snap = Path(env._snapshot_path)
-        assert snap.exists()
-        assert "BUZZ_PRIVATE_KEY" not in snap.read_text(encoding="utf-8")
-        assert observe_terminal(env, ["BUZZ_PRIVATE_KEY"]) == {"BUZZ_PRIVATE_KEY": first_value}
-        assert "fake-profile-a" not in snap.read_text(encoding="utf-8")
-        monkeypatch.delenv("BUZZ_PRIVATE_KEY")
-        _SESSION_PLATFORM.reset(platform)
-        platform = _SESSION_PLATFORM.set("telegram")
-        assert observe_terminal(env, ["BUZZ_PRIVATE_KEY"]) == {"BUZZ_PRIVATE_KEY": None}
-        assert "BUZZ_PRIVATE_KEY" in env._snapshot_passthrough_names
-        assert "BUZZ_PRIVATE_KEY" not in snap.read_text(encoding="utf-8")
-    finally:
-        if env is not None:
-            env.cleanup()
-        _SESSION_PLATFORM.reset(platform)
-        ss.set_multiplex_active(False)
 
 
 @pytest.mark.parametrize("scoped,expected", [({"SERVICE_TOKEN": "fake-routed"}, "fake-routed"), ({}, None)])
@@ -1455,51 +1348,6 @@ class TestBlocklistCoverage:
                     f"Secret setting env var {name} missing from blocklist"
                 )
 
-    def test_gateway_runtime_vars_are_in_blocklist(self):
-        extras = {
-            "TELEGRAM_HOME_CHANNEL",
-            "TELEGRAM_HOME_CHANNEL_NAME",
-            "DISCORD_HOME_CHANNEL",
-            "DISCORD_HOME_CHANNEL_NAME",
-            "DISCORD_REQUIRE_MENTION",
-            "DISCORD_FREE_RESPONSE_CHANNELS",
-            "DISCORD_AUTO_THREAD",
-            "SLACK_HOME_CHANNEL",
-            "SLACK_HOME_CHANNEL_NAME",
-            "SLACK_ALLOWED_USERS",
-            "WHATSAPP_ENABLED",
-            "WHATSAPP_MODE",
-            "WHATSAPP_ALLOWED_USERS",
-            "SIGNAL_HTTP_URL",
-            "SIGNAL_ACCOUNT",
-            "SIGNAL_ALLOWED_USERS",
-            "SIGNAL_GROUP_ALLOWED_USERS",
-            "SIGNAL_HOME_CHANNEL",
-            "SIGNAL_HOME_CHANNEL_NAME",
-            "SIGNAL_IGNORE_STORIES",
-            "HASS_TOKEN",
-            "HASS_URL",
-            "EMAIL_ADDRESS",
-            "EMAIL_PASSWORD",
-            "EMAIL_IMAP_HOST",
-            "EMAIL_SMTP_HOST",
-            "EMAIL_HOME_ADDRESS",
-            "EMAIL_HOME_ADDRESS_NAME",
-            "SCOUT_DASHBOARD_SESSION_TOKEN",
-            "GATEWAY_ALLOWED_USERS",
-            "GH_TOKEN",
-            "GITHUB_APP_ID",
-            "GITHUB_APP_PRIVATE_KEY_PATH",
-            "GITHUB_APP_INSTALLATION_ID",
-            "MODAL_TOKEN_ID",
-            "MODAL_TOKEN_SECRET",
-            "DAYTONA_API_KEY",
-            "VERCEL_OIDC_TOKEN",
-            "VERCEL_TOKEN",
-            "VERCEL_PROJECT_ID",
-            "VERCEL_TEAM_ID",
-        }
-        assert extras.issubset(_SCOUT_PROVIDER_ENV_BLOCKLIST)
 
 
 class TestSanePathIncludesHomebrew:

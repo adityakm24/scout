@@ -1650,7 +1650,7 @@ def cmd_gui(args: argparse.Namespace):
                 desktop_dir, PROJECT_ROOT, source_mode=source_mode, packaged_executable=packaged_executable
             )
         elif needs_build:
-            prepare_source_dependencies(PROJECT_ROOT, ("ui-tui", "web", "apps/desktop"), env=build_env,
+            prepare_source_dependencies(PROJECT_ROOT, ("web", "apps/desktop"), env=build_env,
                                         explicit=force_build or getattr(args, "build_only", False))
             built = build_prepared_desktop(desktop_dir, source_mode=source_mode, npm=npm, env=build_env)
             if not source_mode:

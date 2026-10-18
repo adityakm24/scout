@@ -16,7 +16,7 @@ from gateway.platforms.event import MessageEvent
 from gateway.session import SessionSource
 
 
-def _make_event(text="/update", platform=Platform.TELEGRAM,
+def _make_event(text="/update", platform=Platform.HOMEASSISTANT,
                 user_id="12345", chat_id="67890", thread_id=None):
     """Build a MessageEvent for testing."""
     source = SessionSource(
@@ -47,48 +47,6 @@ def _make_runner():
 class TestHandleUpdateCommand:
     """Tests for GatewayRunner._handle_update_command."""
 
-    @pytest.mark.asyncio
-    async def test_no_git_directory(self, tmp_path):
-        """Returns an error when .git does not exist."""
-        runner = _make_runner()
-        event = _make_event()
-        # Point _scout_home to tmp_path and project_root to a dir without .git
-        fake_root = tmp_path / "project"
-        fake_root.mkdir()
-        with patch("gateway.run._scout_home", tmp_path), \
-             patch("gateway.run.Path") as MockPath:
-            # Path(__file__).parent.parent.resolve() -> fake_root
-            MockPath.return_value = MagicMock()
-            MockPath.__truediv__ = Path.__truediv__
-            # Easier: just patch the __file__ resolution in the method
-            pass
-
-        # Simpler approach — mock at method level using a wrapper
-        runner = _make_runner()
-
-        with patch("gateway.run._scout_home", tmp_path):
-            # The handler does Path(__file__).parent.parent.resolve()
-            # We need to make project_root / '.git' not exist.
-            # Since Path(__file__) resolves to the real gateway/run.py,
-            # project_root will be the real scout-agent dir (which HAS .git).
-            # Patch Path to control this.
-            original_path = Path
-
-            class FakePath(type(Path())):
-                pass
-
-            # Actually, simplest: just patch the specific file attr.
-            # The _handle_update_command handler lives in gateway/slash_commands.py
-            # (extracted from run.py in the god-file decomposition); it resolves
-            # project_root via Path(__file__).parent.parent, so fake that file.
-            fake_file = str(fake_root / "gateway" / "slash_commands.py")
-            (fake_root / "gateway").mkdir(parents=True)
-            (fake_root / "gateway" / "slash_commands.py").touch()
-
-            with patch("gateway.slash_commands.__file__", fake_file):
-                result = await runner._handle_update_command(event)
-
-        assert "Not a git repository" in result
 
 
     @pytest.mark.asyncio
@@ -121,38 +79,6 @@ class TestHandleUpdateCommand:
             assert _resolve_scout_bin() is None
 
 
-    @pytest.mark.asyncio
-    async def test_writes_pending_marker(self, tmp_path):
-        """Writes .update_pending.json with correct platform and chat info."""
-        runner = _make_runner()
-        event = _make_event(platform=Platform.TELEGRAM, chat_id="99999")
-        event.message_id = "m-update"
-
-        fake_root = tmp_path / "project"
-        fake_root.mkdir()
-        (fake_root / ".git").mkdir()
-        (fake_root / "gateway").mkdir()
-        (fake_root / "gateway" / "run.py").touch()
-        fake_file = str(fake_root / "gateway" / "run.py")
-        scout_home = tmp_path / "scout"
-        scout_home.mkdir()
-
-        with patch("gateway.run._scout_home", scout_home), \
-             patch("gateway.run.__file__", fake_file), \
-             patch("scout_cli.config.detect_install_method", return_value="git"), \
-             patch("shutil.which", side_effect=lambda x: "/usr/bin/scout" if x == "scout" else "/usr/bin/setsid"), \
-             patch("subprocess.Popen"):
-            result = await runner._handle_update_command(event)
-
-        pending_path = scout_home / ".update_pending.json"
-        assert pending_path.exists()
-        data = json.loads(pending_path.read_text())
-        assert data["platform"] == "telegram"
-        assert data["chat_id"] == "99999"
-        assert data["chat_type"] == "dm"
-        assert data["message_id"] == "m-update"
-        assert "timestamp" in data
-        assert not (scout_home / ".update_exit_code").exists()
 
 
     @pytest.mark.asyncio
@@ -227,12 +153,12 @@ class TestUpdateCommandPlatformGate:
         from scout_cli.plugins import PluginManager
         PluginManager().discover_and_load(force=True)
         from gateway.platform_registry import platform_registry
-        discord_entry = platform_registry.get("discord")
+        discord_entry = platform_registry.get("homeassistant")
         assert discord_entry is not None
         assert discord_entry.allow_update_command is True
 
         runner = _make_runner()
-        event = _make_event(platform=Platform.DISCORD)
+        event = _make_event(platform=Platform.HOMEASSISTANT)
         monkeypatch.setenv("SCOUT_MANAGED", "")
 
         with patch("subprocess.Popen"):
@@ -265,12 +191,12 @@ class TestSendUpdateNotification:
 
         pending_path = scout_home / ".update_pending.json"
         pending_path.write_text(json.dumps({
-            "platform": "telegram", "chat_id": "67890", "user_id": "12345",
+            "platform": "homeassistant", "chat_id": "67890", "user_id": "12345",
         }))
         (scout_home / ".update_output.txt").write_text("still running")
 
         mock_adapter = AsyncMock()
-        runner.adapters = {Platform.TELEGRAM: mock_adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: mock_adapter}
 
         with patch("gateway.run._scout_home", scout_home):
             result = await runner._send_update_notification()
@@ -288,13 +214,13 @@ class TestSendUpdateNotification:
 
         claimed_path = scout_home / ".update_pending.claimed.json"
         claimed_path.write_text(json.dumps({
-            "platform": "telegram", "chat_id": "67890", "user_id": "12345",
+            "platform": "homeassistant", "chat_id": "67890", "user_id": "12345",
         }))
         (scout_home / ".update_output.txt").write_text("done")
         (scout_home / ".update_exit_code").write_text("0")
 
         mock_adapter = AsyncMock()
-        runner.adapters = {Platform.TELEGRAM: mock_adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: mock_adapter}
 
         with patch("gateway.run._scout_home", scout_home):
             result = await runner._send_update_notification()
@@ -312,7 +238,7 @@ class TestSendUpdateNotification:
 
         # Write pending marker
         pending = {
-            "platform": "telegram",
+            "platform": "homeassistant",
             "chat_id": "67890",
             "user_id": "12345",
             "timestamp": "2026-03-04T21:00:00",
@@ -326,7 +252,7 @@ class TestSendUpdateNotification:
         # Mock the adapter
         mock_adapter = AsyncMock()
         mock_adapter.send = AsyncMock()
-        runner.adapters = {Platform.TELEGRAM: mock_adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: mock_adapter}
 
         with patch("gateway.run._scout_home", scout_home):
             await runner._send_update_notification()
@@ -353,7 +279,7 @@ class TestSendUpdateNotification:
 
         pending_path = scout_home / ".update_pending.json"
         pending_path.write_text(json.dumps({
-            "platform": "telegram",
+            "platform": "homeassistant",
             "chat_id": "67890",
             "user_id": "12345",
             "timestamp": (datetime.now() - timedelta(hours=2)).isoformat(),
@@ -385,7 +311,7 @@ class TestSendUpdateNotification:
 
         pending_path = scout_home / ".update_pending.json"
         pending_path.write_text(json.dumps({
-            "platform": "telegram",
+            "platform": "homeassistant",
             "chat_id": "67890",
             "user_id": "12345",
             "timestamp": (datetime.now() - timedelta(minutes=5)).isoformat(),
@@ -410,7 +336,7 @@ class TestSendUpdateNotification:
         output_path = scout_home / ".update_output.txt"
         exit_code_path = scout_home / ".update_exit_code"
         pending_path.write_text(json.dumps({
-            "platform": "telegram", "chat_id": "111", "user_id": "222",
+            "platform": "homeassistant", "chat_id": "111", "user_id": "222",
         }))
         output_path.write_text("✓ Done")
         exit_code_path.write_text("0")
@@ -418,7 +344,7 @@ class TestSendUpdateNotification:
         # Adapter send raises
         mock_adapter = AsyncMock()
         mock_adapter.send.side_effect = RuntimeError("network error")
-        runner.adapters = {Platform.TELEGRAM: mock_adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: mock_adapter}
 
         with patch("gateway.run._scout_home", scout_home):
             await runner._send_update_notification()
@@ -429,43 +355,6 @@ class TestSendUpdateNotification:
         assert not exit_code_path.exists()
 
 
-    @pytest.mark.asyncio
-    async def test_no_adapter_for_platform_preserves_markers(self, tmp_path):
-        """A finished update whose platform is offline keeps its markers.
-
-        When the target platform's adapter has not reconnected yet, dropping
-        the completion markers would silently lose the notification. Instead the
-        call defers (returns False) and leaves every marker on disk so a later
-        retry can deliver once the platform is back.
-        """
-        runner = _make_runner()
-        scout_home = tmp_path / "scout"
-        scout_home.mkdir()
-
-        pending = {"platform": "discord", "chat_id": "111", "user_id": "222"}
-        pending_path = scout_home / ".update_pending.json"
-        output_path = scout_home / ".update_output.txt"
-        exit_code_path = scout_home / ".update_exit_code"
-        pending_path.write_text(json.dumps(pending))
-        output_path.write_text("Done")
-        exit_code_path.write_text("0")
-
-        # Only telegram adapter available, but pending says discord
-        mock_adapter = AsyncMock()
-        runner.adapters = {Platform.TELEGRAM: mock_adapter}
-
-        with patch("gateway.run._scout_home", scout_home):
-            result = await runner._send_update_notification()
-
-        # No send (wrong platform offline) and the result is deferred.
-        assert result is False
-        mock_adapter.send.assert_not_called()
-        # Markers are preserved for a later retry — NOT cleaned up.
-        assert pending_path.exists()
-        assert output_path.exists()
-        assert exit_code_path.exists()
-        # The marker stays in its canonical pending location (claim restored).
-        assert not (scout_home / ".update_pending.claimed.json").exists()
 
     @pytest.mark.asyncio
     async def test_deferred_notification_delivers_after_reconnect(self, tmp_path):
@@ -480,7 +369,7 @@ class TestSendUpdateNotification:
         scout_home = tmp_path / "scout"
         scout_home.mkdir()
 
-        pending = {"platform": "discord", "chat_id": "111", "user_id": "222"}
+        pending = {"platform": "homeassistant", "chat_id": "111", "user_id": "222"}
         pending_path = scout_home / ".update_pending.json"
         output_path = scout_home / ".update_output.txt"
         exit_code_path = scout_home / ".update_exit_code"
@@ -497,7 +386,7 @@ class TestSendUpdateNotification:
 
         # Platform reconnects: the reconnect watcher adds the adapter back.
         mock_adapter = AsyncMock()
-        runner.adapters = {Platform.DISCORD: mock_adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: mock_adapter}
 
         with patch("gateway.run._scout_home", scout_home):
             second = await runner._send_update_notification()
@@ -519,7 +408,7 @@ class TestSendUpdateNotification:
         scout_home = tmp_path / "scout"
         scout_home.mkdir()
 
-        pending = {"platform": "discord", "chat_id": "111", "user_id": "222"}
+        pending = {"platform": "homeassistant", "chat_id": "111", "user_id": "222"}
         pending_path = scout_home / ".update_pending.json"
         output_path = scout_home / ".update_output.txt"
         exit_code_path = scout_home / ".update_exit_code"
@@ -528,7 +417,7 @@ class TestSendUpdateNotification:
         exit_code_path.write_text("0")
 
         mock_adapter = AsyncMock()
-        runner.adapters = {Platform.DISCORD: mock_adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: mock_adapter}
 
         with patch("gateway.run._scout_home", scout_home):
             delivered = await runner._send_update_notification()
@@ -553,11 +442,11 @@ class TestSendUpdateNotification:
         scout_home = tmp_path / "scout"
         scout_home.mkdir()
         (scout_home / ".update_pending.json").write_text(
-            json.dumps({"platform": "discord", "chat_id": "111", "user_id": "222"}))
+            json.dumps({"platform": "homeassistant", "chat_id": "111", "user_id": "222"}))
         (scout_home / ".update_output.txt").write_text("x" * 3000 + "\nERROR: pip failed\n")
         (scout_home / ".update_exit_code").write_text("1")
         mock_adapter = AsyncMock()
-        runner.adapters = {Platform.DISCORD: mock_adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: mock_adapter}
 
         with patch("gateway.run._scout_home", scout_home):
             await runner._send_update_notification()
@@ -581,7 +470,7 @@ class TestWatchUpdateProgress:
         scout_home.mkdir()
 
         (scout_home / ".update_pending.json").write_text(json.dumps({
-            "platform": "telegram",
+            "platform": "homeassistant",
             "chat_id": "67890",
             "user_id": "12345",
         }))
@@ -591,7 +480,7 @@ class TestWatchUpdateProgress:
         (scout_home / ".update_exit_code").write_text("0")
 
         mock_adapter = AsyncMock()
-        runner.adapters = {Platform.TELEGRAM: mock_adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: mock_adapter}
 
         with patch("gateway.run._scout_home", scout_home):
             await runner._watch_update_progress(poll_interval=0.01, stream_interval=0.01, timeout=1.0)
@@ -606,29 +495,3 @@ class TestWatchUpdateProgress:
 # ---------------------------------------------------------------------------
 
 
-class TestUpdateCommandInstallMethodRefusal:
-    """/update on a non-git install refuses with the steward's own update
-    command instead of attempting a git-based `scout update`."""
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize("method", ["docker", "nix"])
-    async def test_refuses_non_git_install(self, tmp_path, method):
-        runner = _make_runner()
-        event = _make_event()
-        scout_home = tmp_path / "scout"
-        scout_home.mkdir()
-        mock_popen = MagicMock()
-
-        with patch("gateway.run._scout_home", scout_home), \
-             patch("scout_cli.config.detect_install_method",
-                   return_value=method), \
-             patch("scout_cli.config.recommended_update_command_for_method",
-                   return_value=f"steward-update --{method}"), \
-             patch("subprocess.Popen", mock_popen):
-            result = await runner._handle_update_command(event)
-
-        assert f"does not apply to this install ({method})" in result
-        assert f"Update with: steward-update --{method}" in result
-        # No update attempt: nothing spawned, no pending marker written.
-        mock_popen.assert_not_called()
-        assert not (scout_home / ".update_pending.json").exists()

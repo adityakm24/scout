@@ -21,7 +21,7 @@ vi.mock('@/scout', async importOriginal => ({
 const archivedMatrixSession = {
   archived: true,
   ended_at: null,
-  id: 'matrix-1',
+  id: 'webhook-1',
   input_tokens: 0,
   is_active: false,
   last_active: 1,
@@ -29,7 +29,7 @@ const archivedMatrixSession = {
   model: null,
   output_tokens: 0,
   preview: null,
-  source: 'matrix',
+  source: 'webhook',
   started_at: 1,
   title: 'archived room',
   tool_call_count: 0
@@ -52,8 +52,8 @@ describe('SessionsSettings unarchive', () => {
 
     await act(async () => fireEvent.click(button))
 
-    await waitFor(() => expect(setSessionArchived).toHaveBeenCalledWith('matrix-1', false, undefined))
-    expect($messagingSessions.get().map(session => session.id)).toEqual(['matrix-1'])
+    await waitFor(() => expect(setSessionArchived).toHaveBeenCalledWith('webhook-1', false, undefined))
+    expect($messagingSessions.get().map(session => session.id)).toEqual(['webhook-1'])
     expect($messagingSessions.get()[0]?.archived).toBe(false)
     expect($sessions.get()).toEqual([])
   })

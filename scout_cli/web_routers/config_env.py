@@ -34,7 +34,6 @@ config_router = APIRouter()
 router = APIRouter()
 
 # Late-bound so a test's monkeypatch on the owning module wins at call time.
-_channel_managed_env_keys = late("_channel_managed_env_keys", "scout_cli.web_server_messaging")
 _config_profile_scope = late("_config_profile_scope", "scout_cli.web_server_profiles")
 _profile_scope = late("_profile_scope", "scout_cli.web_server_profiles")
 _require_token = late("_require_token")
@@ -54,7 +53,7 @@ _REVEAL_WINDOW_SECONDS = 30
 _CATEGORY_ORDER = [
     "general", "agent", "terminal", "display", "delegation",
     "memory", "compression", "security", "browser", "voice",
-    "tts", "stt", "logging", "discord", "auxiliary",
+    "tts", "stt", "logging", "auxiliary",
 ]
 
 
@@ -266,7 +265,6 @@ async def get_env_vars(profile: Optional[str] = None):
 def _get_env_vars_sync(profile: Optional[str] = None):
     with _profile_scope(profile):
         env_on_disk = load_env()
-    channel_keys = _channel_managed_env_keys()
     catalog_meta = _catalog_provider_env_metadata()
 
     def _row(var_name: str, info: dict, *, custom: bool = False) -> dict:
@@ -283,9 +281,6 @@ def _get_env_vars_sync(profile: Optional[str] = None):
             "is_password": info.get("password", cat_meta.get("is_password", False)),
             "tools": info.get("tools", []),
             "advanced": info.get("advanced", cat_meta.get("advanced", False)),
-            # Messaging-platform credential owned by a Channels page card; the
-            # Keys/Env page hides it rather than duplicate the richer UI.
-            "channel_managed": var_name in channel_keys,
             # Provider grouping from the unified catalog, so the desktop groups
             # by the SAME provider identity the CLI `scout model` picker uses.
             "provider": cat_meta.get("provider", ""),
@@ -313,10 +308,10 @@ def _get_env_vars_sync(profile: Optional[str] = None):
             result[var_name] = _row(var_name, {})
     # Custom keys from .env: always "set" (on disk), treated as secrets by
     # default (is_password=True -> redacted, reveal-gated) since an
-    # unrecognised key could hold anything. Channel-managed credentials belong
-    # to the Channels page. A key added via "add a custom key" round-trips here.
+    # unrecognised key could hold anything. A key added via "add a custom key"
+    # round-trips here.
     for var_name in env_on_disk:
-        if var_name in result or var_name in channel_keys:
+        if var_name in result:
             continue
         row = _row(var_name, {}, custom=True)
         row["category"] = "custom"

@@ -47,7 +47,7 @@ export const en: Translations = {
     messaging: "Messaging",
     gateway: "Gateway",
     gatewayHint:
-      "Messaging platforms, the API server and webhooks are configured on the Channels page. These are gateway-wide settings (proxy/relay mode and the global allowlist).",
+      "Gateway-wide settings: the HTTP API server, webhooks and the global allowlist.",
     pluginLoadFailed:
       "Could not load this plugin’s script. Check the Network tab (dashboard-plugins/…) and the server’s plugin path.",
     pluginNotRegistered:
@@ -75,7 +75,6 @@ export const en: Translations = {
     },
     nav: {
       analytics: "Analytics",
-      chat: "Chat",
       config: "Config",
       cron: "Cron",
       keys: "Keys",
@@ -194,8 +193,6 @@ export const en: Translations = {
     selectedSessionsSkippedActive:
       "{deleted} deleted; {count} kept because a turn is running",
     failedToDeleteSelected: "Failed to delete selected sessions",
-    resumeInChat: "Resume in Chat",
-    newChat: "New chat",
     workspace: "workspace",
     workspaceDefault: "Default",
     workspaceRescan: "Rescan repositories",
@@ -323,13 +320,9 @@ export const en: Translations = {
     triggerNow: "Trigger now",
     delivery: {
       local: "Local",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "Email",
       needsHomeChannel: "set a home channel first",
       noneConfigured:
-        "No messaging platforms configured. Set one up under Channels to deliver reports.",
+        "No delivery platforms are configured, so reports are saved locally.",
     },
   },
 
@@ -520,7 +513,6 @@ export const en: Translations = {
       tts: "Text-to-Speech",
       stt: "Speech-to-Text",
       logging: "Logging",
-      discord: "Discord",
       auxiliary: "Auxiliary",
     },
   },

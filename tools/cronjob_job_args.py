@@ -142,7 +142,7 @@ def _local_delivery_notice(job: Dict[str, Any], user_deliver: Optional[str]) -> 
         "cronjob(action='list')) but will NOT be delivered back into this "
         "session — CLI/TUI and stateless HTTP API sessions have no live-delivery channel. To be "
         "notified when it runs, recreate or update the job with deliver set to "
-        "a gateway-connected platform, e.g. deliver='telegram' or deliver='all'.")
+        "'bot-chat' to land the result in the app's Bot Chat.")
 
 
 def _mode_guidance_notes(job: Dict[str, Any], user_deliver: Optional[str]) -> List[str]:
@@ -177,7 +177,7 @@ def _mode_guidance_notes(job: Dict[str, Any], user_deliver: Optional[str]) -> Li
             parts = target.strip().split(":")
             if (
                 len(parts) == 2
-                and parts[0] not in ("bot-chat", "sms")
+                and parts[0] != "bot-chat"
                 and parts[1]
                 and not parts[1].startswith("#")):
                 notes.append(
@@ -246,7 +246,7 @@ def _normalize_optional_job_value(value: Optional[Any], *, strip_trailing_slash:
 
 def _normalize_deliver_param(value: Any) -> Optional[str]:
     """Canonical string form of ``deliver``; None for None/empty. MCP clients may pass a list
-    (``["telegram"]``) which the scheduler's ``str(deliver).split(",")`` would mangle."""
+    (``["bot-chat"]``) which the scheduler's ``str(deliver).split(",")`` would mangle."""
     if value is None:
         return None
     if isinstance(value, (list, tuple)):

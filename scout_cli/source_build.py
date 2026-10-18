@@ -76,12 +76,8 @@ def prepare_launch_dependencies(project_root: Path, *, env: dict) -> None:
 
     desktop_dir = project_root / "apps/desktop"
     desktop = _desktop_dist_exists(desktop_dir) or _desktop_packaged_executable(desktop_dir) is not None
-    workspaces = ("ui-tui", "web") + (("apps/desktop",) if desktop else ())
+    workspaces = ("web",) + (("apps/desktop",) if desktop else ())
     prepare_source_dependencies(project_root, workspaces, env=env)
-
-
-def build_source_tui(project_root: Path, *, env: dict) -> None:
-    run_source_script(project_root, "scripts/build/tui.mjs", env=env, label="Building the TUI")
 
 
 def build_source_web(project_root: Path, *, env: dict, icons: Path | None = None) -> None:
@@ -96,7 +92,7 @@ def source_frontends(project_root: Path) -> tuple[str, ...]:
     """The frontend workspaces this checkout carries. A source slice without them
     (python-only installs, the installer's acceptance fixture) has no products
     to build; it still publishes commands and runs the maintenance tail."""
-    return tuple(name for name in ("ui-tui", "web") if (project_root / name / "package.json").is_file())
+    return tuple(name for name in ("web",) if (project_root / name / "package.json").is_file())
 
 
 def build_update_products(project_root: Path, *, desktop: bool) -> None:
@@ -114,9 +110,6 @@ def build_update_products(project_root: Path, *, desktop: bool) -> None:
     workspaces = frontends + (("apps/desktop",) if desktop else ())
     publish_stage("Updating Node dependencies")
     prepare_source_dependencies(project_root, workspaces, env=env, explicit=True)
-    if "ui-tui" in frontends:
-        publish_stage("Building the TUI")
-        build_source_tui(project_root, env=env)
     if "web" in frontends:
         publish_stage("Building the web UI")
         build_source_web(project_root, env=env)

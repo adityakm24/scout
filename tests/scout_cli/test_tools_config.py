@@ -155,14 +155,6 @@ def test_get_platform_tools_homeassistant_uses_active_profile_token(monkeypatch)
 # an explicit opt-in that should survive the default-off strip. ───────────────
 
 
-def test_discord_toolsets_do_not_leak_to_other_platforms():
-    """Layer 4 (guard): discord/discord_admin are platform-restricted — they
-    must never appear on a non-discord platform even when that platform is
-    explicitly configured."""
-    config = {"platform_toolsets": {"telegram": ["scout-telegram", "discord"]}}
-    enabled = _get_platform_tools(config, "telegram")
-    assert "discord" not in enabled
-    assert "discord_admin" not in enabled
 
 
 def test_toolset_has_keys_for_vision_accepts_codex_auth(tmp_path, monkeypatch):

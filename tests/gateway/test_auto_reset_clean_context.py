@@ -43,7 +43,7 @@ def _make_store(tmp_path):
 
 
 def _make_source():
-    return SessionSource(platform=Platform.TELEGRAM, chat_id="123", user_id="u1")
+    return SessionSource(platform=Platform.HOMEASSISTANT, chat_id="123", user_id="u1")
 
 
 def _bloat(n):

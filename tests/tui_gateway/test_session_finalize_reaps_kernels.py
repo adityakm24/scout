@@ -65,11 +65,3 @@ def test_tui_owned_finalize_disposes_the_sessions_kernels(monkeypatch, live_kern
     assert not approval.is_session_yolo_enabled(SESSION_KEY)
 
 
-def test_viewer_finalize_keeps_a_gateway_owned_sessions_kernels(monkeypatch, live_kernel):
-    _stored_source(monkeypatch, "telegram")
-
-    server._finalize_session(_session(), end_reason="tui_shutdown")
-
-    assert code_kernel._REGISTRY.kernels.get(live_kernel.key) is live_kernel
-    assert not live_kernel.stop_event.is_set()
-    assert approval.is_session_yolo_enabled(SESSION_KEY)

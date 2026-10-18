@@ -62,7 +62,7 @@ def _build_runner(monkeypatch, tmp_path, mode: str) -> GatewayRunner:
 
     runner = GatewayRunner(GatewayConfig())
     adapter = SimpleNamespace(send=AsyncMock(), handle_message=AdmittingHandler())
-    runner.adapters[Platform.TELEGRAM] = adapter
+    runner.adapters[Platform.HOMEASSISTANT] = adapter
     return runner
 
 
@@ -70,7 +70,7 @@ def _watcher_dict(session_id="proc_test", thread_id=""):
     d = {
         "session_id": session_id,
         "check_interval": 0,
-        "platform": "telegram",
+        "platform": "homeassistant",
         "chat_id": "123",
     }
     if thread_id:
@@ -82,7 +82,7 @@ def _watch_event(session_id="proc_watch", thread_id="42"):
     return {
         "type": "watch_match",
         "session_id": session_id,
-        "session_key": f"agent:main:telegram:dm:123:{thread_id}",
+        "session_key": f"agent:main:homeassistant:dm:123:{thread_id}",
         "pattern": "READY",
         "command": "build",
         "output": "READY\n",
@@ -144,7 +144,7 @@ async def test_consumed_completion_skips_raw_notification(monkeypatch, tmp_path)
     monkeypatch.setattr(asyncio, "sleep", _instant_sleep)
 
     runner = _build_runner(monkeypatch, tmp_path, "all")
-    adapter = runner.adapters[Platform.TELEGRAM]
+    adapter = runner.adapters[Platform.HOMEASSISTANT]
 
     # notify_on_complete=True mirrors the reported scenario: the watcher's
     # agent-notify skip must not fall through to a raw adapter.send().
@@ -177,8 +177,8 @@ async def test_agent_notify_receipt_only_while_launching_turn_is_busy(
 
     runner = _build_runner(monkeypatch, tmp_path, "concise")
     runner._enqueue_process_completion_notification = AsyncMock(return_value=True)
-    adapter = runner.adapters[Platform.TELEGRAM]
-    watcher = {**_watcher_dict(), "session_key": "agent:main:telegram:dm:123", "notify_on_complete": True}
+    adapter = runner.adapters[Platform.HOMEASSISTANT]
+    watcher = {**_watcher_dict(), "session_key": "agent:main:homeassistant:dm:123", "notify_on_complete": True}
     adapter._active_sessions = {watcher["session_key"]: asyncio.Event()} if launching_turn_busy else {}
 
     await runner._run_process_watcher(watcher)
@@ -233,7 +233,7 @@ async def test_consumed_completion_skips_raw_notification_without_agent_notify(
     monkeypatch.setattr(asyncio, "sleep", _instant_sleep)
 
     runner = _build_runner(monkeypatch, tmp_path, "all")
-    adapter = runner.adapters[Platform.TELEGRAM]
+    adapter = runner.adapters[Platform.HOMEASSISTANT]
 
     await runner._run_process_watcher(_watcher_dict())
 
@@ -245,10 +245,10 @@ async def test_inject_watch_notification_routes_from_session_store_origin(monkey
     from gateway.session import SessionSource
 
     runner = _build_runner(monkeypatch, tmp_path, "all")
-    adapter = runner.adapters[Platform.TELEGRAM]
-    runner.session_store._entries["agent:main:telegram:group:-100:42"] = SimpleNamespace(
+    adapter = runner.adapters[Platform.HOMEASSISTANT]
+    runner.session_store._entries["agent:main:homeassistant:group:-100:42"] = SimpleNamespace(
         origin=SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_id="-100",
             chat_type="group",
             thread_id="42",
@@ -259,7 +259,7 @@ async def test_inject_watch_notification_routes_from_session_store_origin(monkey
 
     evt = {
         "session_id": "proc_watch",
-        "session_key": "agent:main:telegram:group:-100:42",
+        "session_key": "agent:main:homeassistant:group:-100:42",
     }
 
     await runner._inject_watch_notification("[SYSTEM: Background process matched]", evt)
@@ -267,7 +267,7 @@ async def test_inject_watch_notification_routes_from_session_store_origin(monkey
     adapter.handle_message.assert_awaited_once()
     synth_event = adapter.handle_message.await_args.args[0]
     assert synth_event.internal is True
-    assert synth_event.source.platform == Platform.TELEGRAM
+    assert synth_event.source.platform == Platform.HOMEASSISTANT
     assert synth_event.source.chat_id == "-100"
     assert synth_event.source.chat_type == "group"
     assert synth_event.source.thread_id == "42"
@@ -278,7 +278,7 @@ async def test_inject_watch_notification_routes_from_session_store_origin(monkey
 @pytest.mark.asyncio
 async def test_post_turn_watch_drain_off_consumes_without_injecting(monkeypatch, tmp_path):
     runner = _build_runner(monkeypatch, tmp_path, "off")
-    adapter = runner.adapters[Platform.TELEGRAM]
+    adapter = runner.adapters[Platform.HOMEASSISTANT]
     completion_queue = queue.Queue()
     completion_queue.put(_watch_event("proc_one"))
     completion_queue.put(_watch_event("proc_two"))
@@ -297,10 +297,10 @@ async def test_post_turn_watch_drain_all_injects_from_queued_event_origin(monkey
     from gateway.session import SessionSource
 
     runner = _build_runner(monkeypatch, tmp_path, "all")
-    adapter = runner.adapters[Platform.TELEGRAM]
-    runner.session_store._entries["agent:main:telegram:dm:123:42"] = SimpleNamespace(
+    adapter = runner.adapters[Platform.HOMEASSISTANT]
+    runner.session_store._entries["agent:main:homeassistant:dm:123:42"] = SimpleNamespace(
         origin=SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_id="123",
             chat_type="dm",
             thread_id="42",
@@ -338,10 +338,10 @@ async def test_inject_watch_notification_drops_stale_trigger_reply_anchor(monkey
     from gateway.session import SessionSource
 
     runner = _build_runner(monkeypatch, tmp_path, "all")
-    adapter = runner.adapters[Platform.TELEGRAM]
-    runner.session_store._entries["agent:main:telegram:dm:123:24296"] = SimpleNamespace(
+    adapter = runner.adapters[Platform.HOMEASSISTANT]
+    runner.session_store._entries["agent:main:homeassistant:dm:123:24296"] = SimpleNamespace(
         origin=SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_id="123",
             chat_type="dm",
             thread_id="24296",
@@ -353,7 +353,7 @@ async def test_inject_watch_notification_drops_stale_trigger_reply_anchor(monkey
 
     evt = {
         "session_id": "proc_watch",
-        "session_key": "agent:main:telegram:dm:123:24296",
+        "session_key": "agent:main:homeassistant:dm:123:24296",
         "message_id": "777",
     }
 
@@ -383,10 +383,10 @@ async def test_inject_watch_notification_loads_session_store_off_loop(monkeypatc
     from gateway.session import SessionSource
 
     runner = _build_runner(monkeypatch, tmp_path, "all")
-    adapter = runner.adapters[Platform.TELEGRAM]
-    runner.session_store._entries["agent:main:telegram:dm:123:24296"] = SimpleNamespace(
+    adapter = runner.adapters[Platform.HOMEASSISTANT]
+    runner.session_store._entries["agent:main:homeassistant:dm:123:24296"] = SimpleNamespace(
         origin=SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_id="123",
             chat_type="dm",
             thread_id="24296",
@@ -408,7 +408,7 @@ async def test_inject_watch_notification_loads_session_store_off_loop(monkeypatc
         "[SYSTEM: Background process matched]",
         {
             "session_id": "proc_watch",
-            "session_key": "agent:main:telegram:dm:123:24296",
+            "session_key": "agent:main:homeassistant:dm:123:24296",
             "message_id": "777",
         },
     )
@@ -424,12 +424,12 @@ async def test_inject_watch_notification_ignores_foreground_event_source(monkeyp
     from gateway.session import SessionSource
 
     runner = _build_runner(monkeypatch, tmp_path, "all")
-    adapter = runner.adapters[Platform.TELEGRAM]
+    adapter = runner.adapters[Platform.HOMEASSISTANT]
 
     # Session store has the process's original thread (thread 42)
-    runner.session_store._entries["agent:main:telegram:group:-100:42"] = SimpleNamespace(
+    runner.session_store._entries["agent:main:homeassistant:group:-100:42"] = SimpleNamespace(
         origin=SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_id="-100",
             chat_type="group",
             thread_id="42",
@@ -441,7 +441,7 @@ async def test_inject_watch_notification_ignores_foreground_event_source(monkeyp
     # The evt dict carries the correct session_key — NOT a foreground event
     evt = {
         "session_id": "proc_cross_thread",
-        "session_key": "agent:main:telegram:group:-100:42",
+        "session_key": "agent:main:homeassistant:group:-100:42",
     }
 
     await runner._inject_watch_notification("[SYSTEM: watch match]", evt)
@@ -517,7 +517,7 @@ async def test_concise_mode_no_interim_output_updates(monkeypatch, tmp_path):
     monkeypatch.setattr(asyncio, "sleep", _instant_sleep)
 
     runner = _build_runner(monkeypatch, tmp_path, "concise")
-    adapter = runner.adapters[Platform.TELEGRAM]
+    adapter = runner.adapters[Platform.HOMEASSISTANT]
 
     await runner._run_process_watcher(_watcher_dict())
 
@@ -535,49 +535,21 @@ async def test_concise_mode_no_interim_output_updates(monkeypatch, tmp_path):
 
 def test_parse_session_key_with_extra_parts():
     """6th part in a group key may be a user_id, not a thread_id — omit it."""
-    result = _parse_session_key("agent:main:discord:group:chan123:thread456")
-    assert result == {"platform": "discord", "chat_type": "group", "chat_id": "chan123"}
+    result = _parse_session_key("agent:main:homeassistant:group:chan123:thread456")
+    assert result == {"platform": "homeassistant", "chat_type": "group", "chat_id": "chan123"}
 
 
-def test_parse_session_key_named_profile():
-    """A named-profile namespace parses and is reported as ``profile``."""
-    result = _parse_session_key("agent:work:telegram:dm:123")
-    assert result == {
-        "profile": "work",
-        "platform": "telegram",
-        "chat_type": "dm",
-        "chat_id": "123",
-    }
 
 
-def test_parse_session_key_named_profile_thread_id():
-    """Thread-slot handling is identical for named-profile keys."""
-    result = _parse_session_key("agent:work:telegram:thread:100:42")
-    assert result == {
-        "profile": "work",
-        "platform": "telegram",
-        "chat_type": "thread",
-        "chat_id": "100",
-        "thread_id": "42",
-    }
 
 
-def test_parse_session_key_named_profile_group_suffix_omitted():
-    """Group-suffix (user_id) stays omitted for named-profile keys too."""
-    result = _parse_session_key("agent:work:discord:group:chan1:user9")
-    assert result == {
-        "profile": "work",
-        "platform": "discord",
-        "chat_type": "group",
-        "chat_id": "chan1",
-    }
 
 
 def test_parse_session_key_main_shape_unchanged():
     """``main`` keys keep their historical dict shape exactly (no ``profile`` key)."""
-    result = _parse_session_key("agent:main:telegram:dm:123:42")
+    result = _parse_session_key("agent:main:homeassistant:dm:123:42")
     assert result == {
-        "platform": "telegram",
+        "platform": "homeassistant",
         "chat_type": "dm",
         "chat_id": "123",
         "thread_id": "42",
@@ -587,23 +559,10 @@ def test_parse_session_key_main_shape_unchanged():
 def test_parse_session_key_rejects_invalid_namespace():
     """A namespace slot that cannot be a profile id still parses to None."""
     assert _parse_session_key("agent:Bad_NS:telegram:dm:123") is None
-    assert _parse_session_key("agent:main:telegram:dm") is None
+    assert _parse_session_key("agent:main:homeassistant:dm") is None
     assert _parse_session_key("raw-session-id") is None
 
 
-def test_build_process_event_source_named_profile_key(monkeypatch, tmp_path):
-    """A synthetic event keyed by a named-profile session resolves platform/chat and keeps
-    the profile, instead of being unresolvable and dropped with a warning."""
-    runner = _build_runner(monkeypatch, tmp_path, "all")
-    source = runner._build_process_event_source({
-        "session_id": "proc_watch",
-        "session_key": "agent:work:telegram:dm:123",
-    })
-    assert source is not None
-    assert source.platform is Platform.TELEGRAM
-    assert source.chat_id == "123"
-    assert source.chat_type == "dm"
-    assert source.profile == "work"
 
 
 # ---------------------------------------------------------------------------
@@ -813,7 +772,7 @@ async def test_raw_output_modes_are_human_facing(monkeypatch, tmp_path):
     monkeypatch.setattr(asyncio, "sleep", _instant_sleep)
 
     runner = _build_runner(monkeypatch, tmp_path, "all")
-    adapter = runner.adapters[Platform.TELEGRAM]
+    adapter = runner.adapters[Platform.HOMEASSISTANT]
     await runner._run_process_watcher(_watcher_dict(session_id="proc_deadbeef"))
 
     sent = [call.args[1] for call in adapter.send.await_args_list]

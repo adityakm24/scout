@@ -94,15 +94,15 @@ async def test_startup_connects_platforms_concurrently(monkeypatch, tmp_path):
 
     config = GatewayConfig(
         platforms={
-            Platform.TELEGRAM: PlatformConfig(enabled=True, token="***"),
-            Platform.DISCORD: PlatformConfig(enabled=True, token="***"),
+            Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***"),
+            Platform.WEBHOOK: PlatformConfig(enabled=True, token="***"),
         },
         sessions_dir=tmp_path / "sessions",
     )
     runner = GatewayRunner(config)
 
     def _make_adapter(platform, platform_config):
-        sleep = 0.3 if platform is Platform.TELEGRAM else 0.0
+        sleep = 0.3 if platform is Platform.HOMEASSISTANT else 0.0
         return _TimingAdapter(platform, sleep)
 
     monkeypatch.setattr(runner, "_create_adapter", _make_adapter)
@@ -114,8 +114,8 @@ async def test_startup_connects_platforms_concurrently(monkeypatch, tmp_path):
     events = _OrderRecorder.events
     assert events, "no connect() event was recorded"
 
-    fast_end = _OrderRecorder.index_of(Platform.DISCORD.value, "end")
-    slow_end = _OrderRecorder.index_of(Platform.TELEGRAM.value, "end")
+    fast_end = _OrderRecorder.index_of(Platform.WEBHOOK.value, "end")
+    slow_end = _OrderRecorder.index_of(Platform.HOMEASSISTANT.value, "end")
     assert fast_end != -1 and slow_end != -1, f"missing end events: {events}"
 
     # Overlap proof: the fast platform finished before the slow one did,
@@ -124,8 +124,8 @@ async def test_startup_connects_platforms_concurrently(monkeypatch, tmp_path):
         f"connects did not overlap (serial loop?): events={events}"
     )
     # Both platforms should be registered once startup settles.
-    assert Platform.TELEGRAM in runner.adapters
-    assert Platform.DISCORD in runner.adapters
+    assert Platform.HOMEASSISTANT in runner.adapters
+    assert Platform.WEBHOOK in runner.adapters
 
 
 @pytest.mark.asyncio
@@ -139,7 +139,7 @@ async def test_startup_one_failing_platform_does_not_block_others(monkeypatch, t
 
     class _FailingSlowAdapter(BasePlatformAdapter):
         def __init__(self):
-            super().__init__(PlatformConfig(enabled=True, token="***"), Platform.TELEGRAM)
+            super().__init__(PlatformConfig(enabled=True, token="***"), Platform.HOMEASSISTANT)
 
         async def connect(self, *, is_reconnect: bool = False) -> bool:
             await asyncio.sleep(0.3)
@@ -160,15 +160,15 @@ async def test_startup_one_failing_platform_does_not_block_others(monkeypatch, t
 
     config = GatewayConfig(
         platforms={
-            Platform.TELEGRAM: PlatformConfig(enabled=True, token="***"),
-            Platform.DISCORD: PlatformConfig(enabled=True, token="***"),
+            Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***"),
+            Platform.WEBHOOK: PlatformConfig(enabled=True, token="***"),
         },
         sessions_dir=tmp_path / "sessions",
     )
     runner = GatewayRunner(config)
 
     def _make_adapter(platform, platform_config):
-        if platform is Platform.TELEGRAM:
+        if platform is Platform.HOMEASSISTANT:
             return _FailingSlowAdapter()
         return _TimingAdapter(platform, 0.0)
 
@@ -178,9 +178,9 @@ async def test_startup_one_failing_platform_does_not_block_others(monkeypatch, t
     await runner.start()
 
     # The healthy platform connected and is registered despite Telegram failing.
-    assert Platform.DISCORD in runner.adapters
+    assert Platform.WEBHOOK in runner.adapters
     # The failed platform is queued for retry, not silently dropped.
-    assert Platform.TELEGRAM in runner._failed_platforms
+    assert Platform.HOMEASSISTANT in runner._failed_platforms
 
 
 class TestTelegramColdStartCap:
@@ -198,90 +198,18 @@ class TestTelegramColdStartCap:
         )
         return GatewayRunner(config)
 
-    def test_initial_telegram_budget_is_capped(self, tmp_path, monkeypatch):
-        monkeypatch.delenv("SCOUT_GATEWAY_PLATFORM_CONNECT_TIMEOUT", raising=False)
-        runner = self._runner(tmp_path)
-        initial = runner._platform_connect_timeout_secs(
-            Platform.TELEGRAM, initial=True
-        )
-        full = runner._platform_connect_timeout_secs(Platform.TELEGRAM)
-        assert initial < full, (
-            "cold-start Telegram budget must be shorter than the reconnect "
-            f"budget (initial={initial}, full={full})"
-        )
-        assert initial <= 60.0  # gateway reaches `running` within a minute
 
     def test_other_platforms_unchanged(self, tmp_path, monkeypatch):
         monkeypatch.delenv("SCOUT_GATEWAY_PLATFORM_CONNECT_TIMEOUT", raising=False)
         runner = self._runner(tmp_path)
         assert runner._platform_connect_timeout_secs(
-            Platform.DISCORD, initial=True
-        ) == runner._platform_connect_timeout_secs(Platform.DISCORD)
+            Platform.WEBHOOK, initial=True
+        ) == runner._platform_connect_timeout_secs(Platform.WEBHOOK)
 
     def test_env_override_applies_to_initial(self, tmp_path, monkeypatch):
         monkeypatch.setenv("SCOUT_GATEWAY_PLATFORM_CONNECT_TIMEOUT", "12")
         runner = self._runner(tmp_path)
         assert runner._platform_connect_timeout_secs(
-            Platform.TELEGRAM, initial=True
+            Platform.HOMEASSISTANT, initial=True
         ) == 12.0
 
-    @pytest.mark.asyncio
-    async def test_initial_connect_times_out_at_cap_and_queues_retry(
-        self, tmp_path, monkeypatch
-    ):
-        """A wedged Telegram connect is abandoned at the capped budget and the
-        platform lands in the reconnect queue instead of blocking startup."""
-        monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
-        monkeypatch.delenv("SCOUT_GATEWAY_PLATFORM_CONNECT_TIMEOUT", raising=False)
-
-        class _WedgedAdapter(BasePlatformAdapter):
-            def __init__(self):
-                super().__init__(
-                    PlatformConfig(enabled=True, token="***"), Platform.TELEGRAM
-                )
-
-            async def connect(self, *, is_reconnect: bool = False) -> bool:
-                await asyncio.sleep(3600)
-                return True
-
-            async def disconnect(self) -> None:
-                self._mark_disconnected()
-
-            async def send(self, chat_id, content, reply_to=None, metadata=None):
-                raise NotImplementedError
-
-            async def get_chat_info(self, chat_id):
-                return {"id": chat_id}
-
-        config = GatewayConfig(
-            platforms={
-                Platform.TELEGRAM: PlatformConfig(enabled=True, token="***"),
-                Platform.DISCORD: PlatformConfig(enabled=True, token="***"),
-            },
-            sessions_dir=tmp_path / "sessions",
-        )
-        runner = GatewayRunner(config)
-
-        # Shrink the capped budget so the test is fast; the assertion is that
-        # the INITIAL path (initial=True) is the one that fires, not the 180s
-        # reconnect budget.
-        import gateway.run as gateway_run
-
-        monkeypatch.setattr(
-            gateway_run, "_TELEGRAM_INITIAL_CONNECT_TIMEOUT_SECS_DEFAULT", 0.2
-        )
-
-        def _make_adapter(platform, platform_config):
-            if platform is Platform.TELEGRAM:
-                return _WedgedAdapter()
-            return _TimingAdapter(platform, 0.0)
-
-        monkeypatch.setattr(runner, "_create_adapter", _make_adapter)
-        monkeypatch.setattr(runner, "_start_secondary_profile_adapters", lambda: 0)
-
-        await asyncio.wait_for(runner.start(), timeout=30)
-
-        # Discord served; Telegram queued for the watcher's full-budget retry.
-        assert Platform.DISCORD in runner.adapters
-        assert Platform.TELEGRAM not in runner.adapters
-        assert Platform.TELEGRAM in runner._failed_platforms

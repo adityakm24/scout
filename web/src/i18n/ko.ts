@@ -68,7 +68,6 @@ export const ko: Translations = {
     },
     nav: {
       analytics: "분석",
-      chat: "채팅",
       config: "설정",
       cron: "Cron",
       keys: "키",
@@ -162,8 +161,6 @@ export const ko: Translations = {
     selectedSessionsDeleted: "{count}개 세션이 삭제되었습니다",
     selectedSessionsSkippedActive: "{deleted}개 삭제됨, 진행 중인 턴이 있어 {count}개 유지됨",
     failedToDeleteSelected: "선택한 세션 삭제에 실패했습니다",
-    resumeInChat: "채팅에서 다시 시작",
-    newChat: "새 채팅",
     workspace: "작업 공간",
     workspaceDefault: "기본값",
     workspaceRescan: "저장소 다시 검색",
@@ -281,10 +278,6 @@ export const ko: Translations = {
     triggerNow: "지금 실행",
     delivery: {
       local: "로컬",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "Email",
     },
   },
 
@@ -418,7 +411,6 @@ export const ko: Translations = {
       tts: "텍스트 음성 변환",
       stt: "음성 텍스트 변환",
       logging: "로깅",
-      discord: "Discord",
       auxiliary: "보조",
     },
   },

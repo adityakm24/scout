@@ -227,13 +227,6 @@ import { preReadyDockLaunchSteps } from './dock-launch-order'
 import { installEmbedReferer } from './embed-referer'
 import { createAmbientClaimArbiter } from './event-dedupe'
 import { openExternalUrl as externalOpen, type ExternalOpenDeps, reportPreOpenStatFailure } from './external-open'
-import {
-  buildTerminalScript,
-  resolveTerminalLaunch,
-  terminalScriptEnv,
-  terminalScriptExtension,
-  tuiResumeArgs
-} from './external-terminal'
 import { f12ShortcutDecision, toF12KeyboardEventPayload } from './f12-shortcut'
 import { type FaviconIo, resolveFavicon } from './favicon'
 import { resolveFeatureFlags } from './feature-flags'
@@ -509,7 +502,6 @@ import { createSshIsolatedKeepaliveRegistry } from './ssh-isolated-keepalive'
 import { createSshTeardownTracker } from './ssh-teardown'
 import { createStreamThrottle } from './stream-throttle'
 import { installSystemCaTrust } from './system-ca'
-import { registerTerminalIpc } from './terminal-ipc'
 import { nativeOverlayWidth as computeNativeOverlayWidth, titleBarOverlayOptions } from './titlebar-overlay-width'
 import {
   backgroundMaterialFor,
@@ -9559,8 +9551,6 @@ async function teardownSshConnection(profile) {
 
   sshConnections.delete(scope)
 
-  terminalIpc.disposeTerminalSessionsForSshScope(scope)
-
   // Kill the owned remote serve --isolated *before* closing the SSH
   // transport. Spawn detaches with setsid/nohup, so closing the tunnel
   // alone leaves the backend at pid 1 holding state.db (#91668).
@@ -11357,8 +11347,6 @@ async function drainManagedSshScope(scope) {
     if (!state) {
       return
     }
-
-    terminalIpc.disposeTerminalSessionsForSshScope(scope.key)
 
     if (state.localPort && state.remotePort) {
       await state.ssh.cancelForward(state.localPort, state.remotePort)
@@ -15136,70 +15124,6 @@ ipcMain.handle('scout:window:openBrowser', async (_event, tabId) => {
   return { ok: true }
 })
 
-// Hand a session to the user's OWN terminal emulator, running the TUI against
-// it (`scout --tui --resume <id>`). Not the in-app terminal pane: the point is
-// to continue the chat in the terminal they already live in.
-//
-// The desktop's runtime is usually a venv Python invoked as
-// `python -m scout_cli.main`, so we resolve the SAME backend the app itself
-// launches and carry its argv + PYTHONPATH into a launcher script rather than
-// hoping a `scout` exists on the user's interactive PATH. Resolution only —
-// never ensureRuntime(), which would kick off a first-run install from a menu
-// click; an unresolved runtime is reported instead.
-ipcMain.handle('scout:window:openInTerminal', async (_event, sessionId, opts) => {
-  if (typeof sessionId !== 'string' || !sessionId.trim()) {
-    return { ok: false, error: 'invalid-session-id' }
-  }
-
-  try {
-    const profile = typeof opts?.profile === 'string' ? opts.profile.trim() : ''
-    const backend = await resolveScoutBackend(tuiResumeArgs(sessionId.trim(), profile || undefined))
-
-    if (!backend.command) {
-      return { ok: false, error: 'Scout is not installed yet' }
-    }
-
-    const { cwd } = sanitizeWorkspaceCwd(opts?.cwd)
-    const scriptDir = path.join(app.getPath('userData'), 'open-in-terminal')
-    fs.mkdirSync(scriptDir, { recursive: true })
-
-    const scriptPath = path.join(
-      scriptDir,
-      `scout-${crypto.randomBytes(6).toString('hex')}${terminalScriptExtension()}`
-    )
-
-    fs.writeFileSync(
-      scriptPath,
-      buildTerminalScript({
-        args: backend.args,
-        command: backend.command,
-        cwd,
-        env: terminalScriptEnv(backend.env, SCOUT_HOME)
-      }),
-      { mode: 0o700 }
-    )
-
-    const launch = resolveTerminalLaunch({ findOnPath, scriptPath })
-
-    if (!launch) {
-      return { ok: false, error: 'No terminal emulator found' }
-    }
-
-    rememberLog(`[terminal] opening session ${sessionId} via ${launch.command}`)
-
-    // Detached + unref'd: the terminal window outlives the desktop app, and
-    // never inherits our stdio (a closed pipe would kill the TUI).
-    const child = spawn(launch.command, launch.args, { detached: true, stdio: 'ignore' })
-    child.unref()
-
-    return { ok: true }
-  } catch (error) {
-    rememberLog(`[terminal] open in terminal failed: ${error.message}`)
-
-    return { ok: false, error: error.message }
-  }
-})
-
 // --- Text size (zoom) -------------------------------------------------------
 // The settings UI drives the same clamped zoom scale as the Ctrl/Cmd
 // shortcuts and the View menu. Reads and writes target the asking window.
@@ -17788,18 +17712,6 @@ registerGitIpc({ resolveGitBinary, resolveGhBinary })
 // mcp-oauth-callback-ipc.ts.
 registerMcpOauthCallbackIpc()
 
-// Embedded terminal PTY host (scout:terminal:*) — see terminal-ipc.ts.
-const terminalIpc = registerTerminalIpc({
-  isWindows: IS_WINDOWS,
-  findOnPath,
-  rememberLog,
-  activeSshTerminalTarget,
-  ensureBackend: webContentsId => ensureTerminalBackend(webContentsId),
-  getSshConnectionState: scope => sshConnections.get(scope)
-})
-
-const disposeTerminalSession = terminalIpc.disposeTerminalSession
-
 ipcMain.handle(
   'scout:updates:check',
   async (_event: Electron.IpcMainInvokeEvent, opts?: { force?: boolean }): Promise<UpdaterStatusWire> =>
@@ -18787,10 +18699,6 @@ app.on('before-quit', event => {
 
   flushDesktopLogBufferSync()
   closePreviewWatchers()
-
-  // Kill open PTYs before environment teardown to avoid the node-pty#904
-  // ThreadSafeFunction SIGABRT race.
-  terminalIpc.disposeAllTerminalSessions()
 
   void backendShutdown.run()
 })

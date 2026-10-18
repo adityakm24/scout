@@ -1168,16 +1168,7 @@ class CLICommandsMixin:
             return _cp(f"  {_t('handoff.config_load_failed', error=exc)}")
         pcfg = gw_config.platforms.get(platform)
         if not pcfg or not pcfg.enabled:
-            # Relay aliasing: a relay-fronted gateway has only a RELAY block yet /handoff discord
-            # is deliverable. UX pre-check only — the gateway watcher re-checks before dispatch.
-            relay_fronts = False
-            with suppress(Exception):
-                from gateway.relay import relay_platform_identities
-                relay_cfg = gw_config.platforms.get(Platform.RELAY)
-                if relay_cfg and relay_cfg.enabled:
-                    relay_fronts = platform_name in {p for p, _ in relay_platform_identities()}
-            if not relay_fronts:
-                return _cp(f"  {_t('handoff.platform_not_enabled', platform=platform_name)}")
+            return _cp(f"  {_t('handoff.platform_not_enabled', platform=platform_name)}")
         home = gw_config.get_home_channel(platform)
         if not home or not home.chat_id:
             return _cp(f"  {_t('handoff.no_home_channel', platform=platform_name)}",
@@ -1387,9 +1378,7 @@ class CLICommandsMixin:
             return _cp(f"  {_gt('branch.no_conversation')}")
         if not self._session_db:
             return _cp(_db_unavailable_line())
-        # CLI has no threads: always in place; strip the gateway's ``--here`` so it is never a title.
-        from gateway.slash_commands_branch_thread import parse_branch_args
-        _, branch_name = parse_branch_args(_command_arg(cmd_original))
+        branch_name = _command_arg(cmd_original).strip()
         now = datetime.now()
         new_session_id = mint_session_id(now)
         branch_title = branch_name or self._session_db.get_next_title_in_lineage(

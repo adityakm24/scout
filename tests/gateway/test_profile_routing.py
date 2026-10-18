@@ -211,16 +211,6 @@ class TestWhatsAppChatIdIdentityMatching:
         )
         monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
 
-    def test_number_route_matches_jid_and_mapped_lid_forms(self, tmp_path, monkeypatch):
-        self._write_lid_mapping(tmp_path, monkeypatch)
-        for platform in ("whatsapp", "whatsapp_cloud"):
-            r = ProfileRoute(name="owner", platform=platform, profile="owner", chat_id=self.PHONE)
-            assert r.matches(platform, chat_id=f"{self.PHONE}@s.whatsapp.net")
-            assert r.matches(platform, chat_id=f"{self.PHONE}:47@s.whatsapp.net")
-            assert r.matches(platform, chat_id=f"{self.LID}@lid")
-            # Alias fallback also applies to the thread-parent slot.
-            assert r.matches(platform, chat_id="thread-1", parent_chat_id=f"{self.LID}@lid")
-            assert not r.matches(platform, chat_id="15550001111@s.whatsapp.net")
 
     def test_groups_and_other_platforms_stay_exact(self, tmp_path, monkeypatch):
         self._write_lid_mapping(tmp_path, monkeypatch)

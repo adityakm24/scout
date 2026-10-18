@@ -8,7 +8,7 @@ import { $activeTerminalId, $terminals } from './terminals'
 
 describe('TerminalRail', () => {
   beforeEach(() => {
-    $terminals.set([{ auto: true, cwd: 'C:\\repo', id: 'term-1', kind: 'user', title: 'PowerShell' }])
+    $terminals.set([{ id: 'term-1', procId: 'proc-1', title: 'PowerShell' }])
     $activeTerminalId.set('term-1')
     $bindings.set({ ...$bindings.get(), 'view.showTerminal': ['ctrl+`'] })
   })
@@ -20,7 +20,7 @@ describe('TerminalRail', () => {
   })
 
   it('⌘-click closes the tab; a plain click selects it', () => {
-    $terminals.set([...$terminals.get(), { auto: true, cwd: 'C:\\repo', id: 'term-2', kind: 'user', title: 'zsh' }])
+    $terminals.set([...$terminals.get(), { id: 'term-2', procId: 'proc-2', title: 'zsh' }])
 
     render(<TerminalRail />)
 

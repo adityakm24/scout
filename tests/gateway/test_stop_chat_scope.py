@@ -36,7 +36,7 @@ class _FakeStore:
 
 def _slack_source(chat_type, chat_id, thread_id=None, user_id="U-alice", scope_id="T1"):
     return SessionSource(
-        platform=Platform.SLACK, chat_type=chat_type, chat_id=chat_id,
+        platform=Platform.HOMEASSISTANT, chat_type=chat_type, chat_id=chat_id,
         thread_id=thread_id, user_id=user_id, scope_id=scope_id,
     )
 
@@ -176,23 +176,6 @@ async def test_a_lone_thread_sibling_keeps_its_own_invalidation_reason():
     assert result == t("gateway.stop.stopped")
 
 
-@pytest.mark.asyncio
-async def test_stop_matches_a_canonicalised_whatsapp_dm_chat_id():
-    # build_session_key canonicalises a WhatsApp DM chat id, so the fallback must match the same
-    # text: a stop whose source carries the raw JID has to reach the canonicalised run.
-    running_key = build_session_key(
-        SessionSource(platform=Platform.WHATSAPP, chat_type="dm", chat_id="1234567890@s.whatsapp.net",
-                      user_id="1234567890@s.whatsapp.net")
-    )
-    stop_source = SessionSource(platform=Platform.WHATSAPP, chat_type="dm",
-                                chat_id="1234567890:7@s.whatsapp.net",
-                                user_id="1234567890:7@s.whatsapp.net", thread_id="t1")
-    assert build_session_key(stop_source) != running_key
-
-    interrupted, result = await _stop(stop_source, running_key)
-
-    assert interrupted == [(running_key, "stop_command_chat_scope")]
-    assert result == t("gateway.stop.stopped")
 
 
 @pytest.mark.asyncio
@@ -201,14 +184,14 @@ async def test_stop_in_a_dm_does_not_reach_a_group_run_that_ends_in_the_same_use
     # that same user id — the group run is a different chat and must stay untouched, while the
     # DM's own threaded run in the same chat is still reached.
     same_chat = build_session_key(
-        SessionSource(platform=Platform.TELEGRAM, chat_type="dm", chat_id="777",
+        SessionSource(platform=Platform.HOMEASSISTANT, chat_type="dm", chat_id="777",
                       thread_id="42", user_id="777")
     )
     group_run = build_session_key(
-        SessionSource(platform=Platform.TELEGRAM, chat_type="group", chat_id="-100123",
+        SessionSource(platform=Platform.HOMEASSISTANT, chat_type="group", chat_id="-100123",
                       user_id="777")
     )
-    dm_stop = SessionSource(platform=Platform.TELEGRAM, chat_type="dm", chat_id="777",
+    dm_stop = SessionSource(platform=Platform.HOMEASSISTANT, chat_type="dm", chat_id="777",
                             user_id="777")
 
     interrupted, result = await _stop(dm_stop, [same_chat, group_run])
@@ -244,10 +227,10 @@ async def test_pending_sentinel_is_never_interrupted():
 async def test_stop_reaches_a_chat_whose_id_contains_a_colon():
     # Matrix ids carry ":" (`!room:example.org`), so the chat id must be matched as text after
     # the fixed-shape head — slot-splitting the key would silently disable both fallbacks.
-    room = SessionSource(platform=Platform.MATRIX, chat_type="channel", chat_id="!room:example.org",
+    room = SessionSource(platform=Platform.HOMEASSISTANT, chat_type="channel", chat_id="!room:example.org",
                          thread_id="$t1", user_id="@alice:example.org")
     running_key = build_session_key(room)
-    stop_source = SessionSource(platform=Platform.MATRIX, chat_type="thread",
+    stop_source = SessionSource(platform=Platform.HOMEASSISTANT, chat_type="thread",
                                 chat_id="!room:example.org", thread_id="$t1",
                                 user_id="@alice:example.org")
     assert build_session_key(stop_source) != running_key

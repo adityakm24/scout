@@ -12,15 +12,15 @@ class TestToolProgressProvenance:
             ({}, None, ("off", False)),
             ({}, "all", ("all", True)),
             ({"tool_progress": None}, "all", ("all", True)),
-            ({"platforms": {"slack": {"tool_progress": None}}}, "off", ("off", True)),
-            ({"tool_progress_overrides": {"slack": None}}, "new", ("new", True)),
+            ({"platforms": {"homeassistant": {"tool_progress": None}}}, "off", ("off", True)),
+            ({"tool_progress_overrides": {"homeassistant": None}}, "new", ("new", True)),
             ({"tool_progress": False}, "all", ("off", True)),
-            ({"tool_progress": "all", "platforms": {"slack": {"tool_progress": None}}}, "off", ("all", True)),
-            ({"tool_progress": "off", "tool_progress_overrides": {"slack": "new"}}, "all", ("new", True)),
-            ({"tool_progress_overrides": {"slack": "off"}, "platforms": {"slack": {"tool_progress": "all"}}}, None, ("all", True)),
+            ({"tool_progress": "all", "platforms": {"homeassistant": {"tool_progress": None}}}, "off", ("all", True)),
+            ({"tool_progress": "off", "tool_progress_overrides": {"homeassistant": "new"}}, "all", ("new", True)),
+            ({"tool_progress_overrides": {"homeassistant": "off"}, "platforms": {"homeassistant": {"tool_progress": "all"}}}, None, ("all", True)),
         ]
         for display, env, expected in cases:
-            assert resolve_tool_progress({"display": display}, "slack", env) == expected
+            assert resolve_tool_progress({"display": display}, "homeassistant", env) == expected
 
 class TestResolveDisplaySetting:
     """resolve_display_setting() resolves with correct priority."""
@@ -33,11 +33,11 @@ class TestResolveDisplaySetting:
             "display": {
                 "tool_progress": "all",
                 "platforms": {
-                    "telegram": {"tool_progress": "verbose"},
+                    "homeassistant": {"tool_progress": "verbose"},
                 },
             }
         }
-        assert resolve_display_setting(config, "telegram", "tool_progress") == "verbose"
+        assert resolve_display_setting(config, "homeassistant", "tool_progress") == "verbose"
 
     def test_global_setting_when_no_platform_override(self):
         """Falls back to display.<key> when no platform override exists."""
@@ -49,22 +49,8 @@ class TestResolveDisplaySetting:
                 "platforms": {},
             }
         }
-        assert resolve_display_setting(config, "telegram", "tool_progress") == "new"
+        assert resolve_display_setting(config, "homeassistant", "tool_progress") == "new"
 
-    def test_platform_override_only_affects_that_platform(self):
-        """Other platforms are unaffected by a specific platform override."""
-        from gateway.display_config import resolve_display_setting
-
-        config = {
-            "display": {
-                "tool_progress": "all",
-                "platforms": {
-                    "slack": {"tool_progress": "off"},
-                },
-            }
-        }
-        assert resolve_display_setting(config, "slack", "tool_progress") == "off"
-        assert resolve_display_setting(config, "telegram", "tool_progress") == "all"
 
 # ---------------------------------------------------------------------------
 # Backward compatibility: tool_progress_overrides
@@ -82,12 +68,12 @@ class TestBackwardCompat:
                 "tool_progress": "all",
                 "tool_progress_overrides": {
                     "signal": "off",
-                    "telegram": "verbose",
+                    "homeassistant": "verbose",
                 },
             }
         }
         assert resolve_display_setting(config, "signal", "tool_progress") == "off"
-        assert resolve_display_setting(config, "telegram", "tool_progress") == "verbose"
+        assert resolve_display_setting(config, "homeassistant", "tool_progress") == "verbose"
 
 # ---------------------------------------------------------------------------
 # YAML normalisation
@@ -101,7 +87,7 @@ class TestYAMLNormalisation:
         from gateway.display_config import resolve_display_setting
 
         config = {"display": {"tool_progress": False}}
-        assert resolve_display_setting(config, "telegram", "tool_progress") == "off"
+        assert resolve_display_setting(config, "homeassistant", "tool_progress") == "off"
 
     def test_only_long_running_visibility_accepts_generic_mode(self):
         from gateway.display_config import resolve_display_setting
@@ -175,21 +161,10 @@ class TestInstallerSeededConfigThroughGatewayResolver:
         assert_keeps_platform_display_defaults(seeded)
         # ...and through the resolver the gateway turn actually calls (same arguments as gateway/run_turn.py).
         assert _resolve_gateway_display_bool(
-            seeded, "qqbot", "show_reasoning", default=False, platform=Platform.QQBOT,
-            require_platform_override_for={Platform.MATTERMOST},
+            seeded, "qqbot", "show_reasoning", default=False, platform=Platform.HOMEASSISTANT,
+            require_platform_override_for={Platform.HOMEASSISTANT},
         ) is False
 
-    def test_explicit_global_opt_in_still_reaches_gateway_platforms(self, tmp_path):
-        """Control: an operator who deliberately writes ``display.show_reasoning: true`` still gets it (#7148)."""
-        from gateway.config import Platform
-        from gateway.run import _load_gateway_config, _resolve_gateway_display_bool
-
-        (tmp_path / "config.yaml").write_text("display:\n  show_reasoning: true\n")
-        cfg = _load_gateway_config(tmp_path / "config.yaml")
-        assert _resolve_gateway_display_bool(
-            cfg, "qqbot", "show_reasoning", default=False, platform=Platform.QQBOT,
-            require_platform_override_for={Platform.MATTERMOST},
-        ) is True
 
 
 # ---------------------------------------------------------------------------
@@ -209,7 +184,7 @@ class TestConfigMigration:
             "display": {
                 "tool_progress_overrides": {
                     "signal": "off",
-                    "telegram": "all",
+                    "homeassistant": "all",
                 },
             },
         }
@@ -226,7 +201,7 @@ class TestConfigMigration:
         updated = yaml.safe_load(config_path.read_text(encoding="utf-8"))
         platforms = updated.get("display", {}).get("platforms", {})
         assert platforms.get("signal", {}).get("tool_progress") == "off"
-        assert platforms.get("telegram", {}).get("tool_progress") == "all"
+        assert platforms.get("homeassistant", {}).get("tool_progress") == "all"
 
 # ---------------------------------------------------------------------------
 # Streaming per-platform (None = follow global)
@@ -241,10 +216,10 @@ class TestStreamingPerPlatform:
 
         config = {
             "display": {
-                "platforms": {"telegram": {"streaming": False}},
+                "platforms": {"homeassistant": {"streaming": False}},
             }
         }
-        assert resolve_display_setting(config, "telegram", "streaming") is False
+        assert resolve_display_setting(config, "homeassistant", "streaming") is False
 
 # ---------------------------------------------------------------------------
 # cleanup_progress — opt-in deletion of temporary progress bubbles
@@ -260,7 +235,7 @@ class TestCleanupProgress:
         for val in ("true", "yes", "on", "1"):
             config = {
                 "display": {
-                    "platforms": {"telegram": {"cleanup_progress": val}},
+                    "platforms": {"homeassistant": {"cleanup_progress": val}},
                 }
             }
-            assert resolve_display_setting(config, "telegram", "cleanup_progress") is True, val
+            assert resolve_display_setting(config, "homeassistant", "cleanup_progress") is True, val

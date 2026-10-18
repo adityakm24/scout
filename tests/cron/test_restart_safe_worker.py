@@ -1038,7 +1038,7 @@ def test_managed_gateway_restart_preserves_active_worker_and_single_side_effect(
     adapter.send = send
     gateway_config = Mock()
     gateway_config.platforms = {
-        Platform.TELEGRAM: PlatformConfig(enabled=True),
+        Platform.HOMEASSISTANT: PlatformConfig(enabled=True),
     }
     gateway_config.get_home_channel = lambda _platform: None
     monkeypatch.setattr(
@@ -1100,7 +1100,7 @@ def test_managed_gateway_restart_preserves_active_worker_and_single_side_effect(
             row = delivery_queue.get_status(execution["id"])
             if row and row["status"] == "pending":
                 scheduler.drain_delivery_queue(
-                    {Platform.TELEGRAM: adapter}, replacement_loop
+                    {Platform.HOMEASSISTANT: adapter}, replacement_loop
                 )
             current = executions.latest_execution(job["id"])
             if current and current["status"] == "completed":

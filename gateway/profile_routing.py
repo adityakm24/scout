@@ -2,12 +2,12 @@
 
 Matching is conjunctive; the highest additive specificity wins (``gateway.profile_routes``
 in config.yaml): user_id 16, thread_id 8, chat_id 4, guild_id 2, else the default profile.
-For Discord threads/forum posts ``parent_chat_id`` carries the direct parent, so a
-channel route also matches any thread/post under it.
+For threads ``parent_chat_id`` carries the direct parent, so a channel route also matches any
+thread under it.
 
 A route applies only to messages received by the bot of its ``bot_profile`` (default: the
-default profile's shared bot). Telegram DM ``chat_id == user_id`` for EVERY bot, so without
-this a ``chat_id`` route meant for the shared bot would re-home the same user's DM with a
+default profile's shared bot); a DM's ``chat_id`` can equal the sender id for EVERY bot, so
+without this a ``chat_id`` route meant for the shared bot would re-home the same user's DM with a
 dedicated secondary bot into another profile (#104933).
 """
 
@@ -18,35 +18,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
-
-# Baileys and Cloud share phone/JID/LID identity rules; other platforms compare exactly.
-_WHATSAPP_IDENTITY_PLATFORMS = {"whatsapp", "whatsapp_cloud"}
-_WHATSAPP_NON_USER_SUFFIXES = ("@g.us", "@broadcast", "@newsletter")
-
-
-def _is_whatsapp_non_user_chat(chat_id: Optional[str]) -> bool:
-    """True for group / broadcast / newsletter JIDs — not a sender identity."""
-    return bool(chat_id) and str(chat_id).strip().lower().endswith(_WHATSAPP_NON_USER_SUFFIXES)
-
-
-def _whatsapp_user_chat_ids_match(platform: str, left: Optional[str], right: Optional[str]) -> bool:
-    """True when two WhatsApp *user* chat_ids refer to the same person.
-
-    Uses ``expand_whatsapp_aliases`` (same helper as session keys and adapter allowlists) so a bare
-    number, JID and LID collapse to one identity. Group/broadcast JIDs are chats, not senders;
-    non-WhatsApp platforms → False.
-    """
-    if (
-        (platform or "").strip().lower() not in _WHATSAPP_IDENTITY_PLATFORMS
-        or not left or not right
-        or _is_whatsapp_non_user_chat(left) or _is_whatsapp_non_user_chat(right)
-    ):
-        return False
-    from gateway.whatsapp_identity import expand_whatsapp_aliases
-
-    left_aliases = expand_whatsapp_aliases(str(left))
-    return bool(left_aliases and left_aliases & expand_whatsapp_aliases(str(right)))
-
 
 class ProfileRouteRejected(RuntimeError):
     """An explicit route matched a profile this gateway does not serve."""
@@ -94,8 +65,6 @@ class ProfileRoute:
         if (
             self.chat_id
             and self.chat_id not in (chat_id, parent_chat_id)
-            and not _whatsapp_user_chat_ids_match(platform, self.chat_id, chat_id)
-            and not _whatsapp_user_chat_ids_match(platform, self.chat_id, parent_chat_id)
         ):
             return False
         return not (self.guild_id and self.guild_id != guild_id)

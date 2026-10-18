@@ -75,7 +75,7 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/scout/tools
 # names (see .scout/plans/termux-removal-commit-spec.md).
 RUN apt-get -o Acquire::Retries=3 update && \
     apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
-    ca-certificates curl iputils-ping python3 python-is-python3 gcc g++ make cmake python3-dev python3-venv libffi-dev libolm-dev libatomic1 procps git openssh-client docker-cli xz-utils \
+    ca-certificates curl iputils-ping python3 python-is-python3 gcc g++ make cmake python3-dev python3-venv libffi-dev libatomic1 procps git openssh-client docker-cli xz-utils \
     libasound2t64 libatk-bridge2.0-0t64 libatk1.0-0t64 libatspi2.0-0t64 libcairo2 libcups2t64 libdbus-1-3 libgbm1 libglib2.0-0t64 libnspr4 libnss3 libpango-1.0-0 libx11-6 libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxkbcommon0 libxrandr2 && \
     rm -rf /var/lib/apt/lists/*
 
@@ -242,11 +242,10 @@ FROM runtime_base AS python_deps
 # frontend stats the readme path during dep resolution, so we `touch` an
 # empty placeholder — the real README is restored by `COPY . .` below.
 #
-# `pm.build_env --no-install-project --extra all --extra messaging --extra otlp`
+# `pm.build_env --no-install-project --extra all --extra otlp`
 # installs the deps reachable through the composite `[all]` extra
-# (handpicked set intended for the production image; dependency groups are not selected),
-# plus gateway messaging adapters that should work in the published image
-# without a first-boot lazy install.  We do NOT use `--all-extras`:
+# (handpicked set intended for the production image; dependency groups are not selected).
+# We do NOT use `--all-extras`:
 # that would pull in `[rl]` (atroposlib + tinker + torch + wandb from
 # git) and `[yc-bench]` (another git dep), neither of which belongs in
 # the published container.
@@ -259,24 +258,13 @@ FROM runtime_base AS python_deps
 # Health export is enabled. Collector and observability-backend dependencies
 # remain external and are not part of the Scout production image.
 #
-# The Matrix gateway's deps ([matrix] extra) are baked in because
-# python-olm (transitive via mautrix[encryption]) builds from source on
-# Python/image combinations without usable wheels.  The Docker image is
-# Linux-only, so keeping the native libolm/build-toolchain packages here
-# avoids the cross-platform failures that kept [matrix] out of [all]
-# while still making Matrix work in the published container. Fixes #30399.
-#
-# Google Chat's [google-chat] extra (google-cloud-pubsub + Chat API clients)
-# is baked so hosted/immutable images can enable the adapter without writing
-# the sealed venv.
-#
 # Source binding is created after the source copy below.
 COPY pyproject.toml uv.lock ./
 RUN touch ./README.md
 RUN python3 -m pm.build_env --source /opt/scout --python /usr/local/bin/python3 \
     --out /opt/scout/.venv --no-install-project --sealed \
-    --extra all --extra messaging --extra otlp --extra anthropic --extra bedrock \
-    --extra azure-identity --extra matrix --extra google-chat
+    --extra all --extra otlp --extra anthropic --extra bedrock \
+    --extra azure-identity
 
 # Icons render on the runtime environment: Pillow and resvg-py are core
 # dependencies. A stage of its own so the frontend stage keeps building its
@@ -290,22 +278,18 @@ RUN /opt/scout/.venv/bin/python -I scripts/generate_icons.py --source /opt/scout
 FROM runtime_base AS frontend_build
 COPY package.json package-lock.json ./
 COPY web/package.json web/
-COPY ui-tui/package.json ui-tui/
-COPY ui-tui/packages/scout-ink/ ui-tui/packages/scout-ink/
 COPY apps/shared/ apps/shared/
 COPY scripts/build/node-deps.mjs scripts/build/node-deps.mjs
 ENV npm_config_install_links=false
-RUN node scripts/build/node-deps.mjs --source /opt/scout --workspace ui-tui --workspace web
+RUN node scripts/build/node-deps.mjs --source /opt/scout --workspace web
 
 COPY pyproject.toml uv.lock ./
 COPY web/ web/
-COPY ui-tui/ ui-tui/
 COPY scripts/build/*.mjs scripts/build/
 COPY scripts/generate-icons.mjs scripts/generate_icons.py scripts/
 COPY assets/ assets/
 COPY --from=icons /tmp/scout-icons /tmp/scout-icons
-RUN node scripts/build/tui.mjs --source /opt/scout --out /opt/products/tui && \
-    node scripts/build/web.mjs --source /opt/scout --icons /tmp/scout-icons --out /opt/products/web
+RUN node scripts/build/web.mjs --source /opt/scout --icons /tmp/scout-icons --out /opt/products/web
 
 FROM python_deps AS runtime
 # Standalone TypeScript linting is a runtime feature; Vite/esbuild are not.
@@ -313,24 +297,7 @@ COPY --from=frontend_build /opt/scout/node_modules/typescript /opt/scout/node_mo
 RUN mkdir -p /opt/scout/node_modules/.bin && \
     ln -s ../typescript/bin/tsc /opt/scout/node_modules/.bin/tsc
 
-# ---------- Photon iMessage sidecar deps (baked, NS-606) ----------
-# The photon plugin's Node sidecar needs its own node_modules
-# (spectrum-ts). The install tree is immutable at runtime, so a lazy
-# `npm ci` on first connect would hit EROFS — bake the deps here instead
-# (deterministic installs, NS-559). The patch script is copied alongside
-# the manifests because package.json's postinstall runs it, which also
-# means the spectrum-ts patch is applied at build time. Layer-cached:
-# only re-runs when the sidecar manifests/patch change.
-COPY plugins/platforms/photon/sidecar/package.json \
-     plugins/platforms/photon/sidecar/package-lock.json \
-     plugins/platforms/photon/sidecar/patch-spectrum-mixed-attachments.mjs \
-     plugins/platforms/photon/sidecar/
-RUN cd plugins/platforms/photon/sidecar && \
-    npm ci --no-audit --fetch-retries=5 && \
-    npm cache clean --force
-
 # Shared product outputs are independent of application dependency assembly.
-COPY --from=frontend_build /opt/products/tui /opt/scout/ui-tui
 COPY --from=frontend_build /opt/products/web /opt/scout/scout_cli/web_dist
 # ---------- Bot Screen X socket directory ----------
 # Xvnc would create this itself (/tmp is 1777); pre-creating it keeps ownership
@@ -427,23 +394,6 @@ COPY --chmod=0755 docker/cont-init.d/02-reconcile-profiles /etc/cont-init.d/02-r
 
 # ---------- Runtime ----------
 ENV SCOUT_WEB_DIST=/opt/scout/scout_cli/web_dist
-# Point the TUI launcher at the prebuilt bundle baked at build time (Layer 8:
-# `ui-tui && npm run build`). This makes _make_tui_argv take the prebuilt-bundle
-# fast path (`node --expose-gc /opt/scout/ui-tui/dist/entry.js`) and skip the
-# _tui_need_npm_install / runtime `npm install` branch entirely — exactly the
-# nix/packaged-release path the launcher was designed for.
-#
-# Why this is required (not just an optimization): the root package-lock.json
-# describes the WHOLE monorepo workspace set (root + web + ui-tui + apps/*),
-# but the image only installs root/web/ui-tui (apps/* — the desktop app — is
-# never `npm install`ed here). So the actualized node_modules permanently
-# disagrees with the canonical lock, _tui_need_npm_install() returns True on
-# every launch, and the runtime `npm install` it triggers (a) can never
-# converge against the partial monorepo and (b) races itself across concurrent
-# embedded-chat (/api/pty) connections → ENOTEMPTY → the chat tab dies with a
-# 502 / "[session ended]". Pointing at the prebuilt bundle sidesteps the whole
-# check. (A separate launcher hardening is tracked independently.)
-ENV SCOUT_TUI_DIR=/opt/scout/ui-tui
 ENV SCOUT_HOME=/opt/data
 ENV SCOUT_WRITE_SAFE_ROOT=/opt/data
 # Opt-in backend SDKs install on first use into PM dependency generations under
@@ -505,8 +455,7 @@ VOLUME [ "/opt/data" ]
 # On the PID-1 path, s6-overlay's /init sets up the supervision tree, runs
 # /etc/cont-init.d/* (our stage2 hook), starts s6-rc services declared in
 # /etc/s6-overlay/s6-rc.d/, then exec's its remaining argv as the container's
-# "main program" with stdin/stdout/stderr inherited (this is what makes
-# interactive --tui work). When the main program exits, /init begins stage 3
+# "main program" with stdin/stdout/stderr inherited. When the main program exits, /init begins stage 3
 # shutdown and the container exits with the program's exit code. Replaces
 # tini — see Phase 2 of docs/plans/2026-05-07-s6-overlay-dynamic-subagent-gateways.md.
 #
@@ -516,7 +465,6 @@ VOLUME [ "/opt/data" ]
 #   docker run <image>                  → entrypoint-dispatch.sh   (CMD default)
 #   docker run <image> chat -q "hi"     → entrypoint-dispatch.sh chat -q hi
 #   docker run <image> sleep infinity   → entrypoint-dispatch.sh sleep infinity
-#   docker run <image> --tui            → entrypoint-dispatch.sh --tui
 #
 # main-wrapper.sh handles arg routing (bare-exec vs. scout
 # subcommand vs. no-args), drops to the scout user via s6-setuidgid,

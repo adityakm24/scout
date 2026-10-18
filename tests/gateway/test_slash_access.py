@@ -79,7 +79,7 @@ class TestPolicyForSource:
     def test_dm_chat_type_resolves_to_dm_scope(self):
         cfg = GatewayConfig(
             platforms={
-                Platform.DISCORD: PlatformConfig(
+                Platform.HOMEASSISTANT: PlatformConfig(
                     enabled=True,
                     extra={
                         "allow_admin_from": ["111"],
@@ -91,7 +91,7 @@ class TestPolicyForSource:
             }
         )
         dm_src = SessionSource(
-            platform=Platform.DISCORD, chat_id="A", chat_type="dm", user_id="111"
+            platform=Platform.HOMEASSISTANT, chat_id="A", chat_type="dm", user_id="111"
         )
         p = policy_for_source(cfg, dm_src)
         assert p.is_admin("111") is True
@@ -104,17 +104,17 @@ class TestPolicyForSource:
         # Group has admin list, DM does not → DM gating disabled, group active.
         cfg = GatewayConfig(
             platforms={
-                Platform.DISCORD: PlatformConfig(
+                Platform.HOMEASSISTANT: PlatformConfig(
                     enabled=True,
                     extra={"group_allow_admin_from": ["222"]},
                 )
             }
         )
         dm_src = SessionSource(
-            platform=Platform.DISCORD, chat_id="A", chat_type="dm", user_id="999"
+            platform=Platform.HOMEASSISTANT, chat_id="A", chat_type="dm", user_id="999"
         )
         grp_src = SessionSource(
-            platform=Platform.DISCORD, chat_id="G", chat_type="group", user_id="999"
+            platform=Platform.HOMEASSISTANT, chat_id="G", chat_type="group", user_id="999"
         )
         dm_p = policy_for_source(cfg, dm_src)
         grp_p = policy_for_source(cfg, grp_src)
@@ -140,8 +140,8 @@ def test_blank_chat_type_resolves_to_the_gated_scope(extra, chat_type, admin, ga
     """A blank/None chat_type (relay frames may carry ""/null, restored rows keep a
     stored empty value) must resolve to whichever scope is gated, never to an
     ungated allow-everything scope (#116282)."""
-    cfg = GatewayConfig(platforms={Platform.DISCORD: PlatformConfig(enabled=True, extra=extra)})
-    src = SessionSource(platform=Platform.DISCORD, chat_id="A", chat_type=chat_type, user_id="999")
+    cfg = GatewayConfig(platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, extra=extra)})
+    src = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="A", chat_type=chat_type, user_id="999")
     p = policy_for_source(cfg, src)
     assert p.enabled is gated
     assert p.can_run("999", "stop") is (not gated)

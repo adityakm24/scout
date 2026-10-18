@@ -80,7 +80,7 @@ def _make_runner():
 
 def _make_source() -> SessionSource:
     return SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_id="12345",
         chat_type="dm",
         user_id="user-1",
@@ -89,7 +89,7 @@ def _make_source() -> SessionSource:
 
 def _make_discord_auto_thread_source() -> SessionSource:
     return SessionSource(
-        platform=Platform.DISCORD,
+        platform=Platform.HOMEASSISTANT,
         chat_id="999",
         chat_type="thread",
         user_id="user-1",

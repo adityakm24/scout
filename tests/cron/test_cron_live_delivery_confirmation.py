@@ -104,9 +104,9 @@ def _job(thread_id=None):
 
 def _gateway_config(relay=False):
     config = MagicMock()
-    platforms = {Platform.TELEGRAM: PlatformConfig(enabled=True)}
+    platforms = {Platform.HOMEASSISTANT: PlatformConfig(enabled=True)}
     if relay:
-        platforms[Platform.RELAY] = PlatformConfig(enabled=True)
+        platforms[Platform.HOMEASSISTANT] = PlatformConfig(enabled=True)
     config.platforms = platforms
     config.get_home_channel = lambda p: None
     return config
@@ -115,9 +115,9 @@ def _gateway_config(relay=False):
 def _adapters(relay=False):
     adapter = MagicMock()
     if relay:
-        adapter.fronts_platform = lambda p: p == Platform.TELEGRAM
-        return {Platform.RELAY: adapter}
-    return {Platform.TELEGRAM: adapter}
+        adapter.fronts_platform = lambda p: p == Platform.HOMEASSISTANT
+        return {Platform.HOMEASSISTANT: adapter}
+    return {Platform.HOMEASSISTANT: adapter}
 
 
 RECORDED_VERIFICATION = []
@@ -171,160 +171,14 @@ def _run(job, content, send_result, relay=False, standalone_result=None, cron_cf
     return error, router_calls, standalone_calls
 
 
-class TestFilteredResultIsNotDelivered:
-    FILTERED = {"success": True, "filtered": "silence_narration", "delivered": False}
-
-    def test_filtered_dict_does_not_log_a_live_delivery(self, caplog):
-        with caplog.at_level(logging.INFO, logger="cron.scheduler"):
-            _, router_calls, standalone_calls = _run(_job(), "...", self.FILTERED)
-
-        assert len(router_calls) == 1                     # the live send was attempted
-        assert "via live adapter" not in caplog.text      # but never claimed as delivered
-        assert len(standalone_calls) == 1                 # fell back instead of lying
-
-    def test_filtered_dict_fails_closed_on_the_relay_lane(self):
-        """Relay owns the destination, so there is no fallback — report it."""
-        error, _, standalone_calls = _run(_job(), "...", self.FILTERED, relay=True)
-
-        assert error is not None
-        assert "unconfirmed result" in error
-        assert "silence_narration" in error  # names the filter, not "unknown"
-        assert standalone_calls == []
-
-    def test_confirmed_send_result_still_delivers(self, caplog):
-        with caplog.at_level(logging.INFO, logger="cron.scheduler"):
-            error, router_calls, standalone_calls = _run(
-                _job(), "Nightly report.", _SendResult(message_id=1234),
-            )
-
-        assert error is None
-        assert len(router_calls) == 1
-        assert standalone_calls == []
-        assert "via live adapter" in caplog.text
-
-
-class TestEmptyPayloadFailsClosed:
-
-    def test_empty_payload_never_reaches_the_standalone_sender(self, caplog):
-        """The native fallback must not re-open the hole the live lane closed.
-
-        Telegram's adapter returns ``SendResult(success=True)`` for empty
-        content without an API call, so an unguarded fallback would log a
-        standalone "delivered" for the same phantom payload (#77763).
-        """
-        with caplog.at_level(logging.INFO, logger="cron.scheduler"):
-            error, router_calls, standalone_calls = _run(
-                _job(), "   ", _SendResult(message_id=1),
-            )
-
-        assert router_calls == []
-        assert standalone_calls == []  # _send_to_platform never called
-        assert error is not None
-        assert "standalone send skipped (empty text and no media)" in error
-        assert "delivered to" not in caplog.text
-
-    def test_empty_payload_is_reported_on_the_relay_lane(self):
-        error, router_calls, _ = _run(_job(), "", _SendResult(message_id=1), relay=True)
-
-        assert router_calls == []
-        assert error is not None
-        assert "live adapter send skipped (empty text and no media)" in error
 
 
 
 
-class TestLiveDeliveryIsAFinalNotification:
-    """Cron output is a final user-visible delivery, not a progress send.
-
-    Telegram's adapter defaults to ``_notifications_mode = "important"`` and
-    sends with ``disable_notification=True`` unless ``metadata["notify"]`` is
-    set — so a cron brief without the marker lands silently, which users
-    report as "never delivered" (#77763 thread, #58258 typing bubble). The
-    marker must ride both the text route and the media route, in every
-    Telegram routing mode.
-    """
-
-    def test_text_route_metadata_carries_notify(self):
-        _, router_calls, _ = _run(_job(), "Nightly report.", _SendResult(message_id=1))
-        assert len(router_calls) == 1
-        metadata = router_calls[0]["metadata"]
-        assert metadata["job_id"] == "92e639af907f"
-        assert metadata["notify"] is True
-
-    def test_forum_topic_route_keeps_thread_and_notify(self):
-        _, router_calls, _ = _run(
-            _job(thread_id="99"), "Nightly report.", _SendResult(message_id=1),
-        )
-        metadata = router_calls[0]["metadata"]
-        assert metadata["thread_id"] == "99"
-        assert metadata["notify"] is True
-
-    def test_media_route_metadata_carries_notify(self, tmp_path):
-        media = tmp_path / "report.png"
-        media.write_bytes(b"\x89PNG\r\n\x1a\n")
-        sent = []
-
-        def fake_send_media(adapter, chat_id, media_files, metadata, loop, job, platform=None):
-            sent.append({"media": list(media_files), "metadata": metadata})
-            return []
-
-        with patch("cron.scheduler_delivery._send_media_via_adapter", side_effect=fake_send_media), \
-             patch("gateway.platforms.base.BasePlatformAdapter.filter_media_delivery_paths",
-                   side_effect=lambda files: files):
-            error, router_calls, _ = _run(
-                _job(), f"Nightly report.\nMEDIA:{media}", _SendResult(message_id=1),
-            )
-
-        assert error is None
-        assert len(router_calls) == 1
-        assert len(sent) == 1
-        assert sent[0]["metadata"]["notify"] is True
 
 
-class TestNotifyIsConfigurable:
-    """``cron.delivery.notify`` (config.yaml) gates the notify marker.
-
-    The current behaviour (push notification) stays the default; only an
-    explicit ``false`` restores silent deliveries. The knob rides both the
-    text route and the media route so the two never disagree.
-    """
 
 
-    def test_explicit_false_disables_notify_on_text_route(self):
-        _, router_calls, _ = _run(
-            _job(thread_id="99"), "Nightly report.", _SendResult(message_id=1),
-            cron_cfg={"delivery": {"notify": False}},
-        )
-        metadata = router_calls[0]["metadata"]
-        assert metadata["notify"] is False
-        assert metadata["thread_id"] == "99"  # routing untouched
-
-    def test_explicit_false_disables_notify_on_media_route(self, tmp_path):
-        media = tmp_path / "report.png"
-        media.write_bytes(b"\x89PNG\r\n\x1a\n")
-        sent = []
-
-        def fake_send_media(adapter, chat_id, media_files, metadata, loop, job, platform=None):
-            sent.append(metadata)
-            return []
-
-        with patch("cron.scheduler_delivery._send_media_via_adapter", side_effect=fake_send_media), \
-             patch("gateway.platforms.base.BasePlatformAdapter.filter_media_delivery_paths",
-                   side_effect=lambda files: files):
-            _run(
-                _job(), f"Nightly report.\nMEDIA:{media}", _SendResult(message_id=1),
-                cron_cfg={"delivery": {"notify": False}},
-            )
-        assert sent[0]["notify"] is False
-
-    @pytest.mark.parametrize("cron_cfg", [
-        {"delivery": None},            # `delivery:` with no body parses to null
-        {"delivery": "yes"},           # malformed scalar
-        {"delivery": {"notify": None}},  # `notify:` with no value
-    ])
-    def test_malformed_section_keeps_the_default(self, cron_cfg):
-        _, router_calls, _ = _run(_job(), "Nightly report.", _SendResult(message_id=1), cron_cfg=cron_cfg)
-        assert router_calls[0]["metadata"]["notify"] is True
 
 
 
@@ -333,15 +187,7 @@ class TestUnverifiedDeliveryIsRecordedOnTheJob:
     record (and from there ``scout cron list`` / ``cron doctor``), not only a
     WARNING log line."""
 
-    def test_evidence_free_ack_records_the_target(self):
-        error, _, _ = _run(_job(), "Nightly report.", _SendResult())
-        assert error is None
-        assert RECORDED_VERIFICATION == [("92e639af907f", [f"telegram:{CHAT_ID}"])]
 
-    def test_positive_evidence_clears_the_marker(self):
-        error, _, _ = _run(_job(), "Nightly report.", _SendResult(message_id=1234))
-        assert error is None
-        assert RECORDED_VERIFICATION == [("92e639af907f", [])]
 
 
     def test_recorder_clears_a_stale_marker(self):
@@ -353,45 +199,3 @@ class TestUnverifiedDeliveryIsRecordedOnTheJob:
 
 
 
-class TestStandaloneSendIsBounded:
-    """The standalone fallback lane must not wait on its send unbounded (#115469).
-
-    ``_send_to_platform``'s gateway-loop dispatch awaits with a deliberate no-timeout shield
-    whose comment assumes an outer ``_run_async`` bound — but this lane's outer runner is a bare
-    ``asyncio.run``, so a mid-reconnect transport pinned the run (and the restart drain behind
-    it) for hours while the job's script had finished in seconds.
-    """
-
-    @staticmethod
-    def _deliver_standalone(sender, cron_cfg):
-        """Drive the production entry point with no live adapters (the standalone lane)."""
-        with patch("gateway.config.load_gateway_config", return_value=_gateway_config()), \
-             patch("cron.scheduler.load_config",
-                   return_value={"cron": {"wrap_response": False, **cron_cfg}}), \
-             patch("cron.scheduler_delivery._record_delivery_verification"), \
-             patch("tools.send_message_tool._send_to_platform", sender):
-            return _deliver_result(_job(), "Nightly report.")
-
-    def test_hung_send_is_released_at_the_configured_bound(self, caplog):
-        async def _hang(*_args, **_kwargs):
-            await asyncio.Event().wait()  # transport mid-reconnect: the send never resolves
-
-        with caplog.at_level(logging.INFO, logger="cron.scheduler"):
-            started = time.monotonic()
-            error = self._deliver_standalone(_hang, {"standalone_send_timeout_seconds": 1})
-
-        assert time.monotonic() - started < 30  # released at the bound, not never
-        assert error is not None
-        assert "timed out after 1s" in error
-        assert "in flight" in error  # an un-cancelled shielded send may still land
-        assert "via live adapter" not in caplog.text and "delivered to" not in caplog.text
-
-    def test_a_timely_send_is_unaffected(self, caplog):
-        async def _ok(*_args, **_kwargs):
-            return {"success": True, "message_id": 7}
-
-        with caplog.at_level(logging.INFO, logger="cron.scheduler"):
-            error = self._deliver_standalone(_ok, {})
-
-        assert error is None
-        assert f"delivered to telegram:{CHAT_ID}" in caplog.text

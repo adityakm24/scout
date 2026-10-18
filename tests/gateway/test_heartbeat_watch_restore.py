@@ -32,7 +32,7 @@ async def test_restore_retries_persisted_routes_in_their_own_profiles(tmp_path, 
     try:
         for profile, status, topic in [(None, 'active', '11'), ('work', 'active', '22'),
                                        ('work', 'paused', '33'), (None, 'cleared', '44')]:
-            source = SessionSource(platform=Platform.TELEGRAM, chat_id='chat',
+            source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id='chat',
                                    thread_id=topic, profile=profile, scope_id='workspace')
             with _profile_runtime_scope(named if profile else home):
                 entry = store.get_or_create_session(source)
@@ -97,7 +97,7 @@ async def test_restore_skips_session_sweep_when_no_heartbeats_exist(tmp_path, mo
     config = GatewayConfig(multiplex_profiles=True)
     store = SessionStore(home / 'sessions', config)
     try:
-        source = SessionSource(platform=Platform.TELEGRAM, chat_id='chat',
+        source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id='chat',
                                thread_id='7', profile=None, scope_id=None)
         store.get_or_create_session(source)
         runner = GatewayRunner.__new__(GatewayRunner)
@@ -149,30 +149,6 @@ async def test_restore_skips_session_sweep_when_no_heartbeats_exist(tmp_path, mo
             db.close()
 
 
-@pytest.mark.asyncio
-async def test_startup_arms_retry_poller_even_without_any_watches(monkeypatch):
-    runner = GatewayRunner.__new__(GatewayRunner)
-    runner._heartbeat_watch = {}
-    runner._background_tasks = set()
-    runner._ensure_hosted_room_worker = AsyncMock()
-    runner._hosted_room_worker_watcher = AsyncMock()
-    runner._spawn_supervised = lambda *args: None
-    runner._start_loop_heartbeat_task = lambda: None
-    runner.hooks = SimpleNamespace(loaded_hooks=[], emit=AsyncMock())
-    runner.adapters = {}
-    runner._send_update_notification = AsyncMock(return_value=True)
-    runner.session_store = SimpleNamespace(list_sessions=lambda: [])
-    runner._run_in_executor_with_context = asyncio.to_thread
-    monkeypatch.setattr('gateway.channel_directory.build_channel_directory', AsyncMock(return_value={}))
-    await runner._start_post_connect_services(0)
-    task = getattr(runner, '_heartbeat_poll_task', None)
-    try:
-        assert task is not None and not task.done()
-        assert runner._heartbeat_watch == {}
-    finally:
-        if task:
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
 
 
 @pytest.mark.asyncio
@@ -194,7 +170,7 @@ async def test_restore_enters_each_profile_scope_once_per_scan(tmp_path, monkeyp
     try:
         expected = {}
         for profile in (None, 'work', 'work', None, 'work'):
-            source = SessionSource(platform=Platform.TELEGRAM, chat_id='chat',
+            source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id='chat',
                                    thread_id=str(len(expected)), profile=profile, scope_id='workspace')
             with _profile_runtime_scope(named if profile else home):
                 entry = store.get_or_create_session(source)

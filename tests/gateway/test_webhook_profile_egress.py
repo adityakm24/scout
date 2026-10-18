@@ -52,41 +52,13 @@ def profile_homes(tmp_path, monkeypatch):
     (sec / ".env").write_text("GH_TOKEN=sec-token\n")
     monkeypatch.setenv("GH_TOKEN", "default-token")  # multiplex: os.environ == the default profile
     default_cfg = GatewayConfig()
-    default_cfg.platforms[Platform.SLACK] = PlatformConfig(
-        enabled=True, home_channel=HomeChannel(platform=Platform.SLACK, chat_id="DEFAULT-HOME", name="Home"))
+    default_cfg.platforms[Platform.HOMEASSISTANT] = PlatformConfig(
+        enabled=True, home_channel=HomeChannel(platform=Platform.HOMEASSISTANT, chat_id="DEFAULT-HOME", name="Home"))
     return default_cfg
 
 
-@pytest.mark.asyncio
-async def test_routed_profile_delivers_via_its_own_adapter_and_home_channel(profile_homes):
-    default, secondary = _target(), _target()
-    adapter = _webhook(_Runner({Platform.SLACK: default}, {"sec": {Platform.SLACK: secondary}}, profile_homes))
-
-    result = await adapter._deliver_cross_platform(
-        "slack", "hi", {"deliver": "slack", "deliver_extra": {}, "profile": "sec"})
-
-    assert result.success
-    default.send.assert_not_awaited()
-    assert secondary.send.await_args.args[0] == "SEC-HOME"
 
 
-@pytest.mark.asyncio
-async def test_delivery_fails_closed_instead_of_crossing_profiles(profile_homes):
-    """Neither direction may borrow: a secondary route without the platform must not use the default
-    bot, and a default-bound route must not use a platform parked only on a secondary."""
-    default, secondary = _target(), _target()
-
-    sec_without_slack = _webhook(_Runner({Platform.SLACK: default}, {"sec": {}}, profile_homes))
-    res = await sec_without_slack._deliver_cross_platform(
-        "slack", "hi", {"deliver": "slack", "deliver_extra": {"chat_id": "C1"}, "profile": "sec"})
-    assert not res.success and "not connected" in res.error
-    default.send.assert_not_awaited()
-
-    default_without_slack = _webhook(_Runner({}, {"sec": {Platform.SLACK: secondary}}, profile_homes))
-    res = await default_without_slack._deliver_cross_platform(
-        "slack", "hi", {"deliver": "slack", "deliver_extra": {"chat_id": "C1"}, "profile": None})
-    assert not res.success and "not connected" in res.error
-    secondary.send.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -107,19 +79,3 @@ async def test_github_comment_authenticates_with_routed_profile_token(profile_ho
     assert seen["GH_TOKEN"] == "sec-token"
 
 
-def test_api_server_profile_callback_resolves_routed_profile_adapter_fail_closed():
-    default, secondary = object(), object()
-    api = APIServerAdapter(PlatformConfig(enabled=True, extra={"port": 0}))
-    request = MagicMock()
-    request.app = {}
-
-    api.gateway_runner = _Runner({Platform("google_chat"): default}, {"sec": {Platform("google_chat"): secondary}})
-    token = _api_request_profile.set("sec")
-    try:
-        assert api._get_platform_callback_adapter(request, "google_chat") is secondary
-        api.gateway_runner = _Runner({Platform("google_chat"): default}, {"sec": {}})
-        assert api._get_platform_callback_adapter(request, "google_chat") is None
-    finally:
-        _api_request_profile.reset(token)
-    # No prefix: the primary map, unchanged.
-    assert api._get_platform_callback_adapter(request, "google_chat") is default

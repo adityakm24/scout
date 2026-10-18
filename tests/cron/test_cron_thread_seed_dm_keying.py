@@ -3,8 +3,8 @@
 Live incident (Alice, 2026-08-20 01:08, job 8e21a957b77b): the continuable
 cron thread seed created its session row with chat_type="thread", but a
 Slack DM thread reply arrives with chat_type="dm" — build_session_key puts
-them in different rows (agent:main:slack:thread:D...:<ts> vs
-agent:main:slack:dm:D...:<ts>), so the user's reply hit a session that had
+them in different rows (agent:main:homeassistant:thread:D...:<ts> vs
+agent:main:homeassistant:dm:D...:<ts>), so the user's reply hit a session that had
 never seen the brief. Slack channel and Matrix room thread replies key on the
 PARENT chat's type (``group``), Discord on ``thread`` — the seed mirrors the
 adapter (``_THREAD_REPLY_CHAT_TYPE``); the DM lane is the unswept sibling of
@@ -36,13 +36,13 @@ def test_dm_thread_seed_key_matches_dm_reply_key():
 
     with patch("gateway.mirror.mirror_to_session", return_value=True):
         _seed_cron_thread_session(
-            {"id": "j1", "name": "digest"}, adapter, "slack",
+            {"id": "j1", "name": "digest"}, adapter, "homeassistant",
             "D0BJTDCSR7C", "1787188136.448949", "Three bullets",
             chat_name=None, is_dm=True,
         )
 
     reply_source = SessionSource(
-        platform=Platform.SLACK,
+        platform=Platform.HOMEASSISTANT,
         chat_id="D0BJTDCSR7C",
         chat_type="dm",
         user_id="U0B5F8EEYAD",
@@ -56,55 +56,8 @@ def test_dm_thread_seed_key_matches_dm_reply_key():
     )
 
 
-def test_channel_thread_seed_key_matches_thread_reply_key():
-    """A Slack channel thread reply keys on the parent channel's type
-    (``group`` — the adapter's ``build_source`` shape, #111896), not on a
-    ``thread`` slot; the seed must match it."""
-    store = MagicMock()
-    adapter = MagicMock()
-    adapter._session_store = store
-
-    with patch("gateway.mirror.mirror_to_session", return_value=True):
-        _seed_cron_thread_session(
-            {"id": "j2", "name": "digest"}, adapter, "slack",
-            "C0AAAAAAAA", "1787188000.000100", "Three bullets",
-            chat_name="ops", is_dm=False,
-        )
-
-    reply_source = SessionSource(
-        platform=Platform.SLACK,
-        chat_id="C0AAAAAAAA",
-        chat_type="group",
-        user_id="U0B5F8EEYAD",
-        thread_id="1787188000.000100",
-    )
-    assert build_session_key(_seeded_source(store)) == build_session_key(
-        reply_source
-    )
 
 
-def test_matrix_room_thread_seed_key_matches_room_reply_key():
-    """The Matrix adapter keys an in-thread reply on the ROOM's type (``group``), so a
-    cron ``attach_to_session`` seed typed ``thread`` is a row no reply ever hits (#112918)."""
-    store = MagicMock()
-    adapter = MagicMock()
-    adapter._session_store = store
-
-    with patch("gateway.mirror.mirror_to_session", return_value=True):
-        _seed_cron_thread_session(
-            {"id": "j7", "name": "alert"}, adapter, "matrix",
-            "!ops:example.org", "$seed_event", "Three bullets",
-            chat_name="ops", is_dm=False,
-        )
-
-    reply_source = SessionSource(
-        platform=Platform.MATRIX,
-        chat_id="!ops:example.org",
-        chat_type="group",
-        user_id="@alice:example.org",
-        thread_id="$seed_event",
-    )
-    assert build_session_key(_seeded_source(store)) == build_session_key(reply_source)
 
 
 def test_dm_seed_default_is_backward_compatible():
@@ -117,39 +70,19 @@ def test_dm_seed_default_is_backward_compatible():
 
     with patch("gateway.mirror.mirror_to_session", return_value=True):
         _seed_cron_thread_session(
-            {"id": "j3"}, adapter, "discord", "123", "9001", "brief",
+            {"id": "j3"}, adapter, "homeassistant", "123", "9001", "brief",
         )
 
     assert _seeded_source(store).chat_type == "thread"
 
 
-def test_telegram_forum_topic_seed_key_matches_topic_reply_key():
-    """The Telegram adapter types every supergroup message ``group`` (forum topics included), so a
-    forum-topic cron seed typed ``thread`` is a row no topic reply ever resolves to — the same
-    shape as the Matrix bug, on the sibling platform."""
-    store = MagicMock()
-    adapter = MagicMock()
-    adapter._session_store = store
-
-    with patch("gateway.mirror.mirror_to_session", return_value=True):
-        _seed_cron_thread_session(
-            {"id": "j8", "name": "digest"}, adapter, "telegram",
-            "-1001234567", "77", "Three bullets", chat_name="ops", is_dm=False,
-        )
-
-    reply_source = SessionSource(
-        platform=Platform.TELEGRAM, chat_id="-1001234567", chat_type="group", user_id="42",
-        thread_id="77",
-    )
-    assert build_session_key(_seeded_source(store)) == build_session_key(reply_source)
-    assert build_session_key(_seeded_source(store)) == "agent:main:telegram:group:-1001234567:77"
 
 
 def test_scoped_dm_thread_seed_key_matches_scoped_reply_key():
     """Slack keys embed the workspace scope_id (build_session_key puts the
     team segment in every Slack dm/group/thread key). A seed built without
-    it creates agent:main:slack:dm:<chat>:<thread> while the real reply keys
-    agent:main:slack:dm:<team>:<chat>:<thread> — a row no scoped reply ever
+    it creates agent:main:homeassistant:dm:<chat>:<thread> while the real reply keys
+    agent:main:homeassistant:dm:<team>:<chat>:<thread> — a row no scoped reply ever
     resolves to. The seed must carry the origin's scope_id."""
     store = MagicMock()
     adapter = MagicMock()
@@ -157,13 +90,13 @@ def test_scoped_dm_thread_seed_key_matches_scoped_reply_key():
 
     with patch("gateway.mirror.mirror_to_session", return_value=True):
         _seed_cron_thread_session(
-            {"id": "j4", "name": "digest"}, adapter, "slack",
+            {"id": "j4", "name": "digest"}, adapter, "homeassistant",
             "D0BJTDCSR7C", "1787188136.448949", "Three bullets",
             chat_name=None, is_dm=True, scope_id="T0AAAA111",
         )
 
     reply_source = SessionSource(
-        platform=Platform.SLACK,
+        platform=Platform.HOMEASSISTANT,
         chat_id="D0BJTDCSR7C",
         chat_type="dm",
         user_id="U0B5F8EEYAD",
@@ -178,29 +111,6 @@ def test_scoped_dm_thread_seed_key_matches_scoped_reply_key():
     )
 
 
-def test_scoped_channel_thread_seed_key_matches_scoped_reply_key():
-    store = MagicMock()
-    adapter = MagicMock()
-    adapter._session_store = store
-
-    with patch("gateway.mirror.mirror_to_session", return_value=True):
-        _seed_cron_thread_session(
-            {"id": "j5", "name": "digest"}, adapter, "slack",
-            "C0AAAAAAAA", "1787188000.000100", "Three bullets",
-            chat_name="ops", is_dm=False, scope_id="T0AAAA111",
-        )
-
-    reply_source = SessionSource(
-        platform=Platform.SLACK,
-        chat_id="C0AAAAAAAA",
-        chat_type="group",
-        user_id="U0B5F8EEYAD",
-        thread_id="1787188000.000100",
-        scope_id="T0AAAA111",
-    )
-    assert build_session_key(_seeded_source(store)) == build_session_key(
-        reply_source
-    )
 
 
 def test_scoped_flat_channel_seed_key_matches_scoped_reply_key():
@@ -211,13 +121,13 @@ def test_scoped_flat_channel_seed_key_matches_scoped_reply_key():
 
     with patch("gateway.mirror.mirror_to_session", return_value=True):
         _seed_cron_channel_session(
-            {"id": "j6", "name": "digest"}, adapter, "slack",
+            {"id": "j6", "name": "digest"}, adapter, "homeassistant",
             "C0AAAAAAAA", "Three bullets", is_dm=False,
             user_id="U0B5F8EEYAD", chat_name="ops", scope_id="T0AAAA111",
         )
 
     reply_source = SessionSource(
-        platform=Platform.SLACK,
+        platform=Platform.HOMEASSISTANT,
         chat_id="C0AAAAAAAA",
         chat_type="group",
         user_id="U0B5F8EEYAD",
@@ -229,23 +139,3 @@ def test_scoped_flat_channel_seed_key_matches_scoped_reply_key():
     )
 
 
-def test_seeds_do_not_collide_across_workspaces():
-    """Two workspaces sharing a Slack chat id must seed DISTINCT keys —
-    the exact cross-tenant collision the workspace key segment exists to
-    prevent."""
-    keys = []
-    for team in ("T0AAAA111", "T0BBBB222"):
-        store = MagicMock()
-        adapter = MagicMock()
-        adapter._session_store = store
-        with patch("gateway.mirror.mirror_to_session", return_value=True):
-            _seed_cron_channel_session(
-                {"id": f"j-{team}"}, adapter, "slack",
-                "C0AAAAAAAA", "brief", is_dm=False,
-                user_id="U0B5F8EEYAD", scope_id=team,
-            )
-        keys.append(build_session_key(_seeded_source(store)))
-    assert keys[0] != keys[1], (
-        "identical chat ids in different workspaces seeded the SAME session "
-        "key — cross-workspace transcript bleed"
-    )

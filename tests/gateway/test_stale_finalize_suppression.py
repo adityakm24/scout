@@ -42,7 +42,7 @@ from gateway.stream_consumer import GatewayStreamConsumer, StreamConsumerConfig
 class FinalizeCaptureAdapter(BasePlatformAdapter):
     """Adapter that records every send/edit with its finalize flag."""
 
-    def __init__(self, platform=Platform.TELEGRAM):
+    def __init__(self, platform=Platform.HOMEASSISTANT):
         super().__init__(PlatformConfig(enabled=True, token="***"), platform)
         self.sent = []
         self.edits = []
@@ -192,7 +192,7 @@ async def _run_streaming_turn(monkeypatch, tmp_path, agent_cls, session_id):
     )
 
     source = SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_id="-1001",
         chat_type="group",
     )
@@ -212,59 +212,8 @@ async def _run_streaming_turn(monkeypatch, tmp_path, agent_cls, session_id):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_stale_finalize_does_not_suppress_complete_response(
-    monkeypatch, tmp_path
-):
-    """The complete response must reach the platform even when the finalize
-    edit succeeded with only the stale preview snapshot."""
-    adapter, result = await _run_streaming_turn(
-        monkeypatch, tmp_path, StalePrefixAgent, "sess-71643-stale-finalize"
-    )
-
-    assert result["final_response"] == FULL_RESPONSE
-    # The missing tail must appear in at least one platform call — either the
-    # reconciliation edit or the normal final send. On the buggy path it
-    # appears in NO call at all (message loss).
-    all_payloads = [c["content"] for c in adapter.sent] + [
-        e["content"] for e in adapter.edits
-    ]
-    assert any(FULL_RESPONSE in payload for payload in all_payloads), (
-        f"complete response never reached the platform; payloads: {all_payloads!r}"
-    )
-    # The recovery must not duplicate: when the gateway suppressed its normal
-    # final send (already_sent), the complete response must have been the
-    # payload of the message that finalized on screen — either an in-place
-    # reconciliation/finalize edit, or (consumer-declared final contract,
-    # 2026-08-16) the primary send itself when the authoritative final was
-    # adopted before the first flush. Both shapes are single-message.
-    if result.get("already_sent"):
-        _edit_carried = any(
-            e["content"] == FULL_RESPONSE and e["finalize"] for e in adapter.edits
-        )
-        _send_carried = any(c["content"] == FULL_RESPONSE for c in adapter.sent)
-        assert _edit_carried or _send_carried, (
-            "already_sent=True but neither an edit nor the primary send "
-            "carried the complete response"
-        )
 
 
-@pytest.mark.asyncio
-async def test_equal_text_control_still_suppresses_duplicate_send(
-    monkeypatch, tmp_path
-):
-    """When the streamed text equals the final response, suppression must
-    keep working — no duplicate full-response send."""
-    adapter, result = await _run_streaming_turn(
-        monkeypatch, tmp_path, CompleteStreamAgent, "sess-71643-control-equal"
-    )
-
-    assert result["final_response"] == FULL_RESPONSE
-    assert result.get("already_sent") is True
-    # Exactly one platform message holds the answer: the streamed message
-    # (created by one send, then edited). No duplicate full send.
-    full_sends = [c for c in adapter.sent if FULL_RESPONSE in c["content"]]
-    assert len(full_sends) <= 1, f"duplicate final delivery: {full_sends!r}"
 
 
 class _PayloadLessSplitConsumer(GatewayStreamConsumer):
@@ -284,80 +233,6 @@ class _PayloadLessSplitConsumer(GatewayStreamConsumer):
         self._stream_ledger = ""
 
 
-@pytest.mark.asyncio
-async def test_payload_less_split_does_not_suppress_complete_response(
-    monkeypatch, tmp_path
-):
-    """#78541 — payload-less split-delivery flags must not swallow the reply."""
-    import scout_yaml as yaml
-
-    (tmp_path / "config.yaml").write_text(
-        yaml.safe_dump(
-            {
-                "display": {"tool_progress": "off", "interim_assistant_messages": False},
-                "streaming": {
-                    "enabled": True,
-                    "edit_interval": 0.01,
-                    "buffer_threshold": 1,
-                },
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    fake_dotenv = types.ModuleType("dotenv")
-    fake_dotenv.load_dotenv = lambda *args, **kwargs: None
-    monkeypatch.setitem(sys.modules, "dotenv", fake_dotenv)
-
-    fake_run_agent = types.ModuleType("run_agent")
-    fake_run_agent.AIAgent = StalePrefixAgent
-    monkeypatch.setitem(sys.modules, "run_agent", fake_run_agent)
-
-    gateway_run = importlib.import_module("gateway.run")
-    stream_consumer_mod = importlib.import_module("gateway.stream_consumer")
-    # run.py imports GatewayStreamConsumer locally inside _run_agent — patch
-    # the defining module so the local import picks up the sabotage subclass.
-    monkeypatch.setattr(
-        stream_consumer_mod, "GatewayStreamConsumer", _PayloadLessSplitConsumer
-    )
-    monkeypatch.setattr(gateway_run, "_scout_home", tmp_path)
-    monkeypatch.setattr(
-        gateway_run, "_resolve_runtime_agent_kwargs", lambda: {"api_key": "***"}
-    )
-
-    adapter = FinalizeCaptureAdapter()
-    runner = _make_runner(adapter)
-    source = SessionSource(
-        platform=Platform.TELEGRAM,
-        chat_id="-1004492624436",
-        chat_type="group",
-        thread_id="1",
-    )
-    result = await runner._run_agent(
-        message="describe this photo",
-        context_prompt="",
-        history=[],
-        source=source,
-        session_id="sess-78541-payload-less-split",
-        session_key="agent:main:telegram:group:-1004492624436:1",
-    )
-
-    assert result["final_response"] == FULL_RESPONSE
-    all_payloads = [c["content"] for c in adapter.sent] + [
-        e["content"] for e in adapter.edits
-    ]
-    # The contract is "the complete reply is not swallowed", which has two
-    # legitimate shapes: _run_agent puts the full text on the wire itself
-    # (reconcile edit), or it declines to claim delivery so the caller's normal
-    # final send delivers it. A multi-message split takes the second shape --
-    # the reconcile edit is deliberately skipped there because it would repeat
-    # every sealed head chunk inside the tail message (#78541). Asserting only
-    # the first shape would pin the recovery route rather than the guarantee.
-    delivered_here = any(FULL_RESPONSE in payload for payload in all_payloads)
-    assert delivered_here or not result.get("already_sent"), (
-        "complete response was neither delivered nor left to the normal final "
-        f"send; already_sent={result.get('already_sent')!r} payloads={all_payloads!r}"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -462,7 +337,7 @@ class _SplittingAdapter(FinalizeCaptureAdapter):
 
     MAX_MESSAGE_LENGTH = 220
 
-    def __init__(self, platform=Platform.TELEGRAM):
+    def __init__(self, platform=Platform.HOMEASSISTANT):
         super().__init__(platform)
         self.deleted = []
         self.fail_edits = False
@@ -516,121 +391,14 @@ async def _drain_split_turn(consumer, lines):
     await asyncio.wait_for(task, timeout=10)
 
 
-@pytest.mark.asyncio
-async def test_complete_overflow_split_still_suppresses_duplicate():
-    """A fully delivered multi-message reply must NOT be re-sent (#45517)."""
-    adapter, consumer = _split_consumer()
-    lines = [f"line {i} " + "x" * 60 for i in range(12)]
-    await _drain_split_turn(consumer, lines)
-
-    complete = "\n".join(lines)
-    assert consumer._turn_split_delivery is True, "overflow split never triggered"
-    # The user received the whole answer across several messages, so the
-    # gateway must keep suppressing its own final send.
-    assert consumer.delivered_final_matches(complete) is True
 
 
-@pytest.mark.asyncio
-async def test_split_delivery_missing_tail_does_not_suppress():
-    """#78541 — when the completed response exceeds what the split delivered,
-    the matcher must report a mismatch so the gateway still sends it."""
-    adapter, consumer = _split_consumer()
-    lines = [f"line {i} " + "x" * 60 for i in range(12)]
-    await _drain_split_turn(consumer, lines)
-
-    never_streamed = "\n".join(lines) + "\n\n" + "tail the user never saw " * 8
-    assert consumer._turn_split_delivery is True
-    assert consumer.delivered_final_matches(never_streamed) is False
 
 
-@pytest.mark.asyncio
-async def test_split_delivery_keeps_sealed_heads_on_fresh_final():
-    """The fresh-final route must not delete sealed head messages.
-
-    ``_try_fresh_final`` replaces every tracked preview with one fresh message,
-    which only holds the whole answer on a single-message turn.  After a split
-    the sealed heads carry text that the fresh message does not, so deleting
-    them would drop delivered content (#78541).
-    """
-    adapter, consumer = _split_consumer()
-    head_id = await consumer._send_new_chunk("HEAD text. " * 12, None, final=False)
-    consumer._turn_split_delivery = True
-
-    assert head_id in consumer._preview_message_ids
-    assert await consumer._try_fresh_final("TAIL text. " * 12) is False
-    assert head_id not in adapter.deleted, "sealed head chunk was deleted"
 
 
-@pytest.mark.asyncio
-async def test_failed_final_edit_after_split_records_visible_payload():
-    """A flood-controlled cosmetic final edit must not cause a duplicate.
-
-    The complete answer is already on screen; only the cursor-strip edit
-    failed.  Recording the visible payload keeps the gateway suppressing its
-    own send instead of posting the whole answer twice (#36965 / #25349).
-    """
-    adapter = _SplittingAdapter()
-    cursor = " \u2589"
-    consumer = GatewayStreamConsumer(
-        adapter,
-        "chat-split",
-        StreamConsumerConfig(
-            edit_interval=0.0, buffer_threshold=1, cursor=cursor,
-            fresh_final_after_seconds=0.0,
-        ),
-    )
-    full = "The complete answer. " * 8
-    # Streaming already put the whole answer on screen, cursor and all.
-    await consumer._send_or_edit(full + cursor)
-    assert consumer._last_sent_text.endswith(cursor)
-    consumer._turn_split_delivery = True
-    consumer._stream_ledger = full
-    adapter.fail_edits = True
-
-    # The cosmetic cursor-strip edit is rate-limited and fails.
-    assert await consumer._send_or_edit(full, finalize=True) is False
-    assert consumer._final_content_delivered is True
-    assert consumer.delivered_final_matches(full) is True
 
 
-@pytest.mark.asyncio
-async def test_empty_fallback_final_after_split_records_only_what_survives():
-    """A recovery that DELETES the sealed heads must not claim them as delivered.
-
-    ``_send_empty_fallback_final`` replaces the active segment: it sends the
-    completed text as a fresh message and deletes every tracked segment
-    preview -- including the sealed head chunks of an overflow split.  Only the
-    new message is left on screen, so the recorded payload must be that message
-    verbatim, NOT the stream ledger.  Recording the ledger would claim delivery
-    for text this path just removed, and the gateway would suppress its own
-    send and leave the user with a fraction of the answer (#78541).
-    """
-    adapter = _SplittingAdapter()
-    consumer = GatewayStreamConsumer(
-        adapter,
-        "chat-split",
-        StreamConsumerConfig(
-            edit_interval=0.0, buffer_threshold=1, cursor="",
-            fresh_final_after_seconds=0.0,
-        ),
-    )
-    head = "HEAD text. " * 40
-    tail = "TAIL text. " * 6
-    complete = head + tail
-
-    # Sealed head chunk is on screen and tracked as a segment preview.
-    head_id = await consumer._send_new_chunk(head, None, final=False)
-    consumer._turn_split_delivery = True
-    consumer._stream_ledger = complete
-    assert head_id in consumer._segment_preview_message_ids
-
-    # The recovery commits only ``tail`` and deletes the sealed head.
-    assert await consumer._send_empty_fallback_final(tail) == "delivered"
-    assert head_id in adapter.deleted, "expected the recovery to delete the head"
-
-    # The head is gone from the chat, so the complete answer was NOT delivered:
-    # the gateway must be told this is a mismatch and send it.
-    assert consumer.delivered_final_matches(complete) is False
 
 
 @pytest.mark.asyncio

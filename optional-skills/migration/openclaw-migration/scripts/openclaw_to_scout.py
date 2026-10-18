@@ -36,7 +36,6 @@ SKILL_CATEGORY_DESCRIPTION = (
 )
 SKILL_CONFLICT_MODES = {"skip", "overwrite", "rename"}
 SUPPORTED_SECRET_TARGETS={
-    "TELEGRAM_BOT_TOKEN",
     "OPENROUTER_API_KEY",
     "OPENAI_API_KEY",
     "ANTHROPIC_API_KEY",
@@ -61,14 +60,6 @@ MIGRATION_OPTION_METADATA: Dict[str, Dict[str, str]] = {
         "label": "USER.md",
         "description": "Import user profile entries into Scout memories.",
     },
-    "messaging-settings": {
-        "label": "Messaging settings",
-        "description": "Import Scout-compatible messaging settings such as allowlists and working directory.",
-    },
-    "secret-settings": {
-        "label": "Allowlisted secrets",
-        "description": "Import the small allowlist of Scout-compatible secrets when explicitly enabled.",
-    },
     "command-allowlist": {
         "label": "Command allowlist",
         "description": "Merge OpenClaw exec approval patterns into Scout command_allowlist.",
@@ -80,22 +71,6 @@ MIGRATION_OPTION_METADATA: Dict[str, Dict[str, str]] = {
     "tts-assets": {
         "label": "TTS assets",
         "description": "Copy compatible workspace TTS assets into ~/.scout/tts/.",
-    },
-    "discord-settings": {
-        "label": "Discord settings",
-        "description": "Import Discord bot token and allowlist into Scout .env.",
-    },
-    "slack-settings": {
-        "label": "Slack settings",
-        "description": "Import Slack bot/app tokens and allowlist into Scout .env.",
-    },
-    "whatsapp-settings": {
-        "label": "WhatsApp settings",
-        "description": "Import WhatsApp allowlist into Scout .env.",
-    },
-    "signal-settings": {
-        "label": "Signal settings",
-        "description": "Import Signal account, HTTP URL, and allowlist into Scout .env.",
     },
     "provider-keys": {
         "label": "Provider API keys",
@@ -153,10 +128,6 @@ MIGRATION_OPTION_METADATA: Dict[str, Dict[str, str]] = {
         "label": "Full model provider definitions",
         "description": "Import custom model providers (baseUrl, apiType, headers) into Scout custom_providers.",
     },
-    "deep-channels": {
-        "label": "Deep channel configuration",
-        "description": "Import extended channel settings (Matrix, Mattermost, IRC, group configs). Archive complex settings.",
-    },
     "browser-config": {
         "label": "Browser configuration",
         "description": "Import browser automation settings into Scout config.yaml.",
@@ -192,14 +163,9 @@ MIGRATION_PRESETS: Dict[str, set[str]] = {
         "workspace-agents",
         "memory",
         "user-profile",
-        "messaging-settings",
         "command-allowlist",
         "skills",
         "tts-assets",
-        "discord-settings",
-        "slack-settings",
-        "whatsapp-settings",
-        "signal-settings",
         "model-config",
         "tts-config",
         "shared-skills",
@@ -211,7 +177,6 @@ MIGRATION_PRESETS: Dict[str, set[str]] = {
         "browser-config",
         "tools-config",
         "approvals-config",
-        "deep-channels",
         "full-providers",
         "plugins-config",
         "cron-jobs",
@@ -924,7 +889,6 @@ class Migrator:
         "agent-config",
         "gateway-config",
         "full-providers",
-        "deep-channels",
         "browser-config",
         "tools-config",
         "approvals-config",
@@ -1040,12 +1004,6 @@ class Migrator:
                 kind="user-profile",
             ),
         )
-        self.run_if_selected("messaging-settings", lambda: self.migrate_messaging_settings(config))
-        self.run_if_selected("secret-settings", lambda: self.handle_secret_settings(config))
-        self.run_if_selected("discord-settings", lambda: self.migrate_discord_settings(config))
-        self.run_if_selected("slack-settings", lambda: self.migrate_slack_settings(config))
-        self.run_if_selected("whatsapp-settings", lambda: self.migrate_whatsapp_settings(config))
-        self.run_if_selected("signal-settings", lambda: self.migrate_signal_settings(config))
         self.run_if_selected("provider-keys", lambda: self.handle_provider_keys(config))
         self.run_if_selected("model-config", lambda: self.migrate_model_config(config))
         self.run_if_selected("tts-config", lambda: self.migrate_tts_config(config))
@@ -1073,7 +1031,6 @@ class Migrator:
         self.run_if_selected("gateway-config", lambda: self.migrate_gateway_config(config))
         self.run_if_selected("session-config", lambda: self.migrate_session_config(config))
         self.run_if_selected("full-providers", lambda: self.migrate_full_providers(config))
-        self.run_if_selected("deep-channels", lambda: self.migrate_deep_channels(config))
         self.run_if_selected("browser-config", lambda: self.migrate_browser_config(config))
         self.run_if_selected("tools-config", lambda: self.migrate_tools_config(config))
         self.run_if_selected("approvals-config", lambda: self.migrate_approvals_config(config))
@@ -1467,186 +1424,6 @@ class Migrator:
                 added_keys=sorted(added.keys()),
                 conflicting_keys=conflicts,
             )
-
-    def migrate_messaging_settings(self, config: Optional[Dict[str, Any]] = None) -> None:
-        config = config or self.load_openclaw_config()
-        additions: Dict[str, str] = {}
-
-        workspace = (
-            config.get("agents", {})
-            .get("defaults", {})
-            .get("workspace")
-        )
-        if isinstance(workspace, str) and workspace.strip():
-            ws_path = workspace.strip()
-            # Skip if the workspace points inside the OpenClaw source directory —
-            # that path will be stale after migration and would cause the Scout
-            # gateway to use the old OpenClaw workspace as its cwd, picking up
-            # OpenClaw's AGENTS.md, MEMORY.md, etc.
-            try:
-                inside_source = Path(ws_path).resolve().is_relative_to(self.source_root.resolve())
-            except (ValueError, OSError):
-                inside_source = False
-            if not inside_source:
-                additions["MESSAGING_CWD"] = ws_path
-
-        allowlist_path = self.source_root / "credentials" / "telegram-default-allowFrom.json"
-        if allowlist_path.exists():
-            try:
-                allow_data = json.loads(allowlist_path.read_text(encoding="utf-8", errors="replace"))
-            except json.JSONDecodeError:
-                self.record("messaging-settings", allowlist_path, self.target_root / ".env", "error", "Invalid JSON in Telegram allowlist file")
-            except OSError as exc:
-                self.record("messaging-settings", allowlist_path, self.target_root / ".env", "error", f"Could not read Telegram allowlist file: {exc}")
-            else:
-                allow_from = allow_data.get("allowFrom", [])
-                if isinstance(allow_from, list):
-                    users = [str(user).strip() for user in allow_from if str(user).strip()]
-                    if users:
-                        additions["TELEGRAM_ALLOWED_USERS"] = ",".join(users)
-
-        if additions:
-            self.merge_env_values(additions, "messaging-settings", self.source_root / "openclaw.json")
-        else:
-            self.record("messaging-settings", self.source_root / "openclaw.json", self.target_root / ".env", "skipped", "No Scout-compatible messaging settings found")
-
-    def handle_secret_settings(self, config: Optional[Dict[str, Any]] = None) -> None:
-        config = config or self.load_openclaw_config()
-        if self.migrate_secrets:
-            self.migrate_secret_settings(config)
-            return
-
-        config_path = self.source_root / "openclaw.json"
-        if config_path.exists():
-            self.record(
-                "secret-settings",
-                config_path,
-                self.target_root / ".env",
-                "skipped",
-                "Secret migration disabled. Re-run with --migrate-secrets to import allowlisted secrets.",
-                supported_targets=sorted(SUPPORTED_SECRET_TARGETS),
-            )
-        else:
-            self.record(
-                "secret-settings",
-                config_path,
-                self.target_root / ".env",
-                "skipped",
-                "OpenClaw config file not found",
-                supported_targets=sorted(SUPPORTED_SECRET_TARGETS),
-            )
-
-    def migrate_secret_settings(self, config: Dict[str, Any]) -> None:
-        secret_additions: Dict[str, str] = {}
-
-        tg_cfg = config.get("channels", {}).get("telegram", {})
-        telegram_token = self._get_channel_field(tg_cfg, "botToken") if isinstance(tg_cfg, dict) else None
-        if isinstance(telegram_token, str) and telegram_token.strip():
-            secret_additions["TELEGRAM_BOT_TOKEN"] = telegram_token.strip()
-
-        if secret_additions:
-            self.merge_env_values(secret_additions, "secret-settings", self.source_root / "openclaw.json")
-        else:
-            self.record(
-                "secret-settings",
-                self.source_root / "openclaw.json",
-                self.target_root / ".env",
-                "skipped",
-                "No allowlisted Scout-compatible secrets found",
-                supported_targets=sorted(SUPPORTED_SECRET_TARGETS),
-            )
-
-    def _resolve_channel_secret(self, value: Any) -> Optional[str]:
-        """Resolve a channel config value that may be a SecretRef."""
-        return resolve_secret_input(value, self.load_openclaw_env())
-
-    @staticmethod
-    def _get_channel_field(ch_cfg: Dict[str, Any], field: str) -> Any:
-        """Get a field from channel config, checking both flat and accounts.default layout."""
-        val = ch_cfg.get(field)
-        if val is not None:
-            return val
-        accounts = ch_cfg.get("accounts")
-        if isinstance(accounts, dict):
-            default = accounts.get("default")
-            if isinstance(default, dict):
-                return default.get(field)
-        return None
-
-    def migrate_discord_settings(self, config: Optional[Dict[str, Any]] = None) -> None:
-        config = config or self.load_openclaw_config()
-        additions: Dict[str, str] = {}
-        discord = config.get("channels", {}).get("discord", {})
-        if isinstance(discord, dict):
-            token = self._get_channel_field(discord, "token")
-            if isinstance(token, str) and token.strip():
-                additions["DISCORD_BOT_TOKEN"] = token.strip()
-            allow_from = self._get_channel_field(discord, "allowFrom") or []
-            if isinstance(allow_from, list):
-                users = [str(u).strip() for u in allow_from if str(u).strip()]
-                if users:
-                    additions["DISCORD_ALLOWED_USERS"] = ",".join(users)
-        if additions:
-            self.merge_env_values(additions, "discord-settings", self.source_root / "openclaw.json")
-        else:
-            self.record("discord-settings", self.source_root / "openclaw.json", self.target_root / ".env", "skipped", "No Discord settings found")
-
-    def migrate_slack_settings(self, config: Optional[Dict[str, Any]] = None) -> None:
-        config = config or self.load_openclaw_config()
-        additions: Dict[str, str] = {}
-        slack = config.get("channels", {}).get("slack", {})
-        if isinstance(slack, dict):
-            bot_token = self._get_channel_field(slack, "botToken")
-            if isinstance(bot_token, str) and bot_token.strip():
-                additions["SLACK_BOT_TOKEN"] = bot_token.strip()
-            app_token = self._get_channel_field(slack, "appToken")
-            if isinstance(app_token, str) and app_token.strip():
-                additions["SLACK_APP_TOKEN"] = app_token.strip()
-            allow_from = self._get_channel_field(slack, "allowFrom") or []
-            if isinstance(allow_from, list):
-                users = [str(u).strip() for u in allow_from if str(u).strip()]
-                if users:
-                    additions["SLACK_ALLOWED_USERS"] = ",".join(users)
-        if additions:
-            self.merge_env_values(additions, "slack-settings", self.source_root / "openclaw.json")
-        else:
-            self.record("slack-settings", self.source_root / "openclaw.json", self.target_root / ".env", "skipped", "No Slack settings found")
-
-    def migrate_whatsapp_settings(self, config: Optional[Dict[str, Any]] = None) -> None:
-        config = config or self.load_openclaw_config()
-        additions: Dict[str, str] = {}
-        whatsapp = config.get("channels", {}).get("whatsapp", {})
-        if isinstance(whatsapp, dict):
-            allow_from = self._get_channel_field(whatsapp, "allowFrom") or []
-            if isinstance(allow_from, list):
-                users = [str(u).strip() for u in allow_from if str(u).strip()]
-                if users:
-                    additions["WHATSAPP_ALLOWED_USERS"] = ",".join(users)
-        if additions:
-            self.merge_env_values(additions, "whatsapp-settings", self.source_root / "openclaw.json")
-        else:
-            self.record("whatsapp-settings", self.source_root / "openclaw.json", self.target_root / ".env", "skipped", "No WhatsApp settings found")
-
-    def migrate_signal_settings(self, config: Optional[Dict[str, Any]] = None) -> None:
-        config = config or self.load_openclaw_config()
-        additions: Dict[str, str] = {}
-        signal = config.get("channels", {}).get("signal", {})
-        if isinstance(signal, dict):
-            account = self._get_channel_field(signal, "account")
-            if isinstance(account, str) and account.strip():
-                additions["SIGNAL_ACCOUNT"] = account.strip()
-            http_url = self._get_channel_field(signal, "httpUrl")
-            if isinstance(http_url, str) and http_url.strip():
-                additions["SIGNAL_HTTP_URL"] = http_url.strip()
-            allow_from = self._get_channel_field(signal, "allowFrom") or []
-            if isinstance(allow_from, list):
-                users = [str(u).strip() for u in allow_from if str(u).strip()]
-                if users:
-                    additions["SIGNAL_ALLOWED_USERS"] = ",".join(users)
-        if additions:
-            self.merge_env_values(additions, "signal-settings", self.source_root / "openclaw.json")
-        else:
-            self.record("signal-settings", self.source_root / "openclaw.json", self.target_root / ".env", "skipped", "No Signal settings found")
 
     def handle_provider_keys(self, config: Optional[Dict[str, Any]] = None) -> None:
         config = config or self.load_openclaw_config()
@@ -2225,7 +2002,6 @@ class Migrator:
 
         partially_extracted = [
             ("openclaw.json", "Selected Scout-compatible values were extracted; raw OpenClaw config was not copied."),
-            ("credentials/telegram-default-allowFrom.json", "Selected Scout-compatible values were extracted; raw credentials file was not copied."),
         ]
         for rel, reason in partially_extracted:
             candidate = self.source_root / rel
@@ -2671,93 +2447,6 @@ class Migrator:
                         "archived", f"Model aliases/catalog ({len(model_aliases)} entries) archived")
 
     # ── Deep channel config ───────────────────────────────────
-    def migrate_deep_channels(self, config: Optional[Dict[str, Any]] = None) -> None:
-        config = config or self.load_openclaw_config()
-        channels = config.get("channels") or {}
-        if not channels:
-            self.record("deep-channels", None, None, "skipped", "No channel configuration found")
-            return
-
-        # Extended channel token/allowlist mapping
-        CHANNEL_ENV_MAP = {
-            "matrix": {"token": "MATRIX...OKEN", "tokenField": "accessToken", "allowFrom": "MATRIX_ALLOWED_USERS",
-                        "extras": {"homeserverUrl": "MATRIX_HOMESERVER_URL", "userId": "MATRIX_USER_ID"}},
-            "mattermost": {"token": "MATTERMOST_BOT_TOKEN", "allowFrom": "MATTERMOST_ALLOWED_USERS",
-                           "extras": {"url": "MATTERMOST_URL", "teamId": "MATTERMOST_TEAM_ID"}},
-            "irc": {"extras": {"server": "IRC_SERVER", "nick": "IRC_NICK", "channels": "IRC_CHANNELS"}},
-            "googlechat": {"extras": {"serviceAccountKeyPath": "GOOGLE_CHAT_SA_KEY_PATH"}},
-            "imessage": {},
-            "bluebubbles": {"extras": {"server": "BLUEBUBBLES_SERVER", "password": "BLUEBUBBLES_PASSWORD"}},
-            "msteams": {"token": "MSTEAMS_BOT_TOKEN", "allowFrom": "MSTEAMS_ALLOWED_USERS"},
-            "nostr": {"extras": {"nsec": "NOSTR_NSEC", "relays": "NOSTR_RELAYS"}},
-            "twitch": {"token": "TWITCH_BOT_TOKEN", "extras": {"channels": "TWITCH_CHANNELS"}},
-        }
-
-        for ch_name, ch_mapping in CHANNEL_ENV_MAP.items():
-            ch_cfg = channels.get(ch_name) or {}
-            if not ch_cfg:
-                continue
-
-            # Extract tokens (check flat path, then accounts.default)
-            token_field = ch_mapping.get("tokenField", "botToken")
-            bot_token = self._get_channel_field(ch_cfg, token_field)
-            if ch_mapping.get("token") and bot_token and self.migrate_secrets:
-                self._set_env_var(ch_mapping["token"], str(bot_token),
-                                  f"channels.{ch_name}.{token_field}")
-            allow_val = self._get_channel_field(ch_cfg, "allowFrom")
-            if ch_mapping.get("allowFrom") and allow_val:
-                if isinstance(allow_val, list):
-                    allow_val = ",".join(str(x) for x in allow_val)
-                self._set_env_var(ch_mapping["allowFrom"], str(allow_val),
-                                  f"channels.{ch_name}.allowFrom")
-            # Extra fields
-            for oc_key, env_key in (ch_mapping.get("extras") or {}).items():
-                val = self._get_channel_field(ch_cfg, oc_key)
-                if val:
-                    if isinstance(val, list):
-                        val = ",".join(str(x) for x in val)
-                    is_secret = "password" in oc_key.lower() or "token" in oc_key.lower() or "nsec" in oc_key.lower()
-                    if is_secret and not self.migrate_secrets:
-                        continue
-                    self._set_env_var(env_key, str(val), f"channels.{ch_name}.{oc_key}")
-
-        # Map Discord-specific settings to Scout config
-        discord_cfg = channels.get("discord") or {}
-        if discord_cfg:
-            scout_cfg_path = self.target_root / "config.yaml"
-            scout_cfg = load_yaml_file(scout_cfg_path)
-            discord_scout = scout_cfg.get("discord") or {}
-            changed = False
-            if "requireMention" in discord_cfg:
-                discord_scout["require_mention"] = discord_cfg["requireMention"]
-                changed = True
-            if discord_cfg.get("autoThread") is not None:
-                discord_scout["auto_thread"] = discord_cfg["autoThread"]
-                changed = True
-            if changed and self.execute:
-                scout_cfg["discord"] = discord_scout
-                dump_yaml_file(scout_cfg_path, scout_cfg)
-
-        # Archive complex channel configs (group settings, thread bindings, etc.)
-        complex_archive = {}
-        for ch_name, ch_cfg in channels.items():
-            if not isinstance(ch_cfg, dict):
-                continue
-            complex_keys = {k: v for k, v in ch_cfg.items()
-                          if k not in {"botToken", "appToken", "allowFrom", "enabled"}
-                          and v and k not in {"requireMention", "autoThread"}}
-            if complex_keys:
-                complex_archive[ch_name] = complex_keys
-
-        if complex_archive and self.archive_dir:
-            if self.execute:
-                self.archive_dir.mkdir(parents=True, exist_ok=True)
-                dest = self.archive_dir / "channels-deep-config.json"
-                dest.write_text(json.dumps(complex_archive, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-            self.record("deep-channels", "openclaw.json channels (advanced settings)",
-                        "archive/channels-deep-config.json", "archived",
-                        f"Deep channel config for {len(complex_archive)} channels archived")
-
     # ── Browser config ────────────────────────────────────────
     def migrate_browser_config(self, config: Optional[Dict[str, Any]] = None) -> None:
         config = config or self.load_openclaw_config()
@@ -2966,7 +2655,7 @@ class Migrator:
             "",
             "## PM2 / External Processes",
             "",
-            "Your PM2 processes (Discord bots, Telegram bots, etc.) are NOT affected",
+            "Your PM2 processes (chat bots, etc.) are NOT affected",
             "by this migration. They run independently and will continue working.",
             "No action needed for PM2-managed processes.",
             "",
@@ -3045,20 +2734,6 @@ class Migrator:
                 "Imported skills require a new session to take effect. After migration,",
                 "restart your agent or start a new chat session, then run `/skills`",
                 "to verify they loaded correctly.",
-                "",
-            ])
-
-        # Check if WhatsApp was detected
-        has_whatsapp = any(i.kind == "whatsapp-settings" and i.status == "migrated" for i in self.items)
-        if has_whatsapp:
-            notes.extend([
-                "",
-                "## WhatsApp Requires Re-Pairing",
-                "",
-                "WhatsApp uses QR-code pairing, not token-based auth. Your allowlist",
-                "was migrated, but you must re-pair the device by running:",
-                "",
-                "    scout whatsapp",
                 "",
             ])
 
@@ -3225,7 +2900,7 @@ def main() -> int:
 
     # PM2 reassurance
     print()
-    print("  ℹ PM2 processes (Discord/Telegram bots) are NOT affected.")
+    print("  ℹ PM2 processes (chat bots) are NOT affected.")
 
     # Next steps
     if args.execute:

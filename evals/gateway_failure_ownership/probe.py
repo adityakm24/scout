@@ -164,13 +164,12 @@ class ControlledAgent(AIAgent):
 
 run_agent.AIAgent = ControlledAgent
 source = SessionSource(
-    platform=Platform.TELEGRAM,
+    platform=Platform.API_SERVER,
     chat_id="-100104653",
     chat_type="group",
     user_id="104653",
 )
 runner = GatewayRunner(GatewayConfig())
-runner._recover_telegram_topic_thread_id = lambda source: None
 runner._is_user_authorized = lambda *a: True
 
 

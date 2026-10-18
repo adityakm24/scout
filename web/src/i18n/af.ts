@@ -68,7 +68,6 @@ export const af: Translations = {
     },
     nav: {
       analytics: "Analise",
-      chat: "Klets",
       config: "Konfigurasie",
       cron: "Cron",
       keys: "Sleutels",
@@ -162,8 +161,6 @@ export const af: Translations = {
     selectedSessionsDeleted: "{count} sessies geskrap",
     selectedSessionsSkippedActive: "{deleted} geskrap; {count} behou omdat 'n beurt nog loop",
     failedToDeleteSelected: "Kon nie gekose sessies skrap nie",
-    resumeInChat: "Hervat in Klets",
-    newChat: "Nuwe klets",
     workspace: "werkruimte",
     workspaceDefault: "Verstek",
     workspaceRescan: "Herskandeer bewaarplekke",
@@ -282,10 +279,6 @@ export const af: Translations = {
     triggerNow: "Voer nou uit",
     delivery: {
       local: "Plaaslik",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "Email",
     },
   },
 
@@ -419,7 +412,6 @@ export const af: Translations = {
       tts: "Teks-na-Spraak",
       stt: "Spraak-na-Teks",
       logging: "Aantekening",
-      discord: "Discord",
       auxiliary: "Hulpmiddels",
     },
   },

@@ -64,12 +64,6 @@ class StreamConsumerConfig:
     buffer_threshold: int = _DEFAULT_STREAMING_BUFFER_THRESHOLD
     cursor: str = _DEFAULT_STREAMING_CURSOR
     buffer_only: bool = False
-    # >0: final goes out as a fresh message once the preview has been visible this
-    # long (timestamp reflects completion); 0 = always edit in place.
-    # This makes the platform's visible timestamp reflect completion time instead of first-token time for
-    # long-running responses (e.g. reasoning models that stream slowly). Ported from
-    # openclaw/openclaw#72038. The gateway enables this selectively per-platform.
-    fresh_final_after_seconds: float = 0.0
     # "auto"/"draft": native drafts when adapter+chat support it, else "edit"
     # (progressive editMessageText).  "off" is handled by the gateway.
     transport: str = "edit"
@@ -170,10 +164,6 @@ class GatewayStreamConsumer(StreamTransportMixin, StreamFallbackMixin, StreamThi
         self._use_draft_streaming = False
         self._draft_id: Optional[int] = None
         self._draft_failures = 0
-        # TERMINAL authorization refusal for THIS RUN (see _send_draft_frame).
-        # Per-run state, constructed fresh each turn, so a refusal can never
-        # mute a healthy destination on a later turn.
-        self._egress_declined = False
         self._use_native_streaming = False
         self._native_stream_opened = False  # seed sent: bubble open, zero content
         self._native_last_pushed_len = 0    # throttle under WeCom's 30 frames/min
@@ -191,7 +181,6 @@ class GatewayStreamConsumer(StreamTransportMixin, StreamFallbackMixin, StreamThi
     def _reset_message_state(self) -> None:
         """Per-message (segment) state: fresh at construction and after each segment break."""
         self._message_id: Optional[str] = None
-        self._message_created_ts: Optional[float] = None  # fresh-final age
         # ``_stream_ledger`` mirrors ``_accumulated`` but is NOT truncated when
         # overflow splits seal head chunks (reconcilable turn-final payload).
         self._accumulated = self._stream_ledger = ""
@@ -779,7 +768,6 @@ class GatewayStreamConsumer(StreamTransportMixin, StreamFallbackMixin, StreamThi
         # Heads are sealed (or a later head failed): never edit a sealed message with
         # the unsplit payload — the tail is sent fresh, or the fallback path retries.
         self._message_id = None
-        self._message_created_ts = None
         self._last_sent_text = ""
         self._last_edit_time = time.monotonic()
         if tick.got_done:

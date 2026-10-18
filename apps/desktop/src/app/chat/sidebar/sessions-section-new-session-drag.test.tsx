@@ -518,8 +518,6 @@ describe('flat-list date-divider new-session drag source', () => {
       ...Array.from({ length: 5 }, (_, i) => ({ id: `fresh-${i}` })),
       ...Array.from({ length: 2 }, (_, i) => ({ id: `older-${i}` }))
     ].map((row, i) => ({
-      handoff_platform: null,
-      handoff_state: null,
       id: row.id,
       last_active: i < 5 ? now - i * 60 : now - 3 * 24 * 60 * 60,
       profile: 'default',
@@ -553,8 +551,6 @@ describe('flat-list date-divider new-session drag source', () => {
     const onNewSessionSplit = vi.fn()
 
     const longList = Array.from({ length: VIRTUALIZE_THRESHOLD + 5 }, (_, i) => ({
-      handoff_platform: null,
-      handoff_state: null,
       id: `session-${i}`,
       last_active: Math.floor(Date.now() / 1000) - i * 60,
       profile: 'default',

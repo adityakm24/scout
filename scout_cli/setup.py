@@ -503,7 +503,6 @@ def setup_tools(config: dict, first_install: bool = False):
 
 from scout_cli.setup_tts import setup_tts  # noqa: E402
 from scout_cli.setup_terminal import setup_terminal_backend  # noqa: E402
-from scout_cli.setup_platforms import setup_gateway  # noqa: E402
 from scout_cli.setup_summary import _print_setup_summary  # noqa: E402,F401
 from scout_cli.setup_migration import _offer_openclaw_migration, _skip_configured_section  # noqa: E402
 from scout_cli.setup_quick import _run_quick_setup  # noqa: E402
@@ -515,7 +514,6 @@ SETUP_SECTIONS = [
     ("model", "Model & Provider", setup_model_provider),
     ("tts", "Text-to-Speech", setup_tts),
     ("terminal", "Terminal Backend", setup_terminal_backend),
-    ("gateway", "Messaging Platforms (Gateway)", setup_gateway),
     ("tools", "Tools", setup_tools),
     ("agent", "Agent Settings", setup_agent_settings),
 ]
@@ -565,11 +563,7 @@ def _run_full_setup(config: dict, scout_home, *, is_existing: bool, migration_ra
         return migration_ran and _skip_configured_section(config, key, label)
 
     def _gateway_step() -> None:
-        if not _skip("gateway", "Messaging Platforms"):
-            setup_gateway(config)
-            return
-        # A skipped (migrated) gateway section still needs its service so imported platforms
-        # and cron jobs become active.
+        # The background service runs cron jobs, webhooks and the HTTP API.
         from scout_cli.gateway import ensure_gateway_service
         ensure_gateway_service(context="setup")
 
@@ -579,7 +573,7 @@ def _run_full_setup(config: dict, scout_home, *, is_existing: bool, migration_ra
     _run_setup_steps([
         _step("model", "Model & Provider", lambda: setup_model_provider(config)),
         _step("terminal", "Terminal Backend", lambda: setup_terminal_backend(config)),
-        ("Messaging Platforms", _gateway_step),
+        ("Background Service", _gateway_step),
         _step("tools", "Tools", lambda: setup_tools(config, first_install=not is_existing))])
 
 

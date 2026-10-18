@@ -40,14 +40,14 @@ def _entry(platform):
 def test_save_sends_document_through_requesting_platform_adapter():
     adapter = MagicMock()
     adapter.send_document = AsyncMock()
-    runner = _runner(_entry(Platform.TELEGRAM), {Platform.TELEGRAM: adapter})
+    runner = _runner(_entry(Platform.HOMEASSISTANT), {Platform.HOMEASSISTANT: adapter})
 
-    assert _save(runner, Platform.TELEGRAM) == "Export complete."
+    assert _save(runner, Platform.HOMEASSISTANT) == "Export complete."
     kwargs = adapter.send_document.await_args.kwargs
     assert (kwargs["chat_id"], kwargs["file_name"]) == ("c1", "save-stuff.md")
 
 
 def test_save_without_live_adapter_reports_missing_adapter_not_a_crash():
-    runner = _runner(_entry(Platform.DISCORD), {})
+    runner = _runner(_entry(Platform.HOMEASSISTANT), {})
 
-    assert _save(runner, Platform.DISCORD) == "Platform adapter not found to send the document."
+    assert _save(runner, Platform.HOMEASSISTANT) == "Platform adapter not found to send the document."

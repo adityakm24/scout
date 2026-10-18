@@ -23,7 +23,6 @@ import {
   closeAllTerminals,
   closeOtherTerminals,
   closeTerminal,
-  createTerminal,
   selectTerminal,
   type TerminalEntry
 } from './terminals'
@@ -66,21 +65,6 @@ export function TerminalRail() {
             toggleHint={toggleHint}
           />
         ))}
-        <li className="flex w-full justify-center">
-          <Tip
-            label={<TipHintLabel hint={newHint && formatCombo(newHint)} text={t.rightSidebar.terminalNew} />}
-            placement="right-rail"
-          >
-            <button
-              aria-label={t.rightSidebar.terminalNew}
-              className={cn(RAIL_ACTION, 'size-7 text-(--ui-text-quaternary)')}
-              onClick={() => createTerminal()}
-              type="button"
-            >
-              <Codicon name="add" size="0.8125rem" />
-            </button>
-          </Tip>
-        </li>
       </ul>
 
       <div className="flex shrink-0 flex-col items-center pb-1.5">
@@ -141,8 +125,8 @@ function TerminalRailItem({ active, canCloseOthers, index, term, toggleHint }: T
               type="button"
             >
               <Codicon
-                className={cn(term.kind === 'agent' && !active && 'text-primary')}
-                name={term.kind === 'agent' ? 'agent' : 'terminal'}
+                className={cn(!active && 'text-primary')}
+                name="agent"
                 size="0.875rem"
               />
             </button>

@@ -150,21 +150,19 @@ _ORPHAN_CONTIGUITY_DONORS_SQL = f"""
                         LIMIT 2
                         """
 _OPTIONAL_TABLE_NAMES = (
-    "telegram_dm_topic_mode", "telegram_dm_topic_bindings", "delivery_obligations")
+    "delivery_obligations",)
 
 
 def _optional_table_columns(conn) -> Dict[str, Set[str]]:
     """Live column sets of the lazily-created tables that exist (``{}`` when none do).
 
-    ``apply_telegram_topic_migration`` runs only on explicit ``/topic`` opt-in, so a store
-    can hold supported v1/v2 tables without ``profile_name`` for its whole life; likewise the
-    delivery ledger adds ``delivery_obligations.adapter_profile`` only when a gateway opens
+    The delivery ledger adds ``delivery_obligations.adapter_profile`` only when a gateway opens
     it. Identity settlement must gate its column SQL on the column actually being there
     rather than on table existence, and must not force those migrations (#113757).
     """
     existing = {row[0] for row in conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name IN (?, ?, ?)",
-        _OPTIONAL_TABLE_NAMES)}
+        "SELECT name FROM sqlite_master WHERE type='table' AND name IN "
+        f"({', '.join('?' * len(_OPTIONAL_TABLE_NAMES))})", _OPTIONAL_TABLE_NAMES)}
     return {
         table: {row[1] for row in conn.execute(f"PRAGMA table_info('{table}')")}
         for table in _OPTIONAL_TABLE_NAMES if table in existing
@@ -624,7 +622,7 @@ class SessionGatewayMixin:
         def _do(conn):
             existing = {row[0] for row in conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
-            topic_columns = _optional_table_columns(conn)
+            optional_columns = _optional_table_columns(conn)
             collision = conn.execute(
                 "SELECT old.scope, ? || substr(old.session_key, ?) "
                 "FROM gateway_routing AS old JOIN gateway_routing AS target "
@@ -636,20 +634,6 @@ class SessionGatewayMixin:
             if collision is not None:
                 raise ValueError(
                     f"profile routing collision in scope {collision[0]!r}: {collision[1]!r}")
-            for table, columns in (
-                ("telegram_dm_topic_mode", ("chat_id",)),
-                ("telegram_dm_topic_bindings", ("chat_id", "thread_id")),
-            ):
-                if "profile_name" not in topic_columns.get(table, set()):
-                    continue
-                equality = " AND ".join(
-                    f"target.{column} = old.{column}" for column in columns)
-                collision = conn.execute(
-                    f"SELECT 1 FROM {table} AS old JOIN {table} AS target "
-                    f"ON target.profile_name = ? AND {equality} "
-                    "WHERE old.profile_name = ? LIMIT 1", (new, old)).fetchone()
-                if collision is not None:
-                    raise ValueError(f"profile identity collision in {table}")
 
             counts["sessions_profile_name"] = conn.execute(
                 "UPDATE sessions SET profile_name = ? WHERE profile_name = ?", (new, old)).rowcount
@@ -675,23 +659,12 @@ class SessionGatewayMixin:
             counts["sessions_origin_json"] = origin_count
 
             if "delivery_obligations" in existing:
-                if "adapter_profile" in topic_columns.get("delivery_obligations", set()):
+                if "adapter_profile" in optional_columns.get("delivery_obligations", set()):
                     counts["delivery_obligations_adapter_profile"] = conn.execute(
                         "UPDATE delivery_obligations SET adapter_profile = ? WHERE adapter_profile = ?",
                         (new, old)).rowcount
                 counts["delivery_obligations_session_key"] = conn.execute(
                     "UPDATE delivery_obligations SET session_key = ? || substr(session_key, ?) "
-                    "WHERE substr(session_key, 1, ?) = ?",
-                    (new_ns, ns_len + 1, ns_len, old_ns)).rowcount
-            for table in ("telegram_dm_topic_mode", "telegram_dm_topic_bindings"):
-                if "profile_name" in topic_columns.get(table, set()):
-                    counts[f"{table}_profile_name"] = conn.execute(
-                        f"UPDATE {table} SET profile_name = ? WHERE profile_name = ?",
-                        (new, old)).rowcount
-            if "session_key" in topic_columns.get("telegram_dm_topic_bindings", set()):
-                counts["telegram_dm_topic_bindings_session_key"] = conn.execute(
-                    "UPDATE telegram_dm_topic_bindings "
-                    "SET session_key = ? || substr(session_key, ?) "
                     "WHERE substr(session_key, 1, ?) = ?",
                     (new_ns, ns_len + 1, ns_len, old_ns)).rowcount
 
@@ -726,8 +699,7 @@ class SessionGatewayMixin:
 
         The mirror of :meth:`rekey_profile_state`: a rename must rekey a profile's identity, a
         delete must purge it. ``agent:<name>:*`` routing keys, ``gateway_heartbeats.profile``,
-        ``delivery_obligations`` and the telegram topic tables are bookkeeping for a profile that
-        no longer exists — left behind, every inbound event on a chat keyed to the deleted name
+        and ``delivery_obligations`` are bookkeeping for a profile that no longer exists — left behind, every inbound event on a chat keyed to the deleted name
         enters the routing index, resolves a profile whose directory is gone, and logs
         ``Profile '<name>' does not exist`` on each event for the life of the store.
 
@@ -754,7 +726,7 @@ class SessionGatewayMixin:
         def _do(conn):
             existing = {row[0] for row in conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
-            topic_columns = _optional_table_columns(conn)
+            optional_columns = _optional_table_columns(conn)
             if "gateway_routing" in existing:
                 counts["gateway_routing"] = conn.execute(
                     "DELETE FROM gateway_routing WHERE substr(session_key, 1, ?) = ?",
@@ -768,27 +740,13 @@ class SessionGatewayMixin:
                 # non-terminal rows are touched — delivered history is left exactly as it was.
                 # A ledger created before ``adapter_profile`` existed matches on namespace alone.
                 by_profile = ("adapter_profile = ? OR "
-                              if "adapter_profile" in topic_columns.get("delivery_obligations", set())
+                              if "adapter_profile" in optional_columns.get("delivery_obligations", set())
                               else "")
                 params = (time.time(), name, ns_len, ns) if by_profile else (time.time(), ns_len, ns)
                 counts["delivery_obligations"] = conn.execute(
                     "UPDATE delivery_obligations SET state='abandoned', updated_at=? "
                     f"WHERE ({by_profile}substr(session_key, 1, ?) = ?) "
                     "AND state NOT IN ('delivered', 'abandoned')", params).rowcount
-            if "profile_name" in topic_columns.get("telegram_dm_topic_mode", set()):
-                counts["telegram_dm_topic_mode"] = conn.execute(
-                    "DELETE FROM telegram_dm_topic_mode WHERE profile_name = ?", (name,)).rowcount
-            binding_columns = topic_columns.get("telegram_dm_topic_bindings", set())
-            if "session_key" in binding_columns:
-                # A rename rewrites a binding's session_key namespace as well as its profile_name
-                # (:meth:`rekey_profile_state`), so matching on one alone leaves the other behind.
-                # Legacy v1/v2 bindings have no profile_name but keep the ``agent:<name>:`` namespace
-                # in session_key, so the namespace match alone is the exact cleanup there.
-                by_profile = "profile_name = ? OR " if "profile_name" in binding_columns else ""
-                params = (name, ns_len, ns) if by_profile else (ns_len, ns)
-                counts["telegram_dm_topic_bindings"] = conn.execute(
-                    "DELETE FROM telegram_dm_topic_bindings "
-                    f"WHERE {by_profile}substr(session_key, 1, ?) = ?", params).rowcount
 
         self._execute_write(_do)
         return counts
@@ -872,91 +830,3 @@ class SessionGatewayMixin:
             " ORDER BY last_heartbeat DESC")
         return [dict(r) for r in rows]
 
-    def request_handoff(self, session_id: str, platform: str) -> bool:
-        """Mark a session pending handoff to *platform*; False if a handoff is already in flight."""
-        return self._write_rowcount(
-            "UPDATE sessions SET handoff_state = 'pending',     handoff_platform = ?, "
-            "    handoff_error = NULL WHERE id = ? AND (handoff_state IS NULL "
-            "                  OR handoff_state IN ('completed', 'failed'))",
-            (platform, session_id),
-        ) > 0
-
-    def get_handoff_state(self, session_id: str) -> Optional[Dict[str, Any]]:
-        """Return ``{"state", "platform", "error"}`` or None if the session has no handoff record."""
-        try:
-            row = self._read_one(
-                "SELECT handoff_state, handoff_platform, handoff_error FROM sessions WHERE id = ?",
-                (session_id,))
-            if not row:
-                return None
-            return {"state": row["handoff_state"], "platform": row["handoff_platform"],
-                    "error": row["handoff_error"]}
-        except Exception:
-            return None
-
-    def list_pending_handoffs(self) -> List[Dict[str, Any]]:
-        """All sessions in handoff_state='pending', oldest first (gateway handoff watcher)."""
-        try:
-            rows = self._read_all(
-                "SELECT s.*, COALESCE(sp.prompt, s.system_prompt) AS _system_prompt_resolved FROM sessions s "
-                "LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
-                "WHERE s.handoff_state = 'pending' "
-                "ORDER BY s.started_at ASC")
-            return [self._session_row_dict(r) for r in rows]
-        except Exception:
-            return []
-
-    def claim_handoff(self, session_id: str) -> bool:
-        """Atomically transition pending → running. Returns True if claimed."""
-        return self._write_rowcount(
-            "UPDATE sessions SET handoff_state = 'running' WHERE id = ? AND handoff_state = 'pending'",
-            (session_id,),
-        ) > 0
-
-    def has_pending_handoffs(self) -> bool:
-        """Bounded existence probe for the handoff watcher's idle gate (the gate fails open on error)."""
-        return self._read_one("SELECT 1 FROM sessions WHERE handoff_state = 'pending' LIMIT 1") is not None
-
-    def complete_handoff(self, session_id: str) -> None:
-        """Mark a handoff as completed."""
-        self._write_sql(
-            "UPDATE sessions SET handoff_state = 'completed', handoff_error = NULL WHERE id = ?",
-            (session_id,))
-
-    def fail_handoff(
-        self, session_id: str, error: str, *, only_states: Optional[Tuple[str, ...]] = None) -> bool:
-        """Mark a handoff failed and record the reason; True when a row transitioned. ``only_states`` makes
-        the write a compare-and-swap on ``handoff_state``. Waiters that give up (CLI 60s poll, Desktop
-        bounded poll) MUST pass ``only_states=("pending",)``: once the watcher has claimed the row
-        (``running``) it owns the terminal state, and an unconditional waiter-side fail races the dispatch —
-        the gateway later overwrites ``failed`` → ``completed`` after the user was told the gateway is down
-        (split-brain: the handoff delivered and ``switch_session`` re-pointed the session). The watcher
-        fails its OWN claimed row unconditionally."""
-        states = tuple(only_states) if only_states else ()
-        sql = _HANDOFF_FAIL_SQL + "id = ?" + (
-            f" AND handoff_state IN ({', '.join('?' for _ in states)})" if states else "")
-        return self._write_rowcount(sql, (error[:500], session_id, *states)) > 0
-
-    def reclaim_stale_running_handoffs(self, error: str) -> List[str]:
-        """Fail every handoff stuck in ``running``; returns the ids reclaimed. Only the gateway watcher sets
-        ``running``, for one in-process dispatch — so a ``running`` row at watcher startup belongs to a
-        PREVIOUS gateway that died mid-dispatch. It is poisonous: ``request_handoff`` only accepts
-        NULL/``completed``/``failed``, so the session could never hand off again, with no error surfaced.
-        Failing rather than re-queueing is deliberate: the dead gateway may already have switched the
-        session key and dispatched the synthetic turn, so a blind retry risks double delivery; a clean
-        terminal state the user can retry from is right."""
-        def _do(conn):
-            cur = conn.execute("SELECT id FROM sessions WHERE handoff_state = 'running'")
-            ids = [r[0] for r in cur.fetchall()]
-            if ids:
-                conn.execute(_HANDOFF_FAIL_SQL + "handoff_state = 'running'", (error[:500],))
-            return ids
-        try:
-            return self._execute_write(_do) or []
-        except Exception:
-            # Swallow but never silently: a persistently failing reclaim leaves poisonous
-            # 'running' rows in place, so the operator needs a trace.
-            logger.warning(
-                "reclaim_stale_running_handoffs failed; stranded 'running' "
-                "handoff rows (if any) were left in place", exc_info=True)
-            return []

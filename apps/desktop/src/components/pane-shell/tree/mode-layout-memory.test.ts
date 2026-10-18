@@ -99,12 +99,10 @@ it('restores independently customized modes through real pane bindings and reloa
       const simple = app.snapshot()
       expect(window.localStorage.getItem('scout.desktop.layoutTree.v2')).toBe(saved)
 
-      terminal.$terminalInjection.set('pending fixture command')
       layout.$rightRailActiveTabId.set('file:fixture.txt')
       mode.setInterfaceMode('advanced')
       expect(app.snapshot()).toEqual(advanced)
       expect(tree.$hiddenTreePanes.get().has('bots')).toBe(true)
-      expect(terminal.$terminalInjection.get()).toBe('pending fixture command')
       expect(layout.$rightRailActiveTabId.get()).toBe('file:fixture.txt')
       mode.setInterfaceMode('simple')
       expect(app.snapshot()).toEqual(simple)

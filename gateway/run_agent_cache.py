@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from agent.interrupt_compat import _accepts_keyword
-from gateway.config import Platform
 from gateway.session import SessionSource, build_session_context_prompt
 from gateway.session_prompt_pin import PROMPT_PIN_VERSION, sanitize_prompt_pin
 from gateway.run_shutdown import _log_suppressed
@@ -592,28 +591,6 @@ class GatewayAgentCacheMixin:
         staged, state.conversation.sidecar_notes = state.conversation.sidecar_notes, []
         return list(staged) if isinstance(staged, list) else []
 
-    def _voice_channel_sidecar_note(self, event, source: SessionSource, session_key: str) -> Optional[str]:
-        """``[Voice channel now: ...]`` note when VC state changed; ``None`` when unchanged so per-turn
-        member/speaking churn can't touch the prompt."""
-        if source.platform != Platform.DISCORD:
-            return None
-        adapter = self.adapters.get(Platform.DISCORD)
-        guild_id = self._get_guild_id(event)
-        if not (guild_id and adapter and hasattr(adapter, "get_voice_channel_context")):
-            return None
-        try:
-            vc_now = adapter.get_voice_channel_context(guild_id) or ""
-        except Exception:
-            logger.debug("voice-channel context read failed", exc_info=True)
-            return None
-        vc_prev = None
-        if session_key:
-            _vc_state = self._session_state(session_key)
-            vc_prev, _vc_state.conversation.vc_last = _vc_state.conversation.vc_last, vc_now
-        if vc_now == (vc_prev if vc_prev is not None else ""):
-            return None
-        return f"[Voice channel now: {vc_now or 'not connected to a voice channel'}]"
-
     async def _rehydrate_prompt_pins(self, session_key: str, expected_session_id: Optional[str]) -> None:
         """Adopt the durable pin snapshot for an internal turn when this process holds no pins for
         *session_key* (a restart). Eviction clears only ``ephemeral_pin`` and keeps ``channel_pin``,
@@ -721,24 +698,6 @@ class GatewayAgentCacheMixin:
         def _s(v) -> str:
             return str(v or "")
 
-        discord_ids: tuple = ()
-        discord_tools = ""
-        if src.platform == Platform.DISCORD:
-            from gateway.session import _discord_tools_loaded
-            discord_tools = "1" if _discord_tools_loaded() else "0"
-            # message_id: only PRESENCE is rendered (the id itself arrives per-turn in the user
-            # message) — keying on the value would re-render every message for zero byte change.
-            discord_ids = (
-                _s(src.guild_id), _s(src.parent_chat_id), _s(src.thread_id), _s(src.chat_id),
-                "1" if src.message_id else "0",
-            )
-        # Slack's capability-aware platform note is gated on _slack_tools_loaded() — the gate state must
-        # be in the key (same parity contract as the Discord gate above) so a config / MCP-registration
-        # flip re-renders once instead of serving a stale pinned note for the rest of the session.
-        slack_tools = ""
-        if src.platform == Platform.SLACK:
-            from gateway.session import _slack_tools_loaded
-            slack_tools = "1" if _slack_tools_loaded() else "0"
         try:
             from scout_constants import display_scout_home
             home_display = str(display_scout_home())
@@ -748,7 +707,7 @@ class GatewayAgentCacheMixin:
             src.platform.value if src.platform else "",
             _s(src.chat_id), _s(src.thread_id), _s(src.chat_type), _s(src.chat_name), _s(src.chat_topic),
             _s(src.user_name), _s(src.user_id), _s(getattr(src, "profile", None)),
-            bool(context.shared_multi_user_session), discord_ids, discord_tools, slack_tools,
+            bool(context.shared_multi_user_session),
             tuple(p.value for p in context.connected_platforms),
             tuple(
                 (p.value, _s(getattr(hc, "name", "")), _s(getattr(hc, "chat_id", "")))

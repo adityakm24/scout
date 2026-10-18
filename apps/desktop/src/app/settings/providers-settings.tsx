@@ -2,7 +2,6 @@ import { useStore } from '@nanostores/react'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { runInTerminal } from '@/app/right-sidebar/store'
 import {
   FireworksProviderRow,
   LocalModelsProviderRow,
@@ -34,10 +33,6 @@ import { providerGroup, providerMeta, providerPriority } from './helpers'
 import { LocalModelsSettings } from './local-models-settings'
 import { SettingsContent, SettingsSkeleton } from './primitives'
 import { SettingsProfileScope } from './profile-scope'
-
-// The embedded terminal (and thus the "run disconnect command" path) only
-// exists in the Electron desktop shell, not the web dashboard.
-const canRunInTerminal = () => typeof window !== 'undefined' && Boolean(window.scoutDesktop?.terminal)
 
 // Parallel group headers ("Connected", "Other providers") so the expanded list
 // reads as its own section instead of bleeding into the connected group.
@@ -150,7 +145,6 @@ function buildProviderKeyGroups(vars: Record<string, EnvVarInfo>): ProviderKeyGr
 function OAuthPicker({
   disconnecting,
   onDisconnect,
-  onTerminalDisconnect,
   onWantApiKey,
   onWantLocalModels,
   providers,
@@ -158,7 +152,6 @@ function OAuthPicker({
 }: {
   disconnecting: null | string
   onDisconnect: (provider: OAuthProvider) => void
-  onTerminalDisconnect: (provider: OAuthProvider) => void
   onWantApiKey: () => void
   onWantLocalModels: () => void
   providers: OAuthProvider[]
@@ -213,7 +206,6 @@ function OAuthPicker({
               key={p.id}
               onDisconnect={onDisconnect}
               onSelect={select}
-              onTerminalDisconnect={onTerminalDisconnect}
               provider={p}
             />
           ))}
@@ -249,13 +241,11 @@ function ConnectedProviderRow({
   disconnecting,
   onDisconnect,
   onSelect,
-  onTerminalDisconnect,
   provider
 }: {
   disconnecting: boolean
   onDisconnect: (provider: OAuthProvider) => void
   onSelect: (provider: OAuthProvider) => void
-  onTerminalDisconnect: (provider: OAuthProvider) => void
   provider: OAuthProvider
 }) {
   const { t } = useI18n()
@@ -264,17 +254,14 @@ function ConnectedProviderRow({
   const Trail = provider.flow === 'external' ? Terminal : ChevronRight
   // Scout can clear this provider's creds via the API.
   const canDisconnect = provider.disconnectable ?? provider.flow !== 'external'
-  // External (CLI-managed) provider Scout can't clear via the API, but ships a
-  // command we can run in the embedded terminal (Electron shell only).
-  const terminalDisconnect = !canDisconnect && Boolean(provider.disconnect_command) && canRunInTerminal()
   // Only fall back to a static "remove it elsewhere" hint when we offer no button.
-  const showHint = !canDisconnect && !terminalDisconnect
+  const showHint = !canDisconnect
 
   return (
     <div className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-[6px] transition-colors hover:bg-(--ui-control-hover-background)">
       <RowButton
         className="min-w-0 px-3 py-2.5 text-left"
-        onClick={() => (terminalDisconnect ? onTerminalDisconnect(provider) : onSelect(provider))}
+        onClick={() => onSelect(provider)}
       >
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate text-[length:var(--conversation-text-font-size)] font-semibold">{title}</span>
@@ -291,19 +278,7 @@ function ConnectedProviderRow({
         )}
       </RowButton>
       <div className="flex items-center gap-1 pr-2">
-        {terminalDisconnect ? (
-          <Button
-            aria-label={`${copy.disconnect} ${title} in terminal`}
-            onClick={() => onTerminalDisconnect(provider)}
-            size="icon-xs"
-            type="button"
-            variant="ghost"
-          >
-            <Terminal className="size-4" />
-          </Button>
-        ) : (
-          <Trail className="size-4 text-muted-foreground transition group-hover:text-foreground" />
-        )}
+        <Trail className="size-4 text-muted-foreground transition group-hover:text-foreground" />
         {canDisconnect && (
           <Button
             aria-label={`${t.common.remove} ${title}`}
@@ -315,19 +290,6 @@ function ConnectedProviderRow({
           >
             {disconnecting ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
           </Button>
-        )}
-        {terminalDisconnect && (
-          <Tip label={copy.disconnectInTerminal}>
-            <Button
-              aria-label={`${copy.disconnect} ${title}`}
-              onClick={() => onTerminalDisconnect(provider)}
-              size="icon-xs"
-              type="button"
-              variant="ghost"
-            >
-              <Trash2 className="size-3" />
-            </Button>
-          </Tip>
         )}
       </div>
     </div>
@@ -421,39 +383,6 @@ export function ProvidersSettings({
 
     return () => void (cancelled = true)
   }, [onboardingActive, scopeProfile])
-
-  // External (CLI-managed) providers can't be cleared via the API by design —
-  // Scout never deletes creds another tool owns behind a silent API call.
-  // Instead we run the documented removal command in the embedded terminal so
-  // the user sees exactly what executes, then return them to chat to watch it.
-  async function handleTerminalDisconnect(provider: OAuthProvider) {
-    const command = provider.disconnect_command
-
-    if (!command) {
-      return
-    }
-
-    const name = providerTitle(provider)
-
-    const ok = await confirm({
-      confirmLabel: t.settings.providers.disconnect,
-      destructive: true,
-      title: t.settings.providers.removeTerminalConfirm(name, command)
-    })
-
-    if (!ok) {
-      return
-    }
-
-    // Leave the settings overlay so the terminal pane (chat-only) is visible.
-    onClose()
-    runInTerminal(command)
-    notify({
-      kind: 'info',
-      title: t.settings.providers.disconnect,
-      message: t.settings.providers.removeTerminalRunning(name)
-    })
-  }
 
   async function handleDisconnect(provider: OAuthProvider) {
     const name = providerTitle(provider)
@@ -571,7 +500,6 @@ export function ProvidersSettings({
       <OAuthPicker
         disconnecting={disconnecting}
         onDisconnect={provider => void handleDisconnect(provider)}
-        onTerminalDisconnect={provider => void handleTerminalDisconnect(provider)}
         onWantApiKey={() => onViewChange('keys')}
         onWantLocalModels={() => onViewChange('local')}
         profile={scopeProfile}

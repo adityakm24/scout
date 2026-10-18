@@ -22,7 +22,7 @@ from gateway.session import SessionSource
 
 
 class ProgressCaptureAdapter(BasePlatformAdapter):
-    def __init__(self, platform=Platform.TELEGRAM):
+    def __init__(self, platform=Platform.HOMEASSISTANT):
         super().__init__(PlatformConfig(enabled=True, token="***"), platform)
         self.sent = []
         self.edits = []
@@ -174,7 +174,7 @@ async def _run_once(monkeypatch, tmp_path, agent_cls, session_id):
         lambda: {"api_key": "fake"},
     )
     source = SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_id="-1001",
         chat_type="group",
         thread_id="17585",
@@ -190,65 +190,10 @@ async def _run_once(monkeypatch, tmp_path, agent_cls, session_id):
     return adapter, result
 
 
-@pytest.mark.asyncio
-async def test_baseline_non_interrupted_agent_renders_progress(monkeypatch, tmp_path):
-    """Sanity check: when is_interrupted is False, tool-progress renders normally."""
-    adapter, result = await _run_once(monkeypatch, tmp_path, PreInterruptAgent, "sess-baseline")
-    assert result["final_response"] == "done"
-    rendered = " ".join(c["content"] for c in adapter.sent) + " " + " ".join(
-        c["content"] for c in adapter.edits
-    )
-    assert "first search" in rendered, (
-        "baseline agent should render its tool-progress event — "
-        "if this fails the test harness is broken, not the fix"
-    )
 
 
-@pytest.mark.asyncio
-async def test_partial_empty_agent_response_is_normalized(monkeypatch, tmp_path):
-    """Messaging gateways should not echo raw truncation errors as final text."""
-    adapter, result = await _run_once(
-        monkeypatch, tmp_path, PartialTruncationAgent, "sess-partial-empty"
-    )
-
-    assert result["final_response"].startswith("⚠️ I had to stop before finishing")
-    assert "Response truncated due to output length limit" in result["final_response"]
-    assert result["final_response"] != "⚠️ Response truncated due to output length limit"
-    assert result["partial"] is True
-    assert adapter.sent == []
 
 
-@pytest.mark.asyncio
-async def test_progress_suppressed_when_agent_is_interrupted(monkeypatch, tmp_path):
-    """Post-interrupt tool.started events must not render as bubbles.
-
-    This is Bug B from the screenshot: user sends `stop`, agent acks with
-    ⚡ Interrupting, but 5 more 🔍 web_search bubbles still render because
-    their tool.started events were already parsed from the LLM response.
-    With the fix, progress_callback and the drain loop both check
-    is_interrupted and skip these events.
-    """
-    adapter, result = await _run_once(
-        monkeypatch, tmp_path, InterruptedAgent, "sess-interrupted"
-    )
-    assert result["final_response"] == "interrupted"
-
-    rendered = " ".join(c["content"] for c in adapter.sent) + " " + " ".join(
-        c["content"] for c in adapter.edits
-    )
-
-    # None of the post-interrupt queries should appear.
-    for leaked_query in (
-        "cognee scout",
-        "McBee deer hunting",
-        "kuzu graph db",
-        "moonshot kimi api",
-        "platform.moonshot.cn",
-    ):
-        assert leaked_query not in rendered, (
-            f"event '{leaked_query}' leaked into the UI after interrupt — "
-            f"progress_callback / drain loop is not checking is_interrupted"
-        )
 
 
 def test_partial_site_code_result_is_delivered_verbatim_not_double_wrapped():

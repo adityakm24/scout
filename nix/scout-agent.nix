@@ -101,10 +101,6 @@ let
     inherit npm-lockfile-fix;
   };
 
-  scoutTui = callPackage ./tui.nix {
-    inherit scoutNpmLib;
-  };
-
   scoutWeb = callPackage ./web.nix {
     inherit scoutNpmLib generatedIcons;
   };
@@ -192,7 +188,6 @@ let
       optional-mcps = toString bundledOptionalMcps;
     };
     frontends = {
-      tui = "${scoutTui}/lib/scout-tui";
       web = toString scoutWeb;
     };
     ref = if dirty then null else rev;
@@ -306,7 +301,6 @@ stdenv.mkDerivation (finalAttrs: {
     in
     {
       inherit
-        scoutTui
         scoutWeb
         scoutNpmLib
         scoutVenv

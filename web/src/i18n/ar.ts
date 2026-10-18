@@ -68,7 +68,6 @@ export const ar = defineLocale({
     },
     nav: {
       analytics: "التحليلات",
-      chat: "المحادثة",
       config: "الإعدادات",
       cron: "المهام المجدولة",
       keys: "المفاتيح",
@@ -143,7 +142,6 @@ export const ar = defineLocale({
       "سيزيل هذا نهائيًا المحادثة وجميع رسائلها. لا يمكن التراجع عن هذا الإجراء.",
     sessionDeleted: "تم حذف الجلسة",
     failedToDelete: "فشل حذف الجلسة",
-    resumeInChat: "استئناف في المحادثة",
     previousPage: "الصفحة السابقة",
     nextPage: "الصفحة التالية",
     roles: {
@@ -223,10 +221,6 @@ export const ar = defineLocale({
     triggerNow: "تشغيل الآن",
     delivery: {
       local: "محلي",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "البريد الإلكتروني",
     },
   },
 
@@ -360,7 +354,6 @@ export const ar = defineLocale({
       tts: "تحويل النص إلى كلام",
       stt: "تحويل الكلام إلى نص",
       logging: "التسجيل",
-      discord: "Discord",
       auxiliary: "إضافي",
     },
   },

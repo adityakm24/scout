@@ -160,7 +160,7 @@ def _runner_for_stall(adapter: _FakeAdapter) -> GatewayRunner:
 def _pending_event(chat_id: str = "chat-1", thread_id: str | None = None):
     from gateway.session import SessionSource
     from gateway.config import Platform
-    source = SessionSource(chat_id=chat_id, thread_id=thread_id, platform=Platform.TELEGRAM)
+    source = SessionSource(chat_id=chat_id, thread_id=thread_id, platform=Platform.HOMEASSISTANT)
     return SimpleNamespace(text="follow-up", source=source, timestamp=time.time())
 
 

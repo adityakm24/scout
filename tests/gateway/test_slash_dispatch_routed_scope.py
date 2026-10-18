@@ -37,7 +37,7 @@ def _runner(routed_home):
 
 
 def _event(text):
-    source = SessionSource(platform=Platform.TELEGRAM, user_id="u", user_name="u",
+    source = SessionSource(platform=Platform.HOMEASSISTANT, user_id="u", user_name="u",
                            chat_id="c", chat_type="dm", profile="beta")
     return MessageEvent(text=text, message_type=MessageType.TEXT, source=source, message_id="m")
 

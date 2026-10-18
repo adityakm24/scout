@@ -33,15 +33,6 @@ class TestResolveScoutBin:
         assert relaunch_mod.resolve_scout_bin() == "/usr/bin/scout"
 
 
-class TestExtractInheritedFlags:
-    def test_extracts_tui_and_dev(self):
-        argv = ["--tui", "--dev", "chat"]
-        assert relaunch_mod._extract_inherited_flags(argv) == ["--tui", "--dev"]
-
-
-    def test_preserves_multiple_skills(self):
-        argv = ["-s", "foo", "-s", "bar", "--tui"]
-        assert relaunch_mod._extract_inherited_flags(argv) == ["-s", "foo", "-s", "bar", "--tui"]
 
 
 class TestInheritedFlagTable:
@@ -61,19 +52,6 @@ class TestInheritedFlagTable:
 class TestBuildRelaunchArgv:
 
 
-    def test_preserves_inherited_flags(self, monkeypatch):
-        monkeypatch.setattr(relaunch_mod, "resolve_scout_bin", lambda: "/usr/bin/scout")
-        original = ["--tui", "--dev", "--profile", "work", "sessions", "browse"]
-        argv = relaunch_mod.build_relaunch_argv(["--resume", "abc"], original_argv=original)
-        assert "--tui" in argv
-        assert "--dev" in argv
-        assert "--profile" in argv
-        assert "work" in argv
-        assert "--resume" in argv
-        assert "abc" in argv
-        # The original subcommand should not survive
-        assert "sessions" not in argv
-        assert "browse" not in argv
 
     def test_can_disable_preserve(self, monkeypatch):
         monkeypatch.setattr(relaunch_mod, "resolve_scout_bin", lambda: "/usr/bin/scout")

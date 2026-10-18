@@ -54,7 +54,7 @@ import {
 import { $sessionColorOverrides, setSessionColorOverride } from '@/store/session-color'
 import { $sessionTiles, closeAllOpenSessionTiles } from '@/store/session-states'
 import { ackStoredSessionId } from '@/store/session-unread'
-import { canOpenSessionInTerminal, canOpenSessionWindow, openSessionInTerminal } from '@/store/windows'
+import { canOpenSessionWindow } from '@/store/windows'
 
 import type { SessionTitleResponse } from '../../types'
 
@@ -269,31 +269,6 @@ function useSessionActions({
             onSelect: () => {
               triggerHaptic('selection')
               openSession(sessionId, () => undefined, 'window')
-            }
-          })
-        ]
-      : []),
-    // The user's OWN terminal, not the in-app pane: resumes the session in the
-    // TUI. Hidden on a remote connection — the emulator we'd open runs on this
-    // machine while the session (and its runtime) lives on the remote host.
-    ...(canOpenSessionInTerminal() && !isRemote
-      ? [
-          spec({
-            disabled: !sessionId,
-            icon: 'terminal',
-            label: r.openInTerminal,
-            onSelect: () => {
-              triggerHaptic('selection')
-
-              // Read the row lazily: subscribing every row's menu to $sessions
-              // would re-render the whole sidebar on each session update.
-              const cwd =
-                $sessions
-                  .get()
-                  .find(s => sessionMatchesStoredId(s, sessionId))
-                  ?.cwd?.trim() || undefined
-
-              void openSessionInTerminal(sessionId, { cwd, profile })
             }
           })
         ]

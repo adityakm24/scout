@@ -58,9 +58,9 @@ class _DeadReapedAgent:
 def _make_runner(store) -> GatewayRunner:
     runner = object.__new__(GatewayRunner)
     runner.config = GatewayConfig(
-        platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="x")}
+        platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="x")}
     )
-    runner.adapters = {Platform.TELEGRAM: _FakeAdapter()}
+    runner.adapters = {Platform.HOMEASSISTANT: _FakeAdapter()}
     runner._pending_messages = {}
     runner._voice_mode = {}
     runner._background_tasks = set()
@@ -83,7 +83,7 @@ def _make_runner(store) -> GatewayRunner:
 
 def _source(chat_id="555001") -> SessionSource:
     return SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_id=chat_id,
         chat_type="dm",
         user_id=chat_id,
@@ -143,71 +143,5 @@ async def test_reaped_session_message_reaches_cold_path(tmp_path):
     assert agent.interrupts == [_INTERRUPT_REASON_EVICTED]
 
 
-@pytest.mark.asyncio
-async def test_alive_session_keeps_priority_interrupt_path(tmp_path):
-    """Control: with the durable row still open, the PRIORITY interrupt
-    fast-path must behave exactly as before (no eviction)."""
-    store = _store(tmp_path)
-    src = _source(chat_id="555002")
-    store.get_or_create_session(src)
-    key = store._generate_session_key(src)
-
-    runner = _make_runner(store)
-    agent = _DeadReapedAgent()
-    _occupy_turn_slot(runner, key, agent)
-
-    event = MessageEvent(
-        text="follow-up while running",
-        message_type=MessageType.TEXT,
-        source=src,
-    )
-
-    cold_path = AsyncMock(return_value="COLD_PATH_REPLY")
-    with (
-        patch.object(GatewayRunner, "_handle_message_with_agent", cold_path),
-        patch.object(GatewayRunner, "_agent_has_active_subagents", lambda self, a: False),
-        patch.object(
-            GatewayRunner,
-            "_session_has_compression_in_flight",
-            AsyncMock(return_value=False),
-        ),
-    ):
-        result = await runner._handle_message(event)
-
-    assert result is None
-    assert cold_path.await_count == 0
-    assert agent.interrupts == ["follow-up while running"]
 
 
-@pytest.mark.asyncio
-async def test_guard_is_inert_with_stubbed_session_store(tmp_path):
-    """Bare test runners stub session_store with MagicMock; the guard must
-    not evict (peek_session_id returns a Mock, not a str) and must not raise."""
-    store = MagicMock()
-    src = _source(chat_id="555003")
-
-    runner = _make_runner(store)
-    key = runner._session_key_for_source(src)
-    agent = _DeadReapedAgent()
-    _occupy_turn_slot(runner, key, agent)
-
-    event = MessageEvent(
-        text="stub store follow-up",
-        message_type=MessageType.TEXT,
-        source=src,
-    )
-
-    with (
-        patch.object(GatewayRunner, "_agent_has_active_subagents", lambda self, a: False),
-        patch.object(
-            GatewayRunner,
-            "_session_has_compression_in_flight",
-            AsyncMock(return_value=False),
-        ),
-    ):
-        result = await runner._handle_message(event)
-
-    # Slot untouched; the message took the normal busy path.
-    assert runner._is_session_running(key) is True
-    assert result is None
-    assert agent.interrupts == ["stub store follow-up"]

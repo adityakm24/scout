@@ -86,12 +86,7 @@ export const frOverrides = {
       approvals: 'En attente de toi',
       noApprovals: "Rien n'attend ton approbation.",
       allow: 'Autoriser une fois',
-      deny: 'Refuser',
-      pairing: 'Personnes qui veulent lui écrire',
-      noPairing: "Personne n'attend d'approbation.",
-      approve: 'Approuver',
-      waiting: minutes => (minutes < 1 ? "à l'instant" : `il y a ${minutes} min`)
-    }
+      deny: 'Refuser',    }
   },
   dashboard: {
     title: 'Tableau de bord',
@@ -717,7 +712,6 @@ export const frOverrides = {
       'nav.settings': 'Ouvrir les paramètres',
       'nav.profiles': 'Ouvrir les profils',
       'nav.capabilities': 'Ouvrir les skills',
-      'nav.messaging': 'Ouvrir la messagerie',
       'nav.artifacts': 'Ouvrir les artefacts',
       'nav.cron': 'Ouvrir les tâches planifiées',
       'nav.agents': 'Ouvrir les agents',
@@ -2759,10 +2753,6 @@ export const frOverrides = {
         title: 'Capacités',
         detail: 'Skills, outils, serveurs MCP et plugins'
       },
-      messaging: {
-        title: 'Messagerie',
-        detail: 'Configurer Telegram, Slack, Discord et plus'
-      },
       artifacts: {
         title: 'Artéfacts',
         detail: 'Parcourir les sorties générées'
@@ -2878,217 +2868,6 @@ export const frOverrides = {
       running: 'En cours...',
       viewLog: "Journal d'action"
     }
-  },
-  messaging: {
-    search: 'Rechercher dans la messagerie...',
-    statusFilter: {
-      all: 'Tous',
-      bad: 'Erreurs',
-      good: 'Connectés',
-      muted: 'Inactifs',
-      warn: 'Attention requise'
-    },
-    loading: 'Chargement des plateformes de messagerie...',
-    loadFailed: 'Échec du chargement des plateformes de messagerie',
-    states: {
-      connected: 'Connecté',
-      connecting: 'Connexion',
-      disabled: 'Désactivé',
-      fatal: 'Erreur',
-      gateway_stopped: 'Gateway de messagerie arrêté',
-      not_configured: 'Nécessite une configuration',
-      pending_restart: 'Redémarrage requis',
-      retrying: 'Nouvelle tentative',
-      startup_failed: 'Échec du démarrage'
-    },
-    unknown: 'Inconnu',
-    hintPendingRestart: "Redémarrez le gateway depuis la barre d'état pour appliquer ce changement.",
-    sharedListenerUrl: 'Servi sur le listener partagé du gateway à',
-    hintGatewayStopped: "Démarrez le gateway depuis la barre d'état pour vous connecter.",
-    credentialsSet: 'Identifiants définis',
-    needsSetup: 'Nécessite une configuration',
-    gatewayStopped: 'Gateway de messagerie arrêté',
-    getCredentials: 'Obtenez vos identifiants',
-    openSetupGuide: 'Ouvrir le guide de configuration',
-    required: 'Requis',
-    recommended: 'Recommandé',
-    advanced: count => `Avancé (${count})`,
-    noTokenNeeded:
-      'Cette plateforme ne nécessite pas de jeton ici. Utilisez le guide de configuration ci-dessus, puis activez-la ci-dessous.',
-    enabled: 'Activé',
-    disabled: 'Désactivé',
-    unsavedChanges: 'Modifications non enregistrées',
-    saving: 'Enregistrement...',
-    saveChanges: 'Enregistrer les modifications',
-    saved: 'Enregistré',
-    replaceValue: 'Remplacer la valeur actuelle',
-    openDocs: 'Ouvrir la documentation',
-    clearField: key => `Effacer ${key}`,
-    enableAria: name => `Activer ${name}`,
-    disableAria: name => `Désactiver ${name}`,
-    platformEnabled: name => `${name} activé`,
-    platformDisabled: name => `${name} désactivé`,
-    restartToApply: 'Ce changement prend effet après un redémarrage du gateway.',
-    setupSaved: name => `Configuration ${name} enregistrée`,
-    restartToReconnect: 'Les nouveaux identifiants prennent effet après un redémarrage du gateway.',
-    appliedLive: 'Appliqué au gateway en cours d’exécution.',
-    connectingLive: 'Le gateway en cours d’exécution se connecte avec les nouveaux identifiants.',
-    keyCleared: key => `${key} effacé`,
-    setupUpdated: name => `La configuration ${name} a été mise à jour.`,
-    failedUpdate: name => `Échec de la mise à jour de ${name}`,
-    failedSave: name => `Échec de l'enregistrement de ${name}`,
-    failedClear: key => `Échec de l'effacement de ${key}`,
-    pendingRequests: count => `Demandes en attente (${count})`,
-    pendingAria: count =>
-      `${count} ${count === 1 ? "demande d'appairage en attente" : "demandes d'appairage en attente"}`,
-    approvedUsers: count => `Utilisateurs approuvés (${count})`,
-    approve: 'Approuver',
-    approving: 'Approbation…',
-    revoke: 'Révoquer',
-    revoking: 'Révocation…',
-    revokeAria: name => `Révoquer l'accès de ${name}`,
-    revokeTitle: "Révoquer l'accès",
-    revokeDesc: name => `${name} perdra l'accès et ne sera plus reconnu à partir de son prochain message.`,
-    approvedUser: name => `${name} approuvé`,
-    approvedHint: 'Cet utilisateur sera reconnu automatiquement à partir de son prochain message.',
-    revokedUser: name => `Accès de ${name} révoqué`,
-    failedApprove: name => `Échec de l'approbation de ${name}`,
-    failedRevoke: name => `Échec de la révocation de l'accès de ${name}`,
-    pairingLockedOut:
-      "Trop d'échecs d'approbation — cette plateforme est temporairement verrouillée. Réessayez plus tard.",
-    waitingSince: minutes => (minutes < 1 ? "à l'instant" : `il y a ${minutes} min`),
-    restartNeeded: 'Enregistré. Redémarrez le gateway de messagerie pour appliquer les nouveaux paramètres.',
-    restartNow: 'Redémarrer maintenant',
-    restarting: 'Redémarrage…',
-    restartFailedManual: 'Le redémarrage du gateway a échoué — redémarrez-le manuellement et consultez ses journaux.',
-    restartFailedManualDetail:
-      'Réessayez le redémarrage ; si le problème persiste, ouvrez les journaux et envoyez les diagnostics.',
-    restartAgain: 'Redémarrer à nouveau',
-    openLogs: 'Ouvrir les journaux',
-    fieldCopy: {
-      TELEGRAM_BOT_TOKEN: {
-        label: 'Jeton du bot',
-        help: "Créez un bot avec @BotFather, puis collez le jeton qu'il vous fournit.",
-        placeholder: 'Coller le jeton du bot Telegram'
-      },
-      TELEGRAM_ALLOWED_USERS: {
-        label: "IDs d'utilisateurs Telegram autorisés",
-        help: "Recommandé. IDs numériques séparés par des virgules depuis @userinfobot. Sans cela, n'importe qui peut envoyer un message privé à votre bot."
-      },
-      TELEGRAM_PROXY: {
-        label: 'URL du proxy',
-        help: 'Uniquement nécessaire sur les réseaux où Telegram est bloqué.'
-      },
-      DISCORD_BOT_TOKEN: {
-        label: 'Jeton du bot',
-        help: 'Créez une application dans le Discord Developer Portal, ajoutez un bot, puis collez son jeton.'
-      },
-      DISCORD_ALLOWED_USERS: {
-        label: "IDs d'utilisateurs Discord autorisés",
-        help: "Recommandé. IDs d'utilisateurs Discord séparés par des virgules."
-      },
-      DISCORD_REPLY_TO_MODE: {
-        label: 'Style de réponse',
-        help: 'first, all ou off.'
-      },
-      DISCORD_ALLOW_ALL_USERS: {
-        label: 'Autoriser tous les utilisateurs Discord',
-        help: "Développement uniquement. Quand vrai, n'importe qui peut envoyer un message privé au bot sans liste d'autorisation."
-      },
-      DISCORD_HOME_CHANNEL: {
-        label: "ID du canal d'accueil",
-        help: 'Canal où le bot envoie des messages proactifs (sortie cron, rappels).'
-      },
-      DISCORD_HOME_CHANNEL_NAME: {
-        label: "Nom du canal d'accueil",
-        help: "Nom d'affichage pour le canal d'accueil dans les journaux et la sortie d'état."
-      },
-      BLUEBUBBLES_ALLOW_ALL_USERS: {
-        label: 'Autoriser tous les utilisateurs iMessage',
-        help: "Quand vrai, ignorez la liste d'autorisation BlueBubbles."
-      },
-      MATTERMOST_ALLOW_ALL_USERS: {
-        label: 'Autoriser tous les utilisateurs Mattermost'
-      },
-      MATTERMOST_HOME_CHANNEL: {
-        label: "Canal d'accueil"
-      },
-      QQ_ALLOW_ALL_USERS: {
-        label: 'Autoriser tous les utilisateurs QQ'
-      },
-      QQBOT_HOME_CHANNEL: {
-        label: "Canal d'accueil QQ",
-        help: 'Canal ou groupe par défaut pour la livraison cron.'
-      },
-      QQBOT_HOME_CHANNEL_NAME: {
-        label: "Nom du canal d'accueil QQ"
-      },
-      SLACK_BOT_TOKEN: {
-        label: 'Jeton du bot Slack',
-        help: 'Utilisez le jeton du bot depuis OAuth & Permissions après avoir installé votre application Slack.',
-        placeholder: 'Coller le jeton du bot Slack'
-      },
-      SLACK_APP_TOKEN: {
-        label: "Jeton de l'application Slack",
-        help: 'Utilisez le jeton de niveau application requis pour le Socket Mode.',
-        placeholder: "Coller le jeton de l'application Slack"
-      },
-      SLACK_ALLOWED_USERS: {
-        label: "IDs d'utilisateurs Slack autorisés",
-        help: "Recommandé. IDs d'utilisateurs Slack séparés par des virgules."
-      },
-      MATTERMOST_URL: {
-        label: 'URL du serveur',
-        placeholder: 'https://mattermost.example.com'
-      },
-      MATTERMOST_TOKEN: {
-        label: 'Jeton du bot'
-      },
-      MATTERMOST_ALLOWED_USERS: {
-        label: "IDs d'utilisateurs autorisés",
-        help: "Recommandé. IDs d'utilisateurs Mattermost séparés par des virgules."
-      },
-      MATRIX_HOMESERVER: {
-        label: 'URL du homeserver',
-        placeholder: 'https://matrix.org'
-      },
-      MATRIX_ACCESS_TOKEN: {
-        label: "Jeton d'accès"
-      },
-      MATRIX_USER_ID: {
-        label: "ID d'utilisateur du bot",
-        placeholder: '@scout:example.org'
-      },
-      MATRIX_ALLOWED_USERS: {
-        label: "IDs d'utilisateurs Matrix autorisés",
-        help: "Recommandé. IDs d'utilisateurs séparés par des virgules au format @utilisateur:serveur."
-      },
-      SIGNAL_HTTP_URL: {
-        label: 'URL du pont Signal',
-        placeholder: 'http://127.0.0.1:8080',
-        help: "URL d'un pont REST signal-cli en cours d'exécution."
-      },
-      SIGNAL_ACCOUNT: {
-        label: 'Numéro de téléphone',
-        help: 'Le numéro enregistré avec votre pont signal-cli.'
-      },
-      SIGNAL_ALLOWED_USERS: {
-        label: 'Utilisateurs Signal autorisés',
-        help: 'Recommandé. Identifiants Signal séparés par des virgules.'
-      },
-      WHATSAPP_ENABLED: {
-        label: 'Activer le pont WhatsApp',
-        help: "Défini automatiquement par l'interrupteur ci-dessous. Ne touchez pas sauf si vous savez que vous en avez besoin."
-      },
-      WHATSAPP_MODE: {
-        label: 'Mode du pont'
-      },
-      WHATSAPP_ALLOWED_USERS: {
-        label: 'Utilisateurs WhatsApp autorisés',
-        help: 'Recommandé. Numéros de téléphone ou IDs WhatsApp séparés par des virgules.'
-      }
-    },
-    platformIntro: {}
   },
   webhooks: {
     search: 'Rechercher des webhooks...',
@@ -3566,7 +3345,6 @@ export const frOverrides = {
     nav: {
       'new-session': 'Nouvelle session',
       capabilities: 'Capacités',
-      messaging: 'Messagerie',
       artifacts: 'Artefacts',
       cron: 'Tâches planifiées'
     },
@@ -3711,7 +3489,6 @@ export const frOverrides = {
       finishedUnread: 'Terminée — non lue',
       backgroundRunning: 'Tâche en arrière-plan en cours',
       draftSession: 'Brouillon — aucun message envoyé',
-      handoffOrigin: platform => `Transférée depuis ${platform}`,
       continuationOrigin: 'Continuation automatique — cette conversation a été compressée puis poursuivie',
       ownedByProfile: profile => `Profil : ${profile}`,
       renamed: 'Renommée',
@@ -5533,15 +5310,7 @@ export const frOverrides = {
     clipboard: 'Presse-papiers',
     noClipboardImage: 'Aucune image trouvée dans le presse-papiers',
     clipboardPasteFailed: 'Échec du collage depuis le presse-papiers',
-    dropFiles: 'Déposer des fichiers',
-    handoff: {
-      pickPlatform: 'Choisissez une destination',
-      success: platform => `Transféré vers ${platform}. Reprenez ici à tout moment.`,
-      systemNote: platform => `↻ Transféré vers ${platform} — reprenez ici à tout moment.`,
-      failed: error => `Échec du transfert : ${error}`,
-      timedOut: "Délai d'expiration en attendant la Gateway. `scout gateway` est-il en cours d'exécution ?",
-      startMessaging: 'Démarrer la messagerie'
-    }
+    dropFiles: 'Déposer des fichiers'
   },
   tips: {
     close: 'Ne plus afficher cette astuce',
@@ -5553,10 +5322,6 @@ export const frOverrides = {
       skills: {
         title: 'Apprenez-lui une seule fois',
         text: "Les compétences sont des dossiers d'instructions que Scout charge lorsque le travail le nécessite."
-      },
-      messaging: {
-        title: 'Scout loin de votre bureau',
-        text: 'Connectez Telegram, Discord, Slack et plus encore : même agent, même mémoire.'
       },
       artifacts: {
         title: 'Tout ce que Scout a créé',
@@ -5615,7 +5380,6 @@ export const frOverrides = {
     capabilities: 'Compétences',
     chats: 'Chats',
     dashboard: 'Aujourd’hui',
-    messaging: 'Messagerie',
     newChat: 'Nouveau chat',
     noChats: 'Aucun chat pour l’instant. Touchez le crayon pour en commencer un.',
     noMatches: 'Aucun chat ne correspond.',

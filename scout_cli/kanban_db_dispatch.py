@@ -2741,13 +2741,10 @@ def _retag_legacy_worker_sessions(workspaces_root_path: str) -> None:
 
 
 def _worker_argv(task: Task, profile_arg: str, scout_home: Optional[str]) -> list[str]:
-    """Build the ``scout -p <profile> --cli ... chat -q ...`` worker command."""
+    """Build the ``scout -p <profile> ... chat -q ...`` worker command."""
     cmd = [
         *_resolve_scout_argv(),
         "-p", profile_arg,
-        # A worker must NEVER boot the interactive TUI: its no-TTY bail-out
-        # exits 0 without doing the task → "protocol violation" every attempt.
-        "--cli",
         # Workers run under a profile-scoped SCOUT_HOME and so see that
         # profile's shell-hook allowlist; pass --accept-hooks explicitly so
         # configured hooks still register.

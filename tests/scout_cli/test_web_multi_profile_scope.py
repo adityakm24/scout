@@ -11,7 +11,6 @@ Regression for the cross-profile leak class in ``scout dashboard`` / ``scout ser
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import pytest
 
@@ -73,29 +72,3 @@ def test_get_config_for_named_profile_expands_only_its_own_secrets(client, two_h
     assert probe_a["a_ref"] == A_VAL and probe_a["b_ref"] == "${B_ONLY_TOKEN}"
 
 
-def test_console_send_for_named_profile_does_not_write_process_env(two_homes, monkeypatch):
-    """``send`` loads the target profile's ``.env`` for the gateway config loader; inside a
-    multi-profile host that must land in the request's scope, never ``os.environ``."""
-    from scout_cli.web_routers.chat_ws import _execute_console_line
-
-    root, b = two_homes
-    seen = {}
-
-    def fake_send(args):
-        import scout_cli.send_cmd as send_cmd
-        from gateway.config import _getenv
-        send_cmd._load_scout_env()
-        seen["loader_sees"] = _getenv("TELEGRAM_BOT_TOKEN")
-        seen["environ_has"] = "TELEGRAM_BOT_TOKEN" in os.environ
-        seen["home"] = Path(os.environ.get("SCOUT_HOME", ""))
-        return '{"success": true}'
-
-    class Engine:
-        def execute(self, line, *, confirmed=False):
-            import argparse
-            return fake_send(argparse.Namespace())
-
-    _execute_console_line(Engine(), "send --to telegram hi", confirmed=False, profile="b")
-    assert seen["loader_sees"] == "b-telegram-token"  # the loader gets B's token through the scope
-    assert seen["environ_has"] is False  # and the dashboard process env never learns it
-    assert "B_ONLY_TOKEN" not in os.environ

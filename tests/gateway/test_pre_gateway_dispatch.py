@@ -27,7 +27,7 @@ def _clear_auth_env(monkeypatch) -> None:
         monkeypatch.delenv(key, raising=False)
 
 
-def _make_event(text: str = "hello", platform: Platform = Platform.WHATSAPP) -> MessageEvent:
+def _make_event(text: str = "hello", platform: Platform = Platform.HOMEASSISTANT) -> MessageEvent:
     return MessageEvent(
         text=text,
         message_id="m1",
@@ -77,7 +77,7 @@ async def test_internal_events_bypass_hook(monkeypatch):
 
     monkeypatch.setattr("scout_cli.plugins.invoke_hook", _fake_hook)
 
-    runner, _adapter = _make_runner(Platform.WHATSAPP)
+    runner, _adapter = _make_runner(Platform.HOMEASSISTANT)
     runner._handle_message_with_agent = _capture  # noqa: SLF001
 
     event = _make_event("hi")
@@ -111,7 +111,7 @@ async def test_hook_fires_without_session_store_attribute(monkeypatch):
     # The inbound path awaits the hook, so the seam is the async entry point.
     monkeypatch.setattr("scout_cli.plugins.ainvoke_hook", _fake_hook)
 
-    runner, adapter = _make_runner(Platform.WHATSAPP)
+    runner, adapter = _make_runner(Platform.HOMEASSISTANT)
     del runner.session_store
 
     result = await runner._handle_message(_make_event("hi"))
@@ -148,7 +148,7 @@ async def test_async_hook_callback_is_awaited_on_the_gateway_loop(monkeypatch):
         await asyncio.sleep(0)
         gate.set()
 
-    runner, adapter = _make_runner(Platform.WHATSAPP)
+    runner, adapter = _make_runner(Platform.HOMEASSISTANT)
     asyncio.create_task(_release())
     result = await asyncio.wait_for(runner._handle_message(_make_event("hi")), timeout=5)
     assert result is None

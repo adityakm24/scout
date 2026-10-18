@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 from typing import Any, Optional
 
-from gateway.config import UNAUTHORIZED_DM_BEHAVIORS, Platform, PlatformConfig, _coerce_dict, _dict_slot, _normalize_choice
+from gateway.config import Platform, PlatformConfig, _coerce_dict, _dict_slot, _normalize_choice
 
 # Logger name parity with the origin module: records stay under "gateway.config".
 logger = logging.getLogger("gateway.config")
@@ -75,10 +75,6 @@ def _quick_commands_ok(value: Any) -> bool:
     return False
 
 
-def _dm_behavior_choice(value: Any, default: str = "pair") -> str:
-    return _normalize_choice(value, UNAUTHORIZED_DM_BEHAVIORS, default)
-
-
 def _presence(*keys: str) -> tuple:
     return tuple((k, k, "presence", None, None) for k in keys)
 
@@ -99,8 +95,6 @@ _TOPLEVEL_BRIDGE: tuple = (
         "loop_watchdog_probe_interval_s", "loop_watchdog_probe_timeout_s", "loop_watchdog_max_strikes",
         "filter_silence_narration",
     ),
-    ("unauthorized_dm_behavior", "unauthorized_dm_behavior", "presence", None, _dm_behavior_choice),
-    *_presence("unauthorized_dm_decline_message"),
 )
 
 
@@ -195,30 +189,21 @@ def _str_keyed(value: Any) -> Any:
     return {str(k): v for k, v in value.items()} if isinstance(value, dict) else value
 
 
-_TELEGRAM = frozenset({Platform.TELEGRAM})
-_DISCORD_SLACK = frozenset({Platform.DISCORD, Platform.SLACK})
-
 def _plain(*keys: str) -> tuple:
     """Keys copied verbatim into ``extra`` for every platform."""
     return tuple((k, None, None) for k in keys)
 
 
 # (key, platforms-or-None, transform-or-None), in ``extra`` insertion order.
-# ``"dm"`` defers to the global unauthorized_dm_behavior.
 _SHARED_KEYS: tuple = (
-    ("unauthorized_dm_behavior", None, "dm"),
     ("notice_delivery", None, lambda v: _normalize_choice(v, {"public", "private"}, "public")),
     *_plain("reply_prefix", "reply_in_thread", "cron_continuable_surface", "require_mention", "send_read_receipts"),
-    ("allowed_chats", _TELEGRAM, None),
-    ("group_allowed_chats", _TELEGRAM, None),
-    ("allowed_topics", _TELEGRAM, None),
-    *_plain("free_response_channels", "mention_patterns", "exclusive_bot_mentions"),
-    ("observe_unmentioned_group_messages", _TELEGRAM, None),
+    *_plain("group_allowed_chats", "free_response_channels", "mention_patterns", "exclusive_bot_mentions"),
     *_plain(
         "dm_policy", "allow_from", "allow_admin_from", "user_allowed_commands",
         "group_policy", "group_allow_from", "group_allow_admin_from", "group_user_allowed_commands",
     ),
-    ("channel_skill_bindings", _DISCORD_SLACK, None),
+    ("channel_skill_bindings", None, None),
     ("channel_prompts", None, _str_keyed),
     *_plain("gateway_restart_notification", "typing_indicator", "typing_status_text"),
 )
@@ -235,10 +220,7 @@ def _bridged_keys(plat: Platform, platform_cfg: dict, gw_data: dict, *, root_blo
     for key, only, transform in _SHARED_KEYS:
         if key not in platform_cfg or (only is not None and plat not in only):
             continue
-        if transform == "dm":
-            bridged[key] = _dm_behavior_choice(platform_cfg[key], gw_data.get("unauthorized_dm_behavior", "pair"))
-        else:
-            bridged[key] = transform(platform_cfg[key]) if transform else platform_cfg[key]
+        bridged[key] = transform(platform_cfg[key]) if transform else platform_cfg[key]
     return bridged
 
 
@@ -316,9 +298,6 @@ def apply_plugin_yaml_hooks(yaml_cfg: dict, gateway_platforms: Any, platforms_da
 def bridge_core_env_settings(yaml_cfg: dict, platforms_data: dict) -> None:
     """The YAML→env bridges that stay in core (per-platform ones live in plugin hooks).
 
-    Top-level ``require_mention`` → Telegram when the ``telegram:`` section has none: users write it
-    alongside ``group_sessions_per_user`` expecting it to work, and the telegram plugin's hook only
-    runs when a telegram block exists. Signal ``require_mention`` → ``SIGNAL_REQUIRE_MENTION`` (env wins).
     ``allow_all_users`` (top-level or ``gateway.allow_all_users``) → ``GATEWAY_ALLOW_ALL_USERS``: every
     allow-all reader (authz mixin, startup access check, own-policy adapters, plugin gates) consults
     that env var, so the bridge is the one seam that makes the YAML key reach all of them (#110690).
@@ -352,28 +331,6 @@ def bridge_core_env_settings(yaml_cfg: dict, platforms_data: dict) -> None:
             )
         else:
             os.environ.pop("GATEWAY_ALLOW_ALL_USERS", None)
-    tl_require_mention = yaml_cfg.get("require_mention")
-    if tl_require_mention is not None and "require_mention" not in (yaml_cfg.get("telegram") or {}):
-        tg_plat = platforms_data.setdefault(Platform.TELEGRAM.value, {})
-        tg_plat.setdefault("extra", {}).setdefault("require_mention", tl_require_mention)
-        # Also bridge to the TELEGRAM_REQUIRE_MENTION env var that the adapter reads at runtime. This used
-        # to live in the telegram_cfg block in core; it stays in core because it keys off the TOP-LEVEL
-        # require_mention (not a telegram: block), so the telegram plugin's apply_yaml_config_fn hook —
-        # which only runs when a telegram config block exists — can't cover the no-telegram-block case
-        # (#3979).
-        if not skip_env_bridge and not os.getenv("TELEGRAM_REQUIRE_MENTION"):
-            os.environ["TELEGRAM_REQUIRE_MENTION"] = str(tl_require_mention).lower()
-
-    # Telegram settings → env vars / extra: migrated to the telegram plugin's apply_yaml_config_fn hook
-    # (plugins/platforms/telegram/adapter.py). #41112 / #3823.
-    # WhatsApp settings → env vars: migrated to the whatsapp plugin's apply_yaml_config_fn hook
-    # (plugins/platforms/whatsapp/adapter.py). #41112 / #3823.
-    signal_cfg = yaml_cfg.get("signal", {})
-    if isinstance(signal_cfg, dict) and "require_mention" in signal_cfg:
-        sig_plat = platforms_data.setdefault(Platform.SIGNAL.value, {})
-        sig_plat.setdefault("extra", {}).setdefault("require_mention", signal_cfg["require_mention"])
-        if not skip_env_bridge and not os.getenv("SIGNAL_REQUIRE_MENTION"):
-            os.environ["SIGNAL_REQUIRE_MENTION"] = str(signal_cfg["require_mention"]).lower()
 
 
 def read_yaml_layers(home: Path) -> dict:
@@ -382,8 +339,7 @@ def read_yaml_layers(home: Path) -> dict:
     Raises on a malformed user file (the loader then falls back to env + gateway.json WITHOUT the
     managed layer). An ABSENT user file is an empty layer, not a reason to skip the administrator's
     values: a fleet host with no ``config.yaml`` must still honor them. Any pre-activation predicate
-    (``gateway.relay.relay_explicitly_disabled``) reads through here so it cannot disagree with
-    ``load_gateway_config()`` on which files count.
+    reads through here so it cannot disagree with ``load_gateway_config()`` on which files count.
     """
     config_yaml_path = home / "config.yaml"
     yaml_cfg: dict = {}

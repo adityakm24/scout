@@ -638,7 +638,7 @@ export default function EnvPage() {
       };
       for (const cat of categories) {
         const hasEntries = Object.values(vars).some(
-          (info) => info.category === cat && !info.channel_managed,
+          (info) => info.category === cat,
         );
         if (hasEntries) {
           items.push({ id: `section-${cat}`, label: CATEGORY_LABELS[cat] ?? cat });
@@ -827,10 +827,8 @@ export default function EnvPage() {
       }))
       .sort((a, b) => a.priority - b.priority);
 
-    // Non-provider categories — use translated labels. Platform credentials
-    // (channel_managed) are configured on the Channels page, so the messaging
-    // category here is trimmed down to cross-cutting gateway / API / proxy
-    // settings and relabelled accordingly.
+    // Non-provider categories — use translated labels. The messaging category
+    // holds the gateway-wide settings (API server, webhooks, allowlist).
     const CATEGORY_META_LABELS: Record<string, string> = {
       tool: t.app.nav.keys,
       messaging: t.common.gateway ?? "Gateway",
@@ -839,14 +837,13 @@ export default function EnvPage() {
     const CATEGORY_META_HINTS: Record<string, string | undefined> = {
       messaging:
         t.common.gatewayHint ??
-        "Messaging platforms, the API server and webhooks are configured on the Channels page. These are gateway-wide settings (proxy/relay mode and the global allowlist).",
+        "Gateway-wide settings: the HTTP API server, webhooks and the global allowlist.",
     };
     const otherCategories = ["tool", "messaging", "setting"];
     const nonProvider = otherCategories.map((cat) => {
       const entries = Object.entries(vars).filter(
         ([, info]) =>
           info.category === cat &&
-          !info.channel_managed &&
           (showAdvanced || !info.advanced),
       );
       const setEntries = entries.filter(([, info]) => info.is_set);
@@ -866,7 +863,7 @@ export default function EnvPage() {
     // Sorted alphabetically; an in-flight (just-added, unsaved) row carries the
     // custom category locally so it shows here immediately.
     const customEntries = Object.entries(vars)
-      .filter(([, info]) => info.category === "custom" && !info.channel_managed)
+      .filter(([, info]) => info.category === "custom")
       .sort(([a], [b]) => a.localeCompare(b));
 
     return {

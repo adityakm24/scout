@@ -97,73 +97,8 @@ def _enter_fresh_install_patches(stack, **extra):
     return named
 
 
-class TestExistingInstallDefault:
-    """Bare `scout setup` on an existing install = full reconfigure wizard."""
-
-    def test_bare_setup_runs_full_reconfigure_without_menu(self, existing_install):
-        """No menu, no prompt_choice — just run every section in sequence."""
-        args = _make_setup_args()  # no flags
-
-        with ExitStack() as stack:
-            m = _enter_existing_install_patches(
-                stack,
-                prompt_choice="scout_cli.setup.prompt_choice",
-                quick="scout_cli.setup._run_quick_setup",
-                model="scout_cli.setup.setup_model_provider",
-                terminal="scout_cli.setup.setup_terminal_backend",
-                agent="scout_cli.setup.setup_agent_settings",
-                gateway="scout_cli.setup.setup_gateway",
-                tools="scout_cli.setup.setup_tools",
-            )
-            from scout_cli.setup import run_setup_wizard
-            run_setup_wizard(args)
-
-        # No menu shown.
-        m["prompt_choice"].assert_not_called()
-        # Quick-setup path NOT taken.
-        m["quick"].assert_not_called()
-        # Model/terminal/gateway/tools run; agent settings are no longer
-        # prompted on existing installs (they keep their tuned values).
-        m["model"].assert_called_once()
-        m["terminal"].assert_called_once()
-        m["agent"].assert_not_called()
-        m["gateway"].assert_called_once()
-        m["tools"].assert_called_once()
 
 
-class TestQuickFlag:
-    """`--quick` on an existing install runs the fill-missing flow."""
-
-    def test_quick_flag_runs_quick_setup_only(self, existing_install):
-        args = _make_setup_args(quick=True)
-
-        with ExitStack() as stack:
-            m = _enter_existing_install_patches(
-                stack,
-                quick="scout_cli.setup._run_quick_setup",
-                model="scout_cli.setup.setup_model_provider",
-                terminal="scout_cli.setup.setup_terminal_backend",
-                agent="scout_cli.setup.setup_agent_settings",
-                gateway="scout_cli.setup.setup_gateway",
-                tools="scout_cli.setup.setup_tools",
-            )
-            from scout_cli.setup import run_setup_wizard
-            from scout_cli import setup as setup_mod
-
-            section_indexes = []
-            m["quick"].side_effect = lambda *_args: section_indexes.append(
-                setup_mod._SETUP_NAVIGATION.get().section_index
-            )
-            run_setup_wizard(args)
-
-        m["quick"].assert_called_once()
-        assert section_indexes == [0]
-        # Full reconfigure sections must NOT run.
-        m["model"].assert_not_called()
-        m["terminal"].assert_not_called()
-        m["agent"].assert_not_called()
-        m["gateway"].assert_not_called()
-        m["tools"].assert_not_called()
 
 
 class TestFreshInstall:

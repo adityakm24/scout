@@ -68,7 +68,6 @@ export const ja: Translations = {
     },
     nav: {
       analytics: "分析",
-      chat: "チャット",
       config: "設定",
       cron: "Cron",
       keys: "キー",
@@ -162,8 +161,6 @@ export const ja: Translations = {
     selectedSessionsDeleted: "{count}件のセッションを削除しました",
     selectedSessionsSkippedActive: "{deleted}件を削除、実行中のターンがあるため{count}件を保持しました",
     failedToDeleteSelected: "選択したセッションの削除に失敗しました",
-    resumeInChat: "チャットで再開",
-    newChat: "新しいチャット",
     workspace: "ワークスペース",
     workspaceDefault: "デフォルト",
     workspaceRescan: "リポジトリを再スキャン",
@@ -281,10 +278,6 @@ export const ja: Translations = {
     triggerNow: "今すぐ実行",
     delivery: {
       local: "ローカル",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "Email",
     },
   },
 
@@ -418,7 +411,6 @@ export const ja: Translations = {
       tts: "音声合成",
       stt: "音声認識",
       logging: "ロギング",
-      discord: "Discord",
       auxiliary: "補助",
     },
   },

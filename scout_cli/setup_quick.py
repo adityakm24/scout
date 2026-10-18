@@ -35,11 +35,10 @@ def _reload_config_into(config: dict, *, dict_only: bool = False) -> None:
 
 
 def _run_first_time_quick_setup(config: dict, scout_home, is_existing: bool):
-    """Streamlined first-time setup: provider + model, terminal & messaging; everything else gets
-    defaults."""
+    """Streamlined first-time setup: provider + model and terminal; everything else gets defaults."""
     from scout_cli.setup import (
-        _apply_default_agent_settings, _info, print_info, _print_setup_summary, print_success,
-        prompt_choice, save_config, setup_gateway, setup_model_provider, setup_terminal_backend
+        _apply_default_agent_settings, _info, _print_setup_summary, print_success,
+        save_config, setup_model_provider, setup_terminal_backend
     )
     # Step 1: provider + model through the ``scout model`` flow (it saves on its own).
     setup_model_provider(config, quick=True)
@@ -51,24 +50,12 @@ def _run_first_time_quick_setup(config: dict, scout_home, is_existing: bool):
     _apply_default_agent_settings(config)
     save_config(config)
 
-    # Step 4: Offer messaging gateway setup
-    print()
-    gateway_choice = prompt_choice("Connect a messaging platform? (Telegram, Discord, etc.)", [
-        "Set up messaging now (recommended)", "Skip — set up later with 'scout setup gateway'",
-    ], 0)
-    if gateway_choice == 0:
-        setup_gateway(config)
-        save_config(config)
-    else:
-        # Messaging skipped — still install/start the gateway service so cron jobs run and
-        # platforms come alive as soon as tokens are added later (e.g. via `scout import`).
-        from scout_cli.gateway import ensure_gateway_service
-        ensure_gateway_service(context="setup")
+    # Step 4: the background service runs cron jobs, webhooks and the HTTP API.
+    from scout_cli.gateway import ensure_gateway_service
+    ensure_gateway_service(context="setup")
     print()
     print_success("Setup complete! You're ready to go.")
     _info(None, "  Configure all settings:    scout setup")
-    if gateway_choice != 0:
-        print_info("  Connect Telegram/Discord:  scout setup gateway")
     _print_macos_fda_tip()
     print()
     _print_setup_summary(config, scout_home)
@@ -208,9 +195,9 @@ def _run_blank_slate_setup(config: dict, scout_home, is_existing: bool):
 
 
 def _blank_slate_walkthrough(config: dict, scout_home):
-    """Opt-in walkthrough for Blank Slate: skills, tools, plugins, MCP, gateway."""
+    """Opt-in walkthrough for Blank Slate: skills, tools, plugins, MCP."""
     from scout_cli.setup import (
-        _info, print_header, print_info, print_success, print_warning, prompt_yes_no, save_config, setup_gateway,
+        _info, print_header, print_info, print_success, print_warning, prompt_yes_no, save_config,
     )
     # Bundled skills — default to NONE, offer to seed all
     print_header("Bundled Skills", gap=True)
@@ -260,10 +247,6 @@ def _blank_slate_walkthrough(config: dict, scout_home):
         print_header(header, gap=True)
         print_info(yes_msg if prompt_yes_no(question, default=False) else no_msg)
 
-    # Optional messaging gateway
-    print()
-    if prompt_yes_no("Connect a messaging platform (Telegram, Discord, …)?", default=False):
-        setup_gateway(config)
     save_config(config)
     _blank_slate_done(config, scout_home, "  Enable more tools:   scout tools")
 

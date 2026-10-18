@@ -46,9 +46,6 @@ import { setSessionDraftingTool } from '@/store/tool-drafting'
 import type {
   ClientSessionState,
   FileAttachResponse,
-  HandoffFailResponse,
-  HandoffRequestResponse,
-  HandoffStateResponse,
   ImageAttachResponse,
   SessionRedirectResponse
 } from '../../../types'
@@ -82,11 +79,6 @@ import {
   type SubmitTextOptions,
   withSessionNotFoundResume
 } from './utils'
-
-interface HandoffResult {
-  ok: boolean
-  error?: string
-}
 
 /**
  * Stage one file/image attachment into the session workspace and return the
@@ -505,96 +497,6 @@ export function usePromptActions({
     updateSessionState
   })
 
-  // Queue a handoff of this session to a messaging platform and watch it to
-  // a terminal state. We only write the request through the gateway; the
-  // separate `scout gateway` process performs the actual transfer, so we
-  // poll `handoff.state` (mirror of the CLI's block-poll) for the result.
-  const handoffSession = useCallback(
-    async (
-      platform: string,
-      options?: { onProgress?: (state: string) => void; sessionId?: string }
-    ): Promise<HandoffResult> => {
-      const sid = options?.sessionId || activeSessionIdRef.current
-
-      if (!sid) {
-        return { error: copy.sessionUnavailable, ok: false }
-      }
-
-      const target = normalize(platform)
-
-      if (!target) {
-        return { error: copy.handoff.failed(''), ok: false }
-      }
-
-      try {
-        options?.onProgress?.('pending')
-        await requestGateway<HandoffRequestResponse>('handoff.request', {
-          platform: target,
-          session_id: sid
-        })
-      } catch (err) {
-        return { error: inlineErrorMessage(err, copy.handoff.failed(target)), ok: false }
-      }
-
-      const markCompleted = (): HandoffResult => {
-        appendSessionTextMessage(sid, 'system', copy.handoff.systemNote(target))
-        notify({ kind: 'success', message: copy.handoff.success(target) })
-
-        return { ok: true }
-      }
-
-      const deadline = Date.now() + 60_000
-      let lastState = 'pending'
-
-      while (Date.now() < deadline) {
-        await delay(800)
-
-        let record: HandoffStateResponse
-
-        try {
-          record = await requestGateway<HandoffStateResponse>('handoff.state', { session_id: sid })
-        } catch {
-          continue
-        }
-
-        const state = record.state || 'pending'
-
-        if (state !== lastState) {
-          options?.onProgress?.(state)
-          lastState = state
-        }
-
-        if (state === 'completed') {
-          return markCompleted()
-        }
-
-        if (state === 'failed') {
-          return { error: record.error || copy.handoff.failed(target), ok: false }
-        }
-      }
-
-      const cleanup = await requestGateway<HandoffFailResponse>('handoff.fail', {
-        error: copy.handoff.timedOut,
-        session_id: sid
-      }).catch(() => null)
-
-      if (cleanup?.state === 'completed') {
-        return markCompleted()
-      }
-
-      // The messaging service can be started from the app — offer it here
-      // instead of asking a desktop user a CLI question (desktop-17).
-      notify({
-        kind: 'error',
-        message: copy.handoff.timedOut,
-        action: { label: copy.handoff.startMessaging, onClick: () => void runGatewayRestart() }
-      })
-
-      return { error: copy.handoff.timedOut, ok: false }
-    },
-    [activeSessionIdRef, appendSessionTextMessage, copy, requestGateway]
-  )
-
   const executeSlashCommand = useSlashCommand({
     activeSessionIdRef,
     appendSessionTextMessage,
@@ -605,7 +507,6 @@ export function usePromptActions({
     getRoutedStoredSessionId,
     getRuntimeIdForStoredSession,
     handleSkinCommand,
-    handoffSession,
     openMemoryGraph,
     refreshSessions,
     requestGateway,
@@ -1208,10 +1109,9 @@ export function usePromptActions({
     cancelRun,
     editMessage,
     // Session tiles route their slash input here (targets THEIR session via
-    // options.sessionId; app-level effects — branch, handoff — act on main).
+    // options.sessionId; app-level effects — branch — act on main).
     executeSlashCommand,
     handleThreadMessagesChange,
-    handoffSession,
     injectHiddenPrompt,
     reloadFromMessage,
     restoreToMessage,

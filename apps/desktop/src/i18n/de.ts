@@ -85,12 +85,7 @@ export const deOverrides = {
       approvals: 'Wartet auf dich',
       noApprovals: 'Nichts wartet auf deine Freigabe.',
       allow: 'Einmal erlauben',
-      deny: 'Ablehnen',
-      pairing: 'Personen, die ihm schreiben möchten',
-      noPairing: 'Niemand wartet auf Freigabe.',
-      approve: 'Freigeben',
-      waiting: minutes => (minutes < 1 ? 'gerade eben' : `vor ${minutes} Min.`)
-    }
+      deny: 'Ablehnen',    }
   },
   dashboard: {
     title: 'Dashboard',
@@ -722,7 +717,6 @@ export const deOverrides = {
       'nav.settings': 'Einstellungen öffnen',
       'nav.profiles': 'Profile öffnen',
       'nav.capabilities': 'Skills öffnen',
-      'nav.messaging': 'Messaging öffnen',
       'nav.artifacts': 'Artefakte öffnen',
       'nav.cron': 'Geplante Jobs öffnen',
       'nav.agents': 'Agenten öffnen',
@@ -2753,10 +2747,6 @@ export const deOverrides = {
         title: 'Fähigkeiten',
         detail: 'Skills, Tools, MCP-Server und Plugins'
       },
-      messaging: {
-        title: 'Messaging',
-        detail: 'Telegram, Slack, Discord und mehr einrichten'
-      },
       artifacts: {
         title: 'Artefakte',
         detail: 'Generierte Ausgaben durchstöbern'
@@ -2872,218 +2862,6 @@ export const deOverrides = {
       running: 'Läuft...',
       viewLog: 'Aktionslog'
     }
-  },
-  messaging: {
-    search: 'Messaging durchsuchen...',
-    statusFilter: {
-      all: 'Alle',
-      bad: 'Fehler',
-      good: 'Verbunden',
-      muted: 'Inaktiv',
-      warn: 'Handlungsbedarf'
-    },
-    loading: 'Messaging-Plattformen werden geladen...',
-    loadFailed: 'Messaging-Plattformen konnten nicht geladen werden',
-    states: {
-      connected: 'Verbunden',
-      connecting: 'Verbindung wird hergestellt',
-      disabled: 'Deaktiviert',
-      fatal: 'Fehler',
-      gateway_stopped: 'Messaging-Gateway gestoppt',
-      not_configured: 'Einrichtung nötig',
-      pending_restart: 'Neustart nötig',
-      retrying: 'Neuer Versuch',
-      startup_failed: 'Start fehlgeschlagen'
-    },
-    unknown: 'Unbekannt',
-    hintPendingRestart: 'Starten Sie das Gateway über die Statusleiste neu, um diese Änderung zu übernehmen.',
-    sharedListenerUrl: 'Erreichbar über den gemeinsamen Gateway-Listener unter',
-    hintGatewayStopped: 'Starten Sie das Gateway über die Statusleiste, um die Verbindung herzustellen.',
-    credentialsSet: 'Zugangsdaten gesetzt',
-    needsSetup: 'Einrichtung nötig',
-    gatewayStopped: 'Messaging-Gateway gestoppt',
-    getCredentials: 'Zugangsdaten abrufen',
-    openSetupGuide: 'Einrichtungsanleitung öffnen',
-    required: 'Erforderlich',
-    recommended: 'Empfohlen',
-    advanced: count => `Erweitert (${count})`,
-    noTokenNeeded:
-      'Für diese Plattform benötigen Sie hier kein Token. Folgen Sie der Einrichtungsanleitung oben und aktivieren Sie sie darunter.',
-    enabled: 'Aktiviert',
-    disabled: 'Deaktiviert',
-    unsavedChanges: 'Ungespeicherte Änderungen',
-    saving: 'Wird gespeichert…',
-    saveChanges: 'Änderungen speichern',
-    saved: 'Gespeichert',
-    replaceValue: 'Aktuellen Wert ersetzen',
-    openDocs: 'Dokumentation öffnen',
-    clearField: key => `${key} löschen`,
-    enableAria: name => `${name} aktivieren`,
-    disableAria: name => `${name} deaktivieren`,
-    platformEnabled: name => `${name} aktiviert`,
-    platformDisabled: name => `${name} deaktiviert`,
-    restartToApply: 'Diese Änderung wird nach einem Gateway-Neustart wirksam.',
-    setupSaved: name => `${name}-Einrichtung gespeichert`,
-    restartToReconnect: 'Neue Zugangsdaten werden nach einem Gateway-Neustart wirksam.',
-    appliedLive: 'Auf das laufende Gateway angewendet.',
-    connectingLive: 'Das laufende Gateway verbindet sich mit den neuen Zugangsdaten.',
-    keyCleared: key => `${key} gelöscht`,
-    setupUpdated: name => `${name}-Einrichtung wurde aktualisiert.`,
-    failedUpdate: name => `Konnte ${name} nicht aktualisieren`,
-    failedSave: name => `Konnte ${name} nicht speichern`,
-    failedClear: key => `Konnte ${key} nicht löschen`,
-    pendingRequests: count => `Wartende Anfragen (${count})`,
-    pendingAria: count => `${count} wartende ${count === 1 ? 'Koppelung' : 'Koppelungen'}`,
-    approvedUsers: count => `Freigegebene Benutzer (${count})`,
-    approve: 'Freigeben',
-    approving: 'Freigeben...',
-    revoke: 'Entziehen',
-    revoking: 'Wird entzogen...',
-    revokeAria: name => `Entziehe ${name}`,
-    revokeTitle: 'Zugriff entziehen',
-    revokeDesc: (name: string) =>
-      `${name} verliert den Zugriff und wird bei seiner nächsten Message nicht mehr erkannt.`,
-    approvedUser: name => `${name} freigegeben`,
-    approvedHint: 'Sie werden bei ihrer nächsten Message automatisch erkannt.',
-    revokedUser: name => `Zugriff für ${name} entzogen`,
-    failedApprove: name => `Konnte ${name} nicht freigeben`,
-    failedRevoke: name => `Konnte ${name} nicht entziehen`,
-    pairingLockedOut:
-      'Zu viele fehlgeschlagene Freigaben – diese Plattform ist gesperrt. Versuchen Sie es später erneut.',
-    waitingSince: minutes => (minutes < 1 ? 'gerade eben' : `${minutes} Min. her`),
-    restartNeeded: 'Gespeichert. Starten Sie das Messaging-Gateway neu, damit die neuen Einstellungen wirksam werden.',
-    restartNow: 'Jetzt neu starten',
-    restarting: 'Wird neu gestartet…',
-    restartFailedManual:
-      'Gateway-Neustart fehlgeschlagen – starten Sie es manuell neu und prüfen Sie die Gateway-Logs.',
-    restartFailedManualDetail:
-      'Versuchen Sie den Neustart erneut; wenn er weiterhin fehlschlägt, öffnen Sie die Logs und senden Sie Diagnosedaten.',
-    restartAgain: 'Erneut neu starten',
-    openLogs: 'Logs öffnen',
-    fieldCopy: {
-      TELEGRAM_BOT_TOKEN: {
-        label: 'Bot-Token',
-        help: 'Erstellen Sie einen Bot mit @BotFather und fügen Sie das Token ein, das Sie von ihm erhalten.',
-        placeholder: 'Telegram-Bot-Token einfügen'
-      },
-      TELEGRAM_ALLOWED_USERS: {
-        label: 'Erlaubte Telegram-Benutzer-IDs',
-        help: 'Empfohlen. Numerische IDs von @userinfobot, durch Kommas getrennt. Ohne diese können Ihnen beliebige Benutzer Direktnachrichten senden.'
-      },
-      TELEGRAM_PROXY: {
-        label: 'Proxy-URL',
-        help: 'Nur auf Netzwerken nötig, wo Telegram blockiert ist.'
-      },
-      DISCORD_BOT_TOKEN: {
-        label: 'Bot-Token',
-        help: 'Erstellen Sie im Discord Developer Portal eine Anwendung, fügen Sie einen Bot hinzu und fügen Sie sein Token ein.'
-      },
-      DISCORD_ALLOWED_USERS: {
-        label: 'Erlaubte Discord-Benutzer-IDs',
-        help: 'Empfohlen. Discord-Benutzer-IDs, durch Kommas getrennt.'
-      },
-      DISCORD_REPLY_TO_MODE: {
-        label: 'Antwortstil',
-        help: 'first, all oder off.'
-      },
-      DISCORD_ALLOW_ALL_USERS: {
-        label: 'Alle Discord-Benutzer zulassen',
-        help: 'Nur für die Entwicklung. Bei true kann jeder Benutzer dem Bot per DM schreiben, ohne Allowlist.'
-      },
-      DISCORD_HOME_CHANNEL: {
-        label: 'Home-Kanal-ID',
-        help: 'Kanal, in den der Bot proaktive Messages sendet (Cron-Ausgabe, Erinnerungen).'
-      },
-      DISCORD_HOME_CHANNEL_NAME: {
-        label: 'Name des Home-Kanals',
-        help: 'Anzeigename des Home-Kanals in Logs und Status-Ausgabe.'
-      },
-      BLUEBUBBLES_ALLOW_ALL_USERS: {
-        label: 'Alle iMessage-Benutzer zulassen',
-        help: 'Bei true wird die BlueBubbles-Allowlist übersprungen.'
-      },
-      MATTERMOST_ALLOW_ALL_USERS: {
-        label: 'Alle Mattermost-Benutzer zulassen'
-      },
-      MATTERMOST_HOME_CHANNEL: {
-        label: 'Home-Kanal'
-      },
-      QQ_ALLOW_ALL_USERS: {
-        label: 'Alle QQ-Benutzer zulassen'
-      },
-      QQBOT_HOME_CHANNEL: {
-        label: 'QQ-Home-Kanal',
-        help: 'Standard-Kanal oder -Gruppe für die Cron-Zustellung.'
-      },
-      QQBOT_HOME_CHANNEL_NAME: {
-        label: 'Name des QQ-Home-Kanals'
-      },
-      SLACK_BOT_TOKEN: {
-        label: 'Slack-Bot-Token',
-        help: 'Verwenden Sie das Bot-Token aus OAuth & Permissions, nachdem Sie Ihre Slack-App installiert haben.',
-        placeholder: 'Slack-Bot-Token einfügen'
-      },
-      SLACK_APP_TOKEN: {
-        label: 'Slack-App-Token',
-        help: 'Verwenden Sie das App-Level-Token, das für den Socket Mode erforderlich ist.',
-        placeholder: 'Slack-App-Token einfügen'
-      },
-      SLACK_ALLOWED_USERS: {
-        label: 'Erlaubte Slack-Benutzer-IDs',
-        help: 'Empfohlen. Slack-Benutzer-IDs, durch Kommas getrennt.'
-      },
-      MATTERMOST_URL: {
-        label: 'Server-URL',
-        placeholder: 'https://mattermost.example.com'
-      },
-      MATTERMOST_TOKEN: {
-        label: 'Bot-Token'
-      },
-      MATTERMOST_ALLOWED_USERS: {
-        label: 'Erlaubte Benutzer-IDs',
-        help: 'Empfohlen. Mattermost-Benutzer-IDs, durch Kommas getrennt.'
-      },
-      MATRIX_HOMESERVER: {
-        label: 'Homeserver-URL',
-        placeholder: 'https://matrix.org'
-      },
-      MATRIX_ACCESS_TOKEN: {
-        label: 'Zugriffs-Token'
-      },
-      MATRIX_USER_ID: {
-        label: 'Bot-Benutzer-ID',
-        placeholder: '@scout:example.org'
-      },
-      MATRIX_ALLOWED_USERS: {
-        label: 'Erlaubte Matrix-Benutzer-IDs',
-        help: 'Empfohlen. Benutzer-IDs im Format @benutzer:server, durch Kommas getrennt.'
-      },
-      SIGNAL_HTTP_URL: {
-        label: 'Signal-Bridge-URL',
-        placeholder: 'http://127.0.0.1:8080',
-        help: 'URL einer laufenden signal-cli-REST-Bridge.'
-      },
-      SIGNAL_ACCOUNT: {
-        label: 'Telefonnummer',
-        help: 'Die Nummer, die bei Ihrer signal-cli-Bridge registriert ist.'
-      },
-      SIGNAL_ALLOWED_USERS: {
-        label: 'Erlaubte Signal-Benutzer',
-        help: 'Empfohlen. Signal-Kennungen, durch Kommas getrennt.'
-      },
-      WHATSAPP_ENABLED: {
-        label: 'WhatsApp-Bridge aktivieren',
-        help: 'Wird automatisch über den Schalter unten gesetzt. Lassen Sie es unverändert, sofern Sie es nicht ausdrücklich benötigen.'
-      },
-      WHATSAPP_MODE: {
-        label: 'Bridge-Modus'
-      },
-      WHATSAPP_ALLOWED_USERS: {
-        label: 'Erlaubte WhatsApp-Benutzer',
-        help: 'Empfohlen. Telefonnummern oder WhatsApp-IDs, durch Kommas getrennt.'
-      }
-    },
-    platformIntro: {}
   },
   webhooks: {
     search: 'Webhooks suchen …',
@@ -3561,7 +3339,6 @@ export const deOverrides = {
     nav: {
       'new-session': 'Neue Session',
       capabilities: 'Fähigkeiten',
-      messaging: 'Messaging',
       artifacts: 'Artefakte',
       cron: 'Geplante Jobs'
     },
@@ -3707,7 +3484,6 @@ export const deOverrides = {
       finishedUnread: 'Abgeschlossen – ungelesen',
       backgroundRunning: 'Hintergrundaufgabe läuft',
       draftSession: 'Entwurf – noch nichts gesendet',
-      handoffOrigin: platform => `Übergeben von ${platform}`,
       continuationOrigin: 'Automatische Fortsetzung — dieser Chat wurde komprimiert und fortgesetzt',
       ownedByProfile: profile => `Profil: ${profile}`,
       renamed: 'Umbenannt',
@@ -5528,15 +5304,7 @@ export const deOverrides = {
     clipboard: 'Zwischenablage',
     noClipboardImage: 'Kein Bild in der Zwischenablage',
     clipboardPasteFailed: 'Zwischenablage-Einfügen fehlgeschlagen',
-    dropFiles: 'Dateien ablegen',
-    handoff: {
-      pickPlatform: 'Ziel wählen',
-      success: platform => `Übergeben an ${platform}. Jederzeit hier fortsetzen.`,
-      systemNote: platform => `↻ Übergeben an ${platform} — jederzeit hier fortsetzen.`,
-      failed: error => `Übergabe fehlgeschlagen: ${error}`,
-      timedOut: 'Zeitüberschreitung beim Warten auf das Gateway. Läuft `scout gateway`?',
-      startMessaging: 'Messaging starten'
-    }
+    dropFiles: 'Dateien ablegen'
   },
   tips: {
     close: 'Diesen Tip nicht mehr zeigen',
@@ -5548,10 +5316,6 @@ export const deOverrides = {
       skills: {
         title: 'Einmal beibringen',
         text: 'Skills sind Ordner mit Anweisungen, die Scout lädt, wenn die Arbeit danach verlangt.'
-      },
-      messaging: {
-        title: 'Scout abseits Ihres Schreibtischs',
-        text: 'Verbinden Sie Telegram, Discord, Slack und mehr – derselbe Agent, dasselbe Gedächtnis.'
       },
       artifacts: {
         title: 'Alles, was Scout gemacht hat',
@@ -5611,7 +5375,6 @@ export const deOverrides = {
     capabilities: 'Skills',
     chats: 'Chats',
     dashboard: 'Heute',
-    messaging: 'Nachrichten',
     newChat: 'Neuer Chat',
     noChats: 'Noch keine Chats. Tippe auf den Stift, um einen zu beginnen.',
     noMatches: 'Keine passenden Chats.',

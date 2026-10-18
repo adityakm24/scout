@@ -11,57 +11,10 @@ Two halves:
    gateway is running — that gateway ticks it with live adapters, and racing it
    on the tick lock lets the adapter-less desktop ticker deliver standalone.
 """
-import asyncio
 import threading
 from unittest.mock import patch
 
 import pytest
-
-
-
-def test_standalone_fallback_pool_keeps_profile_scope(tmp_path, monkeypatch):
-    from agent.secret_scope import (
-        get_secret,
-        set_multiplex_active,
-        set_secret_scope,
-    )
-    from scout_constants import get_scout_home, set_scout_home_override
-    import cron.scheduler as sched
-    import tools.send_message_tool as smt
-
-    default_home = tmp_path / "default"
-    sec_home = tmp_path / "profiles" / "ops"
-    for home in (default_home, sec_home):
-        (home / "cron").mkdir(parents=True)
-        (home / "config.yaml").write_text("platforms:\n  telegram:\n    enabled: true\n")
-    monkeypatch.setenv("SCOUT_HOME", str(default_home))
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "DEFAULT-TOKEN")
-    set_multiplex_active(True)
-
-    seen = {}
-
-    async def fake_send(platform, pconfig, chat_id, message, **kwargs):
-        seen["home"] = str(get_scout_home())
-        seen["token"] = get_secret("TELEGRAM_BOT_TOKEN", None)
-        return {"success": True, "message_id": "1"}
-
-    job = {"id": "j1", "name": "probe", "deliver": "telegram:12345", "schedule": {"kind": "cron"}}
-
-    async def _inside_running_loop():
-        # Emulate the multiplex ticker's per-profile scope on the caller.
-        set_scout_home_override(str(sec_home))
-        set_secret_scope({"TELEGRAM_BOT_TOKEN": "OPS-TOKEN"})
-        return sched._deliver_result(job, "hello", adapters={}, loop=None)
-
-    try:
-        with patch.object(smt, "_send_to_platform", fake_send):
-            err = asyncio.run(_inside_running_loop())
-    finally:
-        set_multiplex_active(False)
-
-    assert err is None, err
-    assert seen["home"] == str(sec_home.resolve())
-    assert seen["token"] == "OPS-TOKEN"
 
 
 def test_multiplex_ticker_profile_gate_skips_rejected_profile(tmp_path):

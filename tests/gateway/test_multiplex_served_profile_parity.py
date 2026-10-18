@@ -22,7 +22,7 @@ from scout_constants import get_scout_home
 class RecordingAdapter:
     def __init__(self, notice_delivery=None):
         self.config = PlatformConfig(enabled=True, extra={"notice_delivery": notice_delivery} if notice_delivery else {})
-        self.platform = Platform.TELEGRAM
+        self.platform = Platform.HOMEASSISTANT
         self.calls = []
         self._active_sessions, self._pending_messages, self._session_tasks = {}, {}, {}
 
@@ -59,8 +59,8 @@ def served(tmp_path, monkeypatch):
     runner.config = SimpleNamespace(multiplex_profiles=True, profile_routes=[], get_notice_delivery=lambda p: "public")
     runner._running = True
     default_adapter, alpha_adapter = RecordingAdapter(), RecordingAdapter(notice_delivery="private")
-    runner.adapters = {Platform.TELEGRAM: default_adapter}
-    runner._profile_adapters = {"alpha": {Platform.TELEGRAM: alpha_adapter}}
+    runner.adapters = {Platform.HOMEASSISTANT: default_adapter}
+    runner._profile_adapters = {"alpha": {Platform.HOMEASSISTANT: alpha_adapter}}
     runner._primary_profile_name = "default"
     runner._session_source_cache = {}
     runner.session_store = SimpleNamespace(_ensure_loaded=lambda: None, _entries={})
@@ -78,7 +78,7 @@ def served(tmp_path, monkeypatch):
 
 
 def _alpha_source():
-    return SessionSource(platform=Platform.TELEGRAM, chat_id="1001", chat_type="dm", user_id="u1", profile="alpha")
+    return SessionSource(platform=Platform.HOMEASSISTANT, chat_id="1001", chat_type="dm", user_id="u1", profile="alpha")
 
 
 def test_platform_notice_honours_the_served_profiles_notice_delivery(served):

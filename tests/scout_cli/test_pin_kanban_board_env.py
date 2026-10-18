@@ -11,7 +11,7 @@ import importlib
 import os
 
 import pytest
-from scout_cli import main_tui_launch
+from scout_cli import main_chat_env
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +40,7 @@ def test_pin_writes_resolved_board_when_env_unset(monkeypatch):
     import scout_cli.kanban_db as kdb
     monkeypatch.setattr(kdb, "get_current_board", lambda: "space")
 
-    main_tui_launch._pin_kanban_board_env()
+    main_chat_env._pin_kanban_board_env()
 
     assert main_mod.os.environ.get("SCOUT_KANBAN_BOARD") == "space"
 
@@ -56,7 +56,7 @@ def test_pin_does_not_overwrite_existing_env(monkeypatch):
 
     monkeypatch.setattr(kdb, "get_current_board", _explode)
 
-    main_tui_launch._pin_kanban_board_env()
+    main_chat_env._pin_kanban_board_env()
 
     assert main_mod.os.environ.get("SCOUT_KANBAN_BOARD") == "preset"
 

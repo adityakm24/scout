@@ -95,16 +95,6 @@
     "kind": "bare_which"
   },
   {
-    "path": "gateway/platforms/signal.py",
-    "symbol": "_remux_aac_to_m4a",
-    "kind": "bare_which"
-  },
-  {
-    "path": "gateway/platforms/whatsapp_cloud.py",
-    "symbol": "<module>",
-    "kind": "bare_which"
-  },
-  {
     "path": "gateway/run.py",
     "symbol": "_resolve_scout_bin",
     "kind": "bare_which"
@@ -210,11 +200,6 @@
     "kind": "bare_which"
   },
   {
-    "path": "scout_cli/gateway_setup_wizard.py",
-    "symbol": "_setup_signal",
-    "kind": "bare_which"
-  },
-  {
     "path": "scout_cli/gateway_windows.py",
     "symbol": "_exec_schtasks",
     "kind": "bare_which"
@@ -292,26 +277,6 @@
   {
     "path": "scout_cli/main_desktop.py",
     "symbol": "cmd_gui",
-    "kind": "bare_which"
-  },
-  {
-    "path": "scout_cli/main_tui_launch.py",
-    "symbol": "_apply_tui_python_env",
-    "kind": "bare_which"
-  },
-  {
-    "path": "scout_cli/main_tui_launch.py",
-    "symbol": "_make_tui_argv",
-    "kind": "bare_which"
-  },
-  {
-    "path": "scout_cli/main_tui_launch.py",
-    "symbol": "_restore_tui_workspace",
-    "kind": "bare_which"
-  },
-  {
-    "path": "scout_cli/main_tui_launch.py",
-    "symbol": "_tui_node_bin",
     "kind": "bare_which"
   },
   {

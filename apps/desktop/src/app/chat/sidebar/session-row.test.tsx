@@ -76,7 +76,6 @@ vi.mock('@/lib/chat-runtime', async importOriginal => {
 })
 vi.mock('@/lib/haptics', () => ({ triggerHaptic: vi.fn() }))
 vi.mock('@/lib/session-source', () => ({
-  handoffOriginSource: (state?: string, platform?: string) => (state && platform ? platform : null),
   sessionSourceLabel: (source: string) => source
 }))
 vi.mock('@/lib/time', async importOriginal => {
@@ -149,8 +148,6 @@ vi.mock('./use-profile-prewarm', () => ({
 
 function makeSession(overrides: Partial<SessionInfo> & { title: string }): SessionInfo {
   return {
-    handoff_platform: null,
-    handoff_state: null,
     id: 's1',
     last_active: 0,
     profile: 'default',

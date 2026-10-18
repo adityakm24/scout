@@ -19,7 +19,7 @@ import weakref as _weakref
 from agent.async_utils import consume_detached_task_result
 from contextvars import Context
 from datetime import datetime, timedelta, timezone
-from gateway.config import SHARED_LISTENER_MIRROR_PLATFORMS, Platform, platform_binds_port as _platform_binds_port
+from gateway.config import SHARED_LISTENER_MIRROR_PLATFORMS, Platform
 from gateway.platforms.base import BasePlatformAdapter
 from gateway.platforms.helpers import carry_inbound_dedup, inbound_dedup_caches
 from gateway.restart import is_global_startup_conflict
@@ -150,16 +150,9 @@ class GatewayAdapterLifecycleMixin:
         cold-start wait is capped and the platform is handed to the reconnect watcher, which retries with
         the full budget (and ``is_reconnect=True``, preserving the offline update queue — #46621).
         """
-        from gateway.run import (
-            _PLATFORM_CONNECT_TIMEOUT_SECS_DEFAULT, _TELEGRAM_CONNECT_TIMEOUT_SECS_DEFAULT,
-            _TELEGRAM_INITIAL_CONNECT_TIMEOUT_SECS_DEFAULT,
-        )
+        from gateway.run import _PLATFORM_CONNECT_TIMEOUT_SECS_DEFAULT
         override = self._env_timeout_override("SCOUT_GATEWAY_PLATFORM_CONNECT_TIMEOUT")
-        if override is not None:
-            return override
-        if platform != Platform.TELEGRAM:
-            return _PLATFORM_CONNECT_TIMEOUT_SECS_DEFAULT
-        return _TELEGRAM_INITIAL_CONNECT_TIMEOUT_SECS_DEFAULT if initial else _TELEGRAM_CONNECT_TIMEOUT_SECS_DEFAULT
+        return _PLATFORM_CONNECT_TIMEOUT_SECS_DEFAULT if override is None else override
 
     async def _connect_adapter_with_timeout(
         self, adapter, platform, *, is_reconnect: bool = False, initial: bool = False
@@ -222,7 +215,6 @@ class GatewayAdapterLifecycleMixin:
             "config": platform_config, "attempts": attempts, "next_retry": now + delay,
             **({"queued_at": now} if queued else {}),
             "credential_claim": self._adapter_credential_claim(platform, adapter),
-            "listener_claim": self._adapter_listener_claim(platform, adapter),
             "inbound_dedup": inbound_dedup_caches(adapter),
         }
 
@@ -470,103 +462,6 @@ class GatewayAdapterLifecycleMixin:
         task.add_done_callback(_done)
         return task
 
-    async def _handoff_watcher(self, interval: float = 2.0, drain_timeout: float = 30.0) -> None:
-        """Process pending CLI→gateway session handoffs from ``state.db``: claim atomically (pending
-        → running), re-bind the home channel to the CLI session_id, dispatch a synthetic event, mark
-        ``completed``/``failed``."""
-        from gateway.run import _async_profile_runtime_scope, _reclaim_stale, _resolve_handoff_watch_scopes
-        from gateway.run_idle_gates import off_loop_gate, profile_has_pending_handoff
-        await asyncio.sleep(5)  # let platforms connect before dispatching through them
-        # Does _process_handoff accept the profile argument? Test stand-ins bind a one-arg callable.
-        try:
-            import inspect as _inspect
-            _process_takes_profile = len(_inspect.signature(self._process_handoff).parameters) >= 2
-        except Exception:
-            _process_takes_profile = False
-        # In-flight dispatches by session id: a handoff is a FULL agent turn, so never process inline.
-        inflight: Dict[str, "asyncio.Task"] = {}
-
-        async def _dispatch(row, session_id, session_db, profile_name) -> None:
-            """Run one claimed handoff to a terminal state, off the poll path."""
-            try:
-                await self._process_handoff(*((row, profile_name) if _process_takes_profile else (row,)))
-                await session_db.complete_handoff(session_id)
-            except asyncio.CancelledError:
-                # Leave the row 'running' so the next start's reclaim marks it failed with a clear reason.
-                raise
-            except Exception as exc:
-                logger.warning("Handoff for session %s failed: %s", session_id, exc, exc_info=True)
-                with _log_suppressed(logging.DEBUG, "Could not record handoff failure", exc_info=True):
-                    await session_db.fail_handoff(session_id, str(exc))
-            finally:
-                inflight.pop(session_id, None)
-
-        async def _tick(profile_name: Optional[str] = None) -> None:
-            """One poll of the CURRENTLY-SCOPED store; ``profile_name`` (None = root) routes delivery
-            to that profile's OWN adapter. A closure, not a method: tests bind ``_handoff_watcher`` onto
-            a ``SimpleNamespace`` with only ``_session_db``/``_running``/``_process_handoff``."""
-            session_db = getattr(self, "_session_db", None)
-            if session_db is None:
-                return
-            pending = await session_db.list_pending_handoffs()
-            for row in pending:
-                session_id = row.get("id")
-                if not session_id or session_id in inflight:
-                    continue
-                if not await session_db.claim_handoff(session_id):
-                    # Another tick or another gateway already claimed it.
-                    continue
-                # INVARIANT (do not weaken): created inside _profile_runtime_scope but RUNS after it
-                # exits; it sees the profile scope only because ensure_future copies the Context.
-                # Positional, not keyword: the watcher's existing unit tests bind a stand-in
-                # ``_process_handoff(row)`` with no second parameter, and a keyword call would TypeError
-                # into the failure branch — turning a passing suite into a silent no-op watcher. Arity is
-                # probed above. It still sees the profile's home and secret scope only because
-                # ``set_scout_home_override`` and ``set_secret_scope`` are ContextVar-based — ensure_future
-                # copies the current Context into the Task. If either seam is ever migrated to a
-                # thread-local or module global, secondary- profile handoffs silently regress to
-                # primary-config delivery (the exact bug fixed in #91217) while still recording
-                # handoff_state='completed'.
-                inflight[session_id] = asyncio.ensure_future(
-                    _dispatch(row, session_id, session_db, profile_name)
-                )
-
-        # A row still 'running' at startup died mid-dispatch and blocks request_handoff until reclaimed.
-        def _scope(profile_home):  # local: tests bind this watcher onto bare SimpleNamespace runners
-            return GatewayAdapterLifecycleMixin._async_scope_or_null(_async_profile_runtime_scope, profile_home)
-
-        # Multiplex scope resolution walks the filesystem (profiles_to_serve) off the loop, so a
-        # stalled walk cannot trip the liveness probe — startup reclaim and every tick alike.
-        for _pname, _phome in await _resolve_handoff_watch_scopes(self):
-            with _log_suppressed(logging.DEBUG, "Stale-handoff reclaim failed", exc_info=True):
-                async with _scope(_phome):
-                    await _reclaim_stale(self)
-        try:
-            while self._running:
-                try:
-                    for profile_name, profile_home in await _resolve_handoff_watch_scopes(self):
-                        # Idle gate (run_idle_gates): skip the scope entry when the profile's store
-                        # holds no pending handoff. The root poll (None) is unscoped and stays cheap.
-                        if profile_home is not None and not await off_loop_gate(
-                                self, lambda home=profile_home: profile_has_pending_handoff(home)):
-                            continue
-                        async with _scope(profile_home):
-                            await _tick(profile_name)
-                except asyncio.CancelledError:
-                    raise
-                except Exception as exc:
-                    logger.debug("Handoff watcher tick error: %s", exc, exc_info=True)
-                await asyncio.sleep(interval)
-        finally:
-            # Bounded drain: cancelling would strand in-flight rows in 'running'.
-            pending_tasks = [t for t in inflight.values() if not t.done()]
-            if pending_tasks:
-                with _log_suppressed(logging.DEBUG, "Handoff drain raised", exc_info=True):
-                    await asyncio.wait(pending_tasks, timeout=drain_timeout)
-                for task in pending_tasks:
-                    if not task.done():
-                        task.cancel()
-
     def _on_reconnect_watcher_gave_up(self, name: str = "") -> None:
         """Own the reconnect invariant once supervision gives up: while running with queued
         platforms, a watcher is live or a bounded respawn is scheduled (no later event can notice
@@ -721,7 +616,7 @@ class GatewayAdapterLifecycleMixin:
 
     async def _reconnect_failed_platform(self, platform, now: float) -> None:
         """One watcher pass for a queued platform: gate, attempt, and record the outcome."""
-        from gateway.run import _dispose_unused_adapter, _platform_has_bot_credential
+        from gateway.run import _dispose_unused_adapter
         info = self._failed_platforms.get(platform)
         # None: removed concurrently since the caller's snapshot. Paused needs /platform resume.
         if info is None or info.get("paused"):
@@ -731,12 +626,6 @@ class GatewayAdapterLifecycleMixin:
             return  # not time yet
         platform_config = info["config"]
         attempt = info["attempts"] + 1
-        # Empty-token primary configs can never reconnect; drop them so multiplex setups
-        # where a secondary profile owns the bot do not spin forever.
-        # See #64674.
-        if not _platform_has_bot_credential(platform, platform_config):
-            self._drop_from_reconnect_queue(platform, "no bot credential on queued config")
-            return
         logger.info("Reconnecting %s (attempt %d)...", platform.value, attempt)
         adapter = None
         try:
@@ -789,10 +678,8 @@ class GatewayAdapterLifecycleMixin:
         del self._failed_platforms[platform]
 
     def _publish_primary_adapter(self, platform, adapter) -> None:
-        """Register a connected primary adapter and wire voice mode/input (transcription without /voice join)."""
+        """Register a connected primary adapter."""
         self.adapters[platform] = adapter
-        self._sync_voice_mode_state_to_adapter(adapter)
-        self._bind_voice_input_callback(adapter)
 
     def _schedule_planned_restart_replay(self) -> None:
         """Replay the owed planned-restart notice after a reconnect, in the background: notification delivery
@@ -829,10 +716,6 @@ class GatewayAdapterLifecycleMixin:
             platform.value, exc_info=True,
         ):
             await self._redeliver_failed_obligations_for_platform(platform)
-        # Rebuild channel directory with the new adapter
-        with suppress(Exception):
-            from gateway.channel_directory import build_channel_directory
-            await build_channel_directory(self.adapters)
         # A platform offline at startup skipped its restart-interrupted sessions; resume them now.
         try:
             self._schedule_resume_pending_sessions(platform=platform)
@@ -927,34 +810,26 @@ class GatewayAdapterLifecycleMixin:
         return connected
 
     def _primary_resource_claims(self, active: str) -> Dict[tuple, str]:
-        """Resource claim -> owning profile for every live or queued primary adapter (credential:
-        one account polled once; listener: one bind+port). A queued retryable primary owns both."""
+        """Credential claim -> owning profile for every live or queued primary adapter (one account
+        is consumed once). A queued retryable primary owns its claim."""
         claimed: Dict[tuple, str] = {}
         for _plat, _ad in self.adapters.items():
             fp = self._adapter_credential_fingerprint(_ad)
-            for claim in ((_plat, fp) if fp is not None else None, self._adapter_listener_claim(_plat, _ad)):
-                if claim is not None:
-                    claimed[claim] = active
+            if fp is not None:
+                claimed[(_plat, fp)] = active
         for retry_info in getattr(self, "_failed_platforms", {}).values():
-            for claim_name in ("credential_claim", "listener_claim"):
-                retry_claim = retry_info.get(claim_name)
-                if isinstance(retry_claim, tuple):
-                    claimed[retry_claim] = active
+            retry_claim = retry_info.get("credential_claim")
+            if isinstance(retry_claim, tuple):
+                claimed[retry_claim] = active
         return claimed
 
     def _record_served_profiles(self, active: str, profile_homes) -> None:
         """Record the served set (eligible for routing/HTTP prefixes/cron/runtime scope — broader
-        than "has a connected adapter") for `scout status`; seed per-profile PairingStores."""
+        than "has a connected adapter") for `scout status`."""
         with _log_suppressed(logging.DEBUG, "could not record served_profiles", exc_info=True):
             from gateway.status import publish_runtime_status
-            from gateway.pairing import PairingStore
             served = [active] + sorted(name for name, _home in profile_homes if name != active)
             self._note_served_profiles(profile_homes)
-            for name in served:
-                if name and name not in self.pairing_stores:
-                    self.pairing_stores[name] = (
-                        self.pairing_store if name == active else PairingStore(profile=name)
-                    )
             publish_runtime_status(served_profiles=served)
             # The host record is what a second `gateway run` reads to decide attach-vs-start; keep
             # its served set in step with the live one (it is republished, never re-claimed).
@@ -964,14 +839,10 @@ class GatewayAdapterLifecycleMixin:
                 publish_record(ROLE_GATEWAY, profiles=tuple(served), home=str(get_scout_home()))
 
     async def _load_secondary_profile_config(self, profile_name: str, profile_home: "Path"):
-        """Hydrate + enter ``profile_home``'s scope once; return its gateway config. Raises
-        ``MultiplexConfigError`` (open dm/group policy). Port-binding platforms are NOT refused: the
+        """Hydrate + enter ``profile_home``'s scope once; return its gateway config. Port-binding platforms are NOT refused: the
         default profile owns the single shared listener and a secondary's port-binders are built in
         shared-listener mode (``/p/<profile>/...``) by ``_start_one_profile_adapters``."""
-        from gateway.run import (
-            MultiplexConfigError, _load_gateway_config,
-            _own_policy_open_startup_violation, _profile_runtime_scope,
-        )
+        from gateway.run import _load_gateway_config, _profile_runtime_scope
         from gateway.config import load_gateway_config
         from scout_cli.env_loader import hydrate_profile_secret_sources
         # Hydrate external secret sources off-loop ONCE: sync hydration would stall every heartbeat.
@@ -986,161 +857,35 @@ class GatewayAdapterLifecycleMixin:
                 "shell-hook/webhook registration failed for profile '%s'", profile_name, level=logging.WARNING,
             )
             profile_cfg = load_gateway_config()
-            violation = _own_policy_open_startup_violation(profile_cfg)
         self._snapshot_profile_busy_modes(profile_name, profile_runtime_cfg)
-        if violation:
-            raise MultiplexConfigError(
-                f"Profile '{profile_name}' enables {violation}. "
-                "Enable GATEWAY_ALLOW_ALL_USERS or the platform allow-all flag "
-                "for that profile, or change dm_policy/group_policy away from 'open'."
-            )
         return profile_cfg
 
-    @staticmethod
-    def _credential_claim_origin(profile_name: str, profile_home, platform: Platform, token: str) -> Optional[str]:
-        """Where *token* was configured for *profile_name*: that profile's ``.env``, or ambient env.
-
-        ``None`` when the value is not in either place (yaml-only, or unknown). An env label
-        is only returned when the profile's own ``.env`` does not contain the value — a shell
-        export that merely echoes the file is the file.
-        """
-        from gateway.config import PLATFORM_TOKEN_ENV_NAMES
-        env_name = PLATFORM_TOKEN_ENV_NAMES.get(platform)
-        if not env_name or not isinstance(token, str) or not token.strip():
-            return None
-        token = token.strip()
-        in_dotenv = False
-        if profile_home:
-            try:
-                from agent.secret_scope import load_env_file
-                in_dotenv = (load_env_file(Path(profile_home) / ".env").get(env_name) or "").strip() == token
-            except Exception:
-                in_dotenv = False
-        if in_dotenv:
-            if profile_name and profile_name != "default":
-                return f"profiles/{profile_name}/.env"
-            return ".env"
-        if (os.environ.get(env_name) or "").strip() == token:
-            return f"env {env_name}"
-        return None
-
-    def _duplicate_credential_origins(
-        self, owner: str, profile_name: str, profile_home, platform: Platform, adapter: Any,
-    ) -> tuple:
-        """``(owner_origin, incoming_origin)`` for a same-credential refusal; either may be None."""
-        token = None
-        for obj, attr in (
-            (adapter, "token"), (adapter, "bot_token"),
-            (getattr(adapter, "config", None), "token"),
-        ):
-            val = getattr(obj, attr, None) if obj is not None else None
-            if isinstance(val, str) and val.strip():
-                token = val.strip()
-                break
-        if not token:
-            return None, None
-        incoming = self._credential_claim_origin(profile_name, profile_home, platform, token)
-        owner_home = None
-        if owner == "default":
-            try:
-                from scout_constants import get_default_scout_root
-                owner_home = get_default_scout_root()
-            except Exception:
-                owner_home = None
-        else:
-            try:
-                from scout_cli.profiles import get_profile_dir
-                owner_home = get_profile_dir(owner)
-            except Exception:
-                owner_home = None
-        owner_origin = (
-            self._credential_claim_origin(owner, owner_home, platform, token) if owner_home else None
-        )
-        return owner_origin, incoming
-
     def _refuse_duplicate_claim(
-        self, claim, claimed: Dict[tuple, str], profile_name: str, platform: Platform, kind: str,
-        *, owner_origin: Optional[str] = None, incoming_origin: Optional[str] = None,
+        self, claim, claimed: Dict[tuple, str], profile_name: str, platform: Platform,
     ) -> bool:
-        """Log + park a secondary adapter whose credential/listener another profile owns (True when
-        refused). NOT disconnected: it never connected, and for a same-credential Photon adapter
-        disconnect() would shut down the primary profile's live sidecar."""
+        """Log + park a secondary adapter whose credential another profile owns (True when
+        refused). NOT disconnected: it never connected."""
         owner = claimed.get(claim) if claim is not None else None
         if owner is None:
             return False
         pv = platform.value
-        env_derived = any(
-            isinstance(origin, str) and origin.startswith("env ")
-            for origin in (owner_origin, incoming_origin)
+        message = (f"Profile '{owner}' and '{profile_name}' both configure {pv} with the same credential. "
+                   f"Give each profile its own {pv} credential.")
+        logger.error(
+            "Profile '%s' and '%s' both configure %s with the same credential — refusing to start the "
+            "duplicate (one credential cannot be consumed twice).", owner, profile_name, pv,
         )
-        def _who(name: str, origin: Optional[str]) -> str:
-            return f"{name} ({origin})" if env_derived and origin else name
-        head = f"Profile '{_who(owner, owner_origin)}' and '{_who(profile_name, incoming_origin)}' both configure {pv} "
-        if kind == "credential":
-            message = head + f"with the same credential. Give each profile its own {pv} credential."
-            logger.error(
-                "Profile '%s' and '%s' both configure %s with the same credential — refusing to start the "
-                "duplicate (one credential cannot be consumed twice). Give each profile its own %s credential.",
-                _who(owner, owner_origin), _who(profile_name, incoming_origin), pv, pv,
-            )
-        else:
-            bind, port = claim[-2:]
-            message = head + f"sidecars on the same listener. Configure a distinct listener for profile '{profile_name}'."
-            logger.error(
-                "Profile '%s' and '%s' both configure %s sidecars on %s:%s — refusing to start the duplicate "
-                "listener. Set platforms.%s.extra.sidecar_port to a distinct port for profile '%s'.",
-                owner, profile_name, pv, bind, port, pv, profile_name,
-            )
         self._update_platform_runtime_status(
             f"{profile_name}:{platform.value}", platform_state="fatal",
-            error_code=f"duplicate_{kind}", error_message=message,
+            error_code="duplicate_credential", error_message=message,
         )
         return True
-
-    def _note_unserved_secondary_platform(self, profile_name: str, platform: Platform) -> None:
-        """A secondary enabled a shared-ingress platform (Relay, WhatsApp) the multiplexer only runs on
-        the default profile. Log the reason + remedy once per (profile, platform) and stamp a
-        ``<profile>:<platform>`` status entry so ``scout gateway status --profile X`` and the
-        dashboard show *why* the channel is dead instead of nothing at all."""
-        noted = getattr(self, "_unserved_secondary_platforms", None)
-        if noted is None:
-            noted = self._unserved_secondary_platforms = set()
-        if (profile_name, platform) in noted:
-            return
-        noted.add((profile_name, platform))
-        pv = platform.value
-        logger.info(
-            "[MULTIPLEX] Profile '%s': %s is enabled but not served — %s is process-level shared ingress "
-            "owned by the default profile under multiplex. Enable and configure %s on the default profile "
-            "(it serves every profile), or disable it in profile '%s'.",
-            profile_name, pv, pv, pv, profile_name,
-        )
-        self._update_platform_runtime_status(
-            f"{profile_name}:{pv}", platform_state="disabled", error_code="multiplex_shared_ingress",
-            error_message="not served under multiplex (shared ingress owned by default)",
-        )
-
-    def _unserved_shared_ingress_warnings(self) -> list:
-        """Loud ``not being served`` lines for shared-ingress platforms secondaries enabled while
-        NO profile (default included) actually runs them; empty when the default serves the platform."""
-        noted = getattr(self, "_unserved_secondary_platforms", None) or ()
-        lines = []
-        for platform in sorted({p for _n, p in noted}, key=lambda p: p.value):
-            if platform in self.adapters or platform in (getattr(self, "_failed_platforms", None) or {}):
-                continue  # the default owns it: secondaries ARE served through the shared adapter
-            profiles = sorted(n for n, p in noted if p is platform)
-            lines.append(
-                f"{platform.value} is enabled in profile(s) {', '.join(profiles)} but not on the default "
-                f"profile — the platform is not being served. Under multiplex {platform.value} is shared "
-                "ingress: enable and configure it on the default profile, or disable it in those profiles."
-            )
-        return lines
 
     async def _start_one_profile_adapters(
         self, profile_name: str, profile_home: "Path", claimed: Dict[tuple, str]
     ) -> int:
         """Create+connect one profile's adapters under its runtime scope."""
-        from gateway.run import _platform_has_bot_credential, _profile_runtime_scope
+        from gateway.run import _profile_runtime_scope
         profile_cfg = await self._load_secondary_profile_config(profile_name, profile_home)
         # Keep the served profile's config: host-wide passes (planned-restart notices) must reach
         # every served profile's home channels, and this is the only place it is loaded.
@@ -1158,18 +903,6 @@ class GatewayAdapterLifecycleMixin:
             # already live or queued for reconnect are built — never a second poller on the same bot.
             if platform in profile_map or platform in (
                     (getattr(self, "_profile_failed_platforms", None) or {}).get(profile_name) or {}):
-                continue
-            # No credential in THIS profile's scope: an adapter would fan inbound across every such profile.
-            if multiplex and not _platform_has_bot_credential(platform, platform_config):
-                logger.info(
-                    "[MULTIPLEX] Profile '%s': skipping %s - no bot credential "
-                    "in this profile's secrets", profile_name, platform.value,
-                )
-                continue
-            # Relay/WhatsApp are shared process-level ingress under multiplex; a secondary would retry-loop.
-            # Say so: four profiles with WHATSAPP_ENABLED=true and nothing in the log is a silent dead channel.
-            if multiplex and platform in (Platform.RELAY, Platform.WHATSAPP):
-                self._note_unserved_secondary_platform(profile_name, platform)
                 continue
             # api_server / webhook: the default's listener already mirrors them at /p/<profile>/; a second
             # instance here would fight the default for the port (#100397).
@@ -1193,19 +926,9 @@ class GatewayAdapterLifecycleMixin:
                     )
             if not adapter:
                 continue
-            # Same-token / same-listener conflict detection — refuse a duplicate poll or bind.
+            # Same-credential conflict detection — refuse a duplicate consumer.
             credential_claim = self._adapter_credential_claim(platform, adapter)
-            listener_claim = self._adapter_listener_claim(platform, adapter)
-            owner_name = claimed.get(credential_claim) if credential_claim is not None else None
-            owner_origin, incoming_origin = (None, None)
-            if owner_name:
-                owner_origin, incoming_origin = self._duplicate_credential_origins(
-                    owner_name, profile_name, profile_home, platform, adapter,
-                )
-            if self._refuse_duplicate_claim(
-                credential_claim, claimed, profile_name, platform, "credential",
-                owner_origin=owner_origin, incoming_origin=incoming_origin,
-            ) or self._refuse_duplicate_claim(listener_claim, claimed, profile_name, platform, "listener"):
+            if self._refuse_duplicate_claim(credential_claim, claimed, profile_name, platform):
                 continue
             self._configure_profile_adapter(adapter, profile_name, platform)
             try:
@@ -1221,12 +944,8 @@ class GatewayAdapterLifecycleMixin:
                 self._schedule_secondary_profile_startup_reconnect(profile_name, platform, adapter)
                 continue
             profile_map[platform] = adapter
-            # Restore persisted /voice state for this bot (primary startup and reconnects do too).
-            # See #84872.
-            self._sync_voice_mode_state_to_adapter(adapter)
-            for claim in (credential_claim, listener_claim):
-                if claim is not None:
-                    claimed[claim] = profile_name
+            if credential_claim is not None:
+                claimed[credential_claim] = profile_name
             connected += 1
             logger.info("✓ %s connected (profile: %s)", platform.value, profile_name)
         return connected
@@ -1246,7 +965,6 @@ class GatewayAdapterLifecycleMixin:
         _set_reaction = getattr(adapter, "set_reaction_handler", None)
         if callable(_set_reaction):
             _set_reaction(self._handle_reaction_event)
-        adapter.set_topic_recovery_fn(self._recover_telegram_topic_thread_id)
         adapter.set_authorization_check(
             authorization_check or self._make_adapter_auth_check(adapter.platform)
         )
@@ -1289,22 +1007,14 @@ class GatewayAdapterLifecycleMixin:
             busy_text_timing=(timings.get(profile_name) if isinstance(timings, dict) else None),
             human_delay=(delays.get(profile_name, _UNSET) if isinstance(delays, dict) else _UNSET),
         )
-        # Voice transcripts from this bot's channels dispatch through THIS adapter.
-        self._bind_voice_input_callback(adapter)
-        # Secondary adapters carry their profile so prune paths namespace topic bindings correctly.
-        # See #76423.
+        # Secondary adapters carry their profile so prune paths namespace their state correctly.
         adapter._scout_profile_name = profile_name
-        # A secondary's port-binding adapter never binds: the default profile owns the one shared
-        # listener, which forwards /p/<profile>/<path> to this adapter's app (shared_ingress.py).
-        if self._multiplex_on() and platform.value not in SHARED_LISTENER_MIRROR_PLATFORMS \
-                and _platform_binds_port(platform.value, getattr(getattr(adapter, "config", None), "extra", None)):
-            adapter._shared_listener_profile = profile_name
 
     async def _secondary_reconnect_attempt(self, profile_name: str, platform: Platform, inbound_dedup=None):
         """One scoped attempt to rebuild+connect a secondary adapter → ``(adapter, success)``;
         ``(None, None)`` = give up for good (disabled, credential removed, adapter unavailable). Caller
         tears down a RETURNED adapter; one whose configure/connect raised is torn down here."""
-        from gateway.run import _platform_has_bot_credential, _profile_runtime_scope
+        from gateway.run import _profile_runtime_scope
         # Lazy + per-attempt: keeps test monkeypatches on these modules live.
         from scout_cli.profiles import get_profile_dir
         from scout_cli.env_loader import hydrate_profile_secret_sources
@@ -1315,15 +1025,6 @@ class GatewayAdapterLifecycleMixin:
         with _profile_runtime_scope(profile_home, hydrate_secrets=False):
             profile_config = load_gateway_config().platforms.get(platform)
             if profile_config is None or not profile_config.enabled:
-                return None, None
-            # Startup credential gate mirror: a removed credential must not rebuild.
-            # Mirrors the startup credential gate (#84079): a credential removed from this profile's scope
-            # must not rebuild an adapter that would fan out turns.
-            if not _platform_has_bot_credential(platform, profile_config):
-                logger.info(
-                    "Secondary %s reconnect skipped: no bot credential (profile: %s)",
-                    platform.value, profile_name,
-                )
                 return None, None
             adapter = self._create_adapter(platform, profile_config)
             if adapter is None:
@@ -1364,7 +1065,6 @@ class GatewayAdapterLifecycleMixin:
                         profile_map = self._profile_adapters.setdefault(profile_name, {})
                         if platform not in profile_map:
                             profile_map[platform] = adapter
-                            self._sync_voice_mode_state_to_adapter(adapter)
                             logger.info("✓ %s reconnected (profile: %s)", platform.value, profile_name)
                             await self._redeliver_failed_obligations_for_platform(
                                 platform, profile=profile_name
@@ -1722,29 +1422,14 @@ class GatewayAdapterLifecycleMixin:
         return None if fingerprint is None else (platform, fingerprint)
 
     @staticmethod
-    def _adapter_listener_claim(platform: Platform, adapter: Any) -> Optional[tuple]:
-        """Exclusive listener claim (Photon sidecar bind+port): distinct credentials still cannot
-        share a port, so the later adapter is rejected before connect() disturbs the first."""
-        bind = getattr(adapter, "_sidecar_bind", None)
-        if getattr(platform, "value", None) != "photon" or not isinstance(bind, str) or not bind.strip():
-            return None
-        try:
-            port = int(getattr(adapter, "_sidecar_port", None))
-        except (TypeError, ValueError):
-            return None
-        return ("listener", "photon", bind.strip().lower(), port)
-
-    @staticmethod
     def _adapter_credential_fingerprint(adapter: Any) -> Optional[str]:
         """Salted, log-safe hash of an adapter's credential; None when none is discoverable
         (conflict detection is then skipped)."""
-        # Many adapters (Discord) keep the token on `config`; without that fallback the check is skipped.
+        # Many adapters keep the token on `config`; without that fallback the check is skipped.
         candidates = [
             (adapter, attr) for attr in (
                 "token", "bot_token", "_token", "api_token", "_bot_token",
-                "_project_secret",  # Photon/Spectrum: project credentials, not a bot token
-                "_app_id",  # Feishu/Lark app_id — stable, log-safe, already the _app_lock_identity
-                "_client_id", "_bot_id",  # Teams / WeCom app-style id pairs
+                "_app_id", "_client_id", "_bot_id",  # app-style credential ids
             )
         ] + [(getattr(adapter, "config", None), attr) for attr in ("token", "bot_token")]
         for obj, attr in candidates:

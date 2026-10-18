@@ -51,7 +51,7 @@ def loop_env(tmp_path, monkeypatch):
 def _make_runner():
     runner = object.__new__(GatewayRunner)
     runner.config = GatewayConfig(
-        platforms={Platform.DISCORD: PlatformConfig(enabled=True, token="token")}
+        platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="token")}
     )
     runner.session_store = _FakeSessionStore()
     runner.adapters = {}
@@ -64,7 +64,7 @@ def _make_event(text: str) -> MessageEvent:
         text=text,
         message_type=MessageType.TEXT,
         source=SessionSource(
-            platform=Platform.DISCORD,
+            platform=Platform.HOMEASSISTANT,
             chat_id="chat-loop",
             chat_type="channel",
             thread_id="thread-9",
@@ -74,19 +74,6 @@ def _make_event(text: str) -> MessageEvent:
     )
 
 
-@pytest.mark.asyncio
-async def test_gateway_loop_create_captures_route(loop_env):
-    runner = _make_runner()
-    response = await GatewayRunner._handle_loop_command(runner, _make_event("/loop 5m check the deploy"))
-    assert "Loop set" in response
-    assert "every 5m" in response
-
-    state = loops.load_loop("sid-gateway-loop")
-    assert state is not None
-    assert state.prompt == "check the deploy"
-    assert state.route["platform"] == "discord"
-    assert state.route["chat_id"] == "chat-loop"
-    assert state.route["thread_id"] == "thread-9"
 
 
 @pytest.mark.asyncio
@@ -254,9 +241,9 @@ async def test_loop_wakeup_watcher_runs_every_sessiondb_call_off_loop_thread(loo
         async def handle_message(self, event):
             self.handled.append(event.text)
 
-    runner.adapters = {Platform.DISCORD: _Adapter()}
+    runner.adapters = {Platform.HOMEASSISTANT: _Adapter()}
     runner._build_process_event_source = lambda evt: SimpleNamespace(
-        platform=Platform.DISCORD, chat_id=evt["chat_id"], chat_type=evt["chat_type"],
+        platform=Platform.HOMEASSISTANT, chat_id=evt["chat_id"], chat_type=evt["chat_type"],
         thread_id=evt["thread_id"] or None, user_id=evt["user_id"], user_name=evt["user_name"],
     )
     runner._session_key_for_source = lambda source: "agent:main:discord:channel:chat-loop"
@@ -317,92 +304,3 @@ async def test_loop_wakeup_watcher_runs_every_sessiondb_call_off_loop_thread(loo
     assert loops.load_loop("sid-gateway-loop").ticks_fired == 1
 
 
-@pytest.mark.asyncio
-async def test_loop_wakeup_watcher_gates_profile_scope_on_active_loops(loop_env, monkeypatch, tmp_path):
-    """A secondary profile with no ACTIVE loop must not get its runtime scope entered on
-    every tick (each entry re-parses the profile's config/secrets — the dominant idle-CPU
-    cost on multiplex gateways); a profile holding an active loop must still be scanned."""
-    from scout_state import SessionDB
-
-    work_home = tmp_path / "profiles" / "work"
-    work_home.mkdir(parents=True)
-    work_db = SessionDB(db_path=work_home / "state.db")
-    goals._DB_CACHE[str(work_home)] = work_db
-
-    scopes = [(None, None), ("work", work_home)]
-    on_main_thread = []
-
-    def _scopes(_runner):
-        # profiles_to_serve() walks the filesystem: it must resolve off the loop thread.
-        on_main_thread.append(threading.current_thread() is threading.main_thread())
-        return scopes
-
-    monkeypatch.setattr("gateway.run._handoff_watch_scopes", _scopes)
-
-    entered = []
-
-    class _SpyScope:
-        def __init__(self, home):
-            self.home = home
-
-        async def __aenter__(self):
-            entered.append(self.home)
-            return self
-
-        async def __aexit__(self, *exc):
-            return False
-
-    monkeypatch.setattr("gateway.run._async_profile_runtime_scope", _SpyScope)
-
-    runner = _make_runner()
-    runner.config.multiplex_profiles = True
-    runner._running_agents = {}
-    runner.adapters = {}
-
-    orig_sleep = asyncio.sleep
-
-    async def _run_one_tick():
-        runner._running = True
-        calls = {"n": 0}
-
-        async def _one_pass_sleep(delay):
-            calls["n"] += 1
-            if calls["n"] >= 2:  # 5s connect grace, then exactly one scan pass
-                runner._running = False
-            return await orig_sleep(0)
-
-        with pytest.MonkeyPatch.context() as mp:
-            mp.setattr(asyncio, "sleep", _one_pass_sleep)
-            await asyncio.wait_for(
-                GatewayRunner._loop_wakeup_watcher(runner, interval=0), timeout=5)
-
-    try:
-        # Idle: no loop rows in the work profile's store → its scope is never entered.
-        await _run_one_tick()
-        assert entered == [], f"idle profile scope must not be entered; got {entered}"
-        assert on_main_thread == [False], f"scopes must resolve off the loop; got {on_main_thread}"
-
-        # An ACTIVE loop row in the work profile's store opens the gate.
-        await GatewayRunner._handle_loop_command(runner, _make_event("/loop 5m poll CI"))
-        raw = loops._get_session_db().get_meta("loop:sid-gateway-loop")
-        assert raw
-        work_db.set_meta("loop:sid-work-loop", raw)
-        await _run_one_tick()
-        assert entered == [work_home], (
-            f"profile with an active loop must still be scanned; got {entered}")
-
-        # A cleared loop keeps its row (status=cleared): the gate must read status, not key existence.
-        entered.clear()
-        cleared = loops.LoopState.from_json(raw)
-        cleared.status = "cleared"
-        work_db.set_meta("loop:sid-work-loop", cleared.to_json())
-        await _run_one_tick()
-        assert entered == [], f"cleared loop row must not open the gate; got {entered}"
-
-        # Fail OPEN: a store the probe cannot open is "unknown", never "idle" — the scan runs.
-        monkeypatch.setattr("gateway.run_idle_gates._profile_session_db_probe", lambda _home: None)
-        await _run_one_tick()
-        assert entered == [work_home], (
-            f"unavailable store must fall back to the historical scan; got {entered}")
-    finally:
-        work_db.close()

@@ -41,10 +41,7 @@ _CAPABILITY_ROWS = (
      "Run LLM calls under a different auth profile"),
     ("llm.task_override", ("llm", "allow_task_override"),
      "Route its LLM calls through the host's built-in auxiliary "
-     "task lanes"),
-    ("gateway.platform_actions", ("allow_platform_actions",),
-     "Act on connected chat platforms as the gateway bot "
-     "(add reactions, rename threads) via ctx.platform_actions"))
+     "task lanes"))
 CAPABILITY_REGISTRY: Dict[str, CapabilitySpec] = {
     cid: CapabilitySpec(cid, path, desc) for cid, path, desc in _CAPABILITY_ROWS
 }

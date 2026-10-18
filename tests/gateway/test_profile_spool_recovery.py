@@ -43,8 +43,8 @@ def _session(store: SessionStore, key: str, sid: str):
     now = datetime.now()
     store._entries[key] = SessionEntry(
         session_key=key, session_id=sid, created_at=now, updated_at=now,
-        origin=SessionSource(platform=Platform.TELEGRAM, chat_id="42", chat_type="dm", user_id="42"),
-        platform=Platform.TELEGRAM, chat_type="dm",
+        origin=SessionSource(platform=Platform.HOMEASSISTANT, chat_id="42", chat_type="dm", user_id="42"),
+        platform=Platform.HOMEASSISTANT, chat_type="dm",
     )
     db = store._db_for_key(key)
     db.create_session(sid, source="telegram", session_key=key)

@@ -36,7 +36,6 @@ _CORE: Dict[str, Callable[[Dict[str, Any]], str]] = {
     "write_file": lambda a: "Editing files",
     "patch": lambda a: "Editing files",
     "cronjob_manage": lambda a: "Scheduling a task",
-    "send_message": lambda a: "Sending a message",
     "delegate_task": lambda a: "Working on parts of this in parallel",
     "image_generate": lambda a: "Making an image",
     "vision_analyze": lambda a: "Looking at an image",

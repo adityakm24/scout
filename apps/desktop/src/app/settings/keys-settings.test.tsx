@@ -69,15 +69,11 @@ describe('KeysSettings', () => {
     await waitFor(() => expect(getEnvVars).toHaveBeenCalledWith('default'))
   })
 
-  it('lists tools and excludes settings / channel-managed credentials', async () => {
+  it('lists tools and excludes settings', async () => {
     getEnvVars.mockResolvedValue({
       BRAVE_SEARCH_API_KEY: envVar('tool', { description: 'Search the web with Brave.' }),
       FIRECRAWL_API_KEY: envVar('tool', { description: 'Crawl and extract websites.' }),
-      GATEWAY_PROXY: envVar('setting', { description: 'Gateway reverse proxy.' }),
-      TELEGRAM_BOT_TOKEN: envVar('messaging', {
-        channel_managed: true,
-        description: 'Telegram bot token.'
-      })
+      GATEWAY_PROXY: envVar('setting', { description: 'Gateway reverse proxy.' })
     })
 
     await renderKeysSettings('tools')
@@ -85,26 +81,20 @@ describe('KeysSettings', () => {
     expect(screen.getByText('BRAVE SEARCH')).toBeTruthy()
     expect(screen.getByText('FIRECRAWL')).toBeTruthy()
     expect(screen.queryByText('GATEWAY PROXY')).toBeNull()
-    expect(screen.queryByText('TELEGRAM BOT')).toBeNull()
     expect(screen.queryByRole('combobox')).toBeNull()
   })
 
-  it('lists settings rows and excludes tools / channel-managed credentials', async () => {
+  it('lists settings rows and excludes tools', async () => {
     getEnvVars.mockResolvedValue({
       API_SERVER_TOKEN: envVar('setting', { description: 'Protect the local API server.' }),
-      GATEWAY_PROXY: envVar('messaging', { description: 'Gateway reverse proxy address.' }),
-      TELEGRAM_BOT_TOKEN: envVar('messaging', {
-        channel_managed: true,
-        description: 'Telegram bot token.'
-      }),
+      WEBHOOK_SECRET: envVar('messaging', { description: 'Shared webhook signing secret.' }),
       BRAVE_SEARCH_API_KEY: envVar('tool', { description: 'Search the web with Brave.' })
     })
 
     await renderKeysSettings('settings')
 
     expect(screen.getByText('API SERVER')).toBeTruthy()
-    expect(screen.getByText('GATEWAY PROXY')).toBeTruthy()
-    expect(screen.queryByText('TELEGRAM BOT')).toBeNull()
+    expect(screen.getByText('WEBHOOK SECRET')).toBeTruthy()
     expect(screen.queryByText('BRAVE SEARCH')).toBeNull()
   })
 

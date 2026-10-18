@@ -68,7 +68,6 @@ export const ga: Translations = {
     },
     nav: {
       analytics: "Anailís",
-      chat: "Comhrá",
       config: "Cumraíocht",
       cron: "Cron",
       keys: "Eochracha",
@@ -162,8 +161,6 @@ export const ga: Translations = {
     selectedSessionsDeleted: "Scriosadh {count} seisiún",
     selectedSessionsSkippedActive: "Scriosadh {deleted}; coinníodh {count} mar go bhfuil seal ar siúl",
     failedToDeleteSelected: "Theip ar scriosadh na seisiún roghnaithe",
-    resumeInChat: "Lean ar aghaidh sa chomhrá",
-    newChat: "Comhrá nua",
     workspace: "spás oibre",
     workspaceDefault: "Réamhshocrú",
     workspaceRescan: "Athscan na stórtha",
@@ -290,10 +287,6 @@ export const ga: Translations = {
     triggerNow: "Spreag anois",
     delivery: {
       local: "Áitiúil",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "Email",
     },
   },
 
@@ -427,7 +420,6 @@ export const ga: Translations = {
       tts: "Téacs go Caint",
       stt: "Caint go Téacs",
       logging: "Logáil",
-      discord: "Discord",
       auxiliary: "Cúntach",
     },
   },

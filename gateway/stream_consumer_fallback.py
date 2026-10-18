@@ -96,16 +96,6 @@ class StreamFallbackMixin:
     async def _send_fallback_final(self, text: str) -> None:
         """Send the final continuation after streaming edits stop working (one flood retry
         per chunk)."""
-        if getattr(self, "_egress_declined", False):
-            # The connector refused this destination earlier in the run. The
-            # whole point of this path is to deliver the unseen tail as a NEW
-            # message, which is exactly the re-addressing the egress guard
-            # exists to stop.
-            logger.warning(
-                "suppressing the fallback continuation: the connector already "
-                "declined this destination for this run"
-            )
-            return
         # Balance fences BEFORE computing the continuation so the closing fence
         # reaches the user even when only the tail is delivered.
         final_text = ensure_closed_code_fences(self._clean_for_display(text))
@@ -311,8 +301,6 @@ class StreamFallbackMixin:
     async def _flush_segment_tail_on_edit_failure(self) -> None:
         """Before a segment reset, send the unseen tail as a new message (and best-effort
         strip the stuck cursor from the partial)."""
-        if getattr(self, "_egress_declined", False):
-            return  # a new message is exactly the re-addressing the egress guard refused
         if not self._fallback_final_send:
             await self._try_strip_cursor()
         visible = self._fallback_prefix or self._visible_prefix()
@@ -353,14 +341,9 @@ class StreamFallbackMixin:
             # with interim text and orphan the true final.
             _md = self._metadata_for_send(final=False) or {}
             _md["_interim_send"] = True
-            # reply_to only for reply-anchored threading; Discord/Telegram use
-            # thread_id metadata and reply_to on every commentary is spam.
-            _plat = getattr(getattr(self.adapter, "platform", None), "value", None)
-            _platform_name = str(_plat or getattr(self.adapter, "name", "")).lower()
-            _needs_reply_anchor = _platform_name in ("buzz", "slack", "mattermost", "feishu")
-            result = await self.adapter.send(
-                chat_id=self.chat_id, content=text,
-                reply_to=self._initial_reply_to_id if _needs_reply_anchor else None, metadata=_md)
+            # No reply_to: threading rides on metadata, and anchoring every
+            # commentary message to the user's message is noise.
+            result = await self.adapter.send(chat_id=self.chat_id, content=text, metadata=_md)
             # Do NOT set _already_sent: commentary is interim, and the flag would
             # suppress the real final after multiple tool calls.
             if result.success:

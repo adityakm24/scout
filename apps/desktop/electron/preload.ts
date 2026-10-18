@@ -48,7 +48,6 @@ contextBridge.exposeInMainWorld('scoutDesktop', {
   // Union agent roster across every registered connection.
   getAgentRoster: () => ipcRenderer.invoke('scout:agents:roster'),
   openSessionWindow: (sessionId, opts) => ipcRenderer.invoke('scout:window:openSession', sessionId, opts),
-  openSessionInTerminal: (sessionId, opts) => ipcRenderer.invoke('scout:window:openInTerminal', sessionId, opts),
   openWindow: (options?: DesktopProfileRoute) => ipcRenderer.invoke('scout:window:openInstance', options),
   openBrowserWindow: tabId => ipcRenderer.invoke('scout:window:openBrowser', tabId),
   onBrowserPopoutClosed: callback => {
@@ -436,28 +435,6 @@ contextBridge.exposeInMainWorld('scoutDesktop', {
       prList: (repoPath, branches, numbers) =>
         ipcRenderer.invoke('scout:git:review:prList', repoPath, branches, numbers),
       createPr: repoPath => ipcRenderer.invoke('scout:git:review:createPr', repoPath)
-    }
-  },
-  terminal: {
-    attach: id => ipcRenderer.invoke('scout:terminal:attach', id),
-    cwd: id => ipcRenderer.invoke('scout:terminal:cwd', id),
-    dispose: id => ipcRenderer.invoke('scout:terminal:dispose', id),
-    resize: (id, size) => ipcRenderer.invoke('scout:terminal:resize', id, size),
-    start: options => ipcRenderer.invoke('scout:terminal:start', options),
-    write: (id, data) => ipcRenderer.invoke('scout:terminal:write', id, data),
-    onData: (id, callback) => {
-      const channel = `scout:terminal:${id}:data`
-      const listener = (_event, payload) => callback(payload)
-      ipcRenderer.on(channel, listener)
-
-      return () => ipcRenderer.removeListener(channel, listener)
-    },
-    onExit: (id, callback) => {
-      const channel = `scout:terminal:${id}:exit`
-      const listener = (_event, payload) => callback(payload)
-      ipcRenderer.on(channel, listener)
-
-      return () => ipcRenderer.removeListener(channel, listener)
     }
   },
   onClosePreviewRequested: callback => {

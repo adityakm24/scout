@@ -19,7 +19,7 @@ from gateway.config import Platform
 from gateway.platforms.event import MessageEvent
 from gateway.session import SessionSource
 
-def _make_event(text="/update", platform=Platform.TELEGRAM,
+def _make_event(text="/update", platform=Platform.HOMEASSISTANT,
                 user_id="12345", chat_id="67890"):
     """Build a MessageEvent for testing."""
     source = SessionSource(
@@ -135,14 +135,14 @@ class TestWatchUpdateProgress:
         scout_home = tmp_path / "scout"
         scout_home.mkdir()
 
-        pending = {"platform": "telegram", "chat_id": "111", "user_id": "222",
-                   "session_key": "agent:main:telegram:dm:111"}
+        pending = {"platform": "homeassistant", "chat_id": "111", "user_id": "222",
+                   "session_key": "agent:main:homeassistant:dm:111"}
         (scout_home / ".update_pending.json").write_text(json.dumps(pending))
         # Write output
         (scout_home / ".update_output.txt").write_text("→ Fetching updates...\n", encoding="utf-8")
 
         mock_adapter = AsyncMock()
-        runner.adapters = {Platform.TELEGRAM: mock_adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: mock_adapter}
 
         streamed = asyncio.Event()
         sent = []
@@ -183,13 +183,13 @@ class TestWatchUpdateProgress:
         scout_home = tmp_path / "scout"
         scout_home.mkdir()
 
-        pending = {"platform": "telegram", "chat_id": "111", "user_id": "222",
-                   "session_key": "agent:main:telegram:dm:111"}
+        pending = {"platform": "homeassistant", "chat_id": "111", "user_id": "222",
+                   "session_key": "agent:main:homeassistant:dm:111"}
         (scout_home / ".update_pending.json").write_text(json.dumps(pending))
         (scout_home / ".update_output.txt").write_text("output\n")
 
         mock_adapter = AsyncMock()
-        runner.adapters = {Platform.TELEGRAM: mock_adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: mock_adapter}
 
         # Write a prompt, then respond and finish
         async def simulate_prompt_cycle():
@@ -226,10 +226,10 @@ class TestWatchUpdateProgress:
         scout_home.mkdir()
 
         pending = {
-            "platform": "telegram",
+            "platform": "homeassistant",
             "chat_id": "111",
             "user_id": "222",
-            "session_key": "agent:main:telegram:dm:111",
+            "session_key": "agent:main:homeassistant:dm:111",
         }
         prompt = {
             "prompt": "Restore local changes? [Y/n]",
@@ -242,7 +242,7 @@ class TestWatchUpdateProgress:
 
         runner1 = _make_runner()
         adapter1 = AsyncMock()
-        runner1.adapters = {Platform.TELEGRAM: adapter1}
+        runner1.adapters = {Platform.HOMEASSISTANT: adapter1}
 
         with patch("gateway.run._scout_home", scout_home):
             watch1 = asyncio.create_task(
@@ -266,7 +266,7 @@ class TestWatchUpdateProgress:
 
             runner2 = _make_runner()
             adapter2 = AsyncMock()
-            runner2.adapters = {Platform.TELEGRAM: adapter2}
+            runner2.adapters = {Platform.HOMEASSISTANT: adapter2}
 
             async def respond_and_finish():
                 await asyncio.sleep(0.2)
@@ -309,7 +309,7 @@ class TestUpdatePromptInterception:
         scout_home.mkdir()
 
         event = _make_event(text="/new", chat_id="67890")
-        session_key = "agent:main:telegram:dm:67890"
+        session_key = "agent:main:homeassistant:dm:67890"
         runner._update_prompt_pending[session_key] = True
         runner._is_user_authorized = MagicMock(return_value=True)
         runner._session_key_for_source = MagicMock(return_value=session_key)

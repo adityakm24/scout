@@ -122,33 +122,9 @@ class TestReplayEntryApiContentSidecar:
         assert entry["api_content"] == "a <memory-context>"
 
 
-class TestGatewayHistoryBuildForwardsSidecar:
-    def test_end_to_end_history_build_keeps_sidecar(self):
-        from gateway.run import _build_gateway_agent_history
-
-        history = [
-            {"role": "user", "content": "hi", "api_content": "hi\n\nCTX", "timestamp": 123.0},
-            {"role": "assistant", "content": "hello"},
-        ]
-        agent_history, _obs = _build_gateway_agent_history(history)
-        assert agent_history[0]["api_content"] == "hi\n\nCTX"
 
 
 
-def test_gateway_history_keeps_sidecar_only_assistant_row():
-    """A reasoning-only clean stop persists content="" with the promoted reply in ``api_content``
-    (agent/turn_final_response.py); the gateway rebuild must replay it, not drop it (user->user)."""
-    from gateway.run import _build_gateway_agent_history
-
-    history = [
-        {"role": "user", "content": "2+2?"},
-        {"role": "assistant", "content": "", "reasoning": "The answer is 4.", "api_content": "The answer is 4."},
-        {"role": "user", "content": "thanks"},
-    ]
-    agent_history, _ = _build_gateway_agent_history(history)
-    assert [m["role"] for m in agent_history] == ["user", "assistant", "user"]
-    assert agent_history[1]["api_content"] == "The answer is 4."
-    assert agent_history[1]["reasoning"] == "The answer is 4."
 
 
 def test_replay_rebuilds_the_same_conversation_so_every_role_keeps_its_identity():
@@ -164,7 +140,7 @@ def test_replay_rebuilds_the_same_conversation_so_every_role_keeps_its_identity(
         {"role": "tool", "content": "r", "tool_call_id": "call_1", "message_uid": "3" * 32},
         {"role": "assistant", "content": "done", "message_uid": "4" * 32, "_absorbed_message_uids": ["c" * 32]},
     ]
-    replayed, _ = _build_gateway_agent_history(history)
+    replayed = _build_gateway_agent_history(history)
     assert [(m["role"], m.get("message_uid"), m.get("_absorbed_message_uids")) for m in replayed] == [
         (m["role"], m["message_uid"], m.get("_absorbed_message_uids")) for m in history]
 
@@ -178,6 +154,6 @@ def test_a_plain_replay_row_does_not_carry_a_tool_call_uid_map_without_its_calls
         {"role": "user", "content": "q", "message_uid": "1" * 32},
         {"role": "assistant", "content": "done", "message_uid": "2" * 32, "_tool_call_uids": {"call_1": "5" * 32}},
     ]
-    replayed, _ = _build_gateway_agent_history(history)
+    replayed = _build_gateway_agent_history(history)
     assert replayed[1]["message_uid"] == "2" * 32
     assert "_tool_call_uids" not in replayed[1] and "_tool_call_uid" not in replayed[1]

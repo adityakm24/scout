@@ -290,7 +290,7 @@ class PluginLedgerMixin:
             self._plugin_tool_names, self._plugin_platform_names, self._cli_commands,
             self._plugin_commands, self._plugin_skills, self._portable_mcp_servers,
             self._portable_mcp_server_plugins, self._aux_tasks, self._system_prompt_sections, self._approval_transports,
-            self._slack_action_handlers, self._predeclared_modules, self._predeclared_tools,
+            self._predeclared_modules, self._predeclared_tools,
             self._platform_handler_factories,
         ):
             container.clear()

@@ -174,45 +174,6 @@ def test_session_context_uses_session_cwd(monkeypatch, tmp_path):
         server._sessions.pop(sid, None)
 
 
-def test_handoff_fail_marks_only_inflight_rows(monkeypatch):
-    class DbContext:
-        def __init__(self, db):
-            self.db = db
-
-        def __enter__(self):
-            return self.db
-
-        def __exit__(self, *_args):
-            return False
-
-    class FakeDb:
-        def __init__(self, state):
-            self.state = state
-            self.failed_with = None
-
-        def get_handoff_state(self, _key):
-            return {"state": self.state, "platform": "telegram", "error": None}
-
-        def fail_handoff(self, _key, error):
-            self.failed_with = error
-            self.state = "failed"
-
-    sid = "rt-handoff"
-    server._sessions[sid] = {"session_key": "stored-handoff"}
-    try:
-        pending = FakeDb("pending")
-        monkeypatch.setattr(server, "_session_db", lambda _session: DbContext(pending))
-        result = server._methods["handoff.fail"]("r1", {"session_id": sid, "error": "timed out"})
-        assert result["result"] == {"failed": True, "state": "failed"}
-        assert pending.failed_with == "timed out"
-
-        completed = FakeDb("completed")
-        monkeypatch.setattr(server, "_session_db", lambda _session: DbContext(completed))
-        result = server._methods["handoff.fail"]("r2", {"session_id": sid, "error": "late timeout"})
-        assert result["result"] == {"failed": False, "state": "completed"}
-        assert completed.failed_with is None
-    finally:
-        server._sessions.pop(sid, None)
 
 
 
@@ -2918,22 +2879,6 @@ def test_history_to_messages_renders_multimodal_content():
     ]
 
 
-def test_history_to_messages_strips_legacy_discord_triggering_note():
-    # Rows written before the gateway persisted the authored text carry the model-facing
-    # routing note in user ``content``; this projection heals them for TUI/web resume
-    # (the desktop hydration strip is the same rule). Reply pointer and assistant rows are kept.
-    from gateway.run_inbound import discord_triggering_note
-
-    note = discord_triggering_note("123")
-    history = [
-        {"role": "user", "content": f"{note}\n\n[Replying to: hi]\nwhat is up"},
-        {"role": "assistant", "content": f"echo: {note}"},
-    ]
-
-    assert server._history_to_messages(history) == [
-        {"role": "user", "text": "[Replying to: hi]\nwhat is up"},
-        {"role": "assistant", "text": f"echo: {note}"},
-    ]
 
 
 def test_history_to_messages_hides_gateway_system_markers():
@@ -15689,71 +15634,6 @@ def test_session_most_recent_honors_params_profile(monkeypatch, tmp_path):
     assert resp["result"]["session_id"] == "ml-tip"
 
 
-def test_handoff_request_uses_session_profile_home(monkeypatch, tmp_path):
-    """Handoff validation must read the owning session's gateway config."""
-    import contextlib
-
-    from gateway.config import GatewayConfig, HomeChannel, Platform, PlatformConfig
-    from scout_cli.config import get_scout_home
-    from tui_gateway import methods_session
-
-    methods_session.register(server)
-    profile_home = tmp_path / "profiles" / "coder"
-    profile_home.mkdir(parents=True)
-    seen_homes = []
-
-    def load_config():
-        home = get_scout_home()
-        seen_homes.append(home)
-        config = GatewayConfig()
-        if home == profile_home:
-            config.platforms[Platform.DISCORD] = PlatformConfig(
-                enabled=True,
-                home_channel=HomeChannel(
-                    platform=Platform.DISCORD,
-                    chat_id="discord-home",
-                    name="Scout / #chat-coding",
-                ),
-            )
-        return config
-
-    class ProfileDB:
-        def get_session(self, _key):
-            return {"id": _key}
-
-        def request_handoff(self, _key, platform):
-            return platform == "discord"
-
-    @contextlib.contextmanager
-    def profile_db(_session):
-        yield ProfileDB()
-
-    monkeypatch.setattr("gateway.config.load_gateway_config", load_config)
-    monkeypatch.setattr(server, "_ensure_session_db_row", lambda _session: None)
-    monkeypatch.setattr(server, "_session_db", profile_db)
-    server._sessions["handoff-profile"] = {
-        "running": False,
-        "session_key": "desktop-coder-session",
-        "profile_home": str(profile_home),
-    }
-    try:
-        resp = server.handle_request(
-            {
-                "id": "1",
-                "method": "handoff.request",
-                "params": {
-                    "session_id": "handoff-profile",
-                    "platform": "discord",
-                },
-            }
-        )
-    finally:
-        server._sessions.pop("handoff-profile", None)
-
-    assert "result" in resp, resp
-    assert resp["result"]["queued"] is True
-    assert seen_homes == [profile_home]
-    assert get_scout_home() != profile_home
 
 
 def test_session_create_reports_requested_profile_name(monkeypatch, tmp_path):

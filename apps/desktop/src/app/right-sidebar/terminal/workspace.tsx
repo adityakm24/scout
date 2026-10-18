@@ -5,7 +5,7 @@ import { $backgroundStatusBySession } from '@/store/composer-status'
 
 import { seedAgentTerminalCommand, syncAgentTerminalSnapshot } from './agent-terminal-stream'
 import { setActiveTerminalId } from './buffer'
-import { AgentTerminalInstance, TerminalInstance } from './instance'
+import { AgentTerminalInstance } from './instance'
 import { $activeTerminalId, $terminals, ensureAgentTerminal } from './terminals'
 
 interface TerminalWorkspaceProps {
@@ -46,21 +46,9 @@ export function TerminalWorkspace({ onAddSelectionToChat }: TerminalWorkspacePro
 
   return (
     <>
-      {terminals.map(term =>
-        term.kind === 'agent' ? (
-          <AgentTerminalInstance active={term.id === activeId} id={term.id} key={term.id} procId={term.procId!} />
-        ) : (
-          <TerminalInstance
-            active={term.id === activeId}
-            cwd={term.cwd}
-            id={term.id}
-            key={term.id}
-            onAddSelectionToChat={onAddSelectionToChat}
-            restoreCwd={term.restoreCwd}
-            reviveBuffer={term.reviveBuffer}
-          />
-        )
-      )}
+      {terminals.map(term => (
+        <AgentTerminalInstance active={term.id === activeId} id={term.id} key={term.id} procId={term.procId} />
+      ))}
     </>
   )
 }

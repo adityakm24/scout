@@ -6,7 +6,6 @@ import contextlib
 import logging
 import math
 import os
-import re
 from pathlib import Path
 from dataclasses import asdict, dataclass, field, fields, is_dataclass
 from typing import Dict, List, Optional, Any, Callable
@@ -134,14 +133,6 @@ def _coerce_dict(value: Any) -> Dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-# "pair" DMs a pairing code, "ignore" drops silently, "decline" sends one polite refusal then goes
-# silent toward that sender for gateway.pairing.DECLINE_DEDUPE_SECONDS (#88028).
-UNAUTHORIZED_DM_BEHAVIORS = {"pair", "ignore", "decline"}
-DEFAULT_UNAUTHORIZED_DM_DECLINE_MESSAGE = (
-    "Hi! I'm a personal assistant and can only chat with my owner, so I can't help you directly. Sorry!"
-)
-
-
 def _normalize_choice(value: Any, choices: set, default: str) -> str:
     """Lower-cased *value* when it is one of *choices*, else *default*."""
     normalized = value.strip().lower() if isinstance(value, str) else None
@@ -189,32 +180,12 @@ def _bundled_platform_manifest_name(plugin_dir: Path) -> Optional[str]:
 
 
 class Platform(Enum):
-    """Supported messaging platforms. Plugin platforms are dynamic members created on
-    demand by ``_missing_`` and cached so ``Platform("irc") is Platform("irc")`` holds."""
+    """Gateway-hosted surfaces. Plugin platforms are dynamic members created on demand by
+    ``_missing_`` and cached so ``Platform("a2a") is Platform("a2a")`` holds."""
     LOCAL = "local"
-    TELEGRAM = "telegram"
-    DISCORD = "discord"
-    WHATSAPP = "whatsapp"
-    WHATSAPP_CLOUD = "whatsapp_cloud"
-    SLACK = "slack"
-    SIGNAL = "signal"
-    MATTERMOST = "mattermost"
-    MATRIX = "matrix"
     HOMEASSISTANT = "homeassistant"
-    EMAIL = "email"
-    SMS = "sms"
-    DINGTALK = "dingtalk"
     API_SERVER = "api_server"
     WEBHOOK = "webhook"
-    MSGRAPH_WEBHOOK = "msgraph_webhook"
-    FEISHU = "feishu"
-    WECOM = "wecom"
-    WECOM_CALLBACK = "wecom_callback"
-    WEIXIN = "weixin"
-    BLUEBUBBLES = "bluebubbles"
-    QQBOT = "qqbot"
-    YUANBAO = "yuanbao"
-    RELAY = "relay"  # generic relay adapter fronted by the connector (EXPERIMENTAL)
 
     @classmethod
     def _missing_(cls, value):
@@ -276,15 +247,9 @@ class Platform(Enum):
 # Built-in values snapshotted before any dynamic _missing_ lookup.
 _BUILTIN_PLATFORM_VALUES = frozenset(m.value for m in Platform.__members__.values())
 
-# Platforms that bind a host TCP port. In a multiplexer only the default profile binds: a SECONDARY
-# profile's port-binder is built in shared-listener mode and served at /p/<profile>/<path> on the
-# default's listener (gateway/platforms/shared_ingress.py); api_server/webhook are mirrored there.
-PORT_BINDING_PLATFORM_VALUES = frozenset({
-    "webhook", "api_server", "msgraph_webhook", "feishu", "wecom_callback",
-    "bluebubbles", "sms", "whatsapp_cloud", "line", "teams",
-})
-# Platforms that only bind in one connection mode (Feishu's default websocket mode is outbound).
-PORT_BINDING_CONDITIONAL_MODES: dict[str, str] = {"feishu": "webhook"}
+# Platforms that bind a host TCP port. In a multiplexer only the default profile binds; secondary
+# profiles reach api_server/webhook through the /p/<profile>/ mirrors on the default's listener.
+PORT_BINDING_PLATFORM_VALUES = frozenset({"webhook", "api_server"})
 # Port-binders whose /p/<profile>/ surface is a MIRROR served by the default's own adapter; a secondary
 # never gets an instance of these (api_server: /p/<profile>/v1/..., webhook: profile-bound routes).
 SHARED_LISTENER_MIRROR_PLATFORMS = frozenset({"api_server", "webhook"})
@@ -292,42 +257,21 @@ SHARED_LISTENER_MIRROR_PLATFORMS = frozenset({"api_server", "webhook"})
 SHARED_LISTENER_MIRROR_PATHS: dict[str, str] = {"api_server": "/v1", "webhook": "/webhooks/<route>"}
 
 
-def platform_binds_port(platform_value: str, extra: Optional[dict] = None) -> bool:
-    """True when *platform_value* actually binds a port for *extra* config."""
-    if platform_value not in PORT_BINDING_PLATFORM_VALUES:
-        return False
-    expected_mode = PORT_BINDING_CONDITIONAL_MODES.get(platform_value)
-    return expected_mode is None or str((extra or {}).get("connection_mode", "websocket")).strip().lower() == expected_mode
-
-_DISCORD_CHANNEL_LINK_RE = re.compile(
-    r"https://(?:(?:ptb|canary)\.)?discord(?:app)?\.com/channels/(?:[0-9]+|@me)/([0-9]+)/?")
-
-
-def discord_channel_id_from_link(value: str) -> Optional[str]:
-    """Channel id from a pasted Discord channel link (``https://discord.com/channels/<guild>/<channel>``),
-    else None. Message links (a third path segment) and anything that is not a channel link are
-    left alone so callers keep their own error path."""
-    match = _DISCORD_CHANNEL_LINK_RE.fullmatch(value)
-    return match.group(1) if match else None
-
+def platform_binds_port(platform_value: str) -> bool:
+    """True when *platform_value* binds a host TCP port."""
+    return platform_value in PORT_BINDING_PLATFORM_VALUES
 
 @dataclass
 class HomeChannel:
-    """Default destination for a platform (``deliver="telegram"`` without a chat ID);
+    """Default destination for a platform (``deliver="<platform>"`` without a chat ID);
     ``thread_id`` routes the bare target to the topic where /sethome was run."""
     platform: Platform
     chat_id: str
     name: str
     thread_id: Optional[str] = None
-    # Authenticated logical-target provenance (relay egress re-attaches; connector stays the authz boundary).
+    # Authenticated logical-target provenance.
     user_id: Optional[str] = None
     scope_id: Optional[str] = None
-
-    def __post_init__(self) -> None:
-        # Copy Link is next to Copy Channel ID in Discord. Normalize at the
-        # shared home boundary so env, YAML and plugin-seeded homes agree.
-        if self.platform == Platform.DISCORD and isinstance(self.chat_id, str):
-            self.chat_id = discord_channel_id_from_link(self.chat_id.strip()) or self.chat_id
 
     def to_dict(self) -> Dict[str, Any]:
         optional = {k: v for k in ("thread_id", "user_id", "scope_id") if (v := getattr(self, k))}
@@ -363,21 +307,6 @@ class ChannelOverride:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ChannelOverride":
         return cls(**{f.name: data.get(f.name) for f in fields(cls)}) if data else cls()
-
-
-# Platforms whose primary credential is ``PlatformConfig.token`` → its env var (empty-token
-# warnings; multiplex primary-startup gate in ``gateway.run``). Platforms absent here
-# authenticate another way and must never be skipped for a missing token.
-# Platforms absent from this map authenticate some other way (session files, port-bound webhooks,
-# api_key-only) and must never be skipped for a missing token. See #64674.
-PLATFORM_TOKEN_ENV_NAMES: dict["Platform", str] = {
-    Platform.TELEGRAM: "TELEGRAM_BOT_TOKEN",
-    Platform.DISCORD: "DISCORD_BOT_TOKEN",
-    Platform.SLACK: "SLACK_BOT_TOKEN",
-    Platform.MATTERMOST: "MATTERMOST_TOKEN",
-    Platform.MATRIX: "MATRIX_ACCESS_TOKEN",
-    Platform.WEIXIN: "WEIXIN_TOKEN",
-}
 
 
 @dataclass
@@ -469,12 +398,6 @@ class StreamingConfig:
     buffer_threshold: int = DEFAULT_STREAMING_BUFFER_THRESHOLD
     cursor: str = DEFAULT_STREAMING_CURSOR
     # >0: final edit becomes a fresh message once the preview was visible this long (Telegram only; 0 = off).
-    # Ported from openclaw/openclaw#72038. When >0, the final edit for a long-running streamed response is
-    # delivered as a fresh message if the original preview has been visible for at least this many seconds,
-    # so the platform's visible timestamp reflects completion time instead of the preview creation time.
-    # Currently applied to Telegram only (other platforms ignore the setting). Default 0 disables the
-    # fresh-message replacement path; set >0 to opt in.
-    fresh_final_after_seconds: float = 0.0
 
     @property
     def globally_enabled(self) -> bool:
@@ -512,7 +435,6 @@ class StreamingConfig:
             edit_interval=_coerce_float(data.get("edit_interval"), DEFAULT_STREAMING_EDIT_INTERVAL),
             buffer_threshold=_coerce_int(data.get("buffer_threshold"), DEFAULT_STREAMING_BUFFER_THRESHOLD),
             cursor=data.get("cursor", DEFAULT_STREAMING_CURSOR),
-            fresh_final_after_seconds=_coerce_float(data.get("fresh_final_after_seconds"), 0.0),
         )
 
 
@@ -528,24 +450,11 @@ def _has_usable_api_server_key(key: object) -> bool:
         return len(str(key).strip()) >= 16
 
 
-def _needs_extra(*keys: str) -> Callable[[PlatformConfig], bool]:
-    return lambda cfg: all(cfg.extra.get(k) for k in keys)
-
-
 # Built-in "sufficiently configured?" checks; platforms covered by the generic
-# ``token or api_key`` check (Telegram, Discord, Slack, Matrix, ...) need no entry.
+# ``token or api_key`` check (Home Assistant) need no entry.
 _PLATFORM_CONNECTED_CHECKERS: dict[Platform, Callable[[PlatformConfig], bool]] = {
-    Platform.WEIXIN: lambda cfg: bool(cfg.extra.get("account_id") and (cfg.token or cfg.extra.get("token"))),
-    Platform.WHATSAPP_CLOUD: _needs_extra("phone_number_id", "access_token"),
-    Platform.SIGNAL: _needs_extra("http_url"),
     Platform.API_SERVER: lambda cfg: _has_usable_api_server_key(cfg.extra.get("key") if cfg else None),
     Platform.WEBHOOK: lambda cfg: True,
-    Platform.MSGRAPH_WEBHOOK: lambda cfg: bool(str(cfg.extra.get("client_state") or "").strip()),
-    Platform.BLUEBUBBLES: _needs_extra("server_url", "password"),
-    Platform.QQBOT: _needs_extra("app_id", "client_secret"),
-    Platform.YUANBAO: _needs_extra("app_id", "app_secret"),
-    # Relay dials OUT: "connected" once an endpoint URL is configured. EXPERIMENTAL.
-    Platform.RELAY: lambda cfg: bool(cfg.extra.get("relay_url") or cfg.extra.get("url")),
 }
 
 
@@ -603,8 +512,6 @@ class GatewayConfig:
     loop_watchdog_probe_interval_s: float = DEFAULT_LOOP_WATCHDOG_INTERVAL_S
     loop_watchdog_probe_timeout_s: float = DEFAULT_LOOP_WATCHDOG_TIMEOUT_S
     loop_watchdog_max_strikes: int = DEFAULT_LOOP_WATCHDOG_MAX_STRIKES
-    unauthorized_dm_behavior: str = "pair"  # UNAUTHORIZED_DM_BEHAVIORS
-    unauthorized_dm_decline_message: str = ""  # "decline" reply text; empty → DEFAULT_UNAUTHORIZED_DM_DECLINE_MESSAGE
     streaming: StreamingConfig = field(default_factory=StreamingConfig)
     # Prune SessionEntry records older than this (a resumed chat gets a fresh session). 0 = off.
     session_store_max_age_days: int = 90
@@ -617,7 +524,7 @@ class GatewayConfig:
         "max_concurrent_sessions", "multiplex_profiles",
         "room_link_url", "systemd_watchdog_seconds", "loop_watchdog",
         "loop_watchdog_probe_interval_s", "loop_watchdog_probe_timeout_s",
-        "loop_watchdog_max_strikes", "unauthorized_dm_behavior", "unauthorized_dm_decline_message",
+        "loop_watchdog_max_strikes",
     )
 
     def __post_init__(self) -> None:
@@ -631,9 +538,6 @@ class GatewayConfig:
 
     def _is_platform_connected(self, platform: Platform, config: PlatformConfig) -> bool:
         checker = _PLATFORM_CONNECTED_CHECKERS.get(platform)
-        # Weixin needs token AND account_id, so it must bypass the generic token branch.
-        if platform == Platform.WEIXIN:
-            return checker(config)
         if config.token or config.api_key:
             return True
         if checker is not None:
@@ -766,8 +670,6 @@ class GatewayConfig:
             loop_watchdog_probe_timeout_s=bounded_float("loop_watchdog_probe_timeout_s", DEFAULT_LOOP_WATCHDOG_TIMEOUT_S, 1.0, 600.0),
             loop_watchdog_max_strikes=max_strikes,
             max_concurrent_sessions=max_concurrent_sessions,
-            unauthorized_dm_behavior=_normalize_choice(data.get("unauthorized_dm_behavior"), UNAUTHORIZED_DM_BEHAVIORS, "pair"),
-            unauthorized_dm_decline_message=str(data.get("unauthorized_dm_decline_message") or "").strip(),
             streaming=StreamingConfig.from_dict(data.get("streaming", {})),
             session_store_max_age_days=session_store_max_age_days,
             profile_routes=parse_profile_routes(data.get("profile_routes") or []),
@@ -779,14 +681,6 @@ class GatewayConfig:
         if platform_cfg and key in platform_cfg.extra:
             return _normalize_choice(platform_cfg.extra.get(key), choices, default)
         return None
-
-    def get_unauthorized_dm_behavior(self, platform: Optional[Platform] = None) -> str:
-        """Effective unauthorized-DM behavior. Email is inbox-shaped so it defaults to ``"ignore"``
-        unless its own ``unauthorized_dm_behavior`` opts in (a global default does not)."""
-        choice = self._extra_choice(platform, "unauthorized_dm_behavior", UNAUTHORIZED_DM_BEHAVIORS, self.unauthorized_dm_behavior)
-        if choice is not None:
-            return choice
-        return "ignore" if platform == Platform.EMAIL else self.unauthorized_dm_behavior
 
     def get_notice_delivery(self, platform: Optional[Platform] = None) -> str:
         """Effective notice-delivery mode ("public"/"private") for a platform."""
@@ -819,39 +713,7 @@ def load_gateway_config() -> GatewayConfig:
 
     config = GatewayConfig.from_dict(gw_data)
     _apply_env_overrides(config)
-    _validate_gateway_config(config)
     return config
-
-
-def _validate_gateway_config(config: "GatewayConfig") -> None:
-    """Validate and sanitize a loaded GatewayConfig in place (after all sources are merged)."""
-    try:
-        # Reject known-weak placeholder tokens. Ported from openclaw/openclaw#64586: users who copy
-        # .env.example without changing placeholder values get a clear startup error instead of a confusing
-        # "auth failed" from the platform API.
-        from scout_cli.auth import has_usable_secret
-    except ImportError:
-        has_usable_secret = None
-
-    token_platforms = [
-        (p, c, PLATFORM_TOKEN_ENV_NAMES[p]) for p, c in config.platforms.items()
-        if c.enabled and p in PLATFORM_TOKEN_ENV_NAMES and c.token is not None
-    ]
-    for platform, pconfig, env_name in token_platforms:  # an empty token won't connect; say so
-        if not pconfig.token.strip():
-            logger.warning("%s is enabled but %s is empty. The adapter will likely fail to connect.", platform.value, env_name)
-    if has_usable_secret is None:
-        return
-    for platform, pconfig, env_name in token_platforms:  # reject placeholder tokens (copied .env.example)
-        token = pconfig.token
-        if token.strip() and not has_usable_secret(token, min_length=4):
-            logger.error(
-                "%s is enabled but %s is set to a placeholder value ('%s'). "
-                "Set a real bot token before starting the gateway. "
-                "The adapter will NOT be started.",
-                platform.value, env_name, token.strip()[:6] + "...",
-            )
-            pconfig.enabled = False
 
 
 def _apply_env_overrides(config: GatewayConfig) -> None:

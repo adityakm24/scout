@@ -20,16 +20,13 @@ def main(argv=None) -> int:
     parser.add_argument("--out", required=True)
     parser.add_argument("--ref", default="HEAD")
     parser.add_argument("--cache", type=Path, help="persistent uv build cache")
-    parser.add_argument("--tui", type=Path)
     parser.add_argument("--web", type=Path)
     args = parser.parse_args(argv)
-    if bool(args.tui) != bool(args.web):
-        parser.error("supply both --tui and --web products, or neither to build them")
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     (out / "manifest.json").unlink(missing_ok=True)
-    if args.tui is not None:
-        args.frontends = {"tui": args.tui.resolve(), "web": args.web.resolve()}
+    if args.web is not None:
+        args.frontends = {"web": args.web.resolve()}
         return stage_native(args)
     node = shutil.which("node")
     if node is None:
@@ -44,14 +41,13 @@ def main(argv=None) -> int:
         icon_python = prepare_icon_environment(source, products / "icon-environment", args.cache)
         env = {**os.environ, "SCOUT_PYTHON": str(icon_python)}
         commands = [
-            ["scripts/build/node-deps.mjs", "--source", str(source), "--workspace", "ui-tui", "--workspace", "web"],
+            ["scripts/build/node-deps.mjs", "--source", str(source), "--workspace", "web"],
             ["scripts/generate-icons.mjs", "--source", str(source), "--out", str(products / "icons")],
-            ["scripts/build/tui.mjs", "--source", str(source), "--out", str(products / "tui")],
             ["scripts/build/web.mjs", "--source", str(source), "--icons", str(products / "icons"), "--out", str(products / "web")],
         ]
         for command in commands:
             subprocess.run([node, *command], cwd=ROOT, env=env, check=True)
-        args.frontends = {"tui": products / "tui", "web": products / "web"}
+        args.frontends = {"web": products / "web"}
         return stage_native(args)
 
 

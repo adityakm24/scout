@@ -142,7 +142,7 @@ def _runner_for_stall(adapter):
 def _pending_event(chat_id="chat-1"):
     from gateway.session import SessionSource
     from gateway.config import Platform
-    source = SessionSource(chat_id=chat_id, thread_id=None, platform=Platform.TELEGRAM)
+    source = SessionSource(chat_id=chat_id, thread_id=None, platform=Platform.HOMEASSISTANT)
     return SimpleNamespace(text="follow-up", source=source, timestamp=time.time())
 
 

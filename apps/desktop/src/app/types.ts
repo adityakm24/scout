@@ -103,28 +103,8 @@ export interface SessionTitleResponse {
   session_key?: string
 }
 
-export interface HandoffRequestResponse {
-  queued?: boolean
-  session_key?: string
-  platform?: string
-  // Human-readable home channel name for the destination platform.
-  home_name?: string
-}
-
-export interface HandoffStateResponse {
-  // '' | 'pending' | 'running' | 'completed' | 'failed'
-  state?: string
-  platform?: string
-  error?: string
-}
-
-export interface HandoffFailResponse {
-  failed?: boolean
-  state?: string
-}
-
 export type SidebarNavId =
-  'artifacts' | 'capabilities' | 'command-center' | 'cron' | 'messaging' | 'new-session' | 'settings'
+  'artifacts' | 'capabilities' | 'command-center' | 'cron' | 'new-session' | 'settings'
 
 export interface SidebarNavItem extends Tiered {
   /** Built-in view id, or a contributed row's namespaced contribution id. */

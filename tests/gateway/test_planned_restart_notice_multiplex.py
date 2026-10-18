@@ -45,10 +45,10 @@ def multiplex_runner(tmp_path, monkeypatch):
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     monkeypatch.setattr(gateway_run, "_scout_home", tmp_path)
     runner = object.__new__(gateway_run.GatewayRunner)
-    runner.config = _home_config(Platform.DISCORD, "launch-home")
+    runner.config = _home_config(Platform.HOMEASSISTANT, "launch-home")
     runner.config.sessions_dir = tmp_path / "sessions"
     runner.adapters = {}
-    runner._profile_configs = {"coder": _home_config(Platform.TELEGRAM, "coder-home")}
+    runner._profile_configs = {"coder": _home_config(Platform.HOMEASSISTANT, "coder-home")}
     runner._profile_adapters = {"coder": {}}
     runner._free_tier_startup_line = Mock(return_value=None)
     runner._planned_restart_notice_lock = None
@@ -61,8 +61,8 @@ def multiplex_runner(tmp_path, monkeypatch):
 async def test_planned_restart_notifies_every_served_profile(multiplex_runner):
     runner, marker = multiplex_runner
     launch, coder = _adapter(), _adapter()
-    runner.adapters[Platform.DISCORD] = launch
-    runner._profile_adapters["coder"][Platform.TELEGRAM] = coder
+    runner.adapters[Platform.HOMEASSISTANT] = launch
+    runner._profile_adapters["coder"][Platform.HOMEASSISTANT] = coder
 
     await runner._replay_pending_planned_restart_notification()
 
@@ -77,17 +77,17 @@ async def test_marker_survives_until_a_served_profile_is_reachable(multiplex_run
     """A served profile whose platform is down at boot keeps the notice owed for its reconnect."""
     runner, marker = multiplex_runner
     launch = _adapter()
-    runner.adapters[Platform.DISCORD] = launch
+    runner.adapters[Platform.HOMEASSISTANT] = launch
 
     await runner._replay_pending_planned_restart_notification()
 
     launch.send.assert_awaited_once()
     assert marker.exists(), "coder's channel was never notified; the marker must not be consumed"
     delivered = json.loads(marker.read_text(encoding="utf-8"))["delivered_targets"]
-    assert [target for target in delivered if target[0] == "discord"], "the reached target is recorded"
+    assert [target for target in delivered if target[0] == "homeassistant"], "the reached target is recorded"
 
     coder = _adapter()
-    runner._profile_adapters["coder"][Platform.TELEGRAM] = coder
+    runner._profile_adapters["coder"][Platform.HOMEASSISTANT] = coder
     await runner._replay_pending_planned_restart_notification()
 
     coder.send.assert_awaited_once()
@@ -95,39 +95,6 @@ async def test_marker_survives_until_a_served_profile_is_reachable(multiplex_run
     assert not marker.exists()
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("outcome", ["success", "failure"])
-async def test_private_home_notices_reach_both_bots(multiplex_runner, outcome):
-    """Equal positive Telegram chat ids under two bots are two conversations, not one shared chat.
-
-    A Telegram private chat id names the USER, so the launch bot and a served profile's bot with
-    the same home id each owe their own notice; a delivery dedupe that collapses them discharged
-    the served profile's obligation without ever sending it (#118233).
-    """
-    runner, marker = multiplex_runner
-    runner.config = _home_config(Platform.TELEGRAM, "8776018003")
-    launch, coder = _adapter(), _adapter()
-    runner.adapters = {Platform.TELEGRAM: launch}
-    runner._profile_configs = {"coder": _home_config(Platform.TELEGRAM, "8776018003")}
-    runner._profile_adapters = {"coder": {Platform.TELEGRAM: coder}}
-    if outcome == "failure":
-        coder.send.return_value = SendResult(success=False, error="temporary failure")
-
-    await runner._replay_pending_planned_restart_notification()
-
-    launch.send.assert_awaited_once()
-    coder.send.assert_awaited_once()
-    if outcome == "failure":
-        assert marker.exists(), "the second bot's conversation is still owed its notice"
-        recorded = json.loads(marker.read_text(encoding="utf-8"))["delivered_targets"]
-        assert ["telegram", "8776018003", None] in recorded
-        assert ["coder:telegram", "8776018003", None] not in recorded
-        coder.send.reset_mock()
-        coder.send.return_value = SendResult(success=True, message_id="recovered")
-        await runner._replay_pending_planned_restart_notification()
-        coder.send.assert_awaited_once()
-        launch.send.assert_awaited_once()
-    assert not marker.exists()
 
 
 @pytest.mark.asyncio
@@ -140,12 +107,12 @@ async def test_profiles_sharing_one_home_chat_get_one_notice(tmp_path, monkeypat
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     monkeypatch.setattr(gateway_run, "_scout_home", tmp_path)
     runner = object.__new__(gateway_run.GatewayRunner)
-    runner.config = _home_config(Platform.TELEGRAM, "-100999")
+    runner.config = _home_config(Platform.HOMEASSISTANT, "-100999")
     runner.config.sessions_dir = tmp_path / "sessions"
     launch, coder = _adapter(), _adapter()
-    runner.adapters = {Platform.TELEGRAM: launch}
-    runner._profile_configs = {"coder": _home_config(Platform.TELEGRAM, "-100999")}
-    runner._profile_adapters = {"coder": {Platform.TELEGRAM: coder}}
+    runner.adapters = {Platform.HOMEASSISTANT: launch}
+    runner._profile_configs = {"coder": _home_config(Platform.HOMEASSISTANT, "-100999")}
+    runner._profile_adapters = {"coder": {Platform.HOMEASSISTANT: coder}}
     runner._free_tier_startup_line = Mock(return_value=None)
     runner._planned_restart_notice_lock = None
     marker = tmp_path / ".restart_pending.json"
@@ -157,29 +124,6 @@ async def test_profiles_sharing_one_home_chat_get_one_notice(tmp_path, monkeypat
     assert not marker.exists(), "the shared chat was reached, so every owed profile is discharged"
 
 
-@pytest.mark.asyncio
-async def test_one_broken_profile_does_not_starve_the_rest(multiplex_runner, monkeypatch):
-    """A profile whose transport resolution raises is skipped; the fan-out continues."""
-    runner, marker = multiplex_runner
-    runner.adapters[Platform.DISCORD] = _adapter()
-    ok = _adapter()
-    runner._profile_configs = {
-        "b": _home_config(Platform.TELEGRAM, "b-home"),
-        "c": _home_config(Platform.SLACK, "c-home"),
-    }
-    runner._profile_adapters = {"b": {Platform.TELEGRAM: _adapter()}, "c": {Platform.SLACK: ok}}
-    real = gateway_delivery.resolve_delivery_transport
-
-    def resolve(platform, config, adapters):
-        if platform is Platform.TELEGRAM:
-            raise RuntimeError("broken adapter")
-        return real(platform, config, adapters)
-
-    monkeypatch.setattr(gateway_delivery, "resolve_delivery_transport", resolve)
-
-    await runner._send_home_channel_startup_notifications()
-
-    ok.send.assert_awaited_once(), "a profile after the broken one is still notified"
 
 
 @pytest.mark.asyncio
@@ -191,8 +135,8 @@ async def test_unserved_profile_config_is_pruned_from_the_fan_out(tmp_path, monk
     """
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     runner = object.__new__(gateway_run.GatewayRunner)
-    runner.config = _home_config(Platform.DISCORD, "launch-home")
-    runner._profile_configs = {"ghost": _home_config(Platform.TELEGRAM, "-200")}
+    runner.config = _home_config(Platform.HOMEASSISTANT, "launch-home")
+    runner._profile_configs = {"ghost": _home_config(Platform.HOMEASSISTANT, "-200")}
     runner._profile_adapters = {}
     runner._multiplex_on = Mock(return_value=True)
     runner._primary_resource_claims = Mock(return_value={})
@@ -208,7 +152,7 @@ async def test_unserved_profile_config_is_pruned_from_the_fan_out(tmp_path, monk
 
     assert "ghost" not in runner._profile_configs
     assert list(runner._served_home_channel_configs()) == [
-        (None, Platform.DISCORD, runner.config.platforms[Platform.DISCORD])]
+        (None, Platform.HOMEASSISTANT, runner.config.platforms[Platform.HOMEASSISTANT])]
 
 
 @pytest.mark.asyncio
@@ -218,7 +162,7 @@ async def test_a_served_profiles_reconnect_replays_the_owed_notice(multiplex_run
     import asyncio
 
     runner, marker = multiplex_runner
-    runner.adapters[Platform.DISCORD] = _adapter()
+    runner.adapters[Platform.HOMEASSISTANT] = _adapter()
     await runner._replay_pending_planned_restart_notification()  # boot: coder's Telegram is down
     assert marker.exists()
 
@@ -233,11 +177,11 @@ async def test_a_served_profiles_reconnect_replays_the_owed_notice(multiplex_run
     runner._schedule_resume_pending_sessions = Mock(return_value=0)
     runner._secondary_reconnect_attempt = AsyncMock(return_value=(coder, True))
 
-    await runner._run_secondary_profile_reconnect("coder", Platform.TELEGRAM)
+    await runner._run_secondary_profile_reconnect("coder", Platform.HOMEASSISTANT)
     for _ in range(50):
         await asyncio.sleep(0)
 
-    assert runner._profile_adapters["coder"][Platform.TELEGRAM] is coder
+    assert runner._profile_adapters["coder"][Platform.HOMEASSISTANT] is coder
     coder.send.assert_awaited_once()
     assert coder.send.await_args.args[:2] == ("coder-home", ONLINE_NOTICE)
     assert not marker.exists(), "the owed target was reached on reconnect: the obligation is discharged"

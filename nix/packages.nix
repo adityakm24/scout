@@ -52,22 +52,17 @@
           "azure-identity"
           "bedrock"
           "daytona"
-          "dingtalk"
           "edge-tts"
           "exa"
           "fal"
-          "feishu"
           "firecrawl"
           "honcho"
-          "messaging"
           "modal"
           "parallel-web"
           "tts-premium"
           "vercel"
           "voice"
-        ]
-        # matrix is Linux-only (oqs/liboqs lacks aarch64-darwin wheels).
-        ++ lib.optionals pkgs.stdenv.isLinux [ "matrix" ];
+        ];
       };
     in
     {
@@ -82,14 +77,6 @@
 
         inherit minimal;
 
-        # Ships discord.py + python-telegram-bot + slack-sdk so a plain
-        # `nix profile install .#messaging` connects to Discord/Telegram/Slack
-        # on first run — lazy-install can't write to the read-only /nix/store.
-        messaging = minimal.override {
-          extraDependencyGroups = [ "messaging" ];
-        };
-
-        tui = full.scoutTui;
         web = full.scoutWeb;
         desktop = full.scoutDesktop;
 

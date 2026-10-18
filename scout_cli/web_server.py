@@ -24,7 +24,6 @@ import urllib.parse
 
 from scout_cli.install_identity import get_install_id as _shared_get_install_id
 from scout_cli.process_identity import is_desktop_owned_backend
-from scout_cli.pty_session import run_reaper
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -178,14 +177,6 @@ _DESKTOP_MCP_DISCOVERY_DELAY_S = 1.0
 
 @asynccontextmanager
 async def _lifespan(app: "FastAPI"):
-    app.state.event_channels = {}  # dict[str, set]
-    app.state.event_lock = asyncio.Lock()
-    app.state.pty_active_session_files = {}  # dict[str, Path]
-    # Serializes chat-argv resolution so concurrent /api/pty connections don't
-    # overlap ``npm install`` / ``npm run build``. Locks live on app.state (not
-    # module globals) so they bind to the running loop, not the import-time one.
-    app.state.chat_argv_lock = asyncio.Lock()
-
     # Bring state.db schema current BEFORE the first session-list poll
     # (#79531/#80037): a store left behind by `scout update` otherwise 500s
     # every poll while the read-probe heal loses to sibling lock contention.
@@ -273,8 +264,6 @@ async def _lifespan(app: "FastAPI"):
         )
         cron_thread.start()
 
-    # Reap idle/dead keep-alive PTY sessions (30-min TTL).
-    pty_reaper_task = asyncio.create_task(run_reaper(PTY_REGISTRY))
     # Periodic authenticated self-test feeding the ``dashboard`` component on /api/status.
     selftest_task = asyncio.create_task(_dashboard_selftest_loop())
     # Live auto-archive timer, independent of list requests.
@@ -307,10 +296,8 @@ async def _lifespan(app: "FastAPI"):
         hosted_room_start_thread.join(timeout=1.0)
         if cron_stop is not None:
             cron_stop.set()
-        pty_reaper_task.cancel()
         selftest_task.cancel()
         auto_archive_task.cancel()
-        await PTY_REGISTRY.close_all()
         # Stop the managed llama-server with its parent (an orphan pins VRAM).
         try:
             from scout_cli.local_runtime.bootstrap import shutdown_local_runtime
@@ -321,28 +308,6 @@ async def _lifespan(app: "FastAPI"):
         if desktop_owned:
             _terminate_desktop_managed_gateway()
         eager_reconcile_thread.join()
-
-
-def _app_state_default(app: "FastAPI", name: str, factory):
-    """Return ``app.state.<name>``, lazily creating it for non-``with`` TestClient usages.
-
-    The lifespan normally initialises these on the running event loop (an
-    asyncio.Lock created at import time binds to whatever loop was active then).
-    """
-    try:
-        return getattr(app.state, name)
-    except AttributeError:
-        value = factory()
-        setattr(app.state, name, value)
-        return value
-
-
-def _get_chat_argv_lock(app: "FastAPI") -> asyncio.Lock:
-    return _app_state_default(app, "chat_argv_lock", asyncio.Lock)
-
-
-def _get_pty_active_session_files(app: "FastAPI") -> dict[str, Path]:
-    return _app_state_default(app, "pty_active_session_files", dict)
 
 
 app = FastAPI(title="Scout Agent", version=get_version_info().base_version, lifespan=_lifespan)
@@ -415,11 +380,6 @@ def _ssh_runtime_intact() -> bool:
         return False
     return (st.st_dev, st.st_ino) == (device, inode)
 
-
-# In-browser Chat tab (/chat, /api/pty, /api/ws): always enabled. A module
-# constant (not an inlined True) so the WS endpoints and SPA token injection
-# share one testable seam.
-_DASHBOARD_EMBEDDED_CHAT_ENABLED = True
 
 # Desktop file.attach sends a whole base64 data URL in one JSON-RPC frame;
 # uvicorn's 16 MiB default rejects files under the 256 MiB raw attach cap.
@@ -828,7 +788,6 @@ async def _dashboard_selftest_loop() -> None:
 from scout_cli import web_server_gateway as _gateway_mod  # noqa: E402
 from scout_cli.web_server_gateway import _ACTION_LOG_FILES, _terminate_desktop_managed_gateway  # noqa: E402
 from scout_cli.web_server_sessions import _auto_archive_ticker_loop  # noqa: E402
-from scout_cli.web_server_chat import PTY_REGISTRY  # noqa: E402
 from scout_cli.web_server_dashboard import (  # noqa: E402
     _discover_dashboard_plugins, _mount_plugin_api_routes, mount_spa,
 )
@@ -985,7 +944,6 @@ from scout_cli.web_routers import (  # noqa: E402
     memory_providers as _memory_providers_routes,
     config_env as _config_env_routes,
     models as _models_routes,
-    messaging as _messaging_routes,
     oauth as _oauth_routes,
     cron as _cron_routes,
     mcp as _mcp_routes,
@@ -995,7 +953,6 @@ from scout_cli.web_routers import (  # noqa: E402
     tools as _tools_routes,
     analytics as _analytics_routes,
     chat_ws as _chat_ws_routes,
-    chat_workspaces as _chat_workspaces_routes,
     dashboard_ui as _dashboard_ui_routes,
     push as _push_routes,
 )
@@ -1015,7 +972,6 @@ app.include_router(_memory_providers_routes.router)
 app.include_router(_config_env_routes.config_router)
 app.include_router(_models_routes.router)
 app.include_router(_config_env_routes.router)
-app.include_router(_messaging_routes.router)
 app.include_router(_oauth_routes.router)
 app.include_router(_sessions_routes.manage_router)
 app.include_router(_status_routes.logs_router)
@@ -1029,7 +985,6 @@ app.include_router(_skills_routes.router)
 app.include_router(_tools_routes.router)
 app.include_router(_analytics_routes.router)
 app.include_router(_chat_ws_routes.router)
-app.include_router(_chat_workspaces_routes.router)
 app.include_router(_dashboard_ui_routes.router)
 app.include_router(_push_routes.router)
 

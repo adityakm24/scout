@@ -9,7 +9,7 @@ def test_db_flush_collect_does_not_recollect_gateway_history_rows():
         {"role": "user", "content": "first", "_db_persisted": True, "timestamp": 1.0},
         {"role": "assistant", "content": "reply", "_db_persisted": True},
     ]
-    history, _ = _build_gateway_agent_history(stored)
+    history = _build_gateway_agent_history(stored)
     new = {"role": "user", "content": "new"}
 
     agent = SimpleNamespace(

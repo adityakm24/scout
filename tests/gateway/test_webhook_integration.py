@@ -150,13 +150,13 @@ class TestCrossPlatformDelivery:
 
     @pytest.mark.asyncio
     async def test_cross_platform_delivery(self):
-        """When deliver='telegram', the response is routed to the
+        """When deliver='homeassistant', the response is routed to the
         Telegram adapter via gateway_runner.adapters."""
         routes = {
             "alerts": {
                 "secret": _INSECURE_NO_AUTH,
                 "prompt": "Alert: {message}",
-                "deliver": "telegram",
+                "deliver": "homeassistant",
                 "deliver_extra": {"chat_id": "12345"},
             }
         }
@@ -168,10 +168,10 @@ class TestCrossPlatformDelivery:
         mock_tg_adapter.send = AsyncMock(return_value=SendResult(success=True))
 
         mock_runner = MagicMock()
-        mock_runner.adapters = {Platform.TELEGRAM: mock_tg_adapter}
+        mock_runner.adapters = {Platform.HOMEASSISTANT: mock_tg_adapter}
         mock_runner._authorization_adapter = lambda platform, profile=None: mock_runner.adapters.get(platform)
         mock_runner.config = GatewayConfig(
-            platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="fake")}
+            platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="fake")}
         )
         adapter.gateway_runner = mock_runner
 

@@ -148,16 +148,8 @@ def _notice_target_key(platform_value: str, chat_id, thread_id) -> tuple:
 
 
 def _delivery_target_key(platform_value: str, chat_id, thread_id, *, profile: Optional[str] = None) -> tuple:
-    """Dedupe key for one DELIVERED chat: profile-independent, except Telegram private chats.
-
-    Two served profiles can share one home chat (one Telegram group for the whole host) and owe it
-    ONE notice per host restart. A positive Telegram chat id names the USER, though: the same id
-    under two bot tokens is two conversations, so those stay keyed per served profile (#118233).
-    """
-    from gateway.delivery import looks_like_telegram_private_chat_id
-    if (profile and profile != "default" and platform_value == "telegram"
-            and looks_like_telegram_private_chat_id(chat_id)):
-        platform_value = f"{profile}:{platform_value}"
+    """Dedupe key for one DELIVERED chat: profile-independent, since two served profiles sharing one
+    home chat owe it ONE notice per host restart."""
     return _notice_target_key(platform_value, chat_id, thread_id)
 
 

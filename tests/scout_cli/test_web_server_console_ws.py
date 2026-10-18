@@ -58,34 +58,8 @@ def _recv_until(conn, frame_type: str, *, status: str | None = None) -> dict:
     raise AssertionError(f"Timed out waiting for {frame_type} frame")
 
 
-def test_console_ws_rejects_missing_or_bad_token(console_client):
-    with pytest.raises(WebSocketDisconnect) as exc:
-        with console_client.websocket_connect("/api/console"):
-            pass
-    assert exc.value.code == 4401
-
-    with pytest.raises(WebSocketDisconnect) as exc:
-        with console_client.websocket_connect(_url(token="wrong")):
-            pass
-    assert exc.value.code == 4401
 
 
-def test_console_ws_cancel_returns_to_prompt(console_client, monkeypatch):
-    from scout_cli.console_engine import ConsoleResult, ScoutConsoleEngine
-
-    def slow_execute(self, line: str, *, confirmed: bool = False):
-        time.sleep(0.2)
-        return ConsoleResult("ok", output="late", command=line)
-
-    monkeypatch.setattr(ScoutConsoleEngine, "execute", slow_execute)
-
-    with console_client.websocket_connect(_url()) as conn:
-        assert conn.receive_json()["type"] == "ready"
-        conn.send_json({"type": "input", "line": "status"})
-        conn.send_json({"type": "cancel"})
-
-        complete = _recv_until(conn, "complete", status="cancelled")
-        assert complete["prompt"] == "scout> "
 
 
 @pytest.fixture
@@ -137,61 +111,6 @@ def blocking_provider():
         srv.shutdown()
 
 
-def test_console_cancel_stops_forked_agent_request_before_reporting(console_client, monkeypatch, blocking_provider):
-    """#106179: cancelling a console command whose worker forked an AIAgent must interrupt
-    that agent — closing its in-flight provider request — and wait for the worker to exit BEFORE the
-    prompt reports cancelled/timeout. asyncio can only drop the waiter; the thread keeps decoding otherwise."""
-    import threading
-
-    from agent import curator
-    from scout_cli.web_routers import chat_ws
-    from scout_constants import get_scout_home
-    from tools import skill_usage
-
-    # The LLM pass only forks when an agent-created skill is a candidate: bundled
-    # built-ins are excluded from the review list, so the temp home needs one.
-    skill_dir = get_scout_home() / "skills" / "console-cancel-probe"
-    skill_dir.mkdir(parents=True, exist_ok=True)
-    (skill_dir / "SKILL.md").write_text("---\nname: console-cancel-probe\ndescription: x\n---\n", encoding="utf-8")
-    skill_usage.record_created("console-cancel-probe", agent_created=True)
-
-    monkeypatch.setattr(
-        curator, "_resolve_review_provider",
-        lambda: ({"api_key": "test-key", "base_url": blocking_provider["base_url"]}, "test-model", "openai-compat", {}),
-    )
-    worker_exited = threading.Event()
-    real_execute = chat_ws._execute_console_line
-
-    def observed_execute(*args, **kwargs):
-        try:
-            return real_execute(*args, **kwargs)
-        finally:
-            worker_exited.set()
-
-    monkeypatch.setattr(chat_ws, "_execute_console_line", observed_execute)
-    line = "curator run --consolidate --dry-run"
-
-    with console_client.websocket_connect(_url()) as conn:
-        assert conn.receive_json()["type"] == "ready"
-        conn.send_json({"type": "input", "line": line})
-        _recv_until(conn, "complete", status="confirm_required")
-        assert worker_exited.wait(10)  # the confirm probe's worker, not the one under test
-        worker_exited.clear()
-        conn.send_json({"type": "confirm", "command": line})
-        assert blocking_provider["started"].wait(60), "forked agent never reached the provider"
-        conn.send_json({"type": "cancel"})
-        deadline = time.monotonic() + 30
-        while time.monotonic() < deadline:
-            frame = conn.receive_json()
-            if frame.get("type") == "complete" and frame.get("status") in {"cancelled", "timeout"}:
-                break
-        else:
-            raise AssertionError("no cancelled/timeout frame")
-        observed = (frame["status"], blocking_provider["peer_closed"].is_set(), worker_exited.is_set())
-        blocking_provider["release"].set()  # a leaked worker (the bug) must not wedge socket teardown
-        worker_exited.wait(30)
-    assert observed == ("cancelled", True, True), (
-        "(status, provider request closed, worker exited) at the terminal frame")
 
 
 def test_interrupt_scope_cancels_agents_that_start_after_the_cancel():

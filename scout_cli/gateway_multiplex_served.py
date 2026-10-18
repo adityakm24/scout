@@ -48,27 +48,6 @@ def multiplexer_served_secondaries() -> list[str]:
     return [p for p in (recorded_served_profiles() or []) if p and p != "default"]
 
 
-def served_profile_unserved_platforms(profile: str) -> dict[str, str]:
-    """``{platform: reason}`` for a served profile's platforms the multiplexer deliberately does not run
-    (WhatsApp/Relay are shared ingress owned by the default; ``gateway.run_adapters`` stamps
-    ``<profile>:<platform>`` as ``disabled`` with ``error_code=multiplex_shared_ingress``)."""
-    from scout_constants import get_default_scout_root
-    from gateway.status import read_runtime_status
-    if not profile or live_default_gateway_pid() is None:
-        return {}
-    runtime = read_runtime_status(get_default_scout_root() / "gateway_state.json") or {}
-    platforms = runtime.get("platforms")
-    if not isinstance(platforms, dict):
-        return {}
-    prefix = f"{profile}:"
-    return {
-        key[len(prefix):]: str(entry.get("error_message") or "not served under multiplex")
-        for key, entry in platforms.items()
-        if isinstance(key, str) and key.startswith(prefix) and isinstance(entry, dict)
-        and entry.get("error_code") == "multiplex_shared_ingress"
-    }
-
-
 def served_profile_ingress_urls(profile: Optional[str] = None) -> dict[str, dict[str, str]]:
     """``{profile: {platform: url}}`` for every secondary inbound-port platform the live multiplexer
     serves on its shared listener (``<profile>:<platform>`` entries carrying ``ingress_url``). This is
@@ -82,16 +61,6 @@ def served_profile_ingress_urls(profile: Optional[str] = None) -> dict[str, dict
     if not isinstance(platforms, dict):
         return {}
     urls: dict[str, dict[str, str]] = {}
-    for key, entry in platforms.items():
-        if not (isinstance(key, str) and ":" in key and isinstance(entry, dict)):
-            continue
-        url = entry.get("ingress_url")
-        if not url or entry.get("state") in ("fatal", "disconnected", "stopped"):
-            continue
-        name, platform = key.split(":", 1)
-        if profile and name != profile:
-            continue
-        urls.setdefault(name, {})[platform] = str(url)
     # api_server/webhook are the default's adapters mirrored at /p/<profile>/ (no entry of their own).
     served = [str(p) for p in (runtime.get("served_profiles") or []) if p and p != "default"]
     for name in served if not profile else [p for p in served if p == profile]:

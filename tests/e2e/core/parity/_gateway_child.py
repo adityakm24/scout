@@ -101,7 +101,7 @@ _real_instantiate = gateway_run.GatewayRunner._instantiate_adapter
 
 
 def _instantiate_adapter(self, platform: Platform, config: Any):
-    if platform == Platform.TELEGRAM:
+    if platform == Platform.HOMEASSISTANT:
         return ParityTelegramAdapter(config, platform)
     return _real_instantiate(self, platform, config)
 

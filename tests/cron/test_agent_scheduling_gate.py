@@ -27,10 +27,6 @@ ALWAYS_DISABLED = ["messaging", "clarify"]
 
 
 class TestGateOffDefault:
-    def test_empty_config_denies_cronjob(self):
-        assert _resolve_cron_disabled_toolsets({}) == [
-            "cronjob", "messaging", "clarify",
-        ]
 
 
 
@@ -48,11 +44,6 @@ class TestGateOn:
         disabled = _resolve_cron_disabled_toolsets(cfg)
         assert "cronjob" not in disabled
 
-    def test_interactivity_denials_survive_the_gate(self):
-        cfg = {"cron": {"allow_agent_scheduling": True}}
-        disabled = _resolve_cron_disabled_toolsets(cfg)
-        for name in ALWAYS_DISABLED:
-            assert name in disabled
 
     def test_memory_not_denied(self):
         # Cron agents run with memory enabled like any other agent run

@@ -2,7 +2,7 @@
 """SQLite state store for Scout Agent: session metadata, message history, model
 config, FTS5 search. WAL mode (concurrent readers + one writer); compression
 splits sessions via parent_session_id chains; sessions are source-tagged
-('cli', 'telegram', ...). Batch-runner / RL trajectories live elsewhere.
+('cli', 'desktop', ...). Batch-runner / RL trajectories live elsewhere.
 """
 
 import asyncio
@@ -50,7 +50,6 @@ from scout_state_readpool import _READ_POOL_MAX, _proc_fd_targets, _read_budget_
 from scout_state_sessions import SessionSessionsMixin
 from scout_state_fts import SessionFtsSetupMixin, load_fts5_cjk_extension
 from scout_state_portability import SessionPortabilityMixin
-from scout_state_telegram import SessionTelegramTopicsMixin
 from scout_state_profile_repair import SessionProfileRepairMixin
 from scout_state_schema import SessionSchemaMixin
 import scout_state_holders as _state_holders
@@ -450,7 +449,7 @@ def _foreign_state_db_holders(db_path: Path) -> List[Tuple[int, str]]:
 
 class SessionDB(
     SessionSessionsMixin, SessionFtsSetupMixin, SessionSearchMixin, SessionSchemaMixin,
-    SessionPortabilityMixin, SessionTelegramTopicsMixin, SessionCompressionMixin,
+    SessionPortabilityMixin, SessionCompressionMixin,
     SessionGatewayMixin, SessionMaintenanceMixin, SessionUsageMixin, SessionTitlesMixin,
     SessionMessagesMixin, SessionRewindMixin, SessionProfileRepairMixin,
 ):

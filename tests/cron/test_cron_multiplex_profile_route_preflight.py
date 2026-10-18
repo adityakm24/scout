@@ -69,12 +69,6 @@ def multiplex_homes(tmp_path, monkeypatch):
 
 
 class TestRoutedSatellitePreflight:
-    def test_routed_platform_passes_preflight(self, multiplex_homes):
-        """telegram→grant route: a grant-profile telegram deliver passes."""
-        with patch("gateway.config.load_gateway_config",
-                   return_value=_gateway_config(set())):
-            assert _preflight_check_delivery(
-                {"deliver": "telegram:-1004306455751:14"}) is None
 
     def test_unrouted_platform_still_blocked(self, multiplex_homes):
         """The route rescues telegram only — discord stays blocked."""

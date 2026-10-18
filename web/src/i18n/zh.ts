@@ -67,7 +67,6 @@ export const zh: Translations = {
     },
     nav: {
       analytics: "分析",
-      chat: "对话",
       config: "配置",
       cron: "定时任务",
       keys: "密钥",
@@ -160,8 +159,6 @@ export const zh: Translations = {
     selectedSessionsDeleted: "已删除 {count} 个会话",
     selectedSessionsSkippedActive: "已删除 {deleted} 个；{count} 个因仍有回合运行中而保留",
     failedToDeleteSelected: "删除所选会话失败",
-    resumeInChat: "在对话中继续",
-    newChat: "新对话",
     workspace: "工作区",
     workspaceDefault: "默认",
     workspaceRescan: "重新扫描仓库",
@@ -278,10 +275,6 @@ export const zh: Translations = {
     triggerNow: "立即触发",
     delivery: {
       local: "本地",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "邮件",
     },
   },
 
@@ -414,7 +407,6 @@ export const zh: Translations = {
       tts: "文字转语音",
       stt: "语音转文字",
       logging: "日志",
-      discord: "Discord",
       auxiliary: "辅助",
     },
   },

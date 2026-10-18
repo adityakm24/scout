@@ -129,10 +129,6 @@ export interface MemoryProviderOAuthStatus {
 export interface EnvVarInfo {
   advanced: boolean
   category: string
-  // True when this var is a messaging-platform credential owned by a card on
-  // the dedicated Messaging page. The Keys page hides these to avoid
-  // duplicating the richer channel-configuration UI.
-  channel_managed?: boolean
   description: string
   is_password: boolean
   is_set: boolean
@@ -254,75 +250,6 @@ export interface CustomEndpointValidationResponse {
   resolved_base_url?: string
   /** The transport whose route the backend probed (pinned api_mode, or the runtime's URL auto-detect). */
   transport_checked?: CustomEndpointApiMode
-}
-
-export interface MessagingEnvVarInfo {
-  advanced: boolean
-  description: string
-  is_password: boolean
-  is_set: boolean
-  key: string
-  prompt: string
-  redacted_value: null | string
-  required: boolean
-  url: null | string
-}
-
-export interface MessagingHomeChannel {
-  chat_id: string
-  name: string
-  platform: string
-  thread_id?: string
-}
-
-export interface MessagingPlatformInfo {
-  configured: boolean
-  description: string
-  docs_url: string
-  enabled: boolean
-  env_vars: MessagingEnvVarInfo[]
-  error_code?: null | string
-  error_message?: null | string
-  gateway_running: boolean
-  home_channel?: MessagingHomeChannel | null
-  id: string
-  /** Served secondary under a multiplexed gateway: the /p/<profile>/ URL on the shared listener
-   *  the client (or vendor console) must call. Null for standalone and default-profile platforms. */
-  ingress_url?: null | string
-  name: string
-  state?: null | string
-  updated_at?: null | string
-}
-
-export interface MessagingPlatformsResponse {
-  platforms: MessagingPlatformInfo[]
-}
-
-/** A pending pairing request, or an already-approved user, for one platform. */
-export interface PairingUser {
-  age_minutes?: number
-  platform: string
-  /** Present on pending rows only — the id `approvePairing` grants on. */
-  request_id?: string
-  user_id: string
-  user_name?: string
-}
-
-export interface PairingResponse {
-  approved: PairingUser[]
-  pending: PairingUser[]
-}
-
-export interface MessagingPlatformUpdate {
-  clear_env?: string[]
-  enabled?: boolean
-  env?: Record<string, string>
-}
-
-export interface MessagingPlatformTestResponse {
-  message: string
-  ok: boolean
-  state?: null | string
 }
 
 // -- Webhooks (subscription CRUD) --------------------------------------------
@@ -526,14 +453,6 @@ export interface SessionInfo {
   started_at: number
   title: null | string
   tool_call_count: number
-  /** Origin platform when this session was handed off from a messaging
-   *  platform (e.g. a Telegram thread continued in the desktop app). The live
-   *  {@link source} becomes local (tui/desktop) after a handoff, so the origin
-   *  is preserved here to surface the platform badge on the row. */
-  handoff_platform?: null | string
-  /** Handoff lifecycle: 'pending' | 'in_progress' | 'completed' | 'failed'. */
-  handoff_state?: null | string
-  handoff_error?: null | string
   /** Owning profile name, set by the cross-profile aggregator
    *  (`/api/profiles/sessions`). Absent on legacy single-profile responses,
    *  which the UI treats as the default profile. */

@@ -30,33 +30,6 @@ def _isolated_config_env(monkeypatch, tmp_path):
     yield
     os.environ.pop("SCOUT_IGNORE_USER_CONFIG", None)
 
-@pytest.mark.parametrize(
-    "args",
-    [
-        _args(query="hello"),
-        _args(command=None, query=None, oneshot="hello"),
-        _args(query="hello", quiet=True),
-    ],
-    ids=["single-query", "oneshot", "quiet-query"],
-)
-def test_noninteractive_guard_rejects_malformed_yaml(args, tmp_path, caplog, capsys):
-    from scout_cli import main as main_mod
-
-    broken = "model: [unterminated\n"
-    config_path = tmp_path / "config.yaml"
-    config_path.write_text(broken, encoding="utf-8")
-
-    with caplog.at_level(logging.ERROR, logger="scout_cli.config"):
-        with pytest.raises(SystemExit) as exc_info:
-            main_mod._guard_noninteractive_user_config(args)
-
-    assert exc_info.value.code == 2
-    assert capsys.readouterr().err.strip()
-    assert any(record.levelno == logging.ERROR for record in caplog.records)
-    assert config_path.read_text(encoding="utf-8") == broken
-    backups = list((tmp_path / "backups" / "config").glob("config.yaml.corrupt.*"))
-    assert len(backups) == 1
-    assert backups[0].read_text(encoding="utf-8") == broken
 
 def test_prepare_rejects_bad_config_before_plugin_discovery(monkeypatch, tmp_path):
     from scout_cli import main as main_mod

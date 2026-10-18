@@ -6,7 +6,6 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { useNavigate } from "react-router";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -15,14 +14,11 @@ import {
   ChevronRight,
   Database,
   ListFilter,
-  MessageSquare,
   Search,
   Trash2,
   Clock,
   Terminal,
   Globe,
-  MessageCircle,
-  Hash,
   X,
   Play,
   Eraser,
@@ -73,22 +69,12 @@ import { useToast } from "@/ui/hooks/use-toast";
 import { useI18n } from "@/i18n";
 import { usePageHeader } from "@/contexts/usePageHeader";
 import { PluginSlot } from "@/plugins";
-import { isDashboardEmbeddedChatEnabled } from "@/lib/dashboard-flags";
 import { apiErrorFromResponse, errorMessage } from "@/lib/api-error";
 
 const SOURCE_CONFIG: Record<string, { icon: typeof Terminal; color: string }> =
   {
     cli: { icon: Terminal, color: "text-primary" },
     tui: { icon: Terminal, color: "text-primary" },
-    telegram: { icon: MessageCircle, color: "text-[oklch(0.65_0.15_250)]" },
-    discord: { icon: Hash, color: "text-[oklch(0.65_0.15_280)]" },
-    slack: { icon: MessageSquare, color: "text-[oklch(0.7_0.15_155)]" },
-    whatsapp: { icon: Globe, color: "text-success" },
-    whatsapp_cloud: { icon: Globe, color: "text-success" },
-    signal: { icon: MessageCircle, color: "text-success" },
-    matrix: { icon: MessageCircle, color: "text-[oklch(0.65_0.15_250)]" },
-    email: { icon: MessageSquare, color: "text-[oklch(0.7_0.15_155)]" },
-    sms: { icon: MessageCircle, color: "text-success" },
     cron: { icon: Clock, color: "text-warning" },
     tool: { icon: Play, color: "text-warning" },
     oneshot: { icon: Terminal, color: "text-warning" },
@@ -138,18 +124,6 @@ function sourceLabel(source: string): string {
       return "CLI";
     case "tui":
       return "TUI";
-    case "telegram":
-      return "Telegram";
-    case "discord":
-      return "Discord";
-    case "slack":
-      return "Slack";
-    case "whatsapp":
-      return "WhatsApp";
-    case "whatsapp_cloud":
-      return "WhatsApp Cloud";
-    case "sms":
-      return "SMS";
     case "cron":
       return "Cron";
     case "tool":
@@ -476,7 +450,6 @@ function SessionRow({
   onDelete,
   onRename,
   onExport,
-  resumeInChatEnabled,
 }: SessionRowProps) {
   const [messages, setMessages] = useState<SessionMessage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -484,7 +457,6 @@ function SessionRow({
   const [renameValue, setRenameValue] = useState(session.title ?? "");
   const [renameSaving, setRenameSaving] = useState(false);
   const { t } = useI18n();
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isExpanded || messages !== null) return;
@@ -530,22 +502,6 @@ function SessionRow({
         <SourceIcon className={`mr-1 h-3 w-3 ${sourceInfo.color}`} />
         {session.source ? sourceLabel(session.source) : "local"}
       </Badge>
-
-      {resumeInChatEnabled && (
-        <Button
-          ghost
-          size="icon"
-          className="text-muted-foreground hover:text-success"
-          aria-label={t.sessions.resumeInChat}
-          title={t.sessions.resumeInChat}
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/chat?resume=${encodeURIComponent(session.id)}`);
-          }}
-        >
-          <Play />
-        </Button>
-      )}
 
       <Button
         ghost
@@ -876,7 +832,6 @@ export default function SessionsPage() {
   const { t } = useI18n();
   const { setAfterTitle, setEnd } = usePageHeader();
   const { activeAction, actionStatus, dismissLog } = useSystemActions();
-  const resumeInChatEnabled = isDashboardEmbeddedChatEnabled();
   const selectedSources = sourceSelectionsByCategory[sessionCategory];
 
   const pinnedSourceSelections = useMemo(
@@ -2125,7 +2080,6 @@ export default function SessionsPage() {
                   onDelete={() => sessionDelete.requestDelete(s.id)}
                   onRename={handleRename}
                   onExport={handleExport}
-                  resumeInChatEnabled={resumeInChatEnabled}
                 />
               ))}
             </div>
@@ -2220,7 +2174,6 @@ interface SessionRowProps {
   onRename: (id: string, title: string) => Promise<void>;
   onSelectClick: (event: React.MouseEvent) => void;
   onToggle: () => void;
-  resumeInChatEnabled: boolean;
   searchQuery?: string;
   session: SessionInfo;
   snippet?: string;

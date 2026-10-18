@@ -179,19 +179,6 @@ class StreamTransportMixin:
             if getattr(result, "success", False):
                 self._last_sent_text = text  # parity with the edit-based no-op skip
                 return True
-            # P5(b): an AUTHORIZATION decline is terminal for the whole run, not
-            # merely "drafts are unusable". Disabling drafts alone routes the
-            # turn-final to _first_send — a plain send into the chat the
-            # connector just refused. Verified: ops were ['draft', 'send'].
-            from gateway.relay.egress import declined_send
-
-            if declined_send(result):
-                logger.warning(
-                    "send_draft DECLINED by the connector's egress guard; "
-                    "suppressing every later send for this run (the destination "
-                    "is not approved for this connection)"
-                )
-                self._egress_declined = True
             logger.debug("send_draft returned success=False, disabling draft transport: %s",
                          getattr(result, "error", "unknown"))
         self._draft_failures += 1
@@ -217,16 +204,6 @@ class StreamTransportMixin:
         """A real (editable, deletable) preview message id is on screen."""
         return bool(self._message_id) and self._message_id != "__no_edit__"
 
-    def _should_send_fresh_final(self) -> bool:
-        """True when fresh-final is enabled and a real preview has been visible ≥ threshold.
-
-        Ported from openclaw/openclaw#72038.
-        """
-        threshold = getattr(self.cfg, "fresh_final_after_seconds", 0.0) or 0.0
-        if threshold <= 0 or not self._has_real_preview() or self._message_created_ts is None:
-            return False
-        return time.monotonic() - self._message_created_ts >= threshold
-
     def _track_preview_id(self, message_id: Optional[str]) -> None:
         """Record a real preview message id for finalization cleanup."""
         if message_id and message_id != "__no_edit__":
@@ -242,71 +219,9 @@ class StreamTransportMixin:
                     *(getattr(result, "continuation_message_ids", None) or ()), *(raw_ids or ())):
             self._track_preview_id(mid)
 
-    def _adapter_prefers_fresh_final(self, text: str) -> bool:
-        """Adapter's prefers_fresh_final_streaming hook (Telegram's richer send path);
-        False without a real preview / hook, or on any error."""
-        fn = getattr(self.adapter, "prefers_fresh_final_streaming", None)
-        if fn is None or not self._has_real_preview():
-            return False
-        try:
-            try:
-                # chat_id lets relay adapters decide via THIS chat's platform;
-                # otherwise a Slack-primary relay misroutes fronted chats through the
-                # fresh-send lane (duplicates: no delete op).
-                result = fn(text, metadata=self.metadata, chat_id=self.chat_id)
-            except TypeError:
-                try:
-                    result = fn(text, metadata=self.metadata)  # single-platform signature
-                except TypeError:
-                    result = fn(text)  # test doubles without the metadata kwarg
-        except Exception as e:
-            logger.debug("prefers_fresh_final_streaming check failed: %s", e)
-            return False
-        # ``is True`` keeps MagicMock auto-children from enabling fresh-final.
-        return result is True
-
-    async def _try_fresh_final(self, text: str, *, is_turn_final: bool = True) -> bool:
-        """Send ``text`` fresh and best-effort delete the preview(s); False on any failure so
-        the caller falls back to edit.  ``is_turn_final=False`` leaves the delivery flag unset.
-
-        ``is_turn_final`` is False when finalizing an interim segment at a tool boundary (a preamble) rather
-        than the turn-final answer; the final-delivery flag is then left unset so the gateway still delivers
-        the real answer from the next API call (#29346).
-        Ported from openclaw/openclaw#72038.
-        """
-        # Replacing every preview is only sound while ``text`` holds the whole answer;
-        # after a split, deleting sealed heads would erase delivered text.
-        if self._turn_split_delivery:
-            return False
-        stale_ids = self._stale_preview_ids()
-        try:
-            result = await self.adapter.send(
-                chat_id=self.chat_id, content=text, metadata=self._metadata_for_send(final=True))
-        except Exception as e:
-            logger.debug("Fresh-final send failed, falling back to edit: %s", e)
-            return False
-        if not getattr(result, "success", False):
-            return False
-        new_message_id = getattr(result, "message_id", None)
-        # Best-effort preview cleanup; never delete the message just sent.
-        await self._delete_previews(stale_ids, skip=new_message_id, label="Fresh-final")
-        self._preview_message_ids = set()
-        self._adopt_message_id(new_message_id)
-        self._already_sent = True
-        self._last_sent_text = text
-        if is_turn_final:
-            self._final_response_sent = True
-            self._record_turn_final_payload(text)
-        return True
-
     def _adopt_message_id(self, message_id) -> None:
         """Retarget edits at ``message_id``; None → "__no_edit__" sentinel so we never edit it."""
-        if message_id:
-            self._message_id = message_id
-            self._message_created_ts = time.monotonic()
-        else:
-            self._message_id = "__no_edit__"
-            self._message_created_ts = None
+        self._message_id = message_id or "__no_edit__"
 
     async def _send_or_edit(
         self, text: str, *, finalize: bool = False, is_turn_final: bool = True) -> bool:
@@ -446,15 +361,6 @@ class StreamTransportMixin:
 
     async def _first_send(self, text: str, *, finalize: bool) -> bool:
         """First send, threaded to the user's message (correct topic/thread)."""
-        if getattr(self, "_egress_declined", False):
-            # The connector refused this destination earlier in the run (see
-            # _send_draft_frame). This is where every fallback path converges,
-            # so the check belongs here rather than at each caller.
-            logger.warning(
-                "suppressing the plain-send fallback: the connector already "
-                "declined this destination for this run"
-            )
-            return False
         result = await self.adapter.send(
             chat_id=self.chat_id, content=text, reply_to=self._initial_reply_to_id,
             metadata=self._metadata_for_send(final=finalize, expect_edits=not finalize))
@@ -474,23 +380,10 @@ class StreamTransportMixin:
         return True
 
     async def _edit_existing(self, text: str, *, finalize: bool, is_turn_final: bool) -> bool:
-        """Edit the live preview (or replace it via fresh-final when finalizing)."""
+        """Edit the live preview."""
         # REQUIRES_EDIT_FINALIZE adapters need the finalize=True edit even when
         # unchanged; everyone else short-circuits.
         if text == self._last_sent_text and not (finalize and self._adapter_requires_finalize):
-            return True
-        # Fresh-final: replace a long-lived preview with a fresh message, or whenever
-        # the adapter prefers it (Telegram's send path renders richer markdown).  An
-        # explicit hook returning False must NOT be overridden by the time threshold
-        # (delete is best-effort; both messages would stay on screen).  Check the
-        # CLASS (MagicMock auto-creates attrs) plus instance __dict__ (test doubles).
-        has_prefers_hook = (
-            hasattr(type(self.adapter), "prefers_fresh_final_streaming")
-            or "prefers_fresh_final_streaming" in getattr(self.adapter, "__dict__", {}))
-        prefers_fresh = self._adapter_prefers_fresh_final(text)  # probed every edit (hook contract)
-        if finalize and (
-            prefers_fresh or (not has_prefers_hook and self._should_send_fresh_final())
-        ) and await self._try_fresh_final(text, is_turn_final=is_turn_final):
             return True
         result = await self._edit_message(message_id=self._message_id, content=text,
                                           finalize=finalize)
@@ -531,22 +424,6 @@ class StreamTransportMixin:
                                ) -> bool:
         """Classify a failed edit: partial overflow, flood backoff, or fallback mode.  Always
         False; the caller's finalize path may still deliver the tail."""
-        # P5(b): an AUTHORIZATION decline is terminal for the run. Every branch
-        # below treats a failed edit as "editing is unavailable" and hands the
-        # unseen tail to the fallback, which SENDS it as a new message to the
-        # chat the connector just refused. Measured: ops were
-        # ['edit', 'edit', 'send'].
-        from gateway.relay.egress import declined_send
-
-        if declined_send(result):
-            logger.warning(
-                "edit DECLINED by the connector's egress guard; suppressing "
-                "every later send for this run (the destination is not "
-                "approved for this connection)"
-            )
-            self._egress_declined = True
-            self._edit_supported = False
-            return False
         turn_final = finalize and is_turn_final
         if (turn_final and self.cfg.cursor and self._last_sent_text.endswith(self.cfg.cursor)
                 and self._visible_prefix() == text):

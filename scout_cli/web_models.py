@@ -55,23 +55,6 @@ class CustomEndpointUpdate(BaseModel):
     models: Optional[List[str]] = None
     model_details: Optional[List[CustomEndpointModelDetail]] = None
 
-class MessagingPlatformUpdate(BaseModel):
-    enabled: Optional[bool] = None
-    env: Dict[str, str] = {}
-    clear_env: List[str] = []
-    # Explicit body profile beats the switcher's query param (same as other scoped writes).
-    profile: Optional[str] = None
-
-class WhatsAppOnboardingStart(BaseModel):
-    mode: Optional[str] = "bot"
-    allowed_users: Optional[str] = ""
-    profile: Optional[str] = None
-
-class WhatsAppOnboardingApply(BaseModel):
-    mode: Optional[str] = None
-    allowed_users: Optional[str] = None
-    profile: Optional[str] = None
-
 class AudioTranscriptionRequest(BaseModel):
     data_url: str
     mime_type: Optional[str] = None
@@ -340,16 +323,6 @@ class MCPCatalogInstall(BaseModel):
     enable: bool = True
     profile: Optional[str] = None
 
-class PairingApprove(BaseModel):
-    platform: str
-    code: str = ""
-    request_id: str = ""
-    profile: Optional[str] = None
-
-class PairingRevoke(BaseModel):
-    platform: str
-    user_id: str
-    profile: Optional[str] = None
 
 class WebhookCreate(BaseModel):
     name: str

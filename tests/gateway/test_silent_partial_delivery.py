@@ -125,40 +125,6 @@ class TestDeliveredFinalMatchesRecordless:
         assert consumer.delivered_final_matches(FULL_RESPONSE) is True
 
 
-class TestFlagSettingSitesRecordPayload:
-    @pytest.mark.asyncio
-    async def test_fresh_final_records_delivered_payload(self):
-        """_try_fresh_final must record what it sent (#95382 holdout)."""
-
-        class FreshAdapter:
-            MAX_MESSAGE_LENGTH = 4096
-            splits_long_messages = True
-
-            def __init__(self):
-                self.sent = []
-
-            async def send(self, chat_id, content, reply_to=None, metadata=None):
-                self.sent.append(content)
-                return SendResult(success=True, message_id="m-1")
-
-        adapter = FreshAdapter()
-        consumer = _make_consumer(adapter)
-        consumer._final_response_sent = False
-        consumer._final_content_delivered = False
-        consumer._preview_message_ids = set()
-        consumer._message_id = "m-0"
-        consumer._message_created_ts = None
-        consumer.metadata = None
-        consumer._already_sent = False
-
-        ok = await consumer._try_fresh_final(STREAMED_PREFIX, is_turn_final=True)
-        assert ok is True
-        assert consumer._final_response_sent is True
-        # The recorded payload lets the gateway detect a stale fresh-final.
-        assert consumer._delivered_final_text is not None
-        assert STREAMED_PREFIX in consumer._delivered_final_text
-        assert consumer.delivered_final_matches(FULL_RESPONSE) is False
-        assert consumer.delivered_final_matches(STREAMED_PREFIX) is True
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +133,7 @@ class TestFlagSettingSitesRecordPayload:
 
 
 class CaptureAdapter(BasePlatformAdapter):
-    def __init__(self, platform=Platform.DISCORD):
+    def __init__(self, platform=Platform.HOMEASSISTANT):
         super().__init__(PlatformConfig(enabled=True, token="***"), platform)
         self.sent = []
         self.edits = []
@@ -312,7 +278,7 @@ async def _run_turn(monkeypatch, tmp_path, *, consumer_cls=None, session_id):
     adapter = CaptureAdapter()
     runner = _make_runner(adapter)
     source = SessionSource(
-        platform=Platform.DISCORD, chat_id="1534932197436424204", chat_type="group"
+        platform=Platform.HOMEASSISTANT, chat_id="1534932197436424204", chat_type="group"
     )
     result = await runner._run_agent(
         message="deploy status?",
@@ -325,77 +291,10 @@ async def _run_turn(monkeypatch, tmp_path, *, consumer_cls=None, session_id):
     return adapter, result
 
 
-@pytest.mark.asyncio
-async def test_recordless_delivery_flag_does_not_suppress_complete_response(
-    monkeypatch, tmp_path
-):
-    """#95382 boundary: flags claim delivery, nothing recorded, only the
-    prefix visible — the complete response must NOT be suppressed."""
-    adapter, result = await _run_turn(
-        monkeypatch,
-        tmp_path,
-        consumer_cls=_RecordlessFlagConsumer,
-        session_id="sess-95382-recordless",
-    )
-    assert result["final_response"] == FULL_RESPONSE
-    # Pre-fix behavior: already_sent=True and the tail appears in NO platform
-    # call (silent partial delivery). Post-fix: either the gateway performed
-    # the reconciliation edit itself (full text on the wire), or it declined
-    # to claim delivery so the caller's normal final send delivers it.
-    all_payloads = [c["content"] for c in adapter.sent] + [
-        e["content"] for e in adapter.edits
-    ]
-    delivered_here = any(FULL_RESPONSE in p for p in all_payloads)
-    assert delivered_here or not result.get("already_sent"), (
-        "silent partial delivery: gateway claimed delivery but the complete "
-        f"response never reached the platform; payloads={all_payloads!r}"
-    )
 
 
-@pytest.mark.asyncio
-async def test_normal_streaming_turn_still_suppresses_exactly_once(
-    monkeypatch, tmp_path
-):
-    """Control: an honest streaming turn (finalize edit carries the full
-    response) must still suppress the duplicate normal send."""
-    adapter, result = await _run_turn(
-        monkeypatch, tmp_path, session_id="sess-95382-control"
-    )
-    assert result["final_response"] == FULL_RESPONSE
-    all_payloads = [c["content"] for c in adapter.sent] + [
-        e["content"] for e in adapter.edits
-    ]
-    assert any(FULL_RESPONSE in p for p in all_payloads)
-    full_sends = [c for c in adapter.sent if FULL_RESPONSE in c["content"]]
-    assert len(full_sends) <= 1, f"duplicate final delivery: {full_sends!r}"
 
 
-@pytest.mark.asyncio
-async def test_recordless_flag_with_dead_transport_leaves_normal_send(
-    monkeypatch, tmp_path
-):
-    """#95382 incident shape: the reconciliation edit ALSO fails (dead
-    transport). The gateway must NOT claim already_sent — the normal final
-    send (and, on failure there, the delivery ledger) owns recovery."""
-
-    class _DeadEditRecordlessConsumer(_RecordlessFlagConsumer):
-        async def run(self):
-            await super().run()
-            # Transport dies after the stream drained: every further edit
-            # fails, like a dropped Discord WebSocket.
-            self.adapter.fail_edits = True
-
-    adapter, result = await _run_turn(
-        monkeypatch,
-        tmp_path,
-        consumer_cls=_DeadEditRecordlessConsumer,
-        session_id="sess-95382-dead-transport",
-    )
-    assert result["final_response"] == FULL_RESPONSE
-    assert not result.get("already_sent"), (
-        "gateway claimed delivery although neither the stream nor the "
-        "reconciliation edit put the complete response on the wire"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -403,36 +302,6 @@ async def test_recordless_flag_with_dead_transport_leaves_normal_send(
 # ---------------------------------------------------------------------------
 
 
-class TestDiscordTransportClassification:
-    def _adapter_module(self):
-        import plugins.platforms.discord.adapter as mod
-
-        return mod
-
-    def test_connection_error_is_transport(self):
-        mod = self._adapter_module()
-        assert mod._is_discord_transport_error(ConnectionError("websocket closed"))
-        assert mod._is_discord_transport_error(
-            RuntimeError("Session is closed")
-        )
-        assert mod._is_discord_transport_error(OSError(104, "Connection reset"))
-
-    def test_http_and_timeout_errors_are_not_transport(self):
-        mod = self._adapter_module()
-        assert not mod._is_discord_transport_error(
-            RuntimeError("error code: 50013: Missing Permissions")
-        )
-        assert not mod._is_discord_transport_error(asyncio.TimeoutError())
-
-    @pytest.mark.asyncio
-    async def test_send_without_client_reports_send_path_degraded(self):
-        mod = self._adapter_module()
-        adapter = mod.DiscordAdapter.__new__(mod.DiscordAdapter)
-        adapter._client = None
-        result = await mod.DiscordAdapter.send(adapter, "c1", "hello")
-        assert result.success is False
-        assert result.error == "send_path_degraded"
-        assert result.retryable is True
 
 
 class TestLedgerReplaysDegradedDiscordSend:

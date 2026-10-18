@@ -18,9 +18,7 @@ export const $changeEventsAvailable = atom(false)
 
 export const $cronChangeTick = atom(0)
 export const $sessionsChangeTick = atom(0)
-export const $platformsChangeTick = atom(0)
 export const $projectsChangeTick = atom(0)
-export const $pairingChangeTick = atom(0)
 /** `planner.changed` — the user's to-do list moved on disk (agent tool, CLI, another window). */
 export const $plannerChangeTick = atom(0)
 
@@ -52,16 +50,8 @@ export function notifySessionsChanged(): void {
   $sessionsChangeTick.set($sessionsChangeTick.get() + 1)
 }
 
-export function notifyPlatformsChanged(): void {
-  $platformsChangeTick.set($platformsChangeTick.get() + 1)
-}
-
 export function notifyProjectsChanged(): void {
   $projectsChangeTick.set($projectsChangeTick.get() + 1)
-}
-
-export function notifyPairingChanged(): void {
-  $pairingChangeTick.set($pairingChangeTick.get() + 1)
 }
 
 export function notifyPlannerChanged(): void {

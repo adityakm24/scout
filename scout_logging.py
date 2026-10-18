@@ -285,7 +285,7 @@ COMPONENT_PREFIXES = {
     "tools": ("tools",),
     "cli": ("scout_cli", "cli"),
     "cron": ("cron",),
-    "gui": ("scout_cli.web_server", "scout_cli.pty_bridge", "scout_cli.desktop", "tui_gateway", "uvicorn"),
+    "gui": ("scout_cli.web_server", "scout_cli.desktop", "tui_gateway", "uvicorn"),
 }
 
 

@@ -39,7 +39,7 @@ async def test_watches_read_and_admit_in_each_owner_profile(tmp_path, monkeypatc
         with _profile_runtime_scope(home):
             await runner._warm_goals_session_db('test')
             save_heartbeat(name, HeartbeatState(prompt=name, interval_seconds=60, created_at=1))
-        watch[name] = (SessionSource(platform=Platform.TELEGRAM, chat_id=name, profile=name), name)
+        watch[name] = (SessionSource(platform=Platform.HOMEASSISTANT, chat_id=name, profile=name), name)
     with _profile_runtime_scope(tmp_path / '.scout' / 'profiles' / 'alpha'):
         await runner._heartbeat_poll_once(watch)
     assert {row[0] for row in rows} == {'alpha', 'beta'}
@@ -68,7 +68,7 @@ async def test_watch_tracks_rotated_route_owner_without_reviving_parent():
     await runner._warm_goals_session_db('test')
     save_heartbeat('parent', HeartbeatState(prompt='follow rotation', interval_seconds=60, created_at=1))
     assert migrate_heartbeat_to_session('parent', 'child')
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id='chat')
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id='chat')
     watch = {'route': (source, 'parent')}
     await runner._heartbeat_poll_once(watch)
     assert len(events) == 1

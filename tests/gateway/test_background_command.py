@@ -12,7 +12,7 @@ from gateway.config import Platform
 from gateway.platforms.event import MessageEvent
 from gateway.session import SessionSource
 
-def _make_event(text="/bg", platform=Platform.TELEGRAM,
+def _make_event(text="/bg", platform=Platform.HOMEASSISTANT,
                 user_id="12345", chat_id="67890"):
     """Build a MessageEvent for testing."""
     source = SessionSource(
@@ -67,10 +67,10 @@ class TestRunBackgroundTask:
         mock_adapter.send = AsyncMock()
         mock_adapter.extract_media = MagicMock(return_value=([], "Hello from background!"))
         mock_adapter.extract_images = MagicMock(return_value=([], "Hello from background!"))
-        runner.adapters[Platform.TELEGRAM] = mock_adapter
+        runner.adapters[Platform.HOMEASSISTANT] = mock_adapter
 
         source = SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             user_id="12345",
             chat_id="67890",
             user_name="testuser",

@@ -1,5 +1,5 @@
-"""Skin + config-change watcher: on-disk signatures for skin/pet/cron/sessions/platforms/
-pairing/bot-relay state and the broadcast loop that pushes *.changed events. Bodies are
+"""Skin + config-change watcher: on-disk signatures for skin/pet/cron/sessions/projects/
+bot-relay state and the broadcast loop that pushes *.changed events. Bodies are
 rebound onto server.py's globals at install time (method_ctx.bind_module)."""
 
 from __future__ import annotations
@@ -217,44 +217,6 @@ def _projects_sig():
         for name in ("projects.db", "projects.db-wal"))
 
 
-def _pairing_sig():
-    """Newest mtime across every profile's pairing ledgers (legacy ``pairing/`` and
-    ``platforms/pairing/``): the gateway process writes pending codes, so the files are the only
-    shared signal (a pairing request moves nothing in gateway_state.json)."""
-    entries = []
-    for root in _pairing_roots(_watcher_home()):
-        with contextlib.suppress(OSError):
-            # Only the ledgers: _rate_limits.json moves on every unauthorized DM.
-            entries += [
-                e for e in root.iterdir() if e.name.endswith(("-pending.json", "-approved.json"))]
-    return _newest_mtime_ns(entries)
-
-
-# Live-profile pairing roots, cached on (home, ``profiles/`` dir mtime) with a TTL. The liveness
-# probe costs ~14 stats per profile; on the 2 s tick that was the watcher's share of the idle
-# profile-tree burn (#114041 §2/§3). The profile SET only moves when a dir is added or removed —
-# which bumps the parent's mtime — while a marker/tombstone landing inside one is caught by the TTL.
-_PAIRING_ROOTS_TTL_S = 30.0
-_pairing_roots_cache: tuple[Path, int | None, float, list] | None = None
-
-
-def _pairing_roots(home: Path) -> list:
-    global _pairing_roots_cache
-    profiles_dir = home / "profiles"
-    dir_mtime, now = _watcher_mtime_ns(profiles_dir), time.monotonic()
-    cached = _pairing_roots_cache
-    if cached is not None and cached[0] == home and cached[1] == dir_mtime and now - cached[2] < _PAIRING_ROOTS_TTL_S:
-        return cached[3]
-    from scout_constants import named_profile_is_live
-    roots = [home / "pairing", home / "platforms" / "pairing"]
-    with contextlib.suppress(OSError):
-        for profile_dir in profiles_dir.iterdir():
-            if named_profile_is_live(profile_dir):
-                roots += [profile_dir / "pairing", profile_dir / "platforms" / "pairing"]
-    _pairing_roots_cache = (home, dir_mtime, now, roots)
-    return roots
-
-
 # Newest outbox-envelope mtime EVER seen (monotone): a drain empties the outbox,
 # and falling back to None would fire a spurious pending event after every drain.
 _bot_relay_outbox_seen = 0
@@ -266,7 +228,7 @@ def _bot_relay_outbox_sig():
 
     Envelopes are written by the AGENT process (``message_agent`` → ``tools.bot_relay.enqueue_envelope``) —
     a different process that never touches this gateway's transports — so the files are the only shared
-    signal, exactly like the pairing store. See #92760, #93091.
+    signal. See #92760, #93091.
     """
     global _bot_relay_outbox_seen
     home = _watcher_home()
@@ -280,8 +242,7 @@ def _bot_relay_outbox_sig():
 
 # event → (check interval, signature fn, payload fn). Signatures are stat-cheap; the interval
 # keeps pricier probes (pet resolves the sheet off disk) off the 0.5s tick. cron/jobs.json
-# moves on edits AND scheduler ticks; gateway_state.json is where the messaging gateway
-# persists platform connect/disconnect/health (the Messaging page's status signal).
+# moves on edits AND scheduler ticks.
 _CHANGE_WATCHES: dict[str, tuple[float, Any, Any]] = {
     "pet.changed": (2.0, _pet_sig, _pet_changed_payload),
     "cron.changed": (1.0, lambda: _home_mtime_ns("cron", "jobs.json"), lambda: {}),
@@ -292,16 +253,13 @@ _CHANGE_WATCHES: dict[str, tuple[float, Any, Any]] = {
     # Projects created/switched by CLI or agent tooling write projects.db without any
     # state.db movement, so sessions.changed never fires and the desktop Projects
     # sidebar goes stale until a manual refresh (#56757).
-    "platforms.changed": (2.0, lambda: _home_mtime_ns("gateway_state.json"), lambda: {}),
     "projects.changed": (2.0, _projects_sig, lambda: {}),
-    "pairing.changed": (2.0, _pairing_sig, lambda: {}),
     # 1s so a queued DM envelope reaches the Desktop's push-triggered drain fast.
     "bot_relay.outbox.pending": (1.0, _bot_relay_outbox_sig, lambda: {})}
 
-# state.db moves on every append of a streaming turn and gateway_state.json on
-# in-flight bookkeeping; the floor coalesces bursts to one broadcast per window,
+# state.db moves on every append of a streaming turn; the floor coalesces bursts to one broadcast per window,
 # trailing edge included (a floored change keeps its old signature, re-fires later).
-_CHANGE_BROADCAST_FLOOR_S = {"sessions.changed": 2.0, "platforms.changed": 5.0}
+_CHANGE_BROADCAST_FLOOR_S = {"sessions.changed": 2.0}
 
 _change_sigs: dict[str, Any] = {}
 _change_checked_at: dict[str, float] = {}

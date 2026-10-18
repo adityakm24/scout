@@ -2,10 +2,9 @@
 @import './ui/styles.css';
 
 /* ------------------------------------------------------------------ */
-/* JetBrains Mono — bundled for the embedded TUI (/chat tab).          */
+/* JetBrains Mono — bundled for the Scout Console terminal.           */
 /* Gives the terminal a proper monospace font even on systems where    */
-/* the user doesn't have one installed locally; xterm.js picks it up   */
-/* via ChatPage's `fontFamily` option.                                 */
+/* the user doesn't have one installed locally.                        */
 /* Apache-2.0.                                                         */
 /* ------------------------------------------------------------------ */
 

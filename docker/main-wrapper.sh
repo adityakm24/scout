@@ -60,7 +60,7 @@ fi
 
 # HOME comes through with-contenv as /root (the /init context). Override
 # to the scout user's home before dropping privileges so libraries that
-# resolve paths via $HOME (e.g. discord lockfile under XDG_STATE_HOME)
+# resolve paths via $HOME (e.g. lockfiles under XDG_STATE_HOME)
 # don't try to write to /root.
 export HOME=/opt/data
 

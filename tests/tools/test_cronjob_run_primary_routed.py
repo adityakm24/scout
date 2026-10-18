@@ -3,7 +3,7 @@
 Regression for #120330. A multiplexed satellite profile with no ``platforms.<p>`` credential of
 its own posts through the primary's bot via a root ``gateway.profile_routes`` entry, so only the
 gateway process holding that bot can deliver its jobs. ``scout -p <profile> cron run`` used to
-run the whole agent turn in the CLI process anyway, fail delivery with ``platform 'telegram' not
+run the whole agent turn in the CLI process anyway, fail delivery with ``platform 'homeassistant' not
 configured/enabled`` and overwrite the job's ``last_status`` with ``delivery_failed``.
 """
 
@@ -15,7 +15,7 @@ import pytest
 
 from scout_cli.cron import _run_outcome
 
-ROUTED_TARGET = "telegram:-1004306455751:14"
+ROUTED_TARGET = "homeassistant:-1004306455751:14"
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def keeper_job(tmp_path, monkeypatch):
     keeper_home.mkdir(parents=True)
     (root / "config.yaml").write_text(json.dumps({"gateway": {  # YAML is a JSON superset; the test env ships no pyyaml
         "multiplex_profiles": True,
-        "profile_routes": [{"name": "ops", "platform": "telegram", "chat_id": "-1004306455751",
+        "profile_routes": [{"name": "ops", "platform": "homeassistant", "chat_id": "-1004306455751",
                             "thread_id": "14", "profile": "keeper"}],
     }}), encoding="utf-8")
     monkeypatch.setenv("SCOUT_HOME", str(keeper_home))  # what `scout -p keeper` sets
@@ -42,21 +42,6 @@ def _run(job_id, *, gateway_serves_profile):
     return out, m_run
 
 
-def test_routed_run_is_queued_for_the_gateway_that_serves_the_profile(keeper_job, monkeypatch):
-    from cron.jobs import get_job
-    out, m_run = _run(keeper_job["id"], gateway_serves_profile=True)
-
-    assert out["success"] is True
-    m_run.assert_not_called()  # no agent turn in a process that cannot deliver its result
-    stored = get_job(keeper_job["id"])
-    assert stored["next_run_at"] == stored["manual_run_at"]  # due on the gateway's next tick
-    assert stored.get("last_status") is None  # the manual run does not rewrite the job's status
-    assert _run_outcome(out["job"]) == "It will run on the next scheduler tick."
-
-    # Control: a profile holding its own credential for the platform runs in-process as before.
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:keeper-own-bot")
-    _, m_run = _run(keeper_job["id"], gateway_serves_profile=True)
-    m_run.assert_called_once()
 
 
 @pytest.mark.parametrize("gateway_serves_profile", [False, None])

@@ -13,7 +13,7 @@ from scout_cli.heartbeat import (
 
 def test_reset_clears_only_the_departing_conversations_heartbeat(tmp_path):
     store = SessionStore(tmp_path / "sessions", GatewayConfig())
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id="reset", user_id="owner")
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="reset", user_id="owner")
     entry = store.get_or_create_session(source)
     key, parent = entry.session_key, entry.session_id
     child = parent + "-compressed"

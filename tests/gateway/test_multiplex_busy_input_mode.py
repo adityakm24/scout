@@ -57,7 +57,7 @@ def _event(*, profile: str | None) -> MessageEvent:
         text="follow up",
         message_type=MessageType.TEXT,
         source=SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_id="chat-1",
             chat_type="dm",
             user_id="user-1",
@@ -70,7 +70,7 @@ def _event(*, profile: str | None) -> MessageEvent:
 def _adapter() -> _ProfileAdapter:
     adapter = _ProfileAdapter(
         PlatformConfig(enabled=True, token="test-token"),
-        Platform.TELEGRAM,
+        Platform.HOMEASSISTANT,
     )
     return adapter
 
@@ -92,8 +92,8 @@ async def _load_profile_snapshot(
 
     assert await runner._start_one_profile_adapters("research", profile_home, {}) == 0
     adapter = _adapter()
-    runner._profile_adapters["research"][Platform.TELEGRAM] = adapter
-    runner._configure_profile_adapter(adapter, "research", Platform.TELEGRAM)
+    runner._profile_adapters["research"][Platform.HOMEASSISTANT] = adapter
+    runner._configure_profile_adapter(adapter, "research", Platform.HOMEASSISTANT)
     return adapter
 
 
@@ -147,40 +147,6 @@ async def test_secondary_profile_busy_mode_controls_live_busy_behavior(
         agent.interrupt.assert_called_once_with("follow up")
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("secondary_mode", ["queue", "steer"])
-async def test_secondary_profile_busy_mode_controls_priority_path(
-    tmp_path,
-    monkeypatch,
-    secondary_mode,
-):
-    """The runner's early active-agent path uses the same routed policy."""
-    monkeypatch.setenv("SCOUT_TELEGRAM_FOLLOWUP_GRACE_SECONDS", "0")
-    runner = _runner(default_mode="interrupt")
-    adapter = await _load_profile_snapshot(
-        runner,
-        tmp_path / "research",
-        secondary_mode,
-    )
-    event = _event(profile="research")
-    session_key = runner._session_key_for_source(event.source)
-    agent = MagicMock()
-    agent._active_children = []
-    agent.steer.return_value = True
-    runner._running_agents[session_key] = agent
-
-    assert await runner._handle_message(event) is None
-
-    agent.interrupt.assert_not_called()
-    if secondary_mode == "queue":
-        agent.steer.assert_not_called()
-        assert adapter._pending_messages[session_key] is event
-    else:
-        agent.steer.assert_called_once()
-        injected = agent.steer.call_args.args[0]
-        assert injected.endswith("follow up")
-        assert '"chat_id": "chat-1"' in injected
-        assert session_key not in adapter._pending_messages
 
 
 @pytest.mark.asyncio
@@ -358,7 +324,7 @@ async def test_default_busy_mode_is_unchanged_by_secondary_profile(tmp_path, mon
     runner = _runner(default_mode="interrupt")
     await _load_profile_snapshot(runner, tmp_path / "research", "steer")
     adapter = _adapter()
-    runner.adapters[Platform.TELEGRAM] = adapter
+    runner.adapters[Platform.HOMEASSISTANT] = adapter
     event = _event(profile=None)
     session_key = runner._session_key_for_source(event.source)
     agent = MagicMock()
@@ -403,7 +369,7 @@ def test_profile_route_and_nonmultiplexed_resolution_preserve_boundaries(
     runner.config.profile_routes = [
         ProfileRoute(
             name="research-chat",
-            platform="telegram",
+            platform="homeassistant",
             profile="research",
             chat_id="chat-1",
         )
@@ -451,63 +417,6 @@ async def test_effective_mode_uses_startup_snapshot_without_rereading_config(
     assert runner._effective_busy_text_mode(source) == "interrupt"
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("mode", ["steer", "interrupt"])
-@pytest.mark.parametrize("secondary_privacy", [True, False])
-async def test_primary_adapter_busy_origin_uses_routed_privacy(
-    tmp_path, monkeypatch, mode, secondary_privacy,
-):
-    """The primary busy callback bypasses the scoped normal-message handler."""
-    from dataclasses import asdict
-    from agent.agent_runtime_helpers import apply_pending_steer_to_tool_results
-    from scout_constants import get_scout_home_override
-    from run_agent import AIAgent
-
-    home = tmp_path / ".scout"
-    secondary = home / "profiles" / "research"
-    secondary.mkdir(parents=True)
-    monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    monkeypatch.setenv("SCOUT_HOME", str(home))
-    monkeypatch.setattr("gateway.run._scout_home", home)
-    monkeypatch.setenv("SCOUT_GATEWAY_BUSY_ACK_ENABLED", "false")
-    for directory, privacy in ((home, not secondary_privacy), (secondary, secondary_privacy)):
-        (directory / "config.yaml").write_text(
-            f"privacy:\n  redact_pii: {str(privacy).lower()}\n", encoding="utf-8",
-        )
-    runner = _runner(default_mode=mode)
-    runner.config.profile_routes = [
-        ProfileRoute(name="research-chat", platform="telegram", profile="research", chat_id="chat-1"),
-    ]
-    adapter = _adapter()
-    runner.adapters[Platform.TELEGRAM] = adapter
-    runner._wire_adapter_handlers(adapter)
-    adapter.gateway_runner = runner
-    event = MessageEvent(
-        text="follow up", message_id="message-1",
-        source=adapter.build_source(chat_id="chat-1", user_id="user-1"),
-    )
-    assert event.source.profile == "research"
-    original = asdict(event.source)
-    key = runner._session_key_for_source(event.source)
-    agent = AIAgent(
-        api_key="offline-test", base_url="http://127.0.0.1:1/v1", provider="openai-compat",
-        model="test-model", enabled_toolsets=[], quiet_mode=True, skip_context_files=True,
-        skip_memory=True, save_trajectories=False, platform="cli",
-    )
-    agent._executing_tools = mode == "interrupt"
-    runner._session_state(key).turn.agent = agent
-    adapter._active_sessions[key] = asyncio.Event()
-    ambient = get_scout_home_override()
-    await adapter._handle_message_while_active(event, key)
-    messages = [{"role": "tool", "tool_call_id": "probe", "content": "Tool completed."}]
-    apply_pending_steer_to_tool_results(agent, messages, 1)
-    output = messages[-1]["content"]
-    assert "follow up" in output
-    for value in (event.source.chat_id, event.source.user_id, event.message_id, "research"):
-        assert (value not in output) is secondary_privacy
-    assert asdict(event.source) == original
-    assert get_scout_home_override() == ambient
-    assert key not in adapter._pending_messages
 
 
 @pytest.mark.asyncio
@@ -529,8 +438,8 @@ async def test_secondary_busy_text_timing_follows_profile_config_not_process_env
     for name in ("alpha", "beta", "alpha"):
         assert await runner._start_one_profile_adapters(name, homes[name], {}) == 0
         adapter = _adapter()
-        runner._profile_adapters[name][Platform.TELEGRAM] = adapter
-        runner._configure_profile_adapter(adapter, name, Platform.TELEGRAM)
+        runner._profile_adapters[name][Platform.HOMEASSISTANT] = adapter
+        runner._configure_profile_adapter(adapter, name, Platform.HOMEASSISTANT)
         seen.setdefault(name, []).append((adapter._busy_text_debounce_seconds, adapter._busy_text_hard_cap_seconds))
 
     assert seen["alpha"] == [(0.1, 0.5), (0.1, 0.5)]
@@ -569,8 +478,8 @@ async def test_secondary_human_delay_follows_profile_config_not_process_env(tmp_
     for name in ("alpha", "beta", "alpha"):
         assert await runner._start_one_profile_adapters(name, homes[name], {}) == 0
         adapter = _adapter()
-        runner._profile_adapters[name][Platform.TELEGRAM] = adapter
-        runner._configure_profile_adapter(adapter, name, Platform.TELEGRAM)
+        runner._profile_adapters[name][Platform.HOMEASSISTANT] = adapter
+        runner._configure_profile_adapter(adapter, name, Platform.HOMEASSISTANT)
         seen.setdefault(name, []).append(adapter._human_delay_range_ms)
 
     assert seen["alpha"] == [(100, 200), (100, 200)]

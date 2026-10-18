@@ -21,15 +21,10 @@ from contextlib import suppress
 from pathlib import Path
 
 from agent.i18n import t
-from gateway.config import Platform
 from gateway.platforms.base import EphemeralReply
 from gateway.platforms.event import MessageEvent, MessageType
 from gateway.run_busy import approval_input_words
 from gateway.run_common import _UNSET
-from gateway.run_inbound_unauthorized import (
-    UnauthorizedOwnerNotifier, pairing_code_reply, pairing_profile_arg, pairing_rate_limited_reply,
-    unauthorized_owner_hint,
-)
 from gateway.session import (
     SessionSource, build_session_context, is_shared_multi_user_session,
     neutralize_untrusted_inline_text,
@@ -84,27 +79,6 @@ def rehome_inbound_media(event: MessageEvent) -> None:
     event.media_urls = rewritten
 
 
-def discord_triggering_note(message_id: Any) -> str:
-    """Model-facing routing note for a Discord turn (rides the API-bound user message only)."""
-    return (
-        f"[Triggering message id: `{message_id}` — use as `message_id` for reply/react/pin "
-        f"via the discord tools.]"
-    )
-
-
-def strip_discord_triggering_note(event: Any, message_text: Any) -> Any:
-    """Authored text for the durable user row: peel off exactly the note
-    ``_prepend_inbound_reply_context`` added for THIS event, if present. The note is a
-    model instruction, not something the user wrote — persisted as ``content`` it renders
-    verbatim in every transcript surface and pollutes FTS/memory (#71304, #114719). It
-    keeps riding ``message_text`` (and the replay-only ``api_content`` sidecar)."""
-    message_id = getattr(event, "message_id", None)
-    if not message_id or not isinstance(message_text, str):
-        return message_text
-    prefix = f"{discord_triggering_note(message_id)}\n\n"
-    return message_text[len(prefix):] if message_text.startswith(prefix) else message_text
-
-
 class GatewayInboundMixin:
     """Inbound message pipeline (_handle_message, text/media preparation, durable-turn markers, plugin injection) for GatewayRunner."""
 
@@ -145,69 +119,11 @@ class GatewayInboundMixin:
                 break
         return event
 
-    async def _hm_offer_pairing_code(self, source: SessionSource) -> None:
-        """DM an unauthorized sender a pairing code (rate-limited; groups never reach here)."""
-        platform_name = source.platform.value if source.platform else "unknown"
-        pairing_store = self._pairing_store_for(source)
-        if pairing_store is None:
-            logger.error("Cannot offer pairing code on %s: no pairing store", platform_name)
-            return
-        # Rate-limit ALL pairing responses (code or rejection) so a burst of DMs doesn't spam.
-        if pairing_store._is_rate_limited(platform_name, source.user_id):
-            return
-        code = pairing_store.generate_code(platform_name, source.user_id, source.user_name or "")
-        adapter = self._delivery_adapter_for(source)
-        if code:
-            reply = pairing_code_reply(platform_name, code, pairing_profile_arg(pairing_store))
-        else:
-            reply = pairing_rate_limited_reply()
-        if adapter:
-            await adapter.send(source.chat_id, reply)
-        if not code:
-            # Record rate limit so subsequent messages are silently ignored
-            pairing_store._record_rate_limit(platform_name, source.user_id)
-
-    async def _hm_send_unauthorized_decline(self, source: SessionSource) -> None:
-        """``decline`` behavior: one short refusal per sender per DECLINE_DEDUPE_SECONDS, then silence
-        (#88028). The stamp is written BEFORE the send so a delivery
-        hiccup cannot become a decline storm; without a store there is no dedupe state → stay silent."""
-        from gateway.config import DEFAULT_UNAUTHORIZED_DM_DECLINE_MESSAGE
-        platform_name = source.platform.value if source.platform else "unknown"
-        pairing_store = self._pairing_store_for(source)
-        if pairing_store is None or pairing_store.has_recent_decline(platform_name, source.user_id):
-            return
-        pairing_store.record_decline(platform_name, source.user_id)
-        adapter = self._delivery_adapter_for(source)
-        if not adapter:
-            return
-        config = getattr(self, "config", None)
-        text = str(getattr(config, "unauthorized_dm_decline_message", "") or "").strip()
-        try:
-            await adapter.send(source.chat_id, text or DEFAULT_UNAUTHORIZED_DM_DECLINE_MESSAGE)
-        except Exception:
-            logger.warning("Failed to deliver unauthorized-DM decline on %s", platform_name, exc_info=True)
-
-    async def _hm_report_ignored_dm(self, source: SessionSource) -> None:
-        """Unauthorized DM under behaviour ``ignore``: nothing goes to the sender. The owner gets the
-        sender's ID and the allowlist fix in the WARNING log and, once per sender, in the home channel."""
-        from scout_constants import display_scout_home
-        platform_name = source.platform.value if source.platform else "unknown"
-        hint = unauthorized_owner_hint(
-            platform_name, source.user_id, source.user_name or "", scout_home=display_scout_home(),
-        )
-        logger.warning("Unauthorized user (ignored): %s", hint)
-        notifier = getattr(self, "_unauthorized_owner_notifier", None)
-        if notifier is None:
-            notifier = self._unauthorized_owner_notifier = UnauthorizedOwnerNotifier()
-        if notifier.first_time(platform_name, source.user_id) and getattr(self, "config", None) is not None:
-            await notifier.notify(self, source, hint)
-
     async def _hm_admit_event(
         self, event: "MessageEvent"
     ) -> Optional[Tuple["MessageEvent", SessionSource, bool]]:
         """Ingress gates for ``_handle_message``; None when dropped, else ``(event, source, is_internal)``
         (the ``pre_gateway_dispatch`` hook may have rewritten ``event``)."""
-        from gateway.run import _is_slack_ignored_channel
         source = event.source
         # getattr(self, ...) throughout: bare test runners build GatewayRunner via object.__new__.
         _config = getattr(self, "config", None)
@@ -236,23 +152,6 @@ class GatewayInboundMixin:
 
         is_internal = bool(getattr(event, "internal", False))  # e.g. background-process notifications
 
-        # Ignored-channel guard runs FIRST — before startup-restore queueing, plugin hooks, auth,
-        # and session setup — so an ignored channel can never reach pairing/auth/session state.
-        _chat_id = getattr(source, "chat_id", None)
-        if not is_internal and getattr(source, "platform", None) == Platform.SLACK:
-            # The routed adapter's extra carries a secondary profile's own list; ``_config`` is the default's.
-            _slack_adapter = None
-            with suppress(Exception):
-                _slack_adapter = self._intake_adapter_for(source)
-        if (
-            # See #51899.
-            not is_internal
-            and getattr(source, "platform", None) == Platform.SLACK
-            and _is_slack_ignored_channel(_config, _chat_id, _slack_adapter)
-        ):
-            logger.info("Dropping Slack message from configured ignored channel %s", _chat_id)
-            return None
-
         if (
             getattr(self, "_startup_restore_in_progress", False)
             and not is_internal
@@ -271,24 +170,10 @@ class GatewayInboundMixin:
 
         if not self._is_user_authorized_for_source(source):
             if source.user_id is None:
-                # No user identity (Telegram service messages, channel forwards, anonymous admin
-                # posts, sender_chat): can't be paired but may be authorized via a chat allowlist.
                 logger.debug("Ignoring message with no user_id from %s", source.platform.value)
                 return None
-            # DMs get a pairing code or a one-time decline, groups are ignored. A bot cannot pair, and
-            # answering one mid-cooldown is outbound traffic.
-            pairable_dm = source.chat_type == "dm" and not getattr(source, "is_bot", False)
-            behavior = self._get_unauthorized_dm_behavior(source.platform, profile=source.profile) if pairable_dm else None
-            if behavior == "pair":
-                logger.warning("Unauthorized user: %s (%s) on %s", source.user_id, source.user_name, source.platform.value)
-                await self._hm_offer_pairing_code(source)
-            elif behavior == "decline":
-                logger.warning("Unauthorized user: %s (%s) on %s", source.user_id, source.user_name, source.platform.value)
-                await self._hm_send_unauthorized_decline(source)
-            elif pairable_dm:
-                await self._hm_report_ignored_dm(source)
-            else:
-                logger.warning("Unauthorized user: %s (%s) on %s", source.user_id, source.user_name, source.platform.value)
+            # Nothing goes back to an unauthorized sender: any reply would confirm the agent exists.
+            logger.warning("Unauthorized user: %s (%s) on %s", source.user_id, source.user_name, source.platform.value)
             return None
         # The busy path charged this event on arrival; a drained follow-up must not pay twice.
         if not getattr(event, "_bot_loop_admitted", False) and not self._admit_bot_message_for_source(source):
@@ -649,31 +534,6 @@ class GatewayInboundMixin:
             return True, None
         return False, None
 
-    def _hm_busy_telegram_grace_queue(
-        self, event: "MessageEvent", source: SessionSource, _quick_key: str, effective_busy_input_mode: str
-    ) -> bool:
-        """Queue a Telegram text follow-up that lands within the post-start grace window."""
-        _grace = float(os.getenv("SCOUT_TELEGRAM_FOLLOWUP_GRACE_SECONDS", "3.0"))
-        _grace_state = self._peek_session_state(_quick_key)
-        _started_at = _grace_state.turn.started_ts if _grace_state else 0
-        if not (
-            source.platform == Platform.TELEGRAM and event.message_type == MessageType.TEXT
-            and _grace > 0 and _started_at and (time.time() - _started_at) <= _grace
-        ):
-            return False
-        logger.debug(
-            "Telegram follow-up arrived %.2fs after run start for %s — queueing without interrupt",
-            time.time() - _started_at, _quick_key,
-        )
-        if effective_busy_input_mode != "queue":
-            self._hm_merge_pending_for_source(source, _quick_key, event, merge_text=True)
-        else:
-            adapter = self._delivery_adapter_for(source)
-            if adapter:
-                self._enqueue_fifo(_quick_key, event, adapter)
-        return True
-
-    @staticmethod
     def _hm_text_only(event: "MessageEvent") -> bool:
         return event.message_type == MessageType.TEXT and not event.media_urls and not event.media_types
 
@@ -729,8 +589,6 @@ class GatewayInboundMixin:
             return _result
 
         effective_busy_input_mode = self._effective_busy_input_mode(source)
-        if self._hm_busy_telegram_grace_queue(event, source, _quick_key, effective_busy_input_mode):
-            return None
 
         _ra_state = self._peek_session_state(_quick_key)
         running_agent = _ra_state.turn.agent if _ra_state else None
@@ -890,16 +748,10 @@ class GatewayInboundMixin:
         )
 
     async def _hm_cmd_new(self, event, source, _quick_key):
-        if await asyncio.to_thread(self._is_telegram_topic_root_lobby, source):
-            return True, self._telegram_topic_root_new_message()
         return await self._hm_confirm_destructive(
             event, "new", t("gateway.confirm.detail_new"),
             self._handle_reset_command,
         )
-
-    async def _hm_cmd_start(self, event, source, _quick_key):
-        logger.info("Ignoring /start platform ping for session %s", _quick_key)
-        return True, ""
 
     async def _hm_cmd_egress(self, event, source, _quick_key):
         from scout_cli.proxy_cli import format_status_text
@@ -1026,7 +878,7 @@ class GatewayInboundMixin:
     # Idle-path built-ins with bespoke flow (confirmations, prompt rewrites, one-shot MoA), each
     # handled by ``_hm_cmd_<name>`` → ``(handled, result)``; ``(False, None)`` falls through to the agent.
     _HM_CANONICAL_COMMANDS = frozenset({
-        "new", "start", "egress", "learn", "plan", "init", "blueprint", "undo", "queue", "steer", "moa",
+        "new", "egress", "learn", "plan", "init", "blueprint", "undo", "queue", "steer", "moa",
     })
 
     async def _hm_dispatch_canonical_command(
@@ -1344,12 +1196,7 @@ class GatewayInboundMixin:
         # Pending exec approvals go through /approve and /deny only — no bare-text matching, or a
         # conversational "yes" would execute a dangerous command.
         if not is_internal:
-            if await asyncio.to_thread(self._is_telegram_topic_root_lobby, source):
-                # Debounced so a user who forgets about topic mode doesn't get ten reminders.
-                if self._should_send_telegram_lobby_reminder(source):
-                    return self._telegram_topic_root_lobby_message()
-                return None
-            # External-drain new-turn gate: when NAS engaged an external drain (.drain_request.json,
+            # External-drain new-turn gate: while an external drain is engaged (.drain_request.json,
             # seen by _drain_control_watcher), refuse to START new turns so the in-flight set can
             # only fall to zero. Reversible.
             if self._external_drain_active:
@@ -1445,11 +1292,6 @@ class GatewayInboundMixin:
             # Display names are attacker-influenceable: neutralize newlines/control chars or a
             # hostile name masquerades as a fake markdown section (mirrors build_session_context_prompt).
             _safe_user_name = neutralize_untrusted_inline_text(source.user_name)
-            # Slack: expose the CURRENT speaker's verifiable `<@U...>` id so "mention me again" has a
-            # trusted target (display names are ambiguous). user_id comes from the envelope, not user-editable.
-            # See #17916.
-            if source.platform == Platform.SLACK and source.user_id:
-                _safe_user_name = f"{_safe_user_name} | Slack user <@{source.user_id}>"
             message_text = f"[{_safe_user_name}] {message_text}"
         # After the sender-prefix so the prefix applies only to the trigger message, not the backfill.
         if getattr(event, "channel_context", None):
@@ -1614,18 +1456,6 @@ class GatewayInboundMixin:
             _who = " your previous message" if getattr(event, "reply_to_is_own_message", False) else ""
             message_text = f'[Replying to{_who}: "{reply_text}"]\n\n{message_text}'
 
-        # Discord: the triggering message id goes on the per-turn user message, never the cached
-        # system prompt — it changes every turn and would bust the agent-cache signature. It is
-        # the OUTERMOST prefix so strip_discord_triggering_note can peel exactly it off the
-        # persisted transcript row without touching the reply pointer.
-        if (
-            source is not None
-            and getattr(source, "platform", None) == Platform.DISCORD
-            and getattr(event, "message_id", None)
-        ):
-            from gateway.session import _discord_tools_loaded as _disc_tools_loaded
-            if _disc_tools_loaded():
-                message_text = f"{discord_triggering_note(event.message_id)}\n\n{message_text}"
         return message_text
 
     async def _inbound_model_context_length(self, source: SessionSource, session_key: str) -> int:

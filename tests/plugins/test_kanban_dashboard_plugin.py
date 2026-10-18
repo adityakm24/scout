@@ -874,17 +874,6 @@ def with_home_channels(monkeypatch):
     # Slack has a token but NO home — should be excluded from the list.
     monkeypatch.setenv("SLACK_BOT_TOKEN", "slack_fake")
 
-def test_home_channels_lists_only_platforms_with_home(client, with_home_channels):
-    """GET /home-channels returns entries only for platforms where the
-    user has set a home; untoggled-subscribed bool is false by default."""
-    r = client.get("/api/plugins/kanban/home-channels")
-    assert r.status_code == 200
-    platforms = {h["platform"] for h in r.json()["home_channels"]}
-    assert platforms == {"telegram", "discord"}, (
-        f"slack has a token but no home — must not appear. got {platforms}"
-    )
-    for h in r.json()["home_channels"]:
-        assert h["subscribed"] is False
 
 # ---------------------------------------------------------------------------
 # Recovery endpoints (reclaim + reassign) and warnings field

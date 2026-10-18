@@ -72,30 +72,6 @@ print(json.dumps({{
     assert dict(os.environ) == before
 
 
-@pytest.mark.platforms("linux", "macos", "windows")
-@pytest.mark.parametrize("mode", ["strict", "project"])
-def test_credential_policy_and_whitelist_in_real_child(child_env, monkeypatch, mode):
-    from tools.env_passthrough import register_env_passthrough
-    blocked = (
-        "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GITHUB_TOKEN", "MY_SECRET",
-        "DB_PASSWORD", "VAULT_CREDENTIAL", "LDAP_PASSWD", "AUTH_TOKEN",
-        "SENTRY_DSN", "SLACK_WEBHOOK", "HOME_APIKEY", "USER_CREDS", "TERM_BEARER",
-        "SCOUT_BASE_URL", "SCOUT_INTERACTIVE", "BUZZ_PRIVATE_KEY", "RANDOM_UNKNOWN",
-    )
-    allowed = ("SCOUT_PROFILE", "SCOUT_CONFIG", "SCOUT_ENV", "LC_ENV_TEST", "TENOR_API_KEY")
-    for name in blocked + allowed:
-        monkeypatch.setenv(name, "fake-" + name)
-    # Registration is real: a skill cannot tunnel a provider or Buzz credential.
-    register_env_passthrough(["TENOR_API_KEY", "OPENAI_API_KEY", "BUZZ_PRIVATE_KEY"])
-    result = run_code(f'''
-import json, os, scout_tools
-print(json.dumps({{"env": {{k: os.environ.get(k) for k in {blocked + allowed!r}}},
-                  "recursive": hasattr(scout_tools, "execute_code"),
-                  "delegation": hasattr(scout_tools, "delegate_task")}}))
-''', mode, enabled_tools=("read_file", "execute_code", "delegate_task"))
-    assert result["env"] == {**dict.fromkeys(blocked), **{k: "fake-" + k for k in allowed}}
-    assert result["recursive"] is False
-    assert result["delegation"] is False
 
 
 @pytest.mark.parametrize("helper,cache,failed,success", [

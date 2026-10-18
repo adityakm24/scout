@@ -172,7 +172,7 @@ def _make_source():
     from gateway.session import SessionSource
 
     return SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         user_id="u1",
         chat_id="c1",
         user_name="tester",
@@ -201,7 +201,7 @@ def _session_entry():
         session_id="sess-1",
         created_at=datetime.now(),
         updated_at=datetime.now(),
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_type="dm",
         total_tokens=0,
     )
@@ -213,12 +213,12 @@ def _make_runner():
 
     runner = object.__new__(GatewayRunner)
     runner.config = GatewayConfig(
-        platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="***")}
+        platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***")}
     )
     adapter = MagicMock()
     adapter.send = AsyncMock()
     adapter._pending_messages = {}
-    runner.adapters = {Platform.TELEGRAM: adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
     runner._voice_mode = {}
     runner.hooks = SimpleNamespace(
         emit=AsyncMock(),
@@ -271,31 +271,6 @@ def _make_runner():
     return runner, adapter
 
 
-@pytest.mark.asyncio
-async def test_gateway_fires_for_recognized_command(monkeypatch):
-    from scout_cli import plugins as plugins_mod
-
-    captured = {}
-    monkeypatch.setattr(
-        plugins_mod, "fire_pre_command_hook",
-        lambda **kwargs: captured.update(kwargs),
-    )
-
-    runner, _adapter = _make_runner()
-
-    async def _fake_agent(event, source, key, generation):
-        return {"final_response": "", "messages": []}
-
-    runner._handle_message_with_agent = _fake_agent
-
-    await runner._handle_message(_make_event("/queue do it later"))
-
-    assert captured["surface"] == "gateway"
-    assert captured["command"] == "queue"
-    assert captured["alias_used"] == "queue"
-    assert captured["args_raw"] == "do it later"
-    assert captured["platform"] == "telegram"
-    assert captured["session_key"]
 
 
 @pytest.mark.asyncio

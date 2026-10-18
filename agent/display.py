@@ -429,11 +429,6 @@ def _preview_memory(args: dict, _max_len: int) -> str:
     return action
 
 
-def _preview_send_message(args: dict, _max_len: int) -> str:
-    return t("display.preview.send_message_to", target=args.get("target", "?"),
-             message=_tail_trunc(_oneline(args.get("message", "")), 20))
-
-
 def _preview_skill_view(args: dict, max_len: int) -> str | None:
     name = _oneline(str(args.get("name") or ""))
     file_path = args.get("file_path")
@@ -457,7 +452,7 @@ _PREVIEW_BUILDERS = {
     "browser_exec": _preview_browser_exec, "delegate_task": _preview_delegate_task,
     "process_manage": _preview_process_manage, "todo_list": _preview_todo_list,
     "terminal": _preview_shell("command"), "execute_code": _preview_shell("code"),
-    "read_file": _preview_read_file, "memory": _preview_memory, "send_message": _preview_send_message,
+    "read_file": _preview_read_file, "memory": _preview_memory,
     "skill_view": _preview_skill_view,
     "session_search": lambda args, _m: t("display.preview.session_search_recall", query=_clip(_oneline(args.get("query", "")), 25)),
     "tool_call": _preview_bridge_call("tool_call"),
@@ -1172,7 +1167,6 @@ _CUTE_LINES = {
     "image_generate": lambda a, r: _cute_row("🎨", "create", _cute_trunc(a.get("prompt", ""))),
     "text_to_speech": lambda a, r: _cute_row("🔊", "speak", _cute_trunc(a.get("text", ""))),
     "vision_analyze": lambda a, r: _cute_row("👁️ ", "vision", _cute_trunc(a.get("question", ""))),
-    "send_message": lambda a, r: _cute_row("📨", "send", f"{a.get('target', '?')}: \"{_cute_trunc(a.get('message', ''))}\""),
     "cronjob_manage": _cute_cronjob,
     "execute_code": _cute_execute_code,
     "browser_exec": _cute_browser_exec,

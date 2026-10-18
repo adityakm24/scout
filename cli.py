@@ -1774,7 +1774,7 @@ def main(
     _install_single_query_signal_handlers(cli)
 
     if query or image:
-        _run_single_query_mode(cli, query, image, quiet, oneshot, stream_json=output_format == "stream-json")
+        _run_single_query_mode(cli, query, image, quiet, True, stream_json=output_format == "stream-json")
         return
     cli.run()
 

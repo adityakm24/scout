@@ -25,7 +25,7 @@ from gateway.session import SessionSource, build_session_key
 
 class _MediaRoutingAdapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.HOMEASSISTANT)
 
     async def connect(self, *, is_reconnect: bool = False):
         return True
@@ -42,7 +42,7 @@ class _MediaRoutingAdapter(BasePlatformAdapter):
 
 def _event(thread_id=None):
     source = SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_id="chat-1",
         chat_type="dm",
         thread_id=thread_id,
@@ -143,7 +143,7 @@ class _DiscordMediaFailureAdapter(BasePlatformAdapter):
     """Minimal adapter to exercise non-streaming MEDIA failure notification."""
 
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.DISCORD)
+        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.HOMEASSISTANT)
         self.notices: list[str] = []
 
     async def connect(self, *, is_reconnect: bool = False):
@@ -187,7 +187,7 @@ class _DiscordMediaFailureAdapter(BasePlatformAdapter):
     """Minimal adapter to exercise non-streaming MEDIA failure notification."""
 
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.DISCORD)
+        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.HOMEASSISTANT)
         self.notices: list[str] = []
 
     async def connect(self, *, is_reconnect: bool = False):
@@ -459,7 +459,7 @@ class _QueuedMediaCaptureAdapter(BasePlatformAdapter):
     """Adapter that records text + native image delivery for queued-resend tests."""
 
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.HOMEASSISTANT)
         self.sent = []
         self.images = []
 
@@ -510,76 +510,3 @@ class _QueuedMediaAgent:
         }
 
 
-@pytest.mark.asyncio
-async def test_queued_resend_branch_delivers_media_and_preserves_protected_example(
-    tmp_path, monkeypatch,
-):
-    """Exercise the real queued first-response resend path in ``_run_agent``."""
-    media_file = _allowed_media_path(tmp_path, monkeypatch, "quote.png")
-    protected = "Tag files like `MEDIA:/tmp/example.png` in tool output."
-    _QueuedMediaAgent.calls = 0
-    _QueuedMediaAgent.first_response = f"Quote here\nMEDIA:{media_file}\n{protected}"
-
-    fake_dotenv = types.ModuleType("dotenv")
-    setattr(fake_dotenv, "load_dotenv", lambda *args, **kwargs: None)
-    monkeypatch.setitem(sys.modules, "dotenv", fake_dotenv)
-
-    fake_run_agent = types.ModuleType("run_agent")
-    setattr(fake_run_agent, "AIAgent", _QueuedMediaAgent)
-    monkeypatch.setitem(sys.modules, "run_agent", fake_run_agent)
-
-    adapter = _QueuedMediaCaptureAdapter()
-    gateway_run = importlib.import_module("gateway.run")
-    runner = object.__new__(gateway_run.GatewayRunner)
-    runner.adapters = {adapter.platform: adapter}
-    runner._voice_mode = {}
-    runner._prefill_messages = []
-    runner._ephemeral_system_prompt = ""
-    runner._reasoning_config = None
-    runner._provider_routing = {}
-    runner._fallback_model = None
-    runner._session_db = None
-    runner._running_agents = {}
-    runner._session_run_generation = {}
-    runner.session_store = SimpleNamespace(_entries={}, _save=lambda: None)
-    runner.hooks = SimpleNamespace(loaded_hooks=False)
-    runner.config = SimpleNamespace(
-        thread_sessions_per_user=False,
-        group_sessions_per_user=False,
-        stt_enabled=False,
-    )
-    monkeypatch.setattr(gateway_run, "_scout_home", tmp_path)
-    monkeypatch.setattr(gateway_run, "_resolve_runtime_agent_kwargs", lambda: {"api_key": "***"})
-
-    source = SessionSource(
-        platform=Platform.TELEGRAM,
-        chat_id="chat-1",
-        chat_type="dm",
-        thread_id="topic-1",
-    )
-    session_key = build_session_key(source)
-    adapter._pending_messages[session_key] = MessageEvent(
-        text="queued follow-up",
-        message_type=MessageType.TEXT,
-        source=source,
-        message_id="queued-1",
-    )
-
-    result = await runner._run_agent(
-        message="hello",
-        context_prompt="",
-        history=[],
-        source=source,
-        session_id="sess-queued-media",
-        session_key=session_key,
-    )
-
-    assert _QueuedMediaAgent.calls == 2
-    assert result["final_response"] == "follow-up processed"
-    first_texts = [call["content"] for call in adapter.sent if "Quote here" in call["content"]]
-    assert first_texts, f"expected queued resend of first response, got: {adapter.sent!r}"
-    assert f"MEDIA:{media_file}" not in first_texts[0]
-    assert "`MEDIA:/tmp/example.png`" in first_texts[0]
-    assert any(str(media_file) in unquote(img["image_path"]) for img in adapter.images), (
-        f"expected native image delivery via queued resend, got: {adapter.images!r}"
-    )

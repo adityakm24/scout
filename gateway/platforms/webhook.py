@@ -47,10 +47,7 @@ logger = logging.getLogger(__name__)
 _PROFILE_REJECTED = object()
 _UNPARSEABLE = object()
 
-_BUILTIN_DELIVER_PLATFORMS = {
-    "telegram", "discord", "slack", "signal", "sms", "whatsapp", "matrix", "mattermost",
-    "homeassistant", "email", "dingtalk", "feishu", "wecom", "wecom_callback", "weixin",
-    "bluebubbles", "qqbot", "yuanbao"}
+_BUILTIN_DELIVER_PLATFORMS = {"homeassistant"}
 
 # ``None`` → aiohttp binds BOTH address families. "0.0.0.0" is IPv4-only (unreachable on IPv6-only
 # networks such as Fly.io 6PN); "::" becomes IPv6-only where the kernel sets IPV6_V6ONLY=1, breaking
@@ -228,9 +225,6 @@ class WebhookAdapter(BasePlatformAdapter):
         app.router.add_post("/webhooks/{route_name}", self._handle_webhook)
         # /p/<profile>/ routes the event to that profile (honored only under gateway.multiplex_profiles).
         app.router.add_post("/p/{profile}/webhooks/{route_name}", self._handle_webhook)
-        # Without an api_server listener this port is the shared listener: forward a secondary's
-        # inbound-port platforms (Twilio, LINE, Teams, ...) registered in shared-listener mode.
-        app.router.add_route("*", "/p/{profile}/{tail:.*}", self._handle_profile_ingress)
         self._runner = web.AppRunner(app)
         await self._runner.setup()
         try:
@@ -392,14 +386,6 @@ class WebhookAdapter(BasePlatformAdapter):
                         ", ".join(self._dynamic_routes.keys()) or "(none)")
         except Exception as e:
             logger.error("[webhook] Failed to reload dynamic routes: %s", e)
-
-    async def _handle_profile_ingress(self, request: "web.Request") -> "web.StreamResponse":
-        profile = self._resolve_request_profile(request)
-        if profile is _PROFILE_REJECTED or profile is None:
-            return _json_error("Unknown or unconfigured profile", 404)
-        from gateway.platforms.shared_ingress import dispatch_profile_ingress
-        return await dispatch_profile_ingress(
-            self.gateway_runner, profile, request.match_info.get("tail", ""), request)
 
     def _resolve_request_profile(self, request: "web.Request"):
         """Resolve + validate the /p/<profile>/ URL prefix: None (no prefix, or multiplexing off and the

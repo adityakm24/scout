@@ -31,11 +31,6 @@ def _copy(source: Path, destination: Path, *, replace: bool = False) -> None:
 def plant_surfaces(repo: Path, frontends: dict[str, Path]) -> None:
     """Only explicit built products are accepted; no hunting in the source tree."""
     validate_frontends(frontends)
-    if "tui" in frontends:
-        tui = frontends["tui"]
-        destination = repo / "scout_cli/tui_dist"
-        _copy(tui / "dist", destination, replace=True)
-        _copy(tui / "package.json", destination / "package.json")
     if "web" in frontends:
         _copy(frontends["web"], repo / "scout_cli/web_dist", replace=True)
 
@@ -121,8 +116,7 @@ def assemble(inputs: AgentInputs, out: Path) -> dict:
         env = {**inputs.env, "SCOUT_PYTHON": str(inputs.python), "SCOUT_INSTALL_ROOT": str(repo)}
         links = {RESOURCE_ENV[name]: (path, repo / name) for name, path in inputs.resources.items()}
         for name, path in inputs.frontends.items():
-            key, destination = {"tui": ("SCOUT_TUI_DIR", out / "ui-tui"),
-                                "web": ("SCOUT_WEB_DIST", repo / "web_dist")}[name]
+            key, destination = {"web": ("SCOUT_WEB_DIST", repo / "web_dist")}[name]
             links[key] = (path, destination)
         for key, (source, destination) in links.items():
             destination.unlink(missing_ok=True)

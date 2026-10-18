@@ -12,12 +12,11 @@ import dataclasses
 import json
 import logging
 import queue
-import re
 import threading
 import time
 from contextlib import suppress
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from agent.i18n import t
 from agent.interrupt_compat import _accepts_keyword
@@ -40,15 +39,6 @@ logger = logging.getLogger("gateway.run")
 # _load_turn_history escalates the lag line from WARNING to ERROR (#114266: 11 days of WARNING).
 _TRANSCRIPT_LAG_ESCALATION_TURNS = 3
 
-# Exact refusals retained for older adapters/connectors without destination preflight.
-# Substring matching would also silence transient thread-resolution errors.
-_CARD_DESTINATION_REFUSALS = {
-    "No Slack thread target",
-    "slack task_card requires a thread anchor",
-    "slack task_card requires a thread anchor (Slack streams are thread replies)",
-}
-
-
 def _renders_exec_approval_buttons(adapter_cls: type) -> bool:
     """True when the adapter class renders native approval buttons. BasePlatformAdapter subclasses
     say so through ``supports_exec_approval_buttons``; anything else (test doubles, relay-style
@@ -63,16 +53,6 @@ def _renders_exec_approval_buttons(adapter_cls: type) -> bool:
 # Slack click handler shows on a dead entry).
 def _clarify_expired_notice() -> str:
     return t("gateway.clarify.expired")
-
-
-class _ExecApprovalDeclined(RuntimeError):
-    """The connector refused the approval card's destination.
-
-    Raised (not returned) so it propagates out of `_approval_notify_sync` to
-    `_await_gateway_decision`, whose notify-failure path drops the central
-    approval queue entry and unblocks the waiting tool. A plain return
-    suppressed the text fallback but left that entry pending.
-    """
 
 
 class TurnRunner:
@@ -150,10 +130,6 @@ class TurnRunner:
             thinking_text = (preview if tool_name == "_thinking" else tool_name) if ctx._thinking_enabled else None
             if thinking_text:
                 ctx.progress_queue.put(t("gateway.progress.thinking_prefix", text=thinking_text))
-            return
-        # Native task cards consume the ID-bearing tool_start/tool_complete callbacks instead;
-        # name-correlated text events would duplicate cards and mispair concurrent same-tool calls.
-        if ctx._native_slack_task_cards and event_type in {"tool.started", "tool.completed"}:
             return
         # tool_progress off → only _thinking passes (above). Only tool.started renders. clarify:
         # send_clarify IS the user-facing rendering (a bubble would duplicate it, and verbose mode
@@ -321,217 +297,6 @@ class TurnRunner:
             sc.on_tool_progress(msg)
         else:
             ctx.progress_queue.put(msg)
-
-    # ── Slack-native task cards (progress-queue drain) ──────────────────────────────────────
-
-    @dataclasses.dataclass
-    class _TaskCardState:
-        """Task-card rail state for ``_send_native_task_card_progress``."""
-        adapter: Any
-        tasks: Dict[str, Dict[str, str]] = dataclasses.field(default_factory=dict)
-        task_order: List[str] = dataclasses.field(default_factory=list)
-        fallback_msg_id: Optional[str] = None
-        native_failed: bool = False
-        # TERMINAL for the turn, distinct from native_failed: no later publication
-        # in this turn may deliver task text through the native lane OR the text
-        # fallback. Two causes, both properties of the destination rather than of
-        # one attempt: the connector's egress guard refused the chat, or the chat
-        # cannot host a card (no thread anchor). Declared rather than set
-        # dynamically so the state is visible where it lives.
-        publication_suppressed: bool = False
-        anonymous_seq: int = 0
-
-        @staticmethod
-        def _compact(value: Any, limit: int = 120) -> str:
-            text = re.sub(r"\s+", " ", str(value or "")).strip()
-            return text if len(text) <= limit else text[: limit - 3].rstrip() + "..."
-
-        def visible_tasks(self) -> List[Dict[str, str]]:
-            return [self.tasks[task_id] for task_id in self.task_order[-8:]]
-
-        def fallback_text(self) -> str:
-            labels = {"in_progress": t("gateway.progress.task_status_running"),
-                      "complete": t("gateway.progress.task_status_complete"),
-                      "error": t("gateway.progress.task_status_error")}
-            lines = [t("gateway.progress.task_line", title=task["title"], status=labels.get(task["status"], task["status"]))
-                     for task in self.visible_tasks()]
-            return t("gateway.progress.task_card_title") + "\n" + "\n".join(lines)
-
-        def _upsert(self, call_id: str, title: str) -> Dict[str, str]:
-            if call_id not in self.tasks:
-                self.task_order.append(call_id)
-            self.tasks[call_id] = {"id": call_id, "title": self._compact(title), "status": "in_progress"}
-            return self.tasks[call_id]
-
-        def apply_event(self, raw: Any) -> bool:
-            event_type = raw.get("type") if isinstance(raw, dict) else None
-            if event_type not in {"tool.started", "tool.completed"}:
-                return False
-            call_id = str(raw.get("tool_call_id") or "")
-            if not call_id:
-                self.anonymous_seq += 1
-                call_id = f"anonymous_{self.anonymous_seq}"
-            tool_name = str(raw.get("tool_name") or "tool")
-            if event_type == "tool.started":
-                preview = self._compact(raw.get("preview"), 64)
-                self._upsert(call_id, f"{tool_name} - {preview}" if preview else tool_name)
-                return True
-            # Completion-only events are rare but valid on some runtimes; keep their real ID instead
-            # of guessing a same-name pending call.
-            task = self.tasks.get(call_id) or self._upsert(call_id, tool_name)
-            task["status"] = "error" if raw.get("is_error") else "complete"
-            return True
-
-    async def _task_card_send_or_edit_fallback(self, st) -> None:
-        ctx = self._ctx
-        text = st.fallback_text()
-        from gateway.relay.egress import declined_send
-
-        if st.publication_suppressed:
-            return
-        if st.fallback_msg_id:
-            result = await st.adapter.edit_message(
-                chat_id=ctx.source.chat_id, message_id=st.fallback_msg_id, content=text, metadata=ctx._progress_metadata,
-            )
-            if getattr(result, "success", False):
-                return
-            # P5(b): R5-4 made a declined native CARD terminal but left this
-            # editable-text fallback: a declined edit fell through to
-            # _send_progress_text and re-sent the same task text to the refused
-            # chat. The decline must set the terminal state here too.
-            if declined_send(result):
-                logger.warning(
-                    "Task-card fallback edit DECLINED by the connector's egress "
-                    "guard; suppressing progress delivery for the rest of this "
-                    "turn (the destination is not approved)"
-                )
-                st.publication_suppressed = True
-                return
-        result = await self._send_progress_text(st, text)
-        if getattr(result, "success", False) and getattr(result, "message_id", None):
-            st.fallback_msg_id = str(result.message_id)
-
-    async def _task_card_publish(self, st) -> None:
-        ctx = self._ctx
-        if not st.tasks:
-            return
-        if st.publication_suppressed:
-            # Publication was suppressed earlier in the turn (egress refusal or a chat
-            # that cannot host a card); every later publication would re-deliver the
-            # same task text there.
-            return
-        # Resolve eligibility in the owning adapter BEFORE transport I/O: a first
-        # timeout/disconnect must not turn an un-cardable chat into text fallback.
-        # Optional for older adapters; only an explicit False refuses publication.
-        destination_supported = getattr(st.adapter, "native_task_card_destination_supported", None)
-        if callable(destination_supported) and destination_supported(
-            ctx.source.chat_id, reply_to=ctx._progress_reply_to, metadata=ctx._progress_metadata,
-        ) is False:
-            self._task_card_uncardable_destination(st)
-            if st.publication_suppressed:
-                return
-        if not st.native_failed:
-            result = await st.adapter.send_native_task_card_progress(
-                chat_id=ctx.source.chat_id, tasks=st.visible_tasks(), title=t("gateway.progress.task_card_title"),
-                reply_to=ctx._progress_reply_to, metadata=ctx._progress_metadata, fallback_text=st.fallback_text(),
-            )
-            if getattr(result, "success", False):
-                return
-            # P5(b): an AUTHORIZATION decline is not a broken card lane. The
-            # fallback below sends the same task text to the same chat, which
-            # turns a refused card into delivered plain text. Stop the lane
-            # without re-delivering; the refusal is already logged.
-            from gateway.relay.egress import declined_send
-
-            if declined_send(result):
-                # TERMINAL, and stored SEPARATELY from native_failed. Reusing
-                # native_failed suppressed exactly ONE update: the next progress
-                # event skipped this branch (the lane is already "failed") and
-                # went straight to the text fallback. A refusal does not expire
-                # after one tick.
-                st.publication_suppressed = True
-                st.native_failed = True
-                logger.warning(
-                    "Slack native task-card progress DECLINED by the connector's "
-                    "egress guard — suppressing the text fallback for the rest "
-                    "of this turn (the destination is not approved)"
-                )
-                return
-            st.native_failed = True
-            if getattr(result, "error", None) in _CARD_DESTINATION_REFUSALS:
-                self._task_card_uncardable_destination(st, getattr(result, "error", "unknown error"))
-                if st.publication_suppressed:
-                    return
-            else:
-                logger.warning(
-                    "Slack native task-card progress failed; falling back "
-                    "to an editable text update: %s", getattr(result, "error", "unknown error"),
-                )
-        # Once the native rail fails, every later lifecycle event edits the same fallback message.
-        await self._task_card_send_or_edit_fallback(st)
-
-    def _task_card_uncardable_destination(self, st, reason: str = "no thread anchor") -> None:
-        """The chat cannot host a card (flat DM: no thread anchor) — a property of the destination,
-        not a transient outage. The text fallback exists to keep a WORKING card lane live through a
-        transient failure, not to invent text bubbles the operator never asked for: with Slack's tier
-        default (``tool_progress: off``) the lane goes silent for the turn. An operator who WROTE
-        ``new``/``all`` asked for text progress, so the editable fallback carries it instead."""
-        if self._ctx.tool_progress_enabled:
-            st.native_failed = True
-            logger.info(
-                "Slack native task cards are unsupported for this destination (%s); "
-                "tool progress continues as an editable text update", reason,
-            )
-            return
-        st.publication_suppressed = True
-        logger.info(
-            "Slack native task cards are unsupported for this destination (%s); "
-            "tool progress stays off for this turn", reason,
-        )
-
-    def _task_card_drain(self, st) -> bool:
-        changed = False
-        try:
-            while True:
-                changed = st.apply_event(self._ctx.progress_queue.get_nowait()) or changed
-        except queue.Empty:
-            pass
-        except Exception:
-            logger.debug("Slack native progress queue drain failed", exc_info=True)
-        return changed
-
-    async def _send_native_task_card_progress(self, adapter) -> None:
-        """Drain progress into native cards; supported destinations retain editable fallback.
-        Unsupported destinations and egress refusals suppress publication, never finalization.
-
-        See #29483.
-        """
-        ctx = self._ctx
-        st = self._TaskCardState(adapter)
-        try:
-            while ctx._run_still_current():
-                try:
-                    raw = ctx.progress_queue.get_nowait()
-                except queue.Empty:
-                    await asyncio.sleep(0.1)
-                    continue
-                if not self._agent_interrupted() and st.apply_event(raw):
-                    await self._task_card_publish(st)
-        except asyncio.CancelledError:
-            if self._task_card_drain(st) and ctx._run_still_current() and not self._agent_interrupted():
-                await self._task_card_publish(st)
-        finally:
-            if hasattr(adapter, "stop_native_task_card_progress"):
-                # Best-effort on the turn-cleanup path: an escaping transport exception would skip
-                # final-delivery logic (cleanup awaits catch only CancelledError).
-                try:
-                    await adapter.stop_native_task_card_progress(
-                        ctx.source.chat_id, reply_to=ctx._progress_reply_to, metadata=ctx._progress_metadata,
-                    )
-                except asyncio.CancelledError:
-                    raise
-                except Exception:
-                    logger.debug("task-card stop failed during turn cleanup", exc_info=True)
 
     # ── editable progress bubbles (progress-queue drain) ────────────────────────────────────
 
@@ -714,9 +479,6 @@ class TurnRunner:
         adapter = self._runner._delivery_adapter_for(ctx.source) if ctx.progress_queue else None
         if not adapter:
             return
-        if ctx._native_slack_task_cards and hasattr(adapter, "send_native_task_card_progress"):
-            await self._send_native_task_card_progress(adapter)
-            return
         # Skip tool progress for platforms that can't edit messages (e.g. iMessage/BlueBubbles):
         # each update would be a separate bubble. getattr, not attribute access: duck-typed
         # adapters (test fakes, minimal plugins) may lack edit_message — treated as "can't edit".
@@ -765,65 +527,6 @@ class TurnRunner:
                 logger.error("Progress message error: %s", e)
                 await asyncio.sleep(1)
 
-    # ── ID-bearing lifecycle callbacks (agent thread) ───────────────────────────────────────
-
-    def voice_ack_callback(self, call_id, tool_name, args):
-        """tool_start_callback: speak a one-time ack in the voice channel."""
-        ctx = self._ctx
-        if ctx._voice_ack_fired[0] or ctx._voice_ack_guild[0] is None or not ctx._run_still_current():
-            return
-        ctx._voice_ack_fired[0] = True
-        adapter = self._runner.adapters.get(Platform.DISCORD)
-        if adapter is None or not hasattr(adapter, "play_ack_in_voice"):
-            return
-        try:
-            self._schedule(
-                adapter.play_ack_in_voice(ctx._voice_ack_guild[0]), "voice ack scheduling error", loop=ctx._voice_ack_loop,
-            )
-        except Exception as err:
-            logger.debug("voice ack schedule failed: %s", err)
-
-    # Slack-native task cards ride agent.tool_start_callback / tool_complete_callback so start and
-    # completion correlate by the REAL tool-call id; name-correlated progress_callback text events
-    # would duplicate cards and mispair concurrent calls.
-
-    def _native_card_gate(self) -> bool:
-        ctx = self._ctx
-        return bool(ctx.progress_queue) and ctx._run_still_current() and not self._agent_interrupted()
-
-    # ── Slack-native task cards: ID-bearing lifecycle callbacks (#29483) ── These ride
-    # agent.tool_start_callback / agent.tool_complete_callback so start/completion events correlate by the
-    # REAL tool-call id — the name-correlated text events in progress_callback would duplicate cards and
-    # mispair concurrent calls to the same tool.
-    def native_tool_start_callback(self, call_id, tool_name, args):
-        """Queue an ID-correlated native progress start from the agent thread."""
-        if not self._native_card_gate():
-            return
-        from agent.display import build_tool_preview
-        name = str(tool_name or "tool")
-        self._ctx.progress_queue.put({
-            "type": "tool.started", "tool_call_id": str(call_id or ""), "tool_name": name,
-            "preview": build_tool_preview(name, args or {}, max_len=64) or "",
-        })
-
-    def native_tool_complete_callback(self, call_id, tool_name, args, result):
-        """Queue the matching native completion using the real tool-call ID."""
-        if not self._native_card_gate():
-            return
-        from agent.display import _detect_tool_failure
-        name = str(tool_name or "tool")
-        is_error, _ = _detect_tool_failure(name, result)
-        self._ctx.progress_queue.put({
-            "type": "tool.completed", "tool_call_id": str(call_id or ""), "tool_name": name, "is_error": bool(is_error),
-        })
-
-    def combined_tool_start_callback(self, call_id, tool_name, args):
-        """Compose the voice ack + native task-card start consumers."""
-        if self._ctx._voice_ack_guild[0] is not None:
-            self.voice_ack_callback(call_id, tool_name, args)
-        if self._ctx._native_slack_task_cards:
-            self.native_tool_start_callback(call_id, tool_name, args)
-
     # ── hook / status bridges (agent thread → gateway loop) ────────────────────────────────
 
     def _step_callback_sync(self, iteration: int, prev_tools: list) -> None:
@@ -858,35 +561,12 @@ class TurnRunner:
         self._schedule(ctx._status_adapter.send(ctx._status_chat_id, text, metadata=metadata), log_message)
 
     def _attach_session_title_callback(self, agent, ctx) -> None:
-        """Wire the platform thread-rename lane onto the agent as `_on_session_title`.
-
-        The titler runs in the turn prologue, so attach before the run, not after it.
-        """
-        try:
-            # Gateway auto-title failures are not user-actionable, so never surface them as messages;
-            # overriding the failure sink keeps CLI on _emit_auxiliary_failure while gateway logs debug.
-            agent._title_failure_callback = lambda task, exc: logger.debug(
-                "Gateway auto-title failure suppressed (not user-visible): %s: %s", task, exc,
-            )
-            session_id = getattr(agent, "session_id", None)
-            source = ctx.source
-            runner = self._runner
-            # Both lanes spend a rate-limited platform call per title, so they use the model's title
-            # only (TitleCallback); renaming twice burns Discord's 2-per-10-min budget on a throwaway.
-            # Relay Discord predicate is shape-only: whether the connector auto-threaded our reply is
-            # only knowable AFTER delivery, so register eagerly and let the rename lane look up the
-            # cache at fire time — gating registration on the cache read meant it never registered.
-            if runner._is_telegram_topic_lane(source):
-                lane = "_schedule_telegram_topic_title_rename"
-            elif runner._is_discord_auto_thread_lane(source) or runner._is_relay_discord_channel_lane(source):
-                lane = "_schedule_discord_semantic_thread_rename"
-            else:
-                return
-            agent._on_session_title = lambda title, title_source: (
-                title_source == "llm" and getattr(runner, lane)(source, session_id, title)
-            )
-        except Exception:
-            logger.debug("Failed to attach session title callback", exc_info=True)
+        """Gateway auto-title failures are not user-actionable, so never surface them as messages;
+        overriding the failure sink keeps CLI on _emit_auxiliary_failure while gateway logs debug.
+        The titler runs in the turn prologue, so attach before the run, not after it."""
+        agent._title_failure_callback = lambda task, exc: logger.debug(
+            "Gateway auto-title failure suppressed (not user-visible): %s: %s", task, exc,
+        )
 
     def _status_callback_sync(self, event_type: str, message: str) -> None:
         from gateway.run import _prepare_gateway_status_message, _redact_gateway_user_facing_secrets, _send_or_update_status_coro
@@ -1199,7 +879,7 @@ class TurnRunner:
     def _make_bg_review_callbacks(self):
         """(send, release): background-review messages ("💾 Memory updated") are held until the
         adapter's post-delivery hook releases them after the main response lands."""
-        from gateway.run import _interim_metadata, _non_conversational_metadata
+        from gateway.run import _interim_metadata
         ctx = self._ctx
         release_evt = threading.Event()
         pending: list[str] = []
@@ -1209,7 +889,7 @@ class TurnRunner:
             if self._status_live():
                 self._send_status_text(
                     message,
-                    _interim_metadata(_non_conversational_metadata(ctx._status_thread_metadata, platform=ctx.source.platform)),
+                    _interim_metadata(ctx._status_thread_metadata),
                     "background_review_callback scheduling error",
                 )
 
@@ -1258,13 +938,8 @@ class TurnRunner:
         # ALWAYS attached (never gated to None): its body gates each event class, and subagent-
         # failure notices must fire even with tool_progress/thinking off.
         agent.tool_progress_callback = ctx.progress_callback
-        # Discord's one-time voice ack and Slack's task cards both ride the authoritative start
-        # callback, so neither infers identity from tool names.
-        agent.tool_start_callback = (
-            (ctx.native_tool_start_callback or ctx.voice_ack_callback)
-            if (ctx._voice_ack_guild[0] is not None or ctx._native_slack_task_cards) else None
-        )
-        agent.tool_complete_callback = ctx.native_tool_complete_callback if ctx._native_slack_task_cards else None
+        agent.tool_start_callback = None
+        agent.tool_complete_callback = None
         agent.step_callback = ctx._step_callback_sync if ctx._hooks_ref.loaded_hooks else None
         agent.stream_delta_callback = stream_delta_cb
         agent.interim_assistant_callback = interim_assistant_cb if want_interim_messages else None
@@ -1510,37 +1185,7 @@ class TurnRunner:
                         "stays armed for a late tap)"
                     )
                     return
-                if outcome == "declined":
-                    # P5(b): the connector AUTHORIZED this destination and
-                    # refused it. The text fallback below re-sends the same
-                    # content to the same chat, which would turn a refused
-                    # button card into a delivered plain-text one — the exact
-                    # leak the egress guard exists to stop. A decline is
-                    # definitive, so unlike `ambiguous` the registration is
-                    # torn down; unlike `failed`, nothing is re-sent.
-                    logger.warning(
-                        "Button-based approval DECLINED by the connector's "
-                        "egress guard — not falling back to text (the "
-                        "destination is not approved for this connection)"
-                    )
-                    # RAISE, do not return. This function is the notify_cb for
-                    # `_await_gateway_decision`, which already has a correct
-                    # undeliverable path: a raising notify drops the queue entry
-                    # and returns `notify_failed`, unblocking the tool. Returning
-                    # quietly suppressed the text fallback (right) but left the
-                    # CENTRAL approval entry pending (wrong) — the dangerous
-                    # command then blocked until the approval timeout. My earlier
-                    # comment claimed the registration was torn down; only the
-                    # adapter's private prompt map was.
-                    raise _ExecApprovalDeclined(
-                        "exec approval undeliverable: connector egress declined "
-                        "this destination"
-                    )
                 logger.warning("Button-based approval failed (send returned error), falling back to text")
-            except _ExecApprovalDeclined:
-                # Must escape this handler: the fallback below is a text send to
-                # the destination the connector just refused.
-                raise
             except Exception as e:
                 logger.warning("Button-based approval failed, falling back to text: %s", e)
         # Plain-text prompt with the adapter's typed prefix (e.g. `!approve`): typed "/" is blocked
@@ -1570,10 +1215,9 @@ class TurnRunner:
         ctx = self._ctx
         # Transcript rows ({role, content, timestamp}) lose timestamps; interrupt-path agent messages
         # (tool_calls/tool_call_id/reasoning) pass through intact so the API sees valid assistant→tool
-        # sequences. Telegram observed=True rows are withheld from replayable history and attached to
-        # the current addressed message as API-only context.
-        agent_history, observed_group_context = _build_gateway_agent_history(
-            ctx.history, channel_prompt=ctx.channel_prompt, inject_timestamps=_message_timestamps_enabled(ctx.user_config),
+        # sequences.
+        agent_history = _build_gateway_agent_history(
+            ctx.history, inject_timestamps=_message_timestamps_enabled(ctx.user_config),
         )
         # FTS write-corruption guard: if persistence failed silently the reloaded transcript is stale
         # while the SAME cached agent still holds the live conversation (same-session amnesia). Only
@@ -1604,7 +1248,7 @@ class TurnRunner:
             else:
                 streaks.pop(ctx.session_key, None)
         # MEDIA paths already in history are excluded from this turn's extraction (compression-safe).
-        return agent_history, observed_group_context, _collect_history_media_paths(agent_history)
+        return agent_history, _collect_history_media_paths(agent_history)
 
     def _prepend_pending_note(self, attr: str) -> None:
         """Consume a one-shot per-session note (model switch, /reload-skills) into the NEXT user
@@ -1692,11 +1336,10 @@ class TurnRunner:
             logger.warning("Native image attachment failed, falling back to text: %s", exc)
         return ctx.message
 
-    def _run_conversation_with_approval(self, agent, agent_history, observed_group_context,
+    def _run_conversation_with_approval(self, agent, agent_history,
                                         persist_user_message_override, persist_user_timestamp_override):
         """Run the turn with the per-session gateway approval callback registered: dangerous-command
         approval blocks the agent thread (mirrors CLI input()); the callback bridges sync→async."""
-        from gateway.run import _wrap_current_message_with_observed_context
         from tools.approval import register_gateway_notify, unregister_gateway_notify
         from tools.approval_context import reset_current_session_key, set_current_session_key
         ctx = self._ctx
@@ -1704,7 +1347,7 @@ class TurnRunner:
         token = set_current_session_key(session_key)
         register_gateway_notify(session_key, self._approval_notify_sync)
         try:
-            api_message = _wrap_current_message_with_observed_context(self._native_image_run_message(), observed_group_context)
+            api_message = self._native_image_run_message()
             kwargs = {"conversation_history": agent_history, "task_id": ctx.session_id}
             if _accepts_keyword(agent.run_conversation, "turn_author"):
                 # Sent on every transport: a provider gating durable writes needs the bot flag in a DM too.
@@ -1712,8 +1355,6 @@ class TurnRunner:
                                          "is_bot": bool(getattr(ctx.source, "is_bot", False))}
             if persist_user_message_override is not None:
                 kwargs["persist_user_message"] = persist_user_message_override
-            elif observed_group_context:
-                kwargs["persist_user_message"] = ctx.message
             if ctx.persist_user_display_kind:
                 # Internal self-injected turn: type the persisted user row so UIs render it as a
                 # timeline notice, not a user bubble (stripped from provider payloads downstream).
@@ -1773,23 +1414,6 @@ class TurnRunner:
         except TypeError:
             stream_consumer.finish()
 
-    def _restore_telegram_thread_id_after_split(self, agent_session_id) -> None:
-        """Telegram DM whose source.thread_id was lost in the session split (synthetic/recovered
-        event): restore it from the binding so _thread_metadata_for_source yields the right
-        message_thread_id instead of the General thread (non-fatal)."""
-        ctx = self._ctx
-        try:
-            # run_sync is off-loop (executor); sync DB is fine.
-            binding = self._runner._session_db._db.get_telegram_topic_binding_by_session(session_id=agent_session_id)
-            if binding and binding.get("thread_id"):
-                ctx.source.thread_id = str(binding["thread_id"])
-                logger.debug(
-                    "Restored source.thread_id=%s from binding after session split %s → %s",
-                    ctx.source.thread_id, ctx.session_id, agent_session_id,
-                )
-        except Exception:
-            logger.debug("Failed to restore thread_id from binding after session split", exc_info=True)
-
     def _sync_session_after_run(self, agent_history):
         """Sync session_id right after run_conversation(): compression can rotate before a follow-up
         model call fails, and the failure return must still point at the compressed child.
@@ -1805,7 +1429,6 @@ class TurnRunner:
         if session_was_split:
             logger.info("Session split detected: %s → %s (compression)", ctx.session_id, agent_session_id)
             entry = runner.session_store._entries.get(ctx.session_key)
-            persisted = False
             if entry:
                 entry_session_id = getattr(entry, "session_id", None)
                 if not ctx._run_still_current():
@@ -1815,7 +1438,7 @@ class TurnRunner:
                         ctx.session_key or "?", ctx.run_generation,
                     )
                 elif entry_session_id == agent_session_id:
-                    persisted = True
+                    pass  # already published
                 elif entry_session_id != ctx.session_id:
                     logger.info(
                         "Skipping session split sync for %s because the "
@@ -1827,17 +1450,6 @@ class TurnRunner:
                     entry.session_id = agent_session_id
                     runner.session_store._save()
                     runner.session_store._record_gateway_session_peer(agent_session_id, ctx.session_key, ctx.source)
-                    persisted = True
-            # Only after this run published its split — a stale /stop→/new predecessor must not
-            # mutate routing state.
-            if persisted:
-                src = ctx.source
-                if (
-                    getattr(src, "platform", None) == Platform.TELEGRAM and getattr(src, "chat_type", None) == "dm"
-                    and getattr(src, "thread_id", None) is None and runner._session_db is not None
-                ):
-                    self._restore_telegram_thread_id_after_split(agent_session_id)
-                runner._sync_telegram_topic_binding(src, entry, reason="agent-run-compression")
         runner._sync_session_model_from_agent(agent_session_id, agent)
         # history_offset=0 whenever the agent's message list lost the original history prefix
         # (split OR in-place compaction): the returned `messages` is the compacted set, persist all
@@ -1953,9 +1565,9 @@ class TurnRunner:
             # Reuse the in-agent one-shot notice so the pre-agent provider switch is user-visible too.
             agent._pending_fallback_notice = pending_fallback_notice
         self._wire_turn_agent_callbacks(agent, turn_route, reasoning_config, stream_delta_cb, interim_cb, want_interim)
-        agent_history, observed_group_context, history_media_paths = self._load_turn_history(agent, reused_cached_agent)
+        agent_history, history_media_paths = self._load_turn_history(agent, reused_cached_agent)
         persist_msg, persist_ts = self._prepare_turn_message(agent_history)
-        result = self._run_conversation_with_approval(agent, agent_history, observed_group_context, persist_msg, persist_ts)
+        result = self._run_conversation_with_approval(agent, agent_history, persist_msg, persist_ts)
         self._finish_stream_consumer(result, agent_history, stream_consumer)
         # The streaming-TTS consumer's finish() runs on the outer loop thread after the executor
         # returns, so early run_sync returns are also finalised.

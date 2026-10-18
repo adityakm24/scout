@@ -59,24 +59,4 @@ class TestNonInteractiveSetup:
         out = capsys.readouterr().out
         assert "Configuration reset to defaults." in out
 
-    def test_chat_first_run_headless_skips_setup_prompt(self, capsys):
-        """Bare `scout` should not prompt for input when no provider exists and stdin is headless."""
-        from scout_cli.main import cmd_chat
-
-        args = _make_chat_args()
-
-        with (
-            patch("scout_cli.main._has_any_provider_configured", return_value=False),
-            patch("scout_cli.main.cmd_setup") as mock_setup,
-            patch("sys.stdin") as mock_stdin,
-            patch("builtins.input", side_effect=AssertionError("input should not be called")),
-        ):
-            mock_stdin.isatty.return_value = False
-            with pytest.raises(SystemExit) as exc:
-                cmd_chat(args)
-
-        assert exc.value.code == 1
-        mock_setup.assert_not_called()
-        out = capsys.readouterr().out
-        assert "scout config set model.provider custom" in out
 

@@ -403,45 +403,6 @@ class TestSubFloorPreambleToolBoundaries:
         assert any("Ok" in (s or "") for s in sends), sends
 
 
-class TestAdapterPrefersFreshFinal:
-    """An adapter whose send path is richer than its edit path (e.g. Telegram
-    rich messages) finalizes a streamed reply by sending a fresh final message
-    and deleting the preview, instead of final-editing the preview."""
-
-    @pytest.mark.asyncio
-    async def test_edit_stream_finalizes_with_fresh_send_and_deletes_preview(self):
-        adapter = _make_fresh_final_adapter()
-        cfg = StreamConsumerConfig(
-            transport="auto", chat_type="dm",
-            edit_interval=0.01, buffer_threshold=5, cursor="",
-            fresh_final_after_seconds=0.0,  # only the adapter hook drives fresh-final
-        )
-        consumer = GatewayStreamConsumer(adapter, "12345", cfg)
-
-        consumer.on_delta("Full answer here")
-        task = asyncio.create_task(consumer.run())
-        # Let the first send land so a real preview message_id exists before
-        # finalization — the fresh-final path only engages with a live preview.
-        await asyncio.sleep(0.05)
-        consumer.finish()
-        await task
-
-        # Two sends: the streaming preview, then the fresh final.
-        assert adapter.send.await_count == 2
-        first_content = adapter.send.call_args_list[0].kwargs.get("content")
-        second_content = adapter.send.call_args_list[1].kwargs.get("content")
-        # First update delivered the preview via adapter.send.
-        assert first_content == "Full answer here"
-        # Finalization re-sent the same completed content as a fresh message.
-        assert second_content == "Full answer here"
-
-        # The edit path must NOT be used to finalize a rich preview.
-        adapter.edit_message.assert_not_called()
-
-        # The stale preview is best-effort deleted (by its id, not the final's).
-        adapter.delete_message.assert_awaited_once_with("12345", "preview1")
-
-        assert consumer.final_response_sent is True
 
 
 def _make_rich_capable_adapter(*, overflow_limit=32768, send_results=None):
@@ -471,40 +432,4 @@ def _make_rich_capable_adapter(*, overflow_limit=32768, send_results=None):
     return adapter
 
 
-class TestRichAwareOverflow:
-    """Rich-capable adapters raise the consumer's overflow limit so a reply that
-    fits one rich message isn't fragmented at the legacy 4,096 edit limit."""
-
-
-
-    @pytest.mark.asyncio
-    async def test_long_rich_reply_not_split_and_final_is_whole(self):
-        from gateway.platforms.base import SendResult
-
-        long_text = "x" * 5000  # > 4096 legacy limit, < 32768 rich limit
-        adapter = _make_rich_capable_adapter(send_results=[
-            SendResult(success=True, message_id="preview1"),
-            SendResult(success=True, message_id="final1"),
-        ])
-        cfg = StreamConsumerConfig(
-            transport="auto", chat_type="dm",
-            edit_interval=0.01, buffer_threshold=5, cursor="",
-            fresh_final_after_seconds=0.0,
-        )
-        consumer = GatewayStreamConsumer(adapter, "12345", cfg)
-
-        consumer.on_delta(long_text)
-        task = asyncio.create_task(consumer.run())
-        await asyncio.sleep(0.05)
-        consumer.finish()
-        await task
-
-        # Exactly two whole sends: the preview and the fresh final — NOT split
-        # into ~4096 chunks. Both carry the full 5,000-char reply.
-        assert adapter.send.await_count == 2
-        assert adapter.send.call_args_list[0].kwargs.get("content") == long_text
-        assert adapter.send.call_args_list[1].kwargs.get("content") == long_text
-        adapter.edit_message.assert_not_called()
-        adapter.delete_message.assert_awaited_once_with("12345", "preview1")
-        assert consumer.final_response_sent is True
 

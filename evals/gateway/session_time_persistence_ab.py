@@ -18,7 +18,7 @@ results = []
 for mode in ("idle", "daily", "both", "none"):
     cfg = GatewayConfig.from_dict({"default_reset_policy": {"mode": mode, "idle_minutes": 1}})
     store = SessionStore(home / mode, cfg)
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id=mode, user_id="probe")
+    source = SessionSource(platform=Platform.API_SERVER, chat_id=mode, user_id="probe")
     old = store.get_or_create_session(source)
     for role in ("user", "assistant"):
         store.append_to_transcript(old.session_id, {"role": role, "content": "durable probe"})

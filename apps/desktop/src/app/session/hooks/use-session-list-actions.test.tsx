@@ -156,9 +156,9 @@ describe('workspace-only sidebar refresh', () => {
       const incoming = { ...previous, [field]: '/new' }
       setSessions([previous])
       setCronSessions([{ ...previous, source: 'cron' }])
-      setMessagingSessions([{ ...previous, source: 'telegram' }])
+      setMessagingSessions([{ ...previous, source: 'webhook' }])
       listSidebarSessions.mockResolvedValue(
-        sidebar({ sessions: [incoming] }, [{ ...incoming, source: 'cron' }], [{ ...incoming, source: 'telegram' }])
+        sidebar({ sessions: [incoming] }, [{ ...incoming, source: 'cron' }], [{ ...incoming, source: 'webhook' }])
       )
       const { result } = renderHook(() => useSessionListActions({ profileScope: 'default' }))
 
@@ -522,7 +522,7 @@ describe('refreshSessions identity + loading hygiene', () => {
     // both honor the tombstone, or a deleted platform thread resurrects.
     removed.ids = new Set(['tg-2'])
     listSidebarSessions.mockResolvedValue(
-      sidebar({ sessions: [] }, [], [row('tg-1', { source: 'telegram' }), row('tg-2', { source: 'telegram' })])
+      sidebar({ sessions: [] }, [], [row('tg-1', { source: 'webhook' }), row('tg-2', { source: 'webhook' })])
     )
 
     const { result } = renderHook(() => useSessionListActions({ profileScope: 'default' }))
@@ -536,15 +536,15 @@ describe('refreshSessions identity + loading hygiene', () => {
     // Per-platform pager: backend page still lists the doomed row.
     listAllProfileSessions.mockResolvedValue({
       sessions: [
-        row('tg-1', { source: 'telegram' }),
-        row('tg-2', { source: 'telegram' }),
-        row('tg-3', { source: 'telegram' })
+        row('tg-1', { source: 'webhook' }),
+        row('tg-2', { source: 'webhook' }),
+        row('tg-3', { source: 'webhook' })
       ],
       total: 3
     })
 
     await act(async () => {
-      await result.current.loadMoreMessagingForPlatform('telegram')
+      await result.current.loadMoreMessagingForPlatform('webhook')
     })
 
     expect($messagingSessions.get().map(s => s.id)).toEqual(['tg-1', 'tg-3'])
@@ -579,7 +579,7 @@ describe('refreshSessions identity + loading hygiene', () => {
     ownsRefresh = false
     setSessions([row('winner')])
     setCronSessions([row('winner-cron', { source: 'cron' })])
-    setMessagingSessions([row('winner-message', { source: 'signal' })])
+    setMessagingSessions([row('winner-message', { source: 'homeassistant' })])
     setMessagingTruncated(true)
     setSessionProfilesTruncated({ winner: true })
     setSessionProfilesUsage({ winner: { cost_usd: 2, tokens: 20 } })
@@ -593,7 +593,7 @@ describe('refreshSessions identity + loading hygiene', () => {
           sessions: [row('stale')]
         },
         cron: { sessions: [row('stale-cron', { source: 'cron' })] },
-        messaging: { sessions: [row('stale-message', { source: 'telegram' })] }
+        messaging: { sessions: [row('stale-message', { source: 'webhook' })] }
       })
       await refresh
     })
@@ -641,7 +641,7 @@ describe('refreshSessions identity + loading hygiene', () => {
             sessions: [row('stale')]
           },
           cron: { sessions: [row('stale-cron', { source: 'cron' })] },
-          messaging: { sessions: [row('stale-message', { source: 'telegram' })] }
+          messaging: { sessions: [row('stale-message', { source: 'webhook' })] }
         })
         await pending.promise
       })
@@ -838,7 +838,7 @@ describe('refreshSessions batches slices into one request', () => {
         sidebar(
           { sessions: [row('personal-session', { profile: 'personal' })] },
           [row('personal-cron', { profile: 'personal', source: 'cron' })],
-          [row('personal-signal', { profile: 'personal', source: 'signal' })]
+          [row('personal-signal', { profile: 'personal', source: 'homeassistant' })]
         )
       )
       await personalRefresh
@@ -847,7 +847,7 @@ describe('refreshSessions batches slices into one request', () => {
         sidebar(
           { sessions: [row('work-session', { profile: 'work' })] },
           [row('work-cron', { profile: 'work', source: 'cron' })],
-          [row('work-telegram', { profile: 'work', source: 'telegram' })]
+          [row('work-telegram', { profile: 'work', source: 'webhook' })]
         )
       )
       await workRefresh
@@ -871,11 +871,11 @@ describe('refreshSessions batches slices into one request', () => {
 
     await act(async () => {
       personal.resolve(
-        sidebar({ sessions: [row('personal-session')] }, [], [row('personal-chat', { source: 'telegram' })])
+        sidebar({ sessions: [row('personal-session')] }, [], [row('personal-chat', { source: 'webhook' })])
       )
       await personalRefresh
 
-      work.resolve(sidebar({ sessions: [row('work-session')] }, [], [row('work-chat', { source: 'signal' })]))
+      work.resolve(sidebar({ sessions: [row('work-session')] }, [], [row('work-chat', { source: 'homeassistant' })]))
       await workRefresh
     })
 
@@ -934,28 +934,28 @@ describe('messaging profile scope', () => {
   })
 
   it('keeps per-platform pagination on the active profile', async () => {
-    setMessagingSessions([row('m1', { profile: 'work', source: 'signal' })])
+    setMessagingSessions([row('m1', { profile: 'work', source: 'homeassistant' })])
     listAllProfileSessions.mockResolvedValue({
-      sessions: [row('m1', { profile: 'work', source: 'signal' }), row('m2', { profile: 'work', source: 'signal' })],
+      sessions: [row('m1', { profile: 'work', source: 'homeassistant' }), row('m2', { profile: 'work', source: 'homeassistant' })],
       total: 2
     })
     const { result } = renderHook(() => useSessionListActions({ profileScope: 'work' }))
 
     await act(async () => {
-      await result.current.loadMoreMessagingForPlatform('signal')
+      await result.current.loadMoreMessagingForPlatform('homeassistant')
     })
 
     expect(listAllProfileSessions.mock.calls[0][4]).toBe('work')
     expect($messagingSessions.get().map(s => s.id)).toEqual(['m1', 'm2'])
-    expect($messagingPlatformTotals.get()).toEqual({ 'work:signal': 2 })
+    expect($messagingPlatformTotals.get()).toEqual({ 'work:homeassistant': 2 })
   })
 
   it('keeps rows from every profile when paginating the unified scope', async () => {
-    setMessagingSessions([row('work-signal', { profile: 'work', source: 'signal' })])
+    setMessagingSessions([row('work-signal', { profile: 'work', source: 'homeassistant' })])
     listAllProfileSessions.mockResolvedValue({
       sessions: [
-        row('work-signal', { profile: 'work', source: 'signal' }),
-        row('personal-signal', { profile: 'personal', source: 'signal' })
+        row('work-signal', { profile: 'work', source: 'homeassistant' }),
+        row('personal-signal', { profile: 'personal', source: 'homeassistant' })
       ],
       total: 2
     })
@@ -963,33 +963,33 @@ describe('messaging profile scope', () => {
     const { result } = renderHook(() => useSessionListActions({ profileScope: '__all__' }))
 
     await act(async () => {
-      await result.current.loadMoreMessagingForPlatform('signal')
+      await result.current.loadMoreMessagingForPlatform('homeassistant')
     })
 
     expect(listAllProfileSessions.mock.calls[0][4]).toBe('all')
     expect($messagingSessions.get().map(session => session.id)).toEqual(['work-signal', 'personal-signal'])
-    expect($messagingPlatformTotals.get()).toEqual({ 'all:signal': 2 })
+    expect($messagingPlatformTotals.get()).toEqual({ 'all:homeassistant': 2 })
   })
 
   it('keeps loaded platform rows when pagination fails', async () => {
-    const loaded = [row('work-signal', { profile: 'work', source: 'signal' })]
+    const loaded = [row('work-signal', { profile: 'work', source: 'homeassistant' })]
     setMessagingSessions(loaded)
-    setMessagingPlatformTotals({ 'work:signal': 12 })
+    setMessagingPlatformTotals({ 'work:homeassistant': 12 })
     listAllProfileSessions.mockRejectedValue(new Error('request failed'))
 
     const { result } = renderHook(() => useSessionListActions({ profileScope: 'work' }))
 
     await act(async () => {
-      await expect(result.current.loadMoreMessagingForPlatform('signal')).resolves.toBeUndefined()
+      await expect(result.current.loadMoreMessagingForPlatform('homeassistant')).resolves.toBeUndefined()
     })
 
     expect($messagingSessions.get()).toEqual(loaded)
-    expect($messagingPlatformTotals.get()).toEqual({ 'work:signal': 12 })
+    expect($messagingPlatformTotals.get()).toEqual({ 'work:homeassistant': 12 })
   })
 
   it('keeps resolved platform totals separate across profile switches', async () => {
     listAllProfileSessions.mockResolvedValue({
-      sessions: [row('work-signal', { profile: 'work', source: 'signal' })],
+      sessions: [row('work-signal', { profile: 'work', source: 'homeassistant' })],
       total: 42
     })
 
@@ -998,68 +998,68 @@ describe('messaging profile scope', () => {
     })
 
     await act(async () => {
-      await result.current.loadMoreMessagingForPlatform('signal')
+      await result.current.loadMoreMessagingForPlatform('homeassistant')
     })
 
-    expect($messagingPlatformTotals.get()).toEqual({ 'work:signal': 42 })
+    expect($messagingPlatformTotals.get()).toEqual({ 'work:homeassistant': 42 })
 
     rerender({ profileScope: 'personal' })
 
-    expect($messagingPlatformTotals.get()['personal:signal']).toBeUndefined()
-    expect($messagingPlatformTotals.get()['work:signal']).toBe(42)
+    expect($messagingPlatformTotals.get()['personal:homeassistant']).toBeUndefined()
+    expect($messagingPlatformTotals.get()['work:homeassistant']).toBe(42)
 
     listAllProfileSessions.mockResolvedValue({
-      sessions: [row('personal-signal', { profile: 'personal', source: 'signal' })],
+      sessions: [row('personal-signal', { profile: 'personal', source: 'homeassistant' })],
       total: 3
     })
 
     await act(async () => {
-      await result.current.loadMoreMessagingForPlatform('signal')
+      await result.current.loadMoreMessagingForPlatform('homeassistant')
     })
 
-    expect($messagingPlatformTotals.get()).toEqual({ 'personal:signal': 3, 'work:signal': 42 })
+    expect($messagingPlatformTotals.get()).toEqual({ 'personal:homeassistant': 3, 'work:homeassistant': 42 })
 
     rerender({ profileScope: 'work' })
 
-    expect($messagingPlatformTotals.get()['work:signal']).toBe(42)
+    expect($messagingPlatformTotals.get()['work:homeassistant']).toBe(42)
   })
 
   it('ignores an older overlapping load-more response for the same profile and platform', async () => {
     const older = deferred<{ sessions: SessionInfo[]; total: number }>()
     const newer = deferred<{ sessions: SessionInfo[]; total: number }>()
 
-    setMessagingSessions([row('m1', { profile: 'work', source: 'signal' })])
+    setMessagingSessions([row('m1', { profile: 'work', source: 'homeassistant' })])
     listAllProfileSessions.mockImplementationOnce(() => older.promise).mockImplementationOnce(() => newer.promise)
 
     const { result } = renderHook(() => useSessionListActions({ profileScope: 'work' }))
-    const olderLoad = result.current.loadMoreMessagingForPlatform('signal')
+    const olderLoad = result.current.loadMoreMessagingForPlatform('homeassistant')
 
     setMessagingSessions([
-      row('m1', { profile: 'work', source: 'signal' }),
-      row('m2', { profile: 'work', source: 'signal' })
+      row('m1', { profile: 'work', source: 'homeassistant' }),
+      row('m2', { profile: 'work', source: 'homeassistant' })
     ])
-    const newerLoad = result.current.loadMoreMessagingForPlatform('signal')
+    const newerLoad = result.current.loadMoreMessagingForPlatform('homeassistant')
 
     await act(async () => {
       newer.resolve({
         sessions: [
-          row('m1', { profile: 'work', source: 'signal' }),
-          row('m2', { profile: 'work', source: 'signal' }),
-          row('m3', { profile: 'work', source: 'signal' })
+          row('m1', { profile: 'work', source: 'homeassistant' }),
+          row('m2', { profile: 'work', source: 'homeassistant' }),
+          row('m3', { profile: 'work', source: 'homeassistant' })
         ],
         total: 3
       })
       await newerLoad
 
       older.resolve({
-        sessions: [row('m1', { profile: 'work', source: 'signal' }), row('m2', { profile: 'work', source: 'signal' })],
+        sessions: [row('m1', { profile: 'work', source: 'homeassistant' }), row('m2', { profile: 'work', source: 'homeassistant' })],
         total: 2
       })
       await olderLoad
     })
 
     expect($messagingSessions.get().map(session => session.id)).toEqual(['m1', 'm2', 'm3'])
-    expect($messagingPlatformTotals.get()).toEqual({ 'work:signal': 3 })
+    expect($messagingPlatformTotals.get()).toEqual({ 'work:homeassistant': 3 })
   })
 
   it('ignores an in-flight response after the active profile changes', async () => {
@@ -1080,11 +1080,11 @@ describe('messaging profile scope', () => {
 
     await act(async () => {
       personal.resolve({
-        sessions: [row('personal-message', { profile: 'personal', source: 'telegram' })],
+        sessions: [row('personal-message', { profile: 'personal', source: 'webhook' })],
         total: 1
       })
       await personalRefresh
-      work.resolve({ sessions: [row('work-message', { profile: 'work', source: 'signal' })], total: 1 })
+      work.resolve({ sessions: [row('work-message', { profile: 'work', source: 'homeassistant' })], total: 1 })
       await workRefresh
     })
 
@@ -1094,7 +1094,7 @@ describe('messaging profile scope', () => {
 
   it('does not let a callback captured before a profile switch disturb current totals', async () => {
     listAllProfileSessions.mockResolvedValue({ sessions: [], total: 0 })
-    setMessagingPlatformTotals({ 'work:signal': 12 })
+    setMessagingPlatformTotals({ 'work:homeassistant': 12 })
 
     const { rerender, result } = renderHook(({ profileScope }) => useSessionListActions({ profileScope }), {
       initialProps: { profileScope: 'work' }
@@ -1109,12 +1109,12 @@ describe('messaging profile scope', () => {
     })
 
     expect(listAllProfileSessions).not.toHaveBeenCalled()
-    expect($messagingPlatformTotals.get()).toEqual({ 'work:signal': 12 })
+    expect($messagingPlatformTotals.get()).toEqual({ 'work:homeassistant': 12 })
   })
 
   it('re-reads the messaging slice when a same-route re-activation lands mid-refresh', async () => {
     const pending = deferred<{ sessions: SessionInfo[]; total: number }>()
-    const rows = [row('tg', { source: 'telegram' })]
+    const rows = [row('tg', { source: 'webhook' })]
     listAllProfileSessions.mockReturnValueOnce(pending.promise).mockResolvedValueOnce({ sessions: rows, total: 1 })
     const { result } = renderHook(() => useSessionListActions({ profileScope: 'default' }))
 

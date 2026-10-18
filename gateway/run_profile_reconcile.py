@@ -184,15 +184,14 @@ class GatewayProfileReconcileMixin:
 
     def _live_resource_claims(self, active: str) -> Dict[tuple, str]:
         """Startup's ``claimed`` map rebuilt from what is live now: primary claims plus every connected
-        secondary's credential/listener, so a hot-added profile reusing a token is parked, never a
-        second poller."""
+        secondary's credential, so a hot-added profile reusing a credential is parked, never a
+        second consumer."""
         claimed = self._primary_resource_claims(active)
         for profile_name, adapters in (getattr(self, "_profile_adapters", None) or {}).items():
             for platform, adapter in list(adapters.items()):
-                for claim in (self._adapter_credential_claim(platform, adapter),
-                              self._adapter_listener_claim(platform, adapter)):
-                    if claim is not None:
-                        claimed[claim] = profile_name
+                claim = self._adapter_credential_claim(platform, adapter)
+                if claim is not None:
+                    claimed[claim] = profile_name
         return claimed
 
     async def _after_profiles_added(self, profile_homes) -> None:
@@ -235,7 +234,7 @@ class GatewayProfileReconcileMixin:
                 await self._bounded_adapter_teardown(adapter, platform, profile=name)
             # Its ``<name>:<platform>`` runtime entries describe a profile that no longer exists.
             _write_runtime_status_quiet(drop_profile_platforms=name)
-            for attr in ("pairing_stores", "_busy_text_modes_by_profile", "_busy_input_modes_by_profile",
+            for attr in ("_busy_text_modes_by_profile", "_busy_input_modes_by_profile",
                          "_busy_text_timing_by_profile", "_human_delay_by_profile", "_profile_configs"):
                 store = getattr(self, attr, None)
                 if isinstance(store, dict):

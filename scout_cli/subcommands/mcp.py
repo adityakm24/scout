@@ -12,17 +12,10 @@ def build_mcp_parser(subparsers, *, cmd_mcp: Callable) -> None:
     """Attach the ``mcp`` subcommand to ``subparsers``."""
     mcp_parser = subparsers.add_parser(
         "mcp", help="Manage MCP servers and run Scout as an MCP server",
-        description="Manage MCP server connections and run Scout as an MCP server.\n\n"
+        description="Manage MCP server connections.\n\n"
             "MCP servers provide additional tools via the Model Context Protocol.\n"
-            "Use 'scout mcp add' to connect to a new server, or\n"
-            "'scout mcp serve' to expose Scout conversations over MCP.")
+            "Use 'scout mcp add' to connect to a new server.")
     mcp_sub = mcp_parser.add_subparsers(dest="mcp_action")
-
-    mcp_serve_p = mcp_sub.add_parser(
-        "serve", help="Run Scout as an MCP server (expose conversations to other agents)")
-    mcp_serve_p.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose logging on stderr")
-    add_accept_hooks_flag(mcp_serve_p)
 
     mcp_add_p = mcp_sub.add_parser("add", help="Add an MCP server (discovery-first install)")
     mcp_add_p.add_argument("name", help="Server name (used as config key)")

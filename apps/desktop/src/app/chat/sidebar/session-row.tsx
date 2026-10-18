@@ -6,7 +6,6 @@ import type * as React from 'react'
 import { PrTag } from '@/app/chat/pr-tag'
 import { ProfileTag } from '@/app/chat/profile-tag'
 import { startSessionDrag } from '@/app/chat/session-drag'
-import { PlatformAvatar } from '@/app/messaging/platform-icon'
 import { openSession } from '@/app/open-session'
 import { formatMessageTimestamp } from '@/components/assistant-ui/thread/timestamp'
 import { Button } from '@/components/ui/button'
@@ -20,7 +19,6 @@ import { middleClickHandlers } from '@/lib/middle-click'
 import { displayModelName } from '@/lib/model-status-label'
 import { sessionProjectLabel } from '@/lib/session-project-label'
 import { SESSION_ROW_AREAS } from '@/lib/session-row-slots'
-import { handoffOriginSource, sessionSourceLabel } from '@/lib/session-source'
 import { coarseElapsed } from '@/lib/time'
 import { useStoreSelector } from '@/lib/use-session-slice'
 import { cn } from '@/lib/utils'
@@ -251,11 +249,6 @@ function SidebarSessionRowImpl({
 
   // A chip that ends the slot hides whole; the figures handle their own tail.
   const chipEndsSlot = trailing.length > 0 && !figures.length && !pinnedAge
-  // A handed-off session's live source is local, but it originated on a
-  // messaging platform — surface that origin as a small badge so e.g. a
-  // Telegram thread continued here still reads as Telegram.
-  const handoffSource = handoffOriginSource(session.handoff_state, session.handoff_platform)
-  const handoffLabel = handoffSource ? (sessionSourceLabel(handoffSource) ?? handoffSource) : null
   // The same resolved state the row's dot paints, so the arc and the dot cannot
   // contradict each other. A selector, not a plain useStore: the map is rebuilt
   // whenever any session's status changes, but a row only repaints on its own.
@@ -503,17 +496,6 @@ function SidebarSessionRowImpl({
               </SidebarRowLead>
             )
 
-            const handoffBadge =
-              handoffSource && handoffLabel ? (
-                <Tip label={r.handoffOrigin(handoffLabel)}>
-                  <PlatformAvatar
-                    className="-mt-px size-4 shrink-0 rounded-[4px] text-[0.5rem] [&_svg]:size-2.5"
-                    platformId={handoffSource}
-                    platformName={handoffLabel}
-                  />
-                </Tip>
-              ) : null
-
             // A projected continuation renders as a plain top-level row, which
             // reads as a brand-new conversation that "appeared by itself" — and
             // the sealed predecessor it replaced once nested like a branch
@@ -536,7 +518,6 @@ function SidebarSessionRowImpl({
                 <>
                   {leadNode}
                   <SessionRowSlot area={SESSION_ROW_AREAS.leading} sessionId={sessionPinId(session)} />
-                  {handoffBadge}
                   {continuationBadge}
                   <span className="min-w-0 flex-1 self-center">
                     <OverflowTip label={title} placement="row">
@@ -595,7 +576,6 @@ function SidebarSessionRowImpl({
                   >
                     {context}
                   </span>
-                  {handoffBadge}
                   {continuationBadge}
                   <SessionRowSlot area={SESSION_ROW_AREAS.trailing} sessionId={sessionPinId(session)} />
                   {actionsNode}

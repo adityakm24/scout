@@ -62,7 +62,7 @@ class TestProfileEnvIsNotThePrimaryClaim:
         cfg = run_mod.load_gateway_config_for_runner()
 
         assert cfg.multiplex_profiles is True
-        telegram = cfg.platforms.get(Platform.TELEGRAM)
+        telegram = cfg.platforms.get(Platform.HOMEASSISTANT)
         token = "" if telegram is None else (telegram.token or "")
         assert token != _WORKER_TOKEN, (
             "host primary claimed the launching profile's TELEGRAM_BOT_TOKEN"
@@ -228,51 +228,3 @@ class TestSettledHostRecordDecidesRestart:
         )
 
 
-class TestDuplicateRefusalNamesEnvClaim:
-    @pytest.mark.asyncio
-    async def test_refusal_says_which_claim_is_env_derived(self, tmp_path, monkeypatch):
-        """Default inherited the token from the process env; worker configured it in .env."""
-        from gateway.run import GatewayRunner
-
-        default_home, worker_home = _two_homes(tmp_path)
-        _inherit_worker_env(monkeypatch, worker_home)
-        runner = GatewayRunner.__new__(GatewayRunner)
-        runner.config = GatewayConfig(multiplex_profiles=True)
-        runner.adapters = {}
-        runner._profile_adapters = {}
-        runner._profile_failed_platforms = {}
-        writes = []
-
-        class _Adapter:
-            def __init__(self):
-                self.token = _WORKER_TOKEN
-                self.config = PlatformConfig(enabled=True, token=_WORKER_TOKEN)
-
-        adapter = _Adapter()
-        config = GatewayConfig(
-            multiplex_profiles=True,
-            platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token=_WORKER_TOKEN)},
-        )
-        monkeypatch.setattr("gateway.config.load_gateway_config", lambda: config)
-        monkeypatch.setattr(runner, "_create_adapter", lambda _p, _c: adapter)
-        monkeypatch.setattr(
-            runner, "_update_platform_runtime_status",
-            lambda platform, **kwargs: writes.append((platform, kwargs)),
-        )
-        monkeypatch.setattr(runner, "_subscribe_plugin_rewire", lambda *_a, **_k: None)
-        monkeypatch.setattr(runner, "_register_config_hooks", lambda *_a, **_k: None)
-        monkeypatch.setattr(runner, "_snapshot_profile_busy_modes", lambda *_a, **_k: None)
-        claim = runner._adapter_credential_claim(Platform.TELEGRAM, adapter)
-        assert claim is not None
-
-        connected = await runner._start_one_profile_adapters(
-            "worker", worker_home, {claim: "default"},
-        )
-
-        assert connected == 0
-        assert writes, "duplicate was not refused"
-        message = writes[0][1]["error_message"]
-        assert "env TELEGRAM_BOT_TOKEN" in message
-        assert "default" in message
-        assert "worker" in message
-        assert "profiles/worker/.env" in message

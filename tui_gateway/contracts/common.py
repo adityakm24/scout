@@ -123,8 +123,6 @@ class StoredSessionRow(OpenModel):
     archived: bool | None = None
     actual_cost_usd: float | None = None
     estimated_cost_usd: float | None = None
-    handoff_platform: str | None = None
-    handoff_state: str | None = None
     lineage_root_id: str | None = Field(default=None, alias="_lineage_root_id")
     lineage_ids: list[str] | None = Field(default=None, alias="_lineage_ids")
     # #121148: provenance of a projected continuation tip — 'compression' when the row

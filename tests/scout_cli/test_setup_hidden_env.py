@@ -25,30 +25,6 @@ class TestIsSetupHiddenEnv:
             assert is_setup_hidden_env(key), key
 
 
-class TestChannelCards:
-
-    def test_no_card_shows_a_hidden_knob(self):
-        from scout_cli.web_server_messaging import _messaging_platform_catalog
-
-        for entry in _messaging_platform_catalog():
-            for key in entry["env_vars"]:
-                assert not is_setup_hidden_env(key), f"{entry['id']}: {key}"
-
-
-    def test_hidden_knobs_move_to_the_keys_page_not_into_a_void(self):
-        """Keys hides what a Channels card owns. Dropping these from the card
-        must hand them back to Keys, not orphan them from every surface."""
-        from scout_cli.web_server_messaging import _channel_managed_env_keys
-
-        managed = _channel_managed_env_keys()
-        for key in (
-            "DISCORD_HOME_CHANNEL",
-            "DISCORD_ALLOW_ALL_USERS",
-            "DISCORD_REPLY_TO_MODE",
-        ):
-            assert key not in managed, f"{key} is hidden from both surfaces"
-
-
 class TestCliWizard:
     """`scout setup gateway` drops the same knobs. Real wizard, scripted
     stdin, real .env writes under a temp SCOUT_HOME."""
@@ -103,17 +79,3 @@ class TestCliWizard:
         assert "MATTERMOST_TOKEN" not in self._env(home)
 
 
-class TestStillConfigurable:
-    def test_gateway_still_honors_the_env_vars(self, tmp_path, monkeypatch):
-        """Nothing was removed from the product — only from the setup form."""
-        monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
-        monkeypatch.setenv("DISCORD_BOT_TOKEN", "t")
-        monkeypatch.setenv("DISCORD_HOME_CHANNEL", "999")
-        monkeypatch.setenv("DISCORD_REPLY_TO_MODE", "off")
-
-        from gateway.config import Platform, load_gateway_config
-
-        discord = load_gateway_config().platforms[Platform.DISCORD]
-        assert discord.home_channel is not None
-        assert discord.home_channel.chat_id == "999"
-        assert discord.reply_to_mode == "off"

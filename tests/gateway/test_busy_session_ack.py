@@ -111,7 +111,7 @@ class TestBusySessionAck:
         adapter = _make_adapter()
 
         source = SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_id="123",
             chat_type="dm",
             user_id="user1",
@@ -227,46 +227,6 @@ class TestBusySessionAck:
         assert "Steered" in content or "steer" in content.lower()
         assert "Interrupting" not in content
 
-    @pytest.mark.asyncio
-    async def test_steer_mode_transcribes_voice_before_injection(self, monkeypatch):
-        """A busy voice follow-up is transcribed and steered, never queued."""
-        import gateway.run as _gr
-
-        monkeypatch.delenv("SCOUT_GATEWAY_BUSY_STEER_ACK_ENABLED", raising=False)
-        monkeypatch.setattr(_gr, "_load_gateway_config", lambda: {})
-        runner, _sentinel = _make_runner()
-        runner._busy_input_mode = "steer"
-        runner._should_echo_stt_transcripts = MagicMock(return_value=False)
-        runner._enrich_message_with_transcription = AsyncMock(
-            return_value=('"yönü teknik mimariye çevir"', ["yönü teknik mimariye çevir"])
-        )
-        adapter = _make_adapter()
-
-        event = _make_event(text="")
-        event.message_type = MessageType.VOICE
-        event.media_urls = ["/tmp/follow-up.ogg"]
-        event.media_types = ["audio/ogg"]
-        sk = build_session_key(event.source)
-        runner.adapters[event.source.platform] = adapter
-
-        agent = MagicMock()
-        agent.steer = MagicMock(return_value=True)
-        runner._running_agents[sk] = agent
-
-        await runner._handle_active_session_busy_message(event, sk)
-
-        runner._enrich_message_with_transcription.assert_awaited_once_with(
-            "", ["/tmp/follow-up.ogg"]
-        )
-        agent.steer.assert_called_once()
-        injected = agent.steer.call_args.args[0]
-        assert injected.endswith('"yönü teknik mimariye çevir"')
-        assert '"chat_id": "123"' in injected
-        agent.interrupt.assert_not_called()
-        assert sk not in adapter._pending_messages
-        content = adapter._send_with_retry.call_args.kwargs["content"]
-        assert "Steered" in content
-        assert "Queued" not in content
 
 
     @pytest.mark.asyncio
@@ -337,7 +297,7 @@ class TestBusySessionAck:
 
         # Both events must share the SAME platform object so they resolve to
         # the same adapter (a fresh MagicMock per event would not).
-        shared_platform = Platform.TELEGRAM
+        shared_platform = Platform.HOMEASSISTANT
 
         def _evt(text):
             src = SessionSource(

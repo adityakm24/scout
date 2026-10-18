@@ -85,12 +85,7 @@ export const esOverrides = {
       approvals: 'Esperando tu respuesta',
       noApprovals: 'No hay nada esperando tu aprobación.',
       allow: 'Permitir una vez',
-      deny: 'Denegar',
-      pairing: 'Personas que quieren escribirle',
-      noPairing: 'Nadie está esperando aprobación.',
-      approve: 'Aprobar',
-      waiting: minutes => (minutes < 1 ? 'ahora mismo' : `hace ${minutes} min`)
-    }
+      deny: 'Denegar',    }
   },
   dashboard: {
     title: 'Panel',
@@ -717,7 +712,6 @@ export const esOverrides = {
       'nav.settings': 'Abrir configuración',
       'nav.profiles': 'Abrir perfiles',
       'nav.capabilities': 'Abrir skills',
-      'nav.messaging': 'Abrir mensajería',
       'nav.artifacts': 'Abrir artefactos',
       'nav.cron': 'Abrir tareas programadas',
       'nav.agents': 'Abrir agentes',
@@ -2743,10 +2737,6 @@ export const esOverrides = {
         title: 'Capacidades',
         detail: 'Skills, herramientas, servidores MCP y plugins'
       },
-      messaging: {
-        title: 'Mensajería',
-        detail: 'Configura Telegram, Slack, Discord y más'
-      },
       artifacts: {
         title: 'Artefactos',
         detail: 'Explora salidas generadas'
@@ -2863,216 +2853,6 @@ export const esOverrides = {
       running: 'En ejecución…',
       viewLog: 'Registro de acciones'
     }
-  },
-  messaging: {
-    search: 'Buscar mensajería...',
-    statusFilter: {
-      all: 'Todos',
-      bad: 'Errores',
-      good: 'Conectados',
-      muted: 'Inactivos',
-      warn: 'Requiere atención'
-    },
-    loading: 'Cargando plataformas de mensajería...',
-    loadFailed: 'No se pudieron cargar las plataformas de mensajería',
-    states: {
-      connected: 'Conectado',
-      connecting: 'Conectando',
-      disabled: 'Deshabilitado',
-      fatal: 'Error',
-      gateway_stopped: 'Gateway de mensajería detenido',
-      not_configured: 'Necesita configuración',
-      pending_restart: 'Reinicio necesario',
-      retrying: 'Reintentando',
-      startup_failed: 'Falló el inicio'
-    },
-    unknown: 'Desconocido',
-    hintPendingRestart: 'Reinicia el gateway desde la barra de estado para aplicar este cambio.',
-    sharedListenerUrl: 'Servido en el listener del gateway compartido en',
-    hintGatewayStopped: 'Inicia el gateway desde la barra de estado para conectar.',
-    credentialsSet: 'Credenciales definidas',
-    needsSetup: 'Necesita configuración',
-    gatewayStopped: 'Gateway de mensajería detenido',
-    getCredentials: 'Obtener credenciales',
-    openSetupGuide: 'Abrir guía de configuración',
-    required: 'Obligatorio',
-    recommended: 'Recomendado',
-    advanced: count => `Avanzado (${count})`,
-    noTokenNeeded:
-      'Esta plataforma no necesita un token aquí. Usa la guía de configuración de arriba y actívala abajo.',
-    enabled: 'Activado',
-    disabled: 'Desactivado',
-    unsavedChanges: 'Cambios sin guardar',
-    saving: 'Guardando...',
-    saveChanges: 'Guardar cambios',
-    saved: 'Guardado',
-    replaceValue: 'Reemplazar valor actual',
-    openDocs: 'Abrir docs',
-    clearField: key => `Limpiar ${key}`,
-    enableAria: name => `Activar ${name}`,
-    disableAria: name => `Desactivar ${name}`,
-    platformEnabled: name => `${name} activado`,
-    platformDisabled: name => `${name} desactivado`,
-    restartToApply: 'Reinicia el gateway para que este cambio surta efecto.',
-    setupSaved: name => `Configuración de ${name} guardada`,
-    restartToReconnect: 'Reinicia el gateway para reconectar con las credenciales nuevas.',
-    appliedLive: 'Aplicado al gateway en ejecución.',
-    connectingLive: 'El gateway en ejecución se está conectando con las credenciales nuevas.',
-    keyCleared: key => `${key} limpiado`,
-    setupUpdated: name => `La configuración de ${name} se actualizó.`,
-    failedUpdate: name => `No se pudo actualizar ${name}`,
-    failedSave: name => `No se pudo guardar ${name}`,
-    failedClear: key => `No se pudo limpiar ${key}`,
-    pendingRequests: count => `Solicitudes pendientes (${count})`,
-    pendingAria: count =>
-      `${count} solicitud${count === 1 ? '' : 'es'} de emparejamiento pendiente${count === 1 ? '' : 's'}`,
-    approvedUsers: count => `Usuarios aprobados (${count})`,
-    approve: 'Aprobar',
-    approving: 'Aprobando...',
-    revoke: 'Revocar',
-    revoking: 'Revocando...',
-    revokeAria: name => `Revocar ${name}`,
-    revokeTitle: 'Revocar acceso',
-    revokeDesc: name => `${name} perderá el acceso y dejará de ser reconocido en su próximo mensaje.`,
-    approvedUser: name => `${name} aprobado`,
-    approvedHint: 'Se le reconoce automáticamente en su próximo mensaje.',
-    revokedUser: name => `${name} revocado`,
-    failedApprove: name => `No se pudo aprobar a ${name}`,
-    failedRevoke: name => `No se pudo revocar a ${name}`,
-    pairingLockedOut: 'Demasiados fallos de aprobación — esta plataforma está bloqueada. Inténtalo de nuevo más tarde.',
-    waitingSince: minutes => (minutes < 1 ? 'justo ahora' : `hace ${minutes}m`),
-    restartNeeded: 'Guardado. Reinicia el gateway de mensajería para que la nueva configuración surta efecto.',
-    restartNow: 'Reiniciar ahora',
-    restarting: 'Reiniciando…',
-    restartFailedManual: 'Scout no pudo reiniciarse para aplicar tu configuración de mensajería',
-    restartFailedManualDetail:
-      'Vuelve a pulsar Reiniciar; si sigue fallando, abre los registros y envía un diagnóstico.',
-    restartAgain: 'Reiniciar de nuevo',
-    openLogs: 'Abrir registros',
-    fieldCopy: {
-      TELEGRAM_BOT_TOKEN: {
-        label: 'Token del bot',
-        help: 'Crea un bot con @BotFather y pega el token que te dé.',
-        placeholder: 'Pegar token del bot de Telegram'
-      },
-      TELEGRAM_ALLOWED_USERS: {
-        label: 'IDs de usuarios de Telegram permitidos',
-        help: 'Recomendado. IDs numéricos separados por comas desde @userinfobot. Sin esto, cualquiera puede enviar DM a tu bot.'
-      },
-      TELEGRAM_PROXY: {
-        label: 'URL de proxy',
-        help: 'Solo necesario en redes donde Telegram está bloqueado.'
-      },
-      DISCORD_BOT_TOKEN: {
-        label: 'Token del bot',
-        help: 'Crea una aplicación en Discord Developer Portal, añade un bot y pega su token.'
-      },
-      DISCORD_ALLOWED_USERS: {
-        label: 'IDs de usuarios de Discord permitidos',
-        help: 'Recomendado. IDs de usuarios de Discord separados por comas.'
-      },
-      DISCORD_REPLY_TO_MODE: {
-        label: 'Estilo de respuesta',
-        help: '`first`, `all` u `off`.'
-      },
-      DISCORD_ALLOW_ALL_USERS: {
-        label: 'Permitir todos los usuarios de Discord',
-        help: 'Solo desarrollo. Si es true, cualquiera puede enviar DM al bot sin allowlist.'
-      },
-      DISCORD_HOME_CHANNEL: {
-        label: 'ID del canal principal',
-        help: 'Canal donde el bot envía mensajes proactivos (salida de cron, recordatorios).'
-      },
-      DISCORD_HOME_CHANNEL_NAME: {
-        label: 'Nombre del canal principal',
-        help: 'Nombre visible del canal principal en registros y salida de estado.'
-      },
-      BLUEBUBBLES_ALLOW_ALL_USERS: {
-        label: 'Permitir todos los usuarios de iMessage',
-        help: 'Si es true, omite la allowlist de BlueBubbles.'
-      },
-      MATTERMOST_ALLOW_ALL_USERS: {
-        label: 'Permitir todos los usuarios de Mattermost'
-      },
-      MATTERMOST_HOME_CHANNEL: {
-        label: 'Canal principal'
-      },
-      QQ_ALLOW_ALL_USERS: {
-        label: 'Permitir todos los usuarios de QQ'
-      },
-      QQBOT_HOME_CHANNEL: {
-        label: 'Canal principal de QQ',
-        help: 'Canal o grupo predeterminado para entrega cron.'
-      },
-      QQBOT_HOME_CHANNEL_NAME: {
-        label: 'Nombre del canal principal de QQ'
-      },
-      SLACK_BOT_TOKEN: {
-        label: 'Token del bot de Slack',
-        help: 'Usa el token del bot de OAuth & Permissions después de instalar tu app de Slack.',
-        placeholder: 'Pegar token del bot de Slack'
-      },
-      SLACK_APP_TOKEN: {
-        label: 'Token de app de Slack',
-        help: 'Usa el token de nivel de app requerido para Socket Mode.',
-        placeholder: 'Pegar token de app de Slack'
-      },
-      SLACK_ALLOWED_USERS: {
-        label: 'IDs de usuarios de Slack permitidos',
-        help: 'Recomendado. IDs de Slack separados por comas.'
-      },
-      MATTERMOST_URL: {
-        label: 'URL del servidor',
-        placeholder: 'https://mattermost.example.com'
-      },
-      MATTERMOST_TOKEN: {
-        label: 'Token del bot'
-      },
-      MATTERMOST_ALLOWED_USERS: {
-        label: 'IDs de usuarios permitidos',
-        help: 'Recomendado. IDs de Mattermost separados por comas.'
-      },
-      MATRIX_HOMESERVER: {
-        label: 'URL del homeserver',
-        placeholder: 'https://matrix.org'
-      },
-      MATRIX_ACCESS_TOKEN: {
-        label: 'Token de acceso'
-      },
-      MATRIX_USER_ID: {
-        label: 'ID de usuario del bot',
-        placeholder: '@scout:example.org'
-      },
-      MATRIX_ALLOWED_USERS: {
-        label: 'IDs de usuarios de Matrix permitidos',
-        help: 'Recomendado. IDs separados por comas en formato @usuario:servidor.'
-      },
-      SIGNAL_HTTP_URL: {
-        label: 'URL del puente Signal',
-        placeholder: 'http://127.0.0.1:8080',
-        help: 'URL de un puente REST signal-cli en ejecución.'
-      },
-      SIGNAL_ACCOUNT: {
-        label: 'Número de teléfono',
-        help: 'El número registrado con tu puente signal-cli.'
-      },
-      SIGNAL_ALLOWED_USERS: {
-        label: 'Usuarios de Signal permitidos',
-        help: 'Recomendado. Identificadores de Signal separados por comas.'
-      },
-      WHATSAPP_ENABLED: {
-        label: 'Activar puente de WhatsApp',
-        help: 'Se define automáticamente con el interruptor de abajo. No lo toques salvo que sepas que lo necesitas.'
-      },
-      WHATSAPP_MODE: {
-        label: 'Modo del puente'
-      },
-      WHATSAPP_ALLOWED_USERS: {
-        label: 'Usuarios de WhatsApp permitidos',
-        help: 'Recomendado. Números de teléfono o IDs de WhatsApp separados por comas.'
-      }
-    },
-    platformIntro: {}
   },
   webhooks: {
     search: 'Buscar webhooks…',
@@ -3548,7 +3328,6 @@ export const esOverrides = {
     nav: {
       'new-session': 'Nueva sesión',
       capabilities: 'Capacidades',
-      messaging: 'Mensajería',
       artifacts: 'Artefactos',
       cron: 'Tareas programadas'
     },
@@ -3693,7 +3472,6 @@ export const esOverrides = {
       finishedUnread: 'Finalizada — sin leer',
       backgroundRunning: 'Tarea en segundo plano en ejecución',
       draftSession: 'Borrador — aún no se ha enviado nada',
-      handoffOrigin: platform => `Transferido desde ${platform}`,
       continuationOrigin: 'Continuación automática: esta conversación fue comprimida y continuada',
       ownedByProfile: profile => `Perfil: ${profile}`,
       renamed: 'Renombrada',
@@ -5512,16 +5290,7 @@ export const esOverrides = {
     clipboard: 'Portapapeles',
     noClipboardImage: 'No se encontró ninguna imagen en el portapapeles',
     clipboardPasteFailed: 'No se pudo pegar desde el portapapeles',
-    dropFiles: 'Soltar archivos',
-    handoff: {
-      pickPlatform: 'Elige un destino',
-      success: platform => `Transferido a ${platform}. Puedes reanudar aquí cuando quieras.`,
-      systemNote: platform => `↻ Transferido a ${platform}; puedes reanudar aquí cuando quieras.`,
-      failed: error => `La transferencia falló: ${error}`,
-      timedOut:
-        'Scout no pudo llegar a tu conexión de mensajería. Iníciala desde Configuración → Mensajería y vuelve a intentar el traspaso.',
-      startMessaging: 'Iniciar mensajería'
-    }
+    dropFiles: 'Soltar archivos'
   },
   tips: {
     close: 'No volver a mostrar este consejo',
@@ -5533,10 +5302,6 @@ export const esOverrides = {
       skills: {
         title: 'Enséñale una vez',
         text: 'Las skills son carpetas de instrucciones que Scout carga cuando el trabajo las necesita.'
-      },
-      messaging: {
-        title: 'Scout lejos de tu escritorio',
-        text: 'Conecta Telegram, Discord, Slack y más: el mismo agente, la misma memoria.'
       },
       artifacts: {
         title: 'Todo lo que ha creado Scout',
@@ -5595,7 +5360,6 @@ export const esOverrides = {
     capabilities: 'Habilidades',
     chats: 'Chats',
     dashboard: 'Hoy',
-    messaging: 'Mensajería',
     newChat: 'Nuevo chat',
     noChats: 'Aún no hay chats. Toca el lápiz para empezar uno.',
     noMatches: 'Ningún chat coincide.',

@@ -19,7 +19,7 @@ from gateway.session import SessionSource
 
 class _Adapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="x"), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True, token="x"), Platform.HOMEASSISTANT)
 
     @property
     def name(self):
@@ -59,9 +59,9 @@ def _seed_unit(session_key: str, parent_session_id: str = "") -> MagicMock:
 async def test_stop_ends_background_delegations_of_the_session(monkeypatch, session_state):
     monkeypatch.setenv("TELEGRAM_ALLOWED_USERS", "u1")
     adapter = _Adapter()
-    runner = GatewayRunner(config=GatewayConfig(platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="x")}))
-    runner.adapters = {Platform.TELEGRAM: adapter}
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id="c1", chat_type="dm", user_id="u1", user_name="tester")
+    runner = GatewayRunner(config=GatewayConfig(platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="x")}))
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="c1", chat_type="dm", user_id="u1", user_name="tester")
     key = adapter._event_session_key(MessageEvent(text="", message_type=MessageType.TEXT, source=source))
     stop_fn = _seed_unit(key)
     other_fn = MagicMock()

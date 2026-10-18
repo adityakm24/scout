@@ -48,16 +48,16 @@ def _lists():
 
 
 def test_disable_bundled_platform_by_manifest_name_gates_the_loader(home):
-    """`scout plugins disable photon-platform` must produce a key the loader's gate matches; the
-    CLI wrote ``platforms/photon`` while discovery keyed the adapter ``photon-platform``."""
-    plugins_cmd.cmd_disable("photon-platform")
+    """`scout plugins disable homeassistant-platform` must produce a key the loader's gate matches; the
+    CLI wrote ``platforms/homeassistant`` while discovery keyed the adapter ``homeassistant-platform``."""
+    plugins_cmd.cmd_disable("homeassistant-platform")
 
     enabled, disabled = _lists()
-    photon = next(m for m in collect_directory_manifests() if m.name == "photon-platform")
-    gate = gate_manifest(photon, disabled, enabled)
+    hass = next(m for m in collect_directory_manifests() if m.name == "homeassistant-platform")
+    gate = gate_manifest(hass, disabled, enabled)
     assert gate.action == "placeholder" and gate.error == "disabled via config"
     # And the key the CLI persists IS the loader's key — not merely an alias of it.
-    assert photon.key in disabled
+    assert hass.key in disabled
 
 
 def test_dashboard_toggle_writes_canonical_key_and_clears_stale_aliases(home):

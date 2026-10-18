@@ -424,34 +424,6 @@ class TestWsHostOriginGuardOrigins:
 
 
 
-class TestSidecarUrl:
-    def test_loopback_uses_session_token(self, loopback_app):
-        url = _web_server_chat._build_sidecar_url("ch-1")
-        assert url is not None
-        assert f"token={web_server._SESSION_TOKEN}" in url
-        assert "ticket=" not in url
-
-    def test_gated_uses_internal_credential(self, gated_app):
-        url = _web_server_chat._build_sidecar_url("ch-1")
-        assert url is not None
-        assert "token=" not in url
-        assert "ticket=" not in url
-        assert "internal=" in url
-        # The value should be the live process-lifetime internal credential,
-        # multi-use so the child can reconnect /api/pub.
-        cred = url.split("internal=")[1].split("&")[0]
-        info = consume_internal_credential(cred)
-        assert info["user_id"] == "server-internal"
-        assert info["provider"] == "server-internal"
-        # Multi-use: a second consume still succeeds (unlike a ticket).
-        assert consume_internal_credential(cred)["provider"] == "server-internal"
-
-    def test_no_bound_host_returns_none(self, gated_app):
-        web_server.app.state.bound_host = None
-        try:
-            assert _web_server_chat._build_sidecar_url("ch") is None
-        finally:
-            web_server.app.state.bound_host = "fly-app.fly.dev"
 
 
 # ---------------------------------------------------------------------------
@@ -461,16 +433,4 @@ class TestSidecarUrl:
 # ---------------------------------------------------------------------------
 
 
-class TestGatewayWsUrl:
-
-
-    def test_gated_credential_matches_sidecar(self, gated_app):
-        """Both server-internal builders share one process credential, so a
-        single value authenticates /api/ws and /api/pub alike."""
-        gw = _web_server_chat._build_gateway_ws_url()
-        sc = _web_server_chat._build_sidecar_url("ch-1")
-        assert gw is not None and sc is not None
-        gw_cred = gw.split("internal=")[1].split("&")[0]
-        sc_cred = sc.split("internal=")[1].split("&")[0]
-        assert gw_cred == sc_cred
 

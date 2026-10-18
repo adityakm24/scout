@@ -31,39 +31,8 @@ def test_non_push_session_stamps_no_origin_and_gets_creation_notice():
         clear_session_vars(tokens)
 
 
-def test_stamped_api_server_origin_falls_back_to_home_channel(monkeypatch):
-    from cron import scheduler_delivery as sd
-
-    monkeypatch.setenv("TELEGRAM_HOME_CHANNEL", "12345")
-    job = {"id": "old", "deliver": "origin", "origin": {"platform": "api_server", "chat_id": "desk-1"}}
-    targets = sd._resolve_delivery_targets(job)
-    assert [(t["platform"], t["chat_id"], t["_resolved_from"]) for t in targets] == [
-        ("telegram", "12345", "origin_fallback")]
-    # Control: a push-capable origin is delivered as written.
-    job["origin"] = {"platform": "discord", "chat_id": "42"}
-    assert sd._resolve_delivery_targets(job)[0]["platform"] == "discord"
 
 
-def test_non_push_session_creation_notice_names_home_channel_fallback(monkeypatch):
-    """With a home channel configured the rerouted job must still tell the creating client where
-    the report goes (the api_server client never sees it); a push-capable session stays silent."""
-    from tools.cronjob_job_args import _local_delivery_notice, _origin_from_env
-
-    monkeypatch.setenv("TELEGRAM_HOME_CHANNEL", "12345")
-    tokens = set_session_vars(platform="api_server", chat_id="desk-1", session_key="desk-1",
-                              async_delivery=False)
-    try:
-        notice = _local_delivery_notice({"id": "j", "deliver": "origin", "origin": _origin_from_env()}, None)
-    finally:
-        clear_session_vars(tokens)
-    assert notice and "telegram:12345" in notice
-
-    tokens = set_session_vars(platform="telegram", chat_id="777", session_key="tg", async_delivery=True)
-    try:
-        assert _local_delivery_notice(
-            {"id": "j", "deliver": "origin", "origin": _origin_from_env()}, None) is None
-    finally:
-        clear_session_vars(tokens)
 
 
 def test_suggestions_accept_origin_shares_the_non_push_guard():

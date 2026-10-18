@@ -223,7 +223,7 @@ describe('knownOwnerForSession / requestForOwnedSession', () => {
   })
 
   it('routes approval.respond for a messaging row that omits profile to the list server, not ambient or an assumed primary (#108102)', async () => {
-    // Telegram rows from a legacy backend omit `profile`. After restart there is
+    // Webhook rows from a legacy backend omit `profile`. After restart there is
     // no tile, hint, or runtime ledger. The list that still contains the row
     // names the backend that owns it. A non-primary list must keep that
     // connection; a primary list routes to the primary profile door; an
@@ -236,49 +236,49 @@ describe('knownOwnerForSession / requestForOwnedSession', () => {
 
     try {
       setMessagingListServer({ connectionId: 'homelab', profile: null })
-      setMessagingSessions([makeSessionInfo({ id: 'telegram-remote', source: 'telegram' })])
+      setMessagingSessions([makeSessionInfo({ id: 'webhook-remote', source: 'webhook' })])
 
-      expect(knownOwnerForSession('telegram-remote')).toEqual({ connectionId: 'homelab', profile: 'default' })
+      expect(knownOwnerForSession('webhook-remote')).toEqual({ connectionId: 'homelab', profile: 'default' })
 
       await expect(
-        requestForOwnedSession('telegram-remote', ambient as never, 'approval.respond', {
+        requestForOwnedSession('webhook-remote', ambient as never, 'approval.respond', {
           choice: 'once',
-          session_id: 'telegram-remote'
+          session_id: 'webhook-remote'
         })
       ).rejects.toThrow(/cannot dial|registry connections/i)
       expect(primaryRequest).not.toHaveBeenCalled()
       expect(ambient).not.toHaveBeenCalled()
 
       setMessagingListServer({ connectionId: null, profile: null })
-      setMessagingSessions([makeSessionInfo({ id: 'telegram-primary', source: 'telegram' })])
+      setMessagingSessions([makeSessionInfo({ id: 'webhook-primary', source: 'webhook' })])
 
       await expect(
-        requestForOwnedSession('telegram-primary', ambient as never, 'approval.respond', {
+        requestForOwnedSession('webhook-primary', ambient as never, 'approval.respond', {
           choice: 'once',
-          session_id: 'telegram-primary'
+          session_id: 'webhook-primary'
         })
       ).resolves.toEqual({
         method: 'approval.respond',
-        params: { choice: 'once', session_id: 'telegram-primary' },
+        params: { choice: 'once', session_id: 'webhook-primary' },
         via: 'primary'
       })
       expect(ambient).not.toHaveBeenCalled()
 
       setMessagingListServer(null)
-      setMessagingSessions([makeSessionInfo({ id: 'telegram-unknown', source: 'telegram' })])
+      setMessagingSessions([makeSessionInfo({ id: 'webhook-unknown', source: 'webhook' })])
       primaryRequest.mockClear()
 
       await expect(
-        requestForOwnedSession('telegram-unknown', ambient as never, 'approval.respond', {
+        requestForOwnedSession('webhook-unknown', ambient as never, 'approval.respond', {
           choice: 'once',
-          session_id: 'telegram-unknown'
+          session_id: 'webhook-unknown'
         })
       ).rejects.toSatisfy(isSessionOwnerResolutionError)
       expect(primaryRequest).not.toHaveBeenCalled()
       expect(ambient).not.toHaveBeenCalled()
 
       const stamped = stampMessagingRowsWithListServer(
-        [makeSessionInfo({ id: 'telegram-stamped', source: 'telegram' })],
+        [makeSessionInfo({ id: 'webhook-stamped', source: 'webhook' })],
         { connectionId: 'homelab', profile: null }
       )
 
@@ -286,11 +286,11 @@ describe('knownOwnerForSession / requestForOwnedSession', () => {
       expect(stamped[0]?.profile).toBeUndefined()
       setMessagingListServer(null)
       setMessagingSessions(stamped)
-      expect(knownOwnerForSession('telegram-stamped')).toEqual({ connectionId: 'homelab', profile: 'default' })
+      expect(knownOwnerForSession('webhook-stamped')).toEqual({ connectionId: 'homelab', profile: 'default' })
 
       setMessagingListServer({ connectionId: null, profile: null })
-      setMessagingSessions([makeSessionInfo({ connection_id: 'homelab', id: 'telegram-tagged', source: 'telegram' })])
-      expect(knownOwnerForSession('telegram-tagged')).toEqual({ connectionId: 'homelab', profile: 'default' })
+      setMessagingSessions([makeSessionInfo({ connection_id: 'homelab', id: 'webhook-tagged', source: 'webhook' })])
+      expect(knownOwnerForSession('webhook-tagged')).toEqual({ connectionId: 'homelab', profile: 'default' })
 
       setSessions([makeSessionInfo({ id: 'fresh-desktop', profile: 'omar', source: 'desktop' })])
       expect(knownOwnerForSession('fresh-desktop')).toBe('omar')

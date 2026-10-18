@@ -30,11 +30,11 @@ def _fresh_db(tmp_path, monkeypatch):
     yield
 
 
-def _record(oid="ob-1", session_key="agent:main:slack:channel:C1", **kw):
+def _record(oid="ob-1", session_key="agent:main:homeassistant:channel:C1", **kw):
     dl.record_obligation(
         obligation_id=oid,
         session_key=session_key,
-        platform=kw.get("platform", "slack"),
+        platform=kw.get("platform", "homeassistant"),
         chat_id=kw.get("chat_id", "C1"),
         thread_id=kw.get("thread_id", "171.001"),
         content=kw.get("content", "the final answer"),
@@ -165,10 +165,10 @@ class TestRuntimeFailedSweep:
     """A live gateway may reclaim only its own transient reconnect failures."""
 
     def test_claims_current_process_send_path_degraded_row(self):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
 
-        claimed = dl.sweep_failed_for_runtime("telegram")
+        claimed = dl.sweep_failed_for_runtime("homeassistant")
 
         assert len(claimed) == 1
         assert claimed[0]["needs_marker"] is True
@@ -176,23 +176,23 @@ class TestRuntimeFailedSweep:
         assert _row("ob-1")["state"] == "attempting"
 
     def test_permanent_failure_is_not_claimed(self):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "Forbidden: bot was blocked by the user")
 
-        assert dl.sweep_failed_for_runtime("telegram", now=time.time() + 10_000) == []
+        assert dl.sweep_failed_for_runtime("homeassistant", now=time.time() + 10_000) == []
         assert _row("ob-1")["state"] == "failed"
         assert _row("ob-1")["attempts"] == 0
 
     def test_other_rejection_is_claimed_only_after_its_backoff(self):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "503 Service Unavailable")
         with dl._connect() as conn:
             conn.execute("UPDATE delivery_obligations SET attempts=1, updated_at=1000.0 WHERE obligation_id='ob-1'")
 
-        assert dl.sweep_failed_for_runtime("telegram", now=1000.0 + 60) == []
+        assert dl.sweep_failed_for_runtime("homeassistant", now=1000.0 + 60) == []
         assert dl.pending_retries(now=1000.0 + 60) == [
-            {"platform": "telegram", "profile": "default", "not_before": 1000.0 + 120}]
-        claimed = dl.sweep_failed_for_runtime("telegram", now=1000.0 + 121)
+            {"platform": "homeassistant", "profile": "default", "not_before": 1000.0 + 120}]
+        claimed = dl.sweep_failed_for_runtime("homeassistant", now=1000.0 + 121)
         assert [row["obligation_id"] for row in claimed] == ["ob-1"]
         assert claimed[0]["needs_marker"] is True
         assert _row("ob-1")["state"] == "attempting"
@@ -200,13 +200,13 @@ class TestRuntimeFailedSweep:
     def test_other_rejection_keeps_the_last_attempt_for_a_restart(self):
         """The in-process timer never spends the final budgeted attempt: an outage can outlast any
         backoff, and a row the timer abandoned would be lost for good (review on #91655)."""
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "503 Service Unavailable")
         with dl._connect() as conn:
             conn.execute("UPDATE delivery_obligations SET attempts=?, updated_at=1000.0 WHERE obligation_id='ob-1'",
                          (dl.MAX_ATTEMPTS - 1,))
 
-        assert dl.sweep_failed_for_runtime("telegram", now=1000.0 + 10_000) == []
+        assert dl.sweep_failed_for_runtime("homeassistant", now=1000.0 + 10_000) == []
         assert dl.pending_retries(now=1000.0 + 10_000) == []
         assert _row("ob-1")["state"] == "failed"
         assert _row("ob-1")["attempts"] == dl.MAX_ATTEMPTS - 1
@@ -214,32 +214,32 @@ class TestRuntimeFailedSweep:
     def test_reconnect_only_row_is_never_timer_driven(self):
         """A claim released because the adapter was gone comes back as `send_path_degraded` with a
         fresh stamp; only the reconnect sweep may re-claim it, or a timer would loop every tick."""
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
 
         assert dl.pending_retries(now=time.time() + 10_000) == []
-        assert [r["obligation_id"] for r in dl.sweep_failed_for_runtime("telegram")] == ["ob-1"]
+        assert [r["obligation_id"] for r in dl.sweep_failed_for_runtime("homeassistant")] == ["ob-1"]
 
     def test_claim_is_platform_scoped_and_not_reclaimed_while_attempting(self):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         _record(
             oid="ob-2",
-            session_key="agent:main:slack:channel:C2",
-            platform="slack",
+            session_key="agent:main:webhook:channel:C2",
+            platform="webhook",
             chat_id="C2",
         )
         dl.mark_failed("ob-2", "send_path_degraded")
 
-        claimed = dl.sweep_failed_for_runtime("telegram")
+        claimed = dl.sweep_failed_for_runtime("homeassistant")
 
         assert [row["obligation_id"] for row in claimed] == ["ob-1"]
-        assert dl.sweep_failed_for_runtime("telegram") == []
+        assert dl.sweep_failed_for_runtime("homeassistant") == []
         assert _row("ob-2")["state"] == "failed"
         assert _row("ob-2")["attempts"] == 0
 
     def test_other_live_owner_is_not_claimed_or_abandoned(self, monkeypatch):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         with dl._connect() as conn:
             conn.execute(
@@ -249,12 +249,12 @@ class TestRuntimeFailedSweep:
             )
         monkeypatch.setattr(dl, "_owner_stamp", lambda: (54321, 202))
 
-        assert dl.sweep_failed_for_runtime("telegram") == []
+        assert dl.sweep_failed_for_runtime("homeassistant") == []
         assert _row("ob-1")["state"] == "failed"
         assert _row("ob-1")["attempts"] == dl.MAX_ATTEMPTS
 
     def test_unowned_row_is_not_claimed(self):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         with dl._connect() as conn:
             conn.execute(
@@ -263,11 +263,11 @@ class TestRuntimeFailedSweep:
                 ("ob-1",),
             )
 
-        assert dl.sweep_failed_for_runtime("telegram") == []
+        assert dl.sweep_failed_for_runtime("homeassistant") == []
         assert _row("ob-1")["state"] == "failed"
 
     def test_missing_current_process_start_stamp_fails_closed(self, monkeypatch):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         with dl._connect() as conn:
             conn.execute(
@@ -277,11 +277,11 @@ class TestRuntimeFailedSweep:
             )
         monkeypatch.setattr(dl, "_owner_stamp", lambda: (os.getpid(), None))
 
-        assert dl.sweep_failed_for_runtime("telegram") == []
+        assert dl.sweep_failed_for_runtime("homeassistant") == []
         assert _row("ob-1")["state"] == "failed"
 
     def test_same_pid_with_different_start_stamp_is_not_claimed(self, monkeypatch):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         with dl._connect() as conn:
             conn.execute(
@@ -291,29 +291,29 @@ class TestRuntimeFailedSweep:
             )
         monkeypatch.setattr(dl, "_owner_stamp", lambda: (os.getpid(), 202))
 
-        assert dl.sweep_failed_for_runtime("telegram") == []
+        assert dl.sweep_failed_for_runtime("homeassistant") == []
         assert _row("ob-1")["state"] == "failed"
 
     def test_profile_scope_never_claims_another_bot_identity(self):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         _record(
             oid="ob-2",
             session_key="agent:reviewer:telegram:dm:C2",
-            platform="telegram",
+            platform="homeassistant",
             chat_id="C2",
             adapter_profile="reviewer",
         )
         dl.mark_failed("ob-2", "send_path_degraded")
 
-        claimed = dl.sweep_failed_for_runtime("telegram", profile="reviewer")
+        claimed = dl.sweep_failed_for_runtime("homeassistant", profile="reviewer")
 
         assert [row["obligation_id"] for row in claimed] == ["ob-2"]
         assert claimed[0]["profile"] == "reviewer"
         assert _row("ob-1")["state"] == "failed"
 
     def test_current_owner_row_at_attempt_cap_is_abandoned(self):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         with dl._connect() as conn:
             conn.execute(
@@ -321,7 +321,7 @@ class TestRuntimeFailedSweep:
                 (dl.MAX_ATTEMPTS, "ob-1"),
             )
 
-        assert dl.sweep_failed_for_runtime("telegram") == []
+        assert dl.sweep_failed_for_runtime("homeassistant") == []
         assert _row("ob-1")["state"] == "abandoned"
 
     def test_delivered_row_is_never_reclaimed_by_reconnect_sweep(self):
@@ -332,11 +332,11 @@ class TestRuntimeFailedSweep:
         after delivery, so the ONLY guard standing between the sweep and a
         duplicate send is the ``state='delivered'`` filter itself.
         """
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
 
         # First reconnect legitimately claims and (successfully) redelivers.
-        assert len(dl.sweep_failed_for_runtime("telegram")) == 1
+        assert len(dl.sweep_failed_for_runtime("homeassistant")) == 1
         dl.mark_delivered("ob-1")
         # Simulate a mark_delivered that leaves the retryable error string
         # behind: even then, a delivered row must never be reclaimed.
@@ -347,14 +347,14 @@ class TestRuntimeFailedSweep:
                 ("send_path_degraded", "ob-1"),
             )
 
-        assert dl.sweep_failed_for_runtime("telegram") == []
+        assert dl.sweep_failed_for_runtime("homeassistant") == []
         row = _row("ob-1")
         assert row is not None
         assert row["state"] == "delivered"
         assert row["attempts"] == 1
 
     def test_current_owner_stale_row_is_abandoned(self):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         now = time.time()
         with dl._connect() as conn:
@@ -363,7 +363,7 @@ class TestRuntimeFailedSweep:
                 (now - dl.STALE_AFTER_SECONDS - 1, "ob-1"),
             )
 
-        assert dl.sweep_failed_for_runtime("telegram", now=now) == []
+        assert dl.sweep_failed_for_runtime("homeassistant", now=now) == []
         assert _row("ob-1")["state"] == "abandoned"
 
 
@@ -393,7 +393,7 @@ class TestGatewayRedeliverySweep:
         from gateway.run import GatewayRunner
 
         runner = object.__new__(GatewayRunner)
-        runner.adapters = {Platform.SLACK: adapter} if adapter else {}
+        runner.adapters = {Platform.HOMEASSISTANT: adapter} if adapter else {}
         runner._profile_adapters = {}
         runner._active_profile_name = lambda: "default"
         _store = MagicMock()
@@ -426,7 +426,7 @@ class TestGatewayRedeliverySweep:
         assert sent["metadata"] == {"thread_id": "171.001"}
         assert _row("ob-1")["state"] == "delivered"
         runner._async_session_store.clear_resume_pending.assert_awaited_once_with(
-            "agent:main:slack:channel:C1"
+            "agent:main:homeassistant:channel:C1"
         )
 
     @pytest.mark.asyncio
@@ -442,7 +442,7 @@ class TestGatewayRedeliverySweep:
         owner_adapter = self._adapter()
         runner = self._runner(default_adapter)
         runner._profile_adapters = {
-            "credential-owner": {Platform.SLACK: owner_adapter}
+            "credential-owner": {Platform.HOMEASSISTANT: owner_adapter}
         }
 
         n = await runner._redeliver_pending_obligations()
@@ -511,13 +511,13 @@ class TestGatewayRedeliverySweep:
 
     def test_boot_claimed_row_is_not_reclaimed_by_runtime_sweep_mid_send(self):
         """A boot claim is exclusive while its send is in flight: the reconnect sweep must not resend it."""
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         _orphan("ob-1")
 
         assert [r["obligation_id"] for r in dl.sweep_recoverable()] == ["ob-1"]
 
-        assert dl.sweep_failed_for_runtime("telegram") == []
+        assert dl.sweep_failed_for_runtime("homeassistant") == []
 
     @pytest.mark.parametrize("claimed_state", ["pending", "failed"])
     @pytest.mark.asyncio
@@ -535,22 +535,22 @@ class TestGatewayRedeliverySweep:
         await runner._redeliver_claimed_obligations(claimed)
 
         assert _row("ob-1")["state"] == "failed" and _row("ob-1")["attempts"] == 0
-        assert [r["obligation_id"] for r in dl.sweep_failed_for_runtime("slack")] == ["ob-1"]
+        assert [r["obligation_id"] for r in dl.sweep_failed_for_runtime("homeassistant")] == ["ob-1"]
 
     @pytest.mark.asyncio
     async def test_runtime_failed_redelivery_clears_resume_before_send(self):
         from gateway.config import Platform
 
-        _record(platform="slack")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         adapter = self._adapter()
         runner = self._runner(adapter)
 
-        n = await runner._redeliver_failed_obligations_for_platform(Platform.SLACK)
+        n = await runner._redeliver_failed_obligations_for_platform(Platform.HOMEASSISTANT)
 
         assert n == 1
         runner._async_session_store.clear_resume_pending.assert_awaited_once_with(
-            "agent:main:slack:channel:C1"
+            "agent:main:homeassistant:channel:C1"
         )
         assert adapter.send.await_count == 1
         assert adapter.send.call_args.kwargs["content"].startswith(
@@ -563,8 +563,8 @@ class TestGatewayRedeliverySweep:
         from gateway.config import Platform
 
         _record(
-            session_key="agent:reviewer:slack:channel:C1",
-            platform="slack",
+            session_key="agent:reviewer:homeassistant:channel:C1",
+            platform="homeassistant",
             adapter_profile="reviewer",
         )
         dl.mark_failed("ob-1", "send_path_degraded")
@@ -572,11 +572,11 @@ class TestGatewayRedeliverySweep:
         reviewer_adapter = self._adapter()
         runner = self._runner(default_adapter)
         runner._profile_adapters = {
-            "reviewer": {Platform.SLACK: reviewer_adapter}
+            "reviewer": {Platform.HOMEASSISTANT: reviewer_adapter}
         }
 
         n = await runner._redeliver_failed_obligations_for_platform(
-            Platform.SLACK, profile="reviewer"
+            Platform.HOMEASSISTANT, profile="reviewer"
         )
 
         assert n == 1
@@ -587,11 +587,11 @@ class TestGatewayRedeliverySweep:
     async def test_runtime_missing_adapter_releases_unsent_claim(self):
         from gateway.config import Platform
 
-        _record(platform="slack")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         runner = self._runner()
 
-        n = await runner._redeliver_failed_obligations_for_platform(Platform.SLACK)
+        n = await runner._redeliver_failed_obligations_for_platform(Platform.HOMEASSISTANT)
 
         assert n == 0
         assert _row("ob-1")["state"] == "failed"
@@ -602,7 +602,7 @@ class TestGatewayRedeliverySweep:
     async def test_runtime_clear_failure_does_not_send_or_lose_retry(self):
         from gateway.config import Platform
 
-        _record(platform="slack")
+        _record(platform="homeassistant")
         dl.mark_failed("ob-1", "send_path_degraded")
         adapter = self._adapter()
         runner = self._runner(adapter)
@@ -610,7 +610,7 @@ class TestGatewayRedeliverySweep:
             "session store unavailable"
         )
 
-        n = await runner._redeliver_failed_obligations_for_platform(Platform.SLACK)
+        n = await runner._redeliver_failed_obligations_for_platform(Platform.HOMEASSISTANT)
 
         assert n == 0
         adapter.send.assert_not_awaited()
@@ -671,7 +671,7 @@ class TestGatewayRedeliverySweep:
             await asyncio.sleep(0)
 
         runner._async_session_store.clear_resume_pending.assert_awaited_once_with(
-            "agent:main:slack:channel:C1"
+            "agent:main:homeassistant:channel:C1"
         )
         assert not task.done()
 
@@ -693,12 +693,12 @@ class TestAttemptsOnlySpentOnRealSends:
     """
 
     def test_absent_platform_does_not_burn_attempts(self):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         dl.mark_attempting("ob-1")
 
         for _ in range(dl.MAX_ATTEMPTS + 2):
             _orphan("ob-1")
-            assert dl.sweep_recoverable(deliverable_platforms={"discord"}) == []
+            assert dl.sweep_recoverable(deliverable_platforms={"webhook"}) == []
 
         with dl._connect() as conn:
             state, attempts = conn.execute(
@@ -709,13 +709,13 @@ class TestAttemptsOnlySpentOnRealSends:
         assert state == "attempting"
 
     def test_row_still_delivers_once_its_platform_returns(self):
-        _record(platform="telegram")
+        _record(platform="homeassistant")
         for _ in range(dl.MAX_ATTEMPTS + 2):
             _orphan("ob-1")
-            dl.sweep_recoverable(deliverable_platforms={"discord"})
+            dl.sweep_recoverable(deliverable_platforms={"webhook"})
 
         _orphan("ob-1")
-        claimed = dl.sweep_recoverable(deliverable_platforms={"telegram"})
+        claimed = dl.sweep_recoverable(deliverable_platforms={"homeassistant"})
         assert len(claimed) == 1
         assert claimed[0]["attempts"] == 1
 
@@ -739,7 +739,7 @@ class TestUnconnectedPlatformKeepsItsBudget:
 
     @pytest.mark.asyncio
     async def test_row_survives_boots_where_its_platform_is_down(self):
-        _record(platform="slack")
+        _record(platform="homeassistant")
         dl.mark_attempting("ob-1")
 
         for _ in range(dl.MAX_ATTEMPTS + 1):

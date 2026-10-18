@@ -61,7 +61,6 @@ export type DesktopActionId =
   | 'browser'
   | 'btw'
   | 'compress'
-  | 'handoff'
   | 'hatch'
   | 'help'
   | 'journey'
@@ -194,12 +193,6 @@ const DESKTOP_COMMAND_SPECS: readonly DesktopCommandSpec[] = [
     name: '/reasoning',
     description: 'Reasoning effort or display [<level> [--global]|show|hide|full|clamp]',
     surface: action('reasoning'),
-    argumentMode: 'options'
-  },
-  {
-    name: '/handoff',
-    description: 'Hand off this session to a messaging platform',
-    surface: action('handoff'),
     argumentMode: 'options'
   },
   { name: '/profile', description: 'Switch the active Scout profile', surface: action('profile') },

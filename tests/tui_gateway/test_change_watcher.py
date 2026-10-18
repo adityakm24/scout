@@ -214,80 +214,12 @@ def test_served_profile_store_move_broadcasts_sessions_changed(watcher_home, mon
     assert ("sessions.changed", {}) in events
 
 
-def test_gateway_state_move_broadcasts_platforms_changed(watcher_home):
-    home, events = watcher_home
-    server._broadcast_watched_changes(now=0.0)
-
-    (home / "gateway_state.json").write_text('{"platforms": {}}')
-    server._broadcast_watched_changes(now=10.0)
-
-    assert ("platforms.changed", {}) in events
 
 
-def test_pending_pairing_request_broadcasts_pairing_changed(watcher_home):
-    """A new pending request must reach the Messaging page on its own signal.
-
-    The messaging gateway writes the pending code from a different process, and
-    it moves nothing in gateway_state.json — so platforms.changed cannot stand
-    in for this. Without a dedicated signal the badge stays invisible until an
-    unrelated connect/disconnect happens to fire.
-    """
-    home, events = watcher_home
-    store = home / "platforms" / "pairing"
-    store.mkdir(parents=True)
-    server._broadcast_watched_changes(now=0.0)
-
-    (store / "telegram-pending.json").write_text('{"abc": {"user_id": "1"}}')
-    server._broadcast_watched_changes(now=10.0)
-
-    assert ("pairing.changed", {}) in events
-    assert ("platforms.changed", {}) not in events
 
 
-def test_pairing_signal_follows_a_profile_store(watcher_home):
-    """Each profile keeps its own whitelist, and the page can be scoped to any."""
-    home, events = watcher_home
-    store = home / "profiles" / "work" / "platforms" / "pairing"
-    store.mkdir(parents=True)
-    (home / "profiles" / "work" / "config.yaml").write_text("{}\n")  # identity marker: a bare dir is not a profile
-    server._broadcast_watched_changes(now=0.0)
-
-    (store / "telegram-approved.json").write_text('{"u1": {"user_id": "u1"}}')
-    server._broadcast_watched_changes(now=10.0)
-
-    assert ("pairing.changed", {}) in events
 
 
-def test_pairing_probe_reuses_live_profile_roots_until_the_profile_set_moves(watcher_home, monkeypatch):
-    """The per-profile liveness probe (~14 stats each) runs once per profiles/ mtime + TTL, not
-    on every 2 s tick (#114041 §2); ledger writes under known roots are still seen each tick,
-    and a newly created profile is picked up because creating it bumps the parent's mtime."""
-    import scout_constants
-
-    home, events = watcher_home
-    live_calls = []
-    real_live = scout_constants.named_profile_is_live
-    monkeypatch.setattr(scout_constants, "named_profile_is_live",
-                        lambda p: live_calls.append(p.name) or real_live(p))
-
-    def _profile(name):
-        (home / "profiles" / name / "platforms" / "pairing").mkdir(parents=True)
-        (home / "profiles" / name / "config.yaml").write_text("{}\n", encoding="utf-8")
-
-    _profile("work")
-    server._broadcast_watched_changes(now=0.0)
-    (home / "profiles" / "work" / "platforms" / "pairing" / "telegram-pending.json").write_text("{}", encoding="utf-8")
-    server._broadcast_watched_changes(now=10.0)
-    assert events == [("pairing.changed", {})]
-    assert live_calls == ["work"]  # second tick reused the cached roots, still saw the ledger
-
-    _profile("play")
-    os.utime(home / "profiles", ns=(0, 10**18))  # deterministic parent-mtime bump
-    server._broadcast_watched_changes(now=20.0)
-    (home / "profiles" / "play" / "platforms" / "pairing" / "discord-approved.json").write_text("{}", encoding="utf-8")
-    server._broadcast_watched_changes(now=30.0)
-    assert events == [("pairing.changed", {})] * 2
-    assert sorted(live_calls) == ["play", "work", "work"]
 
 
 def test_rate_limit_churn_does_not_broadcast_pairing_changed(watcher_home):

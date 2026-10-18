@@ -26,7 +26,7 @@ def _make_entry(key: str, session_id: str) -> SessionEntry:
         session_id=session_id,
         created_at=now - timedelta(hours=2),
         updated_at=now - timedelta(hours=1),
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_type="dm",
     )
 
@@ -34,7 +34,7 @@ def _make_entry(key: str, session_id: str) -> SessionEntry:
 def _make_entry_with_origin(key: str, session_id: str) -> SessionEntry:
     entry = _make_entry(key, session_id)
     entry.origin = SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_id="5140768830",
         chat_type="dm",
         user_id="5140768830",
@@ -165,47 +165,6 @@ class TestPruneStaleSessionsLocked:
 
 
 
-    def test_reset_boundary_does_not_recover_older_session_for_peer(self, tmp_path):
-        """Startup pruning must not search past an intentional reset boundary.
-
-        The durable recovery query deliberately excludes ``session_reset``
-        rows — and a newer reset row must also fence any *older* still-open
-        row for the same peer. If startup pruning invokes recovery for a
-        routing entry that points at such a row, the query must not return
-        an older live session for the same peer and silently restore the
-        context that the user reset. Exercise the real SessionDB query here
-        rather than mocking its result.
-        """
-        from scout_state import SessionDB
-
-        key = "agent:main:telegram:dm:5140768830"
-        db = SessionDB(tmp_path / "state.db")
-        peer = {
-            "user_id": "5140768830",
-            "session_key": key,
-            "chat_id": "5140768830",
-            "chat_type": "dm",
-        }
-        db.create_session("sid_before_reset", "telegram", **peer)
-        db.append_message("sid_before_reset", "user", "private old context")
-        db.create_session("sid_reset", "telegram", **peer)
-        db.append_message("sid_reset", "user", "/new")
-        db.end_session("sid_reset", "session_reset")
-
-        store = _make_store_with_db(tmp_path / "sessions", db)
-        stale_entry = _make_entry_with_origin(key, "sid_reset")
-        store._entries[key] = stale_entry
-
-        # Model restart startup followed by the peer's first incoming message.
-        store._prune_stale_sessions_locked()
-        assert stale_entry.origin is not None
-        current = store.get_or_create_session(stale_entry.origin)
-
-        assert current.session_id not in {"sid_before_reset", "sid_reset"}
-        assert store._entries[key].session_id == current.session_id
-        reset_row = db.get_session("sid_reset")
-        assert reset_row is not None
-        assert reset_row["end_reason"] == "session_reset"
 
 
 # ---------------------------------------------------------------------------

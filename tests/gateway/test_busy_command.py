@@ -19,7 +19,7 @@ def _make_runner(busy_mode="interrupt"):
 
 def _make_event(text: str, chat_id: str = "chat-test") -> MessageEvent:
     source = SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         user_id=f"user-{chat_id}",
         chat_id=chat_id,
         user_name="tester",

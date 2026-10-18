@@ -119,121 +119,12 @@ def _report() -> dict:
     return json.loads(buf.getvalue())
 
 
-def test_dry_run_names_every_crossing_and_changes_nothing(homes, capsys):
-    _seed_crossings(homes)
-    before = {name: _dump(home / "state.db") for name, home in homes.items()}
-    files_before = {p.name: p.read_text() for p in (homes["default"] / "gateway_voice_mode.json",
-                                                    homes["default"] / "sessions" / "sessions.json")}
-
-    report = _report()
-
-    kinds = {(f["kind"], f["subject"]) for f in report["findings"]}
-    assert {
-        ("mislabelled", "mislabelled"),
-        ("wrong_store", "stray-parent"), ("wrong_store", "stray-child"),
-        ("legacy_main", "legacy-main"),
-        ("unclaimed_namespace", "ghost"),
-        ("wrong_store", "acme-in-beta"), ("crossed_parent", "beta-child"),
-        ("routing_unclaimed", f"{GHOST_KEY} (scope {str((homes['default'] / 'sessions').resolve())!r})"),
-        ("topic_profile_less", "chat 200 thread 7"),
-        ("voice_profile_less", "telegram:200"),
-        ("sessions_json_unclaimed", GHOST_KEY),
-    } <= kinds
-    # beta's own routing row: a standalone gateway's index lives in its own store; nothing recorded a
-    # multiplexing verdict here, so it is NOT reported as stray.
-    assert not any(f["kind"] == "routing_stray" for f in report["findings"])
-    # the healthy controls and the default bot's own voice key are not findings
-    assert not any(f["subject"] in {"ok-root", "ok-acme", "telegram:100", ROOT_KEY} for f in report["findings"])
-    # the two report-only kinds say why
-    by_kind = {f["kind"]: f for f in report["findings"]}
-    assert by_kind["legacy_main"]["action"] is None and "--legacy-main" in by_kind["legacy_main"]["reason"]
-    assert by_kind["unclaimed_namespace"]["action"] is None and "ghost" in by_kind["unclaimed_namespace"]["reason"]
-
-    assert {name: _dump(home / "state.db") for name, home in homes.items()} == before
-    assert {p.name: p.read_text() for p in (homes["default"] / "gateway_voice_mode.json",
-                                            homes["default"] / "sessions" / "sessions.json")} == files_before
 
 
-def test_apply_settles_every_repairable_crossing_and_is_idempotent(homes, monkeypatch, capsys):
-    _seed_crossings(homes)
-    snapshots = []
-    monkeypatch.setattr("scout_cli.sessions_cmd_repair_profiles.default_snapshot",
-                        lambda store: snapshots.append(store.profile) or f"snap-{store.profile}")
-
-    assert _run(apply=True) == 0
-    assert set(snapshots) == {"default", "acme", "beta"}
-
-    root = SessionDB(homes["default"] / "state.db")
-    acme = SessionDB(homes["acme"] / "state.db")
-    beta = SessionDB(homes["beta"] / "state.db")
-    try:
-        # 1. relabelled from the key
-        assert acme.get_session("mislabelled")["profile_name"] == "acme"
-        # 2. moved whole: parent link and every message intact in the target, gone from the source
-        assert root.get_session("stray-parent") is None and root.get_session("stray-child") is None
-        moved_child = acme.get_session("stray-child")
-        assert moved_child["profile_name"] == "acme" and moved_child["parent_session_id"] == "stray-parent"
-        assert len(acme.get_messages("stray-parent")) == 3 and len(acme.get_messages("stray-child")) == 2
-        assert acme.get_session("stray-parent")["system_prompt"] == "sys"
-        #    legacy agent:main row and the ghost row are left exactly as they were
-        assert acme.get_session("legacy-main")["session_key"] == "agent:main:telegram:dm:203"
-        assert root.get_session("ghost")["session_key"] == GHOST_KEY
-        # 3. severed, own identity kept; the acme row it pointed at moved to acme's store
-        child = beta.get_session("beta-child")
-        assert child["parent_session_id"] is None and child["profile_name"] == "beta"
-        assert beta.get_session("acme-in-beta") is None and acme.get_session("acme-in-beta") is not None
-        # 4. ghost routing row dropped, acme's healthy row kept, beta's own row kept (standalone)
-        scope = str((homes["default"] / "sessions").resolve())
-        assert set(root.load_gateway_routing_entries(scope=scope)) == {ACME_KEY}
-        assert set(beta.load_gateway_routing_entries(scope=scope)) == {BETA_KEY}
-        # 5. topic binding carries acme; voice key prefixed only for acme's chat
-        assert acme.get_telegram_topic_binding(chat_id="200", thread_id="7", profile_name="acme") is not None
-        assert acme.get_telegram_topic_binding(chat_id="200", thread_id="7", profile_name="default") is None
-        voice = json.loads((homes["default"] / "gateway_voice_mode.json").read_text())
-        assert voice == {"acme:telegram:200": "all", "telegram:100": "voice_only"}
-        # 6. ghost mirror entry dropped, the default's kept
-        mirror = json.loads((homes["default"] / "sessions" / "sessions.json").read_text())
-        assert set(mirror) == {"_README", ROOT_KEY}
-        # controls untouched
-        assert root.get_session("ok-root")["profile_name"] == "default"
-        assert acme.get_session("ok-acme")["profile_name"] == "acme"
-    finally:
-        for db in (root, acme, beta):
-            db.close()
-
-    # idempotent: only the two report-only findings remain, and nothing is repairable
-    report = _report()
-    assert {f["kind"] for f in report["findings"]} == {"legacy_main", "unclaimed_namespace"}
-    assert report["repairable"] == 0
 
 
-def test_apply_refuses_while_a_gateway_owns_a_store(homes, monkeypatch, capsys):
-    _seed_crossings(homes)
-    monkeypatch.setattr("scout_cli.sessions_cmd_repair_profiles.live_gateway_homes",
-                        lambda stores: [("default", 4242)])
-    before = _dump(homes["default"] / "state.db")
-
-    assert _run(apply=True) == 1
-
-    assert "pid 4242" in capsys.readouterr().err
-    assert _dump(homes["default"] / "state.db") == before
 
 
-def test_legacy_main_rekey_adopts_a_standalone_gateways_history(homes, monkeypatch):
-    """The #113884 incident: multiplexing switched on, every existing key of the named profile's own
-    gateway stopped resolving. ``--legacy-main rekey`` gives them the namespace the multiplexer reads."""
-    _seed_crossings(homes)
-    monkeypatch.setattr("scout_cli.sessions_cmd_repair_profiles.default_snapshot", lambda store: "snap")
-
-    assert _run(apply=True, legacy_main="rekey") == 0
-
-    acme = SessionDB(homes["acme"] / "state.db")
-    try:
-        row = acme.get_session("legacy-main")
-        assert row["session_key"] == "agent:acme:telegram:dm:203" and row["profile_name"] == "acme"
-    finally:
-        acme.close()
-    assert not any(f["kind"] == "legacy_main" for f in _report()["findings"])
 
 
 def test_move_into_a_store_that_already_holds_the_title(homes, monkeypatch):

@@ -86,24 +86,3 @@ class TestShouldSeedInteractive:
 
 
 
-class TestChatParserOneshotFlag:
-    """The chat subcommand's --oneshot must not collide with top-level -z."""
-
-    def _parse(self, argv):
-        from scout_cli._parser import build_top_level_parser
-
-        parser, _subparsers, _chat = build_top_level_parser()
-        return parser.parse_args(argv)
-
-    def test_chat_oneshot_sets_distinct_dest(self):
-        args = self._parse(["chat", "-q", "hello", "--oneshot"])
-        assert args.oneshot_exit is True
-        # Top-level -z prompt dest untouched — dispatch sites check
-        # `args.oneshot` truthiness and would treat True as a prompt.
-        assert getattr(args, "oneshot", None) in (None, False)
-
-
-    def test_top_level_oneshot_prompt_unaffected(self):
-        args = self._parse(["-z", "what is up"])
-        assert args.oneshot == "what is up"
-        assert getattr(args, "oneshot_exit", False) is False

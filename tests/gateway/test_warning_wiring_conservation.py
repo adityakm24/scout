@@ -13,7 +13,7 @@ from gateway.session import SessionSource
 def test_concrete_gateway_sinks_hide_all_freeform_muted_turn_output():
     for muted in (False, True, False):
         scheduled = []
-        ctx = TurnContext(source=SessionSource(platform=Platform.TELEGRAM, chat_id="offline"),
+        ctx = TurnContext(source=SessionSource(platform=Platform.HOMEASSISTANT, chat_id="offline"),
             user_config={}, mute_notification_reply=muted)
         holder = NS(_ctx=ctx, _status_live=lambda: True,
             _schedule=lambda coro, *args: scheduled.append(coro),

@@ -93,8 +93,6 @@ const PROFILE_SCOPED_PREFIXES = [
   "/api/config",
   "/api/env",
   "/api/mcp",
-  "/api/messaging/platforms",
-  "/api/messaging/whatsapp/onboarding",
   // OAuth/account state is profile-owned too: status, login sessions, polling,
   // cancellation, and disconnect must all follow the selected management
   // profile rather than silently targeting the dashboard process's profile.
@@ -104,10 +102,6 @@ const PROFILE_SCOPED_PREFIXES = [
   "/api/model/auxiliary",
   "/api/model/moa",
   "/api/model/options",
-  // A named profile keeps its own pairing whitelist, and its gateway only
-  // consults that one — approving into the global store would grant access
-  // the running gateway never sees.
-  "/api/pairing",
   // Memory files, the curator state file, webhook subscriptions, shell hooks,
   // checkpoints, backups/imports and the dashboard's own theme/font/plugin
   // preferences all live in a profile home. One backend now serves every
@@ -459,27 +453,6 @@ export const api = {
   getSessionDetail: (id: string, profile = getManagementProfile()) =>
     fetchJSON<SessionInfo>(
       appendProfileParam(`/api/sessions/${encodeURIComponent(id)}`, profile),
-    ),
-  /**
-   * Directories a FRESH dashboard chat may start in: the profile's explicit
-   * projects plus discovered git repos (session-derived + scanned). ``scan``
-   * asks the host to rescan its discovery roots first (headless installs have
-   * no Desktop to populate the cache).
-   */
-  getChatWorkspaces: (profile = getManagementProfile(), scan = false) =>
-    fetchJSON<ChatWorkspacesResponse>(
-      appendQueryParam(
-        appendProfileParam("/api/chat/workspaces", profile),
-        "scan",
-        scan ? "1" : undefined,
-      ),
-    ),
-  getSessionLatestDescendant: (id: string, profile = getManagementProfile()) =>
-    fetchJSON<SessionLatestDescendantResponse>(
-      appendProfileParam(
-        `/api/sessions/${encodeURIComponent(id)}/latest-descendant`,
-        profile,
-      ),
     ),
   deleteSession: (id: string, profile = getManagementProfile()) =>
     fetchJSON<{ ok: boolean }>(
@@ -952,59 +925,6 @@ export const api = {
       },
     ),
 
-  // Messaging platforms (gateway channels)
-  getMessagingPlatforms: () =>
-    fetchJSON<MessagingPlatformsResponse>("/api/messaging/platforms"),
-  // `hot_served`: a live multiplexer serving the selected named profile rebuilt its adapters from the
-  // new credentials right away (no gateway restart needed).
-  updateMessagingPlatform: (id: string, body: MessagingPlatformUpdate) =>
-    fetchJSON<{ ok: boolean; platform: string; hot_served?: boolean }>(
-      `/api/messaging/platforms/${encodeURIComponent(id)}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      },
-    ),
-  testMessagingPlatform: (id: string) =>
-    fetchJSON<MessagingPlatformTestResult>(
-      `/api/messaging/platforms/${encodeURIComponent(id)}/test`,
-      { method: "POST" },
-    ),
-  startWhatsAppOnboarding: (body: {
-    mode?: "bot" | "self-chat";
-    allowed_users?: string;
-  }) =>
-    fetchJSON<WhatsAppOnboardingStartResponse>(
-      "/api/messaging/whatsapp/onboarding/start",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      },
-    ),
-  getWhatsAppOnboardingStatus: (pairingId: string) =>
-    fetchJSON<WhatsAppOnboardingStatusResponse>(
-      `/api/messaging/whatsapp/onboarding/${encodeURIComponent(pairingId)}`,
-    ),
-  applyWhatsAppOnboarding: (
-    pairingId: string,
-    body: { mode?: "bot" | "self-chat"; allowed_users?: string; profile?: string },
-  ) =>
-    fetchJSON<WhatsAppOnboardingApplyResponse>(
-      `/api/messaging/whatsapp/onboarding/${encodeURIComponent(pairingId)}/apply`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      },
-    ),
-  cancelWhatsAppOnboarding: (pairingId: string) =>
-    fetchJSON<{ ok: boolean }>(
-      `/api/messaging/whatsapp/onboarding/${encodeURIComponent(pairingId)}`,
-      { method: "DELETE" },
-    ),
-
   // Gateway / update actions
   restartGateway: () =>
     fetchJSON<ActionResponse>("/api/gateway/restart", { method: "POST" }),
@@ -1164,36 +1084,6 @@ export const api = {
         body: JSON.stringify({ name, env, enable }),
       },
     ),
-
-  // ── Admin: Pairing ──────────────────────────────────────────────────
-  // The mutating endpoints read the profile off the BODY, so the query-param
-  // rewrite in withManagementProfile doesn't reach them — send it explicitly
-  // or an approval lands in the wrong profile's whitelist.
-  getPairing: () => fetchJSON<PairingResponse>("/api/pairing"),
-  approvePairing: (platform: string, request_id: string) =>
-    fetchJSON<{ ok: boolean; user: PairingUser }>("/api/pairing/approve", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        platform,
-        request_id,
-        profile: getManagementProfile() || undefined,
-      }),
-    }),
-  revokePairing: (platform: string, user_id: string) =>
-    fetchJSON<{ ok: boolean }>("/api/pairing/revoke", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        platform,
-        user_id,
-        profile: getManagementProfile() || undefined,
-      }),
-    }),
-  clearPendingPairing: () =>
-    fetchJSON<{ ok: boolean; cleared: number }>("/api/pairing/clear-pending", {
-      method: "POST",
-    }),
 
   // ── Admin: Webhooks ─────────────────────────────────────────────────
   getWebhooks: () => fetchJSON<WebhooksResponse>("/api/webhooks"),
@@ -1620,77 +1510,6 @@ export interface McpOAuthFlow {
   tools?: Array<{ name: string; description: string }>;
 }
 
-export interface MessagingPlatformEnvVar {
-  key: string;
-  required: boolean;
-  is_set: boolean;
-  redacted_value: string | null;
-  description: string;
-  prompt: string;
-  help: string;
-  url: string | null;
-  is_password: boolean;
-  advanced: boolean;
-}
-
-export interface MessagingPlatform {
-  id: string;
-  name: string;
-  description: string;
-  docs_url: string;
-  enabled: boolean;
-  configured: boolean;
-  gateway_running: boolean;
-  /**
-   * "connected" | "disabled" | "not_configured" | "pending_restart" |
-   * "gateway_stopped" | "startup_failed" | "disconnected" | "fatal" | string
-   */
-  state: string;
-  error_code: string | null;
-  error_message: string | null;
-  updated_at: string | null;
-  home_channel: { platform: string; chat_id: string; name: string; thread_id?: string } | null;
-  /** Multiplex secondary served on the default profile's shared listener: the vendor callback URL. */
-  ingress_url?: string | null;
-  whatsapp_setup?: {
-    mode?: string;
-    allowed_users_set?: boolean;
-    home_channel_set?: boolean;
-  } | null;
-  env_vars: MessagingPlatformEnvVar[];
-}
-
-export interface MessagingPlatformsResponse {
-  env_path: string;
-  gateway_start_command: string;
-  platforms: MessagingPlatform[];
-}
-
-export interface MessagingPlatformUpdate {
-  enabled?: boolean;
-  env?: Record<string, string>;
-  clear_env?: string[];
-}
-
-export interface MessagingPlatformTestResult {
-  ok: boolean;
-  state: string;
-  message: string;
-}
-
-export interface PairingUser {
-  platform: string;
-  user_id: string;
-  user_name?: string;
-  request_id?: string;
-  age_minutes?: number;
-}
-
-export interface PairingResponse {
-  pending: PairingUser[];
-  approved: PairingUser[];
-}
-
 export interface WebhookRoute {
   name: string;
   description: string;
@@ -2014,31 +1833,6 @@ export interface DiskPressureStatus {
   used_percent?: number | null;
 }
 
-export interface ChatWorkspaceProject {
-  id: string;
-  slug: string;
-  name: string;
-  primary_path: string | null;
-  archived: boolean;
-  folders: Array<{ path: string; label: string | null; is_primary: boolean }>;
-}
-
-export interface ChatWorkspaceRepo {
-  root: string;
-  label: string;
-  sessions: number;
-  last_active: number;
-}
-
-export interface ChatWorkspacesResponse {
-  projects: ChatWorkspaceProject[];
-  repos: ChatWorkspaceRepo[];
-  /** Where a fresh chat lands when no workspace is picked. */
-  default_cwd: string;
-  home: string;
-  scan_enabled: boolean;
-}
-
 export interface SessionInfo {
   id: string;
   source: string | null;
@@ -2059,13 +1853,6 @@ export interface SessionInfo {
   profile?: string;
 }
 
-export interface SessionLatestDescendantResponse {
-  requested_session_id: string;
-  session_id: string;
-  path: string[];
-  changed: boolean;
-}
-
 export interface PaginatedSessions {
   sessions: SessionInfo[];
   total: number;
@@ -2082,42 +1869,8 @@ export interface EnvVarInfo {
   is_password: boolean;
   tools: string[];
   advanced: boolean;
-  /** True when this var is a messaging-platform credential owned by the Channels page. */
-  channel_managed?: boolean;
   /** True when this key is set in .env but not in any catalog (user-added custom key). */
   custom?: boolean;
-}
-
-export interface WhatsAppOnboardingStartResponse {
-  pairing_id: string;
-  status:
-    | "starting"
-    | "installing"
-    | "waiting"
-    | "connected"
-    | "error"
-    | "expired"
-    | "cancelled";
-  qr_payload?: string | null;
-  expires_at: string;
-  mode: "bot" | "self-chat";
-  allowed_users: string;
-  account_id?: string | null;
-  account_name?: string | null;
-  account_phone?: string | null;
-  error?: string | null;
-}
-
-export type WhatsAppOnboardingStatusResponse = WhatsAppOnboardingStartResponse;
-
-export interface WhatsAppOnboardingApplyResponse {
-  ok: boolean;
-  platform: "whatsapp";
-  needs_restart: boolean;
-  restart_started?: boolean;
-  restart_action?: string;
-  restart_pid?: number | null;
-  restart_error?: string;
 }
 
 export interface SessionMessage {

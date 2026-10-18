@@ -25,7 +25,7 @@ _COMMAND_REASONS = [
 
 class _Adapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True), Platform.HOMEASSISTANT)
         self.restarted = []
 
     @property
@@ -53,8 +53,8 @@ def _gateway():
     adapter = _Adapter()
     runner = object.__new__(GatewayRunner)
     runner.config = GatewayConfig()
-    runner.adapters = {Platform.TELEGRAM: adapter}
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id="c1", chat_type="dm", user_id="u1")
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="c1", chat_type="dm", user_id="u1")
     key = adapter._event_session_key(MessageEvent(text="", message_type=MessageType.TEXT, source=source))
     return adapter, runner, source, key
 

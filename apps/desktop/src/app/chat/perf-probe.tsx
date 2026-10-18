@@ -5,7 +5,6 @@ import { writeAgentTerminalChunk } from '@/app/right-sidebar/terminal/agent-term
 import {
   $activeTerminalId,
   $terminals,
-  createTerminal,
   ensureAgentTerminal,
   selectTerminal,
   type TerminalEntry
@@ -246,10 +245,10 @@ if (typeof window !== 'undefined' && !window.__PERF_DRIVE__) {
       }
 
       setCurrentCwdTransient(cwd)
-      const terminalIds = [createTerminal(cwd)]
+      const terminalIds: string[] = []
       let procId = ''
 
-      for (let index = 1; index < Math.max(1, terminals); index += 1) {
+      for (let index = 0; index < Math.max(1, terminals); index += 1) {
         procId = `right-pane-perf-${Date.now()}-${index}`
         const id = ensureAgentTerminal(procId, `perf output ${index}`)
 

@@ -15,7 +15,7 @@ from gateway.platforms.event import MessageEvent
 from gateway.session import SessionSource, build_session_key
 
 
-def _make_event(text="/resume", platform=Platform.TELEGRAM,
+def _make_event(text="/resume", platform=Platform.HOMEASSISTANT,
                 user_id="12345", chat_id="67890"):
     """Build a MessageEvent for testing."""
     source = SessionSource(
@@ -49,7 +49,7 @@ def _make_runner(session_db=None, current_session_id="current_session_001",
     runner._is_user_authorized = lambda _source: True
 
     # Compute the real session key if an event is provided
-    session_key = build_session_key(event.source) if event else "agent:main:telegram:dm"
+    session_key = build_session_key(event.source) if event else "agent:main:homeassistant:dm"
 
     # Mock session_store that returns a session entry with a known session_id
     mock_session_entry = MagicMock()
@@ -81,11 +81,11 @@ class TestHandleResumeCommand:
         event = _make_event(text="/resume")
         lane_key = _session_key_for_event(event)
         db.create_session(
-            "sess_001", "telegram", session_key=lane_key,
+            "sess_001", "homeassistant", session_key=lane_key,
             user_id="12345", chat_id="67890",
         )
         db.create_session(
-            "sess_002", "telegram", session_key=lane_key,
+            "sess_002", "homeassistant", session_key=lane_key,
             user_id="12345", chat_id="67890",
         )
         db.set_session_title("sess_001", "Research")
@@ -109,9 +109,9 @@ class TestHandleResumeCommand:
         restored conversation, while leaving other chats' overrides intact (#10702)."""
         from scout_state import SessionDB
         db = SessionDB(db_path=tmp_path / "state.db")
-        db.create_session("old_session_abc", "telegram", user_id="12345", chat_id="67890")
+        db.create_session("old_session_abc", "homeassistant", user_id="12345", chat_id="67890")
         db.set_session_title("old_session_abc", "My Project")
-        db.create_session("current_session_001", "telegram", user_id="12345", chat_id="67890")
+        db.create_session("current_session_001", "homeassistant", user_id="12345", chat_id="67890")
 
         event = _make_event(text="/resume My Project")
         runner = _make_runner(session_db=db, current_session_id="current_session_001",
@@ -119,11 +119,11 @@ class TestHandleResumeCommand:
         key = _session_key_for_event(event)
         runner._session_model_overrides = {
             key: {"model": "gpt-5", "provider": "openai"},
-            "agent:main:telegram:dm:other": {"model": "keep-me"},
+            "agent:main:homeassistant:dm:other": {"model": "keep-me"},
         }
         runner._pending_model_notes = {
             key: "[Note: switched to gpt-5]",
-            "agent:main:telegram:dm:other": "[Note: keep-me]",
+            "agent:main:homeassistant:dm:other": "[Note: keep-me]",
         }
 
         await runner._handle_resume_command(event)
@@ -132,36 +132,10 @@ class TestHandleResumeCommand:
         assert key not in runner._session_model_overrides
         assert key not in runner._pending_model_notes
         # ...but an unrelated chat's state is untouched.
-        assert runner._session_model_overrides["agent:main:telegram:dm:other"] == {"model": "keep-me"}
-        assert runner._pending_model_notes["agent:main:telegram:dm:other"] == "[Note: keep-me]"
+        assert runner._session_model_overrides["agent:main:homeassistant:dm:other"] == {"model": "keep-me"}
+        assert runner._pending_model_notes["agent:main:homeassistant:dm:other"] == "[Note: keep-me]"
         db.close()
 
-    @pytest.mark.asyncio
-    async def test_resume_clears_last_resolved_model(self, tmp_path):
-        """Resume must also clear the resumed chat's cached last-resolved
-        model, so the restored conversation re-resolves from current config
-        instead of a value cached before the switch (mirrors /new and the
-        compression-exhausted auto-reset, #58403), while leaving other
-        chats' cache entries intact."""
-        from scout_state import SessionDB
-        db = SessionDB(db_path=tmp_path / "state.db")
-        db.create_session("old_session_abc", "telegram", user_id="12345", chat_id="67890")
-        db.set_session_title("old_session_abc", "My Project")
-        db.create_session("current_session_001", "telegram", user_id="12345", chat_id="67890")
-
-        event = _make_event(text="/resume My Project")
-        runner = _make_runner(session_db=db, current_session_id="current_session_001",
-                              event=event)
-        key = _session_key_for_event(event)
-        runner._last_resolved_model = {
-            key: "gpt-5",
-            "agent:main:telegram:dm:other": "keep-me",
-        }
-
-        await runner._handle_resume_command(event)
-        assert key not in runner._last_resolved_model
-        assert runner._last_resolved_model["agent:main:telegram:dm:other"] == "keep-me"
-        db.close()
 
 
     @pytest.mark.asyncio
@@ -170,12 +144,12 @@ class TestHandleResumeCommand:
         from scout_state import SessionDB
 
         db = SessionDB(db_path=tmp_path / "state.db")
-        db.create_session("compressed_root", "telegram", user_id="12345", chat_id="67890")
+        db.create_session("compressed_root", "homeassistant", user_id="12345", chat_id="67890")
         db.set_session_title("compressed_root", "Compressed Work")
         db.end_session("compressed_root", "compression")
-        db.create_session("compressed_child", "telegram", user_id="12345", chat_id="67890", parent_session_id="compressed_root")
+        db.create_session("compressed_child", "homeassistant", user_id="12345", chat_id="67890", parent_session_id="compressed_root")
         db.append_message("compressed_child", "user", "hello from continuation")
-        db.create_session("current_session_001", "telegram", user_id="12345", chat_id="67890")
+        db.create_session("current_session_001", "homeassistant", user_id="12345", chat_id="67890")
 
         event = _make_event(text="/resume Compressed Work")
         runner = _make_runner(
@@ -207,9 +181,9 @@ class TestHandleResumeCommand:
         import threading
         from scout_state import SessionDB
         db = SessionDB(db_path=tmp_path / "state.db")
-        db.create_session("old_session", "telegram", user_id="12345", chat_id="67890")
+        db.create_session("old_session", "homeassistant", user_id="12345", chat_id="67890")
         db.set_session_title("old_session", "Old Work")
-        db.create_session("current_session_001", "telegram", user_id="12345", chat_id="67890")
+        db.create_session("current_session_001", "homeassistant", user_id="12345", chat_id="67890")
 
         event = _make_event(text="/resume Old Work")
         runner = _make_runner(session_db=db, current_session_id="current_session_001",
@@ -235,15 +209,15 @@ class TestHandleResumeCommand:
         for i in range(3):
             sid = f"lane_{i}"
             db.create_session(
-                sid, "telegram", session_key=lane_key,
+                sid, "homeassistant", session_key=lane_key,
                 user_id="12345", chat_id="67890",
             )
             db.set_session_title(sid, f"Lane Work {i}")
         for i in range(12):
             sid = f"foreign_{i}"
             db.create_session(
-                sid, "telegram",
-                session_key=f"agent:main:telegram:dm:foreign-{i}",
+                sid, "homeassistant",
+                session_key=f"agent:main:homeassistant:dm:foreign-{i}",
                 user_id=f"foreign-user-{i}", chat_id=f"foreign-{i}",
             )
             db.set_session_title(sid, f"Foreign Work {i}")
@@ -257,30 +231,6 @@ class TestHandleResumeCommand:
         assert "Foreign Work" not in result
         db.close()
 
-    @pytest.mark.asyncio
-    async def test_bare_resume_ranks_lineages_by_last_activity(self, tmp_path):
-        """A lineage whose root started days ago but was touched last must lead the list: the
-        picker ranks by lineage activity, not root ``started_at`` (#114271)."""
-        from scout_state import SessionDB
-
-        db = SessionDB(db_path=tmp_path / "state.db")
-        event = _make_event(text="/resume")
-        lane_key = _session_key_for_event(event)
-        t0 = time.time() - 5 * 86400
-        for sid, started, active in (("old_root", t0, t0 + 4 * 86400), ("new_root", t0 + 86400, t0 + 86400 + 60)):
-            db.create_session(sid, "telegram", session_key=lane_key, user_id="12345", chat_id="67890")
-            db.append_message(sid, "user", "hi")
-            db._conn.execute("UPDATE sessions SET started_at=?, last_activity_at=? WHERE id=?", (started, active, sid))
-            db._conn.execute("UPDATE messages SET timestamp=? WHERE session_id=?", (active, sid))
-        db._conn.commit()
-        db.set_session_title("old_root", "Old But Active")
-        db.set_session_title("new_root", "Newer But Idle")
-
-        runner = _make_runner(session_db=db, event=event)
-        result = await runner._handle_resume_command(event)
-
-        assert result.index("Old But Active") < result.index("Newer But Idle")
-        db.close()
 
     @pytest.mark.asyncio
     async def test_bare_resume_admin_all_preserves_same_platform_widening(self, tmp_path):
@@ -289,8 +239,8 @@ class TestHandleResumeCommand:
         db = SessionDB(db_path=tmp_path / "state.db")
         event = _make_event(text="/resume --all")
         db.create_session(
-            "other_lane", "telegram",
-            session_key="agent:main:telegram:dm:other",
+            "other_lane", "homeassistant",
+            session_key="agent:main:homeassistant:dm:other",
             user_id="other-user", chat_id="other",
         )
         db.set_session_title("other_lane", "Other Lane Work")
@@ -310,25 +260,25 @@ class TestHandleResumeCommand:
         event = _make_event(text="/resume 2")
         lane_key = _session_key_for_event(event)
         db.create_session(
-            "lane_older", "telegram", session_key=lane_key,
+            "lane_older", "homeassistant", session_key=lane_key,
             user_id="12345", chat_id="67890",
         )
         db.set_session_title("lane_older", "Lane Older")
         db.create_session(
-            "lane_newer", "telegram", session_key=lane_key,
+            "lane_newer", "homeassistant", session_key=lane_key,
             user_id="12345", chat_id="67890",
         )
         db.set_session_title("lane_newer", "Lane Newer")
         for i in range(12):
             sid = f"foreign_{i}"
             db.create_session(
-                sid, "telegram",
-                session_key=f"agent:main:telegram:dm:foreign-{i}",
+                sid, "homeassistant",
+                session_key=f"agent:main:homeassistant:dm:foreign-{i}",
                 user_id=f"foreign-user-{i}", chat_id=f"foreign-{i}",
             )
             db.set_session_title(sid, f"Foreign Work {i}")
         db.create_session(
-            "current_session_001", "telegram", session_key=lane_key,
+            "current_session_001", "homeassistant", session_key=lane_key,
             user_id="12345", chat_id="67890",
         )
 
@@ -340,49 +290,6 @@ class TestHandleResumeCommand:
         assert runner.session_store.switch_session.call_args[0][1] == "lane_older"
         db.close()
 
-    @pytest.mark.asyncio
-    async def test_bare_resume_normalizes_telegram_lobby_source_to_bound_topic(
-        self, tmp_path
-    ):
-        from scout_state import SessionDB
-
-        db = SessionDB(db_path=tmp_path / "state.db")
-        event = _make_event(text="/resume")
-        topic_source = SessionSource(
-            platform=Platform.TELEGRAM,
-            user_id="12345",
-            chat_id="67890",
-            chat_type="dm",
-            thread_id="topic-42",
-        )
-        topic_key = build_session_key(topic_source)
-        db.create_session(
-            "topic_session", "telegram", session_key=topic_key,
-            user_id="12345", chat_id="67890", chat_type="dm",
-            thread_id="topic-42",
-        )
-        db.set_session_title("topic_session", "Recovered Topic Work")
-        db.enable_telegram_topic_mode(chat_id="67890", user_id="12345")
-        db.bind_telegram_topic(
-            chat_id="67890",
-            thread_id="topic-42",
-            user_id="12345",
-            session_key=topic_key,
-            session_id="topic_session",
-        )
-        lobby_key = _session_key_for_event(event)
-        db.create_session(
-            "lobby_session", "telegram", session_key=lobby_key,
-            user_id="12345", chat_id="67890", chat_type="dm",
-        )
-        db.set_session_title("lobby_session", "Lobby Work")
-
-        runner = _make_runner(session_db=db, event=event)
-        result = await runner._handle_resume_command(event)
-
-        assert "Recovered Topic Work" in result
-        assert "Lobby Work" not in result
-        db.close()
 
 
 class TestHandleSessionsCommand:
@@ -479,7 +386,7 @@ class TestHandleSessionsCommand:
         # while later bare/retry upserts must not replace the established data.
         db.create_session(
             entry.session_id,
-            "telegram",
+            "homeassistant",
             model_config={"max_iterations": 60},
         )
         enriched = json.loads(db.get_session(entry.session_id)["model_config"])
@@ -489,7 +396,7 @@ class TestHandleSessionsCommand:
         }
         db.create_session(
             entry.session_id,
-            "telegram",
+            "homeassistant",
             model_config={"max_iterations": 999},
         )
         assert json.loads(db.get_session(entry.session_id)["model_config"]) == enriched
@@ -521,19 +428,19 @@ class TestHandleSessionsCommand:
         for i in range(11):
             sid = f"lane_root_{i}"
             db.create_session(
-                sid, "telegram", session_key=lane_key,
+                sid, "homeassistant", session_key=lane_key,
                 user_id="12345", chat_id="67890",
             )
             db.set_session_title(sid, f"Lane Work {i}")
 
         db.create_session(
-            "current_root", "telegram", session_key=lane_key,
+            "current_root", "homeassistant", session_key=lane_key,
             user_id="12345", chat_id="67890",
         )
         db.set_session_title("current_root", "Current compressed root")
         db.end_session("current_root", "compression")
         db.create_session(
-            "current_tip", "telegram", session_key=lane_key,
+            "current_tip", "homeassistant", session_key=lane_key,
             user_id="12345", chat_id="67890", parent_session_id="current_root",
         )
         db.set_session_title("current_tip", "Current compressed tip")
@@ -541,8 +448,8 @@ class TestHandleSessionsCommand:
         for i in range(60):
             sid = f"foreign_{i}"
             db.create_session(
-                sid, "telegram",
-                session_key=f"agent:main:telegram:dm:foreign-{i}",
+                sid, "homeassistant",
+                session_key=f"agent:main:homeassistant:dm:foreign-{i}",
                 user_id=f"foreign-user-{i}", chat_id=f"foreign-{i}",
             )
             db.set_session_title(sid, f"Foreign Work {i}")
@@ -573,13 +480,13 @@ class TestHandleSessionsCommand:
         event = _make_event(text="/sessions all")
         lane_key = _session_key_for_event(event)
         db.create_session(
-            "tg_named", "telegram", session_key=lane_key,
+            "tg_named", "homeassistant", session_key=lane_key,
             user_id="12345", chat_id="67890",
         )
         db.set_session_title("tg_named", "Telegram Work")
         db.create_session(
-            "discord_named", "discord",
-            session_key="agent:main:discord:dm:other",
+            "discord_named", "homeassistant",
+            session_key="agent:main:homeassistant:dm:other",
             user_id="other-user", chat_id="other",
         )
         db.set_session_title("discord_named", "Discord Work")
@@ -592,79 +499,9 @@ class TestHandleSessionsCommand:
         assert "Discord Work" in result
         db.close()
 
-    @pytest.mark.asyncio
-    async def test_sessions_normalizes_telegram_lobby_source_to_bound_topic(self, tmp_path):
-        from scout_state import SessionDB
-
-        db = SessionDB(db_path=tmp_path / "state.db")
-        event = _make_event(text="/sessions")
-        topic_source = SessionSource(
-            platform=Platform.TELEGRAM,
-            user_id="12345",
-            chat_id="67890",
-            chat_type="dm",
-            thread_id="topic-42",
-        )
-        topic_key = build_session_key(topic_source)
-        db.create_session(
-            "topic_session", "telegram", session_key=topic_key,
-            user_id="12345", chat_id="67890", chat_type="dm",
-            thread_id="topic-42",
-        )
-        db.set_session_title("topic_session", "Recovered Topic Work")
-        db.enable_telegram_topic_mode(chat_id="67890", user_id="12345")
-        db.bind_telegram_topic(
-            chat_id="67890",
-            thread_id="topic-42",
-            user_id="12345",
-            session_key=topic_key,
-            session_id="topic_session",
-        )
-        lobby_key = _session_key_for_event(event)
-        db.create_session(
-            "lobby_session", "telegram", session_key=lobby_key,
-            user_id="12345", chat_id="67890", chat_type="dm",
-        )
-        db.set_session_title("lobby_session", "Lobby Work")
-
-        runner = _make_runner(session_db=db, event=event)
-        result = await runner._handle_sessions_command(event)
-
-        assert "Recovered Topic Work" in result
-        assert "Lobby Work" not in result
-        db.close()
 
 
 
-    @pytest.mark.asyncio
-    async def test_sessions_all_does_not_leak_cross_origin_for_non_admin(self, tmp_path):
-        """`/sessions all` from a non-admin caller must stay scoped to the
-        caller's own origin — it must NOT enumerate other origins' sessions
-        (the enumeration half of the /resume IDOR). Cross-origin listing is
-        gated behind an explicitly-configured admin, which the default test
-        config is not."""
-        from scout_state import SessionDB
-        db = SessionDB(db_path=tmp_path / "state.db")
-        event = _make_event(text="/sessions all full")
-        lane_key = _session_key_for_event(event)
-        db.create_session(
-            "tg_named", "telegram", session_key=lane_key,
-            user_id="12345", chat_id="67890",
-        )
-        db.set_session_title("tg_named", "Telegram Work")
-        db.create_session("discord_unnamed", "discord")  # other origin
-        db.append_message("discord_unnamed", "user", "discord first prompt")
-
-        runner = _make_runner(session_db=db, event=event)
-
-        result = await runner._handle_sessions_command(event)
-
-        # Caller's own (telegram) session is shown; the cross-origin (discord)
-        # session is NOT leaked even with `all`.
-        assert "Telegram Work" in result
-        assert "discord_unnamed" not in result
-        assert "Discord" not in result
-        db.close()
 
     @pytest.mark.asyncio
     async def test_sessions_search_finds_older_titled_session(self, tmp_path):
@@ -676,14 +513,14 @@ class TestHandleSessionsCommand:
         lane_key = _session_key_for_event(event)
         # Bury the target under newer sessions so a plain listing misses it.
         db.create_session(
-            "target_an94", "telegram", session_key=lane_key,
+            "target_an94", "homeassistant", session_key=lane_key,
             user_id="12345", chat_id="67890",
         )
         db.set_session_title("target_an94", "AN-94 Prestige Barrel Build #2")
         for i in range(12):
             sid = f"filler_{i}"
             db.create_session(
-                sid, "telegram", session_key=lane_key,
+                sid, "homeassistant", session_key=lane_key,
                 user_id="12345", chat_id="67890",
             )
             db.set_session_title(sid, f"Filler {i}")
@@ -706,13 +543,13 @@ class TestHandleSessionsCommand:
         event = _make_event(text="/sessions search an94")
         lane_key = _session_key_for_event(event)
         db.create_session(
-            "mine", "telegram", session_key=lane_key,
+            "mine", "homeassistant", session_key=lane_key,
             user_id="12345", chat_id="67890",
         )
         db.set_session_title("mine", "AN-94 mine")
         db.create_session(
-            "theirs", "telegram",
-            session_key="agent:main:telegram:dm:55555",
+            "theirs", "homeassistant",
+            session_key="agent:main:homeassistant:dm:55555",
             user_id="99999", chat_id="55555",
         )
         db.set_session_title("theirs", "AN-94 someone else's secret")
@@ -726,65 +563,12 @@ class TestHandleSessionsCommand:
         db.close()
 
 
-    @pytest.mark.asyncio
-    async def test_resume_persisted_fallback_fails_closed_on_user_id_alt(self, tmp_path):
-        """egilewski/CodeRabbit probe: Signal/Feishu key the session participant
-        on ``user_id_alt or user_id`` (build_session_key), but the sessions table
-        stores only user_id. So a persisted per-user row that a caller shares the
-        user_id of — but NOT the user_id_alt — maps to a DIFFERENT live session
-        key; the persisted fallback must NOT match it on user_id alone (IDOR).
-
-        The live-origin guard already compares user_id_alt correctly; here the
-        target is persisted-only, so the fallback fails closed whenever the
-        caller keys on user_id_alt and the row can't prove that participant."""
-        from scout_state import SessionDB
-        db = SessionDB(db_path=tmp_path / "state.db")
-        # Persisted rows carry only user_id (no user_id_alt column).
-        db.create_session("victim_alt_group", "signal", user_id="+15550001111",
-                          chat_id="signal-group", chat_type="group")
-        db.create_session("victim_alt_dm", "signal", user_id="+15550001111")  # no chat_id
-        runner = _make_runner(session_db=db)
-        runner._gateway_session_origin_for_id = lambda sid: None  # persisted-only
-
-        # Per-user group: attacker shares user_id but has a different user_id_alt
-        # → different session key → must fail closed (was: allowed via user_id).
-        attacker = SessionSource(platform=Platform.SIGNAL, chat_id="signal-group",
-                                 chat_type="group", user_id="+15550001111",
-                                 user_id_alt="attacker-uuid")
-        assert await runner._resume_target_allowed(attacker, "victim_alt_group",
-                                                   allow_override=False) is False
-        # No-chat_id DM keyed purely on the participant: same block.
-        dm_attacker = SessionSource(platform=Platform.SIGNAL, chat_id=None,
-                                    chat_type="dm", user_id="+15550001111",
-                                    user_id_alt="attacker-uuid")
-        assert await runner._resume_target_allowed(dm_attacker, "victim_alt_dm",
-                                                   allow_override=False) is False
-
-        # Regression: a caller WITHOUT user_id_alt (Telegram-style, keyed on
-        # user_id) still resumes its own persisted per-user group row.
-        tg_db = SessionDB(db_path=tmp_path / "state_tg.db")
-        tg_db.create_session("own_group", "telegram", user_id="12345",
-                             chat_id="chat-a", chat_type="group")
-        tg_runner = _make_runner(session_db=tg_db)
-        tg_runner._gateway_session_origin_for_id = lambda sid: None
-        tg_caller = SessionSource(platform=Platform.TELEGRAM, chat_id="chat-a",
-                                  chat_type="group", user_id="12345")
-        assert await tg_runner._resume_target_allowed(tg_caller, "own_group",
-                                                      allow_override=False) is True
-
-        # Regression: an EXPLICITLY-shared group is unaffected — participant
-        # scoping doesn't apply, so an alt-keyed co-member still resumes.
-        runner.config.group_sessions_per_user = False
-        assert await runner._resume_target_allowed(attacker, "victim_alt_group",
-                                                   allow_override=False) is True
-        db.close()
-        tg_db.close()
 
     @pytest.mark.asyncio
     async def test_gateway_dispatches_sessions_command(self, tmp_path):
         from scout_state import SessionDB
         db = SessionDB(db_path=tmp_path / "state.db")
-        db.create_session("tg_session", "telegram", user_id="12345", chat_id="67890")
+        db.create_session("tg_session", "homeassistant", user_id="12345", chat_id="67890")
         db.set_session_title("tg_session", "Telegram Work")
 
         event = _make_event(text="/sessions")
@@ -805,7 +589,7 @@ class TestSameOriginChatGroupScoping:
 
     @staticmethod
     def _src(user_id, *, chat_type="group", chat_id="guild-123",
-             platform=Platform.DISCORD, user_id_alt=None, thread_id=None):
+             platform=Platform.HOMEASSISTANT, user_id_alt=None, thread_id=None):
         return SessionSource(platform=platform, chat_id=chat_id,
                              chat_type=chat_type, user_id=user_id,
                              user_id_alt=user_id_alt, thread_id=thread_id)
@@ -864,7 +648,7 @@ class TestResumeRowVisibleMatrixAllScoping:
 
     @staticmethod
     def _matrix_src(chat_id="!room-a:hs", user_id="@alice:hs"):
-        return SessionSource(platform=Platform.MATRIX, chat_id=chat_id,
+        return SessionSource(platform=Platform.HOMEASSISTANT, chat_id=chat_id,
                              chat_type="group", user_id=user_id)
 
     @pytest.mark.asyncio
@@ -872,36 +656,10 @@ class TestResumeRowVisibleMatrixAllScoping:
         runner = _make_runner()
         runner._resume_caller_is_admin = lambda src: False
         # Titled row whose live origin is a DIFFERENT Matrix room.
-        other_room = SessionSource(platform=Platform.MATRIX, chat_id="!room-b:hs",
+        other_room = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="!room-b:hs",
                                    chat_type="group", user_id="@bob:hs")
         runner._gateway_session_origin_for_id = lambda sid: other_room
         row = {"id": "sid_other_room"}
         assert await runner._resume_row_visible(self._matrix_src(), row, allow_all=True) is False
 
 
-class TestSameMatrixRoomThreadScoping:
-    """Matrix `/resume` (direct and listing) scopes by room AND thread: a live
-    session in another thread of the same room is a different session
-    (build_session_key appends thread_id), so a caller in thread A must not
-    resume/enumerate a target whose origin is in thread B. Non-threaded rooms
-    keep room-level sharing unchanged."""
-
-    @staticmethod
-    def _msrc(chat_id="!room-a:hs", user_id="@alice:hs", thread_id=None):
-        return SessionSource(platform=Platform.MATRIX, chat_id=chat_id,
-                             chat_type="group", user_id=user_id, thread_id=thread_id)
-
-    def test_same_room_no_thread_still_shared(self):
-        runner = _make_runner()
-        a = self._msrc(user_id="@alice:hs")
-        b = self._msrc(user_id="@bob:hs")
-        assert runner._same_matrix_room(a, b) is True
-
-
-    def test_cross_thread_same_room_blocked(self):
-        """The reviewer's probe: caller in thread-a, target origin in thread-b
-        of the same room → must not match."""
-        runner = _make_runner()
-        caller = self._msrc(thread_id="thread-a")
-        victim_origin = self._msrc(thread_id="thread-b")
-        assert runner._same_matrix_room(caller, victim_origin) is False

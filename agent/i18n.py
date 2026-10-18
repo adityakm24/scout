@@ -159,9 +159,8 @@ def _load_catalog(lang: str, home: str | None = None) -> dict[str, str]:
 def surface_catalog(lang: str, surface: str = i18n_layers.CORE_SURFACE) -> dict[str, str]:
     """What ``i18n.catalog`` serves for one surface: packs > overlay > bundled ``locales/<lang>.<surface>.yaml``.
 
-    The core surface omits the bundled layer (the Python renderer already has it); the TUI ships only an
-    English catalog in-tree, so its bundled translations live in ``locales/<lang>.tui.yaml`` and ride
-    along here."""
+    The core surface omits the bundled layer (the Python renderer already has it); other surfaces
+    ride along with their bundled ``locales/<lang>.<surface>.yaml`` when one exists."""
     lang = _normalize_lang(lang)
     merged: dict[str, str] = {}
     if surface != i18n_layers.CORE_SURFACE:

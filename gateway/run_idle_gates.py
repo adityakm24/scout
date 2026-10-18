@@ -53,10 +53,6 @@ def profile_has_active_loop(profile_home: Path) -> bool:
     return _gate(profile_home, store_has_active_loop)
 
 
-def profile_has_pending_handoff(profile_home: Path) -> bool:
-    return _gate(profile_home, lambda db: db.has_pending_handoffs())
-
-
 async def off_loop_gate(runner: object, probe: Callable[[], bool]) -> bool:
     """Run a sync gate through the runner's executor hop. Runners without one (bare test stand-ins
     for the handoff watcher) keep the historical always-enter behaviour."""

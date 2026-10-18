@@ -265,7 +265,7 @@ def test_worker_cli_accepts_the_reasoning_flag():
     from scout_cli._parser import build_top_level_parser
 
     parser = build_top_level_parser()[0]
-    args = parser.parse_args(["--cli", "chat", "-q", "hi", "--reasoning", "high"])
+    args = parser.parse_args(["chat", "-q", "hi", "--reasoning", "high"])
     assert args.reasoning == "high"
 
 

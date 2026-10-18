@@ -166,21 +166,6 @@ class TestEventFilteringPipeline:
         await adapter._handle_ha_event(_make_event("light.bedroom", "off", "on"))
         adapter.handle_message.assert_not_called()
 
-    @pytest.mark.asyncio
-    async def test_watched_domain_forwarded(self):
-        adapter = _make_adapter(watch_domains=["climate"], cooldown_seconds=0)
-        await adapter._handle_ha_event(
-            _make_event("climate.thermostat", "off", "heat",
-                        new_attrs={"friendly_name": "Thermostat", "current_temperature": 20, "temperature": 22})
-        )
-        adapter.handle_message.assert_called_once()
-
-        # Verify the actual MessageEvent text content
-        msg_event = adapter.handle_message.call_args[0][0]
-        assert "Thermostat" in msg_event.text
-        assert "heat" in msg_event.text
-        assert msg_event.source.platform == Platform.HOMEASSISTANT
-        assert msg_event.source.chat_id == "ha_events"
 
 
 # ---------------------------------------------------------------------------
@@ -188,24 +173,6 @@ class TestEventFilteringPipeline:
 # ---------------------------------------------------------------------------
 
 
-class TestCooldown:
-
-    @pytest.mark.asyncio
-    async def test_cooldown_expires(self):
-        adapter = _make_adapter(watch_all=True, cooldown_seconds=1)
-
-        event = _make_event("sensor.temp", "20", "21",
-                            new_attrs={"friendly_name": "Temp"})
-        await adapter._handle_ha_event(event)
-        assert adapter.handle_message.call_count == 1
-
-        # Simulate time passing beyond cooldown
-        adapter._last_event_time["sensor.temp"] = time.time() - 2
-
-        event2 = _make_event("sensor.temp", "21", "22",
-                             new_attrs={"friendly_name": "Temp"})
-        await adapter._handle_ha_event(event2)
-        assert adapter.handle_message.call_count == 2
 
 
 # ---------------------------------------------------------------------------

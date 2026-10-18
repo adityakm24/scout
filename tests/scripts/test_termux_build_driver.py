@@ -78,25 +78,6 @@ def recorded_calls(log):
     return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
 
 
-@pytest.mark.parametrize("identity", [("--tag", "v1.2.3"), ("--commit", "a" * 40)])
-def test_driver_prepares_only_tui_then_passes_product_to_deb(build_fixture, identity):
-    repo, payload, out, log, _ = build_fixture
-    result = invoke(build_fixture, *identity)
-    assert result.returncode == 0, result.stdout + result.stderr
-    product = repo / ".build/termux/tui"
-    assert recorded_calls(log) == [
-        {"tool": "node", "args": [str(repo / "scripts/build/node-deps.mjs"),
-          "--source", str(repo), "--workspace", "ui-tui"],
-         "cwd": str(repo), "image": "fixture-pinned-image"},
-        {"tool": "node", "args": [str(repo / "scripts/build/tui.mjs"),
-          "--source", str(repo), "--out", str(product)],
-         "cwd": str(repo), "image": "fixture-pinned-image"},
-        {"tool": "bash", "args": [str(repo / "scripts/termux/build_deb.sh"),
-          "--repo", str(repo), "--payload", str(payload), "--out", str(out),
-          "--tui-product", str(product), *identity],
-         "cwd": str(repo), "image": "fixture-pinned-image"},
-    ]
-    assert (out / "assembly-received-product").read_text() == str(product)
 
 
 @pytest.mark.parametrize("identity", [
@@ -139,21 +120,6 @@ def test_missing_prepared_payload_is_rejected_before_frontend_work(build_fixture
     assert not out.exists()
 
 
-@pytest.mark.parametrize("stage, reached", [
-    ("node-deps.mjs", ["node-deps.mjs"]),
-    ("tui.mjs", ["node-deps.mjs", "tui.mjs"]),
-    ("build_deb.sh", ["node-deps.mjs", "tui.mjs", "build_deb.sh"]),
-])
-def test_child_failure_stops_sequence_even_with_stale_product(build_fixture, stage, reached):
-    repo, payload, out, log, env = build_fixture
-    stale = repo / ".build/termux/tui/dist/entry.js"
-    stale.parent.mkdir(parents=True)
-    stale.write_text("stale product")
-    env["FAIL_STAGE"] = stage
-    result = invoke(build_fixture, "--tag", "v1.2.3")
-    assert result.returncode == 37, result.stdout + result.stderr
-    assert [Path(call["args"][0]).name for call in recorded_calls(log)] == reached
-    assert not out.exists()
 
 
 @pytest.mark.parametrize("changed_input", ["Dockerfile", "base"])

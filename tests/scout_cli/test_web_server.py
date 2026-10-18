@@ -22,13 +22,11 @@ from scout_cli.config import (
 import gateway.status as _gw_status
 import scout_cli.config as _cfg_mod
 import scout_cli.web_routers.chat_ws as _rt_chat_ws
-import scout_cli.web_server_chat as _web_server_chat
 import scout_cli.web_server_config as _web_server_config
 import scout_cli.web_server_dashboard as _web_server_dashboard
 import scout_cli.web_server_files as _web_server_files
 import scout_cli.web_server_gateway as _web_server_gateway
 import scout_cli.web_server_lifecycle as _web_server_lifecycle
-import scout_cli.web_server_memory as _web_server_memory
 import scout_cli.web_server_sessions as _web_server_sessions
 
 
@@ -696,50 +694,6 @@ class TestWebServerEndpoints:
         ] * len(paths)
 
 
-    def test_messaging_platforms_profile_scopes_gateway_reads(self, monkeypatch):
-        """?profile=<name> must resolve liveness from the profile's own home.
-
-        The gateway status readers resolve process-level paths and ignore the
-        SCOUT_HOME contextvar override (#56986), so /api/messaging/platforms
-        has to pass the profile directory explicitly — otherwise it reports a
-        DIFFERENT profile's gateway as this profile's, which hides a real
-        outage behind a false "connected" (issue #71211).
-        """
-        import scout_cli.web_server as web_server
-        from scout_cli import profiles as profiles_mod
-
-        worker_home = profiles_mod.get_profile_dir("worker")
-        worker_home.mkdir(parents=True)
-        (worker_home / "config.yaml").touch()  # identity marker: bare dirs are not profiles
-
-        seen = {}
-
-        def _pid(pid_path=None, **kw):
-            # The served-profile probe also verifies the DEFAULT home's gateway identity; the
-            # contract here is that the worker's OWN pid file is what the scoped rung reads.
-            seen.setdefault("pid_paths", []).append(pid_path)
-            return None
-
-        def _runtime(path=None):
-            seen.setdefault("status_paths", []).append(path)
-            return None
-
-        def _runtime_pid(runtime=None, *, expected_home=None):
-            seen.setdefault("expected_homes", []).append(expected_home)
-            return None
-
-        monkeypatch.setattr(_gw_status, "get_running_pid_cached", _pid)
-        monkeypatch.setattr(_gw_status, "get_running_pid", _pid)
-        monkeypatch.setattr(_gw_status, "read_runtime_status", _runtime)
-        monkeypatch.setattr(_gw_status, "get_runtime_status_running_pid", _runtime_pid)
-        monkeypatch.setattr(web_server, "_GATEWAY_HEALTH_URL", None)
-
-        resp = self.client.get("/api/messaging/platforms?profile=worker")
-
-        assert resp.status_code == 200
-        assert worker_home / "gateway.pid" in seen["pid_paths"]
-        assert worker_home / "gateway_state.json" in seen["status_paths"]
-        assert worker_home in seen["expected_homes"]
 
 
     def test_gateway_drain_bad_action_400(self):
@@ -1449,41 +1403,6 @@ CONFIG_SCHEMA = ProviderConfigSchema(
         assert resp.status_code == 200
 
 
-    def test_messaging_catalog_prefers_plugin_label_over_enum_pseudo_member(self):
-        """A plugin platform that leaked into Platform.__members__ as a pseudo-
-        member must still render with its plugin label, not a title-cased id.
-
-        Regression: Platform("<plugin id>") caches a pseudo-member in the enum;
-        the catalog iterated the enum FIRST and claimed the id with no plugin
-        metadata, so bundled plugin platforms (irc, ntfy, photon, …) rendered
-        as nameless "Irc"/"Ntfy" cards with empty descriptions.
-        """
-        from gateway.config import Platform
-        from gateway.platform_registry import PlatformEntry, platform_registry
-
-        entry = PlatformEntry(
-            name="pseudofake",
-            label="Pseudo Fake (plugin label)",
-            adapter_factory=lambda cfg: None,
-            check_fn=lambda: True,
-            source="plugin",
-        )
-        platform_registry.register(entry)
-        try:
-            # Materialize the enum pseudo-member the way any earlier config
-            # read would (Platform(value) on a registered plugin platform).
-            member = Platform("pseudofake")
-            assert member.value == "pseudofake"
-            assert "PSEUDOFAKE" in Platform.__members__
-
-            resp = self.client.get("/api/messaging/platforms")
-            ids = {row["id"]: row for row in resp.json()["platforms"]}
-            assert "pseudofake" in ids
-            assert ids["pseudofake"]["name"] == "Pseudo Fake (plugin label)"
-        finally:
-            platform_registry.unregister("pseudofake")
-            Platform._value2member_map_.pop("pseudofake", None)
-            Platform._member_map_.pop("PSEUDOFAKE", None)
 
 
     def test_unauthenticated_api_blocked(self):
@@ -2060,50 +1979,6 @@ CONFIG_SCHEMA = ProviderConfigSchema(
             assert response.status_code == 400
             assert load_env()[key] == rotated
 
-    def test_messaging_and_custom_endpoint_reject_stale_previews(self):
-        """Invariant: preview rejection runs before any mutation (messaging clear+set),
-        and custom-endpoint display strings (``${KEY_ENV}`` / legacy plaintext preview)
-        are refused even after the entry rotated underneath them."""
-        from scout_cli.config import load_config, load_env, save_config, save_env_value
-
-        key = "DISCORD_BOT_TOKEN"
-        real = "discord-live-secret-abcdef1234567890"
-        save_env_value(key, real)
-        response = self.client.put(
-            "/api/messaging/platforms/discord",
-            json={"clear_env": [key], "env": {key: redact_key(real)}},
-        )
-        assert response.status_code == 400
-        assert load_env()[key] == real
-
-        save_env_value("OLD_ENDPOINT_KEY", "old-secret-1234567890")
-        save_env_value("NEW_ENDPOINT_KEY", "new-secret-0987654321")
-        cfg = load_config()
-        cfg["providers"] = {
-            "env-preview": {"name": "Env Preview", "base_url": "https://env-preview.example.com/v1",
-                            "model": "m", "key_env": "OLD_ENDPOINT_KEY", "models": {"m": {}}},
-            "legacy-preview": {"name": "Legacy Preview", "base_url": "https://legacy-preview.example.com/v1",
-                               "model": "m", "api_key": "legacy-secret-A-1234567890", "models": {"m": {}}},
-        }
-        save_config(cfg)
-        endpoints = {e["id"]: e for e in self.client.get("/api/providers/custom-endpoints").json()["endpoints"]}
-        assert endpoints["env-preview"]["api_key_preview"] == "${OLD_ENDPOINT_KEY}"
-        assert endpoints["legacy-preview"]["api_key_preview"].startswith("«redacted")
-
-        cfg = load_config()
-        cfg["providers"]["env-preview"]["key_env"] = "NEW_ENDPOINT_KEY"
-        cfg["providers"]["legacy-preview"]["api_key"] = "legacy-secret-B-0987654321"
-        save_config(cfg)
-        for endpoint_id, base_url in (("env-preview", "https://env-preview.example.com/v1"),
-                                      ("legacy-preview", "https://legacy-preview.example.com/v1")):
-            response = self.client.post("/api/providers/custom-endpoints", json={
-                "id": endpoint_id, "name": "x", "base_url": base_url, "model": "m",
-                "api_key": endpoints[endpoint_id]["api_key_preview"],
-            })
-            assert response.status_code == 400
-        providers = load_config()["providers"]
-        assert providers["env-preview"]["key_env"] == "NEW_ENDPOINT_KEY"
-        assert providers["legacy-preview"]["api_key"] == "legacy-secret-B-0987654321"
 
     def test_activating_an_endpoint_carries_its_credential_either_way(self):
         """Activate must work for both key_env and pre-#69449 plaintext entries."""
@@ -2801,42 +2676,6 @@ class TestNewEndpoints:
     # --- New profiles endpoints: active / description / model / describe-auto ---
 
 
-    def test_discord_toolsets_read_and_write_discord_platform(self):
-        """Platform-restricted toolsets must not be saved as successful CLI no-ops."""
-        from scout_cli.config import load_config
-
-        listing = {t["name"]: t for t in self.client.get("/api/tools/toolsets").json()}
-        assert listing["discord"]["platform"] == "discord"
-        assert listing["discord"]["platform_label"] == "Discord"
-        assert listing["discord"]["enabled"] is False
-
-        resp = self.client.put("/api/tools/toolsets/discord", json={"enabled": True})
-        assert resp.status_code == 200
-        assert resp.json() == {
-            "ok": True,
-            "name": "discord",
-            "platform": "discord",
-            "enabled": True,
-            # Install-on-enable: no provider post_setup pending for discord.
-            "post_setup_started": None,
-        }
-
-        config = load_config()
-        assert "discord" in config["platform_toolsets"]["discord"]
-        assert "discord" not in config["platform_toolsets"].get("cli", [])
-
-        listing = {t["name"]: t for t in self.client.get("/api/tools/toolsets").json()}
-        assert listing["discord"]["enabled"] is True
-        assert listing["discord_admin"]["enabled"] is False
-
-        resp = self.client.put(
-            "/api/tools/toolsets/discord_admin", json={"enabled": True}
-        )
-        assert resp.status_code == 200
-        config = load_config()
-        assert {"discord", "discord_admin"} <= set(
-            config["platform_toolsets"]["discord"]
-        )
 
 
     def test_get_toolset_config_returns_provider_matrix(self):
@@ -3027,7 +2866,6 @@ class TestNewEndpoints:
 
     def _daily_for_local_starts(self, tz_name, local_starts):
         """Seed one session per naive local start in ``tz_name``; return the daily buckets."""
-        from datetime import datetime
         from zoneinfo import ZoneInfo
 
         from scout_state import SessionDB
@@ -4586,158 +4424,12 @@ class TestDashboardPluginManifestExtensions:
 # monkeypatch that hook.
 # ---------------------------------------------------------------------------
 
-from scout_cli import main_tui_launch
-
 
 skip_on_windows = pytest.mark.skipif(
     sys.platform.startswith("win"), reason="PTY bridge is POSIX-only"
 )
 
 
-@skip_on_windows
-class TestPtyWebSocket:
-    @pytest.fixture(autouse=True)
-    def _setup(self, monkeypatch, _isolate_scout_home):
-        from starlette.testclient import TestClient
-
-        import scout_cli.web_server as ws
-
-        # Avoid exec'ing the actual TUI in tests: every test below installs
-        # its own fake argv via ``web_server_chat._resolve_chat_argv``.
-        self.ws_module = ws
-        monkeypatch.setattr(ws, "_DASHBOARD_EMBEDDED_CHAT_ENABLED", True)
-        ws.app.state.pty_active_session_files = {}
-        self.token = ws._SESSION_TOKEN
-        self.client = TestClient(ws.app)
-
-    def _url(self, token: str | None = None, **params: str) -> str:
-        tok = token if token is not None else self.token
-        # TestClient.websocket_connect takes the path; it reconstructs the
-        # query string, so we pass it inline.
-        from urllib.parse import urlencode
-
-        q = {"token": tok, **params}
-        return f"/api/pty?{urlencode(q)}"
-
-
-    def test_tui_python_command_uses_child_path(self, tmp_path):
-        """Bare Python commands are resolved from the TUI child's PATH."""
-
-        command = f"scout-review-python{Path(sys.executable).suffix}"
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        executable = bin_dir / command
-        # copy2, not os.link: tmp_path may sit on a different filesystem than
-        # the venv (tmpfs /tmp vs disk home) where hard links raise EXDEV.
-        shutil.copy2(sys.executable, executable)
-        env = {
-            "SCOUT_CWD": str(tmp_path),
-            "SCOUT_PYTHON": command,
-            "PATH": str(bin_dir),
-        }
-
-        main_tui_launch._apply_tui_python_env(env)
-
-        assert env["SCOUT_PYTHON"] == command
-
-
-    def test_unavailable_platform_closes_with_message(self, monkeypatch):
-        from scout_cli.pty_bridge import PtyUnavailableError
-
-        def _raise(argv, **kwargs):
-            raise PtyUnavailableError("pty missing for tests")
-
-        monkeypatch.setattr(
-            _web_server_chat,
-            "_resolve_chat_argv",
-            lambda resume=None, sidecar_url=None, profile=None: (["/bin/cat"], None, None),
-        )
-        # Patch PtyBridge.spawn at the web_server_chat module's binding.
-        monkeypatch.setattr(_web_server_chat.PtyBridge, "spawn", classmethod(lambda cls, *a, **k: _raise(*a, **k)))
-
-        with self.client.websocket_connect(self._url()) as conn:
-            # Expect a final text frame with the error message, then close.
-            msg = conn.receive_text()
-            assert "pty missing" in msg or "unavailable" in msg.lower() or "pty" in msg.lower()
-
-
-    def test_pub_broadcasts_to_events_subscribers(self):
-        """A frame handed to _broadcast_event is sent verbatim to every
-        subscriber registered on that channel — and not to subscribers on
-        other channels.
-
-        This drives the broadcast unit directly under asyncio rather than
-        round-tripping through Starlette's TestClient WebSocket portal. The
-        portal version was flaky under heavy parallel CI load: the broadcast
-        had to traverse two nested threaded portals within a 10s wall-clock
-        budget, and a starved ASGI thread occasionally blew that budget even
-        though the server logic was correct. Testing _broadcast_event with
-        fake subscribers removes the scheduling surface entirely while
-        asserting the exact fan-out contract.
-        """
-        import asyncio
-        from scout_cli import web_server as ws_mod
-
-        class _FakeSub:
-            def __init__(self):
-                self.sent: list[str] = []
-
-            async def send_text(self, payload: str) -> None:
-                self.sent.append(payload)
-
-        app = ws_mod.app
-
-        async def _run():
-            sub_a1 = _FakeSub()
-            sub_a2 = _FakeSub()
-            sub_other = _FakeSub()
-            frame = '{"type":"tool.start","payload":{"tool_id":"t1"}}'
-
-            event_channels, event_lock = _rt_chat_ws._get_event_state(app)
-            # Register two subscribers on the target channel and one on a
-            # different channel, exactly as the /api/events handler does.
-            async with event_lock:
-                event_channels.setdefault("broadcast-test", set()).update(
-                    {sub_a1, sub_a2}
-                )
-                event_channels.setdefault("other-channel", set()).add(sub_other)
-            try:
-                await _rt_chat_ws._broadcast_event(app, "broadcast-test", frame)
-            finally:
-                async with event_lock:
-                    event_channels.pop("broadcast-test", None)
-                    event_channels.pop("other-channel", None)
-
-            return sub_a1, sub_a2, sub_other, frame
-
-        sub_a1, sub_a2, sub_other, frame = asyncio.run(_run())
-
-        # Every subscriber on the channel got the frame verbatim, exactly once.
-        assert sub_a1.sent == [frame]
-        assert sub_a2.sent == [frame]
-        # A subscriber on a different channel got nothing.
-        assert sub_other.sent == []
-
-
-def test_resolve_chat_argv_injects_gateway_ws_url(monkeypatch):
-    import scout_cli.main_tui_launch as tui_launch
-    import scout_cli.web_server as ws
-
-    monkeypatch.setenv("PATH", "/run/current-system/sw/bin:/usr/bin")
-    monkeypatch.setattr(
-        tui_launch,
-        "_make_tui_argv",
-        lambda *_args, **_kwargs: (["node", "fake-tui.js"], Path("/tmp")),
-    )
-    monkeypatch.setattr(ws.app.state, "bound_host", "127.0.0.1", raising=False)
-    monkeypatch.setattr(ws.app.state, "bound_port", 9119, raising=False)
-
-    _argv, _cwd, env = _web_server_chat._resolve_chat_argv()
-
-    assert env is not None
-    gateway_url = env.get("SCOUT_TUI_GATEWAY_URL", "")
-    assert gateway_url.startswith("ws://127.0.0.1:9119/api/ws?")
-    assert "token=" in gateway_url
 
 
 class TestDashboardPluginStaticAssetAllowlist:

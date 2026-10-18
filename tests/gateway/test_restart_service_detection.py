@@ -52,30 +52,8 @@ def _make_runner_with_mock_restart(tmp_path, monkeypatch):
     return runner
 
 
-@pytest.mark.asyncio
-async def test_restart_with_external_supervisor_marker_uses_service_path(
-    tmp_path, monkeypatch
-):
-    """Wrapped supervisors can retain restart ownership without native markers."""
-    runner = _make_runner_with_mock_restart(tmp_path, monkeypatch)
-    monkeypatch.setenv(EXTERNAL_GATEWAY_SUPERVISOR_ENV, "1")
-
-    await runner._handle_restart_command(_make_restart_event())
-
-    runner.request_restart.assert_called_once_with(detached=False, via_service=True)
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("value", ["", "false"])
-async def test_false_external_supervisor_marker_keeps_detached_path(
-    value, tmp_path, monkeypatch
-):
-    runner = _make_runner_with_mock_restart(tmp_path, monkeypatch)
-    monkeypatch.setenv(EXTERNAL_GATEWAY_SUPERVISOR_ENV, value)
-
-    await runner._handle_restart_command(_make_restart_event())
-
-    runner.request_restart.assert_called_once_with(detached=True, via_service=False)
 
 
 def test_supervised_child_marker_is_a_launch_not_a_restart_route():

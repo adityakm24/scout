@@ -1710,7 +1710,6 @@ export const ja = defineLocale({
       newChat: { title: '新しいセッション', detail: '新しいセッションを開始' },
       settings: { title: '設定', detail: 'Scout デスクトップを設定' },
       capabilities: { title: 'スキルとツール', detail: 'スキル、ツールセット、プロバイダーを有効化' },
-      messaging: { title: 'メッセージング', detail: 'Telegram、Slack、Discord などを設定' },
       artifacts: { title: 'アーティファクト', detail: '生成された出力を閲覧' }
     },
     sectionEntries: {
@@ -1766,160 +1765,6 @@ export const ja = defineLocale({
     topSkills: 'よく使うスキル',
     noSkillActivity: 'スキルのアクティビティはまだありません。',
     actions: count => `${count} アクション`
-  },
-
-  messaging: {
-    search: 'メッセージングを検索...',
-    statusFilter: {
-      all: 'すべて',
-      bad: 'エラー',
-      good: '接続済み',
-      muted: '非アクティブ',
-      warn: '要対応'
-    },
-    loading: 'メッセージングプラットフォームを読み込み中...',
-    loadFailed: 'メッセージングプラットフォームの読み込みに失敗しました',
-    states: {
-      connected: '接続済み',
-      connecting: '接続中',
-      disabled: '無効',
-      fatal: 'エラー',
-      gateway_stopped: 'メッセージングゲートウェイが停止中',
-      not_configured: '設定が必要',
-      pending_restart: '再起動が必要',
-      retrying: '再試行中',
-      startup_failed: '起動失敗'
-    },
-    unknown: '不明',
-    hintPendingRestart: 'この変更を適用するにはステータスバーからゲートウェイを再起動してください。',
-    sharedListenerUrl: '共有ゲートウェイのリスナーで提供中:',
-    hintGatewayStopped: 'ステータスバーからゲートウェイを起動して接続してください。',
-    restartNeeded: '保存しました。新しい設定を反映するにはメッセージングゲートウェイを再起動してください。',
-    restartNow: '今すぐ再起動',
-    restarting: '再起動中…',
-    restartFailedManual: 'ゲートウェイの再起動に失敗しました。手動で再起動し、ゲートウェイのログを確認してください。',
-    credentialsSet: '認証情報を設定しました',
-    needsSetup: '設定が必要',
-    gatewayStopped: 'メッセージングゲートウェイが停止中',
-    getCredentials: '認証情報を取得',
-    openSetupGuide: 'セットアップガイドを開く',
-    required: '必須',
-    recommended: '推奨',
-    advanced: count => `詳細設定 (${count})`,
-    noTokenNeeded:
-      'このプラットフォームはここでトークンが必要ありません。上のセットアップガイドを使用してから、以下で有効にしてください。',
-    enabled: '有効',
-    disabled: '無効',
-    unsavedChanges: '未保存の変更',
-    saving: '保存中...',
-    saveChanges: '変更を保存',
-    saved: '保存しました',
-    replaceValue: '現在の値を置き換え',
-    openDocs: 'ドキュメントを開く',
-    clearField: key => `${key} をクリア`,
-    enableAria: name => `${name} を有効にする`,
-    disableAria: name => `${name} を無効にする`,
-    platformEnabled: name => `${name} を有効にしました`,
-    platformDisabled: name => `${name} を無効にしました`,
-    restartToApply: 'この変更はゲートウェイの再起動後に有効になります。',
-    setupSaved: name => `${name} の設定を保存しました`,
-    restartToReconnect: '新しい認証情報はゲートウェイの再起動後に有効になります。',
-    appliedLive: '実行中のゲートウェイに適用されました。',
-    connectingLive: '実行中のゲートウェイが新しい認証情報で接続しています。',
-    keyCleared: key => `${key} をクリアしました`,
-    setupUpdated: name => `${name} の設定が更新されました。`,
-    failedUpdate: name => `${name} の更新に失敗しました`,
-    failedSave: name => `${name} の保存に失敗しました`,
-    failedClear: key => `${key} のクリアに失敗しました`,
-    fieldCopy: {
-      TELEGRAM_BOT_TOKEN: {
-        label: 'ボットトークン',
-        help: '@BotFather でボットを作成し、表示されたトークンを貼り付けてください。',
-        placeholder: 'Telegram ボットトークンを貼り付け'
-      },
-      TELEGRAM_ALLOWED_USERS: {
-        label: '許可する Telegram ユーザー ID',
-        help: '推奨。@userinfobot の数値 ID をカンマ区切りで。設定しないと誰でもボットに DM できます。'
-      },
-      TELEGRAM_PROXY: { label: 'プロキシ URL', help: 'Telegram がブロックされているネットワークでのみ必要です。' },
-      DISCORD_BOT_TOKEN: {
-        label: 'ボットトークン',
-        help: 'Discord Developer Portal でアプリケーションを作成し、ボットを追加してからトークンを貼り付けてください。'
-      },
-      DISCORD_ALLOWED_USERS: {
-        label: '許可する Discord ユーザー ID',
-        help: '推奨。カンマ区切りの Discord ユーザー ID。'
-      },
-      DISCORD_REPLY_TO_MODE: { label: '返信スタイル', help: 'first、all、または off。' },
-      DISCORD_ALLOW_ALL_USERS: {
-        label: 'すべての Discord ユーザーを許可',
-        help: '開発用のみ。true にすると、許可リストなしで誰でもボットに DM できます。'
-      },
-      DISCORD_HOME_CHANNEL: {
-        label: 'ホームチャンネル ID',
-        help: 'ボットがプロアクティブなメッセージを送信するチャンネル（Cron 出力、リマインダー）。'
-      },
-      DISCORD_HOME_CHANNEL_NAME: {
-        label: 'ホームチャンネル名',
-        help: 'ログやステータス出力でのホームチャンネルの表示名。'
-      },
-      BLUEBUBBLES_ALLOW_ALL_USERS: {
-        label: 'すべての iMessage ユーザーを許可',
-        help: 'true にすると BlueBubbles の許可リストをスキップします。'
-      },
-      MATTERMOST_ALLOW_ALL_USERS: { label: 'すべての Mattermost ユーザーを許可' },
-      MATTERMOST_HOME_CHANNEL: { label: 'ホームチャンネル' },
-      QQ_ALLOW_ALL_USERS: { label: 'すべての QQ ユーザーを許可' },
-      QQBOT_HOME_CHANNEL: { label: 'QQ ホームチャンネル', help: 'Cron 配信のデフォルトチャンネルまたはグループ。' },
-      QQBOT_HOME_CHANNEL_NAME: { label: 'QQ ホームチャンネル名' },
-      SLACK_BOT_TOKEN: {
-        label: 'Slack ボットトークン',
-        help: 'Slack アプリをインストール後、OAuth & Permissions のボットトークンを使用してください。',
-        placeholder: 'Slack ボットトークンを貼り付け'
-      },
-      SLACK_APP_TOKEN: {
-        label: 'Slack アプリトークン',
-        help: 'Socket Mode に必要なアプリレベルのトークンを使用してください。',
-        placeholder: 'Slack アプリトークンを貼り付け'
-      },
-      SLACK_ALLOWED_USERS: {
-        label: '許可する Slack ユーザー ID',
-        help: '推奨。カンマ区切りの Slack ユーザー ID。'
-      },
-      MATTERMOST_URL: { label: 'サーバー URL', placeholder: 'https://mattermost.example.com' },
-      MATTERMOST_TOKEN: { label: 'ボットトークン' },
-      MATTERMOST_ALLOWED_USERS: {
-        label: '許可するユーザー ID',
-        help: '推奨。カンマ区切りの Mattermost ユーザー ID。'
-      },
-      MATRIX_HOMESERVER: { label: 'ホームサーバー URL', placeholder: 'https://matrix.org' },
-      MATRIX_ACCESS_TOKEN: { label: 'アクセストークン' },
-      MATRIX_USER_ID: { label: 'ボットユーザー ID', placeholder: '@scout:example.org' },
-      MATRIX_ALLOWED_USERS: {
-        label: '許可する Matrix ユーザー ID',
-        help: '推奨。@user:server 形式のカンマ区切りユーザー ID。'
-      },
-      SIGNAL_HTTP_URL: {
-        label: 'Signal ブリッジ URL',
-        placeholder: 'http://127.0.0.1:8080',
-        help: '実行中の signal-cli REST ブリッジの URL。'
-      },
-      SIGNAL_ACCOUNT: { label: '電話番号', help: 'signal-cli ブリッジに登録した番号。' },
-      SIGNAL_ALLOWED_USERS: {
-        label: '許可する Signal ユーザー',
-        help: '推奨。カンマ区切りの Signal 識別子。'
-      },
-      WHATSAPP_ENABLED: {
-        label: 'WhatsApp ブリッジを有効にする',
-        help: '以下のトグルで自動的に設定されます。必要な場合を除いてそのままにしてください。'
-      },
-      WHATSAPP_MODE: { label: 'ブリッジモード' },
-      WHATSAPP_ALLOWED_USERS: {
-        label: '許可する WhatsApp ユーザー',
-        help: '推奨。カンマ区切りの電話番号または WhatsApp ID。'
-      }
-    },
-    platformIntro: {}
   },
 
   profiles: {
@@ -2313,7 +2158,6 @@ export const ja = defineLocale({
     nav: {
       'new-session': '新しいセッション',
       capabilities: 'スキルとツール',
-      messaging: 'メッセージング',
       artifacts: 'アーティファクト',
       cron: 'スケジュール済みジョブ'
     },
@@ -2442,7 +2286,6 @@ export const ja = defineLocale({
       finishedUnread: '完了 — 未読',
       backgroundRunning: 'バックグラウンドタスク実行中',
       draftSession: '下書き — 未送信',
-      handoffOrigin: platform => `${platform} から引き継ぎ`,
       ownedByProfile: profile => `プロファイル: ${profile}`,
       renamed: '名前を変更しました',
       renameFailed: '名前の変更に失敗しました',
@@ -3942,14 +3785,7 @@ export const ja = defineLocale({
     clipboard: 'クリップボード',
     noClipboardImage: 'クリップボードに画像が見つかりません',
     clipboardPasteFailed: 'クリップボードからの貼り付けに失敗しました',
-    dropFiles: 'ファイルをドロップ',
-    handoff: {
-      pickPlatform: '送信先を選択',
-      success: platform => `${platform} に引き継ぎました。いつでもここで再開できます。`,
-      systemNote: platform => `↻ ${platform} に引き継ぎました — いつでもここで再開できます。`,
-      failed: error => `引き継ぎに失敗しました: ${error}`,
-      timedOut: 'ゲートウェイの待機がタイムアウトしました。`scout gateway` は起動していますか？'
-    }
+    dropFiles: 'ファイルをドロップ'
   },
 
   tips: {
@@ -3962,10 +3798,6 @@ export const ja = defineLocale({
       skills: {
         title: '一度教えれば覚えます',
         text: 'スキルは手順書のフォルダで、必要な場面で Scout が自分で読み込みます。'
-      },
-      messaging: {
-        title: 'デスクを離れても Scout',
-        text: 'Telegram、Discord、Slack などに接続。同じエージェント、同じ記憶のままです。'
       },
       artifacts: {
         title: 'Scout が作ったものすべて',

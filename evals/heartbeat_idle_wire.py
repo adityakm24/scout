@@ -44,10 +44,10 @@ async def main(base_poller):
     runner = object.__new__(GatewayRunner)
     runner._running_agents = {}
     runner._run_in_executor_with_context = asyncio.to_thread
-    adapter = WireAdapter(PlatformConfig(enabled=True, typing_indicator=False), Platform.TELEGRAM)
+    adapter = WireAdapter(PlatformConfig(enabled=True, typing_indicator=False), Platform.API_SERVER)
     adapter.wire = []
     runner._delivery_adapter_for = lambda source: adapter
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id="42", user_id="42", chat_type="dm")
+    source = SessionSource(platform=Platform.API_SERVER, chat_id="42", user_id="42", chat_type="dm")
     key = build_session_key(source)
     watch = {key: (source, "wire-session")}
     if base_poller:
@@ -100,15 +100,6 @@ async def main(base_poller):
             assert heartbeat.HeartbeatManager("wire-session").state.fire_count == 1
             print(json.dumps({"phase": "idle 15-minute gap + 5 same-time polls", "new_turns": 1,
                               "queue_depth": snapshot()["queue_depth"], "fire_count": 1}))
-            # A pinned route must not enter the pre-claim executor recovery gap.
-            # The callback represents competing traffic changing the last active topic.
-            recovery = []
-            adapter._topic_recovery_fn = lambda source: recovery.append(source) or "foreign-topic"
-            clock.now += 60
-            await runner._heartbeat_poll_once(watch)
-            assert key in adapter._active_sessions and recovery == []
-            await drain()
-            print(json.dumps({"phase": "pinned route", "recovery_calls": len(recovery)}))
             # Admission can be cancelled before the fake agent boundary is reached.
             clock.now += 60
             before = heartbeat.HeartbeatManager("wire-session").state.to_json()
@@ -122,15 +113,13 @@ async def main(base_poller):
             runner.config = GatewayConfig()
             runner.session_store = SessionStore(
                 sessions_dir=Path(os.environ["SCOUT_HOME"]) / "sessions", config=runner.config)
-            runner.adapters = {Platform.TELEGRAM: adapter}
+            runner.adapters = {Platform.API_SERVER: adapter}
             runner._profile_adapters = {}
-            runner._recover_telegram_topic_thread_id = adapter._topic_recovery_fn
             event = MessageEvent(text="pinned heartbeat", source=source,
                                  metadata={"gateway_session_key": key})
             resolved = await runner._hmwa_resolve_session(event, source)
-            assert resolved is not None and resolved[2] == key and recovery == []
-            print(json.dumps({"phase": "runner pinned route", "session_key": resolved[2],
-                              "recovery_calls": len(recovery)}))
+            assert resolved is not None and resolved[2] == key
+            print(json.dumps({"phase": "runner pinned route", "session_key": resolved[2]}))
             # Route mismatch is a real adapter rejection, not a fabricated return value.
             adapter._session_key_profile = lambda source: "different-profile"
             route_sid = resolved[1].session_id

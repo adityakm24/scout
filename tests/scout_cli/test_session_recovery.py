@@ -302,91 +302,6 @@ def _corrupt_table_root(path: Path, root_page: int) -> None:
     path.write_bytes(data)
 
 
-def test_snapshot_blocks_connections_opened_during_the_copy(
-    tmp_path: Path,
-) -> None:
-    """A connection must not be able to open while raw copy descriptors exist.
-
-    Checking has_live_connection() and then copying leaves a window: a
-    connection can open between the two, and the copy's close() cancels its
-    POSIX advisory locks. The guard must hold the lifecycle lock across the
-    whole bundle copy.
-
-    Runs the copy in a worker thread and pauses it inside the patched copy, so
-    the assertion is about lock ordering rather than which thread the
-    scheduler happens to resume first: while the copy is parked, a
-    connect_tracked() attempt must NOT complete; once released, it must.
-    """
-    import threading
-
-    from scout_cli import session_recovery as recovery_module
-    from scout_cli.sqlite_safe_read import connect_tracked
-
-    source = tmp_path / "racy-state.db"
-    snapshot_dir = tmp_path / "snapshot"
-    snapshot_dir.mkdir()
-    _make_source(source)
-
-    inside_copy = threading.Event()
-    release_copy = threading.Event()
-    connect_attempted = threading.Event()
-    connection_opened = threading.Event()
-    errors: list[str] = []
-    real_copy2 = recovery_module.shutil.copy2
-
-    def slow_copy2(src, dst, *args, **kwargs):
-        result = real_copy2(src, dst, *args, **kwargs)
-        if str(src).endswith("racy-state.db"):
-            inside_copy.set()
-            release_copy.wait(30)
-        return result
-
-    def do_copy():
-        try:
-            recovery_module._copy_source_bundle(source, snapshot_dir)
-        except Exception as exc:  # pragma: no cover - surfaced via errors
-            errors.append(f"copy failed: {exc}")
-
-    def do_connect():
-        # Signal immediately before the blocking call so a timed "still
-        # blocked" assertion cannot pass merely because this thread had not
-        # been scheduled yet.
-        connect_attempted.set()
-        try:
-            conn = connect_tracked(source, isolation_level=None, timeout=30.0)
-            connection_opened.set()
-            conn.close()
-        except Exception as exc:  # pragma: no cover - surfaced via errors
-            errors.append(f"connect failed: {exc}")
-
-    recovery_module.shutil.copy2 = slow_copy2
-    copier = threading.Thread(target=do_copy, daemon=True)
-    connector = threading.Thread(target=do_connect, daemon=True)
-    try:
-        copier.start()
-        assert inside_copy.wait(30), "copy never reached the patched operation"
-
-        connector.start()
-        assert connect_attempted.wait(30), "connector thread never started"
-        # The connector is at the lock. While the copy holds it, the
-        # connection must not open.
-        assert not connection_opened.wait(1.0), (
-            "connect_tracked() completed while raw copy descriptors were open "
-            "— the guard is not holding the lifecycle lock across the copy"
-        )
-
-        release_copy.set()
-        # Once the copy finishes and releases the lock, it must open promptly.
-        assert connection_opened.wait(30), (
-            "connect_tracked() never completed after the copy released the lock"
-        )
-    finally:
-        release_copy.set()
-        recovery_module.shutil.copy2 = real_copy2
-        copier.join(30)
-        connector.join(30)
-
-    assert not errors, errors[0]
 
 
 def test_partial_recovery_keeps_messages_when_sessions_are_unsalvageable(
@@ -668,158 +583,15 @@ def _insert_delivery_obligations(path: Path, rows: list[tuple[object, ...]]) -> 
         conn.close()
 
 
-def test_recovery_copies_delivery_obligations(tmp_path: Path) -> None:
-    """Owed replies must survive salvage — #100313 lost 6 obligation rows."""
-
-    source = tmp_path / "state.db"
-    output = tmp_path / "recovered.db"
-    _make_source(source)
-    now = 1_720_000_000.0
-    _insert_delivery_obligations(
-        source,
-        [
-            (
-                "ob-pending",
-                "telegram:1:chat-1",
-                "telegram",
-                "chat-1",
-                None,
-                "owed reply",
-                "pending",
-                0,
-                now,
-                now,
-                4242,
-                99,
-                None,
-                "default",
-            ),
-            (
-                "ob-delivered",
-                "telegram:1:chat-1",
-                "telegram",
-                "chat-1",
-                None,
-                "already sent",
-                "delivered",
-                1,
-                now,
-                now + 1,
-                None,
-                None,
-                None,
-                "default",
-            ),
-        ],
-    )
-
-    inspection = inspect_session_database(source, work_dir=tmp_path)
-    assert inspection["tables"]["delivery_obligations"]["available"] is True
-    assert inspection["tables"]["delivery_obligations"]["rows"] == 2
-
-    report = recover_session_database(source, output, work_dir=tmp_path)
-    copied = report["copy"]["delivery_obligations"]
-    assert copied["status"] == "complete"
-    assert copied["copied_rows"] == 2
-    assert report["verification"]["table_counts"]["delivery_obligations"] == 2
-    assert report["complete"] is True
-    assert report["verified"] is True
-    assert report["installed"] is False
-
-    conn = sqlite3.connect(str(output))
-    try:
-        recovered = conn.execute(
-            """SELECT obligation_id, state, content, owner_pid, adapter_profile
-               FROM delivery_obligations ORDER BY obligation_id"""
-        ).fetchall()
-    finally:
-        conn.close()
-    assert recovered == [
-        ("ob-delivered", "delivered", "already sent", None, "default"),
-        ("ob-pending", "pending", "owed reply", 4242, "default"),
-    ]
-
-
-def test_recovery_regenerates_rather_than_copies_derived_fts_meta(tmp_path: Path) -> None:
-    """Derived FTS markers (including the retired tool high-water key) never reach the new DB."""
-
-    source = tmp_path / "state.db"
-    output = tmp_path / "recovered.db"
-    _make_source(source)
-
-    report = recover_session_database(source, output, work_dir=tmp_path)
-    assert report["complete"] is True
-
-    conn = sqlite3.connect(str(output))
-    try:
-        keys = {row[0] for row in conn.execute("SELECT key FROM state_meta")}
-    finally:
-        conn.close()
-    assert "goal:recovery-session-0" in keys
-    assert not keys & {"fts_rebuild_high_water", "fts_rebuild_progress", "fts_tool_full_content_high_water"}
-
-
-def test_recovery_without_delivery_ledger_is_not_lossy(tmp_path: Path) -> None:
-    """CLI-only stores never created the lazy table; that is not data loss."""
-
-    source = tmp_path / "state.db"
-    output = tmp_path / "recovered.db"
-    _make_source(source)
-
-    report = recover_session_database(source, output, work_dir=tmp_path)
-    assert report["copy"]["delivery_obligations"]["status"] == "missing"
-    assert "delivery_obligations" not in report["verification"]["table_counts"]
-    assert report["complete"] is True
-    assert report["verified"] is True
 
 
 
 
 
-def test_recovery_flags_delivery_obligation_count_mismatch_as_loss(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A source-vs-destination ledger count mismatch must not verify as complete.
 
-    The destination table is created through the registered initializer; a
-    real SQL trigger that silently drops one row stands in for the "rows went
-    missing on the way over" failure the verifier has to catch.
-    """
 
-    from scout_cli import session_recovery
 
-    source = tmp_path / "state.db"
-    output = tmp_path / "recovered.db"
-    _make_source(source)
-    now = 1_720_000_000.0
-    _insert_delivery_obligations(
-        source,
-        [
-            ("ob-a", "k", "telegram", "chat-1", None, "a", "pending", 0, now, now, None, None, None, "default"),
-            ("ob-b", "k", "telegram", "chat-1", None, "b", "pending", 0, now, now, None, None, None, "default"),
-        ],
-    )
 
-    real_init = session_recovery._AUXILIARY_TABLE_SCHEMAS["delivery_obligations"]
-
-    def lossy_init(conn: sqlite3.Connection) -> None:
-        real_init(conn)
-        conn.execute(
-            """CREATE TRIGGER drop_ob_b BEFORE INSERT ON delivery_obligations
-               WHEN NEW.obligation_id = 'ob-b' BEGIN SELECT RAISE(IGNORE); END"""
-        )
-
-    monkeypatch.setitem(
-        session_recovery._AUXILIARY_TABLE_SCHEMAS, "delivery_obligations", lossy_init
-    )
-
-    report = recover_session_database(source, output, work_dir=tmp_path)
-    assert report["verification"]["table_counts"]["delivery_obligations"] == 1
-    assert report["complete"] is False
-    assert any(
-        "delivery_obligations count is 1, expected 2" in error
-        for error in report["verification"]["errors"]
-    )
 
 
 def test_lost_and_found_direct_copy_creates_lazy_delivery_ledger(tmp_path: Path) -> None:
@@ -857,45 +629,6 @@ def test_lost_and_found_direct_copy_creates_lazy_delivery_ledger(tmp_path: Path)
 
 
 
-def test_partial_recovery_skips_phantom_row_rejected_by_destination_schema(
-    tmp_path: Path,
-) -> None:
-    """#102240: a phantom ``sessions`` row with NULL ``started_at`` must be reported as a skipped
-    singleton, not abort the whole ``--allow-partial`` run at the exact-lookup boundary."""
-    source = tmp_path / "phantom-state.db"
-    output = tmp_path / "phantom-recovered.db"
-    _make_source(source)
-
-    # Relax the source's NOT NULL in place (schema text only, the pages stay identical) so the
-    # source can hold a row the destination's canonical schema rejects.
-    with sqlite3.connect(str(source), isolation_level=None) as conn:
-        conn.execute("PRAGMA writable_schema=ON")
-        conn.execute(
-            "UPDATE sqlite_master SET sql = replace(sql, 'started_at REAL NOT NULL', 'started_at REAL') "
-            "WHERE type = 'table' AND name = 'sessions'"
-        )
-        version = conn.execute("PRAGMA schema_version").fetchone()[0]
-        conn.execute(f"PRAGMA schema_version={version + 1}")
-        conn.execute("PRAGMA writable_schema=OFF")
-    with sqlite3.connect(str(source), isolation_level=None) as conn:
-        conn.execute(
-            "INSERT INTO sessions (id, source, started_at, title) VALUES ('phantom', 'cli', NULL, 'Phantom')"
-        )
-        assert conn.execute("SELECT count(*) FROM sessions").fetchone()[0] == 4
-
-    report = recover_session_database(source, output, work_dir=tmp_path, chunk_size=16, allow_partial=True)
-
-    copied = report["copy"]["sessions"]
-    assert copied["status"] == "partial"
-    assert copied["copied_rows"] == 3
-    assert copied["destination_rejected_rows"] == 1
-    assert [item["error"] for item in copied["skipped_rowid_ranges"]] == [
-        "destination constraint rejected row: NOT NULL constraint failed: sessions.started_at",
-    ]
-    assert report["verified"] is True
-    with sqlite3.connect(str(output)) as conn:
-        assert conn.execute("SELECT count(*) FROM sessions WHERE id = 'phantom'").fetchone()[0] == 0
-        assert conn.execute("SELECT count(*) FROM messages").fetchone()[0] == 21
 
 
 

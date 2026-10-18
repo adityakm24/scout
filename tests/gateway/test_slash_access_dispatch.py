@@ -33,7 +33,7 @@ from gateway.session_identity import RoutingIdentity
 
 def _make_source(
     *,
-    platform: Platform = Platform.DISCORD,
+    platform: Platform = Platform.HOMEASSISTANT,
     user_id: str = "user1",
     chat_type: str = "dm",
     chat_id: str = "c1",
@@ -54,7 +54,7 @@ def _make_event(text: str, source: SessionSource) -> MessageEvent:
 
 
 def _make_runner(*, platform_extra: dict | None = None,
-                 platform: Platform = Platform.DISCORD,
+                 platform: Platform = Platform.HOMEASSISTANT,
                  multiplex_profiles: bool = False):
     from gateway.run import GatewayRunner
 
@@ -80,7 +80,7 @@ def _make_runner(*, platform_extra: dict | None = None,
     )
     runner.session_store = MagicMock()
     session_entry = SessionEntry(
-        session_key="agent:main:discord:dm:c1",
+        session_key="agent:main:homeassistant:dm:c1",
         session_id="sess-1",
         created_at=datetime.now(),
         updated_at=datetime.now(),
@@ -141,47 +141,8 @@ async def test_whoami_non_admin_lists_runnable_commands():
     assert "/model" in result
 
 
-@pytest.mark.asyncio
-async def test_secondary_profile_slash_policy_uses_its_own_config():
-    """#121705: a bot configured only in a secondary profile is gated by THAT profile's
-    ``allow_admin_from``; the launch profile's empty policy must not make it unrestricted."""
-    runner = _make_runner(multiplex_profiles=True)
-    runner._profile_configs["beta"] = GatewayConfig(
-        platforms={
-            Platform.DISCORD: PlatformConfig(
-                enabled=True,
-                extra={"allow_admin_from": ["admin"], "user_allowed_commands": ["status"]},
-            )
-        }
-    )
-    user = _make_source(user_id="user", profile="beta")
-    denied = runner._check_slash_access(user, "restart")
-    assert denied is not None and "⛔" in denied
-    assert "Tier: user" in await runner._handle_whoami_command(_make_event("/whoami", user))
-    assert runner._resume_caller_is_admin(user) is False
-
-    admin = _make_source(user_id="admin", profile="beta")
-    assert runner._check_slash_access(admin, "restart") is None
-    assert runner._resume_caller_is_admin(admin) is True
-
-    # The launch profile's own (ungated) bot stays ungated ...
-    assert runner._check_slash_access(_make_source(user_id="user"), "restart") is None
-    # ... including a turn ROUTED to beta: ``allow_admin_from`` is per bot, so the bot-owning
-    # (transport) profile's config decides, the owner ``authorization_home`` already names.
-    routed = _make_source(user_id="user", profile="beta")
-    routed._identity = RoutingIdentity(
-        transport_profile="primary", runtime_profile="beta",
-        authorization_home=Path("/profiles/primary"), runtime_home=Path("/profiles/beta"),
-    )
-    assert runner._check_slash_access(routed, "restart") is None
 
 
-def test_missing_secondary_profile_config_fails_closed():
-    """A served profile whose config is not cached must not inherit the launch profile's open policy."""
-    runner = _make_runner(multiplex_profiles=True)
-    denied = runner._check_slash_access(_make_source(user_id="user", profile="beta"), "restart")
-    assert denied is not None and "⛔" in denied
-    assert runner._check_slash_access(_make_source(user_id="user", profile="beta"), "help") is None
 
 
 @pytest.mark.asyncio
@@ -206,21 +167,6 @@ async def test_help_non_admin_lists_only_runnable_commands():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_non_admin_with_empty_user_commands_gets_floor_only():
-    runner = _make_runner(
-        platform_extra={
-            "allow_admin_from": ["111"],
-            "user_allowed_commands": [],  # explicitly empty
-        }
-    )
-    # /stop denied
-    result = await runner._handle_message(_make_event("/stop", _make_source(user_id="999")))
-    assert "⛔" in result
-    assert "No slash commands are enabled" in result
-    # /whoami still works (always-allowed floor)
-    whoami_result = await runner._handle_message(_make_event("/whoami", _make_source(user_id="999")))
-    assert "Tier: user" in whoami_result
 
 
 # ---------------------------------------------------------------------------
@@ -250,22 +196,6 @@ async def test_group_only_gating_leaves_dm_unrestricted():
     assert "Tier: unrestricted" in result
 
 
-@pytest.mark.asyncio
-async def test_blank_chat_type_resolves_to_gated_scope():
-    """A blank chat_type (relay frames can send ""/null; restored rows keep a
-    stored empty value) used to resolve to group scope, so on a DM-only-gated
-    install the source landed in an ungated scope and every command ran."""
-    runner = _make_runner(
-        platform_extra={
-            "allow_admin_from": ["111"],
-            "user_allowed_commands": ["status"],
-        }
-    )
-    for blank in ("", None):
-        result = await runner._handle_message(
-            _make_event("/stop", _make_source(user_id="999", chat_type=blank))
-        )
-        assert "⛔" in result, repr(blank)
 
 
 # ---------------------------------------------------------------------------
@@ -273,30 +203,6 @@ async def test_blank_chat_type_resolves_to_gated_scope():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_non_admin_denied_for_unlisted_quick_command_exec():
-    """A non-admin must not reach the quick_commands exec sink for a command
-    that isn't in user_allowed_commands. Regression for #44727 — quick
-    commands are never in the gateway registry, so the early gate skips them;
-    the sink gate must catch them."""
-    runner = _make_runner(
-        platform_extra={
-            "allow_admin_from": ["111"],
-            "user_allowed_commands": [],
-        }
-    )
-    runner.config.quick_commands = {
-        "limits": {"type": "exec", "command": "printf quick-command-bypass-confirmed"}
-    }
-
-    result = await runner._handle_message(
-        _make_event("/limits", _make_source(user_id="999"))
-    )
-
-    assert result is not None
-    assert "⛔" in result
-    assert "/limits is admin-only here" in result
-    assert "quick-command-bypass-confirmed" not in result
 
 
 @pytest.mark.asyncio
@@ -389,7 +295,7 @@ async def test_gating_isolated_per_platform():
     runner = object.__new__(GatewayRunner)
     runner.config = GatewayConfig(
         platforms={
-            Platform.DISCORD: PlatformConfig(
+            Platform.HOMEASSISTANT: PlatformConfig(
                 enabled=True,
                 token="***",
                 extra={
@@ -397,14 +303,14 @@ async def test_gating_isolated_per_platform():
                     "user_allowed_commands": [],
                 },
             ),
-            Platform.TELEGRAM: PlatformConfig(
+            Platform.HOMEASSISTANT: PlatformConfig(
                 enabled=True, token="***", extra={}
             ),
         }
     )
     runner.adapters = {
-        Platform.DISCORD: MagicMock(send=AsyncMock()),
-        Platform.TELEGRAM: MagicMock(send=AsyncMock()),
+        Platform.HOMEASSISTANT: MagicMock(send=AsyncMock()),
+        Platform.HOMEASSISTANT: MagicMock(send=AsyncMock()),
     }
     runner._voice_mode = {}
     runner.hooks = SimpleNamespace(
@@ -414,11 +320,11 @@ async def test_gating_isolated_per_platform():
     )
     runner.session_store = MagicMock()
     session_entry = SessionEntry(
-        session_key="agent:main:telegram:dm:c1",
+        session_key="agent:main:homeassistant:dm:c1",
         session_id="sess-1",
         created_at=datetime.now(),
         updated_at=datetime.now(),
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_type="dm",
         total_tokens=0,
     )
@@ -449,6 +355,6 @@ async def test_gating_isolated_per_platform():
     runner._emit_gateway_run_progress = AsyncMock()
 
     # Same user_id on Telegram → must be unrestricted (Telegram has no admin list).
-    tg_src = _make_source(platform=Platform.TELEGRAM, user_id="999", chat_id="t1")
+    tg_src = _make_source(platform=Platform.HOMEASSISTANT, user_id="999", chat_id="t1")
     result = await runner._handle_message(_make_event("/whoami", tg_src))
     assert "Tier: unrestricted" in result

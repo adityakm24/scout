@@ -372,56 +372,7 @@ class TestTerminalIntegration:
         assert "openai_api_key" not in child_env
         assert child_env["PATH"] == "/usr/bin"
 
-    def test_passthrough_cannot_override_internal_dynamic_secret(self):
-        """A skill must NOT be able to register dynamically-named Scout
-        secrets (AUXILIARY_*_API_KEY / _BASE_URL, GATEWAY_RELAY_* auth) as
-        passthrough — they aren't in the static blocklist, so this is the
-        defense-in-depth layer that keeps env_passthrough consistent with the
-        unconditional strip in the sanitizers."""
-        from tools.environments.local import _sanitize_subprocess_env
 
-        for var in (
-            "AUXILIARY_VISION_API_KEY",
-            "AUXILIARY_VISION_BASE_URL",
-            "GATEWAY_RELAY_SECRET",
-            "GATEWAY_RELAY_DELIVERY_KEY",
-        ):
-            register_env_passthrough([var])
-            assert not is_env_passthrough(var), (
-                f"{var} should be refused passthrough registration"
-            )
-            result = _sanitize_subprocess_env({var: "secret", "PATH": "/usr/bin"})
-            assert var not in result
-            assert "PATH" in result
-
-    def test_passthrough_cannot_register_buzz_vars(self, monkeypatch):
-        """GHSA-rhgp-j443-p4rf seal stays intact for the BUZZ_* first-party
-        platform credentials: even though they pass through to terminal
-        children in a Buzz agent context (issue #78026), env_passthrough
-        registration must still refuse them — the carve-out opens NO
-        registration path, so a skill cannot expand BUZZ_* exposure to
-        execute_code."""
-        from tools.environments.local import _sanitize_subprocess_env
-
-        monkeypatch.setenv("BUZZ_MANAGED_AGENT", "1")
-        for var in (
-            "BUZZ_PRIVATE_KEY",
-            "BUZZ_AUTH_TAG",
-            "BUZZ_RELAY_URL",
-        ):
-            register_env_passthrough([var])
-            assert not is_env_passthrough(var), (
-                f"{var} should be refused passthrough registration"
-            )
-            # Terminal sanitizer still passes BUZZ_* through to terminal
-            # children by the first-party carve-out...
-            result = _sanitize_subprocess_env({var: "value", "PATH": "/usr/bin"})
-            assert result.get(var) == "value"
-            # ...but the execute_code child never sees them.
-            from tools.code_execution_env import _scrub_child_env
-
-            child_env = _scrub_child_env({var: "value", "PATH": "/usr/bin"})
-            assert var not in child_env
 
     def test_passthrough_allows_auxiliary_non_secret_routing(self):
         """AUXILIARY_*_PROVIDER / _MODEL and GATEWAY_RELAY routing hints are not

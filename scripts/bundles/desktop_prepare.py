@@ -196,7 +196,7 @@ class BuildRequest:
         return hashlib.sha256(json.dumps(self.data(), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
     def workspaces(self) -> list[str]:
-        return ["apps/desktop"] + ([] if self.variant == "light" else ["ui-tui", "web"])
+        return ["apps/desktop"] + ([] if self.variant == "light" else ["web"])
 
 
 @dataclass(frozen=True)

@@ -52,7 +52,7 @@ def _turn(db, agent, cli, surface, n, prompt_tokens):
     if surface == "gateway":
         from gateway.run import _build_gateway_agent_history
 
-        history = _build_gateway_agent_history(db.get_messages_as_conversation("sid", repair_alternation=True))[0]
+        history = _build_gateway_agent_history(db.get_messages_as_conversation("sid", repair_alternation=True))
         agent.run_conversation(user_message=text, conversation_history=history, task_id="sid", persist_user_message=text)
         return
     from scout_cli.cli_chat_turn_mixin import CLIChatTurnMixin
@@ -95,7 +95,7 @@ def test_manual_compress_between_turns_rewinds_every_carried_original(session):
 
     from gateway.run import _build_gateway_agent_history
 
-    history = _build_gateway_agent_history(db.get_messages_as_conversation("sid", repair_alternation=True))[0]
+    history = _build_gateway_agent_history(db.get_messages_as_conversation("sid", repair_alternation=True))
     assert compress_now(agent, history, parse_compress_args(""), system_message="").status == "compressed"
 
     model_history, display_history = db.get_resume_conversations("sid")

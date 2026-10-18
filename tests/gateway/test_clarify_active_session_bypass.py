@@ -16,7 +16,7 @@ from gateway.session import SessionSource, build_session_key
 
 class _ClarifyBypassAdapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.HOMEASSISTANT)
 
     async def connect(self):
         return True
@@ -36,7 +36,7 @@ def _event(text="custom answer"):
         text=text,
         message_type=MessageType.TEXT,
         source=SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_id="12345",
             chat_type="private",
             user_id="user1",

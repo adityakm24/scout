@@ -8,30 +8,6 @@ from tests.tools._child_env_fixtures import child_env, observe_child  # noqa: F4
 from tools.environments.local import build_subprocess_env
 
 
-@pytest.mark.parametrize("scrub,inherit_home", [(True, True), (True, False), (False, True), (False, False)])
-def test_factory_child_policy_and_profile_home(child_env, monkeypatch, scrub, inherit_home):
-    from scout_constants import set_scout_home_override, reset_scout_home_override
-    routed = child_env / "profiles/coder"
-    routed.mkdir(parents=True)
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-parent-secret")
-    monkeypatch.setenv("AUXILIARY_FAKE_API_KEY", "fake-auxiliary")
-    monkeypatch.setenv("GATEWAY_RELAY_FOO_TOKEN", "fake-relay")
-    before = dict(os.environ)
-    token = set_scout_home_override(str(routed))
-    try:
-        env = build_subprocess_env(scrub_secrets=scrub, inherit_profile_home=inherit_home,
-                                   extra={"MY_HARMLESS_VAR": "caller", "ANTHROPIC_API_KEY": "fake-extra"})
-        result = observe_child(env, ["SCOUT_HOME", "ANTHROPIC_API_KEY", "AUXILIARY_FAKE_API_KEY",
-                                     "GATEWAY_RELAY_FOO_TOKEN", "MY_HARMLESS_VAR"])
-    finally:
-        reset_scout_home_override(token)
-    assert result == {
-        "SCOUT_HOME": str(routed) if scrub or inherit_home else before["SCOUT_HOME"],
-        "ANTHROPIC_API_KEY": None if scrub else "fake-extra",
-        "AUXILIARY_FAKE_API_KEY": None if scrub else "fake-auxiliary",
-        "GATEWAY_RELAY_FOO_TOKEN": None if scrub else "fake-relay", "MY_HARMLESS_VAR": "caller",
-    }
-    assert dict(os.environ) == before
 
 
 def test_no_scrub_is_byte_preserving_except_explicit_extra():

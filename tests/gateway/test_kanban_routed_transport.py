@@ -34,13 +34,13 @@ def setup_runner(tmp_path, monkeypatch):
         profile.mkdir(parents=True)
         (profile / "config.yaml").write_text("{}\n", encoding="utf-8")
     runner = GatewayRunner.__new__(GatewayRunner)
-    runner.adapters = {Platform.DISCORD: RecordingAdapter()}
+    runner.adapters = {Platform.HOMEASSISTANT: RecordingAdapter()}
     runner._profile_adapters = {"yuki": {}}
     runner._primary_profile_name = "default"
     runner._kanban_notifier_profile = "default"
     runner._kanban_dispatcher_lock_handle = object()
     runner.config = GatewayConfig(multiplex_profiles=True, profile_routes=parse_profile_routes([
-        dict(platform="discord", guild_id="guild", chat_id="parent", profile="yuki"),
+        dict(platform="homeassistant", guild_id="guild", chat_id="parent", profile="yuki"),
     ]))
     return runner
 
@@ -49,7 +49,7 @@ def completion(*, profile="yuki", metadata=None, chat="post", thread="post",
                user="creator", mode="notify+wake"):
     with kbc.connect() as conn:
         task = kb.create_task(conn, title="route completion", assignee="worker")
-        kbn.add_notify_sub(conn, task_id=task, platform="discord", chat_id=chat,
+        kbn.add_notify_sub(conn, task_id=task, platform="homeassistant", chat_id=chat,
                            thread_id=thread, chat_type="thread", user_id=user,
                            notifier_profile=profile, delivery_mode=mode,
                            delivery_metadata=metadata if metadata is not None else
@@ -69,13 +69,13 @@ async def deliver(runner, rows):
 
 def unseen(task):
     with kbc.connect() as conn:
-        return kbn.unseen_events_for_sub(conn, task_id=task, platform="discord", chat_id="post",
+        return kbn.unseen_events_for_sub(conn, task_id=task, platform="homeassistant", chat_id="post",
                                          thread_id="post", kinds=["completed"])[1]
 
 
 def test_exact_routed_profile_delivers_once_on_its_authorized_transport(tmp_path, monkeypatch):
     runner = setup_runner(tmp_path, monkeypatch)
-    primary = runner.adapters[Platform.DISCORD]
+    primary = runner.adapters[Platform.HOMEASSISTANT]
     task = completion(metadata={"scope_id": "guild", "guild_id": "stale-alias", "parent_chat_id": "parent"})
     rows = collect(runner)
     assert [row["task"].id for row in rows] == [task]
@@ -90,7 +90,7 @@ def test_exact_routed_profile_delivers_once_on_its_authorized_transport(tmp_path
     # A connected secondary owns its credential even where the primary route matches.
     secondary = RecordingAdapter()
     secondary.scope_id_for_chat = lambda chat: "stale-cache"
-    runner._profile_adapters["yuki"] = {Platform.DISCORD: secondary}
+    runner._profile_adapters["yuki"] = {Platform.HOMEASSISTANT: secondary}
     task = completion(metadata={"guild_id": "guild", "parent_chat_id": "parent"})
     asyncio.run(deliver(runner, collect(runner)))
     assert len(primary.sent) == 1
@@ -102,9 +102,9 @@ def test_exact_routed_profile_delivers_once_on_its_authorized_transport(tmp_path
 
 def test_user_routed_subscription_uses_only_its_authorized_profile(tmp_path, monkeypatch):
     runner = setup_runner(tmp_path, monkeypatch)
-    primary = runner.adapters[Platform.DISCORD]
+    primary = runner.adapters[Platform.HOMEASSISTANT]
     runner.config.profile_routes = parse_profile_routes([
-        dict(platform="discord", user_id="creator", profile="yuki"),
+        dict(platform="homeassistant", user_id="creator", profile="yuki"),
     ])
 
     routed = completion(profile="yuki", chat="shared", thread="")
@@ -123,7 +123,7 @@ def test_user_routed_subscription_uses_only_its_authorized_profile(tmp_path, mon
 
 def test_route_denials_leave_events_retryable_at_claim_and_send(tmp_path, monkeypatch):
     runner = setup_runner(tmp_path, monkeypatch)
-    primary = runner.adapters[Platform.DISCORD]
+    primary = runner.adapters[Platform.HOMEASSISTANT]
     # Unknown owners, wrong/default owners, incomplete anchors, and partial credentials
     # never become primary delivery authority.
     tasks = [completion(profile=owner) for owner in ("other", "default", None)]
@@ -145,7 +145,7 @@ def test_route_denials_leave_events_retryable_at_claim_and_send(tmp_path, monkey
     assert [row["task"].id for row in rows] == [good]
     # Reassignment after the claim must rewind, never send using stale authority.
     runner.config.profile_routes = parse_profile_routes([
-        dict(platform="discord", guild_id="guild", chat_id="parent", profile="other")])
+        dict(platform="homeassistant", guild_id="guild", chat_id="parent", profile="other")])
     asyncio.run(deliver(runner, rows))
     assert primary.sent == primary.handled == []
     assert unseen(good)
@@ -154,8 +154,8 @@ def test_route_denials_leave_events_retryable_at_claim_and_send(tmp_path, monkey
     # cannot skip an earlier rule, but a known conflicting parent rules it out.
     monkeypatch.setenv("SCOUT_KANBAN_DB", str(tmp_path / "tied-routes.db"))
     runner.config.profile_routes = parse_profile_routes([
-        dict(platform="discord", guild_id="guild", chat_id="parent", profile="other"),
-        dict(platform="discord", guild_id="guild", chat_id="post", profile="yuki"),
+        dict(platform="homeassistant", guild_id="guild", chat_id="parent", profile="other"),
+        dict(platform="homeassistant", guild_id="guild", chat_id="post", profile="yuki"),
     ])
     ambiguous = completion(metadata={"scope_id": "guild"})
     exact = completion(metadata={"scope_id": "guild", "parent_chat_id": "different-parent"})
@@ -185,7 +185,7 @@ def test_kanban_wakes_install_the_destination_runtime_scope(tmp_path, monkeypatc
 
     for name in ("yuki", "other"):
         (home / "profiles" / name / ".env").write_text(f"KANBAN_TEST_SECRET={name}\n", encoding="utf-8")
-        runner._profile_adapters[name] = {Platform.DISCORD: ScopedAdapter()}
+        runner._profile_adapters[name] = {Platform.HOMEASSISTANT: ScopedAdapter()}
         completion(profile=name)
     rows = collect(runner)
     assert len(rows) == 2
@@ -204,7 +204,7 @@ def test_removed_profile_never_wakes_under_the_primary_runtime(tmp_path, monkeyp
 
     runner = setup_runner(tmp_path, monkeypatch)
     secondary = RecordingAdapter()
-    runner._profile_adapters["yuki"] = {Platform.DISCORD: secondary}
+    runner._profile_adapters["yuki"] = {Platform.HOMEASSISTANT: secondary}
     task = completion(mode="wake")
     rows = collect(runner)
     assert len(rows) == 1
@@ -233,36 +233,3 @@ def test_anchorless_thread_subscription_warns_once_instead_of_silent_skip(tmp_pa
     assert unseen(task)
 
 
-def test_pinned_profile_without_this_platform_delivers_via_primary(tmp_path, monkeypatch, caplog):
-    """A profile_routes-pinned profile that runs OTHER-platform adapters but none for the
-    subscription's platform is not a dead-end: the primary bot — the only credential serving that
-    chat, for inbound turns too — delivers, exactly as for a route-only profile (#115460, option 1).
-    A sub stamped with a profile other than the route's still warns ONCE instead of rewinding silently."""
-    import logging
-    from gateway import kanban_watchers_notifier as notifier
-
-    runner = setup_runner(tmp_path, monkeypatch)
-    primary = runner.adapters[Platform.DISCORD]
-    monkeypatch.setattr(notifier, "_UNROUTABLE_WARNED", set())
-    runner._profile_adapters["yuki"] = {Platform.TELEGRAM: RecordingAdapter()}
-    task = completion()
-    with caplog.at_level(logging.WARNING, logger=notifier.logger.name):
-        rows = collect(runner)
-    assert [row["task"].id for row in rows] == [task]
-    asyncio.run(deliver(runner, rows))
-    assert len(primary.sent) == len(primary.handled) == 1
-    assert primary.handled[0].source.profile == "yuki"
-    assert not unseen(task)
-    assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
-
-    # An owner stamped with the invoking shell's profile (#76483) instead of the route's
-    # is a permanent dead-end and must surface once at WARNING.
-    monkeypatch.setenv("SCOUT_KANBAN_DB", str(tmp_path / "stamped-owner.db"))
-    stamped = completion(profile="default")
-    with caplog.at_level(logging.WARNING, logger=notifier.logger.name):
-        assert not collect(runner)
-    warnings = [r for r in caplog.records if "pins that chat to profile yuki" in r.getMessage()
-                and stamped in r.getMessage()]
-    assert len(warnings) == 1 and warnings[0].levelno == logging.WARNING
-    assert "--notifier-profile yuki" in warnings[0].getMessage()
-    assert unseen(stamped)

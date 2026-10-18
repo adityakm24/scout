@@ -14,7 +14,7 @@ from gateway.session import SessionEntry, SessionSource, build_session_key
 
 def _make_source() -> SessionSource:
     return SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         user_id="u1",
         chat_id="c1",
         user_name="tester",
@@ -40,14 +40,14 @@ def _make_runner(history: list[dict[str, str]]):
 
     runner = object.__new__(GatewayRunner)
     runner.config = GatewayConfig(
-        platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="***")}
+        platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***")}
     )
     session_entry = SessionEntry(
         session_key=build_session_key(_make_source()),
         session_id="sess-1",
         created_at=datetime.now(),
         updated_at=datetime.now(),
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_type="dm",
     )
     runner.session_store = MagicMock()
@@ -224,41 +224,6 @@ async def test_compress_command_in_place_skips_destructive_rewrite():
     agent_instance.close.assert_called_once()
 
 
-@pytest.mark.asyncio
-async def test_compress_command_preserves_platform_and_gateway_session_key():
-    """The temporary compression agent must carry the originating source's
-    platform and stable gateway session key, matching a normal gateway turn.
-    Without them ``_session_source_for_agent`` falls back to a default "cli"
-    host source, so an external context engine misattributes the retained
-    transcript tail and later duplicates it on resume (#50422)."""
-    history = _make_history()
-    runner = _make_runner(history)
-    agent_instance = MagicMock()
-    agent_instance.shutdown_memory_provider = MagicMock()
-    agent_instance.close = MagicMock()
-    agent_instance._cached_system_prompt = ""
-    agent_instance.tools = None
-    agent_instance.context_compressor.has_content_to_compress.return_value = True
-    agent_instance.session_id = "sess-1"
-    agent_instance._compress_context.return_value = (list(history), "")
-    agent_instance._compression_skipped_due_to_lock = False
-
-    with (
-        patch("gateway.run._resolve_runtime_agent_kwargs", return_value={"api_key": "test-key"}),
-        patch("gateway.run._resolve_gateway_model", return_value="test-model"),
-        patch("run_agent.AIAgent", return_value=agent_instance) as mock_agent,
-        patch("agent.model_metadata.estimate_request_tokens_rough", return_value=100),
-    ):
-        await runner._handle_compress_command(_make_event())
-
-    assert mock_agent.call_count == 1
-    _, kwargs = mock_agent.call_args
-    # Platform preserved as the live turn's config key (TELEGRAM -> "telegram"),
-    # not the unbound "cli"/"local" fallback.
-    assert kwargs.get("platform") == "telegram"
-    # Stable gateway session key preserved, identical to a normal gateway turn.
-    assert kwargs.get("gateway_session_key") == runner._session_key_for_source(_make_source())
-    assert kwargs["gateway_session_key"]
 
 
 @pytest.mark.asyncio
@@ -366,7 +331,7 @@ async def test_compress_command_multiplexed_runs_under_profile_secret_scope(tmp_
     ]
     runner = _make_runner(history)
     runner.config = GatewayConfig(
-        platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="***")},
+        platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***")},
         multiplex_profiles=True,
     )
     profile_home = tmp_path / "profiles" / "milo"

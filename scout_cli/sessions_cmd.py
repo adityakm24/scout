@@ -1143,7 +1143,7 @@ def _cmd_repair_prompts(db, args):
 
 def _cmd_stats(db, args):
     print(f"Total sessions: {db.session_count()}\nTotal messages: {db.message_count()}")
-    for src in ("cli", "telegram", "discord", "whatsapp", "slack"):
+    for src in ("cli", "tui", "desktop", "api_server", "cron"):
         if (c := db.session_count(source=src)) > 0:
             print(f"  {src}: {c} sessions")
     if db.db_path.exists():

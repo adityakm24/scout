@@ -17,7 +17,6 @@ import {
   Route,
   NavLink,
   Navigate,
-  useLocation,
   useNavigate,
 } from "react-router";
 import {
@@ -41,11 +40,9 @@ import {
   PanelLeftOpen,
   Plug,
   Puzzle,
-  Radio,
   RotateCw,
   Settings,
   Shield,
-  ShieldCheck,
   Sparkles,
   Star,
   Terminal,
@@ -89,11 +86,8 @@ const ProfileBuilderPage = lazy(() => import("@/pages/ProfileBuilderPage"));
 const SkillsPage = lazy(() => import("@/pages/SkillsPage"));
 const PluginsPage = lazy(() => import("@/pages/PluginsPage"));
 const McpPage = lazy(() => import("@/pages/McpPage"));
-const PairingPage = lazy(() => import("@/pages/PairingPage"));
-const ChannelsPage = lazy(() => import("@/pages/ChannelsPage"));
 const WebhooksPage = lazy(() => import("@/pages/WebhooksPage"));
 const SystemPage = lazy(() => import("@/pages/SystemPage"));
-const ChatPage = lazy(() => import("@/pages/ChatPage"));
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useI18n } from "@/i18n";
@@ -101,8 +95,6 @@ import type { Translations } from "@/i18n/types";
 import { PluginPage, PluginSlot, usePlugins } from "@/plugins";
 import type { PluginManifest } from "@/plugins";
 import { useTheme } from "@/themes";
-import { isDashboardEmbeddedChatEnabled } from "@/lib/dashboard-flags";
-import { latchChatActivation } from "@/lib/chat-activation";
 import { sharedGatewayProfiles, sharedGatewayRestartDescription } from "@/lib/shared-gateway";
 import { api } from "@/lib/api";
 import type { StatusResponse, UpdateCheckResponse } from "@/lib/api";
@@ -134,24 +126,7 @@ function UnknownRouteFallback({ pluginsLoading }: { pluginsLoading: boolean }) {
   return <Navigate to="/sessions" replace />;
 }
 
-const CHAT_NAV_ITEM: NavItem = {
-  path: "/chat",
-  labelKey: "chat",
-  label: "Chat",
-  icon: Terminal,
-};
-
-/**
- * Built-in routes except /chat.  Chat is rendered persistently (outside
- * <Routes>) when embedded — see the persistent chat host block rendered
- * inline near the bottom of this file — so the PTY child, WebSocket,
- * and xterm instance survive when the user visits another tab and comes
- * back.  A `display:none` toggle hides the terminal without unmounting.
- * The host itself is still deferred until the first /chat visit so the
- * xterm chunk is not downloaded on unrelated pages.  Routing still owns
- * the URL so /chat deep-links, browser back/forward, and nav highlight
- * keep working.
- */
+/** Built-in routes; plugin tabs are merged in by ``buildRoutes``. */
 const BUILTIN_ROUTES_CORE: Record<string, ComponentType> = {
   "/": RootRedirect,
   "/sessions": SessionsPage,
@@ -163,8 +138,6 @@ const BUILTIN_ROUTES_CORE: Record<string, ComponentType> = {
   "/skills": SkillsPage,
   "/plugins": PluginsPage,
   "/mcp": McpPage,
-  "/pairing": PairingPage,
-  "/channels": ChannelsPage,
   "/webhooks": WebhooksPage,
   "/system": SystemPage,
   "/profiles": ProfilesPage,
@@ -172,14 +145,6 @@ const BUILTIN_ROUTES_CORE: Record<string, ComponentType> = {
   "/config": ConfigPage,
   "/env": EnvPage,
 };
-
-// Route placeholder for /chat.  The persistent ChatPage host (rendered
-// outside <Routes> when embedded chat is on) paints on top; this empty
-// element just claims the path so the `*` catch-all redirect doesn't
-// fire when the user navigates to /chat.
-function ChatRouteSink() {
-  return null;
-}
 
 const BUILTIN_NAV_REST: NavItem[] = [
   {
@@ -206,9 +171,7 @@ const BUILTIN_NAV_REST: NavItem[] = [
   { path: "/skills", labelKey: "skills", label: "Skills", icon: Package },
   { path: "/plugins", labelKey: "plugins", label: "Plugins", icon: Puzzle },
   { path: "/mcp", label: "MCP", icon: Plug },
-  { path: "/channels", label: "Channels", icon: Radio },
   { path: "/webhooks", label: "Webhooks", icon: Webhook },
-  { path: "/pairing", label: "Pairing", icon: ShieldCheck },
   { path: "/profiles", labelKey: "profiles", label: "Profiles", icon: Users },
   { path: "/config", labelKey: "config", label: "Config", icon: Settings },
   { path: "/env", labelKey: "keys", label: "Keys", icon: KeyRound },
@@ -363,7 +326,6 @@ const SIDEBAR_COLLAPSED_KEY = "scout-sidebar-collapsed";
 
 export default function App() {
   const { t } = useI18n();
-  const { pathname } = useLocation();
   const { manifests, loading: pluginsLoading } = usePlugins();
   const { theme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -389,16 +351,6 @@ export default function App() {
   const isDesktopCollapsed = collapsed && !isMobile;
   const tooltipWarmRef = useRef(0);
   const sidebarStatus = useSidebarStatus();
-  const normalizedPath = pathname.replace(/\/$/, "") || "/";
-  const isChatRoute = normalizedPath === "/chat";
-  const embeddedChat = isDashboardEmbeddedChatEnabled();
-  // Defer mounting the persistent chat host (and its xterm chunk) until the
-  // user has actually opened /chat at least once. Sticky after that so the
-  // PTY survives later tab switches.
-  const [chatHostMounted, setChatHostMounted] = useState(isChatRoute);
-  useEffect(() => {
-    setChatHostMounted((prev) => latchChatActivation(prev, isChatRoute));
-  }, [isChatRoute]);
 
   // `dashboard.show_token_analytics` gates the Analytics nav item.  The
   // page itself remains reachable by URL (it renders an explanation when
@@ -417,52 +369,21 @@ export default function App() {
       .catch(() => setShowTokenAnalytics(false));
   }, []);
 
-  // A plugin can replace the built-in /chat page via `tab.override: "/chat"`
-  // in its manifest.  When one does, `buildRoutes` already swaps the route
-  // element for <PluginPage /> — but we also have to suppress the
-  // persistent ChatPage host below, or the plugin's page and the built-in
-  // terminal would paint on top of each other.  The override is niche
-  // (nothing ships overriding /chat today) but it's an advertised
-  // extension point, so preserve the pre-persistence contract: when a
-  // plugin owns /chat, the built-in chat UI is entirely absent.
-  //
-  // Waiting on `pluginsLoading` is load-bearing: manifests arrive
-  // asynchronously from /api/dashboard/plugins, so on initial render
-  // `chatOverriddenByPlugin` is always false.  Without the loading
-  // gate, the persistent host would mount, spawn a PTY, and THEN get
-  // yanked out from under the user when the plugin's manifest resolves
-  // — killing the session mid-paint.  Delaying host mount by the
-  // plugin-load window (typically <50ms, worst case 2s safety timeout)
-  // is the cheaper trade-off.
-  const chatOverriddenByPlugin = useMemo(
-    () => manifests.some((m) => m.tab.override === "/chat"),
-    [manifests],
+  const builtinNav = useMemo(
+    () =>
+      showTokenAnalytics
+        ? BUILTIN_NAV_REST
+        : BUILTIN_NAV_REST.filter((n) => n.path !== "/analytics"),
+    [showTokenAnalytics],
   );
-
-  const builtinRoutes = useMemo(
-    () => ({
-      ...BUILTIN_ROUTES_CORE,
-      ...(embeddedChat ? { "/chat": ChatRouteSink } : {}),
-    }),
-    [embeddedChat],
-  );
-
-  const builtinNav = useMemo(() => {
-    const base = embeddedChat
-      ? [CHAT_NAV_ITEM, ...BUILTIN_NAV_REST]
-      : BUILTIN_NAV_REST;
-    return showTokenAnalytics
-      ? base
-      : base.filter((n) => n.path !== "/analytics");
-  }, [embeddedChat, showTokenAnalytics]);
 
   const sidebarNav = useMemo(
     () => partitionSidebarNav(builtinNav, manifests),
     [builtinNav, manifests],
   );
   const routes = useMemo(
-    () => buildRoutes(builtinRoutes, manifests),
-    [builtinRoutes, manifests],
+    () => buildRoutes(BUILTIN_ROUTES_CORE, manifests),
+    [manifests],
   );
   const pluginTabMeta = useMemo(
     () =>
@@ -749,18 +670,14 @@ export default function App() {
               className={cn(
                 "relative z-2 flex min-w-0 min-h-0 flex-1 flex-col",
                 "px-3 sm:px-6",
-                isChatRoute
-                  ? "pb-0 pt-1 sm:pt-2 lg:pt-4"
-                  : "pt-2 sm:pt-4 lg:pt-6",
+                "pt-2 sm:pt-4 lg:pt-6",
               )}
             >
               <PluginSlot name="pre-main" />
               <div
                 className={cn(
                   "w-full min-w-0",
-                  !isChatRoute &&
-                    "pb-[calc(2rem+env(safe-area-inset-bottom,0px))] lg:pb-8",
-                  isChatRoute && "min-h-0 flex flex-1 flex-col",
+                  "pb-[calc(2rem+env(safe-area-inset-bottom,0px))] lg:pb-8",
                 )}
               >
                 <ProfileKeyedRoutes>
@@ -779,34 +696,6 @@ export default function App() {
                   </Suspense>
                 </ProfileKeyedRoutes>
 
-                {embeddedChat &&
-                  !chatOverriddenByPlugin &&
-                  (pluginsLoading ? (
-                    isChatRoute ? (
-                      <RouteFallback label="Loading chat…" />
-                    ) : null
-                  ) : chatHostMounted ? (
-                    <div
-                      data-chat-active={isChatRoute ? "true" : "false"}
-                      className={cn(
-                        "min-h-0 min-w-0",
-                        isChatRoute ? "flex flex-1 flex-col" : "hidden",
-                      )}
-                      aria-hidden={!isChatRoute}
-                    >
-                      <Suspense
-                        fallback={
-                          isChatRoute ? (
-                            <RouteFallback label="Loading chat…" />
-                          ) : null
-                        }
-                      >
-                        <ChatPage isActive={isChatRoute} />
-                      </Suspense>
-                    </div>
-                  ) : isChatRoute ? (
-                    <RouteFallback label="Loading chat…" />
-                  ) : null)}
               </div>
               <PluginSlot name="post-main" />
             </div>
@@ -827,8 +716,7 @@ export default function App() {
  * fetchJSON ?profile= injection) silently targeted the newly selected
  * profile B — the exact stale-target footgun the switcher exists to kill.
  * Keying by profile resets every page's local state so it refetches under
- * the new scope. The persistent ChatPage host below handles its own
- * remount (channel keyed on scopedProfile).
+ * the new scope.
  */
 function ProfileKeyedRoutes({ children }: { children: ReactNode }) {
   const { profile } = useProfileScope();

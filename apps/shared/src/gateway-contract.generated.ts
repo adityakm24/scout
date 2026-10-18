@@ -508,38 +508,6 @@ export interface SubagentSteerResult {
   text: string
 }
 export type SteerStatus = 'queued' | 'rejected'
-export interface HandoffRequestParams {
-  session_id: string
-  profile?: string | null
-  platform: string
-}
-export interface HandoffRequestResult {
-  queued: boolean
-  session_key: string
-  platform: string
-  home_name: string
-}
-/** Any method addressed at one live session. */
-export interface SessionParams {
-  session_id: string
-  profile?: string | null
-}
-/** ``state`` is pending | running | completed | failed, or '' when nothing was requested. */
-export interface HandoffStateResult {
-  state: string
-  platform: string
-  error: string
-}
-export interface HandoffFailParams {
-  session_id: string
-  profile?: string | null
-  error?: string | null
-}
-/** ``failed`` false when the watcher already claimed the row; ``state`` is what it is now. */
-export interface HandoffFailResult {
-  failed: boolean
-  state: string
-}
 /** ``row_id`` is ``messages.id``; a not-yet-persisted live message names ``newest_role`` instead. ``emoji`` null clears; the same emoji again retracts. */
 export interface MessageReactParams {
   session_id: string
@@ -1709,6 +1677,11 @@ export interface SessionForeignImportResult {
   session_id: string
   already_imported?: boolean
 }
+/** Any method addressed at one live session. */
+export interface SessionParams {
+  session_id: string
+  profile?: string | null
+}
 /** ``delegations``: recently failed async delegation tasks for the session (durable store), newest first. */
 export interface SubagentListResult {
   subagents?: SubagentSnapshot[]
@@ -1965,8 +1938,6 @@ export interface ProjectTreeSession {
   archived?: boolean | null
   actual_cost_usd?: number | null
   estimated_cost_usd?: number | null
-  handoff_platform?: string | null
-  handoff_state?: string | null
   _lineage_root_id?: string | null
   _lineage_ids?: string[] | null
   continuation_kind?: string | null
@@ -4442,12 +4413,6 @@ export interface RpcMethods {
   'groups.state': { params: GroupsStateParams; result: GroupsStateResult }
   /** Durably cancel queued or running work for one hosted room. */
   'groups.stop': { params: GroupsStopParams; result: GroupsStopResult }
-  /** Fail a not-yet-claimed handoff (client poll timeout); CAS against the watcher. */
-  'handoff.fail': { params: HandoffFailParams; result: HandoffFailResult }
-  /** Queue a handoff to a messaging platform's home channel; the gateway watcher claims it. */
-  'handoff.request': { params: HandoffRequestParams; result: HandoffRequestResult }
-  /** Poll the handoff row for this session. */
-  'handoff.state': { params: SessionParams; result: HandoffStateResult }
   /** Pack + overlay messages for one language and surface; the renderer merges them over its bundled catalog. */
   'i18n.catalog': { params: I18nCatalogParams; result: I18nCatalogResult }
   /** Every language some layer supplies (bundled ∪ user overlay ∪ plugin packs), en first. */
@@ -4825,9 +4790,6 @@ export const RPC_METHODS = [
   'groups.send',
   'groups.state',
   'groups.stop',
-  'handoff.fail',
-  'handoff.request',
-  'handoff.state',
   'i18n.catalog',
   'i18n.languages',
   'image.attach',
@@ -5096,8 +5058,6 @@ export interface BackendGatewayEventMap {
   'notification.clear': NotificationClearPayload
   /** Show / replace a keyed out-of-band notice (toast or status bar). */
   'notification.show': NotificationShowPayload
-  /** Pairing state moved; refetch pairing. */
-  'pairing.changed': ChangeSignalPayload
   /** Focus / reveal a named desktop pane. */
   'pane.reveal': PaneRevealPayload
   /** The active pet / its spritesheet changed (watcher). */
@@ -5108,8 +5068,6 @@ export interface BackendGatewayEventMap {
   'pet.hatch.progress': PetHatchProgressPayload
   /** planner/todos.json moved; refetch the to-do list. */
   'planner.changed': ChangeSignalPayload
-  /** gateway_state.json moved; refetch platform status. */
-  'platforms.changed': ChangeSignalPayload
   /** Close the preview pane or one tab. */
   'preview.close': PreviewClosePayload
   /** Open a URL / file in the desktop preview pane. */
@@ -5216,13 +5174,11 @@ export const GATEWAY_EVENT_TYPES = [
   'notice',
   'notification.clear',
   'notification.show',
-  'pairing.changed',
   'pane.reveal',
   'pet.changed',
   'pet.generate.progress',
   'pet.hatch.progress',
   'planner.changed',
-  'platforms.changed',
   'preview.close',
   'preview.open',
   'preview.restart.complete',

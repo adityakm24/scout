@@ -17,10 +17,10 @@ async def test_cancelled_admission_is_refunded_but_started_execution_is_not():
     runner = object.__new__(GatewayRunner)
     runner._running_agents = {}
     runner._run_in_executor_with_context = asyncio.to_thread
-    adapter = WireAdapter(PlatformConfig(enabled=True, typing_indicator=False), Platform.TELEGRAM)
+    adapter = WireAdapter(PlatformConfig(enabled=True, typing_indicator=False), Platform.HOMEASSISTANT)
     adapter.wire = []
     runner._delivery_adapter_for = lambda source: adapter
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id='42', user_id='42')
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id='42', user_id='42')
     key = build_session_key(source)
     watch = {key: (source, 'cancel-test')}
     started = asyncio.Event()
@@ -58,10 +58,10 @@ async def test_runner_rejection_does_not_consume_tick_or_overwrite_replacement()
     runner = object.__new__(GatewayRunner)
     runner._running_agents = {}
     runner._run_in_executor_with_context = asyncio.to_thread
-    adapter = WireAdapter(PlatformConfig(enabled=True, typing_indicator=False), Platform.TELEGRAM)
+    adapter = WireAdapter(PlatformConfig(enabled=True, typing_indicator=False), Platform.HOMEASSISTANT)
     adapter.wire = []
     runner._delivery_adapter_for = lambda source: adapter
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id='42', user_id='42')
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id='42', user_id='42')
     key = build_session_key(source)
     watch = {key: (source, 'rejected-test')}
     await runner._warm_goals_session_db('test')

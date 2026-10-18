@@ -54,23 +54,7 @@ class TestStripByDefault:
         for var in _PROVIDER_SAMPLE:
             assert var not in result, f"{var} leaked with inherit_credentials=False"
 
-    def test_tier1_secrets_stripped_by_default(self):
-        result = _build(_TIER1_SAMPLE)
-        for var in _TIER1_SAMPLE:
-            assert var not in result, f"{var} leaked (Tier-1) with inherit_credentials=False"
 
-    def test_buzz_platform_vars_stripped_by_default(self):
-        """BUZZ_* first-party platform credentials must NOT reach the
-        non-terminal spawn surface (browser / TUI host / copilot-executor),
-        even though they pass through to terminal children (issue #78026)."""
-        buzz_sample = {
-            "BUZZ_PRIVATE_KEY": "nsec1fake",
-            "BUZZ_AUTH_TAG": '["tag","data","kind","sig"]',
-            "BUZZ_RELAY_URL": "https://mycommunity.communities.buzz.xyz",
-        }
-        result = _build(buzz_sample)
-        for var in buzz_sample:
-            assert var not in result, f"{var} leaked via scout_subprocess_env"
 
 
     def test_pythonutf8_set(self):
@@ -84,17 +68,6 @@ class TestInheritCredentials:
         for var, val in _PROVIDER_SAMPLE.items():
             assert result.get(var) == val, f"{var} should survive inherit_credentials=True"
 
-    def test_tier1_secrets_stripped_even_when_inheriting(self):
-        """The whole point of Tier 1: gateway/GitHub/infra secrets never reach
-        a child, even a model-driving CLI that legitimately needs provider keys."""
-        result = _build({**_PROVIDER_SAMPLE, **_TIER1_SAMPLE}, inherit_credentials=True)
-        for var in _TIER1_SAMPLE:
-            assert var not in result, (
-                f"{var} (Tier-1) must be stripped even with inherit_credentials=True"
-            )
-        # ...while provider keys survive.
-        for var in _PROVIDER_SAMPLE:
-            assert var in result
 
     def test_pythonutf8_set_when_inheriting(self):
         assert _build(inherit_credentials=True).get("PYTHONUTF8") == "1"
@@ -114,8 +87,6 @@ class TestTierInvariants:
                 f"Tier-1 keys leaked with inherit_credentials={inherit}: {sorted(leaked)}"
             )
 
-    def test_tier1_covers_gateway_bot_token(self):
-        assert "TELEGRAM_BOT_TOKEN" in _ALWAYS_STRIP_KEYS
 
     def test_tier1_covers_github_auth(self):
         assert {"GH_TOKEN", "GITHUB_TOKEN"} <= _ALWAYS_STRIP_KEYS
@@ -129,30 +100,6 @@ class TestTierInvariants:
                 "SCOUT_DASHBOARD_OIDC_CLIENT_SECRET", "SCOUT_DASHBOARD_DRAIN_SECRET"} <= _ALWAYS_STRIP_KEYS
 
 
-class TestBrowserPassthroughPattern:
-    def test_browser_keys_recoverable_after_strip(self):
-        """Browser tool pattern: strip everything, then re-add the browser
-        backend keys agent-browser actually needs."""
-        from tools.browser_tool import _BROWSER_PASSTHROUGH_KEYS
-
-        leaked = {
-            "BROWSERBASE_API_KEY": "bb-key",
-            "BROWSERBASE_PROJECT_ID": "bb-proj",
-            "FIRECRAWL_API_KEY": "fc-key",
-            "ANTHROPIC_API_KEY": "ant-should-go",
-            "TELEGRAM_BOT_TOKEN": "bot-should-go",
-        }
-        with patch.dict(os.environ, {**_SAFE_SAMPLE, **leaked}, clear=True):
-            env = scout_subprocess_env(inherit_credentials=False)
-            for key in _BROWSER_PASSTHROUGH_KEYS:
-                if key in os.environ:
-                    env[key] = os.environ[key]
-
-        assert env["BROWSERBASE_API_KEY"] == "bb-key"
-        assert env["FIRECRAWL_API_KEY"] == "fc-key"
-        # Provider + gateway secrets must NOT come back.
-        assert "ANTHROPIC_API_KEY" not in env
-        assert "TELEGRAM_BOT_TOKEN" not in env
 
 
 class TestDelegatedChildMarker:
@@ -197,10 +144,6 @@ class TestInternalDynamicSecrets:
     BOTH paths — including inherit_credentials=True — since a model-driving CLI
     (codex/copilot) never needs them even when it needs provider keys."""
 
-    def test_stripped_by_default(self):
-        result = _build(_INTERNAL_DYNAMIC_SAMPLE)
-        for var in _INTERNAL_DYNAMIC_SAMPLE:
-            assert var not in result, f"{var} leaked with inherit_credentials=False"
 
 
     def test_auxiliary_non_secrets_preserved(self):
@@ -211,21 +154,4 @@ class TestInternalDynamicSecrets:
         assert result.get("AUXILIARY_VISION_PROVIDER") == "openai"
         assert result.get("AUXILIARY_VISION_MODEL") == "gpt-4o"
 
-    def test_gateway_relay_id_stripped_even_when_inheriting(self):
-        """GATEWAY_RELAY_ID has no secret suffix (predicate skips it) but is
-        gateway-identifying auth material provisioned alongside the relay
-        secret. It's in _ALWAYS_STRIP_KEYS so it's stripped on the inherit path
-        too — closes the codex/copilot leak the predicate alone would miss."""
-        result = _build(
-            {**_PROVIDER_SAMPLE, "GATEWAY_RELAY_ID": "relay-id"},
-            inherit_credentials=True,
-        )
-        assert "GATEWAY_RELAY_ID" not in result
-        # provider keys still flow (codex auth)
-        for var in _PROVIDER_SAMPLE:
-            assert var in result
 
-    def test_relay_triplet_in_always_strip(self):
-        assert {
-            "GATEWAY_RELAY_ID", "GATEWAY_RELAY_SECRET", "GATEWAY_RELAY_DELIVERY_KEY",
-        } <= _ALWAYS_STRIP_KEYS

@@ -43,10 +43,6 @@ interface CredentialSearchCopy {
 }
 
 export function credentialSettingsView(info: EnvVarInfo): CredentialSettingsView | null {
-  if (info.channel_managed) {
-    return null
-  }
-
   if (info.category === 'tool') {
     return 'tools'
   }

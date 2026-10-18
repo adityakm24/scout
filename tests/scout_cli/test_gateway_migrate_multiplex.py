@@ -144,41 +144,8 @@ def _config_flag(root: Path):
     return (raw.get("gateway") or {}).get("multiplex_profiles")
 
 
-def test_dry_run_and_blocked_preflight_change_nothing(fleet, capsys):
-    plan = gm.build_migration_plan()
-    assert not plan.blocked and plan.eligible_for_migration()
-    assert [p.name for p in plan.standalone_secondaries] == ["coder", "ops"]
-
-    gm.cmd_migrate(SimpleNamespace(multiplex=True, dry_run=True, yes=True))  # returns; no exit
-    assert "dry run" in capsys.readouterr().out
-    # Blocked: coder reuses the default's Telegram token -> the gateway's own fingerprint says duplicate.
-    (fleet.root / "profiles/coder/.env").write_text("TELEGRAM_BOT_TOKEN=111111:default-token\n", encoding="utf-8")
-    blocked = gm.build_migration_plan()
-    assert blocked.blocked and "profile_routes" in blocked.blockers[0] and "'coder'" in blocked.blockers[0]
-    with pytest.raises(SystemExit) as exc:
-        gm.cmd_migrate(SimpleNamespace(multiplex=True, dry_run=False, yes=True))
-    assert exc.value.code == 1
-    assert fleet.ops == [] and fleet.services == {"coder": ("systemd", False), "ops": ("systemd", False)}
-    assert fleet.pids == {"coder": 4101, "ops": 4102} and _config_flag(fleet.root) is None
-    assert not (fleet.root / gm.MANIFEST_NAME).exists()
-    assert "nothing will be changed" in capsys.readouterr().out
 
 
-def test_parked_profile_remains_in_migration_inventory(fleet):
-    home = fleet.root / "profiles/coder"
-    (home / "gateway.parked").touch()
-
-    plan = gm.build_migration_plan()
-    inventory = {p.name: p for p in plan.standalone_secondaries}
-    assert "coder" in inventory
-    assert inventory["coder"].home == home
-    assert inventory["coder"].pid == fleet.pids["coder"]
-    assert inventory["coder"].services == [("systemd", False)]
-
-    # Parking must not hide migration preflight conflicts either.
-    (home / ".env").write_text("TELEGRAM_BOT_TOKEN=111111:default-token\n", encoding="utf-8")
-    blocked = gm.build_migration_plan()
-    assert any("'coder'" in reason and "credential" in reason for reason in blocked.blockers)
 
 
 def test_preflight_never_imports_a_parked_profiles_plugins(fleet):
@@ -274,7 +241,7 @@ def test_apply_clears_the_manifest_on_success_and_the_compensator_restores(fleet
     runtime_path = fleet.root / "gateway_state.json"
     runtime = json.loads(runtime_path.read_text(encoding="utf-8"))
     runtime["platforms"] = {
-        "telegram": {"state": "connected"},
+        "homeassistant": {"state": "connected"},
         "coder:telegram": {"state": "connected"},
         "ops:discord": {"state": "connected"},
     }
@@ -292,7 +259,7 @@ def test_apply_clears_the_manifest_on_success_and_the_compensator_restores(fleet
     assert "coder, ops" in capsys.readouterr().out
     runtime = json.loads(runtime_path.read_text(encoding="utf-8"))
     assert runtime["served_profiles"] == []
-    assert runtime["platforms"] == {"telegram": {"state": "connected"}}
+    assert runtime["platforms"] == {"homeassistant": {"state": "connected"}}
     from scout_cli.gateway import named_profile_served_by_running_multiplexer
     assert named_profile_served_by_running_multiplexer("coder") is False
     assert not (fleet.root / gm.MANIFEST_NAME).exists()
@@ -380,53 +347,10 @@ def test_malformed_manifest_is_refused_before_any_mutation(fleet, capsys):
     assert "fix or delete the manifest" in capsys.readouterr().out
 
 
-def test_secondary_port_binder_is_notice_with_ingress_and_blocker_without(fleet, monkeypatch):
-    """The verdict follows the adapter's ``serves_profile_prefix`` declaration, not a hardcoded list."""
-    (fleet.root / "profiles/ops/.env").write_text(
-        "DISCORD_BOT_TOKEN=ops-discord-333333\nAPI_SERVER_KEY=ops-api-key-abcdef\n", encoding="utf-8")
-    (fleet.root / "profiles/ops/config.yaml").write_text(
-        "platforms:\n  api_server:\n    enabled: true\n    extra:\n      port: 9999\n", encoding="utf-8")
-    plan = gm.build_migration_plan()
-    assert not plan.blocked, plan.blockers
-    assert any("api_server" in n and "/p/ops/" in n for n in plan.notices), plan.notices
-
-    monkeypatch.setattr(gm, "platform_serves_profile_prefix", lambda value: False)
-    plan = gm.build_migration_plan()
-    assert plan.blocked and "api_server" in plan.blockers[0] and "/p/ops/" in plan.blockers[0]
 
 
-def test_serves_profile_prefix_is_read_from_adapter_classes():
-    from gateway.platforms.api_server import APIServerAdapter
-    from gateway.platforms.webhook import WebhookAdapter
-    assert APIServerAdapter.serves_profile_prefix and WebhookAdapter.serves_profile_prefix
-    assert gm.platform_serves_profile_prefix("api_server") is True
-    assert gm.platform_serves_profile_prefix("webhook") is True
-    # Every adapter that binds through shared_ingress.bind_listener is served at /p/<profile>/
-    # for a secondary, so migrate must report it as a notice, never a blocker.
-    for platform in ("sms", "line", "teams", "bluebubbles", "whatsapp_cloud", "msgraph_webhook"):
-        assert gm.platform_serves_profile_prefix(platform) is True, platform
-    # An outbound-only adapter never declares it (and never needs to).
-    assert gm.platform_serves_profile_prefix("telegram") is False
 
 
-def test_update_hook_migrates_when_unblocked_and_only_warns_when_blocked(fleet, capsys):
-    fleet.services["default"] = ("systemd", False)  # same service domain as the secondaries
-    gm.maybe_auto_migrate_after_update()
-    out = capsys.readouterr().out
-    assert "Migrating per-profile gateways" in out and "serves 3 profiles" in out
-    assert _config_flag(fleet.root) is True and not (fleet.root / gm.MANIFEST_NAME).exists()
-
-    # Blocked fleet: warning block with the fix + one-liner; nothing changes.
-    for f in ("gateway.pid", "gateway_state.json", gm.MANIFEST_NAME):
-        (fleet.root / f).unlink(missing_ok=True)
-    (fleet.root / "config.yaml").write_text("model:\n  default: x\n", encoding="utf-8")
-    fleet.services.update({"coder": ("systemd", False), "default": ("systemd", False)})
-    fleet.pids.update({"coder": 4101}); fleet.ops.clear()
-    (fleet.root / "profiles/coder/.env").write_text("TELEGRAM_BOT_TOKEN=111111:default-token\n", encoding="utf-8")
-    gm.maybe_auto_migrate_after_update()
-    out = capsys.readouterr().out
-    assert gm.MIGRATE_COMMAND in out and "profile_routes" in out
-    assert fleet.ops == [] and _config_flag(fleet.root) is None
 
 
 def test_update_hook_never_touches_single_profile_or_already_multiplexed(fleet, capsys):

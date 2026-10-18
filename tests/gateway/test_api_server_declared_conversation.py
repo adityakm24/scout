@@ -202,19 +202,6 @@ class TestOtherStructuresUnaffected:
     directory (contact lists) and the SessionStore's own routing table.
     """
 
-    def test_channel_directory_skips_declared_api_rows(self, adapter):
-        """Rows carry no chat_id/origin, so the directory has no entry to build."""
-        from gateway import channel_directory
-
-        a, db = adapter
-        _seed(db, "sess-live")
-        row = db.get_session("sess-live")
-        origin = {
-            "chat_id": row.get("chat_id"),
-            "thread_id": row.get("thread_id"),
-            "chat_name": row.get("display_name"),
-        }
-        assert channel_directory._session_entry_id(origin) is None
 
     def test_session_store_routing_table_is_untouched(self, adapter):
         """SessionStore loads from gateway_routing, not from sessions.session_key."""

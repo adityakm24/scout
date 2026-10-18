@@ -68,7 +68,6 @@ export const zhHant: Translations = {
     },
     nav: {
       analytics: "分析",
-      chat: "對話",
       config: "設定",
       cron: "排程任務",
       keys: "金鑰",
@@ -162,8 +161,6 @@ export const zhHant: Translations = {
     selectedSessionsDeleted: "已刪除 {count} 個工作階段",
     selectedSessionsSkippedActive: "已刪除 {deleted} 個；{count} 個因仍有回合執行中而保留",
     failedToDeleteSelected: "刪除所選工作階段失敗",
-    resumeInChat: "在對話中繼續",
-    newChat: "新對話",
     workspace: "工作區",
     workspaceDefault: "預設",
     workspaceRescan: "重新掃描儲存庫",
@@ -281,10 +278,6 @@ export const zhHant: Translations = {
     triggerNow: "立即觸發",
     delivery: {
       local: "本機",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "Email",
     },
   },
 
@@ -418,7 +411,6 @@ export const zhHant: Translations = {
       tts: "文字轉語音",
       stt: "語音轉文字",
       logging: "日誌",
-      discord: "Discord",
       auxiliary: "輔助",
     },
   },

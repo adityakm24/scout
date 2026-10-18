@@ -29,7 +29,7 @@ Path(os.environ["SCOUT_HOME"]).mkdir(exist_ok=True)
 Path(os.environ["SCOUT_HOME"], "config.yaml").write_text(yaml.safe_dump({"session_reset": {"mode": "both", "idle_minutes": 1}, "gateway": {"session_reset": {"mode": "daily", "at_hour": 0}}}), encoding="utf-8")
 config = load_gateway_config()
 assert "default_reset_policy" not in config.to_dict()
-source = SessionSource(platform=Platform.TELEGRAM, chat_id="cache", user_id="control")
+source = SessionSource(platform=Platform.API_SERVER, chat_id="cache", user_id="control")
 store = SessionStore(home / "sessions", config)
 entry = store.get_or_create_session(source)
 messages = [{"role": "user", "content": "persist across soft release"}]

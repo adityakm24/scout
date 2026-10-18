@@ -99,7 +99,6 @@ import {
   CAPABILITIES_ROUTE,
   COMMAND_CENTER_ROUTE,
   CRON_ROUTE,
-  MESSAGING_ROUTE,
   navigateToWorkspacePage,
   NEW_CHAT_ROUTE,
   PROFILES_ROUTE,
@@ -428,7 +427,6 @@ const NON_CONFIG_SETTINGS: ReadonlyArray<{
     keywords: [
       'connection',
       'connections',
-      'messaging',
       'remote',
       'multi',
       'instances',
@@ -872,13 +870,6 @@ function CommandPaletteBody({ onExited }: { onExited: () => void }) {
             run: go(CAPABILITIES_ROUTE)
           },
           {
-            action: 'nav.messaging',
-            icon: MessageCircle,
-            id: 'nav-messaging',
-            label: cc.nav.messaging.title,
-            run: go(MESSAGING_ROUTE)
-          },
-          {
             action: 'nav.artifacts',
             icon: Package,
             id: 'nav-artifacts',
@@ -961,7 +952,7 @@ function CommandPaletteBody({ onExited }: { onExited: () => void }) {
           {
             icon: RefreshCw,
             id: 'cc-restart-gateway',
-            keywords: ['gateway', 'restart', 'messaging', 'reconnect', 'system'],
+            keywords: ['gateway', 'restart', 'reconnect', 'system'],
             label: cc.restartGateway,
             run: () => void runGatewayRestart()
           },

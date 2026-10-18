@@ -150,7 +150,7 @@ export async function runGatewayRestart(): Promise<boolean> {
   }
 }
 
-// Watch a restart the BACKEND spawned (e.g. after Telegram QR onboarding writes
+// Watch a restart the BACKEND spawned (e.g. after onboarding writes
 // credentials) instead of one this app requested. Same indicator, same bounded
 // poll, same restart-window tolerance and reconnect follow-through.
 export async function watchGatewayRestartOutcome(): Promise<boolean> {

@@ -10,7 +10,6 @@ import { $paneStates } from '@/store/panes'
 
 import { $terminalTakeover } from '../store'
 
-import { ensureTerminal } from './terminals'
 import { TerminalWorkspace } from './workspace'
 
 /**
@@ -70,14 +69,12 @@ export function PersistentTerminal({ onAddSelectionToChat }: PersistentTerminalP
   // VS Code parity: once the pane has ever been opened, keep the terminals
   // mounted — and their shells alive — even while hidden. Hiding the pane just
   // collapses the slot, so the overlay below goes invisible; nothing is torn
-  // down. Only an explicit per-tab close kills a PTY. Re-opening re-ensures one
-  // terminal exists (covers having closed the last tab).
+  // down.
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     if (terminalTakeover && ready) {
       setMounted(true)
-      ensureTerminal()
     }
   }, [terminalTakeover, ready])
 

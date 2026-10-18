@@ -19,7 +19,6 @@ import {
   appViewForPath,
   ARTIFACTS_ROUTE,
   CAPABILITIES_ROUTE,
-  MESSAGING_ROUTE,
   navigateToWorkspacePage,
   NEW_CHAT_ROUTE,
   routePathname,
@@ -114,7 +113,7 @@ describe('syncWorkspaceRoute', () => {
     vi.mocked(revealTreePane).mockClear()
     vi.mocked(noteActiveTreeGroup).mockClear()
 
-    syncWorkspaceRoute(MESSAGING_ROUTE)
+    syncWorkspaceRoute(CAPABILITIES_ROUTE)
 
     expect($workspaceIsPage.get()).toBe(true)
     expect(fronted()).toBe(true)

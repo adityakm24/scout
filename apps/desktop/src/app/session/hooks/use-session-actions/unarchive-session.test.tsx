@@ -120,7 +120,7 @@ describe('unarchiveSession', () => {
   })
 
   it('routes a messaging-source row back to the messaging list, not the sessions one', async () => {
-    $archivedSessions.set([archivedSession({ id: 'msg-1', source: 'telegram' } as Partial<SessionInfo>)])
+    $archivedSessions.set([archivedSession({ id: 'msg-1', source: 'webhook' } as Partial<SessionInfo>)])
     vi.mocked(setSessionArchived).mockResolvedValue({ ok: true })
 
     const handle = await mountHarness()

@@ -29,7 +29,7 @@ def _runner():
 
 def _event(text: str) -> MessageEvent:
     source = SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         user_id="user-1",
         chat_id="chat-1",
         user_name="tester",

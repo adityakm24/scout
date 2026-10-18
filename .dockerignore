@@ -32,12 +32,6 @@ node_modules
 .cache/
 .build/
 
-# Built artifacts that are regenerated inside the image.  Excluded so local
-# rebuilds on the developer's machine don't invalidate the npm-install layer
-# that now depends on the full ui-tui/packages/scout-ink/ tree being present.
-ui-tui/dist/
-ui-tui/packages/scout-ink/dist/
-
 # CI/CD
 .github
 

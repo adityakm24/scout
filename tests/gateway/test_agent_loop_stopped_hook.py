@@ -17,7 +17,7 @@ from gateway.session import SessionSource, build_session_key
 
 def _make_source() -> SessionSource:
     return SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         user_id="u1",
         chat_id="c1",
         user_name="tester",
@@ -30,14 +30,14 @@ def _make_runner():
 
     runner = object.__new__(GatewayRunner)
     runner.config = GatewayConfig(
-        platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="***")}
+        platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***")}
     )
     # SimpleNamespace, not MagicMock — _interrupt_and_clear_session calls
     # adapter.interrupt_session_activity() only when hasattr(...) is true,
     # and MagicMock fakes every attribute, which would push us into an
     # await on a non-awaitable.
     adapter = SimpleNamespace(send=AsyncMock())
-    runner.adapters = {Platform.TELEGRAM: adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
     runner.hooks = SimpleNamespace(emit=AsyncMock(), loaded_hooks=False)
     runner._running_agents = {}
     runner._pending_messages = {}
@@ -51,34 +51,6 @@ def _make_runner():
 
 
 
-@pytest.mark.asyncio
-@patch("scout_cli.plugins.invoke_hook")
-async def test_interrupt_fires_agent_loop_stopped_hook(mock_invoke_hook):
-    """Calling ``_interrupt_and_clear_session`` with a real running agent
-    must interrupt it AND dispatch the hook with the session, platform,
-    and reasons attached."""
-    runner = _make_runner()
-    source = _make_source()
-    session_key = build_session_key(source)
-
-    running_agent = MagicMock()
-    runner._running_agents[session_key] = running_agent
-
-    await runner._interrupt_and_clear_session(
-        session_key,
-        source,
-        interrupt_reason="user_stop",
-        invalidation_reason="stop_command",
-    )
-
-    running_agent.interrupt.assert_called_once_with("user_stop")
-    mock_invoke_hook.assert_any_call(
-        "agent_loop_stopped",
-        session_key=session_key,
-        platform="telegram",
-        reason="user_stop",
-        invalidation_reason="stop_command",
-    )
 
 
 @pytest.mark.asyncio

@@ -17,10 +17,6 @@ from tui_gateway.server import _is_gateway_owned_source, _teardown_session
 
 
 class TestIsGatewayOwnedSource:
-    def test_builtin_gateway_platforms_are_owned(self):
-        for src in ("telegram", "discord", "whatsapp", "slack", "signal",
-                    "matrix", "mattermost", "bluebubbles", "sms", "email"):
-            assert _is_gateway_owned_source(src) is True, src
 
 
     def test_tui_owned_sources_are_not(self):
@@ -83,20 +79,6 @@ def _read_real_row(db_path, session_id):
 
 
 
-class TestGatewayOwnedSessionTeardown:
-    def test_viewer_teardown_leaves_gateway_owned_row_open(self, tmp_path, monkeypatch):
-        session_id = "gateway-owned-session"
-        db_path, session, agent = _make_real_session(
-            tmp_path, monkeypatch, source="telegram", session_id=session_id
-        )
-
-        _teardown_session(session, end_reason="ws_orphan_reap")
-
-        row = _read_real_row(db_path, session_id)
-        assert row["ended_at"] is None
-        assert row["end_reason"] is None
-        assert agent._end_session_on_close is False
-        assert agent._owns_session_db is False  # close() reached _finalize_owned_session_row
 
 
 class TestDesktopAutomaticReclaimTeardown:

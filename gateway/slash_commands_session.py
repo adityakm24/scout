@@ -16,14 +16,10 @@ from typing import Optional, Union
 
 from agent.i18n import t
 from agent.turn_context import extract_api_content_sidecar
-from gateway.config import Platform
 from gateway.platforms.base import EphemeralReply
 from gateway.platforms.event import MessageEvent, MessageType
-from gateway.session import SessionSource, build_session_key, is_shared_multi_user_session
+from gateway.session import SessionSource, is_shared_multi_user_session
 from gateway.session_transcript import TranscriptReadError
-from gateway.slash_commands_branch_thread import (
-    BRANCH_THREAD_PLATFORMS, branch_dest_source, branch_thread_parent, format_thread_ref, parse_branch_args,
-)
 from gateway.slash_commands_status import history_unreadable
 
 logger = logging.getLogger("gateway.run")  # log-record parity with gateway/run.py
@@ -195,17 +191,10 @@ class GatewaySessionCommandsMixin:
         else:  # no existing session: create one
             new_entry = await self.async_session_store.get_or_create_session(source, force_new=True)
             default_header = t("gateway.reset.header_new")
-        header = await asyncio.to_thread(self._telegram_topic_new_header, source) or default_header
+        header = default_header
         _title_arg = event.get_command_args().strip()
         if _title_arg and self._session_db and new_entry:
             header = await self._reset_titled_header(header, new_entry.session_id, _title_arg)
-        # Telegram DM topic lane: rebind (chat_id, thread_id) → session_id so the next message uses
-        # the fresh session instead of switching back to the old one.
-        if await asyncio.to_thread(self._is_telegram_topic_lane, source) and new_entry is not None:
-            try:
-                await asyncio.to_thread(self._record_telegram_topic_binding, source, new_entry)
-            except Exception:
-                logger.debug("Failed to rebind Telegram topic after /new", exc_info=True)
         _new_sid = new_entry.session_id if new_entry else None
         # Plugin on_session_reset hook (new session guaranteed to exist); best-effort.
         try:
@@ -257,16 +246,8 @@ class GatewaySessionCommandsMixin:
         return next((getattr(e, "origin", None) for e in entries.values()
                      if getattr(e, "session_id", None) == session_id), None)
 
-    @staticmethod
-    def _same_matrix_room(current: SessionSource, origin: Optional[SessionSource]) -> bool:
-        # thread_id is part of the session key, so another thread of the SAME room is a DIFFERENT
-        # session; non-threaded rooms compare "" == "".
-        return (origin is not None and origin.platform == Platform.MATRIX
-                and current.platform == Platform.MATRIX and origin.chat_id == current.chat_id
-                and _sattr(current, "thread_id") == _sattr(origin, "thread_id"))
-
     def _same_origin_chat(self, current: SessionSource, origin: Optional[SessionSource]) -> bool:
-        """Platform-agnostic counterpart to ``_same_matrix_room``.  Per-participant sessions must be
+        """Whether *origin* is the caller's own chat.  Per-participant sessions must be
         participant-scoped here too, else a co-member could resume another member's live session
         (IDOR); only an explicitly shared group/thread shares."""
         if origin is None or current is None:
@@ -368,12 +349,10 @@ class GatewaySessionCommandsMixin:
 
     async def _resume_row_visible(self, source: SessionSource, row: dict, allow_all: bool) -> bool:
         """Whether a listing *row* belongs to the caller's origin (blocks cross-origin enumeration of
-        ids/previews); Matrix is room-scoped, ``--all`` needs a configured admin everywhere."""
+        ids/previews); ``--all`` needs a configured admin."""
         if allow_all and self._resume_caller_is_admin(source):
             return True
         sid = str(row.get("id") or "")
-        if source.platform == Platform.MATRIX:
-            return self._same_matrix_room(source, self._gateway_session_origin_for_id(sid))
         return await self._resume_target_allowed(source, sid, allow_override=False)
 
     # ------------------------------------------------------------------ /retry, /undo
@@ -620,82 +599,11 @@ class GatewaySessionCommandsMixin:
                     f"failed to persist compressed transcript for session {new_session_id}")
             session_entry.session_id = new_session_id
             await self.async_session_store._save()
-            await asyncio.to_thread(self._sync_telegram_topic_binding, source, session_entry,
-                                    reason="compress-command")
         elif not getattr(tmp_agent, "_last_compaction_in_place", False):
             logger.warning(
                 "Manual /compress: session rotation did not occur (session_id unchanged) and in-place "
                 "mode is off — preserving original transcript instead of overwriting it (#44794).")
         await self.async_session_store.update_session(session_entry.session_key, last_prompt_tokens=0)
-
-    # ------------------------------------------------------------------------ /topic
-
-    async def _handle_topic_command(self, event: MessageEvent, args: str = "") -> str:
-        """Handle /topic for Telegram DM user-managed topic sessions."""
-        source = event.source
-        if source.platform != Platform.TELEGRAM or source.chat_type != "dm":
-            return t("gateway.topic.not_telegram_dm")
-        if not self._session_db:
-            return self._session_db_unavailable_reply()
-
-        # Defense in depth: /topic mutates SQLite side tables, so re-check the allowlist here.
-        try:
-            if not self._is_user_authorized_for_source(source):
-                return t("gateway.topic.unauthorized")
-        except Exception:
-            logger.debug("Topic auth check failed", exc_info=True)
-
-        args = event.get_command_args().strip()
-        if args.lower() in {"help", "?", "-h", "--help"}:
-            return self._telegram_topic_help_text()
-        if args.lower() in {"off", "disable", "stop"}:
-            return await self._disable_telegram_topic_mode_for_chat(source)
-        if args:
-            if not source.thread_id:
-                return t("gateway.topic.restore_needs_topic")
-            return await self._restore_telegram_topic_session(event, args)
-
-        capabilities = await self._get_telegram_topic_capabilities(source)
-        if capabilities.get("checked"):
-            blocked_key = None
-            if capabilities.get("has_topics_enabled") is False:
-                blocked_key = "gateway.topic.topics_disabled"
-            elif capabilities.get("allows_users_to_create_topics") is False:
-                blocked_key = "gateway.topic.topics_user_disallowed"
-            if blocked_key:  # debounced BotFather screenshot
-                if self._should_send_telegram_capability_hint(source):
-                    await self._send_telegram_topic_setup_image(source)
-                return t(blocked_key)
-
-        profile_name = self._telegram_topic_profile_name(source)
-        try:
-            await self._session_db.enable_telegram_topic_mode(
-                chat_id=str(source.chat_id), user_id=str(source.user_id), profile_name=profile_name,
-                has_topics_enabled=capabilities.get("has_topics_enabled"),
-                allows_users_to_create_topics=capabilities.get("allows_users_to_create_topics"))
-        except Exception as exc:
-            logger.exception("Failed to enable Telegram topic mode")
-            return t("gateway.topic.enable_failed", error=exc)
-
-        if not source.thread_id:
-            await self._ensure_telegram_system_topic(source)
-            return await self._telegram_topic_root_status_message(source)
-        try:
-            binding = await self._session_db.get_telegram_topic_binding(
-                chat_id=str(source.chat_id), thread_id=str(source.thread_id),
-                profile_name=profile_name)
-        except Exception:
-            logger.debug("Failed to read Telegram topic binding", exc_info=True)
-            binding = None
-        if not binding:
-            return t("gateway.topic.thread_ready")
-        session_id = str(binding.get("session_id") or "")
-        try:
-            title = await self._session_db.get_session_title(session_id)
-        except Exception:
-            title = None
-        return t("gateway.topic.bound_status", label=title or t("gateway.topic.untitled_session"),
-                 session_id=session_id)
 
     # ------------------------------------------------------------------ /save, /title
 
@@ -792,11 +700,6 @@ class GatewaySessionCommandsMixin:
                 return t("gateway.title.not_found")
         except ValueError as e:
             return t("gateway.shared.warn_passthrough", error=e)
-        # Mirror the title onto the Telegram forum topic name (auto titles already do this).
-        try:
-            await asyncio.to_thread(self._schedule_telegram_topic_title_rename, source, session_id, sanitized)
-        except Exception:
-            logger.debug("Failed to rename Telegram topic from /title", exc_info=True)
         return t("gateway.title.set_to", title=sanitized)
 
     # -------------------------------------------------------------- /resume, /sessions
@@ -841,15 +744,7 @@ class GatewaySessionCommandsMixin:
     async def _resume_access_denied_reply(self, source, target_id: str, name: str, allow_all: bool,
                                           allow_cross_room: bool) -> Optional[str]:
         """IDOR guard: a session id/title is a routing handle, not authority — bind /resume to the
-        caller's own room (Matrix) or platform/user/chat (other adapters)."""
-        if source.platform == Platform.MATRIX:
-            target_origin = self._gateway_session_origin_for_id(target_id)
-            if self._same_matrix_room(source, target_origin) or allow_cross_room:
-                return None
-            if target_origin is None:
-                return t("gateway.resume.matrix_blocked_no_origin", name=name)
-            return t("gateway.resume.matrix_blocked_other_room", name=name,
-                     room=target_origin.chat_name or target_origin.chat_id)
+        caller's own platform/user/chat."""
         if await self._resume_target_allowed(source, target_id, allow_override=(allow_all or allow_cross_room)):
             return None
         return t("gateway.resume.blocked_not_owner", name=name)
@@ -858,7 +753,7 @@ class GatewaySessionCommandsMixin:
         """Handle /resume command — list or switch to a previous session."""
         if not self._session_db:
             return self._session_db_unavailable_reply()
-        source = await asyncio.to_thread(self._normalize_source_for_session_key, event.source)
+        source = event.source
         session_key = self._session_key_for_source(source)
         try:
             parts = shlex.split(event.get_command_args().strip())
@@ -910,11 +805,6 @@ class GatewaySessionCommandsMixin:
             # The resume itself succeeded; only the count is missing — say so rather than "empty".
             return t("gateway.resume.resumed_no_count", title=title) + "\n" + history_unreadable()
         msg_count = len([m for m in history if m.get("role") == "user"]) if history else 0
-        if source.platform == Platform.MATRIX and allow_cross_room:
-            msg_part = t("gateway.resume.msg_count_one" if msg_count == 1 else "gateway.resume.msg_count_other",
-                         count=msg_count) if msg_count else ""
-            return t("gateway.resume.matrix_cross_room_success", title=title,
-                     room=source.chat_name or source.chat_id, msg_part=msg_part)
         if not msg_count:
             return t("gateway.resume.resumed_no_count", title=title)
         if msg_count == 1:
@@ -928,17 +818,11 @@ class GatewaySessionCommandsMixin:
         if allow_all and not self._resume_caller_is_admin(source):
             scope_note = t("gateway.resume.all_requires_admin")
         if not titled:
-            if source.platform == Platform.MATRIX and not allow_all:
-                return t("gateway.resume.matrix_no_named_sessions")
             base = t("gateway.resume.no_named_sessions")
             return f"{base}\n{scope_note}" if scope_note else base
         lines = [t("gateway.resume.list_header")]
         for idx, s in enumerate(titled[:10], start=1):
             title = s["title"]
-            if source.platform == Platform.MATRIX and allow_all:
-                origin = self._gateway_session_origin_for_id(str(s.get("id") or ""))
-                if origin:
-                    title = f"{title} — {origin.chat_name or origin.chat_id}"
             preview = s.get("preview", "")[:40]
             preview_part = t("gateway.resume.list_preview_suffix", preview=preview) if preview else ""
             lines.append(t("gateway.resume.list_item_numbered", index=idx, title=title, preview_part=preview_part))
@@ -962,7 +846,7 @@ class GatewaySessionCommandsMixin:
             return t("gateway.sessions.usage_search")
         if target:
             return await self._handle_resume_command(dataclasses.replace(event, text=f"/resume {target}"))
-        source = await asyncio.to_thread(self._normalize_source_for_session_key, event.source)
+        source = event.source
         session_key = self._session_key_for_source(source)
         # `/sessions all` is admin-only like `/resume --all` (else any caller could enumerate other
         # origins' ids/titles/previews); a non-admin gets explicit feedback, not a silent narrowing.
@@ -993,12 +877,8 @@ class GatewaySessionCommandsMixin:
     # ----------------------------------------------------------------------- /branch
 
     async def _handle_branch_command(self, event: MessageEvent) -> str:
-        """Handle /branch [--here] [name] — fork the current session into an independent copy.
-
-        Thread-capable platforms (Discord/Telegram/Slack/Matrix) open a NEW sibling thread bound
-        to the clone and leave this chat on the original session; ``--here`` (and every platform
-        without threads) switches the current chat onto the clone instead (#66023).
-        """
+        """Handle /branch [name] — fork the current session into an independent copy and switch
+        this chat onto it."""
         import json as _json
         import uuid as _uuid
         from datetime import datetime as _dt
@@ -1015,25 +895,18 @@ class GatewaySessionCommandsMixin:
         if not history:
             return t("gateway.branch.no_conversation")
         new_session_id = f"{_dt.now().strftime('%Y%m%d_%H%M%S')}_{_uuid.uuid4().hex[:6]}"
-        stay_here, branch_title = parse_branch_args(event.get_command_args())
+        branch_title = event.get_command_args().strip()
         if not branch_title:
             current_title = await self._session_db.get_session_title(current_entry.session_id)
             branch_title = await self._session_db.get_next_title_in_lineage(current_title or "branch")
         parent_session_id = current_entry.session_id
-        # The thread is created BEFORE the clone so a failed create never orphans a branch row;
-        # ``None`` = branch in place (--here, no threads here, or the adapter could not open one).
-        dest_source = None if stay_here else await self._branch_open_thread(source, branch_title)
-        in_place = dest_source is None
-        if in_place:
-            dest_source = source
-        dest_key = session_key if in_place else self._session_key_for_source(dest_source)
+        dest_source = source
+        dest_key = session_key
         # Full origin (same shape as the reset path in gateway/session.py); the live entry's origin
-        # may hold richer metadata than the triggering event's source (#82633). A thread branch
-        # is routed by the NEW thread, so its origin is the destination.
+        # may hold richer metadata than the triggering event's source (#82633).
         _branch_origin_json = None
         with contextlib.suppress(Exception):
-            _origin = (current_entry.origin or source) if in_place else dest_source
-            _branch_origin_json = _json.dumps(_origin.to_dict())
+            _branch_origin_json = _json.dumps((current_entry.origin or source).to_dict())
         # ``_branched_from`` keeps the branch visible in /resume and /sessions after the parent is
         # reopened and re-ended. ALL routing columns go in at CREATE time: a crash before
         # switch_session() records the peer would otherwise leave the branch unroutable.
@@ -1064,43 +937,11 @@ class GatewaySessionCommandsMixin:
                 new_session_id, [_branch_row(msg) for msg in history], chunk_rows=500)
         with contextlib.suppress(Exception):
             await self._session_db.set_session_title(new_session_id, branch_title)
-        if not in_place:
-            # Materialize the thread's own entry, then point IT at the clone; ``session_key`` (this
-            # chat) is never touched, so the original conversation stays live here.
-            await self.async_session_store.get_or_create_session(dest_source)
         new_entry = await self.async_session_store.switch_session(dest_key, new_session_id)
         if not new_entry:
             return t("gateway.branch.switch_failed")
         self._clear_session_boundary_security_state(dest_key)
         self._evict_cached_agent(dest_key)
         msg_count = len([m for m in history if m.get("role") == "user"])
-        if in_place:
-            key = "gateway.branch.branched_one" if msg_count == 1 else "gateway.branch.branched_many"
-            reply = t(key, title=branch_title, count=msg_count, parent=parent_session_id, new=new_session_id)
-            if not stay_here and source.platform in BRANCH_THREAD_PLATFORMS:
-                reply += "\n" + t("gateway.branch.thread_fallback")
-            return reply
-        key = "gateway.branch.branched_thread_one" if msg_count == 1 else "gateway.branch.branched_thread_many"
-        return t(key, title=branch_title, count=msg_count, parent=parent_session_id, new=new_session_id,
-                 thread=format_thread_ref(source.platform, dest_source.thread_id))
-
-    async def _branch_open_thread(self, source: SessionSource, title: str) -> Optional[SessionSource]:
-        """Open the sibling thread a plain ``/branch`` clones into; the destination source, or
-        None when this chat cannot host one (in-place fallback)."""
-        parent_id = branch_thread_parent(source)
-        adapter = self._delivery_adapter_for(source) if parent_id else None
-        if adapter is None:
-            return None
-        try:
-            thread_id = await adapter.create_handoff_thread(parent_id, title)
-        except Exception:
-            logger.warning("Branch: create_handoff_thread failed on %s; branching in place",
-                           source.platform.value, exc_info=True)
-            return None
-        if not thread_id:
-            return None
-        # Discord only answers un-mentioned follow-ups in threads it has participated in.
-        threads = getattr(adapter, "_threads", None)
-        if threads is not None:
-            await threads.mark_async(str(thread_id))
-        return branch_dest_source(source, parent_id=parent_id, thread_id=str(thread_id), title=title)
+        key = "gateway.branch.branched_one" if msg_count == 1 else "gateway.branch.branched_many"
+        return t(key, title=branch_title, count=msg_count, parent=parent_session_id, new=new_session_id)

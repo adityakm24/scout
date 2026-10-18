@@ -36,7 +36,7 @@ def _clear_approval_state():
 
 def _make_source() -> SessionSource:
     return SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         user_id="u1",
         chat_id="c1",
         user_name="tester",

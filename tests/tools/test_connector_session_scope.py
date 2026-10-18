@@ -33,14 +33,3 @@ def test_connector_scope_controls_schema_and_execution(monkeypatch, enabled, dis
         assert "not available in this session" in json.dumps(json.loads(result))
 
 
-def test_ordinary_platform_defaults_grant_connections_without_widening_webhook():
-    from scout_cli.tools_config import _get_platform_tools
-    from toolsets import resolve_toolset
-
-    for platform in ("cli", "telegram"):
-        enabled = _get_platform_tools({}, platform)
-        assert "connections" in enabled
-        assert "manage_connections" in {name for ts in enabled for name in resolve_toolset(ts)}
-    assert "connections" not in _get_platform_tools({}, "webhook")
-    for selection in ([], ["safe"], ["file"]):
-        assert "connections" not in _get_platform_tools({"platform_toolsets": {"cli": selection}}, "cli")

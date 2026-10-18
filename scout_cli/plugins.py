@@ -188,10 +188,9 @@ VALID_HOOKS: Set[str] = {
     # respawn_guarded, skipped_per_profile_capped, skipped_unassigned, skipped_nonspawnable,
     # skipped_locked). Privacy: result carries task ids, assignees, and workspace paths.
     # Gateway platform-boundary observer hooks (#64176). Observer-only; each callback isolated by
-    # invoke_hook. This surface grants no adapter handles or platform actions. Fired today: Telegram
-    # "reaction" + "message_edited"; Discord "message_edited", "message_deleted", "thread_created",
-    # "thread_renamed". Each event type carries its own event-local additive payload contract (see
-    # hooks.md). Other event types and hook names land here only together with real fire-sites and payload
+    # invoke_hook. This surface grants no adapter handles or platform actions. Fired by adapters that
+    # call ``set_platform_event_handler``'s handler. Each event type carries its own event-local additive
+    # payload contract (see hooks.md). Other event types and hook names land here only together with real fire-sites and payload
     # contracts; no inert VALID_HOOKS surface is registered ahead of implementation.
     "gateway_platform_event",
     # pre_command: BEFORE a recognized slash command's handler on CLI and gateway canonical dispatch;
@@ -287,15 +286,6 @@ class PluginContext:
     def state(self) -> PluginState:
         """This plugin's profile-scoped durable JSON state facade."""
         return PluginState(self.plugin_id, self.manifest.skill_namespace)
-
-    @cached_property
-    def platform_actions(self):
-        """Capability-gated platform action facade (``add_reaction``, ``set_thread_title``). Every call
-        re-checks ``gateway.platform_actions`` (legacy ``plugins.entries.<id>.allow_platform_actions``,
-        default OFF) and returns ``{"ok": bool, ...}`` — verbs never raise into hook dispatch; no adapter
-        handles or raw SDK objects."""
-        from scout_cli.platform_actions import PlatformActions
-        return PlatformActions(self.plugin_id)
 
     def _wrong_type(self, obj: Any, base_class: type, label: str, article: str = "a") -> bool:
         """Warn-and-ignore gate shared by every registrar that requires a base class."""
@@ -680,7 +670,7 @@ class PluginContext:
         argument_mode: str | None = None,
     ) -> Optional[PluginRegistration]:
         """Register an in-session slash command (``/name``); handler ``fn(raw_args: str) -> str | None``
-        (sync or async). ``args_hint`` (e.g. ``"<file>"``) lets adapters like Discord surface an argument
+        (sync or async). ``args_hint`` (e.g. ``"<file>"``) lets adapters surface an argument
         field; without it the command registers parameterless there but still accepts trailing text."""
         clean = name.lower().strip().lstrip("/").replace(" ", "-")
         if not clean:
@@ -836,30 +826,10 @@ class PluginContext:
         logger.debug("Plugin %s registered platform: %s", self.manifest.name, name)
         return handle
 
-    def register_slack_action_handler(
-        self, action_id: Any, callback: Callable,
-    ) -> PluginRegistration:
-        """Register a Slack Block Kit action handler, wired into ``slack_bolt.AsyncApp`` at connect.
-        ``action_id`` is anything ``slack_bolt.App.action()`` accepts; ``callback`` is
-        ``async def handler(ack, body, action)`` (``await ack()`` within 3s). Raises ``ValueError`` for
-        a non-callable callback or empty ``action_id``."""
-        if not callable(callback):
-            raise self._refuse("a Slack action handler with a non-callable callback")
-        if action_id is None or (isinstance(action_id, str) and not action_id.strip()):
-            raise self._refuse("a Slack action handler with an empty action_id")
-        entry = (action_id, callback, self.manifest.name)
-        handlers = self._manager._slack_action_handlers
-        handlers.append(entry)
-        handle = self._track("slack_action_handler", repr(action_id),
-                             lambda: self._manager._remove_identity(handlers, entry))
-        logger.debug("Plugin %s registered Slack action handler: %s", self.manifest.name, action_id)
-        return handle
-
     def register_platform_handler(self, platform: str, factory: Callable) -> None:
         """Register ``factory(native, adapter)``, invoked at ``connect()`` before/as the core handlers
-        register (``adapter`` read-only). ``native``: telegram PTB ``Application``, discord
-        ``commands.Bot``, slack ``AsyncApp``, matrix client, teams ``App``, dingtalk
-        ``DingTalkStreamClient``, line aiohttp ``web.Application``, others ``None``. Keep SDK imports
+        register (``adapter`` read-only). ``native`` is the adapter's SDK object (``None`` when it
+        has none). Keep SDK imports
         inside the factory; exceptions are logged and the platform still connects. Scope handlers in
         first-match dispatch tables so core flows keep working. Raises ``ValueError`` when not callable
         or platform is empty."""
@@ -871,12 +841,6 @@ class PluginContext:
         self._manager._platform_handler_factories.setdefault(key, []).append((factory, self.manifest.name))
         logger.debug("Plugin %s registered %s handler factory: %s", self.manifest.name, key,
                      getattr(factory, "__name__", repr(factory)))
-
-    def register_telegram_handler(self, factory: Callable) -> None:
-        """``register_platform_handler("telegram", factory)``. PTB dispatches only the FIRST matching
-        handler per group and core registers a catch-all ``CallbackQueryHandler`` — always scope with
-        ``pattern=`` or you swallow the core button flows."""
-        self.register_platform_handler("telegram", factory)
 
     @_serialized_replacement
     def register_auxiliary_task(
@@ -1242,7 +1206,7 @@ class PluginManager(PluginLoaderMixin, PluginDispatchMixin, PluginLedgerMixin):
         self._context_engine = None  # Set by a plugin via register_context_engine()
         # Manager-local registries keyed by name (see the matching ``PluginContext.register_*``):
         # plugins, hooks, middleware, CLI + slash commands, prompt sections, skills (qualified name ->
-        # metadata), portable MCP servers, auxiliary tasks, approval transports, Slack action handlers
+        # metadata), portable MCP servers, auxiliary tasks, approval transports
         # (matcher, callback, plugin_name), platform handler factories (lowercase platform -> list).
         self._plugins: Dict[str, LoadedPlugin] = {}
         self._hooks: Dict[str, List[Callable]] = {}
@@ -1259,7 +1223,6 @@ class PluginManager(PluginLoaderMixin, PluginDispatchMixin, PluginLedgerMixin):
         self._portable_mcp_server_plugins: Dict[str, str] = {}
         self._aux_tasks: Dict[str, Dict[str, Any]] = {}
         self._approval_transports: Dict[str, Any] = {}
-        self._slack_action_handlers: List[tuple] = []
         self._platform_handler_factories: Dict[str, List[tuple]] = {}
         # Process-owned discovery listeners (``on_plugin_loaded``); never cleared by unload().
         self._plugin_loaded_listeners: List[Callable] = []
@@ -1565,18 +1528,10 @@ class PluginManager(PluginLoaderMixin, PluginDispatchMixin, PluginLedgerMixin):
         """Read installed plugin entry points (see :func:`discover_entrypoint_manifests`)."""
         return discover_entrypoint_manifests()
 
-    def get_slack_action_handlers(self) -> List[tuple]:
-        """``(action_id, callback, plugin_name)`` tuples for the Slack adapter to wire at connect."""
-        return list(self._slack_action_handlers)
-
     def get_platform_handler_factories(self, platform: str) -> List[tuple]:
         """``(factory, plugin_name)`` tuples for one platform; adapters call ``factory(native,
         adapter)`` at connect (see :meth:`PluginContext.register_platform_handler`)."""
         return list(self._platform_handler_factories.get((platform or "").strip().lower(), []))
-
-    def get_telegram_handler_factories(self) -> List[tuple]:
-        """Back-compat alias for ``get_platform_handler_factories("telegram")``."""
-        return self.get_platform_handler_factories("telegram")
 
     def list_plugins(self) -> List[Dict[str, Any]]:
         """Return a list of info dicts for all discovered plugins."""

@@ -36,7 +36,7 @@ class _MinAdapter(BasePlatformAdapter):
 
 @pytest.fixture
 def adapter():
-    return _MinAdapter(PlatformConfig(enabled=True), Platform.TELEGRAM)
+    return _MinAdapter(PlatformConfig(enabled=True), Platform.HOMEASSISTANT)
 
 
 def _invoke(cb):

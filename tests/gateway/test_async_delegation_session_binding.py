@@ -60,7 +60,7 @@ class TestGatewayPinningFailsClosed:
             session_id=session_id,
             created_at=datetime.now(),
             updated_at=datetime.now(),
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_type="group",
         )
 
@@ -225,7 +225,7 @@ async def test_pending_pin_respects_concurrent_boundary(tmp_path, boundary):
     from gateway.session import AsyncSessionStore, SessionSource, SessionStore
 
     store = SessionStore(tmp_path / "sessions", GatewayConfig())
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id="test-chat", chat_type="dm", user_id="test-user")
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="test-chat", chat_type="dm", user_id="test-user")
     entry = store.get_or_create_session(source)
     runner = object.__new__(GatewayRunner)
     runner.session_store = store

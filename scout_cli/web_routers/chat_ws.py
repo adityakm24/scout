@@ -1,5 +1,4 @@
-"""Chat-tab WebSocket routes: /api/console, /api/pty, the /api/ws gateway
-sidecar and /api/pub + /api/events broadcast.
+"""Dashboard WebSocket routes: /api/console and the /api/ws gateway.
 
 Helpers/state that tests monkeypatch on ``web_server`` stay there and are
 reached through the late-binding seam (cycle-safe).
@@ -9,48 +8,23 @@ import asyncio
 import contextlib
 import json
 import logging
-import re
-from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
 from agent.interrupt_scope import InterruptScope, bind_interrupt_scope
-from scout_cli.pty_session import RegistryFull
-from scout_cli.web_deps import LateState, late
-from scout_cli.web_routers.chat_ws_errors import chat_start_failure_message
-from scout_cli.web_server_chat import (
-    _build_sidecar_url, _close_stalled_pty_input, _get_console_executor, _legacy_pump, _ws_auth_ok,
-    _ws_request_is_allowed,
-)
+from scout_cli.web_deps import late
+from scout_cli.web_server_chat import _get_console_executor, _ws_auth_ok, _ws_request_is_allowed
 
 _log = logging.getLogger("scout_cli.web_server")
 router = APIRouter()
 
 # Late-bound so a test's monkeypatch on the owning module wins at call time.
-_active_session_file_for_channel = late("_active_session_file_for_channel", "scout_cli.web_server_chat")
 _profile_scope = late("_profile_scope", "scout_cli.web_server_profiles")
-_resolve_chat_argv_async = late("_resolve_chat_argv_async", "scout_cli.web_server_chat")
 _resolve_profile_dir = late("_resolve_profile_dir", "scout_cli.web_server_profiles")
 _ws_auth_reason = late("_ws_auth_reason", "scout_cli.web_server_chat")
 _ws_client_reason = late("_ws_client_reason", "scout_cli.web_server_chat")
 _ws_host_origin_reason = late("_ws_host_origin_reason", "scout_cli.web_server_chat")
-_DASHBOARD_EMBEDDED_CHAT_ENABLED = LateState("_DASHBOARD_EMBEDDED_CHAT_ENABLED")
-
-
-def _get_event_state(app: "FastAPI"):
-    """(event_channels, event_lock) from app.state, lazily initialised when the
-    lifespan hasn't run (TestClient without a ``with`` block). The lifespan path
-    is preferred because it creates the Lock on the correct event loop."""
-    try:
-        return app.state.event_channels, app.state.event_lock
-    except AttributeError:
-        app.state.event_channels = {}
-        app.state.event_lock = asyncio.Lock()
-        return app.state.event_channels, app.state.event_lock
-
-
-_VALID_CHANNEL_RE = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
 
 
 def _ws_auth_mode() -> str:
@@ -65,33 +39,6 @@ def _ws_auth_mode() -> str:
     return "loopback"
 
 
-async def _broadcast_event(app: Any, channel: str, payload: str) -> None:
-    """Fan out one publisher frame to every subscriber on `channel`."""
-    event_channels, event_lock = _get_event_state(app)
-    async with event_lock:
-        subs = list(event_channels.get(channel, ()))
-    for sub in subs:
-        try:
-            await sub.send_text(payload)
-        except Exception:
-            # Subscriber went away mid-send; /api/events' finally removes it.
-            _log.warning("broadcast send failed for subscriber on %s", channel, exc_info=True)
-
-
-def _channel_or_close_code(ws: WebSocket) -> Optional[str]:
-    """Channel id from the query string, or None if invalid."""
-    channel = ws.query_params.get("channel", "")
-    return channel if _VALID_CHANNEL_RE.match(channel) else None
-
-
-def _read_active_session_file(path: Path) -> Optional[str]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    return str(data.get("session_id") or "").strip() or None
-
-
 def _ws_close_reason(text: str) -> str:
     """Clamp to RFC 6455's 123-byte close-reason limit (uvicorn raises past it);
     reasons embed an attacker-controlled origin, so truncate rather than crash."""
@@ -102,18 +49,14 @@ def _ws_close_reason(text: str) -> str:
 
 
 async def _ws_gate(ws: WebSocket, kind: str) -> Optional[tuple[str, str, str]]:
-    """Run the pre-accept gates for /api/console and /api/pty.
+    """Run the pre-accept gates for /api/console.
 
     Each gate maps to a distinct close code so the log and the browser banner
-    agree on the cause: 4404 chat disabled, 4401 bad credential, 4403
+    agree on the cause: 4401 bad credential, 4403
     host/origin mismatch, 4408 peer not allowed. Returns ``(peer, mode, cred)``
     once every gate passes, or None after closing the socket.
     """
     peer = ws.client.host if ws.client else "?"
-    if not _DASHBOARD_EMBEDDED_CHAT_ENABLED:
-        _log.info("%s refused: embedded chat disabled peer=%s", kind, peer)
-        await ws.close(code=4404, reason="embedded chat disabled")
-        return None
 
     auth_reason, cred = _ws_auth_reason(ws)
     mode = _ws_auth_mode()
@@ -137,11 +80,8 @@ async def _ws_gate(ws: WebSocket, kind: str) -> Optional[tuple[str, str, str]]:
 
 
 async def _close_unless_sidecar_allowed(ws: WebSocket) -> bool:
-    """Pre-accept gates for the /api/ws, /api/pub and /api/events sidecars:
-    4403 when chat is disabled or the request isn't allowed, 4401 on bad auth."""
-    if not _DASHBOARD_EMBEDDED_CHAT_ENABLED:
-        await ws.close(code=4403)
-        return False
+    """Pre-accept gates for the /api/ws gateway:
+    4403 when the request isn't allowed, 4401 on bad auth."""
     if not _ws_auth_ok(ws):
         await ws.close(code=4401)
         return False
@@ -427,171 +367,6 @@ async def console_ws(ws: WebSocket) -> None:
                 pass
 
 
-async def _pty_fail(ws: WebSocket, exc: BaseException) -> None:
-    """Tell the user why chat could not start, then close 1011 so the SPA renders
-    "Start new session". The raw exception goes to the server log only."""
-    _log.warning("pty start failed: %s: %s", type(exc).__name__, exc)
-    await ws.send_text(f"\r\n\x1b[31m{chat_start_failure_message(exc)}\x1b[0m\r\n")
-    await ws.close(code=1011)
-
-
-@router.websocket("/api/pty")
-async def pty_ws(ws: WebSocket) -> None:
-    from scout_cli.web_server_chat import PTY_REGISTRY, PtyBridge, PtyUnavailableError, _PTY_BRIDGE_AVAILABLE, _RESIZE_RE
-    from pm.package import InstallError
-    gate = await _ws_gate(ws, "pty")
-    if gate is None:
-        return
-    peer, mode, cred = gate
-    await ws.accept()
-    _log.info("pty accepted peer=%s mode=%s cred=%s", peer, mode, cred)
-
-    # Native Windows can't import the POSIX PTY bridge: say so and close cleanly.
-    if not _PTY_BRIDGE_AVAILABLE:
-        await ws.send_text(
-            "\r\n\x1b[31mChat unavailable: the embedded terminal requires a "
-            "POSIX PTY, which native Windows Python doesn't provide.\x1b[0m\r\n"
-            "\x1b[33mInstall Scout inside WSL2 to use the dashboard's /chat "
-            "tab — the rest of the dashboard works here.\x1b[0m\r\n"
-        )
-        await ws.close(code=1011)
-        return
-
-    raw_resume = ws.query_params.get("resume") or None
-    resume = raw_resume
-    profile = ws.query_params.get("profile") or None
-    channel = _channel_or_close_code(ws)
-    sidecar_url = _build_sidecar_url(channel) if channel else None
-    force_fresh = (ws.query_params.get("fresh") or "").strip().lower() in {"1", "true", "yes", "on"}
-    active_session_file: Optional[Path] = None
-
-    if channel:
-        active_session_file = _active_session_file_for_channel(ws.app, channel)
-        if force_fresh:
-            resume = None
-            try:
-                active_session_file.unlink(missing_ok=True)
-            except OSError:
-                pass
-        elif not resume:
-            resume = _read_active_session_file(active_session_file)
-            if resume:
-                # The client only pins the viewport to the bottom when it asked
-                # for `?resume=`; announce the implicit active-session replay so
-                # it gets the same follow-scroll treatment.
-                # See #93518.
-                await ws.send_json({"type": "resume", "id": resume})
-
-    resolve_kwargs = {"resume": resume, "sidecar_url": sidecar_url, "profile": profile}
-    if active_session_file is not None:
-        resolve_kwargs["active_session_file"] = str(active_session_file)
-    # A picked workspace only applies to a FRESH chat; a resumed session keeps its own cwd.
-    if not resume:
-        from scout_cli.web_routers.chat_workspaces import resolve_chat_cwd
-        try:
-            workspace_cwd = resolve_chat_cwd(ws.query_params.get("cwd"))
-        except HTTPException as exc:  # dead/relative path: fail closed, never the launch dir
-            await _pty_fail(ws, exc)
-            return
-        if workspace_cwd:
-            resolve_kwargs["workspace_cwd"] = workspace_cwd
-
-    try:
-        argv, cwd, env = await _resolve_chat_argv_async(**resolve_kwargs)
-    except HTTPException as exc:  # unknown/invalid profile
-        await _pty_fail(ws, exc)
-        return
-    except SystemExit as exc:  # _make_tui_argv sys.exit(1)s when node/npm is missing
-        await _pty_fail(ws, exc)
-        return
-    except InstallError as exc:  # PM could not provide node; its remedy names the fix
-        await _pty_fail(ws, exc)
-        return
-
-    raw_attach_token = ws.query_params.get("attach") or None
-    attach_token = raw_attach_token
-    registry_resume = raw_resume
-    if raw_resume and env:
-        registry_resume = env.get("SCOUT_TUI_RESUME") or raw_resume
-    if attach_token is not None and (registry_resume or profile):
-        # Key explicit resumes on their canonical target, never the active-session fallback.
-        attach_token = f"{attach_token}\0{profile or ''}\0{registry_resume or ''}"
-
-    def _spawn():
-        return PtyBridge.spawn(argv, cwd=cwd, env=env)
-
-    if attach_token is None:
-        # Legacy path: 1:1 socket<->PTY, killed on disconnect.
-        try:
-            bridge = _spawn()
-        except PtyUnavailableError as exc:
-            await _pty_fail(ws, exc)
-            return
-        except (FileNotFoundError, OSError) as exc:
-            await _pty_fail(ws, exc)
-            return
-        await _legacy_pump(ws, bridge)
-        return
-
-    # Keep-alive path: the PTY outlives this socket; reattach by token.
-    try:
-        await PTY_REGISTRY.close_other_sessions(raw_attach_token, keep_key=attach_token)
-        session, _created = await PTY_REGISTRY.attach_or_spawn(attach_token, spawn=_spawn)
-    except (PtyUnavailableError, FileNotFoundError, OSError, RegistryFull) as exc:
-        await _pty_fail(ws, exc)
-        return
-
-    # A fresh xterm can't rebuild the TUI from an arbitrary tail of alternate-
-    # screen differential output; reused PTYs emit a full frame after replay.
-    if not await session.attach(ws, force_redraw=not _created):
-        # attach() detaches itself when the client dropped mid-replay, and a socket
-        # superseded during replay is already closed by its replacement; only a
-        # stalled redraw write leaves THIS socket attached and worth closing.
-        if session._ws is ws:
-            await _close_stalled_pty_input(ws, path="keepalive-redraw")
-        PTY_REGISTRY.detach(attach_token, ws)
-        return
-
-    # Writer loop only: the session's drain task (one per PTY, inside the
-    # registry) forwards output to whichever socket is attached and ring-buffers
-    # it while detached. On child EOF it closes the attached socket with 4410,
-    # which unparks ws.receive() — same half-open protection as the legacy pump.
-    try:
-        while True:
-            try:
-                msg = await ws.receive()
-            except RuntimeError:  # receive() after the drain task already closed us
-                break
-            if msg.get("type") == "websocket.disconnect":
-                break
-            raw = msg.get("bytes")
-            if raw is None:
-                text = msg.get("text")
-                raw = text.encode("utf-8") if isinstance(text, str) else b""
-            if not raw:
-                continue
-            # Resize escape is consumed locally, never written to the PTY.
-            match = _RESIZE_RE.match(raw)
-            if match and match.end() == len(raw):
-                session.bridge.resize(cols=int(match.group(1)), rows=int(match.group(2)))
-                continue
-            if not await session.write(ws, raw):
-                await _close_stalled_pty_input(ws, path="keepalive")
-                break
-    except WebSocketDisconnect:
-        pass
-    finally:
-        # Detach only — the PTY keeps running for a reattach; the registry
-        # reaper closes it after the TTL (or immediately on process exit).
-        PTY_REGISTRY.detach(attach_token, ws)
-
-
-# --- /api/ws: JSON-RPC sidecar for the Chat tab. Drives the same
-# tui_gateway.dispatch surface Ink uses over stdio so the dashboard can render
-# structured metadata next to the xterm; both transports bind to the same
-# session id, so agent emits fan out to both sinks.
-
-
 @router.websocket("/api/ws")
 async def gateway_ws(ws: WebSocket) -> None:
     if not await _close_unless_sidecar_allowed(ws):
@@ -611,56 +386,3 @@ async def gateway_ws(ws: WebSocket) -> None:
         auth_identity=getattr(ws, "_scout_auth_identity", None),
         subprotocol=getattr(ws, "_scout_ws_subprotocol", None),
     )
-
-
-# --- /api/pub + /api/events: the PTY-side tui_gateway.entry opens /api/pub
-# (SCOUT_TUI_SIDECAR_URL from /api/pty's env) and writes every dispatcher emit
-# through it; the dashboard fans frames out to /api/events subscribers on the
-# same channel — the React sidebar's tool-call feed without touching the PTY
-# child's stdio handshake with Ink.
-
-
-async def _accept_channel_ws(ws: WebSocket) -> Optional[str]:
-    if not await _close_unless_sidecar_allowed(ws):
-        return None
-    channel = _channel_or_close_code(ws)
-    if not channel:
-        await ws.close(code=4400)
-        return None
-    await ws.accept()
-    return channel
-
-
-@router.websocket("/api/pub")
-async def pub_ws(ws: WebSocket) -> None:
-    channel = await _accept_channel_ws(ws)
-    if channel is None:
-        return
-    try:
-        while True:
-            await _broadcast_event(ws.app, channel, await ws.receive_text())
-    except WebSocketDisconnect:
-        pass
-
-
-@router.websocket("/api/events")
-async def events_ws(ws: WebSocket) -> None:
-    channel = await _accept_channel_ws(ws)
-    if channel is None:
-        return
-    event_channels, event_lock = _get_event_state(ws.app)
-    async with event_lock:
-        event_channels.setdefault(channel, set()).add(ws)
-    try:
-        while True:
-            # Subscribers don't speak — receive() just blocks until disconnect.
-            await ws.receive_text()
-    except WebSocketDisconnect:
-        pass
-    finally:
-        async with event_lock:
-            subs = event_channels.get(channel)
-            if subs is not None:
-                subs.discard(ws)
-                if not subs:
-                    event_channels.pop(channel, None)

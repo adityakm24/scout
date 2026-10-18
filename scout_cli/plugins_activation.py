@@ -34,7 +34,7 @@ def plugin_activation_summary(manager: Any, plugin_key: str) -> Dict[str, Any]:
     manifest promises. Keys appear only when non-empty.
 
     ``activated_now``: ``gateway_commands`` (slash names), ``gateway_transforms`` / ``hooks`` (hook names),
-    ``callbacks`` (platforms with a ``register_platform_handler`` factory / Slack action ids), ``locales``
+    ``callbacks`` (platforms with a ``register_platform_handler`` factory), ``locales``
     (``<lang>.<surface>`` language-pack layers).
     ``deferred``: ``tools`` (tool names; next session), ``prompt`` (section ids; next session),
     ``mcp_servers`` (the plugin's mcp.json server names exactly as registered; until ``mcp.reload``)."""
@@ -55,7 +55,6 @@ def plugin_activation_summary(manager: Any, plugin_key: str) -> Dict[str, Any]:
         now["hooks"] = sorted(hooks - _GATEWAY_TRANSFORM_HOOKS)
     callbacks = sorted(platform for platform, factories in manager._platform_handler_factories.items()
                        if any(plugin == name for _f, plugin in factories))
-    callbacks += [f"slack:{a}" for a in kinds.get("slack_action_handler", ())]
     if callbacks:
         now["callbacks"] = callbacks
     if kinds.get("locale"):  # language-pack layers: the i18n caches reset on registration, so live at once

@@ -68,7 +68,6 @@ export const es: Translations = {
     },
     nav: {
       analytics: "Analíticas",
-      chat: "Chat",
       config: "Configuración",
       cron: "Cron",
       keys: "Claves",
@@ -162,8 +161,6 @@ export const es: Translations = {
     selectedSessionsDeleted: "{count} sesiones eliminadas",
     selectedSessionsSkippedActive: "{deleted} eliminadas; {count} conservadas porque hay un turno en curso",
     failedToDeleteSelected: "No se pudieron eliminar las sesiones seleccionadas",
-    resumeInChat: "Reanudar en el chat",
-    newChat: "Nuevo chat",
     workspace: "espacio de trabajo",
     workspaceDefault: "Predeterminado",
     workspaceRescan: "Volver a buscar repositorios",
@@ -282,10 +279,6 @@ export const es: Translations = {
     triggerNow: "Ejecutar ahora",
     delivery: {
       local: "Local",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "Email",
     },
   },
 
@@ -420,7 +413,6 @@ export const es: Translations = {
       tts: "Texto a voz",
       stt: "Voz a texto",
       logging: "Registro",
-      discord: "Discord",
       auxiliary: "Auxiliar",
     },
   },

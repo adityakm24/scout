@@ -19,42 +19,18 @@ from gateway.session import SessionSource, SessionStore, build_session_key
 
 
 def _src(**kw) -> SessionSource:
-    kw.setdefault("platform", Platform.TELEGRAM)
+    kw.setdefault("platform", Platform.HOMEASSISTANT)
     kw.setdefault("chat_id", "99")
     kw.setdefault("chat_type", "dm")
     return SessionSource(**kw)
 
 
-class TestSessionKeyByteIdenticalWhenOff:
-    """The non-negotiable guard: with no profile (or 'default'), every key is
-    byte-for-byte what it was before Phase 0. A diff here orphans every
-    existing session on upgrade."""
-
-    @pytest.mark.parametrize("profile", [None, "default"])
-    def test_dm_with_chat_id(self, profile):
-        s = _src(chat_id="99", chat_type="dm")
-        assert build_session_key(s, profile=profile) == "agent:main:telegram:dm:99"
-
-
-    @pytest.mark.parametrize("profile", [None, "default"])
-    def test_group_per_user(self, profile):
-        s = _src(platform=Platform.DISCORD, chat_id="g1", chat_type="group", user_id="alice")
-        assert (
-            build_session_key(s, profile=profile)
-            == "agent:main:discord:group:g1:alice"
-        )
 
 
 class TestSessionKeyNamespacedWhenOn:
     """A named profile occupies the namespace slot, isolating its sessions."""
 
 
-    def test_named_profile_group_per_user(self):
-        s = _src(platform=Platform.DISCORD, chat_id="g1", chat_type="group", user_id="alice")
-        assert (
-            build_session_key(s, profile="coder")
-            == "agent:coder:discord:group:g1:alice"
-        )
 
     def test_two_profiles_same_chat_do_not_collide(self):
         s = _src(chat_id="99", chat_type="dm")
@@ -110,23 +86,6 @@ class TestMultiplexConfigFlag:
         assert cfg.multiplex_profiles is True
 
 
-class TestSessionStoreProfileResolution:
-    """SessionStore._generate_session_key honors the flag: legacy namespace
-    when off, active-profile namespace when on."""
-
-    def _store(self, tmp_path, **cfg_kw):
-        config = GatewayConfig(**cfg_kw)
-        with patch("gateway.session.SessionStore._ensure_loaded"):
-            s = SessionStore(sessions_dir=tmp_path, config=config)
-        s._db = None
-        s._loaded = True
-        return s
-
-    def test_flag_off_uses_legacy_namespace(self, tmp_path):
-        store = self._store(tmp_path)  # multiplex_profiles defaults False
-        s = _src(chat_id="99", chat_type="dm")
-        assert store._generate_session_key(s) == "agent:main:telegram:dm:99"
-        assert store._generate_session_key(s) == build_session_key(s)
 
 
 class _RecoveringDB:

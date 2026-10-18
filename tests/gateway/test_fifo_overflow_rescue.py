@@ -27,7 +27,7 @@ from gateway.run import GatewayRunner
 
 class _StubAdapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.HOMEASSISTANT)
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         return True
@@ -48,7 +48,7 @@ def _text_event(text: str, msg_id: str) -> MessageEvent:
     return MessageEvent(
         text=text,
         message_type=MessageType.TEXT,
-        source=MagicMock(chat_id="123", platform=Platform.TELEGRAM, profile=None),
+        source=MagicMock(chat_id="123", platform=Platform.HOMEASSISTANT, profile=None),
         message_id=msg_id,
     )
 

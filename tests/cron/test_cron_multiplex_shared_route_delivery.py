@@ -50,7 +50,7 @@ def _run(job, adapters):
         return {"success": False, "error": "DISCORD_BOT_TOKEN is not set"}
 
     config = MagicMock()
-    config.platforms = {Platform.DISCORD: PlatformConfig(enabled=True)}
+    config.platforms = {Platform.HOMEASSISTANT: PlatformConfig(enabled=True)}
     config.get_home_channel = lambda p: None
     with patch("gateway.config.load_gateway_config", return_value=config), \
          patch("cron.scheduler.load_config", return_value={"cron": {"wrap_response": False}}), \
@@ -72,74 +72,13 @@ def _primary_adapter():
     return adapter
 
 
-def test_satellite_routes_exact_target_through_primary_adapter(tmp_path, monkeypatch):
-    root = tmp_path / "root"
-    fitness_home = root / "profiles" / "fitness"
-    fitness_home.mkdir(parents=True)
-    (root / "config.yaml").write_text(yaml.safe_dump(PRIMARY_YAML), encoding="utf-8")
-    monkeypatch.setattr("scout_constants.get_default_scout_root", lambda: root)
-    primary = _primary_adapter()
-
-    token = set_scout_home_override(str(fitness_home))
-    try:
-        shared = SharedRouteAdapters(
-            {Platform.DISCORD: primary}, _primary_profile_routes_for_current_home()
-        )
-        # exact enabled route → primary adapter sends, no standalone attempt
-        error, standalone = _run(_job("1543065293755256852"), shared)
-        assert error is None, error
-        assert primary.sent == ["1543065293755256852"]
-        assert standalone == []
-
-        # unmatched chat, disabled route, route for another profile → the
-        # primary bot is NEVER used; delivery stays on the satellite's own
-        # (credentialless) standalone path and reports its failure.
-        for chat in ("424242", "999", "777"):
-            primary.sent.clear()
-            error, standalone = _run(_job(chat), shared)
-            assert error is not None and "DISCORD_BOT_TOKEN" in error
-            assert primary.sent == []
-            assert standalone == [chat]
-    finally:
-        reset_scout_home_override(token)
 
 
 def test_shared_view_is_falsy_without_routes_or_primary_adapters():
     assert not SharedRouteAdapters({}, [])
-    assert SharedRouteAdapters({Platform.DISCORD: object()}, []).get(Platform.DISCORD) is None
+    assert SharedRouteAdapters({Platform.HOMEASSISTANT: object()}, []).get(Platform.HOMEASSISTANT) is None
 
 
-def test_guild_scoped_route_authorizes_cron_target_even_when_satellite_has_no_platform_block(
-    tmp_path, monkeypatch,
-):
-    """The documented Discord route shape is ``guild_id + chat_id``. A cron target carries no guild
-    anchor, so the route must be matched on its target-exact discriminators; and the satellite's
-    missing/disabled ``platforms.discord`` block must not veto the PRIMARY's authorized transport
-    (#89302 sibling) — before, both fell to standalone "DISCORD_BOT_TOKEN is not set"."""
-    root = tmp_path / "root"
-    sat_home = root / "profiles" / "fitness"
-    sat_home.mkdir(parents=True)
-    (root / "config.yaml").write_text(yaml.safe_dump({
-        "gateway": {"multiplex_profiles": True, "profile_routes": [
-            {"platform": "discord", "guild_id": "G1", "chat_id": "C1", "profile": "fitness"}]},
-    }), encoding="utf-8")
-    monkeypatch.setattr("scout_constants.get_default_scout_root", lambda: root)
-    primary = _primary_adapter()
-
-    token = set_scout_home_override(str(sat_home))
-    try:
-        shared = SharedRouteAdapters({Platform.DISCORD: primary}, _primary_profile_routes_for_current_home())
-        for satellite_platforms in ({}, {Platform.DISCORD: PlatformConfig(enabled=False)}):
-            primary.sent.clear()
-            config = MagicMock()
-            config.platforms = satellite_platforms
-            config.get_home_channel = lambda p: None
-            with patch("gateway.config.load_gateway_config", return_value=config):
-                error, standalone = _run(_job("C1"), shared)
-            assert error is None, error
-            assert primary.sent == ["C1"] and standalone == []
-    finally:
-        reset_scout_home_override(token)
 
 
 def test_live_native_adapter_without_platform_block_is_not_treated_as_disabled():
@@ -151,12 +90,12 @@ def test_live_native_adapter_without_platform_block_is_not_treated_as_disabled()
     config.platforms = {}
     adapter = object()
     resolved, err = _resolve_target_transport(
-        {"id": "j"}, Platform.DISCORD, "discord", {"platform": "discord", "chat_id": "C1"},
-        {Platform.DISCORD: adapter}, config)
+        {"id": "j"}, Platform.HOMEASSISTANT, "discord", {"platform": "discord", "chat_id": "C1"},
+        {Platform.HOMEASSISTANT: adapter}, config)
     assert err is None and resolved[2] is adapter and resolved[1].enabled
     # an explicitly disabled block still vetoes
-    config.platforms = {Platform.DISCORD: PlatformConfig(enabled=False)}
+    config.platforms = {Platform.HOMEASSISTANT: PlatformConfig(enabled=False)}
     resolved, err = _resolve_target_transport(
-        {"id": "j"}, Platform.DISCORD, "discord", {"platform": "discord", "chat_id": "C1"},
-        {Platform.DISCORD: adapter}, config)
+        {"id": "j"}, Platform.HOMEASSISTANT, "discord", {"platform": "discord", "chat_id": "C1"},
+        {Platform.HOMEASSISTANT: adapter}, config)
     assert resolved is None and "not configured/enabled" in err

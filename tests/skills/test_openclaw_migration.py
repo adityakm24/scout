@@ -295,42 +295,6 @@ def test_unreadable_config_refused_by_model_config_too(tmp_path: Path):
     assert items and items[0]["status"] == mod.STATUS_ERROR
 
 
-def test_migrator_optionally_imports_supported_secrets_and_messaging_settings(tmp_path: Path):
-    mod = load_module()
-    source = tmp_path / ".openclaw"
-    target = tmp_path / ".scout"
-
-    (source / "credentials").mkdir(parents=True)
-    (source / "openclaw.json").write_text(
-        json.dumps(
-            {
-                "agents": {"defaults": {"workspace": "/tmp/openclaw-workspace"}},
-                "channels": {"telegram": {"botToken": "123:abc"}},
-            }
-        ),
-        encoding="utf-8",
-    )
-    (source / "credentials" / "telegram-default-allowFrom.json").write_text(
-        json.dumps({"allowFrom": ["111", "222"]}),
-        encoding="utf-8",
-    )
-    target.mkdir()
-
-    migrator = mod.Migrator(
-        source_root=source,
-        target_root=target,
-        execute=True,
-        workspace_target=None,
-        overwrite=False,
-        migrate_secrets=True,
-        output_dir=target / "migration-report",
-    )
-    migrator.migrate()
-
-    env_text = (target / ".env").read_text(encoding="utf-8")
-    assert "MESSAGING_CWD=/tmp/openclaw-workspace" in env_text
-    assert "TELEGRAM_ALLOWED_USERS=111,222" in env_text
-    assert "TELEGRAM_BOT_TOKEN=123:abc" in env_text
 
 
 
@@ -407,37 +371,6 @@ def test_source_candidate_finds_files_in_custom_workspace(tmp_path: Path):
 
 
 
-def test_slack_settings_migrated(tmp_path: Path):
-    """Slack bot/app tokens and allowlist migrate to .env."""
-    mod = load_module()
-    source = tmp_path / ".openclaw"
-    target = tmp_path / ".scout"
-    target.mkdir()
-    source.mkdir()
-
-    (source / "openclaw.json").write_text(
-        json.dumps({
-            "channels": {
-                "slack": {
-                    "botToken": "xoxb-slack-bot",
-                    "appToken": "xapp-slack-app",
-                    "allowFrom": ["U111", "U222"],
-                }
-            }
-        }),
-        encoding="utf-8",
-    )
-
-    migrator = mod.Migrator(
-        source_root=source, target_root=target, execute=True,
-        workspace_target=None, overwrite=False, migrate_secrets=False, output_dir=None,
-        selected_options={"slack-settings"},
-    )
-    report = migrator.migrate()
-    env_text = (target / ".env").read_text(encoding="utf-8")
-    assert "SLACK_BOT_TOKEN=xoxb-slack-bot" in env_text
-    assert "SLACK_APP_TOKEN=xapp-slack-app" in env_text
-    assert "SLACK_ALLOWED_USERS=U111,U222" in env_text
 
 
 
@@ -665,35 +598,6 @@ def test_command_allowlist_handles_invalid_utf8_bytes(tmp_path: Path):
     assert "/usr/bin/*" in config_text
 
 
-def test_messaging_settings_handles_invalid_utf8_in_telegram_allowlist(tmp_path: Path):
-    """Telegram allowFrom file with a non-UTF-8 byte should not abort migration;
-    valid user IDs elsewhere in the same file must still be imported."""
-    mod = load_module()
-    source = tmp_path / ".openclaw"
-    target = tmp_path / ".scout"
-    source.mkdir()
-    target.mkdir()
-
-    creds_dir = source / "credentials"
-    creds_dir.mkdir()
-    _write_invalid_utf8_json(
-        creds_dir / "telegram-default-allowFrom.json",
-        prefix=b'{"allowFrom": ["bad',
-        valid_value=b'", "123456789"]}',
-        suffix=b"",
-    )
-
-    migrator = mod.Migrator(
-        source_root=source, target_root=target, execute=True,
-        workspace_target=None, overwrite=False, migrate_secrets=False, output_dir=None,
-        selected_options={"messaging-settings"},
-    )
-    report = migrator.migrate()
-
-    items = [i for i in report["items"] if i["kind"] == "messaging-settings"]
-    assert items and items[0]["status"] == "migrated"
-    env_text = (target / ".env").read_text(encoding="utf-8")
-    assert "123456789" in env_text
 
 
 

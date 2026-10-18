@@ -81,7 +81,6 @@ vi.mock('@/scout', async importOriginal => ({
 }))
 vi.mock('@/lib/haptics', () => ({ triggerHaptic: vi.fn() }))
 vi.mock('@/lib/session-source', () => ({
-  handoffOriginSource: () => null,
   sessionSourceLabel: () => ''
 }))
 vi.mock('@/lib/session-export', () => ({ exportSession: vi.fn() }))
@@ -122,8 +121,6 @@ vi.mock('./use-profile-prewarm', () => ({
 
 const session = {
   cwd: '/tmp/project',
-  handoff_platform: null,
-  handoff_state: null,
   id: 's1',
   last_active: 0,
   message_count: 1,

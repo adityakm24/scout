@@ -54,7 +54,7 @@ def test_gateway_file_layers_preserve_unicode_and_fallback(tmp_path, monkeypatch
 class TestHomeChannelRoundtrip:
     def test_to_dict_from_dict(self):
         hc = HomeChannel(
-            platform=Platform.DISCORD,
+            platform=Platform.HOMEASSISTANT,
             chat_id="999",
             name="general",
             user_id="user-123",
@@ -63,7 +63,7 @@ class TestHomeChannelRoundtrip:
         d = hc.to_dict()
         restored = HomeChannel.from_dict(d)
 
-        assert restored.platform == Platform.DISCORD
+        assert restored.platform == Platform.HOMEASSISTANT
         assert restored.chat_id == "999"
         assert restored.name == "general"
         assert restored.user_id == "user-123"
@@ -88,7 +88,7 @@ class TestPlatformConfigRoundtrip:
             enabled=True,
             token="tok_123",
             home_channel=HomeChannel(
-                platform=Platform.TELEGRAM,
+                platform=Platform.HOMEASSISTANT,
                 chat_id="555",
                 name="Home",
             ),
@@ -159,7 +159,7 @@ class TestPlatformConfigMalformedSections:
         restored = PlatformConfig.from_dict(
             {
                 "enabled": True,
-                "home_channel": "telegram:123",
+                "home_channel": "homeassistant:123",
                 "extra": "oops",
             }
         )
@@ -169,50 +169,10 @@ class TestPlatformConfigMalformedSections:
         assert restored.extra == {}
 
 
-class TestGetConnectedPlatforms:
-    def test_returns_enabled_with_token(self):
-        config = GatewayConfig(
-            platforms={
-                Platform.TELEGRAM: PlatformConfig(enabled=True, token="t"),
-                Platform.DISCORD: PlatformConfig(enabled=False, token="d"),
-                Platform.SLACK: PlatformConfig(enabled=True),  # no token
-            },
-        )
-        connected = config.get_connected_platforms()
-        assert Platform.TELEGRAM in connected
-        assert Platform.DISCORD not in connected
-        assert Platform.SLACK not in connected
 
 
-    def test_dingtalk_recognised_via_env_vars(self, monkeypatch):
-        """DingTalk configured via env vars (no extras) should still be
-        recognised as connected — covers the case where _apply_env_overrides
-        hasn't populated extras yet."""
-        monkeypatch.setenv("DINGTALK_CLIENT_ID", "env_cid")
-        monkeypatch.setenv("DINGTALK_CLIENT_SECRET", "env_sec")
-        config = GatewayConfig(
-            platforms={
-                Platform.DINGTALK: PlatformConfig(enabled=True, extra={}),
-            },
-        )
-        assert Platform.DINGTALK in config.get_connected_platforms()
 
 
-class TestStreamingConfig:
-
-
-    def test_from_dict_malformed_numeric_values_fall_back_to_defaults(self):
-        restored = StreamingConfig.from_dict(
-            {
-                "edit_interval": "oops",
-                "buffer_threshold": "oops",
-                "fresh_final_after_seconds": "oops",
-            }
-        )
-        defaults = StreamingConfig()
-        assert restored.edit_interval == defaults.edit_interval
-        assert restored.buffer_threshold == defaults.buffer_threshold
-        assert restored.fresh_final_after_seconds == defaults.fresh_final_after_seconds
 
 
 class TestGatewayConfigRoundtrip:
@@ -245,40 +205,8 @@ class TestGatewayConfigRoundtrip:
         assert config.max_concurrent_sessions is None
 
 
-    def test_roundtrip_preserves_unauthorized_dm_behavior(self):
-        config = GatewayConfig(
-            unauthorized_dm_behavior="ignore",
-            platforms={
-                Platform.WHATSAPP: PlatformConfig(
-                    enabled=True,
-                    extra={"unauthorized_dm_behavior": "pair"},
-                ),
-            },
-        )
 
-        restored = GatewayConfig.from_dict(config.to_dict())
 
-        assert restored.unauthorized_dm_behavior == "ignore"
-        assert restored.platforms[Platform.WHATSAPP].extra["unauthorized_dm_behavior"] == "pair"
-
-    def test_email_defaults_to_ignore_for_unauthorized_dm_behavior(self):
-        config = GatewayConfig(
-            platforms={Platform.EMAIL: PlatformConfig(enabled=True)},
-        )
-
-        assert config.get_unauthorized_dm_behavior(Platform.EMAIL) == "ignore"
-
-    def test_email_can_opt_into_pairing_for_unauthorized_dm_behavior(self):
-        config = GatewayConfig(
-            platforms={
-                Platform.EMAIL: PlatformConfig(
-                    enabled=True,
-                    extra={"unauthorized_dm_behavior": "pair"},
-                ),
-            },
-        )
-
-        assert config.get_unauthorized_dm_behavior(Platform.EMAIL) == "pair"
 
 
 class TestLoadGatewayConfig:
@@ -339,44 +267,8 @@ class TestLoadGatewayConfig:
             == "${WEBHOOK_SECRET_UNSET_FOR_TEST}"
         )
 
-    def test_slack_ignored_channels_config_sets_env_bridge(self, tmp_path, monkeypatch):
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        (scout_home / "config.yaml").write_text(
-            "slack:\n"
-            "  ignored_channels:\n"
-            "    - C0123456789\n"
-            "    - C0987654321\n",
-            encoding="utf-8",
-        )
-
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.delenv("SLACK_IGNORED_CHANNELS", raising=False)
-
-        load_gateway_config()
-
-        assert os.getenv("SLACK_IGNORED_CHANNELS") == "C0123456789,C0987654321"
 
 
-    def test_typing_status_text_from_nested_platforms_block(self, tmp_path, monkeypatch):
-        """``platforms.slack.typing_status_text`` reaches PlatformConfig via
-        _merge_platform_map + the from_dict top-level read."""
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        (scout_home / "config.yaml").write_text(
-            "platforms:\n"
-            "  slack:\n"
-            "    enabled: true\n"
-            '    typing_status_text: "chasing yarn…"\n',
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-
-        config = load_gateway_config()
-
-        assert (
-            config.platforms[Platform.SLACK].typing_status_text == "chasing yarn…"
-        )
 
     def test_multiplex_profiles_from_nested_gateway_section(self, tmp_path, monkeypatch):
         """``gateway.multiplex_profiles: true`` (the nested form written by
@@ -423,33 +315,6 @@ class TestLoadGatewayConfig:
         assert config.multiplex_profiles is True
         assert not hasattr(config, "multiplex_profile_allowlist")
 
-    def test_discord_websocket_health_settings_seed_platform_extra(self, tmp_path, monkeypatch):
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        (scout_home / "config.yaml").write_text(
-            "discord:\n"
-            "  websocket_liveness_interval_seconds: 17\n"
-            "  websocket_liveness_failure_threshold: 4\n"
-            "  websocket_heartbeat_ack_max_age_seconds: 75\n"
-            "  websocket_max_latency_seconds: 30\n"
-            "  websocket_event_max_silence_seconds: 7200\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        for key in (
-            "SCOUT_DISCORD_LIVENESS_INTERVAL_SECONDS",
-            "SCOUT_DISCORD_LIVENESS_FAILURE_THRESHOLD",
-        ):
-            monkeypatch.delenv(key, raising=False)
-
-        config = load_gateway_config()
-
-        extra = config.platforms[Platform.DISCORD].extra
-        assert extra["websocket_liveness_interval_seconds"] == 17
-        assert extra["websocket_liveness_failure_threshold"] == 4
-        assert extra["websocket_heartbeat_ack_max_age_seconds"] == 75
-        assert extra["websocket_max_latency_seconds"] == 30
-        assert extra["websocket_event_max_silence_seconds"] == 7200
 
 
     def test_quick_commands_from_nested_gateway_section(self, tmp_path, monkeypatch):
@@ -638,228 +503,18 @@ class TestLoadGatewayConfig:
         assert config.always_log_local is False
 
 
-    def test_unauthorized_dm_behavior_from_nested_gateway_section(self, tmp_path, monkeypatch):
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "gateway:\n  unauthorized_dm_behavior: ignore\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-
-        config = load_gateway_config()
-
-        assert config.unauthorized_dm_behavior == "ignore"
 
 
-    def test_relay_platform_enabled_from_env_url(self, tmp_path, monkeypatch):
-        """GATEWAY_RELAY_URL must enable Platform.RELAY in config.platforms so
-        start_gateway()'s connect loop actually dials the connector. Registering
-        the adapter in the platform_registry is NOT enough — the connect loop
-        iterates config.platforms, so an un-enabled RELAY never connects (the
-        'relay registered but no inbound' bug)."""
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.setenv("GATEWAY_RELAY_URL", "https://connector.example/relay/")
-
-        config = load_gateway_config()
-
-        assert Platform.RELAY in config.platforms
-        relay = config.platforms[Platform.RELAY]
-        assert relay.enabled is True
-        # Trailing slash stripped; mirrored into extra for the connected-checker.
-        assert relay.extra.get("relay_url") == "https://connector.example/relay"
-        assert Platform.RELAY in config.get_connected_platforms()
 
 
-    def test_relay_env_url_disables_other_messaging_platforms(self, tmp_path, monkeypatch):
-        """A GATEWAY_RELAY_URL env stamp means the connector owns all platform
-        connections: directly-connected messaging platforms must be disabled,
-        even when explicitly enabled in config.yaml, while non-messaging
-        surfaces (api_server et al.) survive."""
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "gateway:\n"
-            "  platforms:\n"
-            "    telegram:\n"
-            "      enabled: true\n"
-            "      bot_token: '123:abc'\n"
-            "    api_server:\n"
-            "      enabled: true\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.setenv("GATEWAY_RELAY_URL", "https://connector.example/relay")
-        # Credential-based auto-enable path must be suppressed too.
-        monkeypatch.setenv("DISCORD_BOT_TOKEN", "fake-token-for-test")
-
-        config = load_gateway_config()
-
-        assert config.platforms[Platform.RELAY].enabled is True
-        assert config.platforms[Platform.TELEGRAM].enabled is False
-        discord_cfg = config.platforms.get(Platform.DISCORD)
-        assert discord_cfg is None or discord_cfg.enabled is False
-        # Non-messaging surfaces are untouched.
-        assert config.platforms[Platform.API_SERVER].enabled is True
 
 
-    def test_relay_yaml_url_keeps_other_platforms_enabled(self, tmp_path, monkeypatch):
-        """gateway.relay_url in config.yaml (no env stamp) keeps the old
-        additive behavior: relay runs beside directly-connected platforms."""
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "gateway:\n"
-            "  platforms:\n"
-            "    relay:\n"
-            "      enabled: true\n"
-            "      extra:\n"
-            "        relay_url: https://connector.example/relay\n"
-            "    telegram:\n"
-            "      enabled: true\n"
-            "      bot_token: '123:abc'\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.delenv("GATEWAY_RELAY_URL", raising=False)
-
-        config = load_gateway_config()
-
-        assert config.platforms[Platform.RELAY].enabled is True
-        assert config.platforms[Platform.TELEGRAM].enabled is True
 
 
-    def test_relay_env_url_opt_out_keeps_direct_platforms(self, tmp_path, monkeypatch):
-        """GATEWAY_RELAY_ALLOW_DIRECT_PLATFORMS=true opts a deployment out of
-        the relay-exclusive sweep: direct adapters stay enabled beside the
-        relay even with the GATEWAY_RELAY_URL env stamp present."""
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "gateway:\n"
-            "  platforms:\n"
-            "    telegram:\n"
-            "      enabled: true\n"
-            "      bot_token: '123:abc'\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.setenv("GATEWAY_RELAY_URL", "https://connector.example/relay")
-        monkeypatch.setenv("GATEWAY_RELAY_ALLOW_DIRECT_PLATFORMS", "true")
-
-        config = load_gateway_config()
-
-        assert config.platforms[Platform.RELAY].enabled is True
-        assert config.platforms[Platform.TELEGRAM].enabled is True
 
 
-    def test_relay_exclusive_reads_profile_scoped_env(self, tmp_path, monkeypatch):
-        """GATEWAY_RELAY_URL is a process-global deployment stamp (like the
-        API_SERVER listener vars, #69379): the scoped runner reload in a
-        multiplexed gateway must keep seeing it, so config's relay enablement
-        and sweep agree with gateway.relay.relay_url()/register_relay_adapter()
-        (which read os.environ). A secondary profile's .env stamp does NOT
-        override the shared process stamp — an isolated multiplex scope is
-        never consulted for globals. (A single-profile gateway, or the profile
-        the process is launched under, still activates via its .env because
-        load_scout_dotenv exports that file into os.environ at startup.)"""
-        from agent import secret_scope as ss
-
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "gateway:\n"
-            "  platforms:\n"
-            "    telegram:\n"
-            "      enabled: true\n"
-            "      bot_token: '123:abc'\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        # Managed-deploy stamp in the process env; the profile .env has none.
-        monkeypatch.setenv("GATEWAY_RELAY_URL", "https://deploy.example/relay")
-
-        profile_dir = tmp_path / "profile-a"
-        profile_dir.mkdir()
-        (profile_dir / ".env").write_text("", encoding="utf-8")
-
-        ss.set_multiplex_active(True)
-        tok = ss.set_secret_scope(ss.build_profile_secret_scope(profile_dir))
-        try:
-            config = load_gateway_config()
-        finally:
-            ss.reset_secret_scope(tok)
-            ss.set_multiplex_active(False)
-
-        # The deploy stamp survives the profile scope: relay enabled, sweep
-        # ran — matching what register_relay_adapter() sees in os.environ.
-        assert config.platforms[Platform.RELAY].enabled is True
-        assert config.platforms[Platform.TELEGRAM].enabled is False
-
-        # A profile-only stamp does NOT activate relay: globals read only the
-        # process env, so config and the relay transport can never disagree.
-        monkeypatch.delenv("GATEWAY_RELAY_URL", raising=False)
-        (profile_dir / ".env").write_text(
-            "GATEWAY_RELAY_URL=https://profile.example/relay\n", encoding="utf-8"
-        )
-        ss.set_multiplex_active(True)
-        tok = ss.set_secret_scope(ss.build_profile_secret_scope(profile_dir))
-        try:
-            config = load_gateway_config()
-        finally:
-            ss.reset_secret_scope(tok)
-            ss.set_multiplex_active(False)
-
-        relay_cfg = config.platforms.get(Platform.RELAY)
-        assert relay_cfg is None or relay_cfg.enabled is False
-        assert config.platforms[Platform.TELEGRAM].enabled is True
 
 
-    def test_relay_exclusive_sweep_log_levels_and_marker_cleanup(self, tmp_path, monkeypatch, caplog):
-        """Explicitly-enabled platforms are disabled at WARNING, auto-enabled
-        ones at INFO, and the _enabled_explicit marker never survives config
-        load."""
-        import logging as _logging
-
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "gateway:\n"
-            "  platforms:\n"
-            "    telegram:\n"
-            "      enabled: true\n"
-            "      bot_token: '123:abc'\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.setenv("GATEWAY_RELAY_URL", "https://connector.example/relay")
-        monkeypatch.setenv("DISCORD_BOT_TOKEN", "fake-token-for-test")
-
-        with caplog.at_level(_logging.INFO, logger="gateway.config"):
-            config = load_gateway_config()
-
-        warnings = [
-            r for r in caplog.records
-            if r.levelno == _logging.WARNING and "telegram" in r.getMessage()
-        ]
-        assert warnings, "explicit platform must be disabled at WARNING"
-        discord_infos = [
-            r for r in caplog.records
-            if r.levelno == _logging.INFO and "discord" in r.getMessage()
-        ]
-        if config.platforms.get(Platform.DISCORD) is not None:
-            assert discord_infos, "auto-enabled platform must be disabled at INFO"
-
-        for pc in config.platforms.values():
-            assert "_enabled_explicit" not in (pc.extra or {})
 
 
     def test_thread_require_mention_yaml_does_not_overwrite_env(self, tmp_path, monkeypatch):
@@ -868,7 +523,7 @@ class TestLoadGatewayConfig:
         scout_home.mkdir()
         config_path = scout_home / "config.yaml"
         config_path.write_text(
-            "discord:\n"
+            "homeassistant:\n"
             "  thread_require_mention: false\n",
             encoding="utf-8",
         )
@@ -882,38 +537,6 @@ class TestLoadGatewayConfig:
         assert os.environ.get("DISCORD_THREAD_REQUIRE_MENTION") == "true"
 
 
-    def test_bridges_nested_gateway_platforms_dingtalk_allowed_users_to_env(self, tmp_path, monkeypatch):
-        """gateway.platforms.dingtalk.extra.allowed_users must reach
-        DINGTALK_ALLOWED_USERS — it's the documented config.yaml alternative
-        to the env var (website/docs/user-guide/messaging/dingtalk.md), the
-        adapter reads it from PlatformConfig.extra, but gateway auth
-        (_is_user_authorized) only consults the env var.
-        """
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "gateway:\n"
-            "  platforms:\n"
-            "    dingtalk:\n"
-            "      enabled: true\n"
-            "      extra:\n"
-            "        allowed_users:\n"
-            "          - user-id-1\n"
-            "          - user-id-2\n",
-            encoding="utf-8",
-        )
-
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.delenv("DINGTALK_ALLOWED_USERS", raising=False)
-
-        config = load_gateway_config()
-
-        assert config.platforms[Platform.DINGTALK].extra["allowed_users"] == [
-            "user-id-1",
-            "user-id-2",
-        ]
-        assert os.environ.get("DINGTALK_ALLOWED_USERS") == "user-id-1,user-id-2"
 
     @pytest.mark.parametrize("yaml_text", ["gateway:\n  allow_all_users: true\n", "allow_all_users: true\n"])
     def test_allow_all_users_yaml_reaches_the_authz_gate(self, tmp_path, monkeypatch, yaml_text):
@@ -931,33 +554,9 @@ class TestLoadGatewayConfig:
         runner = object.__new__(GatewayAuthorizationMixin)
         runner.config = load_gateway_config()
         runner.adapters = {}
-        stranger = SessionSource(platform=Platform.TELEGRAM, user_id="999", chat_id="999", chat_type="dm")
+        stranger = SessionSource(platform=Platform.HOMEASSISTANT, user_id="999", chat_id="999", chat_type="dm")
         assert runner._is_user_authorized(stranger) is True
 
-    @pytest.mark.parametrize("yaml_text, env, expected", [
-        ("gateway:\n  allow_all_users: false\n", None, None),  # only a truthy grant is exported
-        ("gateway:\n  allow_all_users: true\n", "false", "false"),  # explicit env wins over YAML
-        ("gateway: {}\n", None, None),
-    ])
-    def test_allow_all_users_yaml_never_widens_past_env(self, tmp_path, monkeypatch, yaml_text, env, expected):
-        from gateway.authz_mixin import GatewayAuthorizationMixin
-        from gateway.session import SessionSource
-
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        (scout_home / "config.yaml").write_text(yaml_text, encoding="utf-8")
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        if env is None:
-            monkeypatch.delenv("GATEWAY_ALLOW_ALL_USERS", raising=False)
-        else:
-            monkeypatch.setenv("GATEWAY_ALLOW_ALL_USERS", env)
-
-        runner = object.__new__(GatewayAuthorizationMixin)
-        runner.config = load_gateway_config()
-        runner.adapters = {}
-        assert os.environ.get("GATEWAY_ALLOW_ALL_USERS") == expected
-        stranger = SessionSource(platform=Platform.TELEGRAM, user_id="999", chat_id="999", chat_type="dm")
-        assert runner._is_user_authorized(stranger) is False
 
     def test_bridged_allow_all_users_does_not_survive_a_config_flip_or_restart(self, tmp_path, monkeypatch):
         """The bridge owns what it wrote: flipping config.yaml to false and reloading closes the gate,
@@ -1000,7 +599,7 @@ class TestLoadGatewayConfig:
         runner.adapters = {}
         set_multiplex_active(True)
         try:
-            stranger = SessionSource(platform=Platform.TELEGRAM, user_id="999", chat_id="999", chat_type="dm")
+            stranger = SessionSource(platform=Platform.HOMEASSISTANT, user_id="999", chat_id="999", chat_type="dm")
             with _profile_runtime_scope(scout_home):
                 assert runner._is_user_authorized(stranger) is True
             assert "GATEWAY_ALLOW_ALL_USERS" not in build_profile_secret_scope(secondary)
@@ -1008,111 +607,11 @@ class TestLoadGatewayConfig:
             set_multiplex_active(False)
 
 
-    def test_top_level_platforms_override_nested_gateway_platforms(self, tmp_path, monkeypatch):
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "gateway:\n"
-            "  platforms:\n"
-            "    telegram:\n"
-            "      enabled: false\n"
-            "      token: nested-token\n"
-            "      extra:\n"
-            "        reply_prefix: nested\n"
-            "platforms:\n"
-            "  telegram:\n"
-            "    enabled: true\n"
-            "    token: top-token\n"
-            "    extra:\n"
-            "      reply_prefix: top\n",
-            encoding="utf-8",
-        )
-
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-
-        config = load_gateway_config()
-
-        telegram = config.platforms[Platform.TELEGRAM]
-        assert telegram.enabled is True
-        assert telegram.token == "top-token"
-        assert telegram.extra["reply_prefix"] == "top"
-
-    def test_shared_key_loop_bridges_allow_from_from_nested_platforms(self, tmp_path, monkeypatch):
-        """Regression: shared-key loop must bridge allow_from / require_mention
-        into PlatformConfig.extra even when the platform is configured only
-        under ``platforms:`` (no top-level ``telegram:`` block).
-
-        Before the fix, ``platform_cfg = yaml_cfg.get('telegram')`` returned
-        None for nested-only configs, so the loop skipped the platform entirely
-        and allow_from was silently ignored.  The apply_yaml_config_fn dispatch
-        received the same fix in #44f3e51; the shared-key loop now mirrors it.
-        """
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "platforms:\n"
-            "  telegram:\n"
-            "    allow_from:\n"
-            "      - \"111222333\"\n"
-            "      - \"444555666\"\n"
-            "    require_mention: true\n",
-            encoding="utf-8",
-        )
-
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-
-        config = load_gateway_config()
-
-        telegram = config.platforms[Platform.TELEGRAM]
-        assert telegram.extra.get("allow_from") == ["111222333", "444555666"], (
-            "allow_from configured under platforms.telegram must be bridged "
-            "into PlatformConfig.extra by the shared-key loop"
-        )
-        assert telegram.extra.get("require_mention") is True, (
-            "require_mention configured under platforms.telegram must be "
-            "bridged into PlatformConfig.extra by the shared-key loop"
-        )
 
 
-    def test_bridges_unauthorized_dm_behavior_from_config_yaml(self, tmp_path, monkeypatch):
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "unauthorized_dm_behavior: ignore\n"
-            "whatsapp:\n"
-            "  unauthorized_dm_behavior: pair\n",
-            encoding="utf-8",
-        )
-
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-
-        config = load_gateway_config()
-
-        assert config.unauthorized_dm_behavior == "ignore"
-        assert config.platforms[Platform.WHATSAPP].extra["unauthorized_dm_behavior"] == "pair"
 
 
-    def test_loads_telegram_rich_messages_from_gateway_platform_extra(self, tmp_path, monkeypatch):
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "gateway:\n"
-            "  platforms:\n"
-            "    telegram:\n"
-            "      extra:\n"
-            "        rich_messages: false\n",
-            encoding="utf-8",
-        )
 
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-
-        config = load_gateway_config()
-
-        assert config.platforms[Platform.TELEGRAM].extra["rich_messages"] is False
 
 
     def test_telegram_proxy_env_takes_precedence_over_config(self, tmp_path, monkeypatch):
@@ -1120,7 +619,7 @@ class TestLoadGatewayConfig:
         scout_home.mkdir()
         config_path = scout_home / "config.yaml"
         config_path.write_text(
-            "telegram:\n"
+            "homeassistant:\n"
             "  proxy_url: http://from-config:8080\n",
             encoding="utf-8",
         )
@@ -1133,49 +632,6 @@ class TestLoadGatewayConfig:
         import os
         assert os.environ.get("TELEGRAM_PROXY") == "socks5://from-env:1080"
 
-    def test_profile_scoped_env_overrides_do_not_fall_back_to_default_profile_env(
-        self,
-        tmp_path,
-        monkeypatch,
-    ):
-        default_home = tmp_path / "default-home"
-        default_home.mkdir()
-        default_config = default_home / "config.yaml"
-        default_config.write_text(
-            "multiplex_profiles: true\n",
-            encoding="utf-8",
-        )
-
-        secondary_home = tmp_path / "secondary-home"
-        secondary_home.mkdir()
-        secondary_config = secondary_home / "config.yaml"
-        secondary_config.write_text(
-            "multiplex_profiles: true\n",
-            encoding="utf-8",
-        )
-
-        monkeypatch.setenv("SCOUT_HOME", str(default_home))
-        monkeypatch.setenv("API_SERVER_ENABLED", "true")
-        monkeypatch.setenv("DISCORD_BOT_TOKEN", "default-token")
-
-        # Model the real multiplexed gateway: run.py flips the runtime flag at
-        # startup (set_multiplex_active) BEFORE any secondary-profile config
-        # loads.  Without the flag, a scope miss legitimately falls through to
-        # os.environ (single-profile overlay semantics, #67827) and this test
-        # would no longer exercise the cross-profile isolation it's about.
-        set_multiplex_active(True)
-        home_token = set_scout_home_override(str(secondary_home))
-        secret_token = set_secret_scope({"DISCORD_BOT_TOKEN": "worker-token"})
-        try:
-            config = load_gateway_config()
-        finally:
-            reset_secret_scope(secret_token)
-            reset_scout_home_override(home_token)
-            set_multiplex_active(False)
-
-        assert config.multiplex_profiles is True
-        assert config.platforms[Platform.DISCORD].token == "worker-token"
-        assert Platform.API_SERVER not in config.platforms
 
 
 class TestWebhookPortBridging:
@@ -1220,135 +676,9 @@ class TestWebhookPortBridging:
         assert wh.extra.get("host") == "0.0.0.0"
 
 
-    def test_root_level_platform_block_adapter_keys_reach_extra(self, tmp_path, monkeypatch):
-        """A ROOT-level ``webhook:`` block (not under ``platforms:``) is a supported spelling; its
-        adapter keys must reach ``extra`` like the nested form, with nested ``extra:`` winning."""
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        (scout_home / "config.yaml").write_text(
-            "webhook:\n  enabled: true\n  port: 9100\n  host: 127.0.0.2\n  secret: fixture\n"
-            "  extra:\n    port: 9999\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.delenv("WEBHOOK_PORT", raising=False)
-        wh = load_gateway_config().platforms[Platform.WEBHOOK]
-        assert (wh.extra.get("port"), wh.extra.get("host"), wh.extra.get("secret")) == (9999, "127.0.0.2", "fixture")
-
-    def test_msgraph_webhook_port_host_secret_bridged_from_toplevel(self, tmp_path, monkeypatch):
-        """msgraph_webhook top-level port/host/secret must be bridged into extra,
-        with an explicit extra: value still winning over the top-level one."""
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        config_path = scout_home / "config.yaml"
-        config_path.write_text(
-            "platforms:\n"
-            "  msgraph_webhook:\n"
-            "    enabled: true\n"
-            "    host: 0.0.0.0\n"
-            "    port: 8651\n"
-            "    secret: toplevel-secret\n"
-            "    extra:\n"
-            "      client_state: my-client-state\n"
-            "      secret: extra-secret\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.delenv("MSGRAPH_WEBHOOK_ENABLED", raising=False)
-        monkeypatch.delenv("MSGRAPH_WEBHOOK_PORT", raising=False)
-        monkeypatch.delenv("MSGRAPH_WEBHOOK_CLIENT_STATE", raising=False)
-
-        config = load_gateway_config()
-
-        assert Platform.MSGRAPH_WEBHOOK in config.platforms
-        ms = config.platforms[Platform.MSGRAPH_WEBHOOK]
-        assert ms.enabled is True
-        assert ms.extra.get("port") == 8651
-        assert ms.extra.get("host") == "0.0.0.0"
-        # explicit extra: wins over top-level
-        assert ms.extra.get("secret") == "extra-secret"
-        assert ms.extra.get("client_state") == "my-client-state"
 
 
-class TestHomeChannelEnvOverrides:
-    """Home channel env vars should apply even when the platform was already
-    configured via config.yaml (not just when credential env vars create it)."""
 
-    def test_existing_platform_configs_accept_home_channel_env_overrides(self):
-        cases = [
-            (
-                Platform.SLACK,
-                PlatformConfig(enabled=True, token="xoxb-from-config"),
-                {"SLACK_HOME_CHANNEL": "C123", "SLACK_HOME_CHANNEL_NAME": "Ops"},
-                ("C123", "Ops"),
-            ),
-            (
-                Platform.WHATSAPP,
-                PlatformConfig(enabled=True),
-                {
-                    "WHATSAPP_HOME_CHANNEL": "1234567890@lid",
-                    "WHATSAPP_HOME_CHANNEL_NAME": "Owner DM",
-                },
-                ("1234567890@lid", "Owner DM"),
-            ),
-            (
-                Platform.SIGNAL,
-                PlatformConfig(
-                    enabled=True,
-                    extra={"http_url": "http://localhost:9090", "account": "+15551234567"},
-                ),
-                {"SIGNAL_HOME_CHANNEL": "+1555000", "SIGNAL_HOME_CHANNEL_NAME": "Phone"},
-                ("+1555000", "Phone"),
-            ),
-            (
-                Platform.MATTERMOST,
-                PlatformConfig(
-                    enabled=True,
-                    token="mm-token",
-                    extra={"url": "https://mm.example.com"},
-                ),
-                {"MATTERMOST_HOME_CHANNEL": "ch_abc123", "MATTERMOST_HOME_CHANNEL_NAME": "General"},
-                ("ch_abc123", "General"),
-            ),
-            (
-                Platform.MATRIX,
-                PlatformConfig(
-                    enabled=True,
-                    token="syt_abc123",
-                    extra={"homeserver": "https://matrix.example.org"},
-                ),
-                {"MATRIX_HOME_ROOM": "!room123:example.org", "MATRIX_HOME_ROOM_NAME": "Bot Room"},
-                ("!room123:example.org", "Bot Room"),
-            ),
-            (
-                Platform.EMAIL,
-                PlatformConfig(
-                    enabled=True,
-                    extra={
-                        "address": "scout@test.com",
-                        "imap_host": "imap.test.com",
-                        "smtp_host": "smtp.test.com",
-                    },
-                ),
-                {"EMAIL_HOME_ADDRESS": "user@test.com", "EMAIL_HOME_ADDRESS_NAME": "Inbox"},
-                ("user@test.com", "Inbox"),
-            ),
-            (
-                Platform.SMS,
-                PlatformConfig(enabled=True, api_key="token_abc"),
-                {"SMS_HOME_CHANNEL": "+15559876543", "SMS_HOME_CHANNEL_NAME": "My Phone"},
-                ("+15559876543", "My Phone"),
-            ),
-        ]
-
-        for platform, platform_config, env, expected in cases:
-            config = GatewayConfig(platforms={platform: platform_config})
-            with patch.dict(os.environ, {**env, "SCOUT_HOME": os.environ["SCOUT_HOME"]}, clear=True):
-                _apply_env_overrides(config)
-
-            home = config.platforms[platform].home_channel
-            assert home is not None, f"{platform.value}: home_channel should not be None"
-            assert (home.chat_id, home.name) == expected, platform.value
 
 
 class TestMultiplexProfilesEnvOverride:
@@ -1533,56 +863,3 @@ class TestWebhookEnvOverride:
         assert webhook.enabled is True
         assert webhook.extra["secret"] == "yaml-secret"
 
-    def test_env_key_does_not_reenable_explicitly_disabled_webhook(self):
-        """An explicit ``platforms.webhook.enabled: false`` must survive
-        _apply_env_overrides() even when WEBHOOK_ENABLED is truthy in the env.
-
-        Regression (#85637): _apply_env_overrides() force-set
-        webhook.enabled = True whenever WEBHOOK_ENABLED was truthy. In
-        multiplex mode a secondary profile pins ``webhook.enabled: false`` so
-        it shares the default profile's listener instead of binding its own
-        port, but it still inherits the process-level WEBHOOK_ENABLED
-        (or carries one in its own .env). The unconditional re-enable
-        flipped it back on and tripped the MultiplexConfigError check.
-
-        The fix honors the explicit disable, flagged by ``_enabled_explicit``
-        in the platform's extra (set when the config.yaml pins enabled).
-        The MSGRAPH_WEBHOOK branch shares the shape and the fix.
-        """
-        config = GatewayConfig(
-            platforms={
-                Platform.WEBHOOK: PlatformConfig(
-                    enabled=False,
-                    extra={"_enabled_explicit": True},
-                ),
-                Platform.MSGRAPH_WEBHOOK: PlatformConfig(
-                    enabled=False,
-                    extra={"_enabled_explicit": True},
-                ),
-            },
-        )
-
-        with patch.dict(
-            os.environ,
-            {
-                "SCOUT_HOME": os.environ["SCOUT_HOME"],
-                "WEBHOOK_ENABLED": "true",
-                "WEBHOOK_PORT": "9999",
-                "WEBHOOK_SECRET": "shared-secret",
-                "MSGRAPH_WEBHOOK_ENABLED": "true",
-                "MSGRAPH_WEBHOOK_PORT": "9998",
-            },
-            clear=True,
-        ):
-            _apply_env_overrides(config)
-
-        # Explicit disable wins over the env-var presence.
-        assert config.platforms[Platform.WEBHOOK].enabled is False
-        assert config.platforms[Platform.MSGRAPH_WEBHOOK].enabled is False
-        assert config.platforms[Platform.MSGRAPH_WEBHOOK].extra.get("port") == 9998
-        # Port/secret are still wired through for the shared listener.
-        assert config.platforms[Platform.WEBHOOK].extra.get("port") == 9999
-        assert (
-            config.platforms[Platform.WEBHOOK].extra.get("secret")
-            == "shared-secret"
-        )

@@ -677,7 +677,7 @@ compression:
 
   # Opt-in compression progress notices on chat platforms (default: false).
   # By design, routine automatic compression is SILENT on human-facing chat
-  # gateways (Telegram, Discord, Slack, ...) — it happens in the background
+  # gateways — it happens in the background
   # with server-side logging only. Set true to also deliver the routine
   # progress statuses (compacting started, preflight/pre-API compression,
   # idle compaction, retry progress, and the compaction-complete notice) to
@@ -789,7 +789,7 @@ compression:
   # Gateway session-hygiene turn-hold budget (default: 10). Max seconds an
   # arriving user turn is held while a still-streaming hygiene summary
   # finishes. Distinct from hygiene_timeout_seconds (compressor inactivity
-  # budget): this bounds user-visible latency so chat transports (Telegram
+  # budget): this bounds user-visible latency so chat transports (
   # ~30s) do not drop a silent connection. On expiry the turn proceeds
   # uncompressed; the detached worker keeps its commit admission (when the
   # commit is watermark-fenced) and the summary is adopted at the next safe
@@ -955,7 +955,7 @@ prompt_caching:
 #                           #     enable_thinking: false
 #
 #   # Auto-generated short session titles after the first exchange.
-#   # Each active Discord/Telegram channel can spawn a background title
+#   # Each active gateway conversation can spawn a background title
 #   # call.  Cap concurrency to keep retries during provider incidents
 #   # from amplifying the request burst.  Leave unset for legacy behavior
 #   # (unlimited).
@@ -1084,7 +1084,7 @@ group_sessions_per_user: true
 # WS sidecar — tui/desktop/subagent rows whose start time AND newest
 # message are both older than the session TTL (SCOUT_TUI_SESSION_TTL_S,
 # default 6h) are closed with end_reason "startup_orphan_reap".
-# Messaging-platform sessions (Telegram, Discord, ...) are never touched;
+# Gateway-surface sessions (webhook, API, Home Assistant) are never touched;
 # live in-memory sessions are excluded; swept sessions stay resumable.
 #
 # dashboard:
@@ -1130,8 +1130,7 @@ group_sessions_per_user: true
 # ─────────────────────────────────────────────────────────────────────────────
 # Stream tokens to messaging platforms in real-time. The bot sends a message
 # on first token, then progressively edits it as more tokens arrive.
-# Disabled by default — enable to try the streaming UX on Telegram/Discord/Slack.
-# For Telegram, partial edits are sent as plain text and only the final edit uses MarkdownV2.
+# Disabled by default — enable to try the streaming UX on gateway platforms.
 streaming:
   enabled: false
   # transport: edit           # "edit" = progressive editMessageText
@@ -1265,7 +1264,7 @@ agent:
   # verify before finishing. Off by default (false). Set true to force it on
   # everywhere, or "auto" for the surface-aware mode: on for interactive
   # coding surfaces (CLI, TUI, desktop) and programmatic callers, off on
-  # conversational messaging surfaces (Telegram, Discord, etc.) where the
+  # conversational gateway surfaces where the
   # verification summary would reach a human as chat noise. The
   # SCOUT_VERIFY_ON_STOP env var (1/0) takes precedence.
   # verify_on_stop: false
@@ -1352,7 +1351,7 @@ gateway:
   # SSL_CERT_FILE) from the process environment, plus macOS system-proxy
   # auto-detection. Set to false when the gateway inherits a proxy it must not
   # use (e.g. a Windows Scheduled Task picking up a local Clash/V2Ray proxy that
-  # isn't running). Explicit per-platform vars like DISCORD_PROXY still apply.
+  # isn't running). Explicit per-platform <PLATFORM>_PROXY vars still apply.
   # trust_env: true
 
 # =============================================================================
@@ -1368,118 +1367,42 @@ gateway:
 # If a platform isn't listed here, its built-in default is used.
 #
 # You can use EITHER:
-#   - A preset like "scout-cli" or "scout-telegram" (curated tool set)
+#   - A preset like "scout-cli" (curated tool set)
 #   - A list of individual toolsets to compose your own (see list below)
 #
-# Supported platform keys: cli, telegram, discord, whatsapp, slack, qqbot, teams, google_chat
+# Supported platform keys: cli, cron, api_server, webhook, homeassistant
 #
 # Examples:
-#
-#   # Use presets (same as defaults):
-#   platform_toolsets:
-#     cli: [scout-cli]
-#     telegram: [scout-telegram]
-#
-#   # Custom: give Telegram only web + terminal + file + planning:
-#   platform_toolsets:
-#     telegram: [web, terminal, file, todo]
 #
 #   # Custom: CLI without browser or image gen:
 #   platform_toolsets:
 #     cli: [web, terminal, file, skills, todo, tts, cronjob]
 #
-#   # Restrictive: Discord gets read-only tools only:
+#   # Restrictive: the HTTP API gets read-only tools only:
 #   platform_toolsets:
-#     discord: [web, vision, skills, todo]
+#     api_server: [web, vision, skills, todo]
 #
 # If not set, defaults are:
 #   cli:           scout-cli            (everything + cronjob management)
-#   telegram:      scout-telegram       (terminal, file, web, vision, image, tts, browser, skills, todo, cronjob, messaging)
-#   discord:       scout-discord        (same as telegram)
-#   whatsapp:      scout-whatsapp       (same as telegram)
-#   slack:         scout-slack          (same as telegram)
-#   signal:        scout-signal         (same as telegram)
-#   homeassistant: scout-homeassistant  (same as telegram)
-#   qqbot:            scout-qqbot            (same as telegram)
-#   teams:            scout-teams            (same as telegram)
-#   google_chat:      scout-google_chat      (same as telegram)
+#   api_server:    scout-api-server
+#   webhook:       scout-webhook        (web search/extract, vision, clarify)
+#   homeassistant: scout-homeassistant
 #
 platform_toolsets:
   cli: [scout-cli]
-  telegram: [scout-telegram]
-  discord: [scout-discord]
-  whatsapp: [scout-whatsapp]
-  slack: [scout-slack]
-  signal: [scout-signal]
   homeassistant: [scout-homeassistant]
-  qqbot: [scout-qqbot]
-  yuanbao: [scout-yuanbao]
-  teams: [scout-teams]
-  google_chat: [scout-google_chat]
 
 # =============================================================================
 # Gateway Platform Settings
 # =============================================================================
-# Optional per-platform messaging settings.
-# Platform-specific knobs live under `extra`.
+# Optional per-platform settings. Platform-specific knobs live under `extra`.
 #
 # platforms:
-#   telegram:
-#     reply_to_mode: "first"  # off | first | all
-#     # guest_mode lets explicit @mentions from non-allowlisted groups through.
-#     # Default false; ordinary messages, replies, and regex wake words stay blocked.
-#     guest_mode: false
-#     # allowed_chats: ["-1001234567890"]
-#     extra:
-#       drop_pending_on_cold_boot: true # Drop Telegram's queued updates on a cold boot (default). Set false on hosts that power off, so messages sent while offline are delivered on the next start; watcher reconnects always preserve them
-#       disable_link_previews: false  # Set true to suppress Telegram URL previews in bot messages
-#       rich_messages: false          # Bot API 10.1 rich messages (tables/task lists/details/math); default false for copyable legacy MarkdownV2, set true to opt in
-#       rich_drafts: false            # Experimental rich draft previews during Telegram DM streaming; default false because Telegram Desktop/macOS can visually overlay draft frames
-#       allow_cjk_rich_messages: false # Keep CJK content on the safe MarkdownV2 path unless an unaffected client explicitly opts in to native rich rendering
-#       command_menu:
-#         # Telegram allows up to 100 BotCommands; Scout defaults to 60 so
-#         # all built-in commands plus common skill commands stay visible
-#         # while remaining under Telegram's payload-size limit. Clamped 1..100.
-#         max_commands: 60
-#         # prepend = user priority first, then Scout defaults
-#         # append  = Scout defaults first, then user priority
-#         # replace = only the list below defines priority
-#         priority_mode: prepend
-#         # Priority is applied across core + plugin + skill commands before
-#         # the cap, so a listed skill command always keeps a menu slot.
-#         priority:
-#           - my_plugin_command
-#           - my-important-skill
-#   slack:
-#     extra:
-#       # Render live tool calls as Slack-native plan/task cards. This explicit
-#       # opt-in works even though Slack text tool_progress defaults to off.
-#       native_task_cards: false
-#       # Slack user IDs whose Web-API posts (user token, e.g. your own
-#       # dashboard/mobile front-end) count as human instead of being dropped
-#       # as app traffic. Narrower than allow_bots: all. Users only — never apps.
-#       api_human_users: ["U0AAAAAAA", "U0BBBBBBB"]
-#       # Suppress automatic link-preview cards without removing clickable links.
-#       # Omit either key to preserve Slack's default for that preview type.
-#       unfurl_links: false
-#       unfurl_media: false
 #   webhook:
 #     extra:
 #       # Route scripts default to a 30 second timeout. Scripts must live under
 #       # the active profile's scripts directory and receive webhook JSON on stdin.
 #       script_timeout_seconds: 30
-#
-# Discord-specific settings (config.yaml top-level, not under platforms:):
-#
-# discord:
-#   require_mention: true            # Require @mention in server channels (default: true)
-#   bots_require_inline_mention: true  # Bot authors must type a literal @mention (default: true)
-#   auto_thread: true                # Auto-create thread on @mention (default: true)
-#   free_response_auto_thread: false # Free-response channels also auto-thread (default: reply inline)
-#   free_response_channels: ""       # Channel IDs where no mention is needed
-#   reactions: true                  # Show processing reactions (default: true)
-#   history_backfill: true           # Recover missed channel messages on mention (default: true)
-#   history_backfill_limit: 50       # Max messages to scan backwards (default: 50)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Available toolsets (use these names in platform_toolsets or the toolsets list)
@@ -1505,12 +1428,7 @@ platform_toolsets:
 #   cronjob      - cronjob (create/list/update/pause/resume/run/remove scheduled tasks)
 #
 # PRESETS (curated bundles):
-#   scout-cli       - All of the above except send_message
-#   scout-telegram  - terminal, file, web, vision, image_gen, tts, browser,
-#                      skills, todo, cronjob, send_message
-#   scout-discord   - Same as scout-telegram
-#   scout-whatsapp  - Same as scout-telegram
-#   scout-slack     - Same as scout-telegram
+#   scout-cli       - All of the above
 #
 # COMPOSITE:
 #   debugging    - terminal + web + file
@@ -1613,11 +1531,10 @@ platform_toolsets:
 # tts:
 #   provider: "gemini"
 #   speed: 1.0              # global speed multiplier (provider-specific overrides this)
-#   # Per-platform audio upload limits. Built-in defaults: discord 10 MiB,
-#   # telegram 50 MiB, everything else 10 MiB, each with safety_ratio 0.85
+#   # Per-platform audio upload limits. Built-in default: 10 MiB, each with safety_ratio 0.85
 #   # (the fraction of max_file_bytes actually targeted). Override per platform:
 #   delivery_profiles:
-#     telegram:
+#     api_server:
 #       max_file_bytes: 52428800
 #       safety_ratio: 0.85
 #   gemini:
@@ -1852,28 +1769,22 @@ display:
   # built-in default. To change one platform, set it under
   # display.platforms.<platform> instead.
   #
-  # Per-platform defaults can be quieter than the CLI. Telegram
-  # tunes for mobile: tool_progress and busy_ack_detail default off (no
-  # per-tool breadcrumb stream, no "iteration 21/60" debug detail in busy
-  # acks or heartbeats), but interim_assistant_messages and
-  # long_running_notifications STAY ON so the user has real signal between
-  # turn start and final answer (mid-turn assistant commentary + a single
-  # edit-in-place "⏳ Working — N min" heartbeat). Override under
-  # display.platforms.telegram.
+  # Per-platform defaults can be quieter than the CLI. Override under
+  # display.platforms.<platform>.
 
   # Auto-cleanup of temporary progress bubbles after the final response lands.
-  # On platforms that support message deletion (currently Telegram), this
+  # On platforms that support message deletion (per adapter), this
   # removes the tool-progress bubble, "⏳ Still working..." notices, and
   # context-pressure status messages once the final reply has been delivered —
   # keeping long-running turns visible live, then tidy afterward. Failed runs
   # leave the bubbles in place as breadcrumbs. Off by default.
-  # Per-platform override: display.platforms.telegram.cleanup_progress
+  # Per-platform override: display.platforms.<platform>.cleanup_progress
   #   true:  Delete tracked progress/status bubbles on successful turn
   #   false: Leave everything in place (default)
   # Example:
   #   display:
   #     platforms:
-  #       telegram:
+  #       api_server:
   #         cleanup_progress: true
   cleanup_progress: false
 
@@ -1901,14 +1812,14 @@ display:
   # notifications even if agent.gateway_notify_interval is non-zero. The
   # heartbeat edits a single message in place (where the adapter supports
   # editing) instead of posting a new bubble each interval.
-  # Default: true, including Telegram (silent agents are worse than a single
-  # edit-in-place heartbeat); false on Slack and on platforms that cannot edit.
+  # Default: true, including gateway platforms (silent agents are worse than a single
+  # edit-in-place heartbeat); false on platforms that cannot edit.
   # long_running_notifications: true
 
   # Include detailed iteration/tool/status context in busy acknowledgments
   # and long-running heartbeats. When true, busy acks show "iteration 21/60,
   # terminal, 10 min" and the heartbeat shows "⏳ Working — 12 min,
-  # iteration 21/60, terminal". When false (Telegram, Slack and no-edit
+  # iteration 21/60, terminal". When false (no-edit
   # platform default), both stay terse: "Interrupting current task" and
   # "⏳ Working — 12 min, terminal".
   # busy_ack_detail: true
@@ -1926,7 +1837,7 @@ display:
 
   # Background process notifications (gateway/messaging only).
   # Controls how chatty the process watcher is when you use
-  # terminal(background=true, notify_on_complete=true) from Telegram/Discord/etc.
+  # terminal(background=true, notify_on_complete=true) from a gateway platform
   #   concise: One-line status message on completion; failures include a short
   #            output tail (default)
   #   off:     No watcher messages at all

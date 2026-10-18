@@ -39,17 +39,17 @@ def _gateway_save(db, fmt, out):
     from gateway.session import SessionEntry, SessionSource, build_session_key
     from scout_state import AsyncSessionDB
 
-    source = SessionSource(platform=Platform.TELEGRAM, user_id="u1", chat_id="c1", user_name="t", chat_type="dm")
+    source = SessionSource(platform=Platform.HOMEASSISTANT, user_id="u1", chat_id="c1", user_name="t", chat_type="dm")
     runner = object.__new__(GatewayRunner)
     delivered = {}
     adapter = MagicMock()
     adapter.send_document = AsyncMock(side_effect=lambda **kw: delivered.update(
         text=open(kw["file_path"], encoding="utf-8").read()))
-    runner.adapters, runner._profile_adapters = {Platform.TELEGRAM: adapter}, {}
+    runner.adapters, runner._profile_adapters = {Platform.HOMEASSISTANT: adapter}, {}
     runner.session_store = MagicMock()
     runner.session_store.get_or_create_session.return_value = SessionEntry(
         session_key=build_session_key(source), session_id="s1", created_at=datetime.now(),
-        updated_at=datetime.now(), platform=Platform.TELEGRAM, chat_type="dm")
+        updated_at=datetime.now(), platform=Platform.HOMEASSISTANT, chat_type="dm")
     runner._session_db = AsyncSessionDB(db)
     event = MessageEvent(text=f"/save {fmt} {out.name}", source=source, message_id="m1")
     assert asyncio.run(runner._handle_save_command(event)) == "Export complete."

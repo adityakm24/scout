@@ -518,7 +518,7 @@ class GatewayModelCommandsMixin:
         # Normalize like a message turn (Telegram DM topic recovery) before deriving the override
         # key, so the override lands under the key the next turn reads.
         # Check for session override. See #30479.
-        source = await asyncio.to_thread(self._normalize_source_for_session_key, event.source)
+        source = event.source
         session_key = self._session_key_for_source(source)
         ctx = _ModelSwitchContext(
             # Gateway routing columns — forward ALL of them at CREATE time, same fix as the
@@ -704,7 +704,7 @@ class GatewayModelCommandsMixin:
         args, persist_global = self._parse_reasoning_command_args(raw_args)
         # Normalize (Telegram DM topic recovery) so the override key matches the next turn's.
         # See #30479.
-        _reasoning_source = await asyncio.to_thread(self._normalize_source_for_session_key, event.source)
+        _reasoning_source = event.source
         session_key = self._session_key_for_source(_reasoning_source)
         self._show_reasoning = self._load_show_reasoning()
         # Effective model (session /model override wins) so per-model reasoning_overrides display.

@@ -1580,9 +1580,7 @@ def _restart_manual_gateways(out: _GatewayRestartOutcome, _drain_budget) -> None
                 pid, _drain_budget, proc.profile, self_restart_pending=out.self_restart_pending_pids):
             with suppress(ProcessLookupError, PermissionError):
                 os.kill(pid, _signal.SIGTERM)
-        # Wait ≤5s for exit: Telegram keeps the old getUpdates session ~30s; a new gateway
-        # inside that window gets a 409 (_handle_polling_conflict retries, but a brief
-        # wait avoids it on fast machines).
+        # Wait ≤5s for exit so the replacement gateway does not race the old one for its port.
         _wait_for_gateway_exit(timeout=5.0, force_after=None)
         out.killed_pids.add(pid)
         if restart_mode == "external-supervisor":

@@ -31,7 +31,7 @@ def store(tmp_path, monkeypatch):
 
 
 def _pinned_key(store):
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id="c1", chat_type="dm",
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="c1", chat_type="dm",
                            user_id="u1", user_name="tester")
     key = store.get_or_create_session(source).session_key
     store.set_model_override(key, OVERRIDE)

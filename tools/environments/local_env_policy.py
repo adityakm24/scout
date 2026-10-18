@@ -3,7 +3,6 @@ names are Scout-managed credentials. The env *builders* applying it (``_make_run
 ``_sanitize_subprocess_env``, ``scout_subprocess_env``) live in ``tools.environments.local``."""
 
 import functools
-import os
 from typing import Optional
 
 # Prefix a caller uses in ``extra_env`` to force a blocklisted var through.
@@ -25,20 +24,12 @@ _STATIC_PROVIDER_ENV_BLOCKLIST = frozenset({
     "VERTEX_CREDENTIALS_PATH", "GOOGLE_APPLICATION_CREDENTIALS", "DEEPSEEK_API_KEY",
     "MISTRAL_API_KEY", "GROQ_API_KEY", "TOGETHER_API_KEY", "PERPLEXITY_API_KEY",
     "COHERE_API_KEY", "FIREWORKS_API_KEY", "XAI_API_KEY", "HELICONE_API_KEY",
-    "PARALLEL_API_KEY", "FIRECRAWL_API_KEY", "FIRECRAWL_API_URL",
-    "TELEGRAM_HOME_CHANNEL", "TELEGRAM_HOME_CHANNEL_NAME", "DISCORD_HOME_CHANNEL",
-    "DISCORD_HOME_CHANNEL_NAME", "DISCORD_REQUIRE_MENTION",
-    "DISCORD_FREE_RESPONSE_CHANNELS", "DISCORD_AUTO_THREAD", "SLACK_HOME_CHANNEL",
-    "SLACK_HOME_CHANNEL_NAME", "SLACK_ALLOWED_USERS", "WHATSAPP_ENABLED",
-    "WHATSAPP_MODE", "WHATSAPP_ALLOWED_USERS", "SIGNAL_HTTP_URL", "SIGNAL_ACCOUNT",
-    "SIGNAL_ALLOWED_USERS", "SIGNAL_GROUP_ALLOWED_USERS", "SIGNAL_HOME_CHANNEL",
-    "SIGNAL_HOME_CHANNEL_NAME", "SIGNAL_IGNORE_STORIES", "HASS_TOKEN", "HASS_URL",
+    "PARALLEL_API_KEY", "FIRECRAWL_API_KEY", "FIRECRAWL_API_URL", "HASS_TOKEN", "HASS_URL",
     "EMAIL_ADDRESS", "EMAIL_PASSWORD", "EMAIL_IMAP_HOST", "EMAIL_SMTP_HOST",
     "EMAIL_HOME_ADDRESS", "EMAIL_HOME_ADDRESS_NAME", "SCOUT_DASHBOARD_SESSION_TOKEN",
     "GATEWAY_ALLOWED_USERS", "GH_TOKEN", "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY_PATH",
     "GITHUB_APP_INSTALLATION_ID", "MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET",
-    "DAYTONA_API_KEY", "GATEWAY_RELAY_ID", "GATEWAY_RELAY_SECRET",
-    "GATEWAY_RELAY_DELIVERY_KEY", "VERCEL_OIDC_TOKEN", "VERCEL_TOKEN",
+    "DAYTONA_API_KEY", "VERCEL_OIDC_TOKEN", "VERCEL_TOKEN",
     "VERCEL_PROJECT_ID", "VERCEL_TEAM_ID",
     # Keys the OAuth provider profiles (qwen-oauth) also accept when pasted. The auth registry
     # mirrors env_vars only for api_key profiles, and discovering the provider plugins from here,
@@ -77,24 +68,19 @@ def _build_provider_env_blocklist() -> frozenset:
     # CLAUDE_CODE_OAUTH_TOKEN (via the anthropic registry entry) belongs to the user's
     # Claude Code install, not Scout: stripping it made agent-spawned ``claude`` CLIs
     # fall through to the shared Keychain / ~/.claude store and, on auth failure, wipe
-    # it — logging the user out. BUZZ_* is deliberately NOT discarded: this list feeds
-    # every scrub surface, so an import-time discard would leak BUZZ_PRIVATE_KEY into
-    # non-terminal children; the Buzz carve-out is terminal-only and context-gated
-    # (``_is_terminal_first_party_env``).
+    # it — logging the user out.
     # It is set and owned by the user's Claude Code install (subscription OAuth), not a Scout-managed
     # inference credential — Claude subscription auth is not a working Scout provider path. It arrives via
     # the registry loop above (anthropic api_key_env_vars), so remove it explicitly. See #55878.
     blocked.discard("CLAUDE_CODE_OAUTH_TOKEN")
-    # BUZZ_* is deliberately NOT discarded here, even for Buzz-managed agents (BUZZ_MANAGED_AGENT set by the
-    # buzz-acp harness). See #76243, #78026, #78065, #78511.
     return frozenset(blocked)
 
 
 def _build_adapter_secret_env() -> frozenset:
-    """Secrets the messaging adapters declare, process-wide: core ``password`` messaging entries
+    """Secrets the gateway adapters declare, process-wide: core ``password`` messaging entries
     of OPTIONAL_ENV_VARS, the bundled platform plugin manifests' secret entries, and the
-    secret-named keys the gateway env-override table reads (WEIXIN_TOKEN, FEISHU_ENCRYPT_KEY, ...).
-    Declared names only: a user's own ``SLACK_USER_TOKEN`` or ``LOCAL_LLM_API_KEY`` is not Scout's.
+    secret-named keys the gateway env-override table reads (HASS_TOKEN, ...).
+    Declared names only: a user's own ``LOCAL_LLM_API_KEY`` is not Scout's.
     A profile's user-installed platform plugins are per home: :func:`_home_adapter_secret_env`.
     Nothing here fails soft: an unreadable bundled manifest or env table fails the import rather
     than dropping its secrets from the policy."""
@@ -174,78 +160,6 @@ def _is_provider_env_blocklisted(name: str, _registered: "frozenset | None" = No
     return upper in (_registered_adapter_secret_env() if _registered is None else _registered)
 
 
-# First-party platform credentials (``BUZZ_*``, driving the platform-mandated ``buzz``
-# CLI) carved out of the TERMINAL scrub only (``_make_run_env``,
-# ``_sanitize_subprocess_env``); execute_code, scout_subprocess_env, docker and
-# env_passthrough registration stay sealed (GHSA-rhgp-j443-p4rf). CONTEXT-GATED via
-# ``_buzz_terminal_context_active``: a Telegram/CLI/cron session on a host that also
-# runs a Buzz gateway must not get the signing key. Values are used directly, never
-# scope-resolved (UnscopedSecretError under multiplex); the snapshot treats them as
-# profile-scoped. Prefix-based so future BUZZ_* names need no code change.
-# First-party platform credentials the agent's own platform adapters need in terminal children (e.g. the
-# ``BUZZ_*`` vars for the Buzz messaging platform, which drive the platform-mandated ``buzz`` CLI:
-# BUZZ_PRIVATE_KEY, BUZZ_AUTH_TAG, BUZZ_RELAY_URL, and the other BUZZ_* names). These are the agent's OWN
-# credentials — a Buzz community agent is expected to operate the ``buzz`` CLI — so they are carved out of
-# the terminal scrub. CONTEXT-GATED: the carve-out applies ONLY when this process/session is actually
-# operating as a Buzz agent — either the process is a Buzz-ACP managed agent (``BUZZ_MANAGED_AGENT`` is set,
-# only by Buzz Desktop's buzz-acp harness; see #76243 / #78511) or the current session's platform is
-# ``buzz`` (the gateway's ``SCOUT_SESSION_PLATFORM`` ContextVar; concurrency safe under a multi-session
-# host). A Telegram/CLI/cron session on a host that also runs a Buzz gateway does NOT get BUZZ_PRIVATE_KEY
-# in its terminal children — blanket passthrough of a signing key to every terminal child on the host would
-# be wrong (maintainer triage note on #76243: don't expose the key to unrelated shell commands).
-# ``_sanitize_subprocess_env`` is also consumed by search workers (e.g. the ddgs web-search subprocess), the
-# computer-use driver binary, and user-script runners (bang ``!`` commands, quick commands, cron scripts,
-# webhook-filter scripts), so those children receive the vars too — matching the approved background/PTY
-# scope. Every other surface stays sealed — execute_code scrubbing, :func:`scout_subprocess_env` (browser /
-# TUI host / copilot-executor spawns), docker children, and ``env_passthrough`` registration (skills/config
-# still cannot register these names). The GHSA-rhgp-j443-p4rf seal is preserved because no registration path
-# is opened; this is a scrub-path exemption, not an allowlist addition. First-party matches use the merged
-# env value directly — they are the process's own env values and are never scope-resolved (a profile secret
-# scope under multiplex would otherwise raise UnscopedSecretError at passthrough-resolution call sites);
-# only skill/config passthrough names resolve through the profile secret scope. The snapshot mechanism
-# treats these names like profile-scoped passthrough names (see
-# ``LocalEnvironment._additional_profile_scoped_passthrough_names``) so they never persist in the shared
-# terminal snapshot across profiles. Contrast with CLAUDE_CODE_OAUTH_TOKEN above, which is discarded from
-# the blocklist entirely because it is NOT a Scout credential; these ARE Scout-managed first-party
-# platform credentials, so they stay IN the blocklist for every non-terminal surface. See issue #78026 (Buzz
-# agents could not use ``buzz`` from the terminal tool) and #76243 (Buzz Desktop managed agent wakes but
-# cannot reply).
-_TERMINAL_FIRST_PARTY_ENV_PREFIXES = ("BUZZ_",)
-
-
-def _matches_terminal_first_party_prefix(name: str) -> bool:
-    """Pure name check (``BUZZ_*``), regardless of session context — the snapshot
-    exclusion must stay conservative even when the carve-out is inactive.
-    Case-folded: on Windows the env block is case-insensitive, so a
-    lowercase-stored ``buzz_private_key`` IS the credential; it needs the
-    carve-out (and the snapshot exclusion) just like the canonical name."""
-    return name.upper().startswith(_TERMINAL_FIRST_PARTY_ENV_PREFIXES)
-
-
-def _buzz_terminal_context_active() -> bool:
-    """True when this process/session operates as a Buzz agent: ``BUZZ_MANAGED_AGENT`` in
-    the process env (set only by Buzz Desktop's buzz-acp harness), or the live session's
-    platform is ``buzz`` via the gateway ContextVar — authoritative under a concurrent
-    multi-session host, so a sibling Telegram session resolves its OWN platform.
-
-    Gateway / CLI / cron / kanban processes never carry it. See #76243.
-    """
-    if os.environ.get("BUZZ_MANAGED_AGENT"):
-        return True
-    try:
-        from gateway.session_context import get_session_env
-
-        return get_session_env("SCOUT_SESSION_PLATFORM", "").strip().lower() == "buzz"
-    except Exception:
-        return False
-
-
-def _is_terminal_first_party_env(name: str) -> bool:
-    """``name`` is a first-party platform credential (``BUZZ_*``) AND the current
-    process/session context entitles it to reach terminal children."""
-    return _matches_terminal_first_party_prefix(name) and _buzz_terminal_context_active()
-
-
 # Active-venv markers that must NOT leak: VIRTUAL_ENV/CONDA_PREFIX make uv/poetry sync
 # ANOTHER project's deps into the Scout venv (still reachable via PATH, so stripping
 # is safe); PYTHONHOME redirects a child interpreter's stdlib to the Scout venv
@@ -268,13 +182,10 @@ _ACTIVE_VENV_MARKER_VARS = ("VIRTUAL_ENV", "CONDA_PREFIX", "PYTHONHOME")
 def _is_scout_internal_secret(key: str) -> bool:
     """True for Scout-internal secrets injected under *dynamic* names the static
     blocklist cannot enumerate: ``AUXILIARY_<TASK>_API_KEY``/``_BASE_URL`` (per-task
-    side-LLM credentials) and ``GATEWAY_RELAY_*_SECRET``/``_KEY``/``_TOKEN`` (relay
-    auth; non-secret routing hints stay visible). Stripped on every spawn path
-    regardless of env_passthrough registration or ``inherit_credentials``."""
+    side-LLM credentials). Stripped on every spawn path regardless of env_passthrough
+    registration or ``inherit_credentials``."""
     upper = key.upper()
-    if upper.startswith("AUXILIARY_") and upper.endswith(("_API_KEY", "_BASE_URL")):
-        return True
-    return upper.startswith("GATEWAY_RELAY_") and upper.endswith(("_SECRET", "_KEY", "_TOKEN"))
+    return upper.startswith("AUXILIARY_") and upper.endswith(("_API_KEY", "_BASE_URL"))
 
 
 # Authorization gates: the env names platform adapters read to decide WHO may talk to the
@@ -284,7 +195,7 @@ def _is_scout_internal_secret(key: str) -> bool:
 # from a process that loaded profile A's gates (or a unit-file ``Environment=``) would enforce
 # A's channel/user/role list as its own (#113270). The suffix is matched by shape so a gate
 # added to any adapter is covered without a second edit, but ONLY under a platform prefix
-# (``DISCORD_``, ``GATEWAY_``, a plugin adapter's name): an operator's own ``DEMO_ALLOWED_SENDER``
+# (``GATEWAY_``, a plugin adapter's name): an operator's own ``DEMO_ALLOWED_SENDER``
 # is script data, not a Scout gate, and deleting it by name shape broke routed ``no_agent``
 # cron scripts (#119539). ``SCOUT_*`` never counts (``SCOUT_MEDIA_ALLOW_DIRS``,
 # ``SCOUT_ALLOW_PRIVATE_URLS`` are process settings, not adapter gates).
@@ -292,9 +203,8 @@ _PROFILE_GATE_ENV_MARKERS = (
     "_ALLOWED_", "_ALLOW_ALL_", "_ALLOW_FROM", "_ALLOW_BOTS", "_ALLOW_PUBLIC_", "_IGNORED_CHANNELS",
     "_NO_THREAD_CHANNELS", "_FREE_RESPONSE_CHANNELS", "_BACKFILL_CHANNELS", "_GROUP_ALLOWED",
 )
-# Gate owners that are not a ``Platform`` value: the cross-platform pairing gate and adapters whose
-# env prefix differs from their platform name (``qqbot`` reads ``QQ_*``).
-_EXTRA_GATE_ENV_PREFIXES = frozenset({"GATEWAY", "QQ"})
+# Gate owner that is not a ``Platform`` value: the cross-platform ``GATEWAY_ALLOWED_USERS`` gate.
+_EXTRA_GATE_ENV_PREFIXES = frozenset({"GATEWAY"})
 
 
 @functools.lru_cache(maxsize=1)
@@ -327,8 +237,8 @@ def _platform_gate_env_prefixes() -> frozenset:
 
 
 def is_profile_gate_env(name: str, _prefixes: Optional[frozenset] = None) -> bool:
-    """True for a platform authorization gate (``DISCORD_ALLOWED_CHANNELS``, ``TELEGRAM_ALLOW_ALL_USERS``,
-    ``GATEWAY_ALLOWED_USERS``, ``WHATSAPP_GROUP_ALLOW_FROM`` ...) — profile-scoped policy a child acting
+    """True for a platform authorization gate (``GATEWAY_ALLOWED_USERS``, ``GATEWAY_ALLOW_ALL_USERS``,
+    ``<PLUGIN>_ALLOWED_USERS`` ...) — profile-scoped policy a child acting
     for ANOTHER profile must never inherit. A gate is a platform prefix AND a gate-shaped suffix;
     an operator variable that merely contains ``_ALLOWED_`` is not one."""
     upper = name.upper()
@@ -367,13 +277,8 @@ _ALWAYS_STRIP_KEYS: frozenset[str] = frozenset({
     # GitHub auth
     "GH_TOKEN", "GITHUB_TOKEN", "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY_PATH",
     "GITHUB_APP_INSTALLATION_ID",
-    # Gateway / messaging bot tokens and access control
-    "TELEGRAM_BOT_TOKEN", "DISCORD_BOT_TOKEN", "SLACK_BOT_TOKEN", "SLACK_APP_TOKEN",
-    "SLACK_SIGNING_SECRET", "GATEWAY_ALLOWED_USERS", "GATEWAY_ALLOW_ALL_USERS",
-    # Gateway relay auth triplet. _SECRET/_DELIVERY_KEY are also matched by
-    # _is_scout_internal_secret, but _ID has no secret suffix, so it must be
-    # enumerated here to stay stripped on the inherit_credentials=True path.
-    "GATEWAY_RELAY_ID", "GATEWAY_RELAY_SECRET", "GATEWAY_RELAY_DELIVERY_KEY",
+    # Gateway access control
+    "GATEWAY_ALLOWED_USERS", "GATEWAY_ALLOW_ALL_USERS",
     "HASS_TOKEN", "EMAIL_PASSWORD", "SCOUT_DASHBOARD_SESSION_TOKEN",
     # Dashboard auth: the basic-auth password and session-signing secret, the OIDC client
     # secret and the drain bearer. They let a holder mint or forge dashboard sessions, and no

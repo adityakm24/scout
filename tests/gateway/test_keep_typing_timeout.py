@@ -36,7 +36,7 @@ from gateway.platforms.base import (
 
 class _StubAdapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.HOMEASSISTANT)
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         return True
@@ -276,7 +276,7 @@ async def test_process_message_pauses_typing_before_a_stalled_final_send():
     adapter._start_typing_refresh = MagicMock(return_value=None)  # loop shape irrelevant here
     event = MessageEvent(
         text="hi", message_id="msg-1", message_type=MessageType.TEXT,
-        source=SessionSource(platform=Platform.TELEGRAM, chat_id="77", user_id="u-1"),
+        source=SessionSource(platform=Platform.HOMEASSISTANT, chat_id="77", user_id="u-1"),
     )
     turn = asyncio.create_task(adapter._process_message_background(event, "agent:main:telegram:private:77"))
     try:

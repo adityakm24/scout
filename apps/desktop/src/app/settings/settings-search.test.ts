@@ -64,7 +64,6 @@ describe('settings search index', () => {
         url: 'https://future.example/keys'
       }),
       FUTURE_GATEWAY_URL: envVar('setting', { description: 'Route gateway traffic.' }),
-      TELEGRAM_BOT_TOKEN: envVar('messaging', { channel_managed: true }),
       MODEL_PROVIDER_API_KEY: envVar('provider')
     }
 
@@ -92,7 +91,6 @@ describe('settings search index', () => {
     expect(credentialSettingsView(envVar('tool'))).toBe('tools')
     expect(credentialSettingsView(envVar('setting'))).toBe('settings')
     expect(credentialSettingsView(envVar('messaging'))).toBe('settings')
-    expect(credentialSettingsView(envVar('messaging', { channel_managed: true }))).toBeNull()
     expect(credentialSettingsView(envVar('provider'))).toBeNull()
   })
 

@@ -211,7 +211,6 @@ _CATEGORY_MERGE: Dict[str, str] = {
     "goals": "agent",
     "updates": "general",
     "onboarding": "agent",
-    "telegram": "discord",
     "mcp": "agent",
     "computer_use": "agent",
     "plugins": "agent",

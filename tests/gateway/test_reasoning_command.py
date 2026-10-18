@@ -13,7 +13,7 @@ from gateway.platforms.event import MessageEvent
 from gateway.session import SessionSource
 
 
-def _make_event(text="/reasoning", platform=Platform.TELEGRAM, user_id="12345", chat_id="67890"):
+def _make_event(text="/reasoning", platform=Platform.HOMEASSISTANT, user_id="12345", chat_id="67890"):
     """Build a MessageEvent for testing."""
     source = SessionSource(
         platform=platform,
@@ -129,65 +129,6 @@ class TestReasoningCommand:
         assert runner._resolve_session_reasoning_config(source=source) == {"enabled": True, "effort": "xhigh"}
 
 
-    def test_run_agent_includes_enabled_mcp_servers_in_gateway_toolsets(self, tmp_path, monkeypatch):
-        scout_home = tmp_path / "scout"
-        scout_home.mkdir()
-        (scout_home / "config.yaml").write_text(
-            "platform_toolsets:\n"
-            "  cli: [web, memory]\n"
-            "mcp_servers:\n"
-            "  exa:\n"
-            "    url: https://mcp.exa.ai/mcp\n"
-            "  web-search-prime:\n"
-            "    url: https://api.z.ai/api/mcp/web_search_prime/mcp\n",
-            encoding="utf-8",
-        )
-
-        monkeypatch.setattr(gateway_run, "_scout_home", scout_home)
-        monkeypatch.setattr(gateway_run, "_env_path", scout_home / ".env")
-        monkeypatch.setattr(
-            gateway_run,
-            "_resolve_runtime_agent_kwargs",
-            lambda: {
-                "provider": "openrouter",
-                "api_mode": "chat_completions",
-                "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "test-key",
-            },
-        )
-        fake_run_agent = types.ModuleType("run_agent")
-        fake_run_agent.AIAgent = _CapturingAgent
-        monkeypatch.setitem(sys.modules, "run_agent", fake_run_agent)
-
-        _CapturingAgent.last_init = None
-        runner = _make_runner()
-
-        source = SessionSource(
-            platform=Platform.LOCAL,
-            chat_id="cli",
-            chat_name="CLI",
-            chat_type="dm",
-            user_id="user-1",
-        )
-
-        result = asyncio.run(
-            runner._run_agent(
-                message="ping",
-                context_prompt="",
-                history=[],
-                source=source,
-                session_id="session-1",
-                session_key="agent:main:local:dm",
-            )
-        )
-
-        assert result["final_response"] == "ok"
-        assert _CapturingAgent.last_init is not None
-        enabled_toolsets = set(_CapturingAgent.last_init["enabled_toolsets"])
-        assert "web" in enabled_toolsets
-        assert "memory" in enabled_toolsets
-        assert "exa" in enabled_toolsets
-        assert "web-search-prime" in enabled_toolsets
 
 
 class TestLoadShowReasoningCoercion:

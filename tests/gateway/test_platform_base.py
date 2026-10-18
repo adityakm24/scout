@@ -8,15 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from gateway.platforms.base import (
-    BasePlatformAdapter,
-    SendResult,
-    cache_image_from_bytes,
-    safe_url_for_log,
-    utf16_len,
-    _prefix_within_utf16_limit,
-    cache_audio_from_bytes,
-)
+from gateway.platforms.base import BasePlatformAdapter, SendResult, cache_image_from_bytes, safe_url_for_log, cache_audio_from_bytes
 from gateway.platforms.event import MessageEvent
 
 
@@ -47,8 +39,6 @@ class TestInboundMediaSizeCap:
         monkeypatch.setattr(base, "get_inbound_media_max_bytes", lambda: 16)
         with pytest.raises(ValueError, match="Inbound image payload is too large"):
             cache_image_from_bytes(self._PNG, ext=".png")
-
-
 
 
 class TestSafeUrlForLog:
@@ -970,21 +960,6 @@ class TestDockerContainerMediaPathTranslation:
 # should_send_media_as_audio
 # ---------------------------------------------------------------------------
 
-class TestShouldSendMediaAsAudio:
-    """Audio-routing policy shared by gateway + scheduler + send_message."""
-
-    def test_unknown_extension_returns_false(self):
-        from gateway.platforms.base import should_send_media_as_audio
-        assert should_send_media_as_audio(None, ".png") is False
-        assert should_send_media_as_audio("telegram", ".pdf") is False
-
-
-    def test_telegram_ogg_opus_only_when_voice_flagged(self):
-        from gateway.platforms.base import should_send_media_as_audio
-        assert should_send_media_as_audio("telegram", ".ogg", is_voice=True) is True
-        assert should_send_media_as_audio("telegram", ".opus", is_voice=True) is True
-        assert should_send_media_as_audio("telegram", ".ogg") is False
-        assert should_send_media_as_audio("telegram", ".opus") is False
 
 
 # ---------------------------------------------------------------------------
@@ -1017,7 +992,7 @@ class TestIsSenderAuthorized:
         from gateway.config import Platform, PlatformConfig
 
         return StubAdapter(config=PlatformConfig(enabled=True, token="test"),
-                           platform=Platform.TELEGRAM)
+                           platform=Platform.HOMEASSISTANT)
 
     def test_no_check_registered_is_unknown(self):
         assert self._adapter()._is_sender_authorized("user") is None
@@ -1078,7 +1053,7 @@ class TestTruncateMessage:
         from gateway.config import Platform, PlatformConfig
 
         config = PlatformConfig(enabled=True, token="test")
-        return StubAdapter(config=config, platform=Platform.TELEGRAM)
+        return StubAdapter(config=config, platform=Platform.HOMEASSISTANT)
 
     def test_short_message_single_chunk(self):
         adapter = self._adapter()
@@ -1196,63 +1171,6 @@ class TestGetHumanDelay:
 # Extension B) are surrogate pairs: 1 Python char but 2 UTF-16 units.
 
 
-class TestUtf16Len:
-    """Verify the UTF-16 length helper."""
-
-    def test_ascii(self):
-        assert utf16_len("hello") == 5
-
-    def test_bmp_cjk(self):
-        # CJK ideographs in the BMP are 1 code unit each
-        assert utf16_len("你好") == 2
-
-
-class TestPrefixWithinUtf16Limit:
-    """Verify UTF-16-aware prefix truncation."""
-
-    def test_fits_entirely(self):
-        assert _prefix_within_utf16_limit("hello", 10) == "hello"
-
-
-    def test_all_emoji(self):
-        msg = "😀" * 10  # 20 UTF-16 units
-        result = _prefix_within_utf16_limit(msg, 6)
-        assert result == "😀😀😀"
-        assert utf16_len(result) == 6
-
-
-class TestTruncateMessageUtf16:
-    """Verify truncate_message respects UTF-16 lengths when len_fn=utf16_len."""
-
-    def test_short_emoji_message_no_split(self):
-        """A short message under the UTF-16 limit should not be split."""
-        msg = "Hello 😀 world"
-        chunks = BasePlatformAdapter.truncate_message(msg, 4096, len_fn=utf16_len)
-        assert len(chunks) == 1
-        assert chunks[0] == msg
-
-    def test_emoji_near_limit_triggers_split(self):
-        """A message at 4096 codepoints but >4096 UTF-16 units must split."""
-        # 2049 emoji = 2049 codepoints but 4098 UTF-16 units → exceeds 4096
-        msg = "😀" * 2049
-        assert len(msg) == 2049  # Python len sees 2049 chars
-        assert utf16_len(msg) == 4098  # but it's 4098 UTF-16 units
-
-        # Without UTF-16 awareness, this would NOT split (2049 < 4096)
-        chunks_naive = BasePlatformAdapter.truncate_message(msg, 4096)
-        assert len(chunks_naive) == 1, "Without len_fn, no split expected"
-
-        # With UTF-16 awareness, it MUST split
-        chunks = BasePlatformAdapter.truncate_message(msg, 4096, len_fn=utf16_len)
-        assert len(chunks) > 1, "With utf16_len, message should be split"
-
-        # Each chunk must fit within the UTF-16 limit
-        for i, chunk in enumerate(chunks):
-            assert utf16_len(chunk) <= 4096, (
-                f"Chunk {i} exceeds 4096 UTF-16 units: {utf16_len(chunk)}"
-            )
-
-
 class TestProxyKwargsForAiohttp:
     """Verify proxy_kwargs_for_aiohttp routes all schemes through ProxyConnector."""
 
@@ -1324,7 +1242,7 @@ class _CapturingAdapter(BasePlatformAdapter):
 
     def __init__(self):
         from gateway.config import Platform, PlatformConfig
-        super().__init__(PlatformConfig(enabled=True), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True), Platform.HOMEASSISTANT)
         self.sent: list[dict] = []
 
     async def connect(self) -> bool:  # pragma: no cover - not exercised
@@ -1559,7 +1477,7 @@ class TestPlatformLockTakeoverGovernance:
         from gateway.config import Platform, PlatformConfig
 
         adapter = _LockGovernanceProbeAdapter(
-            config=PlatformConfig(), platform=Platform.DISCORD
+            config=PlatformConfig(), platform=Platform.HOMEASSISTANT
         )
         adapter._platform_lock_takeover_allowed = takeover_allowed
         return adapter

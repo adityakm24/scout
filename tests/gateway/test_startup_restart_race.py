@@ -56,8 +56,8 @@ def make_startup_runner(tmp_path):
     runner = object.__new__(gateway_run.GatewayRunner)
     runner.config = GatewayConfig(
         platforms={
-            Platform.TELEGRAM: PlatformConfig(enabled=True, token="***"),
-            Platform.SLACK: PlatformConfig(enabled=True, token="***"),
+            Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***"),
+            Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***"),
         },
         sessions_dir=tmp_path / "sessions",
     )
@@ -135,10 +135,10 @@ async def test_startup_aborts_when_restart_begins_during_platform_connect(tmp_pa
     runner = make_startup_runner(tmp_path)
     first_disconnected = asyncio.Event()
     telegram = StartupRaceAdapter(
-        Platform.TELEGRAM,
+        Platform.HOMEASSISTANT,
         on_connect=lambda: runner.request_restart(detached=False, via_service=True),
     )
-    slack = StartupRaceAdapter(Platform.SLACK, wait_for_disconnect=first_disconnected)
+    slack = StartupRaceAdapter(Platform.HOMEASSISTANT, wait_for_disconnect=first_disconnected)
 
     async def disconnect_and_release():
         telegram.disconnected = True
@@ -161,7 +161,7 @@ async def test_startup_aborts_when_restart_begins_during_platform_connect(tmp_pa
         for call in runner._update_runtime_status.call_args_list
     )
     assert not any(
-        call.args[:2] == (Platform.SLACK.value, "connected")
+        call.args[:2] == (Platform.HOMEASSISTANT.value, "connected")
         for call in runner._update_platform_runtime_status.call_args_list
     )
 

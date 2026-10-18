@@ -9,11 +9,10 @@ The inventory is OWNERSHIP-based and evaluated in the SOURCE profile's plugin sc
 keys it declares outright (``required_env``, allowlist / allow-all / home-channel names, the gateway
 env-override table ``gateway.config_env._ENV_STEPS`` / ``_ENV_ENABLE_CREDENTIALS``) plus every key
 under its canonical ``<PLATFORM>_`` prefix and its historical alias prefixes. Gateway-wide channel
-policy (``GATEWAY_ALLOW_ALL_USERS`` / ``GATEWAY_ALLOWED_USERS``) and relay enrollment identity
-(``GATEWAY_RELAY_*``) are channel settings too. A prefix an adapter SHARES with a non-channel
-capability (``HASS_*`` is also the Home Assistant tool, ``TWILIO_*`` the telephony skill, ``EMAIL_*``
-mail-sending scripts) is stripped only when the source actually runs that adapter — the credential is
-then the bot's identity; otherwise it is a tool key and survives. Model/provider keys, tool keys,
+policy (``GATEWAY_ALLOW_ALL_USERS`` / ``GATEWAY_ALLOWED_USERS``) is a channel setting too. A prefix
+an adapter SHARES with a non-channel capability (``HASS_*`` is also the Home Assistant tool) is
+stripped only when the source actually runs that adapter — the credential is then the adapter's
+identity; otherwise it is a tool key and survives. Model/provider keys, tool keys,
 memory and general config are never touched.
 """
 
@@ -29,13 +28,9 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 logger = logging.getLogger(__name__)
 
 # Historical env prefixes that do not match a platform's config id. They SUPPLEMENT the canonical
-# ``<PLATFORM>_`` prefix (``WECOM_DM_POLICY`` and ``SMS_WEBHOOK_PORT`` are wecom / sms keys too).
+# ``<PLATFORM>_`` prefix.
 _PLATFORM_ENV_PREFIX_ALIASES: dict[str, tuple[str, ...]] = {
-    "email": ("EMAIL_",),
     "homeassistant": ("HASS_",),
-    "qqbot": ("QQ_",),
-    "relay": ("GATEWAY_RELAY_",),
-    "sms": ("TWILIO_",),
 }
 
 # Pseudo-platform for gateway-wide channel policy: not an adapter, but a clone that inherits the
@@ -43,12 +38,10 @@ _PLATFORM_ENV_PREFIX_ALIASES: dict[str, tuple[str, ...]] = {
 GATEWAY_POLICY_ID = "gateway"
 _GATEWAY_POLICY_KEYS = ("GATEWAY_ALLOW_ALL_USERS", "GATEWAY_ALLOWED_USERS")
 
-# Prefixes a messaging adapter shares with a NON-channel capability. Their credentials belong to the
+# Prefixes a gateway adapter shares with a NON-channel capability. Their credentials belong to the
 # channel only while the source runs that adapter; the adapter's policy keys are channel-only always.
 _SHARED_WITH_TOOLS: dict[str, tuple[str, ...]] = {
     "homeassistant": ("HASS_",),   # tools/homeassistant_tool.py reads HASS_TOKEN / HASS_URL
-    "sms": ("TWILIO_",),           # telephony skill reads TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN
-    "email": ("EMAIL_",),          # mail-sending skills read EMAIL_ADDRESS / EMAIL_PASSWORD / EMAIL_SMTP_*
 }
 _POLICY_MARKERS = ("_ALLOWED_USERS", "_ALLOW_ALL_USERS", "_ALLOWED_CHATS", "_HOME_CHANNEL", "_HOME_ADDRESS")
 
@@ -184,7 +177,7 @@ _CREDENTIAL_SUFFIXES = (
 def credential_env_keys() -> Dict[str, str]:
     """``{ENV_KEY: platform_id}`` for the keys that make an adapter CONNECT AS a bot (token / app id /
     client id / secret — the shape ``GatewayRunner._adapter_credential_fingerprint`` hashes). Enable
-    flags, URLs and hosts are excluded: two profiles pointing at one Mattermost server collide only
+    flags, URLs and hosts are excluded: two profiles pointing at one server collide only
     when they also share the token."""
     keys: Dict[str, str] = {}
     for entry in _registry_entries():
@@ -359,14 +352,13 @@ def strip_channel_config(config_path: Path, index: Optional[ChannelKeyIndex] = N
 
 
 def channel_state_entries(root: Path, index: Optional[ChannelKeyIndex] = None) -> List[Path]:
-    """Root entries of a profile that hold per-bot runtime identity: pairing approvals and the
-    WhatsApp device session (``platforms/`` + legacy dirs), the gateway's per-platform ledgers,
-    channel directories and every ``<platform>_*`` file OR directory an adapter writes beside
-    config.yaml (Google Chat keeps user tokens in ``google_chat_user_tokens/``)."""
+    """Root entries of a profile that hold per-adapter runtime identity: ``platforms/``, the
+    gateway's per-platform ledgers and every ``<platform>_*`` file OR directory an adapter writes
+    beside config.yaml."""
     if not root.is_dir():
         return []
     index = index or ChannelKeyIndex()
-    fixed = {"platforms", "pairing", "whatsapp", "gateway", "channel_directory.json", "channel_aliases.json"}
+    fixed = {"platforms", "gateway"}
     prefixes = tuple(f"{pid}_" for pid in index.platforms)
     return sorted(entry for entry in root.iterdir() if entry.name in fixed or entry.name.startswith(prefixes))
 

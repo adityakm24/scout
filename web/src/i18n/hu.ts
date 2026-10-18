@@ -68,7 +68,6 @@ export const hu: Translations = {
     },
     nav: {
       analytics: "Analitika",
-      chat: "Csevegés",
       config: "Beállítások",
       cron: "Cron",
       keys: "Kulcsok",
@@ -162,8 +161,6 @@ export const hu: Translations = {
     selectedSessionsDeleted: "{count} munkamenet törölve",
     selectedSessionsSkippedActive: "{deleted} törölve; {count} megtartva, mert egy kör még fut",
     failedToDeleteSelected: "Nem sikerült törölni a kijelölt munkameneteket",
-    resumeInChat: "Folytatás a csevegésben",
-    newChat: "Új csevegés",
     workspace: "munkaterület",
     workspaceDefault: "Alapértelmezett",
     workspaceRescan: "Tárolók újrakeresése",
@@ -282,10 +279,6 @@ export const hu: Translations = {
     triggerNow: "Indítás most",
     delivery: {
       local: "Helyi",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "Email",
     },
   },
 
@@ -419,7 +412,6 @@ export const hu: Translations = {
       tts: "Szövegfelolvasás",
       stt: "Beszédfelismerés",
       logging: "Naplózás",
-      discord: "Discord",
       auxiliary: "Kiegészítő",
     },
   },

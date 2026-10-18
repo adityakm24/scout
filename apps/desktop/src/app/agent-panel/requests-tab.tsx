@@ -1,17 +1,10 @@
 import { useStore } from '@nanostores/react'
-import { useCallback, useEffect, useState } from 'react'
 
-import { approvePairing, getPairing } from '@/api/messaging'
 import { sendApproval } from '@/components/assistant-ui/tool/approval'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n'
 import { notifyError } from '@/store/notifications'
-import { $activeGatewayProfile } from '@/store/profile'
 import { $approvalRequests, type ApprovalRequest } from '@/store/prompts'
-import type { PairingUser } from '@/types/scout'
-
-// Pairing requests arrive from messaging platforms with no push to the desktop.
-const PAIRING_POLL_MS = 15_000
 
 function Section({ children, empty, title }: { children: React.ReactNode[]; empty: string; title: string }) {
   return (
@@ -22,30 +15,11 @@ function Section({ children, empty, title }: { children: React.ReactNode[]; empt
   )
 }
 
-/** Everything waiting on the user: command approvals from any open chat, and messaging users
- *  asking to talk to the agent. */
+/** Everything waiting on the user: command approvals from any open chat. */
 export function RequestsTab() {
   const { t } = useI18n()
   const copy = t.agentPanel.requests
-  const profile = useStore($activeGatewayProfile)
   const approvals = Object.values(useStore($approvalRequests)).filter((r): r is ApprovalRequest => Boolean(r))
-  const [pending, setPending] = useState<PairingUser[]>([])
-
-  const loadPairing = useCallback(
-    () =>
-      getPairing(profile).then(
-        res => setPending(res.pending ?? []),
-        () => setPending([])
-      ),
-    [profile]
-  )
-
-  useEffect(() => {
-    void loadPairing()
-    const timer = window.setInterval(() => void loadPairing(), PAIRING_POLL_MS)
-
-    return () => window.clearInterval(timer)
-  }, [loadPairing])
 
   const answer = (request: ApprovalRequest, choice: 'deny' | 'once') =>
     void sendApproval(request, choice).catch(error => notifyError(error, t.agentPanel.saveFailed))
@@ -70,34 +44,6 @@ export function RequestsTab() {
                 {copy.deny}
               </Button>
             </div>
-          </div>
-        ))}
-      </Section>
-
-      <Section empty={copy.noPairing} title={copy.pairing}>
-        {pending.map(user => (
-          <div
-            className="scout-stagger flex items-center gap-3 rounded-xl border border-(--ui-stroke-quaternary) bg-(--ui-bg-elevated) p-3"
-            key={`${user.platform}:${user.request_id ?? user.user_id}`}
-          >
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-[0.8125rem] font-medium">{user.user_name || user.user_id}</span>
-              <span className="text-xs capitalize text-(--ui-text-tertiary)">
-                {user.platform} · {copy.waiting(Math.round(user.age_minutes ?? 0))}
-              </span>
-            </span>
-            {user.request_id && (
-              <Button
-                onClick={() =>
-                  void approvePairing(user.platform, user.request_id!, profile).then(loadPairing, error =>
-                    notifyError(error, t.agentPanel.saveFailed)
-                  )
-                }
-                size="sm"
-              >
-                {copy.approve}
-              </Button>
-            )}
           </div>
         ))}
       </Section>

@@ -135,7 +135,7 @@ class TestGatewayConnectionErrorReply:
             assert reply.strip()
             assert not _claims_the_endpoint_is_down(reply), reply
 
-    @pytest.mark.parametrize("platform", [Platform.TELEGRAM, "slack", "feishu"])
+    @pytest.mark.parametrize("platform", [Platform.HOMEASSISTANT, "slack", "feishu"])
     def test_interrupted_connection_delivery_keeps_precedence_and_redaction(self, platform):
         """The new category rides the real chat path, and takes nothing from the other rows."""
         raw_reset = (
@@ -212,7 +212,7 @@ class TestQuotaExhaustedIsNotAnAuthFailure:
         runner = SimpleNamespace(_resolve_session_agent_runtime=_resolve,
                                  _get_system_prompt_for_channel=lambda *a, **k: "",
                                  _ephemeral_system_prompt="")
-        ctx = TurnContext(source=SessionSource(platform=Platform.SLACK, chat_id="C1", chat_type="dm"),
+        ctx = TurnContext(source=SessionSource(platform=Platform.HOMEASSISTANT, chat_id="C1", chat_type="dm"),
                           session_key="slack:C1", user_config={}, message="Hi")
         result = TurnRunner(runner, ctx).run_sync()
         reply = result["final_response"]

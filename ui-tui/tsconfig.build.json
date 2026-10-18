@@ -1,8 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "paths": {
-      "@scout/ink": ["src/types/scout-ink.d.ts"]
-    }
-  }
-}

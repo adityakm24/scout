@@ -217,11 +217,3 @@ def test_fast_version_parity(tmp_path):
     assert "Traceback" not in result.stderr
 
 
-@pytest.mark.parametrize("argv", [["update"], ["pm", "doctor"], ["gateway", "status"]])
-def test_termux_chat_shortcut_leaves_subcommands_to_dispatch(monkeypatch, argv):
-    from scout_cli import main
-
-    monkeypatch.setenv("PREFIX", "/data/data/com.termux/files/usr")
-    monkeypatch.delenv("SCOUT_TERMUX_DISABLE_FAST_CLI", raising=False)
-    monkeypatch.setattr(sys, "argv", ["scout", *argv])
-    assert main._try_termux_fast_cli_launch() is False

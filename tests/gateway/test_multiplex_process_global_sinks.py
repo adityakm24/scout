@@ -3,7 +3,6 @@ Yuanbao auto-sethome env write, the config ``terminal.env_passthrough`` allowlis
 Slack ignored-channel fail-safe (which only had the DEFAULT profile's GatewayConfig)."""
 from __future__ import annotations
 
-import os
 
 from agent.secret_scope import reset_secret_scope, set_multiplex_active, set_secret_scope
 from scout_constants import reset_scout_home_override, set_scout_home_override
@@ -19,27 +18,6 @@ def _under_secondary(home, fn):
         reset_secret_scope(secret_token)
         reset_scout_home_override(home_token)
         set_multiplex_active(False)
-
-
-def test_yuanbao_auto_sethome_from_secondary_stays_in_its_config(tmp_path, monkeypatch):
-    from gateway.platforms.yuanbao import AutoSetHomeMiddleware
-
-    monkeypatch.delenv("YUANBAO_HOME_CHANNEL", raising=False)
-    secondary = tmp_path / "profiles" / "b2"
-    secondary.mkdir(parents=True)
-    (secondary / "config.yaml").write_text("{}\n")
-
-    class Adapter:
-        name = "yuanbao-b2"
-
-    class Ctx:
-        chat_id = "dm:tenant-b2"
-        chat_name = "b2"
-
-    _under_secondary(secondary, lambda: AutoSetHomeMiddleware._persist_home(Adapter(), Ctx()))
-
-    assert "YUANBAO_HOME_CHANNEL" not in os.environ
-    assert "dm:tenant-b2" in (secondary / "config.yaml").read_text()
 
 
 def test_env_passthrough_allowlist_follows_the_active_profile(tmp_path, monkeypatch):
@@ -58,17 +36,3 @@ def test_env_passthrough_allowlist_follows_the_active_profile(tmp_path, monkeypa
     assert ep._load_config_passthrough() == {"FOO_DEFAULT"}
 
 
-def test_slack_ignored_channels_use_the_routed_adapters_list(monkeypatch):
-    from gateway.config import GatewayConfig, Platform, PlatformConfig
-    from gateway.run import _is_slack_ignored_channel
-
-    monkeypatch.delenv("SLACK_IGNORED_CHANNELS", raising=False)
-    default_cfg = GatewayConfig(platforms={Platform.SLACK: PlatformConfig(enabled=True, extra={"ignored_channels": ["C_DEFAULT"]})})
-
-    class SecondaryAdapter:
-        config = PlatformConfig(enabled=True, extra={"ignored_channels": ["C_B2"]})
-
-    assert _is_slack_ignored_channel(default_cfg, "C_B2", SecondaryAdapter())
-    assert not _is_slack_ignored_channel(default_cfg, "C_DEFAULT", SecondaryAdapter())
-    # No routed adapter (legacy callers): the process-level config still rules.
-    assert _is_slack_ignored_channel(default_cfg, "C_DEFAULT")

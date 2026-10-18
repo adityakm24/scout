@@ -6,19 +6,12 @@ Windows and under multiplex profile overrides. Every resolver below must land in
 """
 from __future__ import annotations
 
-import pytest
 
-from scout_constants import reset_scout_home_override, set_scout_home_override
 
 
 def _a2a_conversation(home):
     from plugins.platforms.a2a import protocol
     return protocol._conv_path("peer-x")
-
-
-def _photon_auth(home):
-    from plugins.platforms.photon import auth
-    return auth._auth_json_path()
 
 
 def _mem0_qdrant(home):
@@ -31,19 +24,3 @@ def _openviking_log(home):
     return ov.get_scout_home() / ov._OPENVIKING_SERVER_LOG_RELATIVE_PATH
 
 
-_RESOLVERS = {"a2a": _a2a_conversation, "photon": _photon_auth, "mem0-qdrant": _mem0_qdrant,
-              "openviking": _openviking_log}
-
-
-@pytest.mark.parametrize("name", sorted(_RESOLVERS))
-def test_plugin_path_follows_profile_override(name, tmp_path, monkeypatch):
-    monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "default"))
-    monkeypatch.setenv("HOME", str(tmp_path / "user-home"))
-    profile = tmp_path / "profiles" / "b"
-    profile.mkdir(parents=True)
-    token = set_scout_home_override(profile)
-    try:
-        resolved = str(_RESOLVERS[name](profile))
-    finally:
-        reset_scout_home_override(token)
-    assert resolved.startswith(str(profile)), f"{name} resolved {resolved!r} outside the active profile"

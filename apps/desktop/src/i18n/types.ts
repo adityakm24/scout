@@ -149,10 +149,6 @@ export interface Translations {
       noApprovals: string
       allow: string
       deny: string
-      pairing: string
-      noPairing: string
-      approve: string
-      waiting: (minutes: number) => string
     }
   }
   dashboard: {
@@ -2123,7 +2119,7 @@ export interface Translations {
     mcpServers: string
     archivedChats: string
     sections: Record<'maintenance' | 'sessions' | 'system' | 'usage', string>
-    nav: Record<'newChat' | 'settings' | 'capabilities' | 'messaging' | 'artifacts', { title: string; detail: string }>
+    nav: Record<'newChat' | 'settings' | 'capabilities' | 'artifacts', { title: string; detail: string }>
     sectionEntries: Record<'sessions' | 'system' | 'usage', { title: string; detail: string }>
     providerNavigate: string
     providerSessions: string
@@ -2220,76 +2216,6 @@ export interface Translations {
       running: string
       viewLog: string
     }
-  }
-
-  messaging: {
-    search: string
-    statusFilter: Record<'all' | 'bad' | 'good' | 'muted' | 'warn', string>
-    loading: string
-    loadFailed: string
-    states: Record<string, string>
-    unknown: string
-    hintPendingRestart: string
-    sharedListenerUrl: string
-    hintGatewayStopped: string
-    credentialsSet: string
-    needsSetup: string
-    gatewayStopped: string
-    getCredentials: string
-    openSetupGuide: string
-    required: string
-    recommended: string
-    advanced: (count: number) => string
-    noTokenNeeded: string
-    enabled: string
-    disabled: string
-    unsavedChanges: string
-    saving: string
-    saveChanges: string
-    saved: string
-    replaceValue: string
-    openDocs: string
-    clearField: (key: string) => string
-    enableAria: (name: string) => string
-    disableAria: (name: string) => string
-    platformEnabled: (name: string) => string
-    platformDisabled: (name: string) => string
-    restartToApply: string
-    setupSaved: (name: string) => string
-    restartToReconnect: string
-    appliedLive: string
-    connectingLive: string
-    keyCleared: (key: string) => string
-    setupUpdated: (name: string) => string
-    failedUpdate: (name: string) => string
-    failedSave: (name: string) => string
-    failedClear: (key: string) => string
-    pendingRequests: (count: number) => string
-    pendingAria: (count: number) => string
-    approvedUsers: (count: number) => string
-    approve: string
-    approving: string
-    revoke: string
-    revoking: string
-    revokeAria: (name: string) => string
-    revokeTitle: string
-    revokeDesc: (name: string) => string
-    approvedUser: (name: string) => string
-    approvedHint: string
-    revokedUser: (name: string) => string
-    failedApprove: (name: string) => string
-    failedRevoke: (name: string) => string
-    pairingLockedOut: string
-    waitingSince: (minutes: number) => string
-    restartNeeded: string
-    restartNow: string
-    restarting: string
-    restartFailedManual: string
-    restartFailedManualDetail: string
-    restartAgain: string
-    openLogs: string
-    fieldCopy: Record<string, { label?: string; help?: string; placeholder?: string }>
-    platformIntro: Record<string, string>
   }
 
   webhooks: {
@@ -2844,7 +2770,6 @@ export interface Translations {
       finishedUnread: string
       backgroundRunning: string
       draftSession: string
-      handoffOrigin: (platform: string) => string
       continuationOrigin: string
       ownedByProfile: (profile: string) => string
       renamed: string
@@ -4225,14 +4150,6 @@ export interface Translations {
     noClipboardImage: string
     clipboardPasteFailed: string
     dropFiles: string
-    handoff: {
-      pickPlatform: string
-      success: (platform: string) => string
-      systemNote: (platform: string) => string
-      failed: (error: string) => string
-      timedOut: string
-      startMessaging: string
-    }
   }
 
   tips: {
@@ -4268,7 +4185,6 @@ export interface Translations {
     capabilities: string
     chats: string
     dashboard: string
-    messaging: string
     newChat: string
     noChats: string
     noMatches: string

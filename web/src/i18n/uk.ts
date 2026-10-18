@@ -68,7 +68,6 @@ export const uk: Translations = {
     },
     nav: {
       analytics: "Аналітика",
-      chat: "Чат",
       config: "Конфігурація",
       cron: "Cron",
       keys: "Ключі",
@@ -162,8 +161,6 @@ export const uk: Translations = {
     selectedSessionsDeleted: "Видалено сесій: {count}",
     selectedSessionsSkippedActive: "Видалено: {deleted}; залишено: {count}, бо хід ще виконується",
     failedToDeleteSelected: "Не вдалося видалити вибрані сесії",
-    resumeInChat: "Продовжити в чаті",
-    newChat: "Новий чат",
     workspace: "робоча папка",
     workspaceDefault: "За замовчуванням",
     workspaceRescan: "Пересканувати репозиторії",
@@ -282,10 +279,6 @@ export const uk: Translations = {
     triggerNow: "Запустити зараз",
     delivery: {
       local: "Локально",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "Email",
     },
   },
 
@@ -420,7 +413,6 @@ export const uk: Translations = {
       tts: "Синтез мовлення",
       stt: "Розпізнавання мовлення",
       logging: "Журналювання",
-      discord: "Discord",
       auxiliary: "Додатково",
     },
   },

@@ -37,7 +37,7 @@ SESSION_KEY = "agent:main:slack:dm:D123:1111.2222"
 
 class _StubAdapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.SLACK)
+        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.HOMEASSISTANT)
 
     async def connect(self, *, is_reconnect: bool = False):
         return True
@@ -72,7 +72,7 @@ def _event(text):
         text=text,
         message_type=MessageType.TEXT,
         source=SessionSource(
-            platform=Platform.SLACK,
+            platform=Platform.HOMEASSISTANT,
             chat_id="D123",
             chat_type="dm",
             user_id="U1",

@@ -40,7 +40,7 @@ def test_notify_sub_delivery_mode_persists_and_last_write_wins(kanban_home):
         tid = kb.create_task(conn, title="mode sub task", assignee="worker1")
         # Fresh sub without a mode -> defaults to "notify".
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="chat1",
+            conn, task_id=tid, platform="homeassistant", chat_id="chat1",
             notifier_profile="owner-a",
         )
         subs = kbn.list_notify_subs(conn, tid)
@@ -51,7 +51,7 @@ def test_notify_sub_delivery_mode_persists_and_last_write_wins(kanban_home):
         # Explicit re-subscribe changes the mode (last-write-wins) and must NOT
         # overwrite the existing owner (owner self-heals only when unset).
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="chat1",
+            conn, task_id=tid, platform="homeassistant", chat_id="chat1",
             notifier_profile="owner-b", delivery_mode="wake",
         )
         subs = kbn.list_notify_subs(conn, tid)
@@ -60,13 +60,13 @@ def test_notify_sub_delivery_mode_persists_and_last_write_wins(kanban_home):
         assert subs[0]["notifier_profile"] == "owner-a"
 
         # A None re-subscribe leaves the existing mode untouched.
-        kbn.add_notify_sub(conn, task_id=tid, platform="telegram", chat_id="chat1")
+        kbn.add_notify_sub(conn, task_id=tid, platform="homeassistant", chat_id="chat1")
         subs = kbn.list_notify_subs(conn, tid)
         assert subs[0]["delivery_mode"] == "wake"
 
         # An unknown mode is ignored (treated like None: no clobber).
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="chat1",
+            conn, task_id=tid, platform="homeassistant", chat_id="chat1",
             delivery_mode="bogus",
         )
         subs = kbn.list_notify_subs(conn, tid)
@@ -81,14 +81,14 @@ def test_notify_subscribe_cli_records_discord_multiplex_anchors(kanban_home):
     with kbc.connect() as conn:
         tid = kb.create_task(conn, title="thread route", assignee="worker")
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="discord", chat_id="thread",
+            conn, task_id=tid, platform="homeassistant", chat_id="thread",
             thread_id="thread", delivery_metadata={"chat_type": "thread", "existing": "keep"},
         )
 
     parser = argparse.ArgumentParser()
     kc.build_parser(parser.add_subparsers(dest="command"))
     args = parser.parse_args([
-        "kanban", "notify-subscribe", tid, "--platform", "discord", "--chat-id", "thread",
+        "kanban", "notify-subscribe", tid, "--platform", "homeassistant", "--chat-id", "thread",
         "--thread-id", "thread", "--chat-type", "thread", "--parent-chat-id", "parent",
         "--guild-id", "guild",
     ])
@@ -113,13 +113,13 @@ def test_notify_sub_chat_type_persists_and_last_write_wins(kanban_home):
     try:
         tid = kb.create_task(conn, title="chat_type sub", assignee="worker1")
         # Fresh sub without chat_type -> defaults to "dm".
-        kbn.add_notify_sub(conn, task_id=tid, platform="telegram", chat_id="chat1")
+        kbn.add_notify_sub(conn, task_id=tid, platform="homeassistant", chat_id="chat1")
         subs = kbn.list_notify_subs(conn, tid)
         assert subs[0]["chat_type"] == "dm"
 
         # Explicit re-subscribe corrects the recorded chat_type (last-write-wins).
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="chat1",
+            conn, task_id=tid, platform="homeassistant", chat_id="chat1",
             chat_type="group",
         )
         subs = kbn.list_notify_subs(conn, tid)
@@ -128,7 +128,7 @@ def test_notify_sub_chat_type_persists_and_last_write_wins(kanban_home):
         # A None re-subscribe (here changing only the mode) must NOT clobber
         # the recorded chat_type.
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="chat1",
+            conn, task_id=tid, platform="homeassistant", chat_id="chat1",
             delivery_mode="wake",
         )
         subs = kbn.list_notify_subs(conn, tid)
@@ -145,11 +145,11 @@ def test_notify_sub_user_id_backfills_legacy_senderless_rows(kanban_home):
     conn = kbc.connect()
     try:
         tid = kb.create_task(conn, title="legacy sub", assignee="worker1")
-        kbn.add_notify_sub(conn, task_id=tid, platform="telegram", chat_id="chat1")
+        kbn.add_notify_sub(conn, task_id=tid, platform="homeassistant", chat_id="chat1")
         assert kbn.list_notify_subs(conn, tid)[0]["user_id"] is None
 
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="chat1", user_id="640466638",
+            conn, task_id=tid, platform="homeassistant", chat_id="chat1", user_id="640466638",
         )
         subs = kbn.list_notify_subs(conn, tid)
     finally:
@@ -168,7 +168,7 @@ def test_notify_sub_user_id_alt_persists_and_backfills_legacy_rows(kanban_home):
     try:
         tid = kb.create_task(conn, title="alt sub", assignee="worker1")
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="chat1",
+            conn, task_id=tid, platform="homeassistant", chat_id="chat1",
             user_id="open-id",
         )
         subs = kbn.list_notify_subs(conn, tid)
@@ -176,7 +176,7 @@ def test_notify_sub_user_id_alt_persists_and_backfills_legacy_rows(kanban_home):
         assert subs[0]["user_id_alt"] is None
 
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="chat1",
+            conn, task_id=tid, platform="homeassistant", chat_id="chat1",
             user_id="open-id", user_id_alt="union-id",
         )
         subs = kbn.list_notify_subs(conn, tid)
@@ -200,9 +200,9 @@ async def test_notifier_notify_plus_wake_sends_and_wakes(kanban_home):
     try:
         passive_tid = kb.create_task(conn, title="passive task", assignee="worker1")
         active_tid = kb.create_task(conn, title="active task", assignee="worker1")
-        kbn.add_notify_sub(conn, task_id=passive_tid, platform="telegram", chat_id="chat1")
+        kbn.add_notify_sub(conn, task_id=passive_tid, platform="homeassistant", chat_id="chat1")
         kbn.add_notify_sub(
-            conn, task_id=active_tid, platform="telegram", chat_id="chat1",
+            conn, task_id=active_tid, platform="homeassistant", chat_id="chat1",
             delivery_mode="notify+wake",
         )
         kb.block_task(conn, passive_tid, reason="passive block")
@@ -222,7 +222,7 @@ async def test_notifier_notify_plus_wake_sends_and_wakes(kanban_home):
         sent_msgs.append(msg)
 
     fake_adapter.send = AsyncMock(side_effect=_send)
-    runner.adapters = {Platform.TELEGRAM: fake_adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: fake_adapter}
 
     _orig_sleep = asyncio.sleep
     tick_count = 0
@@ -269,7 +269,7 @@ async def test_notifier_plain_notify_never_wakes_even_with_session_id(kanban_hom
             assignee="worker1",
             session_id="origin-session-id",
         )
-        kbn.add_notify_sub(conn, task_id=tid, platform="telegram", chat_id="chat1")
+        kbn.add_notify_sub(conn, task_id=tid, platform="homeassistant", chat_id="chat1")
         kb.block_task(conn, tid, reason="plain notify block")
     finally:
         conn.close()
@@ -281,7 +281,7 @@ async def test_notifier_plain_notify_never_wakes_even_with_session_id(kanban_hom
     fake_adapter = MagicMock()
     fake_adapter.send = AsyncMock()
     fake_adapter.handle_message = AsyncMock()
-    runner.adapters = {Platform.TELEGRAM: fake_adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: fake_adapter}
 
     _orig_sleep = asyncio.sleep
     tick_count = 0
@@ -318,7 +318,7 @@ async def test_notifier_notify_wake_does_not_wake_on_status_event(kanban_home):
     try:
         tid = kb.create_task(conn, title="status-only task", assignee="worker1")
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="chat1",
+            conn, task_id=tid, platform="homeassistant", chat_id="chat1",
             delivery_mode="notify+wake",
         )
         kb._append_event(conn, tid, kind="status", payload={"status": "review"})
@@ -331,7 +331,7 @@ async def test_notifier_notify_wake_does_not_wake_on_status_event(kanban_home):
     runner._kanban_sub_fail_counts = {}
     fake_adapter = MagicMock()
     fake_adapter.send = AsyncMock()
-    runner.adapters = {Platform.TELEGRAM: fake_adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: fake_adapter}
 
     _orig_sleep = asyncio.sleep
     tick_count = 0
@@ -369,7 +369,7 @@ async def test_notifier_wake_forwards_persisted_chat_type_and_user_id(kanban_hom
     try:
         tid = kb.create_task(conn, title="group wake", assignee="worker1")
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="grp1",
+            conn, task_id=tid, platform="homeassistant", chat_id="grp1",
             user_id="op-42", chat_type="group", delivery_mode="wake",
             notifier_profile="owner-profile",
         )
@@ -383,8 +383,8 @@ async def test_notifier_wake_forwards_persisted_chat_type_and_user_id(kanban_hom
     runner._kanban_sub_fail_counts = {}
     fake_adapter = MagicMock()
     fake_adapter.send = AsyncMock()
-    runner.adapters = {Platform.TELEGRAM: fake_adapter}
-    runner._profile_adapters = {"owner-profile": {Platform.TELEGRAM: fake_adapter}}
+    runner.adapters = {Platform.HOMEASSISTANT: fake_adapter}
+    runner._profile_adapters = {"owner-profile": {Platform.HOMEASSISTANT: fake_adapter}}
     runner._authorization_adapter = lambda platform, profile=None: fake_adapter
 
     _orig_sleep = asyncio.sleep
@@ -425,7 +425,7 @@ async def test_notifier_wake_only_skips_send_and_advances_cursor(kanban_home):
     try:
         tid = kb.create_task(conn, title="wake only task", assignee="worker1")
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="chat1",
+            conn, task_id=tid, platform="homeassistant", chat_id="chat1",
             delivery_mode="wake",
         )
         kb.block_task(conn, tid, reason="wake only block")
@@ -439,7 +439,7 @@ async def test_notifier_wake_only_skips_send_and_advances_cursor(kanban_home):
 
     fake_adapter = MagicMock()
     fake_adapter.send = AsyncMock()
-    runner.adapters = {Platform.TELEGRAM: fake_adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: fake_adapter}
 
     _orig_sleep = asyncio.sleep
     tick_count = 0
@@ -498,7 +498,7 @@ async def test_notifier_unsubs_after_abnormal_events(kind, kanban_home):
 
     try:
         tid = kb.create_task(conn, title=f"test {kind} task", assignee="worker1")
-        kbn.add_notify_sub(conn, task_id=tid, platform="telegram", chat_id="chat1")
+        kbn.add_notify_sub(conn, task_id=tid, platform="homeassistant", chat_id="chat1")
         kb._append_event(conn, tid, kind=kind)
     finally:
         conn.close()
@@ -514,7 +514,7 @@ async def test_notifier_unsubs_after_abnormal_events(kind, kanban_home):
         runner._running = False
 
     fake_adapter.send = AsyncMock(side_effect=_send_and_stop)
-    runner.adapters = {Platform.TELEGRAM: fake_adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: fake_adapter}
 
     _orig_sleep = asyncio.sleep
 
@@ -560,7 +560,7 @@ async def test_notifier_wakes_origin_for_review_and_keeps_subscription(kanban_ho
         kbn.add_notify_sub(
             conn,
             task_id=task_id,
-            platform="telegram",
+            platform="homeassistant",
             chat_id="chat1",
         )
         task = kb.claim_task(conn, task_id, claimer="builder:1")
@@ -587,9 +587,9 @@ async def test_notifier_wakes_origin_for_review_and_keeps_subscription(kanban_ho
         runner._running = False
 
     adapter = MagicMock()
-    adapter.name = "telegram"
+    adapter.name = "homeassistant"
     adapter.send = AsyncMock(side_effect=_send)
-    runner.adapters = {Platform.TELEGRAM: adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
 
     real_sleep = asyncio.sleep
 
@@ -606,64 +606,6 @@ async def test_notifier_wakes_origin_for_review_and_keeps_subscription(kanban_ho
     with kbc.connect() as conn:
         assert kbn.list_notify_subs(conn), "review is non-final; subscription must survive"
 
-@pytest.mark.asyncio
-async def test_gateway_create_autosubscribes_on_explicit_board(kanban_home):
-    """`/kanban --board <slug> create ...` must subscribe on that board.
-
-    The gateway handler currently auto-subscribes after `/kanban create`,
-    but the create detection must still work when the shared `--board`
-    flag appears before the subcommand, and the subscription must land in
-    that board's DB rather than the ambient/default board.
-    """
-    from gateway.run import GatewayRunner
-    from gateway.config import Platform
-
-    kb.create_board("projx")
-
-    runner = object.__new__(GatewayRunner)
-    runner._owns_kanban_dispatcher_lock = lambda: True
-    source = SimpleNamespace(
-        platform=Platform.TELEGRAM,
-        chat_id="chat1",
-        chat_type="dm",
-        thread_id="20197",
-        user_id="u1",
-    )
-    event = SimpleNamespace(
-        text='/kanban --board projx create "hello" --assignee alice',
-        source=source,
-        message_id="462",
-        reply_to_message_id=None,
-    )
-
-    out = await GatewayRunner._handle_kanban_command(runner, event)
-
-    assert "subscribed" in out.lower()
-
-    conn = kbc.connect(board="projx")
-    try:
-        subs = kbn.list_notify_subs(conn)
-        tasks = kb.list_tasks(conn)
-    finally:
-        conn.close()
-
-    assert [t.title for t in tasks] == ["hello"]
-    assert len(subs) == 1
-    assert subs[0]["chat_id"] == "chat1"
-    assert subs[0]["thread_id"] == "20197"
-    assert subs[0]["delivery_metadata"] == {
-        "chat_type": "dm",
-        "direct_messages_topic_id": "20197",
-        "telegram_dm_topic_reply_fallback": True,
-        "telegram_reply_to_message_id": "462",
-        "thread_id": "20197",
-    }
-
-    conn = kbc.connect(board="default")
-    try:
-        assert kbn.list_notify_subs(conn) == []
-    finally:
-        conn.close()
 
 @pytest.mark.parametrize(
     "chat_type,thread_id,thread_sessions_per_user",
@@ -700,7 +642,7 @@ async def test_gateway_autosubscribe_roundtrips_user_id_alt_for_session_key(
     # user_id != user_id_alt is the whole point: the alt id is the canonical
     # participant, so dropping it silently corrupts the session key.
     source = SimpleNamespace(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_id="chat1",
         chat_type=chat_type,
         thread_id=thread_id,
@@ -726,7 +668,7 @@ async def test_gateway_autosubscribe_roundtrips_user_id_alt_for_session_key(
     assert row["user_id_alt"] == "union-id"
 
     original = SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_id="chat1",
         chat_type=chat_type,
         thread_id=thread_id,
@@ -777,7 +719,7 @@ async def test_notifier_artifact_delivery_skips_missing_files(kanban_home, tmp_p
     conn = kbc.connect()
     try:
         tid = kb.create_task(conn, title="t", assignee="worker1")
-        kbn.add_notify_sub(conn, task_id=tid, platform="telegram", chat_id="chat1")
+        kbn.add_notify_sub(conn, task_id=tid, platform="homeassistant", chat_id="chat1")
         # A dispatcher-spawned worker completes a card it holds a run on: bind the
         # run id like the dispatcher does, or the ownership CAS refuses (#116239).
         assert kb.claim_task(conn, tid) is not None
@@ -803,7 +745,7 @@ async def test_notifier_artifact_delivery_skips_missing_files(kanban_home, tmp_p
     runner._kanban_dispatcher_lock_handle = object()
 
     fake_adapter = MagicMock()
-    fake_adapter.name = "telegram"
+    fake_adapter.name = "homeassistant"
 
     documents_uploaded: list = []
 
@@ -819,7 +761,7 @@ async def test_notifier_artifact_delivery_skips_missing_files(kanban_home, tmp_p
     from gateway.platforms.base import BasePlatformAdapter
     fake_adapter.extract_local_files = BasePlatformAdapter.extract_local_files
 
-    runner.adapters = {Platform.TELEGRAM: fake_adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: fake_adapter}
 
     _orig_sleep = asyncio.sleep
 
@@ -836,81 +778,6 @@ async def test_notifier_artifact_delivery_skips_missing_files(kanban_home, tmp_p
     assert len(documents_uploaded) == 1
     assert "real.pdf" in documents_uploaded[0]
 
-@pytest.mark.asyncio
-async def test_notifier_uploads_review_handoff_artifacts(kanban_home, tmp_path, monkeypatch):
-    """A review handoff's files are uploaded from the durable staged copy —
-    not the scratch original the reviewer's completion is about to delete."""
-    import scout_cli.kanban_db as kb
-    from scout_cli import kanban_db_connect as kbc
-    from scout_cli import kanban_db_notify as kbn
-    from scout_cli import kanban_db_workspace as kbw
-    from gateway.run import GatewayRunner
-    from gateway.config import Platform
-
-    monkeypatch.setenv("SCOUT_MEDIA_ALLOW_DIRS", str(tmp_path))
-
-    conn = kbc.connect()
-    try:
-        tid = kb.create_task(conn, title="review handoff", assignee="worker1")
-        kbn.add_notify_sub(conn, task_id=tid, platform="telegram", chat_id="chat1")
-        ws = kbw.resolve_workspace(kb.get_task(conn, tid))
-        kbw.set_workspace_path(conn, tid, ws)
-        scratch = ws / "report.pdf"
-        scratch.write_bytes(b"%PDF-fake")
-        kb.claim_task(conn, tid)
-        run_id = kb.get_task(conn, tid).current_run_id
-        # The summary names the scratch original, which still exists at
-        # handoff time: it must not ride along as a second upload.
-        assert kb.request_review(
-            conn, tid, summary=f"ready for review: {scratch}",
-            metadata={"artifacts": [str(scratch)]}, expected_run_id=run_id)
-        handoff = [e for e in kb.list_events(conn, tid) if e.kind == "review_requested"][-1]
-        attachments = kb.list_attachments(conn, tid)
-    finally:
-        conn.close()
-    staged_path = handoff.payload["artifacts"][0]
-    assert staged_path != str(scratch), "handoff must name the staged copy, not the scratch original"
-    assert scratch.exists(), "scratch original survives until the reviewer completes"
-    assert staged_path == attachments[0].stored_path
-
-    runner = object.__new__(GatewayRunner)
-    runner._owns_kanban_dispatcher_lock = lambda: True
-    runner._running = True
-    runner._kanban_sub_fail_counts = {}
-    runner._kanban_dispatcher_lock_handle = object()
-
-    fake_adapter = MagicMock()
-    fake_adapter.name = "telegram"
-
-    documents_uploaded: list = []
-
-    async def _send(chat_id, msg, metadata=None):
-        runner._running = False
-
-    async def _send_document(chat_id, file_path, metadata=None, **_kw):
-        documents_uploaded.append(file_path)
-
-    fake_adapter.send = AsyncMock(side_effect=_send)
-    fake_adapter.send_document = AsyncMock(side_effect=_send_document)
-    fake_adapter.send_multiple_images = AsyncMock()
-    from gateway.platforms.base import BasePlatformAdapter
-    fake_adapter.extract_local_files = BasePlatformAdapter.extract_local_files
-
-    runner.adapters = {Platform.TELEGRAM: fake_adapter}
-
-    _orig_sleep = asyncio.sleep
-
-    async def _fast_sleep(_):
-        await _orig_sleep(0)
-
-    with patch("gateway.run.asyncio.sleep", side_effect=_fast_sleep):
-        await asyncio.wait_for(
-            runner._kanban_notifier_watcher(interval=1),
-            timeout=10.0,
-        )
-
-    assert documents_uploaded == [staged_path]
-    assert str(scratch) not in documents_uploaded
 
 # ---------------------------------------------------------------------------
 # Migration backfill: pre-delivery_mode gateway subscriptions keep active wake.
@@ -933,7 +800,7 @@ def test_migration_backfills_legacy_gateway_subs_to_notify_wake(kanban_home):
         conn.execute(
             "INSERT INTO kanban_notify_subs "
             "(task_id, platform, chat_id, thread_id, created_at) "
-            "VALUES (?, 'telegram', 'legacy-chat', '', 1)",
+            "VALUES (?, 'homeassistant', 'legacy-chat', '', 1)",
             (task_id,),
         )
         conn.execute(
@@ -953,7 +820,7 @@ def test_migration_backfills_legacy_gateway_subs_to_notify_wake(kanban_home):
                 (task_id,),
             )
         }
-    assert rows["telegram"] == "notify+wake", (
+    assert rows["homeassistant"] == "notify+wake", (
         "Legacy gateway subscription lost active wake across the upgrade"
     )
     assert rows["tui"] == "notify"
@@ -966,7 +833,7 @@ def test_migration_backfill_runs_only_on_first_add(kanban_home):
         kbn.add_notify_sub(
             conn,
             task_id=task_id,
-            platform="telegram",
+            platform="homeassistant",
             chat_id="chat-x",
             delivery_mode="notify",
         )
@@ -990,7 +857,7 @@ def test_migration_backfill_runs_only_on_first_add(kanban_home):
 
 def _add_full_parent_sub(kb, conn, parent):
     kbn.add_notify_sub(
-        conn, task_id=parent, platform="telegram", chat_id="chat1",
+        conn, task_id=parent, platform="homeassistant", chat_id="chat1",
         thread_id="topic1", user_id="user1", user_id_alt="alt-1",
         chat_type="dm", notifier_profile="default",
         delivery_mode="notify+wake",
@@ -1000,7 +867,7 @@ def _add_full_parent_sub(kb, conn, parent):
 def _assert_full_inherited_sub(subs):
     assert len(subs) == 1
     s = subs[0]
-    assert s["platform"] == "telegram"
+    assert s["platform"] == "homeassistant"
     assert s["chat_id"] == "chat1"
     assert s["thread_id"] == "topic1"
     assert s["user_id"] == "user1"
@@ -1057,7 +924,7 @@ def test_create_with_parents_inherits_delivery_metadata(kanban_home):
 def _make_done_task_with_sub(kb, conn, *, title, chat_id):
     tid = kb.create_task(conn, title=title, assignee="worker1")
     kbn.add_notify_sub(
-        conn, task_id=tid, platform="telegram", chat_id=chat_id,
+        conn, task_id=tid, platform="homeassistant", chat_id=chat_id,
         notifier_profile="default",
     )
     assert kb.complete_task(conn, tid, summary="done")
@@ -1166,7 +1033,7 @@ def test_gc_purges_blocked_task_that_never_done(kanban_home):
     try:
         tid = kb.create_task(conn, title="stuck blocked", assignee="worker1")
         kbn.add_notify_sub(
-            conn, task_id=tid, platform="telegram", chat_id="c-blocked",
+            conn, task_id=tid, platform="homeassistant", chat_id="c-blocked",
             notifier_profile="default",
         )
         _set_task_status(kb, conn, tid, "blocked")

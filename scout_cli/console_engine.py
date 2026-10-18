@@ -294,14 +294,10 @@ _CLI_FAMILIES: dict[str, tuple[_CliSurface, str]] = {
         _sub("auth", "build_auth_parser", "cmd_auth"),
         "list, status, *reset, *priority, *refresh, *add, *remove, *logout, spotify status, *spotify login, "
         "*spotify logout"),
-    "pairing": (
-        _sub("pairing", "build_pairing_parser", "cmd_pairing"),
-        "list, *approve, *revoke, *clear-pending"),
     "webhook": (
         _sub("webhook", "build_webhook_parser", "cmd_webhook"),
         "list, *subscribe, *remove, test"),
     "hooks": (_sub("hooks", "build_hooks_parser", "cmd_hooks"), "list, *test, *doctor, *revoke"),
-    "slack": (_sub("slack", "build_slack_parser", "cmd_slack"), "manifest"),
     "profile": (
         _sub("profile", "build_profile_parser", "cmd_profile"),
         "list, show, info, *create, *use, *describe, *rename, *delete, *export, *import, "
@@ -330,9 +326,6 @@ _CLI_FAMILIES: dict[str, tuple[_CliSurface, str]] = {
 # (builder/adder families never did).
 _CONFIRMED_KINDS = {"extracted", "registered"}
 
-_SEND_SURFACE = _CliSurface("adder", "scout_cli.send_cmd", "register_send_subparser")
-
-
 def _register_command_family(
     engine: "ScoutConsoleEngine", root: str, surface: _CliSurface, paths: str) -> None:
     summaries = _surface_summaries(surface, root)
@@ -351,11 +344,10 @@ def _register_command_family(
 
 _BLOCKED_TOP = frozenset(
     "acp chat claw completion dashboard desktop fallback gateway gui login logout model moa "
-    "oneshot proxy serve setup uninstall update whatsapp whatsapp-cloud".split())
+    "oneshot proxy serve setup uninstall update".split())
 
 _BLOCKED_PAIRS = {
     ("config", "edit"): "`config edit` opens an editor and is not available in Scout Console.",
-    ("mcp", "serve"): "`mcp serve` starts a server and is not available in Scout Console.",
     ("profile", "alias"): "`profile alias` creates shell wrappers and is not available in Scout Console.",
     ("skills", "config"): "`skills config` is interactive and is not available in Scout Console.",
     ("skills", "publish"): "`skills publish` is not available in Scout Console.",
@@ -431,10 +423,6 @@ class ScoutConsoleEngine:
                 mutating=bool(confirmation), confirmation=confirmation)
         for root, (surface, paths) in _CLI_FAMILIES.items():
             _register_command_family(self, root, surface, paths)
-        self.register(
-            ("send",), "send --to <target> <message>", "Send a message to a configured platform.",
-            lambda _engine, args: _dispatch(_SEND_SURFACE, "send", (), args),
-            mutating=True, confirmation="Send this message?")
 
     def register(
         self, path: Iterable[str], usage: str, summary: str,
@@ -613,7 +601,7 @@ def _sessions_stats(_engine: ScoutConsoleEngine, args: list[str]) -> str:
             f"Total sessions: {total}",
             f"Listable sessions: {listable}",
             f"Total messages: {db.message_count()}"]
-        for source in ["cli", "tui", "telegram", "discord", "slack", "cron"]:
+        for source in ["cli", "tui", "desktop", "api_server", "cron"]:
             count = db.session_count(source=source)
             if count:
                 lines.append(f"  {source}: {count}")

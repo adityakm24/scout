@@ -209,8 +209,8 @@ _RESERVED_NAMES = frozenset({"scout", "default", "test", "tmp", "root", "sudo"})
 
 # Scout subcommands that cannot be used as profile names/aliases
 _SCOUT_SUBCOMMANDS = frozenset({
-    "chat", "model", "gateway", "setup", "whatsapp", "login", "logout",
-    "status", "cron", "doctor", "dump", "config", "pairing", "skills", "tools",
+    "chat", "model", "gateway", "setup", "login", "logout",
+    "status", "cron", "doctor", "dump", "config", "skills", "tools",
     "mcp", "sessions", "insights", "version", "update", "uninstall", "profile", "plugins", "honcho", "acp",
 })
 

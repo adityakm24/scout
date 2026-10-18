@@ -47,7 +47,7 @@ def _deliver_through_router(monkeypatch, loop, *, live_error: str):
             return SendResult(success=False, error=live_error, retryable=live_error == "send_path_degraded")
 
     fields = {name: None for name in sd._TargetDelivery.__dataclass_fields__}
-    fields.update(job={"id": "job-1"}, platform=Platform.TELEGRAM, platform_name="telegram", chat_id="-100",
+    fields.update(job={"id": "job-1"}, platform=Platform.HOMEASSISTANT, platform_name="telegram", chat_id="-100",
                   thread_id="42", transport=Transport(), config=GatewayConfig(), loop=loop,
                   target_adapters={}, mirror_text="", origin={})
     t = sd._TargetDelivery(**fields)

@@ -92,7 +92,7 @@ def test_notifier_pings_run_under_the_subscribers_profile(served, monkeypatch):
     conn = kbc.connect()
     try:
         tid = kb.create_task(conn, title="notify parity", assignee="alpha")
-        kbn.add_notify_sub(conn, task_id=tid, platform="telegram", chat_id="1001", notifier_profile="alpha")
+        kbn.add_notify_sub(conn, task_id=tid, platform="homeassistant", chat_id="1001", notifier_profile="alpha")
         kb.complete_task(conn, tid, summary="done")
     finally:
         conn.close()
@@ -101,8 +101,8 @@ def test_notifier_pings_run_under_the_subscribers_profile(served, monkeypatch):
     runner._running = True
     runner.config = SimpleNamespace(multiplex_profiles=True, profile_routes=[])
     alpha_adapter = RecordingAdapter()
-    runner.adapters = {Platform.TELEGRAM: RecordingAdapter()}
-    runner._profile_adapters = {"alpha": {Platform.TELEGRAM: alpha_adapter}}
+    runner.adapters = {Platform.HOMEASSISTANT: RecordingAdapter()}
+    runner._profile_adapters = {"alpha": {Platform.HOMEASSISTANT: alpha_adapter}}
     runner._primary_profile_name = "default"
     runner._kanban_sub_fail_counts = {}
     runner._kanban_dispatcher_lock_handle = object()

@@ -35,7 +35,7 @@ def mock_runner():
 def discord_source():
     """Create a basic Discord SessionSource for testing."""
     return SessionSource(
-        platform=MagicMock(value="discord"),
+        platform=MagicMock(value="webhook"),
         chat_id="123456",
         guild_id="789",
         thread_id=None,
@@ -51,7 +51,7 @@ def telegram_source():
     Used to prove profile routing is platform-generic, not Discord-only.
     """
     return SessionSource(
-        platform=MagicMock(value="telegram"),
+        platform=MagicMock(value="homeassistant"),
         chat_id="-1001234567890",
         guild_id=None,
         thread_id=None,
@@ -101,7 +101,7 @@ class TestMissingProfileWarning:
                             assert len(caplog.records) == 1
                             assert caplog.records[0].levelname == "WARNING"
                             assert "nonexistent" in caplog.records[0].message
-                            assert "discord" in caplog.records[0].message
+                            assert "webhook" in caplog.records[0].message
                             assert "123456" in caplog.records[0].message
     
     
@@ -148,7 +148,7 @@ class TestNonDiscordProfileRouting:
         """A configured Telegram route resolves to its profile via the real
         ``_profile_name_for_source`` (bound onto the mock runner)."""
         mock_runner.config.profile_routes = [
-            ProfileRoute(name="tg", platform="telegram", profile="tg-profile",
+            ProfileRoute(name="tg", platform="homeassistant", profile="tg-profile",
                          chat_id="-1001234567890"),
         ]
         telegram_source.profile = None
@@ -164,7 +164,7 @@ class TestNonDiscordProfileRouting:
         mock_runner.config.profile_routes = [
             ProfileRoute(
                 name="worker-route",
-                platform="telegram",
+                platform="homeassistant",
                 profile="worker",
                 chat_id="route-chat",
             )
@@ -184,7 +184,7 @@ class TestNonDiscordProfileRouting:
         mock_runner.config.profile_routes = [
             ProfileRoute(
                 name="restricted-route",
-                platform="telegram",
+                platform="homeassistant",
                 profile="restricted",
                 chat_id="route-chat",
             )
@@ -201,21 +201,6 @@ class TestNonDiscordProfileRouting:
 
         assert "target profile 'restricted' is not served" in caplog.text
 
-    def test_no_route_match_preserves_default_sentinel(self, mock_runner, telegram_source):
-        mock_runner.config.profile_routes = [
-            ProfileRoute(
-                name="other-chat",
-                platform="telegram",
-                profile="worker",
-                chat_id="different-chat",
-            )
-        ]
-        telegram_source.chat_id = "route-chat"
-
-        assert mock_runner._profile_name_for_source(telegram_source) is None
-        adapter = _stub_adapter(Platform.TELEGRAM, mock_runner)
-        source = adapter.build_source(chat_id="route-chat", chat_type="group")
-        assert source.profile is None
 
 
 class TestGatewayRunnerInjection:
@@ -236,57 +221,11 @@ class TestGatewayRunnerInjection:
         runner = object.__new__(GatewayRunner)
         adapter = MagicMock(spec=BasePlatformAdapter)
         monkeypatch.setattr(runner, "_instantiate_adapter", lambda platform, config: adapter)
-        assert runner._create_adapter(Platform.SIGNAL, PlatformConfig(enabled=True)) is adapter
+        assert runner._create_adapter(Platform.HOMEASSISTANT, PlatformConfig(enabled=True)) is adapter
         assert adapter.gateway_runner is runner
         monkeypatch.setattr(runner, "_instantiate_adapter", lambda platform, config: None)
-        assert runner._create_adapter(Platform.SIGNAL, PlatformConfig(enabled=True)) is None
+        assert runner._create_adapter(Platform.HOMEASSISTANT, PlatformConfig(enabled=True)) is None
 
-    @pytest.mark.asyncio
-    async def test_real_signal_factory_routes_inbound_group_event(self, monkeypatch):
-        """A factory-built (built-in) Signal adapter resolves profile_routes
-        for a real inbound envelope — fails on main where the Signal branch
-        returned a bare ``SignalAdapter(config)`` with no runner."""
-        from gateway.config import PlatformConfig
-
-        group_id = "test-signal-route"
-        monkeypatch.setenv("SIGNAL_GROUP_ALLOWED_USERS", group_id)
-        runner = object.__new__(GatewayRunner)
-        runner.config = GatewayConfig(
-            multiplex_profiles=True,
-            profile_routes=[
-                ProfileRoute(name="signal", platform="signal", profile="ops", chat_id=f"group:{group_id}"),
-            ],
-        )
-        adapter = runner._create_adapter(
-            Platform.SIGNAL,
-            PlatformConfig(enabled=True, extra={"http_url": "http://127.0.0.1:18080", "account": "+15555550123"}),
-        )
-        assert adapter is not None and adapter.gateway_runner is runner
-
-        captured = {}
-
-        async def capture_event(event):
-            captured["event"] = event
-
-        adapter.handle_message = capture_event
-        with patch(
-            "scout_cli.profiles.profiles_to_serve",
-            return_value=[("default", Path("/profiles/default")), ("ops", Path("/profiles/ops"))],
-        ):
-            await adapter._handle_envelope({
-                "envelope": {
-                    "sourceNumber": "+15555550124",
-                    "sourceName": "Test Operator",
-                    "timestamp": 1700000000000,
-                    "dataMessage": {
-                        "message": "diagnose the cluster",
-                        "groupInfo": {"groupId": group_id, "groupName": "US East 7"},
-                    },
-                },
-            })
-        source = captured["event"].source
-        assert source.profile == "ops"
-        assert build_session_key(source, profile=source.profile).startswith("agent:ops:")
 
 
 # A concrete adapter we can instantiate without the full platform stack.
@@ -323,92 +262,33 @@ class TestAdapterToSessionKeyIntegration:
     @staticmethod
     def _routes():
         return [
-            ProfileRoute(name="dc", platform="discord", profile="coder",
+            ProfileRoute(name="dc", platform="webhook", profile="coder",
                          guild_id="111", chat_id="222"),
-            ProfileRoute(name="tg", platform="telegram", profile="ops",
+            ProfileRoute(name="tg", platform="homeassistant", profile="ops",
                          chat_id="-1001234567890"),
         ]
 
-    def test_discord_adapter_stamps_profile_and_scopes_key(self, mock_runner):
-        mock_runner.config.profile_routes = self._routes()
-        adapter = _stub_adapter(Platform.DISCORD, mock_runner)
 
-        with patch(
-            "scout_cli.profiles.profiles_to_serve",
-            return_value=[("default", Path("/profiles/default")),
-                          ("coder", Path("/profiles/coder"))],
-        ):
-            source = adapter.build_source(
-                chat_id="222", chat_type="group", guild_id="111", user_id="u1",
-            )
-        assert source.profile == "coder"
 
-        key = build_session_key(source, profile=source.profile)
-        assert key.startswith("agent:coder:"), key
-        # A default-profile key would land in agent:main — must differ.
-        assert key != build_session_key(source, profile=None)
-
-    def test_adapter_preserves_numeric_zero_user_id_for_routing(self, mock_runner):
-        mock_runner.config.profile_routes = [
-            ProfileRoute(name="zero", platform="discord", profile="zero", user_id="0")
-        ]
-        adapter = _stub_adapter(Platform.DISCORD, mock_runner)
-
-        with patch(
-            "scout_cli.profiles.profiles_to_serve",
-            return_value=[("default", Path("/profiles/default")), ("zero", Path("/profiles/zero"))],
-        ):
-            source = adapter.build_source(chat_id="channel", user_id=0)
-
-        assert (source.user_id, source.profile) == ("0", "zero")
-
-    @pytest.mark.asyncio
-    async def test_adapter_drops_rejected_route_before_dispatch(self, mock_runner):
-        mock_runner.config.profile_routes = [
-            ProfileRoute(
-                name="restricted-route",
-                platform="telegram",
-                profile="restricted",
-                chat_id="route-chat",
-            )
-        ]
-        adapter = _stub_adapter(Platform.TELEGRAM, mock_runner)
-
-        with patch(
-            "scout_cli.profiles.profiles_to_serve",
-            return_value=[("default", Path("/profiles/default"))],
-        ):
-            source = adapter.build_source(chat_id="route-chat", chat_type="group")
-
-        assert source.profile is None
-        assert source.profile_route_rejected is True
-        roundtrip = SessionSource.from_dict(source.to_dict())
-        assert roundtrip.profile_route_rejected is False
-        assert roundtrip == source
-        result = await GatewayRunner._handle_message(
-            mock_runner,
-            MessageEvent(text="discard me", source=source),
-        )
-        assert result is None
 
     def test_matcher_failure_rejects_instead_of_serving_the_default_profile(self, mock_runner):
         mock_runner.config.multiplex_profiles = True
         mock_runner.config.profile_routes = [
-            ProfileRoute(name="r", platform="discord", profile="routed", chat_id="c")
+            ProfileRoute(name="r", platform="webhook", profile="routed", chat_id="c")
         ]
         with patch("gateway.profile_routing.match_profile_route", side_effect=RuntimeError("boom")):
             with pytest.raises(ProfileRouteRejected):
                 mock_runner._profile_name_for_source(
-                    SessionSource(platform=Platform.DISCORD, chat_id="c")
+                    SessionSource(platform=Platform.HOMEASSISTANT, chat_id="c")
                 )
 
     def test_plain_no_match_still_serves_the_active_profile(self, mock_runner):
         # Only failures fail closed; an ordinary unrouted sender keeps the historical behaviour.
         mock_runner.config.multiplex_profiles = True
         mock_runner.config.profile_routes = [
-            ProfileRoute(name="r", platform="discord", profile="routed", chat_id="other")
+            ProfileRoute(name="r", platform="webhook", profile="routed", chat_id="other")
         ]
-        source = SessionSource(platform=Platform.DISCORD, chat_id="c", user_id="nobody")
+        source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="c", user_id="nobody")
         assert mock_runner._profile_name_for_source(source) is None
         assert mock_runner._resolve_profile_home_for_source(source) is not None
 
@@ -418,12 +298,12 @@ class TestAdapterToSessionKeyIntegration:
         mock_runner.config.profile_routes = [
             ProfileRoute(
                 name="restricted-route",
-                platform="telegram",
+                platform="homeassistant",
                 profile="restricted",
                 chat_id="route-chat",
             )
         ]
-        source = SessionSource(platform=Platform.TELEGRAM, chat_id="route-chat")
+        source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="route-chat")
 
         with patch(
             "scout_cli.profiles.profiles_to_serve",
@@ -452,7 +332,7 @@ class TestMultiplexGate:
     def test_routes_ignored_when_multiplex_off(self, mock_runner, discord_source):
         mock_runner.config.multiplex_profiles = False
         mock_runner.config.profile_routes = [
-            ProfileRoute(name="dc", platform="discord", profile="coder",
+            ProfileRoute(name="dc", platform="webhook", profile="coder",
                          guild_id="789", chat_id="123456"),
         ]
         discord_source.profile = None

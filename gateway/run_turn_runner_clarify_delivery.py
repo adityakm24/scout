@@ -17,7 +17,6 @@ from typing import Any, Callable, Optional
 logger = logging.getLogger(__name__)
 
 UNDELIVERED = "[clarify prompt could not be delivered]"
-UNDELIVERED_DECLINED = "[clarify prompt could not be delivered: destination refused]"
 # No status adapter (a run whose chat surface is gone): shares the ``[clarify prompt could not be
 # delivered`` prefix every consumer already treats as a non-answer
 # (agent/context_compressor.py::_CLARIFY_NON_RESPONSE_PREFIXES).
@@ -44,18 +43,6 @@ def _abort_for_outcome(outcome: str, *, session_key: str, clarify_mod) -> Option
 
     Only a DEFINITIVE failure tears down the registration; ``ambiguous`` (card may have posted) stays armed
     and proceeds to the bounded wait, whose response timeout covers a lost card."""
-    if outcome == "declined":
-        # P5(b): a connector DECLINE is MORE definitive than a failure — the
-        # destination was authorized and refused, so the card cannot arrive and
-        # no late reply can resolve it. Without this branch `declined` fell
-        # through to the bounded wait and the agent blocked until
-        # clarify_timeout (indefinitely when that is configured non-positive).
-        logger.warning(
-            "Clarify prompt DECLINED by the connector's egress guard; "
-            "clearing registration"
-        )
-        clarify_mod.clear_session(session_key)
-        return UNDELIVERED_DECLINED
     if outcome == "failed":
         # Undeliverable: clear the registration and return the sentinel so the agent falls back, not hangs.
         logger.warning("Clarify send failed definitively; clearing registration")
@@ -81,9 +68,8 @@ def _clarify_send_then_wait(fut, *, clarify_id: str, session_key: str, clarify_m
     """Resolve a clarify prompt: send disposition, plain-text fallback, then the bounded wait.
 
     ``fallback()`` schedules the plain-text ``send_clarify`` and returns its future (or ``None``);
-    it runs when the native card failed definitively — at once, or late, after the ack window —
-    and never on a connector DECLINE (re-sending refused content as text is the exfiltration the
-    egress guard exists to stop). A card that fails after the window releases the wait with the
+    it runs when the native card failed definitively — at once, or late, after the ack window.
+    A card that fails after the window releases the wait with the
     delivery notice, not the inactivity one.
 
     Returns ``(response, answered)``. ``answered`` is the only signal that a user reply arrived;
@@ -157,11 +143,6 @@ class _LateFailureWatch:
             # Lost ack (``raw_response.ambiguous``): the card may well have posted. Same invariant as
             # ``_abort_for_outcome`` — stay armed for the late button tap, never re-send, never
             # release; the bounded wait's own timeout covers a card that truly never arrived.
-            return
-        if outcome == "declined":
-            # Refused destination: no text retry (see ``_clarify_send_then_wait``), and the notice
-            # says so rather than the generic delivery failure.
-            self._release(UNDELIVERED_DECLINED)
             return
         fallback_fut = self._fallback() if self._fallback is not None else None
         if fallback_fut is None:

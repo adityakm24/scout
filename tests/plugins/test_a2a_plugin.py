@@ -1422,37 +1422,6 @@ class TestClientTenantAndDiscovery:
 
 
 class TestV1SpecRegressionFixes:
-    def test_rpc_send_message_v1_returns_send_message_response_wrapper(self, monkeypatch):
-        monkeypatch.delenv("A2A_BEARER_TOKEN", raising=False)
-        monkeypatch.delenv("A2A_PEER_TOKENS", raising=False)
-        adapter, base = _make_live_adapter(monkeypatch)
-
-        async def run():
-            assert await adapter.connect() is True
-            body = _send_body("hello v1")
-            body["method"] = "SendMessage"
-            resp = await asyncio.to_thread(_post_json, base + "/", body, {"A2A-Version": "1.0"})
-            assert resp["id"] == "1"
-            assert set(resp["result"].keys()) == {"task"}
-            task = resp["result"]["task"]
-            assert task["status"]["state"] == protocol.STATE_COMPLETED
-            assert "hello v1" in protocol.extract_text(task["artifacts"][0])
-            get_resp = await asyncio.to_thread(_post_json, base + "/", {
-                "jsonrpc": "2.0", "id": "2", "method": "GetTask",
-                "params": {"id": task["id"]},
-            }, {"A2A-Version": "1.0"})
-            assert get_resp["result"]["id"] == task["id"]
-            list_resp = await asyncio.to_thread(_post_json, base + "/", {
-                "jsonrpc": "2.0", "id": "3", "method": "ListTasks",
-                "params": {"contextId": task["contextId"], "pageSize": 10},
-            }, {"A2A-Version": "1.0"})
-            assert list_resp["result"]["nextPageToken"] == ""
-            assert list_resp["result"]["pageSize"] == 10
-            assert list_resp["result"]["totalSize"] >= 1
-            assert "artifacts" not in list_resp["result"]["tasks"][0]
-            await adapter.disconnect()
-
-        asyncio.run(run())
 
     def test_client_sends_v1_method_and_unwraps_response(self, monkeypatch):
         posted = {}

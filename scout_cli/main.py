@@ -73,113 +73,6 @@ if _argv_is_gateway_run(sys.argv[1:]):
         pass
 
 
-def _exit_after_oneshot(rc: object) -> None:
-    """Exit one-shot mode without letting late native finalizers change rc.
-
-    The SIGABRT this guards against fires in a native-extension finalizer
-    during ``Py_FinalizeEx``, *after* the response printed. Flush, shut down
-    file logging, then ``os._exit`` past finalization. The ``atexit`` chain is
-    deliberately skipped — several handlers re-enter native code that may be
-    the abort source; stateful cleanup lives in ``_cleanup_oneshot_runtime``.
-
-    See #30387, #43055.
-    """
-    for stream in (sys.stdout, sys.stderr):
-        try:
-            stream.flush()
-        except Exception:
-            pass
-    try:
-        logging.shutdown()
-    except Exception:
-        pass
-    os._exit(rc if isinstance(rc, int) else (0 if rc is None else 1))
-
-
-_oneshot_cleanup_done = False
-# (module, attr, kwargs, exceptions swallowed). MCP shutdown may raise
-# BaseException-derived errors from executor teardown; the rest are Exception.
-_ONESHOT_CLEANUPS = (
-    ("tools.terminal_tool", "cleanup_all_environments", {}, Exception),
-    ("tools.async_delegation", "interrupt_all", {"reason": "oneshot shutdown"}, Exception),
-    ("tools.browser_tool_lifecycle", "_emergency_cleanup_all_sessions", {}, Exception),
-    ("tools.mcp_tool_lifecycle", "shutdown_mcp_servers", {}, BaseException),
-    ("agent.auxiliary_client", "shutdown_cached_clients", {}, Exception),
-)
-
-
-def _cleanup_oneshot_runtime() -> None:
-    """Best-effort process-global cleanup before one-shot hard exit.
-
-    ``run_oneshot`` owns the agent-local cleanup (memory provider, agent.close,
-    session_db.close — all in ``_run_agent``'s finally block). This mirrors the
-    process-global pieces from ``cli.py:_run_cleanup()`` that would otherwise
-    be skipped by ``os._exit``.
-    """
-    global _oneshot_cleanup_done
-    if _oneshot_cleanup_done:
-        return
-    _oneshot_cleanup_done = True
-    import importlib
-
-    for module, attr, kwargs, swallow in _ONESHOT_CLEANUPS:
-        try:
-            getattr(importlib.import_module(module), attr)(**kwargs)
-        except swallow:
-            pass
-
-
-def _run_and_exit_oneshot(
-    prompt: str,
-    *,
-    model: object = None,
-    provider: object = None,
-    toolsets: object = None,
-    skills: object = None,
-    usage_file: object = None,
-    resume: object = None,
-    reasoning: object = None,
-) -> None:
-    try:
-        from scout_cli.oneshot import run_oneshot
-
-        rc = run_oneshot(
-            prompt,
-            model=model,
-            provider=provider,
-            toolsets=toolsets,
-            skills=skills,
-            usage_file=usage_file,
-            resume=resume,
-            reasoning=reasoning,
-        )
-    except KeyboardInterrupt:
-        rc = 130
-    except SystemExit as exc:
-        if exc.code is not None and not isinstance(exc.code, int):
-            print(exc.code, file=sys.stderr)
-            rc = 1
-        else:
-            rc = exc.code
-    except BaseException:
-        # ``run_oneshot`` already maps agent failures to an int rc; anything
-        # still escaping means it malfunctioned. Print it but never fall
-        # through to interpreter teardown (the SIGABRT path this routine fixes).
-        import traceback
-        try:
-            traceback.print_exc()
-        except Exception:
-            pass
-        rc = 1
-    try:
-        _cleanup_oneshot_runtime()
-    finally:
-        # Even an interrupt during cleanup must not fall back into interpreter
-        # finalization, where the native SIGABRT occurs.
-        # The hard exit is the safety boundary for #43055.
-        _exit_after_oneshot(rc)
-
-
 def _warn_if_unsupervised_pid1(pid: "int | None" = None) -> None:
     """Warn when this process is PID 1 with nothing above it to reap orphans.
 
@@ -232,100 +125,6 @@ def _set_process_title() -> None:
         pass
 
 
-# Cheap read of `display.interface` for the earliest hot-path decisions
-# (mouse-residue suppression, Termux fast launch) that run before
-# scout_cli.config is importable. Cached per config path so early callers
-# don't re-parse YAML, and so the answer follows the home the process ends up
-# in: mouse-residue suppression reads this BEFORE `_apply_profile_override()`
-# sets SCOUT_HOME, and a cache keyed on nothing pinned every later caller to
-# the default home's interface for the whole run (#116902).
-_EARLY_INTERFACE_CACHE: "tuple[str, str] | None" = None
-
-
-def _early_interface_config_path() -> str:
-    """config.yaml of the home this process is currently pointed at."""
-    home = os.environ.get("SCOUT_HOME")
-    if home:
-        return os.path.join(home, "config.yaml")
-    return os.path.join(os.path.expanduser("~"), ".scout", "config.yaml")
-
-
-def _config_default_interface_early() -> str:
-    """Return the configured default interface ("cli"/"tui") via a minimal
-    YAML read. Best-effort: any error falls back to "cli" (legacy behavior)."""
-    global _EARLY_INTERFACE_CACHE
-    cfg_path = _early_interface_config_path()
-    if _EARLY_INTERFACE_CACHE is not None and _EARLY_INTERFACE_CACHE[0] == cfg_path:
-        return _EARLY_INTERFACE_CACHE[1]
-    value = "cli"
-    try:
-        if os.path.exists(cfg_path):
-            import scout_yaml as _yaml_iface
-
-            with open(cfg_path, encoding="utf-8-sig") as _f:
-                raw = _yaml_iface.safe_load(_f) or {}
-            disp = raw.get("display", {})
-            if isinstance(disp, dict):
-                iface = disp.get("interface")
-                if isinstance(iface, str) and iface.strip().lower() == "tui":
-                    value = "tui"
-    except Exception:
-        value = "cli"  # best-effort — default to classic REPL on any error
-    _EARLY_INTERFACE_CACHE = (cfg_path, value)
-    return value
-
-
-def _wants_tui_early(argv: "list[str] | None" = None) -> bool:
-    """Earliest TUI decision, usable before argparse/config imports.
-
-    Precedence: ``--cli`` wins, then ``--tui``/``SCOUT_TUI=1``, then a
-    real-TTY gate, then ``display.interface``. The TTY gate is load-bearing
-    for headless spawners (kanban workers, cron, pipes running ``chat -q``):
-    a ``display.interface: tui`` default used to boot the TUI here, whose
-    no-TTY bail-out exits 0 without doing the task. An explicit ``--tui``
-    still reaches that informative bail-out.
-    """
-    if argv is None:
-        argv = sys.argv[1:]
-    if "--cli" in argv:
-        return False
-    if os.environ.get("SCOUT_TUI") == "1" or any(flag in argv for flag in ("--tui", "--native", "--tui-native")):
-        return True
-    try:
-        if not (sys.stdin.isatty() and sys.stdout.isatty()):
-            return False
-    except Exception:
-        return False
-    return _config_default_interface_early() == "tui"
-
-
-# Mouse-tracking residue suppression — runs BEFORE every other import on the
-# TUI hot path: while the launcher is still importing (~100-300ms, cooked+echo
-# mode, before the Node TUI takes stdin raw) incoming SGR/X10 mouse reports
-# echo into the shell scrollback as ``^[[<…M``. entry.tsx's
-# `resetTerminalModes()` is the later cousin. ``SCOUT_TUI_NO_EARLY_DISABLE``
-# escapes the behaviour for diagnostics.
-def _suppress_mouse_residue_early() -> None:
-    if os.environ.get("SCOUT_TUI_NO_EARLY_DISABLE") == "1":
-        return
-    if not _wants_tui_early():
-        return
-    try:
-        if not os.isatty(1):  # redirected stdout: raw CSI would pollute the log
-            return
-        # Every mouse-tracking variant we know about; idempotent.
-        os.write(
-            1,
-            b"\x1b[?1003l\x1b[?1002l\x1b[?1001l\x1b[?1000l\x1b[?9l"
-            b"\x1b[?1006l\x1b[?1005l\x1b[?1015l\x1b[?1016l\x1b[?2029l",
-        )
-    except OSError:
-        pass
-
-
-_suppress_mouse_residue_early()
-
-
 _startup_fast.ensure_project_root_on_path()
 
 # ``scout --version`` is answered before config/logging imports.
@@ -347,8 +146,6 @@ from scout_cli.subcommands.profile import build_profile_parser
 from scout_cli.subcommands.model import build_model_parser
 from scout_cli.subcommands.setup import build_setup_parser
 
-from scout_cli.subcommands.whatsapp import build_whatsapp_parser, build_whatsapp_cloud_parser
-from scout_cli.subcommands.slack import build_slack_parser
 from scout_cli.subcommands.login import build_login_parser
 from scout_cli.subcommands.logout import build_logout_parser
 from scout_cli.subcommands.auth import build_auth_parser
@@ -382,7 +179,6 @@ from scout_cli.subcommands.insights import build_insights_parser
 from scout_cli.subcommands.usage import build_usage_parser
 from scout_cli.subcommands.monitoring import build_monitoring_parser
 from scout_cli.subcommands.skills import build_skills_parser
-from scout_cli.subcommands.pairing import build_pairing_parser
 from scout_cli.subcommands.plugins import build_plugins_parser
 from scout_cli.subcommands.mcp import build_mcp_parser
 from scout_cli.subcommands.claw import build_claw_parser
@@ -797,11 +593,6 @@ from scout_cli.main_agent_cmds import (
     cmd_skills,
     cmd_tools,
 )
-from scout_cli.main_platform_setup import (
-    cmd_slack,
-    cmd_whatsapp,
-    cmd_whatsapp_cloud,
-)
 from scout_cli.process_identity import is_desktop_owned_backend as _is_desktop_owned_backend
 from scout_cli.main_dashboard import (
     _attach_to_host_backend,
@@ -896,10 +687,8 @@ from scout_cli.main_web_build import (  # frozen updater surface: update_cmd*.py
     _record_bytecode_fingerprint,
     _run_npm_install_deterministic,
 )
-from scout_cli.main_tui_launch import (
-    _launch_tui,
+from scout_cli.main_chat_env import (
     _pin_kanban_board_env,
-    _resolve_use_tui,
     _sync_bundled_skills_quietly,
 )
 
@@ -1308,14 +1097,6 @@ def _session_db():
                 pass
 
 
-def _latest_session_id(use_tui: bool) -> Optional[str]:
-    """MRU session for the active interface; a TUI launch falls back to the CLI MRU."""
-    last_id = _resolve_last_session(source="tui" if use_tui else "cli")
-    if not last_id and use_tui:
-        last_id = _resolve_last_session(source="cli")
-    return last_id
-
-
 def _resolve_last_session(source: str = "cli") -> Optional[str]:
     """Look up the most recently-used session ID for a source.
 
@@ -1494,7 +1275,7 @@ def _create_titled_session(title: str) -> Optional[str]:
                 pass
 
 
-def _resolve_continue_arg(args, *, use_tui: bool) -> None:
+def _resolve_continue_arg(args) -> None:
     """Resolve ``-c/--continue`` into ``args.resume``.
 
     ``-c <name>``: resolve by title/ID; on miss fail loudly on **stderr** (exit
@@ -1554,14 +1335,12 @@ def _resolve_continue_arg(args, *, use_tui: bool) -> None:
                 args.resume = _crumb_id
             else:
                 # No valid breadcrumb — continue the most recent session
-                last_id = _latest_session_id(use_tui)
+                last_id = _resolve_last_session(source="cli")
                 if last_id:
                     args.resume = last_id
                 else:
-                    kind = "TUI" if use_tui else "CLI"
                     print(
-                        f"No previous {kind} session to continue. Start a new one with "
-                        "`scout`, or list sessions with `scout sessions list`.",
+                        "No previous session to continue. List sessions with `scout sessions list`.",
                         file=sys.stderr,
                     )
                     sys.exit(1)
@@ -1617,7 +1396,7 @@ def _import_foreign_resume(args) -> None:
     args.resume = _imported_id
 
 
-def _resolve_chat_session_args(args, use_tui: bool) -> None:
+def _resolve_chat_session_args(args) -> None:
     """Normalize --in / --resume / --continue on ``args`` before agent init.
 
     Order matters: ``--in DIR`` chdirs first so workspace-scoped "latest"/-c
@@ -1633,16 +1412,15 @@ def _resolve_chat_session_args(args, use_tui: bool) -> None:
     # session literally titled "latest" (still reachable by ID or `-c latest`).
     _resume_raw = getattr(args, "resume", None)
     if isinstance(_resume_raw, str) and _resume_raw.strip().lower() == "latest":
-        _last_id = _latest_session_id(use_tui)
+        _last_id = _resolve_last_session(source="cli")
         if _last_id:
             args.resume = _last_id
         else:
-            kind = "TUI" if use_tui else "CLI"
-            print(f"No previous {kind} session found to resume.")
+            print("No previous session found to resume.")
             print("Use 'scout sessions list' to see available sessions.")
             sys.exit(1)
 
-    _resolve_continue_arg(args, use_tui=use_tui)
+    _resolve_continue_arg(args)
 
     _import_foreign_resume(args)
 
@@ -1806,7 +1584,7 @@ def _read_query_file(args) -> None:
         sys.exit(2)
 
 
-# args attr -> (kwarg, default) passed through to _launch_tui / cli.main.
+# args attr -> (kwarg, default) passed through to cli.main.
 _CHAT_PASSTHROUGH = (
     ("provider", None), ("toolsets", None), ("skills", None), ("verbose", None),
     ("quiet", False), ("query", None), ("image", None), ("resume", None),
@@ -1815,16 +1593,22 @@ _CHAT_PASSTHROUGH = (
 )
 
 
+_NO_INTERACTIVE_CHAT = (
+    "Scout has no interactive terminal chat. Talk to Scout in the desktop app, the web app or the "
+    "mobile app; `scout chat -q \"...\"` runs one headless agent turn and exits."
+)
+
+
 def cmd_chat(args):
-    """Run interactive chat CLI."""
+    """Run one headless agent turn (``-q``/``--query-file``/``--image``) and exit."""
+    if not (getattr(args, "query", None) or getattr(args, "query_file", None) or getattr(args, "image", None)):
+        print(_NO_INTERACTIVE_CHAT, file=sys.stderr)
+        sys.exit(2)
     _apply_safe_mode(args)
     _apply_user_config_bypass(args)
     _guard_noninteractive_user_config(args)
-    from scout_cli.stream_json import stream_json_requested
-    # Structured stdout is a non-interactive protocol: it overrides SCOUT_TUI/display.interface too.
-    use_tui = False if stream_json_requested(args) else _resolve_use_tui(args)
 
-    _resolve_chat_session_args(args, use_tui)
+    _resolve_chat_session_args(args)
 
     _warn_retired_xai_models()
 
@@ -1855,17 +1639,6 @@ def cmd_chat(args):
     _pin_kanban_board_env()
     _confirm_startup_expensive_model_override(args)
 
-    passthrough = {k: getattr(args, k, d) for k, d in _CHAT_PASSTHROUGH}
-    if use_tui:
-        _launch_tui(
-            passthrough.pop("resume"),
-            tui_dev=getattr(args, "tui_dev", False),
-            native_mode=getattr(args, "tui_native", False) or None,
-            model=getattr(args, "model", None),
-            accept_hooks=getattr(args, "accept_hooks", False),
-            **passthrough,
-        )
-
     _read_query_file(args)
 
     safe_mode = getattr(args, "safe_mode", False)
@@ -1874,7 +1647,6 @@ def cmd_chat(args):
         "reasoning": getattr(args, "reasoning", None),
         "toolsets": args.toolsets,
         "query": args.query,
-        "oneshot": bool(getattr(args, "oneshot_exit", False)),
         "run_budget": getattr(args, "run_budget", None),
         "output_format": getattr(args, "output_format", "text"),
         "ignore_rules": getattr(args, "ignore_rules", False) or safe_mode,
@@ -1957,9 +1729,7 @@ cmd_dump = _forward_command("cmd_dump", "scout_cli.dump", "run_dump", doc='Dump 
 cmd_debug = _forward_command("cmd_debug", "scout_cli.debug", "run_debug", doc='Debug tools (share report, etc.).')
 cmd_skin = _forward_command("cmd_skin", "scout_cli.skin_cmd", "skin_command", doc='Skin management (list / use / set).')
 cmd_import = _forward_command("cmd_import", "scout_cli.backup", "run_import", forward_return=True, doc='Restore a Scout backup from a zip file.')
-cmd_gateway_enroll = _forward_command("cmd_gateway_enroll", "scout_cli.gateway_enroll", "cmd_gateway_enroll", doc='Enroll a self-hosted gateway with a relay connector.')
 cmd_prompt_size = _forward_command("cmd_prompt_size", "scout_cli.prompt_size", "cmd_prompt_size", doc='Show a byte/char breakdown of the system prompt + tool schemas.')
-cmd_pairing = _forward_command("cmd_pairing", "scout_cli.pairing", "pairing_command")
 cmd_plugins = _forward_command("cmd_plugins", "scout_cli.plugins_cmd", "plugins_command")
 cmd_mcp = _forward_command("cmd_mcp", "scout_cli.mcp_config", "mcp_command", forward_return=True)
 cmd_claw = _forward_command("cmd_claw", "scout_cli.claw", "claw_command")
@@ -2542,8 +2312,8 @@ def _coalesce_session_name_args(argv: list) -> list:
     are collected until the next flag (``-*``) or known top-level subcommand.
     """
     _SUBCOMMANDS = {
-        "chat", "model", "gateway", "setup", "whatsapp", "whatsapp-cloud", "login", "logout",
-        "auth", "status", "cron", "doctor", "config", "pairing", "skills", "tools", "mcp",
+        "chat", "model", "gateway", "setup", "login", "logout",
+        "auth", "status", "cron", "doctor", "config", "skills", "tools", "mcp",
         "sessions", "insights", "update", "uninstall", "profile", "dashboard", "serve",
         "desktop", "gui", "honcho", "claw", "plugins", "security", "acp", "webhook", "peer",
         "memory", "dump", "debug", "backup", "import", "completion", "logs", "usage",
@@ -2865,14 +2635,14 @@ _BUILTIN_SUBCOMMANDS = frozenset(
         "dump", "egress", "fallback", "gateway", "hooks", "import", "import-agent", "insights",
         "gui", "desktop", "kanban", "login", "logout", "logs", "lsp", "mcp", "memory", "migrate", "moa",
         "journey", "memory-graph", "learning",
-        "google", "model", "monitoring", "pairing", "pause", "peer", "pets", "plugins", "profile",
+        "google", "model", "monitoring", "pause", "peer", "pets", "plugins", "profile",
         "project", "proxy",
         "prompt-size",
         "resume",
-        "send", "sessions", "setup",
-        "skin", "skills", "slack", "status", "tools", "uninstall", "update",
+        "sessions", "setup",
+        "skin", "skills", "status", "tools", "uninstall", "update",
         "usage", "vault",
-        "webhook", "whatsapp", "whatsapp-cloud", "worktree", "chat", "secrets", "security",
+        "webhook", "worktree", "chat", "secrets", "security",
         "browser",
         "verify",
         # Plugin commands missing from top-level --help is an accepted trade-off.
@@ -2939,22 +2709,6 @@ _AGENT_SUBCOMMANDS = {
 }
 
 
-def _is_tui_chat_launch(args) -> bool:
-    if getattr(args, "tui", False) or os.environ.get("SCOUT_TUI") == "1":
-        return True
-    # The chat path decides TUI-vs-classic via _resolve_use_tui (--cli/--tui
-    # flags, TTY gate, SCOUT_TUI env, display.interface config). Bare
-    # `scout`/`scout chat` with a TUI display config was previously missed
-    # here, so the wrapper pre-warmed its own MCP discovery while the TUI
-    # gateway (spawned moments later) ran a second one — an idle stdio MCP
-    # server copy held dead for the whole session. Only chat commands can
-    # launch the TUI; other commands (mcp serve, gateway, acp, cron) keep
-    # their own discovery behavior untouched.
-    if getattr(args, "command", None) not in {None, "chat"}:
-        return False
-    return _resolve_use_tui(args)
-
-
 def _agent_subcommand_selected(args) -> bool:
     """True for ``cron run/tick``, ``gateway run``, ``mcp serve`` (see _AGENT_SUBCOMMANDS)."""
     _sub_attr, _sub_set = _AGENT_SUBCOMMANDS.get(args.command, (None, None))
@@ -2969,7 +2723,7 @@ def _command_has_dedicated_mcp_startup(args) -> bool:
 
 
 def _should_background_mcp_startup(args) -> bool:
-    return not _is_tui_chat_launch(args) and args.command in {None, "chat", "rl"}
+    return args.command in {None, "chat", "rl"}
 
 
 def _prepare_agent_startup(args) -> None:
@@ -2989,22 +2743,20 @@ def _prepare_agent_startup(args) -> None:
         return
 
     _accept_hooks = bool(getattr(args, "accept_hooks", False))
-    if not _is_tui_chat_launch(args):
-        # The TUI backend does its own discovery; the launcher only spawns Node.
-        try:
-            from scout_cli.plugins import start_background_plugin_discovery
+    try:
+        from scout_cli.plugins import start_background_plugin_discovery
 
-            # Daemon thread: ~150ms of manifest scanning overlaps the rest of
-            # startup. Every synchronous reader goes through discover_plugins(),
-            # which joins this thread first (incl. model_tools at import time).
-            start_background_plugin_discovery()
-        except Exception:
-            logger.warning(
-                "plugin discovery failed at CLI startup",
-                exc_info=True,
-            )
+        # Daemon thread: ~150ms of manifest scanning overlaps the rest of
+        # startup. Every synchronous reader goes through discover_plugins(),
+        # which joins this thread first (incl. model_tools at import time).
+        start_background_plugin_discovery()
+    except Exception:
+        logger.warning(
+            "plugin discovery failed at CLI startup",
+            exc_info=True,
+        )
     # -t/--toolsets narrows which configured MCP servers get spawned, on
-    # every discovery path (inline below, background thread, TUI/desktop
+    # every discovery path (inline below, background thread, desktop
     # deferred start). Built-in toolset names never match a server key, so
     # `-t terminal` simply spawns nothing; `-t all` keeps the full set.
     try:
@@ -3014,11 +2766,8 @@ def _prepare_agent_startup(args) -> None:
     except Exception:
         logger.debug("MCP server filter setup failed", exc_info=True)
 
-    # TUI launches hand off to a startup path that backgrounds MCP discovery
-    # with a bounded join; acp/gateway/cron do their own on the runtime path.
-    _run_inline_mcp_discovery = not (
-        _is_tui_chat_launch(args) or _command_has_dedicated_mcp_startup(args)
-    )
+    # acp/gateway/cron do their own MCP discovery on the runtime path.
+    _run_inline_mcp_discovery = not _command_has_dedicated_mcp_startup(args)
     if _run_inline_mcp_discovery and _should_background_mcp_startup(args):
         try:
             from scout_cli.mcp_startup import start_background_mcp_discovery
@@ -3086,11 +2835,7 @@ def _guard_noninteractive_user_config(args) -> None:
     if getattr(args, "_noninteractive_config_validated", False):
         return
 
-    is_noninteractive = (
-        bool(getattr(args, "oneshot", None))
-        or bool(getattr(args, "query", None))
-    )
-    if not is_noninteractive:
+    if not getattr(args, "query", None):
         return
 
     from scout_cli.config import (
@@ -3110,59 +2855,6 @@ def _guard_noninteractive_user_config(args) -> None:
         raise SystemExit(2) from exc
 
     setattr(args, "_noninteractive_config_validated", True)
-
-
-def _set_chat_arg_defaults(args) -> None:
-    """Fill the chat-parser attrs cmd_chat reads when chat was not parsed."""
-    for attr, default in [
-        ("query", None),
-        ("model", None),
-        ("provider", None),
-        ("toolsets", None),
-        ("verbose", False),
-        ("resume", None),
-        ("continue_last", None),
-        ("worktree", False),
-    ]:
-        if not hasattr(args, attr):
-            setattr(args, attr, default)
-
-
-def _run_oneshot_from_args(args) -> None:
-    """Top-level --oneshot / -z: single-shot mode, stdout = final response only.
-
-    Bypasses cli.py entirely; _run_and_exit_oneshot never returns.
-    """
-    _confirm_startup_expensive_model_override(args)
-    # -z honors --resume/-c/--in exactly like chat (#105892): normalize BEFORE the
-    # oneshot exit path takes over, else the flags parse fine but silently do nothing
-    # and the turn starts a fresh session (every wire request loses all history).
-    _resolve_chat_session_args(args, use_tui=False)
-    _run_and_exit_oneshot(
-        args.oneshot,
-        model=getattr(args, "model", None),
-        provider=getattr(args, "provider", None),
-        toolsets=getattr(args, "toolsets", None),
-        skills=getattr(args, "skills", None),
-        usage_file=getattr(args, "usage_file", None),
-        resume=getattr(args, "resume", None),
-        reasoning=getattr(args, "reasoning", None),
-    )
-
-
-def _light_chat_parser():
-    """Top-level + chat parser only (no subcommand tree); chat dispatches to cmd_chat."""
-    from scout_cli._parser import build_top_level_parser
-
-    parser, _subparsers, chat_parser = build_top_level_parser()
-    chat_parser.set_defaults(func=cmd_chat)
-    return parser
-
-
-def _promote_top_level_resume(args) -> None:
-    """Top-level --resume/--continue with no subcommand is a chat shortcut."""
-    if (args.resume or args.continue_last) and args.command is None:
-        args.command = "chat"
 
 
 def _try_fast_serve_launch() -> bool:
@@ -3201,148 +2893,6 @@ def _try_fast_serve_launch() -> bool:
         return False
 
     cmd_dashboard(args)
-    return True
-
-
-def _try_fast_chat_launch() -> bool:
-    """Fast path for unambiguous interactive chat launches (all hosts).
-
-    Building all ~40 subcommand parsers costs ~140ms the chat path never
-    uses. Bails out (False) whenever the invocation is not certainly a chat
-    launch — subcommand positional, ``--help``, unknown flags. Mirrors
-    ``_try_termux_fast_cli_launch`` minus the Termux deferred startup; kept
-    separate so phone-tuned behavior doesn't leak to desktops.
-    """
-    if os.environ.get("SCOUT_DISABLE_FAST_CHAT_LAUNCH") == "1":
-        return False
-    argv = sys.argv[1:]
-    if "-h" in argv or "--help" in argv:
-        return False
-    # Container routing must win: NixOS container mode forwards EVERY invocation.
-    try:
-        from scout_cli.config import get_container_exec_info
-        if get_container_exec_info():
-            return False
-    except Exception:
-        return False
-    # TUI launches keep full dispatch outside Termux (own startup path).
-    if _wants_tui_early(argv):
-        return False
-    if _first_positional_argv() not in {None, "chat"}:
-        return False
-
-    parser = _light_chat_parser()
-    try:
-        args, unknown = parser.parse_known_args(_coalesce_session_name_args(argv))
-    except SystemExit:
-        return False
-    if unknown:  # plugin subcommand or full-parser-only flag → full dispatch
-        return False
-    if getattr(args, "version", False):
-        return False
-    if getattr(args, "command", None) not in {None, "chat"}:
-        return False
-
-    if getattr(args, "yolo", False):
-        os.environ["SCOUT_YOLO_MODE"] = "1"
-    _prepare_agent_startup(args)
-
-    if getattr(args, "oneshot", None):
-        _run_oneshot_from_args(args)
-
-    _promote_top_level_resume(args)
-    _set_chat_arg_defaults(args)
-    cmd_chat(args)
-    return True
-
-
-def _try_termux_fast_cli_launch() -> bool:
-    """Run obvious Termux non-TUI chat/oneshot/version paths on a light parser."""
-    if not _is_termux_startup_environment():
-        return False
-    if os.environ.get("SCOUT_TERMUX_DISABLE_FAST_CLI") == "1":
-        return False
-
-    argv = sys.argv[1:]
-    if "-h" in argv or "--help" in argv:
-        return False
-    if _wants_tui_early(argv):  # TUI fast path / full dispatch owns those
-        return False
-
-    if _startup_fast.is_global_fast_version_argv(argv):
-        _print_version_info(check_updates=True)
-        return True
-
-    first = _first_positional_argv()
-    has_oneshot = any(
-        arg == "-z" or arg == "--oneshot" or arg.startswith("--oneshot=")
-        for arg in argv
-    )
-    if not has_oneshot and first not in {None, "chat"}:
-        return False
-
-    parser = _light_chat_parser()
-    args = parser.parse_args(_coalesce_session_name_args(argv))
-
-    if getattr(args, "version", False):
-        _print_version_info(check_updates=True)
-        return True
-
-    if getattr(args, "oneshot", None):
-        _prepare_agent_startup(args)
-        _run_oneshot_from_args(args)
-
-    _promote_top_level_resume(args)
-    if args.command in {None, "chat"}:
-        _set_chat_arg_defaults(args)
-        interactive_prompt = not getattr(args, "query", None) and not getattr(args, "image", None)
-        if interactive_prompt:
-            # Reach the prompt first; agent-only discovery on the first turn.
-            setattr(args, "compact", True)
-            os.environ["SCOUT_DEFER_AGENT_STARTUP"] = "1"
-            os.environ["SCOUT_FAST_STARTUP_BANNER"] = "1"
-            if getattr(args, "accept_hooks", False):
-                os.environ["SCOUT_ACCEPT_HOOKS"] = "1"
-        else:
-            _prepare_agent_startup(args)
-        cmd_chat(args)
-        return True
-
-    return False
-
-
-def _try_termux_fast_tui_launch() -> bool:
-    """Launch obvious Termux TUI invocations before building every subparser.
-
-    `scout --tui` is the hot path on phones and the TUI immediately execs
-    Node, so the full parser's command-module imports are pure waste there.
-    """
-    if not _is_termux_startup_environment():
-        return False
-
-    if "-h" in sys.argv[1:] or "--help" in sys.argv[1:]:
-        return False
-
-    wants_tui = _wants_tui_early(sys.argv[1:])
-    if not wants_tui:
-        return False
-
-    first = _first_positional_argv()
-    if first not in {None, "chat"}:
-        return False
-
-    parser = _light_chat_parser()
-    args = parser.parse_args(_coalesce_session_name_args(sys.argv[1:]))
-
-    # Preserve top-level behaviours whose semantics are not "launch chat/TUI".
-    if getattr(args, "version", False) or getattr(args, "oneshot", None):
-        return False
-    if getattr(args, "command", None) not in {None, "chat"}:
-        return False
-    if not _resolve_use_tui(args):
-        return False
-
-    cmd_chat(args)
     return True
 
 
@@ -3434,7 +2984,7 @@ def _build_cli_parser():
     build_migrate_parser(subparsers)
     build_codex_runtime_parser(subparsers)
     build_gateway_parser(
-        subparsers, cmd_gateway=cmd_gateway, cmd_proxy=cmd_proxy, cmd_gateway_enroll=cmd_gateway_enroll
+        subparsers, cmd_gateway=cmd_gateway, cmd_proxy=cmd_proxy
     )
 
     # LSP is optional — a registration failure must not break the CLI.
@@ -3445,13 +2995,6 @@ def _build_cli_parser():
         logger.debug("LSP CLI registration failed: %s", _lsp_err)
 
     build_setup_parser(subparsers, cmd_setup=cmd_setup)
-    build_whatsapp_parser(subparsers, cmd_whatsapp=cmd_whatsapp)
-    build_whatsapp_cloud_parser(subparsers, cmd_whatsapp_cloud=cmd_whatsapp_cloud)
-    build_slack_parser(subparsers, cmd_slack=cmd_slack)
-
-    from scout_cli.send_cmd import register_send_subparser
-    register_send_subparser(subparsers)
-
     build_login_parser(subparsers, cmd_login=cmd_login)
     build_logout_parser(subparsers, cmd_logout=cmd_logout)
     build_auth_parser(subparsers, cmd_auth=cmd_auth)
@@ -3484,7 +3027,6 @@ def _build_cli_parser():
     build_config_parser(subparsers, cmd_config=cmd_config)
     build_skin_parser(subparsers, cmd_skin=cmd_skin)
     build_console_parser(subparsers, cmd_console=cmd_console)
-    build_pairing_parser(subparsers, cmd_pairing=cmd_pairing)
     build_skills_parser(subparsers, cmd_skills=cmd_skills)
     build_bundles_parser(subparsers)
     build_plugins_parser(subparsers, cmd_plugins=cmd_plugins)
@@ -3560,13 +3102,6 @@ def _parse_cli_args(parser, subparsers, argv):
     return args
 
 
-def _default_to_chat(args) -> None:
-    """No subcommand given: run chat."""
-    _promote_top_level_resume(args)
-    _set_chat_arg_defaults(args)
-    cmd_chat(args)
-
-
 def main():
     """Main entry point for scout CLI."""
     _set_process_title()
@@ -3631,13 +3166,7 @@ def main():
 
         logging.getLogger(__name__).debug("pm startup check failed", exc_info=True)
 
-    if _try_termux_fast_tui_launch():
-        return
-    if _try_termux_fast_cli_launch():
-        return
     if _try_fast_serve_launch():
-        return
-    if _try_fast_chat_launch():
         return
 
     parser, subparsers = _build_cli_parser()
@@ -3668,12 +3197,9 @@ def main():
     # trigger no consent prompts for hooks the user is still inspecting.
     _prepare_agent_startup(args)
 
-    if getattr(args, "oneshot", None):
-        _run_oneshot_from_args(args)
-
-    # No subcommand (optionally with top-level --resume / --continue) → chat.
+    # No subcommand: there is no interactive terminal chat — print the command list.
     if args.command is None:
-        _default_to_chat(args)
+        parser.print_help()
         return
 
     # A handler's int return code becomes the exit code (None = success).

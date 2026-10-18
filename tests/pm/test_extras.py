@@ -125,12 +125,6 @@ def test_available_missing_module():
     assert extras.available("no-such-extra-anywhere") is False
 
 
-@pytest.mark.parametrize(("extra", "module"), [
-    ("teams", "microsoft_teams.apps"),
-])
-def test_available_counts_sys_modules_fakes(monkeypatch, extra, module):
-    monkeypatch.setitem(sys.modules, module, SimpleNamespace())
-    assert extras.available(extra) is True
 
 
 def test_google_readiness_requires_its_oauth_imports(monkeypatch):
@@ -224,7 +218,7 @@ def test_legacy_selection_carries_extras_the_main_era_venv_lazily_installed(monk
     monkeypatch.setattr(extras, "_PLATFORM_GATES", {"piper": "python_version < '0'"})
     site = tmp_path / "venv" / "lib" / "python3.11" / "site-packages"
     (site / "fal_client").mkdir(parents=True)
-    (site / "telegram").mkdir()
+    (site / "modal").mkdir()
     (site / "piper").mkdir()
     (site / "google").mkdir()
     (site / "google" / "auth").mkdir()
@@ -234,7 +228,7 @@ def test_legacy_selection_carries_extras_the_main_era_venv_lazily_installed(monk
     selection = extras.legacy_selection(tmp_path)
 
     assert selection[0] == "all"
-    assert {"fal", "telegram", "vertex", "exa"} <= set(selection)
+    assert {"fal", "modal", "vertex", "exa"} <= set(selection)
     assert "messaging" not in selection
     assert "piper" not in selection
     assert "hindsight" not in selection  # Catalog plugin owns this dependency, not a core extra.

@@ -102,7 +102,7 @@ def mount_spa(application: FastAPI):
     with a missing dist per-request (404 JSON / ``check_dir=False``), so a long-lived
     ``--skip-build`` process recovers the moment a build appears on disk — no restart.
     """
-    from scout_cli.web_server import WEB_DIST, _DASHBOARD_EMBEDDED_CHAT_ENABLED, app
+    from scout_cli.web_server import WEB_DIST, app
     from scout_cli.web_deps import _server
 
     # `scout serve` is the headless backend: it must NEVER serve the browser SPA, even if a
@@ -142,15 +142,14 @@ def mount_spa(application: FastAPI):
 
         When the OAuth auth gate is active (``app.state.auth_required``), the legacy
         ``_SESSION_TOKEN`` is NOT injected — the SPA reads identity from ``/api/auth/me`` over
-        cookie auth; ``__SCOUT_AUTH_REQUIRED__`` tells it which scheme to use for /api/pty
-        and /api/ws (ticket vs token).
+        cookie auth; ``__SCOUT_AUTH_REQUIRED__`` tells it which scheme to use for /api/ws
+        (ticket vs token).
         """
         try:
             html = (WEB_DIST / "index.html").read_text(encoding="utf-8-sig")
         except OSError:
             # Partial build / wiped dist / permissions: same JSON 404 as a fully-missing dist.
             return JSONResponse({"error": "Frontend not built. Run: cd web && npm run build"}, status_code=404)
-        chat_js = "true" if _DASHBOARD_EMBEDDED_CHAT_ENABLED else "false"
         gated = bool(getattr(app.state, "auth_required", False))
         token_js = "" if gated else f'window.__SCOUT_SESSION_TOKEN__="{_server()._SESSION_TOKEN}";'
         # Launcher-preselected profile (``--open-profile``): the SPA's fallback scope when the URL
@@ -164,7 +163,6 @@ def mount_spa(application: FastAPI):
         serving_profile_js = json.dumps(_serving_profile_name()).replace("</", "<\\/")
         bootstrap_script = (
             f"<script>{token_js}"
-            f"window.__SCOUT_DASHBOARD_EMBEDDED_CHAT__={chat_js};"
             f'window.__SCOUT_BASE_PATH__="{prefix}";'
             f"window.__SCOUT_AUTH_REQUIRED__={'true' if gated else 'false'};"
             f"window.__SCOUT_INITIAL_PROFILE__={initial_profile_js};"

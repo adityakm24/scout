@@ -42,7 +42,7 @@ class _Adapter(BasePlatformAdapter):
     """Concrete adapter whose final-reply send can be held open."""
 
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="t"), Platform.SIGNAL)
+        super().__init__(PlatformConfig(enabled=True, token="t"), Platform.HOMEASSISTANT)
         self.sent: list[str] = []
         self.hold_reply = None
         self.reply_held = asyncio.Event()
@@ -147,7 +147,7 @@ def _event(text: str) -> MessageEvent:
         text=text,
         message_type=MessageType.TEXT,
         source=SessionSource(
-            platform=Platform.SIGNAL,
+            platform=Platform.HOMEASSISTANT,
             chat_id="+15550001",
             chat_type="dm",
             user_id="+15550001",
@@ -162,7 +162,7 @@ def _gateway(tmp_path, monkeypatch, route, held):
     turns = _Turns()
     runner = object.__new__(GatewayRunner)
     runner.config = GatewayConfig()
-    runner.adapters = {Platform.SIGNAL: adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
     runner._draining = False
     runner._restart_requested = False
     runner._is_user_authorized = lambda _source: True

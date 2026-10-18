@@ -38,11 +38,8 @@ def inputs_fixture(tmp_path):
     (pm / "lib/site-packages").mkdir(parents=True)
     (pm / "pm-runtime.json").write_text(json.dumps({
         "python": "../tools/python/bin/python3", "sitePackages": "lib/site-packages"}), encoding="utf-8")
-    tui, web = tmp_path / "tui", tmp_path / "web"
-    (tui / "dist").mkdir(parents=True)
+    web = tmp_path / "web"
     web.mkdir()
-    (tui / "dist/entry.js").write_text("export const built = true;", encoding="utf-8")
-    (tui / "package.json").write_text('{"type":"module"}', encoding="utf-8")
     (web / "index.html").write_text("built web", encoding="utf-8")
     return out, {
         "project": str(source / "pyproject.toml"), "code": str(source),
@@ -50,7 +47,7 @@ def inputs_fixture(tmp_path):
         "python": str(python), "site_packages": str(site),
         "environment": str(out / "venv"), "tools": str(out / "tools"),
         "pm_runtime": str(pm), "resources": {"skills": str(source / "skills")},
-        "frontends": {"tui": str(tui), "web": str(web)}, "ref": "fixture-revision",
+        "frontends": {"web": str(web)}, "ref": "fixture-revision",
     }
 
 
@@ -80,8 +77,6 @@ def test_contained_cli_assembly_runs_after_move_and_preserves_prepared_state(tmp
     assert manifest["runtime"] == {
         "repoDir": "app", "toolsDir": "tools", "storePython": "tools/python/bin/python3",
         "sitePackages": "venv/lib/python3.14/site-packages", "commands": {"probe": "bin/probe"}}
-    assert (out / "app/scout_cli/tui_dist/entry.js").is_file()
-    assert json.loads((out / "app/scout_cli/tui_dist/package.json").read_text())["type"] == "module"
     assert (out / "app/scout_cli/web_dist/index.html").is_file()
     assert not (tmp_path / "home/.scout").exists()
     moved = tmp_path / "relocated payload"
@@ -120,12 +115,10 @@ def test_referenced_installed_code_uses_derived_command_map_without_copying(tmp_
     mapping = json.loads((out / "command-map.json").read_text())
     assert mapping["commands"] == {"probe": {
         "source": str(command), "destination": "bin/probe", "entry": "entry:main"}}
-    assert Path(mapping["env"]["SCOUT_TUI_DIR"]).resolve() == Path(data["frontends"]["tui"])
     assert Path(mapping["env"]["SCOUT_WEB_DIST"]).resolve() == Path(data["frontends"]["web"])
     assert mapping["env"]["SCOUT_INSTALL_ROOT"] == str(out / "share/scout-agent")
     assert not list(out.rglob("entry.py"))
     assert (out / "share/scout-agent/skills").is_symlink()
-    assert (out / "ui-tui").is_symlink()
     assert (out / "share/scout-agent/web_dist").is_symlink()
     assert not (out / "bin/probe").exists(), "Nix owns native makeWrapper"
     run = subprocess.run([mapping["commands"]["probe"]["source"]], cwd=tmp_path,
@@ -188,7 +181,7 @@ def test_source_metadata_keeps_declared_requirements_extras_and_entrypoints(tmp_
 
 
 @pytest.mark.platforms("posix")
-@pytest.mark.parametrize("fault", ["missing-pm", "missing-resource", "missing-tui", "missing-web", "unknown-field", "bad-repo", "bad-target"])
+@pytest.mark.parametrize("fault", ["missing-pm", "missing-resource", "missing-web", "unknown-field", "bad-repo", "bad-target"])
 def test_failed_inputs_cannot_leave_a_completion_claim(tmp_path, fault):
     out, data = inputs_fixture(tmp_path)
     (out / "manifest.json").write_text('{"runtime": {"commands": {}}}', encoding="utf-8")
@@ -196,8 +189,6 @@ def test_failed_inputs_cannot_leave_a_completion_claim(tmp_path, fault):
         (Path(data["pm_runtime"]) / "pm-runtime.json").unlink()
     elif fault == "missing-resource":
         data["resources"]["skills"] = str(tmp_path / "missing skills")
-    elif fault == "missing-tui":
-        (Path(data["frontends"]["tui"]) / "dist/entry.js").unlink()
     elif fault == "missing-web":
         (Path(data["frontends"]["web"]) / "index.html").unlink()
     elif fault == "unknown-field":
@@ -225,7 +216,6 @@ def test_incremental_copy_drops_removed_source_without_deleting_provider_files(t
     assert build_cli(data, out, tmp_path).returncode == 0
     assert not (out / "app/obsolete.py").exists()
     assert not (out / "app/scout_cli/web_dist/stale").exists()
-    assert (out / "app/scout_cli/tui_dist/entry.js").read_bytes() == (Path(data["frontends"]["tui"]) / "dist/entry.js").read_bytes()
     assert sentinel.read_text() == "retain"
 
 
@@ -301,7 +291,7 @@ def test_stage_passes_explicit_products_to_the_single_assembler(tmp_path, monkey
         assemble(AgentInputs.from_dict({**data, "frontends": args.frontends}), out)
         return 0
     monkeypatch.setattr(stage, "stage_native", native)
-    assert stage.main(["--out", str(out), "--ref", "fixture", "--tui", data["frontends"]["tui"],
+    assert stage.main(["--out", str(out), "--ref", "fixture",
                        "--web", data["frontends"]["web"]]) == 0
     assert calls == [{k: Path(v) for k, v in data["frontends"].items()}]
     assert json.loads((out / "manifest.json").read_text())["runtime"]["commands"] == {"probe": "bin/probe"}
@@ -360,4 +350,4 @@ def test_automatic_frontends_use_requested_snapshot_not_current_checkout(tmp_pat
     monkeypatch.setattr(stage.subprocess, "run", run)
     monkeypatch.setattr(stage, "stage_native", lambda args: 0)
     assert stage.main(["--out", str(tmp_path / "out"), "--ref", revision]) == 0
-    assert len(built_sources) == 4
+    assert len(built_sources) == 3

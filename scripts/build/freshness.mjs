@@ -6,18 +6,8 @@ import { parseArgs } from 'node:util'
 import { isMain } from './frontend-common.mjs'
 
 const receiptName = 'scout-build.json'
-const workspaces = { tui: 'ui-tui', web: 'web', desktop: 'apps/desktop' }
+const workspaces = { web: 'web', desktop: 'apps/desktop' }
 const generated = new Set(['node_modules', 'dist', 'build', 'release', '.cache', '.git', 'coverage', 'test-results', 'playwright-report'])
-
-// buildTui bundles these source roots (including the Ink source alias), not
-// the workspaces' documentation, test runners or other product recipes.
-const tuiInputs = [
-  ...['ui-tui', 'ui-tui/packages/scout-ink', 'apps/shared'].flatMap(root => [
-    `${root}/src`, `${root}/package.json`, `${root}/tsconfig.json`,
-  ]),
-  'tsconfig.json', 'package.json', 'package-lock.json', '.npmrc', 'pm/lock.json',
-  'scripts/build/tui.mjs', 'scripts/build/frontend-common.mjs', 'scripts/build/freshness.mjs',
-]
 
 function treeHash(root, inputs, skip, contents = () => true) {
   const hash = createHash('sha256')
@@ -40,7 +30,7 @@ function treeHash(root, inputs, skip, contents = () => true) {
 export function sourceHash(source, product) {
   const workspace = workspaces[product]
   if (!workspace) throw new Error(`Unknown frontend product: ${product}`)
-  return treeHash(source, product === 'tui' ? tuiInputs : [
+  return treeHash(source, [
     workspace, 'apps/shared', 'package.json', 'package-lock.json', '.npmrc', 'pm/lock.json',
     'scripts/build',
     'scripts/generate-icons.mjs', 'scripts/generate_icons.py',
@@ -51,7 +41,6 @@ export function sourceHash(source, product) {
     // Build scripts are inputs; workspace build directories are outputs.
     const parts = name.split('/')
     return (!name.startsWith('scripts/') && parts.some(part => generated.has(part)))
-      || (product === 'tui' && (parts.includes('__tests__') || /\.(test|spec)(-d)?\.[cm]?[jt]sx?$/.test(name)))
       || parts.some(part => part.startsWith('.dist-') || part.startsWith('.staging-') || part === '__pycache__')
       || name.endsWith('.tsbuildinfo') || name.endsWith('.pyc')
   })

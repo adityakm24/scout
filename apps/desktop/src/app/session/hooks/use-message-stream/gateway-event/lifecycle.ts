@@ -4,10 +4,8 @@ import type { ScoutSkin } from '@scout/shared/skin'
 import { clearClarifyRequest } from '@/store/clarify'
 import {
   notifyCronChanged,
-  notifyPairingChanged,
   notifyPetChanged,
   notifyPlannerChanged,
-  notifyPlatformsChanged,
   notifyProjectsChanged,
   notifySessionsChanged,
   type PetChangeMeta,
@@ -29,8 +27,6 @@ const CHANGE_NOTIFIERS = new Map<string, (payload: unknown) => void>([
   ['cron.changed', () => notifyCronChanged()],
   ['sessions.changed', () => notifySessionsChanged()],
   ['projects.changed', () => notifyProjectsChanged()],
-  ['platforms.changed', () => notifyPlatformsChanged()],
-  ['pairing.changed', () => notifyPairingChanged()],
   ['planner.changed', () => notifyPlannerChanged()]
 ])
 

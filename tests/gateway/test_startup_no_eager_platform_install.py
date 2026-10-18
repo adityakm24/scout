@@ -68,6 +68,6 @@ def test_unconfigured_platform_is_not_probed_for_install(isolated_registry):
     _apply_env_overrides(config)
 
     check_fn.assert_not_called()
-    assert not config.platforms.get(Platform.DISCORD, PlatformConfig()).enabled
+    assert not config.platforms.get(Platform.HOMEASSISTANT, PlatformConfig()).enabled
 
 

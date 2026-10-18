@@ -76,7 +76,7 @@ from tests.conformance.persistence._harness import (
     wait_for,
 )
 
-SESSION_KEY = "agent:main:telegram:dm:cell5"
+SESSION_KEY = "agent:main:homeassistant:dm:cell5"
 CHAT_ID = "4242"
 N_OBLIGATIONS = 3  # crash-window obligations per kill point (plus one delivered control)
 N_CONCURRENT_OBLIGATIONS = 12
@@ -116,7 +116,7 @@ def journal_send(content):
 
 class JournalAdapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="cell5"), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True, token="cell5"), Platform.HOMEASSISTANT)
 
     async def connect(self, *, is_reconnect=False):
         return True
@@ -153,7 +153,7 @@ adapter = JournalAdapter()
 
 
 def event(tag):
-    src = SessionSource(platform=Platform.TELEGRAM, chat_id=CHAT_ID, chat_type="dm", user_id="u1")
+    src = SessionSource(platform=Platform.HOMEASSISTANT, chat_id=CHAT_ID, chat_type="dm", user_id="u1")
     return MessageEvent(text=f"question {tag}", source=src, message_id=f"m-{tag}")
 
 
@@ -170,7 +170,7 @@ async def main():
         if kind == "pending":
             # Recorded, crashed before mark_attempting.
             oid = dl.compute_obligation_id(SESSION_KEY, ev.message_id, text)
-            dl.record_obligation(obligation_id=oid, session_key=SESSION_KEY, platform="telegram",
+            dl.record_obligation(obligation_id=oid, session_key=SESSION_KEY, platform="homeassistant",
                                  chat_id=CHAT_ID, thread_id=None, content=text)
         else:
             oid = await adapter._record_delivery_obligation(ev, SESSION_KEY, text, adapter, False)
@@ -225,7 +225,7 @@ if barrier_dir:
 
 home = Path(os.environ["SCOUT_HOME"])
 runner = object.__new__(GatewayRunner)
-runner.adapters = {Platform.TELEGRAM: JournalAdapter()}
+runner.adapters = {Platform.HOMEASSISTANT: JournalAdapter()}
 runner._profile_adapters = {}
 runner.session_store = SessionStore(home / "sessions", GatewayConfig())
 

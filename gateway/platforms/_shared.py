@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import re
 import logging
 import os
 from typing import Any, Callable, Iterable, Optional
@@ -167,12 +168,18 @@ def yaml_env_setter() -> Callable[[str, Any], None]:
     return set_env
 
 
+_URL_SECRET_QUERY_RE = re.compile(
+    r"([?&](?:access_token|api[_-]?key|auth[_-]?token|token|signature|sig)=)([^&#\s]+)", re.IGNORECASE)
+_GENERIC_SECRET_ASSIGN_RE = re.compile(
+    r"\b(access_token|api[_-]?key|auth[_-]?token|signature|sig)\s*=\s*([^\s,;]+)", re.IGNORECASE)
+
+
 def send_error(message: Any) -> dict:
-    """Standalone-sender failure envelope with vendor exception text redacted (the same helper
-    ``send_message`` uses), so a token or signed URL in an httpx/aiohttp error never reaches the
-    model transcript."""
-    from tools.send_message_senders import _error
-    return _error(str(message))
+    """Standalone-sender failure envelope with vendor exception text redacted, so a token or
+    signed URL in an httpx/aiohttp error never reaches the model transcript."""
+    from agent.redact import redact_sensitive_text
+    redacted = _URL_SECRET_QUERY_RE.sub(lambda m: f"{m.group(1)}***", redact_sensitive_text(str(message)))
+    return {"error": _GENERIC_SECRET_ASSIGN_RE.sub(lambda m: f"{m.group(1)}=***", redacted)}
 
 
 # kind -> (applies-when predicate over (cfg, key), env encoder). "lower"/"json" bridge whenever the key

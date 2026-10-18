@@ -24,7 +24,7 @@ from gateway.platforms.event import MessageEvent, MessageType
 
 class _StubAdapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True, token="test"), Platform.HOMEASSISTANT)
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         return True
@@ -54,7 +54,7 @@ class TestQueueMessageStorage:
         event = MessageEvent(
             text="queued prompt",
             message_type=MessageType.TEXT,
-            source=MagicMock(chat_id="123", platform=Platform.TELEGRAM),
+            source=MagicMock(chat_id="123", platform=Platform.HOMEASSISTANT),
             message_id="q2",
         )
         adapter._pending_messages[session_key] = event
@@ -185,13 +185,13 @@ class TestBusyInputModeQueueFifo:
         runner = GatewayRunner.__new__(GatewayRunner)
         runner._queued_events = {}
         adapter = _StubAdapter()
-        runner.adapters = {Platform.TELEGRAM: adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: adapter}
         return runner, adapter
 
     def _text_event(self, text: str) -> MessageEvent:
         # profile=None: a MagicMock auto-attribute reads as a truthy stamped
         # profile and trips fail-closed adapter resolution (AGENTS.md #17).
-        source = MagicMock(chat_id="c1", platform=Platform.TELEGRAM, profile=None)
+        source = MagicMock(chat_id="c1", platform=Platform.HOMEASSISTANT, profile=None)
         return MessageEvent(
             text=text,
             message_type=MessageType.TEXT,
@@ -221,7 +221,7 @@ class TestBusyInputModeQueueFifo:
 
 
     def _media_event(self, path: str, mime: str, message_type: MessageType, text: str = "") -> MessageEvent:
-        source = MagicMock(chat_id="c1", platform=Platform.TELEGRAM, profile=None)
+        source = MagicMock(chat_id="c1", platform=Platform.HOMEASSISTANT, profile=None)
         return MessageEvent(
             text=text, message_type=message_type, source=source,
             media_urls=[path], media_types=[mime], message_id=f"m-{path}",

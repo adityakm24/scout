@@ -76,27 +76,6 @@ def configured_update(source_launch, tmp_path, monkeypatch):
     return root, selected, site, config, build_in_child
 
 
-@pytest.mark.platforms("posix")
-def test_update_names_missing_configured_features_from_selected_child(configured_update, capfd):
-    root, selected, site, _, build = configured_update
-    facts = runtime_facts_path(root).read_bytes()
-    build()
-    out = capfd.readouterr().out
-    assert "fail to load them on restart" in out
-    assert "Feishu / Lark" in out and "MCP servers" in out
-    assert "scout setup" in out and "scout pm" in out
-    target = json.loads(next(line.removeprefix("TARGET=") for line in out.splitlines() if line.startswith("TARGET=")))
-    assert Path(target["prefix"]) == selected
-    assert Path(target["python"]).parent.parent == selected
-    assert runtime_facts_path(root).read_bytes() == facts
-    assert not (root / ".update-incomplete").exists()
-
-    # Only the target gains the anchors; no updater module/cache is repaired.
-    for name in ("lark_oapi", "mcp"):
-        (site / f"{name}.py").write_text("# Passive dependency-probe fixture.\n", encoding="utf-8")
-    build()
-    assert "fail to load them on restart" not in capfd.readouterr().out
-    assert runtime_facts_path(root).read_bytes() == facts
 
 
 @pytest.mark.platforms("posix")

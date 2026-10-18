@@ -148,7 +148,6 @@ vi.mock('@/lib/session-source', async importOriginal => {
 
   return {
     ...actual,
-    handoffOriginSource: (state?: string, platform?: string) => (state && platform ? platform : null),
     sessionSourceLabel: (source: string) => source
   }
 })
@@ -217,8 +216,6 @@ vi.mock('@/store/windows', async importOriginal => {
 
 function makeSession(overrides: Partial<SessionInfo> & { title: string }): SessionInfo {
   return {
-    handoff_platform: null,
-    handoff_state: null,
     id: 's1',
     last_active: 0,
     profile: 'default',

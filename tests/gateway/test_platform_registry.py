@@ -14,12 +14,6 @@ class TestPlatformEnumDynamic:
 
 
 
-    def test_dynamic_member_case_normalised(self):
-        """Mixed case normalised to lowercase."""
-        a = Platform("IRC")
-        b = Platform("irc")
-        assert a is b
-        assert a.value == "irc"
 
     def test_dynamic_member_with_hyphens(self):
         """Registered plugin platforms with hyphens work once registered."""
@@ -640,40 +634,3 @@ class TestPluginEnablementGate:
             _reg.unregister("myhardblockplat")
 
 
-class TestMigratedPlatformWiring:
-    """Every lazy-installable bundled platform must register the split:
-    a PASSIVE check_fn plus an ACTIVE ensure_deps_fn (#79812).
-
-    Behavior contract, not a snapshot: asserts the two fields are distinct
-    callables (probe != installer), not specific function identities, so
-    renames don't churn this test. One discovery pass covers every platform.
-    """
-
-    _LAZY_INSTALLABLE = (
-        "teams", "telegram", "discord", "slack",
-        "matrix", "dingtalk", "feishu", "wecom_callback",
-        "google_chat",
-    )
-
-    def test_lazy_installable_platforms_have_split_wiring(self):
-        from scout_cli.plugins import discover_plugins
-
-        discover_plugins()
-        from gateway.platform_registry import platform_registry
-
-        # Materialize deferred loaders (wecom_callback is registered by the
-        # "wecom" manifest's loader; a cold get() by its own name misses).
-        platform_registry.plugin_entries()
-        for platform_name in self._LAZY_INSTALLABLE:
-            entry = platform_registry.get(platform_name)
-            assert entry is not None, f"{platform_name} not registered"
-            assert entry.ensure_deps_fn is not None, (
-                f"{platform_name} has a lazy-installable SDK but no "
-                "ensure_deps_fn — its deps can never auto-install "
-                "(the #79812 deadlock)"
-            )
-            assert entry.ensure_deps_fn is not entry.check_fn, (
-                f"{platform_name} registered the same callable for the passive "
-                "probe and the active installer — status displays would "
-                "pip-install as a side effect"
-            )

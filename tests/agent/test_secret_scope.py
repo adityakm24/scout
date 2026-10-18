@@ -466,7 +466,7 @@ class TestRelayRoutingStampGlobals:
     secrets: config's relay enablement/sweep and gateway.relay's readers
     (relay_url(), registration, self-provision) must resolve the same
     process-env value under any scope, or the gateway enters a split-brain
-    state (adapter registered but Platform.RELAY absent from config, or vice
+    state (adapter registered but Platform.HOMEASSISTANT absent from config, or vice
     versa). Auth material (GATEWAY_RELAY_SECRET / _ID / _DELIVERY_KEY and the
     IDP_* credentials) stays profile-scoped with the fail-closed guard —
     mirroring the API_SERVER_KEY line above and the terminal env blocklist

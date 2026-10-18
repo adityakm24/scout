@@ -20,13 +20,13 @@ async def test_admitted_heartbeat_executes_only_in_own_conversation(tmp_path, bo
     runner._running_agents = {}
     runner._run_in_executor_with_context = asyncio.to_thread
     runner.session_store = SessionStore(tmp_path / "sessions", runner.config)
-    adapter = WireAdapter(PlatformConfig(enabled=True, typing_indicator=False), Platform.TELEGRAM)
+    adapter = WireAdapter(PlatformConfig(enabled=True, typing_indicator=False), Platform.HOMEASSISTANT)
     adapter.wire = []
     runner._delivery_adapter_for = lambda source: adapter
     runner._is_telegram_topic_lane = lambda source: False
     runner._cache_session_source = lambda *args: None
     runner._clear_session_env = lambda tokens: None
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id="boundary", user_id="owner")
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="boundary", user_id="owner")
     entry = runner.session_store.get_or_create_session(source)
     key, old = entry.session_key, entry.session_id
     await runner._warm_goals_session_db("test")
@@ -82,7 +82,7 @@ async def test_restart_does_not_restore_suspended_heartbeat(tmp_path):
 
     config = GatewayConfig()
     store = SessionStore(tmp_path / "sessions", config)
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id="stopped", user_id="owner")
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="stopped", user_id="owner")
     entry = store.get_or_create_session(source)
     save_heartbeat(entry.session_id, HeartbeatState(prompt="stale work", interval_seconds=60, created_at=1))
     store.suspend_session(entry.session_key)

@@ -27,7 +27,7 @@ from scout_cli.web_server_gateway import _restart_gateway_after
 from scout_cli.web_server_memory import _normalize_memory_provider_name, _require_memory_provider_ready
 from scout_cli.web_models import (
     BackupRequest, CredentialPoolAdd, HookCreate, HookDelete, ImportRequest, MemoryEntriesWrite,
-    MemoryProviderSelect, MemoryReset, PairingApprove, PairingRevoke, WebhookCreate, WebhookEnabledToggle,
+    MemoryProviderSelect, MemoryReset, WebhookCreate, WebhookEnabledToggle,
 )
 from scout_cli.web_routers._common import (
     config_scoped_to_thread, config_write_scope, destructive_profile, http_failure,
@@ -44,7 +44,7 @@ _gateway_subcommand = late("_gateway_subcommand", "scout_cli.web_server_gateway"
 _config_profile_scope = late("_config_profile_scope", "scout_cli.web_server_profiles")
 _resolve_profile_dir = late("_resolve_profile_dir", "scout_cli.web_server_profiles")
 _spawn_scout_action = late("_spawn_scout_action", "scout_cli.web_server_gateway")
-_write_platform_enabled = late("_write_platform_enabled", "scout_cli.web_server_messaging")
+write_platform_config_field = late("write_platform_config_field", "scout_cli.config")
 get_scout_home = late("get_scout_home", "scout_cli.config")
 load_config = late("load_config", "scout_cli.config")
 save_config = late("save_config", "scout_cli.config")
@@ -58,75 +58,6 @@ def _spawn_action(argv: List[str], name: str, *, log_msg: str, prefix: str,
     that retargets a fresh process's import-time home bindings.
     """
     return spawn_profile_action(profile, argv, name, log_msg=log_msg, prefix=prefix)
-
-
-# --- Pairing: how a remote admin onboards messaging users without shell access.
-
-
-def _pairing_store(profile: Optional[str] = None):
-    """Pairing store for ``profile`` — the dashboard's own when unspecified.
-
-    The gateway keeps one store per served profile, so without scoping an
-    operator on a named profile would approve into a whitelist their gateway
-    never consults. ``PairingStore`` resolves the profile home itself
-    (``default`` maps to the global store); only the name is validated here,
-    so nothing process-global is swapped across the ``await`` boundary.
-    """
-    from gateway.pairing import PairingStore
-
-    requested = (profile or "").strip()
-    if not requested or requested.lower() == "current":
-        return PairingStore()
-    _resolve_profile_dir(requested)  # 400/404 on an unknown profile
-    return PairingStore(profile=requested)
-
-
-@router.get("/api/pairing")
-async def list_pairing(profile: Optional[str] = None):
-    store = _pairing_store(profile)
-    return {"pending": store.list_pending(), "approved": store.list_approved()}
-
-
-@router.post("/api/pairing/approve")
-async def approve_pairing(body: PairingApprove):
-    store = _pairing_store(body.profile)
-    platform = (body.platform or "").lower().strip()
-    # `request_id` is what an admin surface sends after listing pending requests;
-    # `code` is the one-time code the user relays. A request-id-shaped value in
-    # the older `code` field still routes to the request path.
-    target = (body.request_id or body.code or "").strip()
-    if not platform or not target:
-        raise HTTPException(status_code=400, detail="platform and request_id or code are required")
-
-    by_request_id = bool(body.request_id) or store.looks_like_request_id(target)
-    result = store.approve_request(platform, target) if by_request_id else store.approve_code(platform, target.upper())
-    if result:
-        return {"ok": True, "user": result}
-    # Lockout only gates the code path — a stale request id must not surface
-    # as a bogus 429 while the platform is locked out for an unrelated reason.
-    if not by_request_id and store._is_locked_out(platform):
-        raise HTTPException(
-            status_code=429, detail=f"Platform '{platform}' is locked out after too many failed approvals.",
-        )
-    raise HTTPException(
-        status_code=404, detail=f"Pairing request or code not found or expired for platform '{platform}'.",
-    )
-
-
-@router.post("/api/pairing/revoke")
-async def revoke_pairing(body: PairingRevoke):
-    store = _pairing_store(body.profile)
-    platform = (body.platform or "").lower().strip()
-    if not platform or not body.user_id:
-        raise HTTPException(status_code=400, detail="platform and user_id are required")
-    if store.revoke(platform, body.user_id):
-        return {"ok": True}
-    raise HTTPException(status_code=404, detail=f"User {body.user_id} not found in approved list for {platform}.")
-
-
-@router.post("/api/pairing/clear-pending")
-async def clear_pending_pairing(profile: Optional[str] = None):
-    return {"ok": True, "cleared": _pairing_store(profile).clear_pending()}
 
 
 # --- Webhooks: same JSON store as the CLI (scout_cli.webhook); the adapter
@@ -173,7 +104,7 @@ async def list_webhooks(profile: Optional[str] = None):
 async def enable_webhooks(profile: Optional[str] = None):
     def _run():
         with config_write_scope(profile):
-            _write_platform_enabled("webhook", True)
+            write_platform_config_field("webhook", "enabled", True)
 
     with http_failure("Failed to enable webhook platform from dashboard", 500, detail="Failed to enable webhook platform."):
         await asyncio.to_thread(_run)

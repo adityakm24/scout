@@ -14,13 +14,12 @@ import os
 import re
 import shlex
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Union
 
 from agent.i18n import t
-from gateway.config import HomeChannel, Platform, PlatformConfig, persist_home_channel
+from gateway.config import Platform
 from gateway.platforms.base import EphemeralReply
 from gateway.platforms.event import MessageEvent
 from gateway.session import AsyncSessionStore
@@ -50,12 +49,6 @@ _BUSY_MODE_BEHAVIOR = {
 # /diff argument -> diff mode (unknown args leave the mode unchanged).
 _DIFF_MODE_BY_ARG = {**dict.fromkeys(("staged", "--staged", "cached", "--cached"), "staged"),
                      **dict.fromkeys(("all", "--all", "head"), "all"), "session": "session"}
-
-# /voice subcommand -> stored mode (None = auto-TTS disabled), confirmation i18n key.
-_VOICE_MODE_BY_ARG = {
-    **dict.fromkeys(("on", "enable"), ("voice_only", "gateway.voice.enabled_voice_only")),
-    **dict.fromkeys(("off", "disable"), ("off", "gateway.voice.disabled_text")),
-    "tts": ("all", "gateway.voice.tts_enabled")}
 
 # /footer argument -> new enabled state ("" toggles; anything else is a usage error).
 _FOOTER_STATE_BY_ARG = {**dict.fromkeys(("on", "enable", "true", "1"), True),
@@ -113,9 +106,6 @@ def _restart_notify_payload(event: MessageEvent) -> dict:
     source = event.source
     data = {"platform": source.platform.value if source.platform else None,
             "chat_id": source.chat_id, "chat_type": source.chat_type}
-    if source.delivered_via_upstream_relay is True:
-        data["delivered_via_upstream_relay"] = True
-        data.update({k: getattr(source, k) for k in ("user_id", "scope_id") if getattr(source, k)})
     optional = (("thread_id", source.thread_id), ("message_id", event.message_id),
                 ("profile", getattr(source, "profile", None)))
     data.update({k: v for k, v in optional if v})
@@ -150,19 +140,6 @@ def _spawn_detached_update(scout_cmd, output_path, exit_code_path) -> None:
     setsid_bin = shutil.which("setsid")
     argv = [setsid_bin, "bash", "-c", update_cmd] if setsid_bin else ["bash", "-c", update_cmd]
     subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-
-
-def _home_thread_from_source(source) -> Optional[str]:
-    """The thread id /sethome should persist on the home target, or None.  Slack thread-per-message
-    keying stamps a top-level message's own id as ``source.thread_id`` (a session key, not a
-    location); persisting it would pin HOME to that ephemeral thread.  A thread id equal to the
-    message's own id is synthetic and dropped; a real thread (id = parent's) is kept."""
-    thread_id = getattr(source, "thread_id", None)
-    if not thread_id:
-        return None
-    synthetic = (getattr(source, "platform", None) == Platform.SLACK and getattr(source, "message_id", None)
-                 and str(thread_id) == str(source.message_id))
-    return None if synthetic else str(thread_id)
 
 
 class GatewaySlashCommandsMixin(
@@ -219,10 +196,6 @@ class GatewaySlashCommandsMixin(
         if not event.source:
             return None, None
         return self._delivery_adapter_for(event.source), self._session_key_for_source(event.source)
-
-    def _telegramized_command_reply(self, event: MessageEvent, text: str) -> str:
-        from gateway.run import _telegramize_command_mentions
-        return _telegramize_command_mentions(text, getattr(getattr(event, "source", None), "platform", None))
 
     def _checkpoint_manager(self):
         """A CheckpointManager from gateway config, or None when checkpoints are disabled."""
@@ -527,16 +500,6 @@ class GatewaySlashCommandsMixin(
     async def _handle_restart_command(self, event: MessageEvent) -> Union[str, EphemeralReply]:
         """Handle /restart command - drain active work, then restart the gateway."""
         from gateway.run import _scout_home
-        # Idempotency check: if the previous gateway process recorded this same /restart (platform +
-        # update_id) and we see it *again*, it's a redelivery from PTB's graceful-shutdown get_updates
-        # ACK failing on the way out. Ignoring it prevents a loop where every fresh gateway re-restarts.
-        if self._is_stale_restart_redelivery(event):
-            src = event.source
-            logger.info("Ignoring redelivered /restart (platform=%s, update_id=%s) — "
-                        "already processed by a previous gateway instance.",
-                        src.platform.value if src and src.platform else "?",
-                        event.platform_update_id)
-            return ""
         if self._restart_requested or self._draining:
             count = self._running_agent_count()
             return t("gateway.draining", count=count) if count else EphemeralReply(t("gateway.restart.in_progress"))
@@ -556,20 +519,8 @@ class GatewaySlashCommandsMixin(
                 self._restart_command_source = event.source
             return data
 
-        def _dedup_payload() -> dict:
-            # Platform + update_id of the triggering /restart, for redelivery detection.
-            data = {"platform": event.source.platform.value if event.source.platform else None,
-                    "requested_at": time.time()}
-            if event.platform_update_id is not None:
-                data["update_id"] = event.platform_update_id
-            return data
-
         # Save the requester's routing info so the new gateway process can notify them once back.
         await _write_marker(".restart_notify.json", _notify_payload, "notify file")
-        # Record the triggering platform + update_id in a dedicated dedup marker. Unlike
-        # .restart_notify.json (unlinked once the new gateway sends its notification) this persists
-        # so a delayed Telegram redelivery is still detectable. Overwritten on every /restart.
-        await _write_marker(".restart_last_processed.json", _dedup_payload, "dedup marker")
         active_agents = self._running_agent_count()
         # Under a service manager (systemd/launchd) or Docker/Podman, exit 75 so the supervisor /
         # restart policy restarts us — detached setsid+bash fails there (systemd KillMode=mixed kills
@@ -603,110 +554,11 @@ class GatewaySlashCommandsMixin(
 
     async def _handle_help_command(self, event: MessageEvent) -> str:
         """Handle /help command - list available commands."""
-        return self._telegramized_command_reply(
-            event, _execute("help", options=self._catalog_options(event)).text)
+        return _execute("help", options=self._catalog_options(event)).text
 
     async def _handle_commands_command(self, event: MessageEvent) -> str:
-        # Page size is a surface parameter (Telegram messages are shorter).
-        page_size = 15 if event.source.platform == Platform.TELEGRAM else 20
-        options = {"page_size": page_size, **self._catalog_options(event)}
-        reply = _execute("commands", args=event.get_command_args(), options=options)
-        return self._telegramized_command_reply(event, reply.text)
-
-    async def _handle_set_home_command(self, event: MessageEvent) -> str:
-        """Handle /sethome command -- set the current chat as the platform's home channel."""
-        from gateway.run import _home_target_env_var, _home_thread_env_var
-        source = event.source
-        platform_name = source.platform.value if source.platform else "unknown"
-        chat_id = source.chat_id
-        chat_name = source.chat_name or chat_id
-        if source.platform is None:
-            return t("gateway.set_home.save_failed", error=t("gateway.set_home.err_missing_platform"))
-        via_relay = getattr(source, "delivered_via_upstream_relay", False) is True
-        if via_relay:
-            adapter_for_source = getattr(self, "_intake_adapter_for", None)
-            relay_adapter = adapter_for_source(source) if callable(adapter_for_source) else None
-            fronts_platform = getattr(relay_adapter, "fronts_platform", None)
-            if (source.platform in {None, Platform.LOCAL, Platform.RELAY}
-                    or not getattr(source, "user_id", None)
-                    or not callable(fronts_platform) or not fronts_platform(source.platform)):
-                return t("gateway.set_home.save_failed", error=t("gateway.set_home.err_relay_unauthenticated"))
-        thread_id = _home_thread_from_source(source)
-        home = HomeChannel(
-            platform=source.platform, chat_id=str(chat_id), name=chat_name, thread_id=thread_id,
-            user_id=str(source.user_id) if getattr(source, "user_id", None) else None,
-            scope_id=str(source.scope_id) if getattr(source, "scope_id", None) else None)
-        # config.yaml is canonical because it can persist the authenticated logical-target
-        # provenance required by Relay after a restart.
-        try:
-            persist_home_channel(home, enabled_if_new=not via_relay)
-        except Exception as e:
-            return t("gateway.set_home.save_failed", error=e)
-        # Preserve legacy home env vars for existing cron/setup consumers.
-        try:
-            from scout_cli.config import save_env_value
-            save_env_value(_home_target_env_var(platform_name), str(chat_id))
-            save_env_value(_home_thread_env_var(platform_name), str(thread_id or ""))
-        except Exception as e:
-            logger.warning("Home config saved but legacy env persistence failed: %s", e)
-        # Keep the running gateway config in sync too. The pre-restart notification path reads
-        # self.config before the process reloads config.
-        platform_config = self.config.platforms.setdefault(source.platform, PlatformConfig(enabled=not via_relay))
-        platform_config.home_channel = home
-        return t("gateway.set_home.success", name=chat_name, chat_id=chat_id)
-
-    async def _handle_voice_command(self, event: MessageEvent) -> str:
-        """Handle /voice [on|off|tts|channel|leave|status] command."""
-        args = event.get_command_args().strip().lower()
-        chat_id = event.source.chat_id
-        # Voice state belongs to the (bot, chat) pair: resolve the adapter that received the
-        # command and key the mode by its owning profile so two multiplexed bots in one chat keep
-        # independent /voice state.
-        # See #75198.
-        voice_key = self._voice_key_for_source(event.source)
-        adapter = self._delivery_adapter_for(event.source)
-
-        def _set_mode(mode: str) -> None:
-            self._voice_mode[voice_key] = mode
-            self._save_voice_modes()
-            if not adapter:
-                return
-            if mode == "off":
-                self._set_adapter_auto_tts_disabled(adapter, chat_id, disabled=True)
-            else:
-                self._set_adapter_auto_tts_enabled(adapter, chat_id, enabled=True)
-
-        if args in _VOICE_MODE_BY_ARG:
-            mode, reply_key = _VOICE_MODE_BY_ARG[args]
-            _set_mode(mode)
-            return t(reply_key)
-        if args in {"channel", "join"}:
-            return await self._handle_voice_channel_join(event)
-        if args == "leave":
-            return await self._handle_voice_channel_leave(event)
-        if args == "status":
-            mode = self._voice_mode.get(voice_key, "off")
-            label = t(f"gateway.voice.label_{mode}") if mode in ("off", "voice_only", "all") else mode
-            lines = [t("gateway.voice.status_mode", label=label)]
-            guild_id = self._get_guild_id(event)  # append voice channel info if connected
-            info = adapter.get_voice_channel_info(guild_id) if guild_id and hasattr(adapter, "get_voice_channel_info") else None
-            if info:
-                lines += [t("gateway.voice.status_channel", channel=info['channel_name']),
-                          t("gateway.voice.status_participants", count=info['member_count'])]
-                for m in info["members"]:
-                    status = t("gateway.voice.speaking") if m.get("is_speaking") else ""
-                    lines.append(t("gateway.voice.status_member", name=m['display_name'], status=status))
-            return "\n".join(lines)
-
-        # Toggle: off → on, on/all → off
-        turning_on = self._voice_mode.get(voice_key, "off") == "off"
-        _set_mode("voice_only" if turning_on else "off")
-        toggle_line = t("gateway.voice.enabled_short" if turning_on else "gateway.voice.disabled_short")
-        # Bare /voice still toggles, but append an explainer so users discover the on/off/tts/status
-        # subcommands (and, on Discord, live voice-channel join/leave). Toggle result shows first.
-        supports_voice_channels = adapter is not None and hasattr(adapter, "join_voice_channel")
-        channels = t("gateway.voice.help_channels") if supports_voice_channels else ""
-        return t("gateway.voice.help", toggle=toggle_line, channels=channels)
+        options = {"page_size": 20, **self._catalog_options(event)}
+        return _execute("commands", args=event.get_command_args(), options=options).text
 
     async def _handle_rollback_command(self, event: MessageEvent) -> str:
         """Handle /rollback command — list or restore filesystem checkpoints."""

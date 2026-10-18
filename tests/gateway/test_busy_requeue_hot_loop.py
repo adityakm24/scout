@@ -32,7 +32,7 @@ from tests.gateway.restart_test_helpers import RestartTestAdapter
 
 
 def _source() -> SessionSource:
-    return SessionSource(platform=Platform.TELEGRAM, user_id="u1", chat_id="c1",
+    return SessionSource(platform=Platform.HOMEASSISTANT, user_id="u1", chat_id="c1",
                          user_name="tester", chat_type="dm")
 
 
@@ -43,13 +43,13 @@ def _runner_with_running_agent(adapter, *, compression_in_flight):
 
     runner = object.__new__(GatewayRunner)
     runner.config = GatewayConfig(
-        platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="***")})
-    runner.adapters = {Platform.TELEGRAM: adapter}
+        platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***")})
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
     runner._voice_mode = {}
     runner.hooks = SimpleNamespace(emit=AsyncMock(), loaded_hooks=False)
     sk = build_session_key(_source())
     entry = SessionEntry(session_key=sk, session_id="sess-1", created_at=datetime.now(),
-                         updated_at=datetime.now(), platform=Platform.TELEGRAM, chat_type="dm")
+                         updated_at=datetime.now(), platform=Platform.HOMEASSISTANT, chat_type="dm")
     store = MagicMock()
     store.get_or_create_session.return_value = entry
     store.load_transcript.return_value = []

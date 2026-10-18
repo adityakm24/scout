@@ -4,8 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Set, Optional, Tuple
 
 
-# Shared tool list for CLI and all messaging platform toolsets (edit once, all
-# platforms follow). Desktop GUI affordances are deliberately NOT here: they live
+# Shared tool list for every surface's toolset (edit once, all surfaces follow). Desktop GUI affordances are deliberately NOT here: they live
 # in `desktop_ui`/`project`, enabled per desktop-sourced session by the GUI gateway
 # (tui_gateway/server.py::_load_enabled_toolsets). HA, kanban and computer_use
 # entries are further gated by their tools' check_fns.
@@ -46,11 +45,6 @@ _SCOUT_CORE_TOOLS = [
 # Webhook payloads are untrusted third-party content: no file/system execution.
 _SCOUT_WEBHOOK_SAFE_TOOLS = ["web_search", "web_extract", "vision_analyze", "clarify"]
 _HA_TOOLS = ["ha_list_entities", "ha_get_state", "ha_list_services", "ha_call_service"]
-_FEISHU_TOOLS = [
-    "feishu_doc_read", "feishu_drive_list_comments", "feishu_drive_list_comment_replies",
-    "feishu_drive_reply_comment", "feishu_drive_add_comment",
-]
-_YUANBAO_TOOLS = ["yb_query_group_info", "yb_query_group_members", "yb_send_dm", "yb_search_sticker", "yb_send_sticker"]
 
 
 def _ts(description, tools=(), includes=(), **extra):
@@ -174,11 +168,6 @@ TOOLSETS = {
         "files, and (for orchestrators) list, unblock, and fan out tasks.",
         [t for t in _SCOUT_CORE_TOOLS if t.startswith("kanban_")],
     ),
-    "discord": _ts("Discord read and participate tools (fetch messages, search members, create threads)", ["discord"]),
-    "discord_admin": _ts("Discord server management (list channels/roles, pin messages, assign roles)", ["discord_admin"]),
-    "yuanbao": _ts("Yuanbao platform tools - group info, member queries, DM, stickers", _YUANBAO_TOOLS),
-    "feishu_doc": _ts("Read Feishu/Lark document content", ["feishu_doc_read"]),
-    "feishu_drive": _ts("Feishu/Lark document comment operations (list, reply, add)", _FEISHU_TOOLS[1:]),
     "spotify": _ts(
         "Native Spotify playback, search, playlist, album, and library tools",
         ["spotify_playback", "spotify_devices", "spotify_queue", "spotify_search",
@@ -200,7 +189,7 @@ TOOLSETS = {
         posture=True,
     ),
 
-    # Full Scout toolsets (CLI + messaging platforms). All share the core tools;
+    # Full Scout toolsets, one per surface. All share the core tools;
     # there is deliberately no agent-callable send_message tool. scout-acp is the
     # coding posture minus the interactive clarify UI.
     "scout-acp": _ts(
@@ -218,44 +207,12 @@ TOOLSETS = {
     # Mirrors scout-cli; `scout tools` platform config filters it down and
     # _get_platform_tools() drops _DEFAULT_OFF_TOOLSETS unless user-enabled.
     "scout-cron": _bundle("Default cron toolset - same core tools as scout-cli; gated by `scout tools`"),
-    "scout-telegram": _bundle("Telegram bot toolset - full access for personal use (terminal has safety checks)"),
-    "scout-discord": _bundle(
-        "Discord bot toolset - full access (terminal has safety checks via dangerous "
-        "command approval)",
-        ["discord", "discord_admin"],
-    ),
-    "scout-whatsapp": _bundle("WhatsApp bot toolset - similar to Telegram (personal messaging, more trusted)"),
-    "scout-slack": _bundle("Slack bot toolset - full access for workspace use (terminal has safety checks)"),
-    "scout-signal": _bundle("Signal bot toolset - encrypted messaging platform (full access)"),
-    "scout-bluebubbles": _bundle("BlueBubbles iMessage bot toolset - Apple iMessage via local BlueBubbles server"),
     "scout-homeassistant": _bundle("Home Assistant bot toolset - smart home event monitoring and control"),
-    "scout-email": _bundle("Email bot toolset - interact with Scout via email (IMAP/SMTP)"),
-    "scout-mattermost": _bundle("Mattermost bot toolset - self-hosted team messaging (full access)"),
-    "scout-matrix": _bundle("Matrix bot toolset - decentralized encrypted messaging (full access)"),
-    "scout-dingtalk": _bundle("DingTalk bot toolset - enterprise messaging platform (full access)"),
-    "scout-feishu": _bundle("Feishu/Lark bot toolset - enterprise messaging via Feishu/Lark (full access)", _FEISHU_TOOLS),
-    "scout-weixin": _bundle("Weixin bot toolset - personal WeChat messaging via iLink (full access)"),
-    "scout-qqbot": _bundle("QQBot toolset - QQ messaging via Official Bot API v2 (full access)"),
-    "scout-wecom": _bundle("WeCom bot toolset - enterprise WeChat messaging (full access)"),
-    "scout-wecom-callback": _bundle("WeCom callback toolset - enterprise self-built app messaging (full access)"),
-    "scout-yuanbao": {
-        "description": "Yuanbao Bot 元宝消息平台工具集 - 群信息、成员查询、私聊、贴纸表情",
-        "tools": _SCOUT_CORE_TOOLS + _YUANBAO_TOOLS,
-        "module": "tools.yuanbao_tools",
-        "includes": [],
-    },
-    "scout-sms": _bundle("SMS bot toolset - interact with Scout via SMS (Twilio)"),
     "scout-webhook": _ts("Webhook toolset - receive and process external webhook events", _SCOUT_WEBHOOK_SAFE_TOOLS),
     "scout-gateway": _ts(
-        "Gateway toolset - union of all messaging platform tools",
+        "Gateway toolset - union of the gateway-hosted surface toolsets",
         [],
-        includes=[
-            "scout-telegram", "scout-discord", "scout-whatsapp", "scout-slack",
-            "scout-signal", "scout-bluebubbles", "scout-homeassistant", "scout-email",
-            "scout-sms", "scout-mattermost", "scout-matrix", "scout-dingtalk",
-            "scout-feishu", "scout-wecom", "scout-wecom-callback", "scout-weixin",
-            "scout-qqbot", "scout-webhook", "scout-yuanbao",
-        ],
+        includes=["scout-homeassistant", "scout-webhook"],
     ),
 }
 

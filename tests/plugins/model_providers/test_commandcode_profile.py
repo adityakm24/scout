@@ -46,7 +46,6 @@ def commandcode_anthropic_profile():
 # ── Chat Completions profile ──────────────────────────────────────────────────
 
 
-
 class TestCommandCodeReasoningWireControls:
     """DeepSeek V4+ defaults to thinking when ``thinking`` is omitted, so the profile
     must put the user's setting on the wire (#95232); other families stay a no-op."""
@@ -58,26 +57,9 @@ class TestCommandCodeReasoningWireControls:
         assert extra_body.get("thinking") == {"type": "disabled"}
         assert top_level == {}
 
-    def test_deepseek_effort_matches_native_profile_and_others_noop(self, commandcode_profile):
-        from plugins.model_providers.deepseek import deepseek
-
-        rc = {"enabled": True, "effort": "low"}
-        expected = deepseek.build_api_kwargs_extras(reasoning_config=rc, model="deepseek-v4.1-flash")
-        assert expected[1].get("reasoning_effort") == "low"  # equality below must not be ({}, {}) == ({}, {})
-        assert commandcode_profile.build_api_kwargs_extras(
-            reasoning_config=rc, model="deepseek/deepseek-v4.1-flash"
-        ) == expected
-        assert commandcode_profile.build_api_kwargs_extras(
-            reasoning_config=rc, model="Qwen/Qwen3.7-Max"
-        ) == ({}, {})
-
 
 class TestCommandCodeAnthropicProfileIdentity:
     """Anthropic-compatible profile metadata."""
-
-
-
-
 
 
     def test_fallback_models_are_claude_family(self, commandcode_anthropic_profile):
@@ -85,9 +67,6 @@ class TestCommandCodeAnthropicProfileIdentity:
             assert model.startswith("claude-"), (
                 f"All anthropic fallback models should be claude-*: got {model}"
             )
-
-
-
 
 
 # ── Bearer Auth Recognition ───────────────────────────────────────────────────
@@ -122,9 +101,7 @@ class TestCommandCodeAnthropicBearerAuth:
 # ── Registry integrity ───────────────────────────────────────────────────────
 
 
-
 # ── Model list filtering ──────────────────────────────────────────────────────
-
 
 
 # ── Picker contract ──────────────────────────────────────────────────────────

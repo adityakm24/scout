@@ -13,7 +13,7 @@ from gateway.config import GatewayConfig, Platform, PlatformConfig
 from gateway.platforms.event import MessageEvent
 from gateway.session import SessionSource
 
-def _make_event(text="/title", platform=Platform.TELEGRAM,
+def _make_event(text="/title", platform=Platform.HOMEASSISTANT,
                 user_id="12345", chat_id="67890"):
     """Build a MessageEvent for testing."""
     source = SessionSource(
@@ -82,24 +82,6 @@ class TestHandleTitleCommand:
         assert db.get_session_title("test_session_123") == "helloworld"
         db.close()
 
-    @pytest.mark.asyncio
-    async def test_set_title_propagates_to_telegram_topic_rename(self, tmp_path):
-        """/title <name> also renames the visible Telegram topic, not just the DB."""
-        from scout_state import SessionDB
-        db = SessionDB(db_path=tmp_path / "state.db")
-        db.create_session("test_session_123", "telegram")
-
-        runner = _make_runner(session_db=db)
-        runner._schedule_telegram_topic_title_rename = MagicMock()
-
-        event = _make_event(text="/title My Topic Name")
-        result = await runner._handle_title_command(event)
-
-        assert "My Topic Name" in result
-        runner._schedule_telegram_topic_title_rename.assert_called_once_with(
-            event.source, "test_session_123", "My Topic Name"
-        )
-        db.close()
 
     @pytest.mark.asyncio
     async def test_show_title_does_not_rename_topic(self, tmp_path):
@@ -139,11 +121,11 @@ class TestResetCommandWithTitle:
 
         runner = object.__new__(GatewayRunner)
         runner.config = GatewayConfig(
-            platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="***")}
+            platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***")}
         )
         adapter = MagicMock()
         adapter.send = AsyncMock()
-        runner.adapters = {Platform.TELEGRAM: adapter}
+        runner.adapters = {Platform.HOMEASSISTANT: adapter}
         runner._voice_mode = {}
         runner.hooks = SimpleNamespace(emit=AsyncMock(), loaded_hooks=False)
         runner._session_model_overrides = {}
@@ -151,7 +133,7 @@ class TestResetCommandWithTitle:
         runner._background_tasks = set()
 
         source = SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             user_id="12345",
             chat_id="67890",
             user_name="testuser",
@@ -162,7 +144,7 @@ class TestResetCommandWithTitle:
             session_id="sess-new",
             created_at=datetime.now(),
             updated_at=datetime.now(),
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_type="dm",
         )
         runner.session_store = MagicMock()

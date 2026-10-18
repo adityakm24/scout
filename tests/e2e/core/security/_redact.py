@@ -11,17 +11,29 @@ import json
 import re
 import secrets
 import string
-import subprocess
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
 import pytest
 
-from tests.e2e.core.delivery._fake_platform import GatewayProcess, read_jsonl, wait_until
-from tests.e2e.core.security._helpers import REPO_ROOT, BoundaryBreach, db_blob, files_containing, run_scout
+from tests.e2e.core.security._helpers import BoundaryBreach, db_blob, files_containing, run_scout
 from tests.fakes.fake_llm_provider import Error, Response, Text, ToolCall
+
+
+def read_jsonl(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    out = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue  # a torn last line from a SIGKILLed writer
+    return out
 
 
 def _alnum(n: int) -> str:
@@ -288,38 +300,9 @@ def check(world: World, scenario: str, sink: str) -> None:
 # Gateway ------------------------------------------------------------------------------------------
 
 
-class LoggingGateway(GatewayProcess):
-    """The delivery suite's real GatewayRunner child, with the gateway's file logging installed the way
-    ``start_gateway`` does (agent.log / errors.log / gateway.log under the child's SCOUT_HOME)."""
-
-    def start(self) -> "LoggingGateway":
-        assert self.proc is None
-        self.boots += 1
-        ready_before = len(read_jsonl(self.spool / "ready.jsonl"))
-        with open(self.log, "wb") as log:
-            self.proc = subprocess.Popen(
-                [sys.executable, "-m", "tests.e2e.core.security._redact", "serve", str(self.spool)],
-                cwd=str(REPO_ROOT), env=self.env(), stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
-        self.pids.append(self.proc.pid)
-        pid = self.proc.pid
-        rec = wait_until(lambda: next((r for r in read_jsonl(self.spool / "ready.jsonl")[ready_before:]
-                                       if r["pid"] == pid), None),
-                         "gateway child ready", timeout=240, proc=self.proc, log=self.log)
-        import socket
-        self.sock = socket.create_connection(("127.0.0.1", rec["port"]), timeout=120)
-        self._rfile = self.sock.makefile("rb")
-        return self
 
 
 def files_with(root: Path, needles: list[str]) -> list[str]:
     return files_containing(root, [core(n) for n in needles])
 
 
-if __name__ == "__main__":  # pragma: no cover - gateway child entry
-    if len(sys.argv) >= 3 and sys.argv[1] == "serve":
-        from scout_logging import setup_logging
-
-        setup_logging(mode="gateway")
-        from tests.e2e.core.delivery._fake_platform import _serve
-
-        _serve(Path(sys.argv[2]))

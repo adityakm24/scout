@@ -589,7 +589,7 @@ def _check_secondary_port_binders(plan: MigrationPlan, configs: dict[str, object
         if cfg is None:
             continue
         for platform, platform_config in cfg.platforms.items():
-            if not platform_config.enabled or not platform_binds_port(platform.value, platform_config.extra):
+            if not platform_config.enabled or not platform_binds_port(platform.value):
                 continue
             if platform_serves_profile_prefix(platform.value):
                 plan.notices.append(

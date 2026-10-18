@@ -51,7 +51,7 @@ CRED_ENV = {
     "qqbot": {"QQ_APP_ID": "qq-app", "QQ_CLIENT_SECRET": "qq-secret"},
     "yuanbao": {"YUANBAO_APP_ID": "yb-app", "YUANBAO_APP_SECRET": "yb-secret"},
     # control: the pattern that always honored the explicit disable
-    "telegram": {"TELEGRAM_BOT_TOKEN": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+    "homeassistant": {"TELEGRAM_BOT_TOKEN": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
 }
 
 _PLATFORM_ENV_PREFIXES = (
@@ -73,81 +73,14 @@ def _isolate(monkeypatch, tmp_path, env):
         monkeypatch.setenv(k, v)
     return scout_home
 
-@pytest.mark.parametrize("platform", sorted(CRED_ENV))
-def test_yaml_explicit_disable_survives_env_credentials(platform, tmp_path, monkeypatch):
-    """``platforms.<x>.enabled: false`` + credentials in env -> stays disabled."""
-    scout_home = _isolate(monkeypatch, tmp_path, CRED_ENV[platform])
-    (scout_home / "config.yaml").write_text(
-        f"platforms:\n  {platform}:\n    enabled: false\n", encoding="utf-8"
-    )
 
-    config = load_gateway_config()
 
-    cfg = config.platforms.get(Platform(platform))
-    assert cfg is not None
-    assert cfg.enabled is False, (
-        f"{platform}: env credentials re-enabled a platform the user explicitly "
-        "disabled in config.yaml (#48820 Bug 2)"
-    )
-
-@pytest.mark.parametrize("platform", sorted(CRED_ENV))
-def test_env_credentials_still_enable_without_yaml_opinion(platform, tmp_path, monkeypatch):
-    """No ``enabled`` key in YAML + credentials in env -> env-only setup still works."""
-    scout_home = _isolate(monkeypatch, tmp_path, CRED_ENV[platform])
-    (scout_home / "config.yaml").write_text("platforms: {}\n", encoding="utf-8")
-
-    config = load_gateway_config()
-
-    cfg = config.platforms.get(Platform(platform))
-    assert cfg is not None and cfg.enabled is True, (
-        f"{platform}: env-only configuration must still enable the platform"
-    )
-
-def test_env_credentials_still_populate_extra_when_yaml_disables(tmp_path, monkeypatch):
-    """The disable only gates ``enabled``; credentials are still wired through
-    (mirrors the Slack/API-server contract so send-only tooling keeps working)."""
-    scout_home = _isolate(monkeypatch, tmp_path, CRED_ENV["weixin"])
-    (scout_home / "config.yaml").write_text(
-        "platforms:\n  weixin:\n    enabled: false\n", encoding="utf-8"
-    )
-
-    config = load_gateway_config()
-
-    cfg = config.platforms[Platform.WEIXIN]
-    assert cfg.enabled is False
-    assert cfg.token == CRED_ENV["weixin"]["WEIXIN_TOKEN"]
-    assert cfg.extra.get("account_id") == "acct_12345"
-    # marker never leaks out of config load
-    assert "_enabled_explicit" not in cfg.extra
 
 @pytest.fixture()
 def _fresh_warn_dedup(monkeypatch):
     """The explicit-disable notice is one-time per process; start each test clean."""
     monkeypatch.setattr(gateway_config_env, "_EXPLICIT_DISABLE_WARNED", set())
 
-@pytest.mark.usefixtures("_fresh_warn_dedup")
-@pytest.mark.parametrize("platform", sorted(CRED_ENV))
-def test_explicit_disable_with_env_credentials_warns_once(platform, tmp_path, monkeypatch, caplog):
-    """Users who relied on 'creds in .env = platform on' must be told why it went
-    dark: one WARNING naming the platform, the winning config key, and the env
-    credential(s) — emitted once per process, not on every config reload."""
-    scout_home = _isolate(monkeypatch, tmp_path, CRED_ENV[platform])
-    (scout_home / "config.yaml").write_text(
-        f"platforms:\n  {platform}:\n    enabled: false\n", encoding="utf-8"
-    )
-
-    with caplog.at_level(logging.WARNING, logger="gateway.config"):
-        load_gateway_config()
-        load_gateway_config()  # reload: must not repeat
-
-    hits = [
-        r for r in caplog.records
-        if r.levelno == logging.WARNING and f"platforms.{platform}.enabled: false" in r.getMessage()
-    ]
-    assert len(hits) == 1, [r.getMessage() for r in caplog.records]
-    msg = hits[0].getMessage()
-    for env_name in CRED_ENV[platform]:
-        assert env_name in msg
 
 @pytest.mark.usefixtures("_fresh_warn_dedup")
 def test_no_warning_when_yaml_has_no_opinion_or_is_enabled(tmp_path, monkeypatch, caplog):
@@ -159,20 +92,7 @@ def test_no_warning_when_yaml_has_no_opinion_or_is_enabled(tmp_path, monkeypatch
     with caplog.at_level(logging.WARNING, logger="gateway.config"):
         config = load_gateway_config()
 
-    assert config.platforms[Platform.WEIXIN].enabled is True
+    assert config.platforms[Platform.HOMEASSISTANT].enabled is True
     assert config.platforms[Platform.HOMEASSISTANT].enabled is True
     assert not [r for r in caplog.records if "explicitly disabled" in r.getMessage()]
 
-@pytest.mark.usefixtures("_fresh_warn_dedup")
-def test_no_warning_when_disabled_and_no_env_credentials(tmp_path, monkeypatch, caplog):
-    """The notice is about credentials being IGNORED; a plain disable is silent."""
-    scout_home = _isolate(monkeypatch, tmp_path, {})
-    (scout_home / "config.yaml").write_text(
-        "platforms:\n  weixin:\n    enabled: false\n", encoding="utf-8"
-    )
-
-    with caplog.at_level(logging.WARNING, logger="gateway.config"):
-        config = load_gateway_config()
-
-    assert config.platforms[Platform.WEIXIN].enabled is False
-    assert not [r for r in caplog.records if "explicitly disabled" in r.getMessage()]

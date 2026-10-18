@@ -48,7 +48,7 @@ def _make_history(n_messages: int, content_size: int = 100) -> list:
 class _CaptureAdapter(BasePlatformAdapter):
     def __init__(self):
         super().__init__(
-            PlatformConfig(enabled=True, token="fake-token"), Platform.TELEGRAM
+            PlatformConfig(enabled=True, token="fake-token"), Platform.HOMEASSISTANT
         )
         self.sent = []
 
@@ -82,10 +82,10 @@ def _build_runner(gateway_run, adapter, fake_db):
     runner = object.__new__(gateway_run.GatewayRunner)
     runner.config = GatewayConfig(
         platforms={
-            Platform.TELEGRAM: PlatformConfig(enabled=True, token="fake-token")
+            Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="fake-token")
         }
     )
-    runner.adapters = {Platform.TELEGRAM: adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
     runner._voice_mode = {}
     runner.hooks = SimpleNamespace(emit=AsyncMock(), loaded_hooks=False)
     runner.session_store = MagicMock()
@@ -94,7 +94,7 @@ def _build_runner(gateway_run, adapter, fake_db):
         session_id="sess-97963",
         created_at=datetime.now(),
         updated_at=datetime.now(),
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_type="dm",
     )
     runner.session_store.load_transcript.return_value = _make_history(
@@ -125,7 +125,7 @@ def _make_event():
     return MessageEvent(
         text="hello",
         source=SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_id="12345",
             chat_type="dm",
             user_id="12345",

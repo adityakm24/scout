@@ -38,9 +38,9 @@ def poller(monkeypatch):
     goals._get_session_db()
     clock = SimpleNamespace(now=1000.0)
     monkeypatch.setattr(heartbeat, "time", SimpleNamespace(time=lambda: clock.now))
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id="42", user_id="42", chat_type="dm", message_id="watch-cmd")
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="42", user_id="42", chat_type="dm", message_id="watch-cmd")
     key = build_session_key(source)
-    adapter = _HeartbeatAdapter(PlatformConfig(enabled=True, typing_indicator=False), Platform.TELEGRAM)
+    adapter = _HeartbeatAdapter(PlatformConfig(enabled=True, typing_indicator=False), Platform.HOMEASSISTANT)
     runner = object.__new__(GatewayRunner)
     runner._running_agents = {}
     runner._delivery_adapter_for = lambda source: adapter

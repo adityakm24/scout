@@ -19,7 +19,6 @@ import textwrap
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from scout_cli import setup_platforms  # noqa: F401 — resolved lazily by siblings through the facade
 
 # UV's bundled Python ships a minimal PATH; ensure launchctl/systemctl are discoverable.
 if os.name == "posix":
@@ -1635,22 +1634,6 @@ def _print_served_ingress_urls(profile: str | None = None) -> None:
     for name, per_platform in sorted(urls.items()):
         for line in format_ingress_url_lines(per_platform, indent=f"  {name}/" if not profile else "  "):
             print(line)
-
-
-def _print_unserved_shared_ingress(profile: str | None) -> None:
-    """Shared-ingress platforms (WhatsApp/Relay) this served profile enabled that the multiplexer runs
-    only on the default profile — the ``whatsapp: not served under multiplex`` line."""
-    try:
-        from scout_cli.gateway_multiplex_served import served_profile_unserved_platforms
-        unserved = served_profile_unserved_platforms(profile or "")
-    except Exception:
-        return
-    if not unserved:
-        return
-    print()
-    for platform, reason in sorted(unserved.items()):
-        print(f"  ⚠ {platform}: {reason}")
-    print("  Enable it on the default profile (shared ingress serves every profile), or disable it here.")
 
 
 def _print_other_profiles_gateway_status() -> None:
@@ -4679,46 +4662,6 @@ def run_gateway(verbose: int = 0, quiet: bool = False, replace: bool = False, fo
     _hard_exit_after_gateway_teardown(0)
 
 
-# =============================================================================
-# Gateway Setup (Interactive Messaging Platform Configuration)
-# =============================================================================
-
-from scout_cli.gateway_setup_wizard import (  # noqa: E402,F401 — facade re-exports; tests patch here
-    _PLATFORMS,
-    _all_platforms,
-    _platform_status,
-    _set_platform_unauthorized_dm_behavior,
-    _print_setup_header,
-    _confirm_reconfigure,
-    _offer_home_channel,
-    _save_env_values,
-    _prompt_csv,
-    _UNAUTHORIZED_ACCESS_CHOICES,
-    _prompt_unauthorized_access,
-    _clean_discord_ids,
-    _prompt_allowlist_var,
-    _setup_standard_platform,
-    _WEIXIN_DM_POLICIES,
-    _WEIXIN_GROUP_NOTE,
-    _setup_weixin,
-    _setup_qqbot,
-    _signal_line_input,
-    _setup_signal,
-    _builtin_setup_fn,
-    _configure_platform,
-    _wizard_offer_service_action,
-    _setup_service_action,
-    _WIZARD_BANNER,
-    _WIZARD_BACKEND_LABELS,
-    _WIZARD_NO_SERVICE_LINES,
-    _wizard_service_status_block,
-    _wizard_platform_loop,
-    _wizard_install_service,
-    _wizard_post_setup,
-    gateway_setup,
-)
-
-
 # Operator wording for the out-of-loop watchdog exit reasons stamped by gateway/shutdown_watchdog.py.
 _WATCHDOG_EXIT_REASONS = {
     "loop_liveness_watchdog": (
@@ -5080,10 +5023,6 @@ def _cmd_run(args):
         getattr(args, "verbose", 0), quiet=getattr(args, "quiet", False),
         replace=getattr(args, "replace", False), force=getattr(args, "force", False),
     )
-
-
-def _cmd_setup(args):
-    gateway_setup()
 
 
 _WSL_FOREGROUND_HINT = (
@@ -5621,7 +5560,6 @@ def _cmd_status(args):
         print("✓ Gateway is running via the default-profile multiplexer")
         print("  Manage it from the default profile: scout gateway status")
         _print_served_ingress_urls(get_active_profile_name())
-        _print_unserved_shared_ingress(get_active_profile_name())
     elif (kind := _installed_service_kind_for(lambda: _windows_service_installed)) is not None:
         if kind == "systemd":
             systemd_status(deep, system=system, full=full)
@@ -5695,7 +5633,7 @@ def _cmd_migrate(args):
 
 
 _GATEWAY_SUBCOMMANDS = {
-    None: _cmd_run, "run": _cmd_run, "setup": _cmd_setup, "install": _cmd_install,
+    None: _cmd_run, "run": _cmd_run, "install": _cmd_install,
     "uninstall": _cmd_uninstall, "start": _cmd_start, "stop": _cmd_stop, "restart": _cmd_restart,
     "status": _cmd_status, "list": _cmd_list, "migrate-legacy": _cmd_migrate_legacy, "migrate": _cmd_migrate,
 }

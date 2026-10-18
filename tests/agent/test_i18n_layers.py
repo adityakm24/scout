@@ -44,14 +44,14 @@ def home(tmp_path, monkeypatch, clean_layers):
     return home
 
 
-def _write_pack_plugin(home, name="scout-lang-pl", *, lang="pl", core=None, tui=None, desktop=None,
+def _write_pack_plugin(home, name="scout-lang-pl", *, lang="pl", core=None, desktop=None,
                        manifest_extra=None, with_init=False):
     plugin = home / "plugins" / name
     (plugin / "locales").mkdir(parents=True)
     manifest = {"name": name, "version": "1.0.0", "description": f"{lang} language pack",
                 "provides_locales": [lang], **(manifest_extra or {})}
     (plugin / "plugin.yaml").write_text(yaml.safe_dump(manifest), encoding="utf-8")
-    for surface, data in (("", core), (".tui", tui), (".desktop", desktop)):
+    for surface, data in (("", core), (".desktop", desktop)):
         if data is not None:
             (plugin / "locales" / f"{lang}{surface}.yaml").write_text(yaml.safe_dump(data, allow_unicode=True),
                                                                       encoding="utf-8")
@@ -119,7 +119,7 @@ def test_overlay_is_profile_scoped_across_two_homes(tmp_path, monkeypatch, clean
 
 def test_manifest_only_pack_registers_language_and_display_language_resolves(home):
     _write_pack_plugin(home, core={"approval": {"denied": "Zatwierdzenie"}},
-                       tui={"status": {"ready": "Gotowy"}}, desktop={"settings": {"title": "Ustawienia"}})
+                       desktop={"settings": {"title": "Ustawienia"}})
     assert "pl" not in i18n.supported_languages()
 
     manager = _load(home)
@@ -132,7 +132,6 @@ def test_manifest_only_pack_registers_language_and_display_language_resolves(hom
     other = next(k for k in i18n._load_bundled("en") if k != _KEY)
     assert i18n.t(other, lang="pl") == _en(other)
     # Surfaces are kept apart and served separately.
-    assert i18n.surface_catalog("pl", "tui") == {"status.ready": "Gotowy"}
     assert i18n.surface_catalog("pl", "desktop") == {"settings.title": "Ustawienia"}
     assert i18n.surface_catalog("pl", "core") == {"approval.denied": "Zatwierdzenie"}
     # Registration never touches display.language; setting it makes the pack the active language.

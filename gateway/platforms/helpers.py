@@ -225,8 +225,8 @@ class ThreadParticipationTracker:
 
         ``_save`` ends in ``atomic_json_write`` -> ``os.replace``, whose
         duration is unbounded under filesystem pressure.  Every caller of this
-        tracker sits on an inbound-message coroutine in the Discord and Matrix
-        adapters, so the rename must not be paid inline on the event loop -- it
+        tracker sits on an inbound-message coroutine in an adapter, so the rename
+        must not be paid inline on the event loop -- it
         stalls every other adapter's polling and every in-flight turn for as
         long as it runs.
         """
@@ -242,17 +242,7 @@ class ThreadParticipationTracker:
             self._threads.clear()
 
 
-def redact_phone(phone: str) -> str:
-    """Redact a phone number for logging, preserving country code and last 4."""
-    if not phone:
-        return "<none>"
-    if len(phone) <= 8:
-        return phone[:2] + "****" + phone[-2:] if len(phone) > 4 else "****"
-    return phone[:4] + "****" + phone[-4:]
-
-
-# ─── GFM table → bullets. Discord calls convert_table_to_bullets(); Telegram imports the
-# primitives but keeps its own MarkdownV2-aware renderer.
+# ─── GFM table → bullets for adapters whose clients cannot render tables.
 # Delimiter row: optional outer pipes, dash cells (optional alignment colons). Requires at
 # least one internal '|' so a lone '---' rule is NOT matched.
 TABLE_SEPARATOR_RE = re.compile(r'^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*){1,}\|?\s*$')
@@ -270,8 +260,8 @@ def split_markdown_table_row(line: str) -> list[str]:
 
 
 def _render_table_block(table_block: list[str]) -> str:
-    """Render a GFM table as bold-heading + bullet groups (same alignment logic as Telegram's
-    renderer: without a row-label column the full row is data and the heading bullet is skipped)."""
+    """Render a GFM table as bold-heading + bullet groups (without a row-label column the full
+    row is data and the heading bullet is skipped)."""
     headers = split_markdown_table_row(table_block[0]) if len(table_block) >= 3 else []
     if len(headers) < 2:
         return "\n".join(table_block)
@@ -322,9 +312,9 @@ def compile_mention_patterns(raw, *, log_prefix: str, platform_label: str | None
                              logger_: 'logging.Logger | None' = None) -> 'list[re.Pattern]':
     """Compile regex wake-word/mention patterns from config or env values.
 
-    * **Config-style** (dingtalk, telegram): pass ``platform_label``. ``raw`` must be a
+    * **Config-style**: pass ``platform_label``. ``raw`` must be a
       list or string (else warn + ``[]``); non-string entries skipped; info log on load.
-    * **Wakeword-style** (photon, bluebubbles): pass ``defaults``. ``raw`` may be None
+    * **Wakeword-style**: pass ``defaults``. ``raw`` may be None
       (defaults), a string (JSON list or comma/newline separated), a list, or a scalar.
     ``log_prefix`` is interpolated into every log line so per-adapter output stays
     byte-identical to the historical inline implementations.
@@ -371,8 +361,8 @@ def compile_mention_patterns(raw, *, log_prefix: str, platform_label: str | None
 
 
 # ─── Fence-Aware Markdown Chunking ───────────────────────────────────────────
-# Shared core for gateway/stream_consumer.py (``prefer_paragraphs=False, balance_fences=True``),
-# yuanbao (``prefer_paragraphs=True, balance_fences=False``) and weixin (``greedy_pack_blocks``).
+# Shared core for gateway/stream_consumer.py (``prefer_paragraphs=False, balance_fences=True``)
+# and adapters that pack whole paragraphs (``prefer_paragraphs=True``, ``greedy_pack_blocks``).
 
 
 def text_has_unclosed_fence(text: str) -> bool:
@@ -547,7 +537,7 @@ def split_text_fence_aware(text, limit, len_fn=None, *, prefer_paragraphs=True,
                            balance_fences=False):
     """Split markdown into chunks of at most *limit*, respecting fences.
 
-    ``prefer_paragraphs=True`` (yuanbao-derived): atoms (fences, tables, paragraphs) are
+    ``prefer_paragraphs=True``: atoms (fences, tables, paragraphs) are
     greedily merged, oversized non-atomic chunks split at paragraph boundaries, small
     neighbours re-merged; a single atom larger than *limit* is emitted oversize, not broken.
     ``prefer_paragraphs=False`` (stream_consumer-derived): newline-preferred hard splitting
@@ -564,7 +554,7 @@ def split_text_fence_aware(text, limit, len_fn=None, *, prefer_paragraphs=True,
 
 
 def _chunk_markdown_paragraphs(text, max_chars, len_fn=None):
-    """Yuanbao-derived paragraph/atom chunking pipeline (see module docs)."""
+    """Paragraph/atom chunking pipeline (see module docs)."""
     _len = len_fn or len
     if _len(text) <= max_chars:
         return [text]
@@ -632,29 +622,3 @@ def _chunk_newline_preferred(text, limit, len_fn):
     if remaining:
         chunks.append(remaining)
     return chunks
-
-
-# ─── Discord channel obfuscation (Bot API change, mandatory Nov 16 2026) ───────
-# Channels a bot lacks VIEW_CHANNEL on are still dispatched over the Gateway with the
-# name replaced by "___hidden___", sensitive fields nulled and flag 1 << 17 set; over
-# HTTP they are omitted. https://discord.com/developers/docs/change-log (Aug 12, 2026)
-DISCORD_CHANNEL_OBFUSCATED_FLAG = 1 << 17
-DISCORD_OBFUSCATED_CHANNEL_NAME = "___hidden___"
-
-
-def is_discord_channel_obfuscated(channel) -> bool:
-    """True when a discord.py channel object is an obfuscated placeholder.
-
-    Skip these wherever guild channels are enumerated (channel directory, message
-    backfill): history reads and sends always fail with a permission error. Flag
-    first; the sentinel name is the fallback for discord.py builds that don't
-    expose the flag (a visible channel literally named ``___hidden___`` is then
-    also skipped — deliberate bias toward hiding). #90154
-    """
-    try:
-        flag_value = channel.flags.value
-    except AttributeError:
-        flag_value = None
-    if isinstance(flag_value, int) and flag_value & DISCORD_CHANNEL_OBFUSCATED_FLAG:
-        return True
-    return getattr(channel, "name", None) == DISCORD_OBFUSCATED_CHANNEL_NAME

@@ -128,7 +128,7 @@ def test_primary_handler_enters_routed_profile_scope_before_dispatch(multiplex_h
     event = MessageEvent(
         text="second turn",
         source=SessionSource(
-            platform=Platform.DISCORD,
+            platform=Platform.HOMEASSISTANT,
             chat_id="routed-channel",
             user_id="user-1",
             profile="fitness",
@@ -170,7 +170,7 @@ def test_primary_handler_rejected_route_falls_back_and_marks_sentinel(multiplex_
 
     runner._handle_message = capture_scope
     source = SessionSource(
-        platform=Platform.DISCORD,
+        platform=Platform.HOMEASSISTANT,
         chat_id="unserved-channel",
         user_id="user-1",
     )
@@ -224,7 +224,7 @@ def test_primary_route_keeps_transport_authorization_scope(multiplex_homes):
     event = MessageEvent(
         text="hello from the shared bot",
         source=SessionSource(
-            platform=Platform.DISCORD,
+            platform=Platform.HOMEASSISTANT,
             chat_id="routed-channel",
             user_id="user-1",
             chat_type="group",
@@ -258,7 +258,7 @@ def test_two_primary_routed_turns_reload_profile_transcript(multiplex_homes):
         profile_routes=[
             ProfileRoute(
                 name="fitness-channel",
-                platform="discord",
+                platform="homeassistant",
                 profile="fitness",
                 chat_id="routed-channel",
             )
@@ -275,7 +275,7 @@ def test_two_primary_routed_turns_reload_profile_transcript(multiplex_homes):
                 [(message["role"], message["content"]) for message in history]
             )
             if not history:
-                db.create_session(session_id, "discord")
+                db.create_session(session_id, "homeassistant")
                 db.append_message(session_id, "user", event.text)
                 db.append_message(session_id, "assistant", "first response")
         finally:
@@ -288,7 +288,7 @@ def test_two_primary_routed_turns_reload_profile_transcript(multiplex_homes):
         return MessageEvent(
             text=text,
             source=SessionSource(
-                platform=Platform.DISCORD,
+                platform=Platform.HOMEASSISTANT,
                 chat_id="routed-channel",
                 user_id="user-1",
             ),
@@ -505,7 +505,7 @@ def _multiplex_store(root: Path) -> SessionStore:
 
 def _profile_source() -> SessionSource:
     return SessionSource(
-        platform=Platform.TELEGRAM, chat_id="555", user_id="u1", profile="fitness"
+        platform=Platform.HOMEASSISTANT, chat_id="555", user_id="u1", profile="fitness"
     )
 
 
@@ -595,7 +595,7 @@ def test_cached_agent_dead_check_reads_the_routed_profile_store(multiplex_homes)
 
     root, profile = multiplex_homes
     store = _multiplex_store(root)
-    default_source = SessionSource(platform=Platform.TELEGRAM, chat_id="555", user_id="u1")
+    default_source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="555", user_id="u1")
 
     def guard(entry, current_sid):
         cache = {entry.session_key: (object(), "sig", 0, entry.session_id)}
@@ -644,8 +644,8 @@ def test_default_namespace_keeps_ambient_resolution(multiplex_homes):
     root, _profile = multiplex_homes
     store = _make_store(root)  # multiplex off -> agent:main keys
 
-    assert store._profile_home_for_key("agent:main:telegram:dm:1") is None
-    assert store._db_for_key("agent:main:telegram:dm:1") is store._db
+    assert store._profile_home_for_key("agent:main:homeassistant:dm:1") is None
+    assert store._db_for_key("agent:main:homeassistant:dm:1") is store._db
     assert store._db_for_key(None) is store._db
 
 
@@ -705,7 +705,7 @@ def test_named_owner_without_a_home_never_falls_back_to_root(multiplex_homes):
     (home / "config.yaml").write_text("{}\n", encoding="utf-8")  # identity marker
     db = store._db_for_key(key)
     assert db is not None
-    db.create_session("20260829_120000_abcdef01", "telegram")
+    db.create_session("20260829_120000_abcdef01", "homeassistant")
 
     assert _session_ids(home / "state.db") == {"20260829_120000_abcdef01"}
     assert _session_ids(root / "state.db") == set()
@@ -759,8 +759,8 @@ def test_compression_child_write_stays_in_the_parents_profile_store(multiplex_ho
     token = set_scout_home_override(str(profile))
     try:
         db = store._db
-        db.create_session(parent_id, "telegram")
-        db.create_session(child_id, "telegram", parent_session_id=parent_id)
+        db.create_session(parent_id, "homeassistant")
+        db.create_session(child_id, "homeassistant", parent_session_id=parent_id)
         db.end_session(parent_id, "compression")
     finally:
         reset_scout_home_override(token)
@@ -846,7 +846,7 @@ def test_default_namespace_rows_stay_in_launch_store_under_secondary_scope(multi
 
     scope = set_scout_home_override(str(profile))
     try:
-        db = store._db_for_key("agent:main:telegram:dm:1")
+        db = store._db_for_key("agent:main:homeassistant:dm:1")
     finally:
         reset_scout_home_override(scope)
 
@@ -866,7 +866,7 @@ def test_profile_named_main_keeps_its_own_namespace_and_store(multiplex_homes):
     main_home.mkdir(parents=True)
     (main_home / "config.yaml").write_text("{}\n", encoding="utf-8")  # identity marker
     store = _multiplex_store(root)
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id="555", user_id="u1", profile="main")
+    source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="555", user_id="u1", profile="main")
 
     main_key = build_session_key(source, profile="main")
     default_key = build_session_key(source, profile=None)

@@ -38,7 +38,6 @@ It uses `scripts/openclaw_to_scout.py` to:
 - import `SOUL.md` into the Scout home directory as `SOUL.md`
 - transform OpenClaw `MEMORY.md` and `USER.md` into Scout memory entries
 - merge OpenClaw command approval patterns into Scout `command_allowlist`
-- migrate Scout-compatible messaging settings such as `TELEGRAM_ALLOWED_USERS`, and map OpenClaw workspace settings to Scout working-directory configuration
 - copy OpenClaw skills into `~/.scout/skills/openclaw-imports/`
 - optionally copy the OpenClaw workspace instructions file into a chosen Scout workspace
 - mirror compatible workspace assets such as `workspace/tts/` into `~/.scout/tts/`
@@ -64,9 +63,7 @@ Before running the helper:
 3. Only use `find` as a fallback if the installed location is missing or the skill was moved manually.
 4. When calling the terminal tool, do not pass `workdir: "~"`. Use an absolute directory such as the user's home directory, or omit `workdir` entirely.
 
-With `--migrate-secrets`, it will also import a small allowlisted set of Scout-compatible secrets, currently:
-
-- `TELEGRAM_BOT_TOKEN`
+With `--migrate-secrets`, it also imports model provider API keys.
 
 ## Default workflow
 
@@ -212,7 +209,6 @@ Prefer these two presets in normal use:
 - `workspace-agents`
 - `memory`
 - `user-profile`
-- `messaging-settings`
 - `command-allowlist`
 - `skills`
 - `tts-assets`
@@ -220,7 +216,7 @@ Prefer these two presets in normal use:
 
 `full` includes everything in `user-data` plus:
 
-- `secret-settings`
+- `provider-keys`
 
 The helper script still supports category-level `--include` / `--exclude`, but treat that as an advanced fallback rather than the default UX.
 

@@ -59,11 +59,10 @@ describe('sessionMatchesSearch', () => {
   })
 
   it('matches sessions by source platform and aliases', () => {
-    expect(sessionMatchesSearch(makeSession({ source: 'telegram' }), 'Telegram')).toBe(true)
-    expect(sessionMatchesSearch(makeSession({ source: 'whatsapp' }), 'WhatsApp')).toBe(true)
-    expect(sessionMatchesSearch(makeSession({ source: 'whatsapp' }), 'wa')).toBe(true)
-    expect(sessionMatchesSearch(makeSession({ source: 'slack' }), 'slack')).toBe(true)
-    expect(sessionMatchesSearch(makeSession({ source: 'bluebubbles' }), 'imessage')).toBe(true)
+    expect(sessionMatchesSearch(makeSession({ source: 'homeassistant' }), 'Home Assistant')).toBe(true)
+    expect(sessionMatchesSearch(makeSession({ source: 'webhook' }), 'webhook')).toBe(true)
+    expect(sessionMatchesSearch(makeSession({ source: 'desktop' }), 'gui')).toBe(true)
+    expect(sessionMatchesSearch(makeSession({ source: 'tui' }), 'terminal')).toBe(true)
   })
 
   it('does not match unrelated queries', () => {

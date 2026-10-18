@@ -104,7 +104,7 @@ def test_desktop_poller_leaves_gateway_owned_heartbeat_for_gateway(server, sessi
     s["source"] = "desktop"
     store = SessionStore(scout_home / "sessions", GatewayConfig())
     store._db = server._get_db()  # the routing index lives in the store the Desktop poller reads
-    src = SessionSource(platform=Platform.TELEGRAM, chat_id="42")
+    src = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="42")
     archived_key = store.get_or_create_session(src).session_id
     current_key = store.get_or_create_session(src, force_new=True).session_id
 

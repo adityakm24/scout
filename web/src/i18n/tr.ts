@@ -68,7 +68,6 @@ export const tr: Translations = {
     },
     nav: {
       analytics: "Analiz",
-      chat: "Sohbet",
       config: "Yapılandırma",
       cron: "Cron",
       keys: "Anahtarlar",
@@ -162,8 +161,6 @@ export const tr: Translations = {
     selectedSessionsDeleted: "{count} oturum silindi",
     selectedSessionsSkippedActive: "{deleted} silindi; bir tur çalıştığı için {count} tutuldu",
     failedToDeleteSelected: "Seçilen oturumlar silinemedi",
-    resumeInChat: "Sohbette Devam Et",
-    newChat: "Yeni sohbet",
     workspace: "çalışma alanı",
     workspaceDefault: "Varsayılan",
     workspaceRescan: "Depoları yeniden tara",
@@ -282,10 +279,6 @@ export const tr: Translations = {
     triggerNow: "Şimdi tetikle",
     delivery: {
       local: "Yerel",
-      telegram: "Telegram",
-      discord: "Discord",
-      slack: "Slack",
-      email: "Email",
     },
   },
 
@@ -419,7 +412,6 @@ export const tr: Translations = {
       tts: "Metinden Konuşmaya",
       stt: "Konuşmadan Metne",
       logging: "Günlükleme",
-      discord: "Discord",
       auxiliary: "Yardımcı",
     },
   },

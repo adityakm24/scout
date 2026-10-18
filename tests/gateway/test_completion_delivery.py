@@ -44,7 +44,7 @@ def isolated_registry(tmp_path, monkeypatch):
 def _runner(adapter, *, origins=None):
     runner = object.__new__(GatewayRunner)
     runner._running = True
-    runner.adapters = {Platform.TELEGRAM: adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
     runner.session_store = SimpleNamespace(
         _ensure_loaded=lambda: None,
         _entries=origins or {},
@@ -916,7 +916,7 @@ def test_unavailable_delivery_preserves_budget_across_restarts(tmp_path, unavail
         runner = _runner(adapter)
         runner.adapters = {Platform.API_SERVER: api} if unavailable == "api_db" else {}
         if unavailable == "owner_db":
-            runner.adapters = {Platform.TELEGRAM: adapter}
+            runner.adapters = {Platform.HOMEASSISTANT: adapter}
         assert asyncio.run(runner._deliver_async_delegation_group(events)) is False
         for event in events:
             row = async_delegation.get_durable_delegation(event["delegation_id"])
@@ -951,7 +951,7 @@ def test_completion_profile_transport_never_falls_back(monkeypatch, isolated_reg
     primary = SimpleNamespace(handle_message=AdmittingHandler(), send=AsyncMock())
     secondary = SimpleNamespace(handle_message=AdmittingHandler(), send=AsyncMock())
     runner = _runner(primary)
-    runner._profile_adapters = {"research": {Platform.TELEGRAM: secondary}} if available else {}
+    runner._profile_adapters = {"research": {Platform.HOMEASSISTANT: secondary}} if available else {}
     evt = dict(_completion_event(started_at=1), session_key="agent:research:telegram:dm:12345")
     result = asyncio.run(runner._inject_watch_notification("private result", evt))
     assert result is available

@@ -1192,27 +1192,6 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
           echo "ok" > $out/result
         '';
 
-        # Verify bundled TUI is present and compiled
-        bundled-tui = pkgs.runCommand "scout-bundled-tui" { } ''
-          set -e
-          echo "=== Checking bundled TUI ==="
-          test -d ${scout-agent}/ui-tui || (echo "FAIL: ui-tui directory missing"; exit 1)
-          echo "PASS: ui-tui directory exists"
-
-          test -f ${scout-agent}/ui-tui/dist/entry.js || (echo "FAIL: compiled entry.js missing"; exit 1)
-          echo "PASS: compiled entry.js present"
-
-          # self-contained bundle; no runtime node_modules expected
-
-          grep -q "SCOUT_TUI_DIR" ${scout-agent}/bin/scout || \
-            (echo "FAIL: SCOUT_TUI_DIR not in wrapper"; exit 1)
-          echo "PASS: SCOUT_TUI_DIR set in wrapper"
-
-          echo "=== All bundled TUI checks passed ==="
-          mkdir -p $out
-          echo "ok" > $out/result
-        '';
-
         # Verify SCOUT_NODE is set in wrapper and points to Node 26+
         # (Scout pins its toolchain to Node 26 everywhere)
         scout-node = pkgs.runCommand "scout-node-version" { } ''

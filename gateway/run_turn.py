@@ -1,11 +1,10 @@
-"""Agent-turn execution for GatewayRunner: _handle_message_with_agent, _run_agent*, proxy path,
+"""Agent-turn execution for GatewayRunner: _handle_message_with_agent, _run_agent*,
 background tasks, MCP reload. Bound onto ``GatewayRunner`` via the MRO; ``gateway.run`` internals
 are imported lazily inside method bodies (import cycle) so ``patch("gateway.run.X")`` still works.
 """
 
 from __future__ import annotations
 
-from pm import install_hint
 import logging
 from typing import TYPE_CHECKING
 import asyncio
@@ -30,7 +29,7 @@ from gateway.response_filters import (
 )
 from gateway.warning_notifications import diagnostic_metadata, diagnostic_turn_muted, diagnostic_wake_muted
 from gateway.session import (
-    SessionSource, _session_key_namespace, build_channel_continuity_note,
+    SessionSource, _session_key_namespace,
     build_session_context,
 )
 from gateway.session_transcript import TranscriptReadError
@@ -401,29 +400,15 @@ class GatewayTurnMixin:
             return False
 
     async def _hmwa_resolve_session(self, event, source):
-        """Resolve ``source`` to its session entry (topic recovery, internal-route guards, Telegram
-        topic-binding heal). Returns ``(source, session_entry, session_key)`` or ``None`` to drop
-        the event."""
-        # Topic-mode DMs: rewrite a stale/foreign thread_id to the user's last-active topic so a
-        # cross-topic Reply doesn't fragment the conversation.
+        """Resolve ``source`` to its session entry (internal-route guards). Returns
+        ``(source, session_entry, session_key)`` or ``None`` to drop the event."""
         event_metadata = getattr(event, "metadata", None) or {}
         expected_session_key = str(event_metadata.get("gateway_session_key") or "").strip()
-        recovered = (await asyncio.to_thread(self._recover_telegram_topic_thread_id, source)
-                     if not expected_session_key else None)
-        if recovered is not None:
-            logger.info(
-                "telegram topic recovery: chat=%s user=%s %r -> %s",
-                source.chat_id, source.user_id, source.thread_id, recovered,
-            )
-            source = dataclasses.replace(source, thread_id=recovered)
-            with suppress(Exception):
-                event.source = source
-
         if expected_session_key:
             derived_session_key = self._session_key_for_source(source)
             if derived_session_key != expected_session_key:
                 logger.warning(
-                    "Dropping internally routed event after route recovery: expected session=%s derived=%s",
+                    "Dropping internally routed event: expected session=%s derived=%s",
                     expected_session_key, derived_session_key,
                 )
                 return
@@ -451,61 +436,10 @@ class GatewayTurnMixin:
                 return
             session_entry = resolved_entry
         self._cache_session_source(session_key, source)
-        if await asyncio.to_thread(self._is_telegram_topic_lane, source):
-            session_entry = await self._hmwa_heal_telegram_topic_binding(source, session_entry, session_key)
         from gateway.run_heartbeat_acceptance import resolve_heartbeat_owner
         if not await resolve_heartbeat_owner(self, event, session_entry):
             return
         return source, session_entry, session_key
-
-    async def _hmwa_heal_telegram_topic_binding(self, source, session_entry, session_key):
-        """Follow the (chat_id, thread_id) topic binding — healed to its compression tip — or record
-        a fresh one. Returns the (possibly switched) session entry."""
-        binding = None
-        try:
-            if self._session_db:
-                binding = await self._session_db.get_telegram_topic_binding(
-                    chat_id=str(source.chat_id), thread_id=str(source.thread_id),
-                    profile_name=self._telegram_topic_profile_name(source),
-                )
-        except Exception:
-            logger.debug("Failed to read Telegram topic binding", exc_info=True)
-        if not binding:
-            try:
-                await asyncio.to_thread(self._record_telegram_topic_binding, source, session_entry)
-            except Exception:
-                logger.debug("Failed to record Telegram topic binding", exc_info=True)
-            return session_entry
-        stored_session_id = str(binding.get("session_id") or "")
-        bound_session_id = stored_session_id
-        # A binding pointing at a pre-compression parent is walked forward to the tip so the next
-        # message resumes the compressed child instead of reloading the oversized parent.
-        # Returns the input unchanged when the session isn't a compression parent, so this is cheap and
-        # safe. See #20470, #29712, #33414.
-        if bound_session_id and self._session_db is not None:
-            try:
-                canonical_session_id = await self._session_db.get_compression_tip(bound_session_id)
-            except Exception:
-                logger.debug("compression-tip lookup failed for %s", bound_session_id, exc_info=True)
-                canonical_session_id = bound_session_id
-            if canonical_session_id and canonical_session_id != bound_session_id:
-                bound_session_id = canonical_session_id
-        if bound_session_id and bound_session_id != session_entry.session_id:
-            # Route through SessionStore so the key → id mapping persists and the previous lane
-            # session ends cleanly (in-place mutation split-brained the JSON index). The two DB
-            # awaits above are a window for /new or /resume to move the route; the CAS on the
-            # snapshot id lets that win instead of being clobbered by a stale binding.
-            switched = await self.async_session_store.switch_session(
-                session_key, bound_session_id, expected_session_id=session_entry.session_id,
-            )
-            if switched is not None:
-                session_entry = switched
-        if bound_session_id and bound_session_id != stored_session_id:
-            # The stored binding pointed at a parent: rewrite it to the canonical descendant.
-            await asyncio.to_thread(
-                self._sync_telegram_topic_binding, source, session_entry, reason="compression-tip-walk",
-            )
-        return session_entry
 
     async def _hmwa_open_session(self, session_entry, session_key, source):
         """Consume auto-reset / fresh-reset flags and emit ``session:start`` for new sessions.
@@ -545,15 +479,6 @@ class GatewayTurnMixin:
         from gateway.run import _AUTO_RESET_CONTEXT_NOTES
         reset_reason = getattr(session_entry, 'auto_reset_reason', None) or 'suspended'
         context_note = _AUTO_RESET_CONTEXT_NOTES.get(reset_reason, _AUTO_RESET_CONTEXT_NOTES["suspended"])
-        # Long-lived channels: point the agent at the prior same-channel session for session_search.
-        try:
-            # Returns None (appends nothing) for other platforms or when there's no prior activity to
-            # recall. Deterministic — no extra API/DB calls (#36220).
-            continuity_note = build_channel_continuity_note(session_entry, source)
-        except Exception:
-            continuity_note = None
-        if continuity_note:
-            context_note = context_note + "\n\n" + continuity_note
         turn_sidecar_notes.append(context_note)
 
         try:
@@ -1133,9 +1058,6 @@ class GatewayTurnMixin:
                 # The held turn lease follows the rotation (alias keys still serialize on this turn).
                 self._rebind_turn_lease(_quick_key, run_generation, _hyg_new_sid)
                 await self.async_session_store._save()
-                await asyncio.to_thread(
-                    self._sync_telegram_topic_binding, source, session_entry, reason="hygiene-compression",
-                )
 
         if _hyg_rotated or _hyg_in_place:
             # Rewritten (rotation) or persisted by archive_and_compact() (in-place): reset token count.
@@ -1406,10 +1328,9 @@ class GatewayTurnMixin:
         return bounded
 
     async def _hmwa_first_contact_notes(self, source, history, turn_sidecar_notes):
-        """First-ever-message onboarding note + one-time 'no home channel' prompt (both only when
-        the session has no history). Delivered on the user message (sidecar), NOT the ephemeral
-        system prompt: present-on-turn-1/absent-on-turn-2 was a guaranteed prompt diff + rebuild."""
-        from gateway.run import _scout_home, _home_target_env_var, _load_gateway_config
+        """First-ever-message onboarding note (only when the session has no history). Delivered on
+        the user message (sidecar), NOT the ephemeral system prompt: present-on-turn-1/absent-on-turn-2 was a guaranteed prompt diff + rebuild."""
+        from gateway.run import _scout_home, _load_gateway_config
         if history:
             return
         if not await self.async_session_store.has_any_sessions():
@@ -1423,43 +1344,11 @@ class GatewayTurnMixin:
             if note:
                 turn_sidecar_notes.append(note)
 
-        # One-time prompt if no home channel is set (webhooks deliver to configured targets instead).
-        if not source.platform or source.platform in (Platform.LOCAL, Platform.WEBHOOK):
-            return
-        platform_name = source.platform.value
-        env_key = _home_target_env_var(platform_name)
-        # Multiplex: the home channel may live only in the profile secret scope, not os.environ.
-        home_env = ""
-        if env_key:
-            with suppress(Exception):
-                from agent.secret_scope import get_secret
-                home_env = (get_secret(env_key) or "").strip()
-            home_env = home_env or (os.getenv(env_key) or "").strip()
-        # Also honor in-memory / yaml home_channel on this platform.
-        with suppress(Exception):
-            if not home_env and self.config.get_home_channel(source.platform):
-                home_env = "set"
-        # Secondary-profile platforms may only exist under that profile's config — re-read in scope.
-        if not home_env:
-            with suppress(Exception):
-                from gateway.config import load_gateway_config as _lgc
-                prof = (getattr(source, "profile", None) or "").strip()
-                if prof and prof != "default" and _lgc().get_home_channel(source.platform):
-                    home_env = "set"
-        if not home_env:
-            # Slack routes every command through the parent `/scout`; bare `/sethome` would fail.
-            sethome_cmd = "/scout sethome" if source.platform == Platform.SLACK else "/sethome"
-            await self._deliver_platform_notice(
-                source, t("gateway.notify.no_home_channel", platform=platform_name.title(), sethome_cmd=sethome_cmd),
-            )
-
     def _hmwa_apply_message_timestamp(self, event, message_text):
         """Capture the platform event time as message metadata and keep the persisted transcript
-        clean — strip any leading timestamp prefix and the Discord triggering-message note (a
-        model instruction, not authored text) — regardless of the toggle; only the in-context
+        clean — strip any leading timestamp prefix — regardless of the toggle; only the in-context
         RENDER is gated behind gateway.message_timestamps.enabled (default OFF)."""
         from gateway.run import _load_gateway_config, _message_timestamps_enabled
-        from gateway.run_inbound import strip_discord_triggering_note
         persist_user_message = None
         persist_user_timestamp = None
         try:
@@ -1472,7 +1361,7 @@ class GatewayTurnMixin:
             _evt_tz = _get_evt_tz()
             if message_text and isinstance(message_text, str):
                 _clean_message_text, _embedded_ts = _strip_msg_ts(message_text, tz=_evt_tz)
-                persist_user_message = strip_discord_triggering_note(event, _clean_message_text)
+                persist_user_message = _clean_message_text
                 _event_epoch = _coerce_msg_ts(getattr(event, "timestamp", None), tz=_evt_tz)
                 persist_user_timestamp = _event_epoch if _event_epoch is not None else _embedded_ts
                 if _message_timestamps_enabled(_load_gateway_config()):
@@ -1574,9 +1463,6 @@ class GatewayTurnMixin:
                 await self.async_session_store._record_gateway_session_peer(
                     session_entry.session_id, session_key, source,
                 )
-                await asyncio.to_thread(
-                    self._sync_telegram_topic_binding, source, session_entry, reason="agent-result-compression",
-                )
             else:
                 logger.info(
                     "Skipping agent-result session split sync for %s because the session binding "
@@ -1587,24 +1473,19 @@ class GatewayTurnMixin:
 
     # reasoning_style → (header catalog key, per-line quote prefix for blank / non-blank lines)
     _REASONING_QUOTE_STYLES = {
-        "subtext": ("gateway.reasoning.quote_label_discord", "-# ", "-#"),
         "blockquote": ("gateway.reasoning.quote_label_md", "> ", ">"),
     }
 
     def _hmwa_prepend_reasoning(self, agent_result, response, source, _intentional_silence):
-        """Prepend the last reasoning block when show_reasoning is on for this platform. Mattermost
-        requires an explicit per-platform opt-in (scratch text, not final-answer content)."""
+        """Prepend the last reasoning block when show_reasoning is on for this platform."""
         from gateway.run import _load_gateway_config, _platform_config_key, _resolve_gateway_display_bool
         try:
             _show_reasoning_effective = _resolve_gateway_display_bool(
                 _load_gateway_config(), _platform_config_key(source.platform), "show_reasoning",
                 default=bool(getattr(self, "_show_reasoning", False)), platform=source.platform,
-                require_platform_override_for={Platform.MATTERMOST},
             )
         except Exception:
-            _show_reasoning_effective = (
-                False if source.platform == Platform.MATTERMOST else getattr(self, "_show_reasoning", False)
-            )
+            _show_reasoning_effective = getattr(self, "_show_reasoning", False)
         last_reasoning = agent_result.get("last_reasoning")
         if not (_show_reasoning_effective and response and not _intentional_silence and last_reasoning):
             return response
@@ -1776,20 +1657,7 @@ class GatewayTurnMixin:
             # Conversation boundary: the funnel clears every conversation-scoped per-session dict.
             self._clear_conversation_scope(session_key, reason="compression_exhausted_reset")
             if new_entry is not None:
-                # Re-point the Telegram topic binding at the fresh session, or the binding-heal walk
-                # switches the next message back onto the bloated child and re-triggers exhaustion
-                # forever. No-op on non-topic lanes.
-                # Compression rotated session_entry.session_id to the oversized compressed child earlier
-                # this turn (the agent-result sync above), and that _sync also rewrote the (chat_id,
-                # thread_id) -> bloated-child binding. reset_session swaps in a clean, parentless session,
-                # but without re-syncing the binding the next inbound message in this topic gets
-                # switch_session'd back onto the bloated child by the binding-heal walk, reloads the
-                # oversized transcript, and re-triggers compression exhaustion forever (#35809 — regression
-                # of the #9893/#10063 auto-reset).
                 session_entry = new_entry
-                await asyncio.to_thread(
-                    self._sync_telegram_topic_binding, source, session_entry, reason="compression-exhausted-reset",
-                )
             response = (response or "") + t("gateway.session.auto_reset_context_exhausted")
         return response, session_entry
 
@@ -1923,14 +1791,6 @@ class GatewayTurnMixin:
             response = ""
 
         adapter = self._delivery_adapter_for(source)
-        # Auto voice reply (TTS audio before the text) unless streaming TTS already delivered audio.
-        _streaming_tts_done = adapter is not None and bool(
-            getattr(adapter, "_streaming_tts_turn_completed", lambda *_a, **_k: False)(session_key, run_generation)
-        )
-        if not _streaming_tts_done and self._should_send_voice_reply(
-            event, response, agent_messages, already_sent=bool(agent_result.get("already_sent")),
-        ):
-            await self._send_voice_reply(event, response)
 
         # Streamed responses still need MEDIA: files delivered (chunks carry the tags verbatim). Never
         # skip when the agent failed: the error text is new content streaming didn't show.
@@ -2092,12 +1952,6 @@ class GatewayTurnMixin:
             return t("gateway.errors.history_unavailable"), _session_env_tokens
 
         await self._hmwa_first_contact_notes(source, history, turn_sidecar_notes)
-
-        # Voice channel state rides the user message ONLY when changed (in the system prompt it
-        # forced a rebuild + prompt-cache re-key per message).
-        _vc_note = self._voice_channel_sidecar_note(event, source, session_key)
-        if _vc_note:
-            turn_sidecar_notes.append(_vc_note)
 
         # Auto-analyze user images so the model gets a description plus the local path.
         message_text = await self._prepare_profile_scoped_inbound_message_text(
@@ -2512,7 +2366,7 @@ class GatewayTurnMixin:
             for media_path, _is_voice in (media_files or []):
                 _ext = os.path.splitext(media_path)[1].lower()
                 with suppress(Exception):
-                    if _should_send_media_as_audio(source.platform, _ext, _is_voice):
+                    if _should_send_media_as_audio(_ext):
                         await adapter.send_voice(
                             chat_id=source.chat_id, audio_path=media_path, metadata=_thread_metadata,
                             is_voice=_is_voice,
@@ -2640,279 +2494,6 @@ class GatewayTurnMixin:
             logger.warning("MCP reload failed: %s", e)
             return t("gateway.reload_mcp.failed", error=e)
 
-    def _get_proxy_url(self) -> Optional[str]:
-        """Proxy URL if proxy mode is configured (GATEWAY_PROXY_URL env wins over ``gateway.proxy_url``).
-        Per-profile like GATEWAY_PROXY_KEY: under multiplex a raw environ read would ship a secondary's
-        turns (authenticated with ITS scoped key) to the default profile's proxy. Same fallback shape as
-        the key — only ``UnscopedSecretError`` (the unscoped default-profile path) reads the env."""
-        from gateway.run import _load_gateway_config
-        from agent.secret_scope import UnscopedSecretError, get_secret
-        try:
-            url = (get_secret("GATEWAY_PROXY_URL") or "").strip()
-        except UnscopedSecretError:
-            url = os.getenv("GATEWAY_PROXY_URL", "").strip()
-        if not url:
-            url = ((_load_gateway_config().get("gateway") or {}).get("proxy_url") or "").strip()
-        return url.rstrip("/") if url else None
-
-    def _build_stream_consumer_config(
-        self, source: "SessionSource", scfg: Any, adapter: Any, *, on_missing_cursor: str,
-    ) -> "tuple[Any, Optional[Callable[[], None]]]":
-        """Build the shared ``StreamConsumerConfig`` and optional Telegram pause-typing closure.
-        For non-editing adapters ``on_missing_cursor="fallback"`` streams with an empty cursor;
-        ``"raise"`` raises ``RuntimeError`` so the caller skips streaming entirely."""
-        from gateway.stream_consumer import StreamConsumerConfig
-        _pause_typing_before_finalize = None
-        if source.platform == Platform.TELEGRAM and hasattr(adapter, "pause_typing_for_chat"):
-            def _pause_typing_before_finalize(_adapter=adapter, _chat_id=source.chat_id) -> None:
-                _adapter.pause_typing_for_chat(_chat_id)
-        # Non-editing platforms (QQ, WeChat) skip streaming — the partial first message could never
-        # be updated — unless they have a native-streaming transport (WeCom msgtype "stream").
-        _adapter_supports_edit = getattr(adapter, "SUPPORTS_MESSAGE_EDITING", True)
-        _adapter_supports_native_stream = bool(getattr(adapter, "SUPPORTS_NATIVE_STREAMING", False))
-        if not _adapter_supports_edit and not _adapter_supports_native_stream and on_missing_cursor == "raise":
-            raise RuntimeError("skip streaming for non-editable platform")
-        _effective_cursor = scfg.cursor if _adapter_supports_edit else ""
-        # Some Matrix clients render the cursor as tofu: stream text, no cursor.
-        if source.platform == Platform.MATRIX:
-            _effective_cursor = ""
-        # Fresh-final applies to Telegram only (others edit in place cheaply).
-        # Fresh-final applies to Telegram only — other platforms either edit in place cheaply (Discord,
-        # Slack) or don't have the timestamp-on-edit / edit-timestamp-stays-stale problem. (Ported from
-        # openclaw/openclaw#72038.)
-        _fresh_final_secs = (
-            float(getattr(scfg, "fresh_final_after_seconds", 0.0) or 0.0)
-            if source.platform == Platform.TELEGRAM else 0.0
-        )
-        _consumer_cfg = StreamConsumerConfig(
-            edit_interval=scfg.edit_interval, buffer_threshold=scfg.buffer_threshold,
-            cursor=_effective_cursor,
-            fresh_final_after_seconds=_fresh_final_secs, transport=scfg.transport or "edit",
-            chat_type=getattr(source, "chat_type", "") or "",
-        )
-        return _consumer_cfg, _pause_typing_before_finalize
-
-    def _run_still_current_fn(self, session_key: Optional[str], run_generation: Optional[int]) -> Callable[[], bool]:
-        """Predicate: does this run's generation still own ``session_key``? (always True when untracked)."""
-        def _run_still_current() -> bool:
-            if run_generation is None or not session_key:
-                return True
-            return self._is_session_run_current(session_key, run_generation)
-        return _run_still_current
-
-    @staticmethod
-    def _proxy_error_result(text: str) -> Dict[str, Any]:
-        return {"final_response": text, "messages": [], "api_calls": 0, "tools": []}
-
-    def _proxy_stream_consumer(self, source: "SessionSource", event_message_id, _thread_metadata, _run_still_current):
-        """Platform stream consumer for the proxy path when streaming is enabled, else ``None``."""
-        from gateway.run import _load_gateway_config, _platform_config_key
-        _scfg = getattr(getattr(self, "config", None), "streaming", None)
-        # #60671 — streaming TTS consumer is created on the outer event-loop thread before run_sync
-        # launches.  run_sync only reads it via ``streaming_tts_consumer_holder[0]`` for delta callback
-        # wiring.
-        if _scfg is None:
-            from gateway.config import StreamingConfig
-            _scfg = StreamingConfig()
-        # Global master switch first: skips the config.yaml re-read on the default (off) path.
-        if not _scfg.globally_enabled:
-            return None
-        from gateway.display_config import resolve_display_setting
-        _plat_streaming = resolve_display_setting(_load_gateway_config(), _platform_config_key(source.platform), "streaming")
-        if not _scfg.enabled_for(_plat_streaming):
-            return None
-        try:
-            from gateway.stream_consumer import GatewayStreamConsumer
-            _adapter = self._delivery_adapter_for(source)
-            if not _adapter:
-                return None
-            _consumer_cfg, _pause_typing_before_finalize = self._build_stream_consumer_config(
-                source, _scfg, _adapter, on_missing_cursor="fallback",
-            )
-            return GatewayStreamConsumer(
-                adapter=_adapter, chat_id=source.chat_id, config=_consumer_cfg,
-                metadata=_thread_metadata, on_before_finalize=_pause_typing_before_finalize,
-                initial_reply_to_id=event_message_id, run_still_current=_run_still_current,
-            )
-        except Exception as _sc_err:
-            logger.debug("Proxy: could not set up stream consumer: %s", _sc_err)
-            return None
-
-    async def _run_agent_via_proxy(
-        self, message: str, context_prompt: str, history: List[Dict[str, Any]],
-        source: "SessionSource", session_id: str, session_key: str = None,
-        run_generation: Optional[int] = None, event_message_id: Optional[str] = None,
-        scheduled_heartbeat: bool = False,
-    ) -> Dict[str, Any]:
-        """Forward the message to a remote Scout API server instead of running a local AIAgent.
-
-        Lets a Docker container handle Matrix E2EE while the agent runs on the host with full
-        access to local files, memory, skills, and a unified session store."""
-        from gateway.run import _GATEWAY_PROXY_SSE_BUFFER_MAX_CHARS
-        try:
-            from aiohttp import ClientSession as _AioClientSession, ClientTimeout
-        except ImportError:
-            return self._proxy_error_result(t("gateway.proxy.requires_aiohttp", hint=install_hint("messaging")))
-
-        proxy_url = self._get_proxy_url()
-        if not proxy_url:
-            return self._proxy_error_result(t("gateway.proxy.url_missing"))
-
-        # The proxy key is a per-profile credential: honor the installed secret scope under multiplex.
-        # Only UnscopedSecretError (the unscoped default-profile path) falls back to the env; any
-        # other get_secret() error propagates (same as BASE) rather than silently degrading to the
-        # ambient key, which may hold another profile's credential.
-        from agent.secret_scope import UnscopedSecretError, get_secret
-
-        try:
-            proxy_key = (get_secret("GATEWAY_PROXY_KEY") or "").strip()
-        except UnscopedSecretError:
-            proxy_key = os.getenv("GATEWAY_PROXY_KEY", "").strip()
-
-        _run_still_current = self._run_still_current_fn(session_key, run_generation)
-
-        def _stale_result(what: str) -> Dict[str, Any]:
-            logger.info(
-                "Discarding stale proxy %s for %s — generation %d is no longer current",
-                what, session_key or "?", run_generation or 0,
-            )
-            return {
-                "final_response": "", "messages": [], "api_calls": 0, "tools": [],
-                "history_offset": len(history), "session_id": session_id, "response_previewed": False,
-            }
-
-        # OpenAI chat format. The remote keeps continuity via X-Scout-Session-Id; send the current
-        # message plus a compact text-only history for a remote that has none yet.
-        api_messages: List[Dict[str, str]] = [{"role": "system", "content": context_prompt}] if context_prompt else []
-        api_messages += [
-            {"role": msg.get("role"), "content": msg.get("content")}
-            for msg in history if msg.get("role") in {"user", "assistant"} and msg.get("content")
-        ]
-        api_messages.append({"role": "user", "content": message})
-
-        headers: Dict[str, str] = {"Content-Type": "application/json"}
-        if proxy_key:
-            headers["Authorization"] = f"Bearer {proxy_key}"
-        if session_id:
-            headers["X-Scout-Session-Id"] = session_id
-        body = {"model": "scout-agent", "messages": api_messages, "stream": True}
-
-        _thread_metadata: Optional[Dict[str, Any]] = self._thread_metadata_for_source(source, event_message_id)
-        _stream_consumer = (
-            None if scheduled_heartbeat
-            else self._proxy_stream_consumer(source, event_message_id, _thread_metadata, _run_still_current)
-        )
-        stream_task = asyncio.create_task(_stream_consumer.run()) if _stream_consumer else None
-
-        _adapter = self._delivery_adapter_for(source)
-        if _adapter and not scheduled_heartbeat:
-            with suppress(Exception):
-                await _adapter.send_typing(source.chat_id, metadata=_thread_metadata)
-
-        full_response = ""
-        _start = time.time()
-        saw_done = False
-
-        def _consume_sse_line(line: str) -> bool:
-            """Parse one SSE line into full_response; True when the terminal ``[DONE]`` was seen.
-
-            Malformed frames (bad JSON, ``choices: [null]``, non-dict deltas) are skipped —
-            one bad chunk must not abort the whole stream."""
-            nonlocal full_response
-            line = line.strip()
-            if not line.startswith("data: "):
-                return False
-            data = line[6:]
-            if data.strip() == "[DONE]":
-                return True
-            try:
-                choices = json.loads(data).get("choices") or []
-                content = choices[0].get("delta", {}).get("content", "") if choices else ""
-            except (json.JSONDecodeError, TypeError, AttributeError, IndexError):
-                return False
-            if content:
-                full_response += content
-                if _stream_consumer:
-                    _stream_consumer.on_delta(content)
-            return False
-
-        try:
-            # sock_connect bounds the TCP connect phase so an unreachable proxy host
-            # (DNS fail, firewall, remote down) fails fast instead of hanging on the OS default.
-            _timeout = ClientTimeout(total=0, sock_read=1800, sock_connect=30)
-            async with _AioClientSession(timeout=_timeout) as session:
-                async with session.post(f"{proxy_url}/v1/chat/completions", json=body, headers=headers) as resp:
-                    if resp.status != 200:
-                        error_text = await resp.text()
-                        logger.warning("Proxy error (%d) from %s: %s", resp.status, proxy_url, error_text[:500])
-                        return self._proxy_error_result(t("gateway.proxy.http_error", status=resp.status, error=error_text[:300]))
-
-                    buffer = ""
-                    async for chunk in resp.content.iter_any():
-                        if saw_done:
-                            # A buggy upstream that holds the connection open after [DONE]
-                            # would otherwise block us for up to sock_read seconds.
-                            break
-                        if not _run_still_current():
-                            return _stale_result("stream")
-                        buffer += chunk.decode("utf-8", errors="replace")
-                        while "\n" in buffer:
-                            line, buffer = buffer.split("\n", 1)
-                            if _consume_sse_line(line):
-                                saw_done = True
-                                break
-                        if len(buffer) > _GATEWAY_PROXY_SSE_BUFFER_MAX_CHARS:
-                            raise ValueError("Proxy SSE stream exceeded max buffer size without a line boundary")
-                    # The final SSE frame may not be newline-terminated: flush the residual
-                    # buffer after EOF instead of silently dropping its content.
-                    if not saw_done and buffer:
-                        saw_done = _consume_sse_line(buffer)
-                    if not saw_done:
-                        # Clean EOF without [DONE] — the upstream dropped the response
-                        # mid-stream. Keep any partial text but say so instead of
-                        # presenting the truncation as a complete answer.
-                        logger.warning(
-                            "Proxy SSE stream from %s ended without [DONE] — response may be truncated "
-                            "(%d chars received)", proxy_url, len(full_response),
-                        )
-                        if not full_response:
-                            return self._proxy_error_result(t("gateway.proxy.closed_early"))
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            logger.error("Proxy connection error to %s: %s", proxy_url, e)
-            if not full_response:
-                return self._proxy_error_result(t("gateway.proxy.connection_error", error=e))
-            # Partial response — return what we got
-        finally:
-            if _stream_consumer:
-                _stream_consumer.finish()
-            if stream_task:
-                try:
-                    await asyncio.wait_for(stream_task, timeout=5.0)
-                except (asyncio.TimeoutError, asyncio.CancelledError):
-                    stream_task.cancel()
-
-        _elapsed = time.time() - _start
-        if not _run_still_current():
-            return _stale_result("result")
-        logger.info(
-            "proxy response: url=%s session=%s time=%.1fs response=%d chars",
-            proxy_url, (session_id or "")[:20], _elapsed, len(full_response),
-        )
-        return {
-            "final_response": full_response or t("gateway.proxy.no_response"),
-            "messages": [
-                {"role": "user", "content": message},
-                {"role": "assistant", "content": full_response},
-            ],
-            "api_calls": 1,
-            "tools": [],
-            "history_offset": len(history),
-            "session_id": session_id,
-            "response_previewed": _stream_consumer is not None and bool(full_response),
-        }
-
     async def _run_agent(
         self, message: str, context_prompt: str, history: List[Dict[str, Any]],
         source: SessionSource, session_id: str, **turn_kwargs,
@@ -2989,7 +2570,7 @@ class GatewayTurnMixin:
         # Webhooks can't edit messages, so tool progress / log mode are off there.
         is_webhook = source.platform == Platform.WEBHOOK
         tool_progress_enabled = progress_mode not in {"off", "log"} and not is_webhook
-        # Live status for text-rendering typing indicators (Slack); independent of tool_progress.
+        # Live status for text-rendering typing indicators; independent of tool_progress.
         _live_status_mode = resolve_display_setting(user_config, platform_key, "live_status", "full")
         _live_status_adapter = (
             adapter if getattr(adapter, "supports_status_text", False) and _live_status_mode != "off" else None
@@ -2997,33 +2578,10 @@ class GatewayTurnMixin:
         # "log" mode: tool calls go to ~/.scout/logs/tool_calls.log instead of the chat. Gateway-only.
         log_mode_enabled = progress_mode == "log" and not is_webhook
         # Interim assistant messages and thinking_progress are independent of tool progress (same
-        # queue). Mattermost requires a per-platform opt-in: scratch text leaks into public threads.
-        interim_assistant_messages_mode = _display_surface_mode(
-            "interim_assistant_messages", default=True, require_platform_override_for={Platform.MATTERMOST},
-        )
+        # queue).
+        interim_assistant_messages_mode = _display_surface_mode("interim_assistant_messages", default=True)
         interim_assistant_messages_enabled = not is_webhook and interim_assistant_messages_mode != "off"
-        _thinking_enabled = _display_surface_mode(
-            "thinking_progress", default=False, require_platform_override_for={Platform.MATTERMOST},
-        ) != "off"
-        # Slack-native task cards need the progress queue even with text tool_progress off.
-        # Slack-native task cards (#29483): when the Slack adapter's opt-in is set, tool progress renders as
-        # native plan/task cards via chat.startStream — the progress queue is needed even though Slack keeps
-        # ordinary text tool_progress off by default (requiring both flags would silently leave the native
-        # feature inactive).
-        # Cards are still tool progress. Slack's TIER default (``off``) only quiets the text lane so
-        # cards stay on for unconfigured installs, but an operator who WRITES ``tool_progress: off``
-        # (global, platform override, or legacy overrides) has asked for no tool progress at all and
-        # gets no cards either. Every other explicit mode keeps the card lane.
-        _native_slack_task_cards = False
-        if (
-            source.platform == Platform.SLACK
-            and hasattr(adapter, "native_task_cards_enabled")
-            and not (_tool_progress_explicit and progress_mode == "off")
-        ):
-            try:
-                _native_slack_task_cards = bool(adapter.native_task_cards_enabled())
-            except Exception:
-                logger.debug("Slack native task-card config check failed", exc_info=True)
+        _thinking_enabled = _display_surface_mode("thinking_progress", default=False) != "off"
         return self._RunAgentDisplay(
             user_config=user_config, platform_key=platform_key, enabled_toolsets=enabled_toolsets,
             disabled_toolsets=disabled_toolsets, resolve_display_setting=resolve_display_setting,
@@ -3033,8 +2591,8 @@ class GatewayTurnMixin:
             _live_status_adapter=_live_status_adapter, log_mode_enabled=log_mode_enabled,
             log_queue=queue.Queue() if log_mode_enabled else None,
             interim_assistant_messages_enabled=interim_assistant_messages_enabled,
-            _thinking_enabled=_thinking_enabled, _native_slack_task_cards=_native_slack_task_cards,
-            needs_progress_queue=tool_progress_enabled or _thinking_enabled or _native_slack_task_cards,
+            _thinking_enabled=_thinking_enabled,
+            needs_progress_queue=tool_progress_enabled or _thinking_enabled,
             _generic_status_phrase=_generic_status_phrase,
         )
 
@@ -3043,7 +2601,7 @@ class GatewayTurnMixin:
         "_live_status_adapter", "_live_status_mode", "_thinking_enabled", "progress_mode",
         "progress_grouping", "tool_progress_enabled", "log_queue", "resolve_display_setting",
         "user_config", "enabled_toolsets", "disabled_toolsets", "log_mode_enabled",
-        "interim_assistant_messages_enabled", "needs_progress_queue", "_native_slack_task_cards",
+        "interim_assistant_messages_enabled", "needs_progress_queue",
     )
 
     def _run_agent_build_turn_context(
@@ -3054,18 +2612,6 @@ class GatewayTurnMixin:
         session_id, persist_user_*, …) are stored verbatim. Returns ``(turn_ctx, turn_runner,
         cleanup_adapter)``."""
         from gateway.run_turn_runner import TurnRunner
-        # Discord voice "verbal ack" on the FIRST tool call (discord.voice_fx.enabled): resolve the
-        # guild whose voice connection is bound to this text channel (mirrors DiscordAdapter.play_tts).
-        _voice_ack_guild: List[Optional[int]] = [None]
-        if source.platform == Platform.DISCORD:
-            _va = self.adapters.get(Platform.DISCORD)
-            _vtc = getattr(_va, "_voice_text_channels", None)
-            if isinstance(_vtc, dict) and hasattr(_va, "voice_mixer_active"):
-                _voice_ack_guild[0] = next(
-                    (_gid for _gid, _tc in _vtc.items() if str(_tc) == str(source.chat_id) and _va.voice_mixer_active(_gid)),
-                    None,
-                )
-
         # Auto-cleanup of temporary progress bubbles needs a real ``delete_message`` (getattr on the
         # type: a fake adapter without it means "can't delete", not a crash).
         _cleanup_progress = bool(
@@ -3084,7 +2630,6 @@ class GatewayTurnMixin:
             run_generation=run_generation, _cleanup_progress=_cleanup_progress,
             _run_still_current=self._run_still_current_fn(session_key, run_generation),
             progress_queue=queue.Queue() if disp.needs_progress_queue else None,
-            _voice_ack_guild=_voice_ack_guild, _voice_ack_loop=asyncio.get_running_loop(),
             **{name: getattr(disp, name) for name in self._DISPLAY_TO_TURN_CTX}, **turn_params,
         )
         turn_runner = TurnRunner(self, turn_ctx)
@@ -3092,98 +2637,33 @@ class GatewayTurnMixin:
             turn_ctx.persist_user_display_metadata, source.platform, turn_ctx.user_config)
         # Agent tool-lifecycle callbacks live on the runner (bound methods, same signatures).
         turn_ctx.progress_callback = turn_runner.progress_callback
-        turn_ctx.voice_ack_callback = turn_runner.voice_ack_callback
-        turn_ctx.native_tool_start_callback = turn_runner.combined_tool_start_callback
-        turn_ctx.native_tool_complete_callback = turn_runner.native_tool_complete_callback
         return turn_ctx, turn_runner, _cleanup_adapter
 
     def _thread_metadata_for_progress(
         self, source: SessionSource, event_message_id: Optional[str], _progress_thread_id: Any,
-        _relay_prospective_thread_id: Optional[str],
     ) -> Optional[Dict[str, Any]]:
-        """Thread metadata for a progress-lane send; relay Discord auto-thread lane falls back to the reply anchor.
-
-        The connector will auto-thread on the reply anchor (thread is born on its FIRST send), so
-        carrying it routes progress / status bubbles into the same thread as the final reply."""
+        """Thread metadata for a progress-lane send."""
         if not _progress_thread_id:
-            metadata = None
-        elif _progress_thread_id == source.thread_id:
-            metadata = self._thread_metadata_for_source(source, event_message_id)
-        else:
-            metadata = self._thread_metadata_for_target(
-                source.platform, source.chat_id, _progress_thread_id,
-                chat_type=getattr(source, "chat_type", None), reply_to_message_id=event_message_id,
-            )
-        if metadata is None and _relay_prospective_thread_id:
-            metadata = {"reply_to_message_id": event_message_id}
-        return metadata
+            return None
+        if _progress_thread_id == source.thread_id:
+            return self._thread_metadata_for_source(source, event_message_id)
+        return self._thread_metadata_for_target(
+            source.platform, source.chat_id, _progress_thread_id,
+            chat_type=getattr(source, "chat_type", None), reply_to_message_id=event_message_id,
+        )
 
     def _run_agent_progress_threading(
-        self, source: SessionSource, event_message_id: Optional[str], _native_slack_task_cards: bool
+        self, source: SessionSource, event_message_id: Optional[str],
     ) -> Tuple[Optional[dict], Optional[str], Optional[dict]]:
-        """Resolve where progress bubbles are threaded (platform-specific).
+        """Resolve where progress bubbles are threaded.
 
         Returns ``(progress_metadata, progress_reply_to, status_thread_metadata)``; the latter is
-        for status / approval / stream sends (Feishu topics need the triggering message id via the
-        reply API, so carry it as a fallback). Slack and Buzz honour the user's reply_in_thread
-        opt-out: never synthesise a thread for progress, or every later reply inherits it."""
-        from gateway.run import _non_conversational_metadata, _resolve_progress_thread_id
-        is_buzz = str(getattr(source.platform, "value", source.platform) or "").lower() == "buzz"
-        _progress_reply_in_thread = True
-        _adapter = self._delivery_adapter_for(source) if source.platform == Platform.SLACK or is_buzz else None
-        if _adapter is not None:
-            try:
-                if is_buzz:
-                    _progress_reply_in_thread = getattr(_adapter, "_reply_to_mode", "first") != "off"
-                else:
-                    # Relay lane: the adapter owns mode resolution; native lane: flat extra key.
-                    _mode_fn = getattr(_adapter, "_effective_reply_in_thread", None)
-                    _progress_reply_in_thread = bool(
-                        _mode_fn() if callable(_mode_fn) else _adapter.config.extra.get("reply_in_thread", True)
-                    )
-            except Exception:
-                _progress_reply_in_thread = True
-        _progress_thread_id = _resolve_progress_thread_id(
-            source.platform, source.thread_id, event_message_id, reply_in_thread=_progress_reply_in_thread,
-        )
-        # Relay Discord auto-thread lane: the connector stamps prospective_thread_id at ingest.
-        _relay_prospective_thread_id = (
-            str(getattr(source, "prospective_thread_id", None))
-            if source.platform == Platform.DISCORD
-            and getattr(source, "delivered_via_upstream_relay", False)
-            and getattr(source, "prospective_thread_id", None)
-            and not source.thread_id
-            else None
-        )
-        _progress_metadata = _non_conversational_metadata(
-            self._thread_metadata_for_progress(
-                source, event_message_id, _progress_thread_id, _relay_prospective_thread_id,
-            ),
-            platform=source.platform,
-        )
-        if _native_slack_task_cards:
-            # chat.startStream in channels requires the recipient team/user pair; harmless elsewhere.
-            _progress_metadata = dict(_progress_metadata or {})
-            if source.scope_id:
-                _progress_metadata.setdefault("recipient_team_id", source.scope_id)
-                _progress_metadata.setdefault("slack_team_id", source.scope_id)
-            if source.user_id:
-                _progress_metadata.setdefault("recipient_user_id", source.user_id)
-        # Buzz has no native thread_id: thread via reply-to unless the user opted out.
-        _progress_reply_to = (
-            event_message_id
-            if (source.platform in (Platform.FEISHU, Platform.MATTERMOST) and source.thread_id and event_message_id)
-            or (is_buzz and event_message_id and _progress_reply_in_thread)
-            or _relay_prospective_thread_id
-            else None
-        )
-        if source.platform == Platform.FEISHU and source.thread_id and event_message_id:
-            _status_thread_metadata = {"thread_id": _progress_thread_id, "reply_to_message_id": event_message_id}
-        else:
-            _status_thread_metadata = self._thread_metadata_for_progress(
-                source, event_message_id, _progress_thread_id, _relay_prospective_thread_id,
-            )
-        return _progress_metadata, _progress_reply_to, _status_thread_metadata
+        for status / approval / stream sends."""
+        from gateway.run import _resolve_progress_thread_id
+        _progress_thread_id = _resolve_progress_thread_id(source.platform, source.thread_id, event_message_id)
+        _status_thread_metadata = self._thread_metadata_for_progress(source, event_message_id, _progress_thread_id)
+        _progress_metadata = _status_thread_metadata
+        return _progress_metadata, None, _status_thread_metadata
 
     async def _run_agent_write_tool_log(self, log_queue: Any) -> None:
         """Drain log_queue and append tool-call lines to tool_calls.log (tool_progress=log).
@@ -3832,8 +3312,7 @@ class GatewayTurnMixin:
             )
             if next_message is None:
                 return result
-            from gateway.run_inbound import strip_discord_triggering_note
-            next_persist_message = strip_discord_triggering_note(pending_event, next_message)
+            next_persist_message = next_message
             next_message_id = self._reply_anchor_for_event(pending_event)
             next_inbound_id = str(pending_event.message_id) if getattr(pending_event, "message_id", None) else None
             next_channel_prompt, next_source = self._pinned_channel_inputs(
@@ -4119,13 +3598,13 @@ class GatewayTurnMixin:
 
     def _run_agent_bind_turn_wiring(
         self, turn_ctx: TurnContext, turn_runner: TurnRunner, source: SessionSource,
-        event_message_id: Optional[str], _native_slack_task_cards: bool,
+        event_message_id: Optional[str],
     ) -> Optional[Dict[str, Any]]:
         """Resolve progress threading, then publish progress metadata and the sync→async bridges onto
         ``turn_ctx`` (the one-slot holders shared with run_sync's executor thread are TurnContext
         defaults). Returns ``_status_thread_metadata``."""
         turn_ctx._progress_metadata, turn_ctx._progress_reply_to, _status_thread_metadata = (
-            self._run_agent_progress_threading(source, event_message_id, _native_slack_task_cards)
+            self._run_agent_progress_threading(source, event_message_id)
         )
         # Bridges: sync step/event/status callbacks → async hooks.emit and adapter.send.
         turn_ctx._loop_for_step = asyncio.get_running_loop()
@@ -4147,7 +3626,7 @@ class GatewayTurnMixin:
 
         Interval: agent.gateway_notify_interval / SCOUT_AGENT_NOTIFY_INTERVAL (default 180s; 0 or
         long_running_notifications=off disables)."""
-        from gateway.run import _float_env, _interim_metadata, _non_conversational_metadata
+        from gateway.run import _float_env, _interim_metadata
         _notify_start = time.time()
         _NOTIFY_INTERVAL = _float_env("SCOUT_AGENT_NOTIFY_INTERVAL", 180)
         _long_running_mode = disp._display_surface_mode("long_running_notifications", default=True, allow_generic=True)
@@ -4204,7 +3683,7 @@ class GatewayTurnMixin:
                         break
                     _notify_res = await _notify_adapter.send(
                         source.chat_id, _heartbeat_text,
-                        metadata=_interim_metadata(_non_conversational_metadata(_status_thread_metadata, platform=source.platform)),
+                        metadata=_interim_metadata(_status_thread_metadata),
                     )
                     if getattr(_notify_res, "success", False) and getattr(_notify_res, "message_id", None):
                         _heartbeat_msg_id = str(_notify_res.message_id)
@@ -4228,13 +3707,6 @@ class GatewayTurnMixin:
         """Run the agent; returns the full run_conversation result dict.
 
         Keys: "final_response", "messages", "api_calls", "completed"."""
-        if self._get_proxy_url():
-            return await self._run_agent_via_proxy(
-                message=message, context_prompt=context_prompt, history=history, source=source,
-                session_id=session_id, session_key=session_key, run_generation=run_generation,
-                event_message_id=event_message_id, scheduled_heartbeat=scheduled_heartbeat,
-            )
-
         from run_agent import AIAgent
 
         disp = self._run_agent_display_settings(source)
@@ -4247,7 +3719,6 @@ class GatewayTurnMixin:
                 tool_progress_enabled=False,
                 interim_assistant_messages_enabled=False,
                 _thinking_enabled=False,
-                _native_slack_task_cards=False,
                 needs_progress_queue=False,
             )
         turn_ctx, turn_runner, _cleanup_adapter = self._run_agent_build_turn_context(
@@ -4264,7 +3735,7 @@ class GatewayTurnMixin:
             scheduled_heartbeat=scheduled_heartbeat,
         )
         _status_thread_metadata = self._run_agent_bind_turn_wiring(
-            turn_ctx, turn_runner, source, event_message_id, disp._native_slack_task_cards,
+            turn_ctx, turn_runner, source, event_message_id,
         )
         # Two independent quiet reasons: a muted diagnostic wake (ours) and a scheduled heartbeat.
         if not (scheduled_heartbeat or turn_ctx.mute_notification_reply):

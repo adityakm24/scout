@@ -84,7 +84,7 @@ def _run_scenario(name, chat_id, is_dm, reply_chat_type):
 
     # LEG 1: what session key did the seed create?
     seeded_source = SessionSource(
-        platform=Platform.SLACK, chat_id=chat_id,
+        platform=Platform.HOMEASSISTANT, chat_id=chat_id,
         chat_type="dm" if is_dm else "group",
         user_id="U_HUMAN", thread_id=None,
     )
@@ -93,7 +93,7 @@ def _run_scenario(name, chat_id, is_dm, reply_chat_type):
     # LEG 2: what does a plain inbound reply (reply_in_thread:false → thread None)
     # from the same user resolve to?
     inbound = SessionSource(
-        platform=Platform.SLACK, chat_id=chat_id, chat_type=reply_chat_type,
+        platform=Platform.HOMEASSISTANT, chat_id=chat_id, chat_type=reply_chat_type,
         user_id="U_HUMAN", thread_id=None,
     )
     reply_key = build_session_key(inbound)

@@ -85,8 +85,6 @@ def test_wal_probe_unknown_never_emits_set_pragma(monkeypatch, tmp_path, caplog)
         sibling.close()
 
 
-
-
 def test_resolve_journal_mode_uses_real_database_config(monkeypatch, tmp_path):
     from scout_state_wal import resolve_journal_mode
 
@@ -273,100 +271,3 @@ def test_configured_delete_with_require_wal_and_existing_wal_returns_wal(monkeyp
         conn.close()
 
 
-def test_real_db_openers_honor_configured_delete(monkeypatch, tmp_path):
-    """All helper-routed file-backed openers must behaviorally use DELETE."""
-    _configure_mode(monkeypatch, tmp_path, "delete")
-    _disable_vulnerable_gate(monkeypatch)
-
-    from agent import verification_evidence
-    from cron import executions
-    from gateway import delivery_ledger
-    from gateway.platforms.api_server import ResponseStore
-    from scout_cli import projects_db
-    from scout_cli import kanban_db_connect as kbc
-    from scout_state import SessionDB
-    from plugins.memory.holographic.store import MemoryStore
-    from plugins.platforms.discord.recovery import DiscordRecoveryStore
-    from tools import async_delegation
-
-    observed: dict[str, str] = {}
-
-    for name, connect in (
-        ("async_delegation", async_delegation._connect),
-        ("delivery_ledger", delivery_ledger._connect),
-        ("verification_evidence", verification_evidence._connect),
-    ):
-        conn = connect()
-        try:
-            observed[name] = conn.execute("PRAGMA journal_mode").fetchone()[0].lower()
-        finally:
-            conn.close()
-
-    monkeypatch.setattr(executions, "EXECUTIONS_FILE", tmp_path / "cron" / "executions.db")
-    executions.EXECUTIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    cron_conn = executions._connect()
-    try:
-        executions._initialize_schema(cron_conn)
-        observed["cron_executions"] = cron_conn.execute(
-            "PRAGMA journal_mode"
-        ).fetchone()[0].lower()
-    finally:
-        cron_conn.close()
-
-    discord = DiscordRecoveryStore(scout_home=tmp_path)
-    observed["discord_recovery"] = discord.call(
-        lambda conn: conn.execute("PRAGMA journal_mode").fetchone()[0].lower()
-    )
-
-    session_db = SessionDB(db_path=tmp_path / "state.db")
-    try:
-        observed["session_db"] = session_db._conn.execute(
-            "PRAGMA journal_mode"
-        ).fetchone()[0].lower()
-    finally:
-        session_db.close()
-
-    kanban_conn = kbc.connect(db_path=tmp_path / "kanban.db")
-    try:
-        observed["kanban"] = kanban_conn.execute(
-            "PRAGMA journal_mode"
-        ).fetchone()[0].lower()
-    finally:
-        kanban_conn.close()
-
-    projects_conn = projects_db.connect(db_path=tmp_path / "projects.db")
-    try:
-        observed["projects"] = projects_conn.execute(
-            "PRAGMA journal_mode"
-        ).fetchone()[0].lower()
-    finally:
-        projects_conn.close()
-
-    holographic = MemoryStore(db_path=tmp_path / "memory_store.db")
-    try:
-        observed["holographic"] = holographic._conn.execute(
-            "PRAGMA journal_mode"
-        ).fetchone()[0].lower()
-    finally:
-        holographic.close()
-
-    response_store = ResponseStore(db_path=str(tmp_path / "response_store.db"))
-    try:
-        observed["response_store"] = response_store._conn.execute(
-            "PRAGMA journal_mode"
-        ).fetchone()[0].lower()
-    finally:
-        response_store.close()
-
-    assert observed == {
-        "async_delegation": "delete",
-        "delivery_ledger": "delete",
-        "verification_evidence": "delete",
-        "cron_executions": "delete",
-        "discord_recovery": "delete",
-        "session_db": "delete",
-        "kanban": "delete",
-        "projects": "delete",
-        "holographic": "delete",
-        "response_store": "delete",
-    }

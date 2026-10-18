@@ -76,9 +76,3 @@ class TestRepairOggContainer:
         assert result == str(p)
         assert _sniff_audio_container(str(p)) == "ogg"
 
-class TestOpusPlatformSet:
-    def test_opus_platforms_cover_voice_bubble_platforms(self):
-        # Behavior contract: the platforms whose adapters deliver native
-        # voice bubbles only for Ogg/Opus must be recognized.
-        for platform in ("telegram", "matrix", "feishu", "whatsapp", "signal"):
-            assert platform in OPUS_VOICE_PLATFORMS

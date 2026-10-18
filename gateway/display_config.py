@@ -16,31 +16,30 @@ _GLOBAL_DEFAULTS: dict[str, Any] = {
     "tool_progress": "all",
     "tool_progress_grouping": "accumulate",  # "accumulate" = edit one bubble; "separate" = one msg per tool
     "show_reasoning": False,
-    "reasoning_style": "code",  # "code" (💭 **Reasoning:** + fence), "blockquote" ("> "), "subtext" ("-# " Discord)
+    "reasoning_style": "code",  # "code" (💭 **Reasoning:** + fence), "blockquote" ("> ")
     "tool_preview_length": 0,
     "streaming": None,  # None = follow top-level streaming config
-    # Gateway-only assistant/status chatter; mobile platforms opt down to final-answer-first.
+    # Gateway-only assistant/status chatter.
     "interim_assistant_messages": True,
     "suppress_warning_notifications": False,
     "long_running_notifications": True,
     "busy_ack_detail": True,
     "busy_steer_ack_enabled": True,  # busy_input_mode=steer echo; the text still lands in the run
-    # Delete tool-progress / "⏳ Working" bubbles after a SUCCESSFUL final response where deletion is
-    # supported (Telegram); failed runs keep them as breadcrumbs.
+    # Delete tool-progress / "⏳ Working" bubbles after a SUCCESSFUL final response where the adapter
+    # supports deletion; failed runs keep them as breadcrumbs.
     "cleanup_progress": False,
-    # Working-state text on text-rendering indicators (Slack assistant status): "full"/true = verb +
-    # argument preview, "verb" = verb only (keeps paths out of shared channels), "off"/false = static.
+    # Working-state text on text-rendering indicators: "full"/true = verb + argument preview,
+    # "verb" = verb only (keeps paths out of shared surfaces), "off"/false = static.
     "live_status": "full",
 }
 
-# Tiers: HIGH = editing, personal/team use; MEDIUM = editing but customer-facing;
+# Tiers: HIGH = editing, personal/team use;
 # LOW = no edit support (progress messages are permanent); MINIMAL = batch delivery.
 _TIER_HIGH = {
     "tool_progress": "all", "show_reasoning": False, "tool_preview_length": 40,
     "streaming": None,  # follow global
     "interim_assistant_messages": True, "long_running_notifications": True, "busy_ack_detail": True,
 }
-_TIER_MEDIUM = {**_TIER_HIGH, "tool_progress": "new"}
 _TIER_LOW = {
     **_TIER_HIGH, "tool_progress": "off", "streaming": False,
     "interim_assistant_messages": False, "long_running_notifications": False, "busy_ack_detail": False,
@@ -48,28 +47,6 @@ _TIER_LOW = {
 _TIER_MINIMAL = {**_TIER_LOW, "tool_preview_length": 0}
 
 _PLATFORM_DEFAULTS: dict[str, dict[str, Any]] = {
-    # Mobile inbox: quiet tool_progress / busy-ack, but keep interim commentary and heartbeats so it
-    # doesn't look like "typing..." for 30 minutes.
-    "telegram": {**_TIER_HIGH, "tool_progress": "off", "busy_ack_detail": False},
-    "discord": {**_TIER_HIGH, "reasoning_style": "subtext"},  # "-# " subtext reads as metadata
-    # Slack: Bolt posts cannot be edited like CLI; "new"/"all" spam permanent lines.
-    "slack": {**_TIER_MEDIUM, "tool_progress": "off", "long_running_notifications": False, "busy_ack_detail": False},
-    "mattermost": _TIER_MEDIUM,
-    "matrix": _TIER_MEDIUM,
-    "feishu": _TIER_MEDIUM,
-    "buzz": _TIER_MEDIUM,  # Nostr: edits in place but channels are shared community spaces
-    "signal": _TIER_LOW,
-    "whatsapp": _TIER_MEDIUM,  # Baileys bridge supports /edit
-    "whatsapp_cloud": _TIER_LOW,  # adapter lacks edit_message; promote once it lands
-    "photon": _TIER_LOW,  # permanent-message iMessage inboxes (no edit)
-    "bluebubbles": _TIER_LOW,
-    "weixin": _TIER_LOW,
-    # Non-editable, but its native "stream" msgtype gives a typing animation + cumulative updates.
-    "wecom": {**_TIER_LOW, "streaming": True},
-    "wecom_callback": _TIER_LOW,
-    "dingtalk": _TIER_LOW,
-    "email": _TIER_MINIMAL,
-    "sms": _TIER_MINIMAL,
     "webhook": _TIER_MINIMAL,
     "homeassistant": _TIER_MINIMAL,
     "api_server": {**_TIER_HIGH, "tool_preview_length": 0},
@@ -82,7 +59,7 @@ OVERRIDEABLE_KEYS = frozenset(_GLOBAL_DEFAULTS.keys())
 def resolve_display_setting(user_config: dict, platform_key: str, setting: str, fallback: Any = None) -> Any:
     """Resolve a display setting with per-platform override support (see module docstring for order).
 
-    ``platform_key`` is the platform config key (``"telegram"``; see ``_platform_config_key`` in
+    ``platform_key`` is the platform config key (``"api_server"``; see ``_platform_config_key`` in
     gateway/run.py). Returns *fallback* when nothing is configured.
     """
     configured = _configured_display_value(user_config, platform_key, setting)
@@ -195,7 +172,7 @@ _NORMALISERS: dict[str, Any] = {
     "cleanup_progress": _norm_cleanup_progress,
     "live_status": _norm_tristate("full", "off", {"full", "verb", "off"}, extra_truthy={"all"}),
     "tool_progress_grouping": _norm_choice(("accumulate", "separate")),
-    "reasoning_style": _norm_choice(("code", "blockquote", "subtext")),
+    "reasoning_style": _norm_choice(("code", "blockquote")),
     "tool_preview_length": _norm_int,
 }
 

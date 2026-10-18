@@ -50,12 +50,12 @@ def runner(clock, settings):
 
 
 def _bot(user_id: str, chat_id: str = GROUP_CHAT, chat_type: str = "group") -> SessionSource:
-    return SessionSource(platform=Platform.TELEGRAM, chat_id=chat_id, chat_type=chat_type, user_id=user_id,
+    return SessionSource(platform=Platform.HOMEASSISTANT, chat_id=chat_id, chat_type=chat_type, user_id=user_id,
                          user_name=f"Bot{user_id}", is_bot=True)
 
 
 def _human(chat_id: str = GROUP_CHAT, chat_type: str = "group") -> SessionSource:
-    return SessionSource(platform=Platform.TELEGRAM, chat_id=chat_id, chat_type=chat_type, user_id=HUMAN,
+    return SessionSource(platform=Platform.HOMEASSISTANT, chat_id=chat_id, chat_type=chat_type, user_id=HUMAN,
                          user_name="Alice", is_bot=False)
 
 
@@ -207,16 +207,6 @@ def test_humans_are_never_metered_and_stay_authorized_during_cooldown(monkeypatc
     assert runner._is_user_authorized(_human()) is True
 
 
-def test_budget_is_scoped_by_chat_and_platform(monkeypatch, runner):
-    _incident_config(monkeypatch)
-    _ping_pong(runner, 25)
-    assert runner._is_user_authorized(_bot(BOT_A)) is False
-
-    assert _inbound(runner, _bot(BOT_A, chat_id=OTHER_GROUP)) is True
-    assert _inbound(runner, _bot(BOT_B, chat_id=OTHER_GROUP)) is True
-    monkeypatch.setenv("DISCORD_ALLOW_BOTS", "all")
-    discord_bot = SessionSource(platform=Platform.DISCORD, chat_id=GROUP_CHAT, chat_type="group", user_id=BOT_A, is_bot=True)
-    assert _inbound(runner, discord_bot) is True
 
 
 def test_cooldown_expiry_readmits_with_a_fresh_budget(monkeypatch, runner, clock):
@@ -236,14 +226,6 @@ def test_disabled_via_config_admits_everything(monkeypatch, runner, settings):
     assert all(_ping_pong(runner, 40))
 
 
-def test_rejected_bot_messages_do_not_consume_budget(monkeypatch, runner):
-    """Only admitted bot traffic counts, so an unauthorized bot cannot silence an authorized one."""
-    monkeypatch.setenv("TELEGRAM_ALLOWED_USERS", HUMAN)
-
-    for _ in range(30):
-        assert _inbound(runner, _bot(BOT_A, chat_id="123", chat_type="dm")) is False
-
-    assert runner._bot_loop_guard.tracked_conversations == 0
 
 
 # --- BotLoopGuard unit ------------------------------------------------------

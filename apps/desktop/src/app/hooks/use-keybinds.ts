@@ -5,7 +5,7 @@ import { closeActiveTab } from '@/app/chat/close-tab'
 import { hudTargetSessionId } from '@/app/hud/handoff'
 import { setTerminalTakeover } from '@/app/right-sidebar/store'
 import { toggleTerminalPane } from '@/app/right-sidebar/terminal/reveal-focus'
-import { closeActiveTerminal, createTerminal, cycleTerminal } from '@/app/right-sidebar/terminal/terminals'
+import { closeActiveTerminal, cycleTerminal } from '@/app/right-sidebar/terminal/terminals'
 import { appViewForPath, isOverlayView } from '@/app/routes'
 import {
   activateTreeTabSlot,
@@ -98,7 +98,6 @@ import {
   ARTIFACTS_ROUTE,
   CAPABILITIES_ROUTE,
   CRON_ROUTE,
-  MESSAGING_ROUTE,
   navigateToWorkspacePage,
   NEW_CHAT_ROUTE,
   PROFILES_ROUTE,
@@ -287,7 +286,6 @@ export function useKeybinds(deps: KeybindRuntimeDeps): void {
     'nav.settings': () => navigate(SETTINGS_ROUTE),
     'nav.profiles': () => navigate(PROFILES_ROUTE),
     'nav.capabilities': () => navigateToWorkspacePage(navigate, CAPABILITIES_ROUTE),
-    'nav.messaging': () => navigateToWorkspacePage(navigate, MESSAGING_ROUTE),
     'nav.artifacts': () => navigateToWorkspacePage(navigate, ARTIFACTS_ROUTE),
     'nav.cron': () => navigate(CRON_ROUTE),
     'nav.agents': () => navigate(AGENTS_ROUTE),
@@ -337,12 +335,6 @@ export function useKeybinds(deps: KeybindRuntimeDeps): void {
     'view.showBrowser': toggleBrowserTab,
     'view.toggleHud': () => toggleHud(hudTargetSessionId()),
     'view.showTerminal': () => toggleTerminalPane(),
-    // Create first so the pane's open-effect ensure sees a non-empty set and
-    // doesn't also spawn one — net effect is exactly one fresh terminal.
-    'view.newTerminal': () => {
-      createTerminal()
-      setTerminalTakeover(true)
-    },
     // Switch / close only act while the terminal is actually ON SCREEN — ask
     // the tree, not the toggle store (which stays true behind a stacked
     // sibling tab or a minimized zone).

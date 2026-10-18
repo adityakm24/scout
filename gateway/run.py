@@ -30,7 +30,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Callable, Dict, Optional, Any, List, Tuple, cast
 
-from agent.async_utils import safe_schedule_threadsafe
+from agent.async_utils import safe_schedule_threadsafe  # noqa: F401 — siblings late-import it from this facade
 from agent.i18n import t
 from agent.conversation_compression import (
     COMPACTION_DONE_STATUS, COMPACTION_HEARTBEAT_STATUS, COMPACTION_STATUS, COMPRESSION_RETRY_CONTEXT_REDUCED_STATUS_TEMPLATE,
@@ -50,15 +50,6 @@ from gateway.turn_executor import _UnboundedThreadExecutor
 _AGENT_CACHE_MAX_SIZE = 128
 _AGENT_CACHE_IDLE_TTL_SECS = 3600.0  # evict agents idle for >1h
 _PLATFORM_CONNECT_TIMEOUT_SECS_DEFAULT = 30.0
-# Telegram connect proves a real getUpdates round trip; must cover polling-start deadlines + readiness.
-_TELEGRAM_CONNECT_TIMEOUT_SECS_DEFAULT = 180.0
-# The initial Telegram connect gates `running` for EVERY platform, so it must not spend the full 180s.
-# Cold-start cap for Telegram (#85993): the initial connect awaited before the gateway reaches `running`
-# must not spend the full 180s budget — an unreachable Telegram would hold EVERY platform's serving state
-# hostage for the whole window. The initial attempt gets one bounded try; on timeout the platform is queued
-# for the reconnect watcher, which retries with the full 180s budget (is_reconnect=True preserves the
-# offline update queue, #46621).
-_TELEGRAM_INITIAL_CONNECT_TIMEOUT_SECS_DEFAULT = 45.0
 _ADAPTER_DISCONNECT_TIMEOUT_SECS_DEFAULT = 5.0
 # Size of the separate pool for best-effort session HOUSEKEEPING; why it is separate: _run_housekeeping_in_executor.
 _HOUSEKEEPING_MAX_WORKERS = 4
@@ -69,7 +60,6 @@ _USER_BOUNDARY_END_REASONS = ("session_reset", "user_exit", "session_switch", "n
 # Bounds one stall-notify send so a wedged transport can't block the watcher; on timeout the next tick retries.
 _STALL_NOTIFY_SEND_TIMEOUT_SECONDS = 15.0
 _GATEWAY_PROXY_SSE_BUFFER_MAX_CHARS = 16 * 1024 * 1024
-_TELEGRAM_COMMAND_MENTION_RE = re.compile(r"(?<![\w:/])/([A-Za-z0-9][A-Za-z0-9_-]*)")
 _GATEWAY_HYGIENE_PLATFORM = "gateway_hygiene"
 
 _TELEGRAM_NOISY_STATUS_RE = re.compile(
@@ -476,16 +466,6 @@ def _gateway_platform_value(platform: Any) -> str:
     return str(getattr(platform, "value", platform) or "").strip().lower()
 
 
-def _non_conversational_metadata(
-    metadata: Optional[Dict[str, Any]] = None, *, platform: Any = None) -> Optional[Dict[str, Any]]:
-    """Mark Discord lifecycle/status sends without changing other platforms."""
-    if _gateway_platform_value(platform) != "discord":
-        return metadata
-    merged = dict(metadata or {})
-    merged["non_conversational"] = True
-    return merged
-
-
 def _interim_metadata(metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Mark a mid-turn status/advisory send as NOT the turn-final.
 
@@ -695,10 +675,8 @@ def _sanitize_gateway_final_response(platform: Any, text: str) -> str:
     if not text or _gateway_surface_passes_raw_text(platform):
         return text
 
-    # Lone UTF-16 surrogates make Telegram/Signal ``.encode()`` raise; last defense for legacy/plugin paths.
-    # Lone UTF-16 surrogates (U+D800–U+DFFF) in model output crash chat surfaces downstream: Telegram's
-    # ``utf16_len`` length check and Signal formatting both ``.encode()`` the reply and raise
-    # UnicodeEncodeError before any send (#55143, #55309). The stored-history copy is already sanitized by
+    # Lone UTF-16 surrogates (U+D800–U+DFFF) in model output make any adapter that ``.encode()``s the
+    # reply raise UnicodeEncodeError before the send (#55143, #55309). The stored-history copy is already sanitized by
     # ``build_assistant_message`` and ``finalize_turn`` scrubs the returned ``final_response``, but this
     # boundary is the last line of defense for every legacy/plugin delivery path that hands us raw text.
     # Raw-text/programmatic surfaces above keep passthrough — their JSON consumers escape surrogates safely.
@@ -783,64 +761,13 @@ def _approval_send_outcome(future, timeout: float) -> str:
         return "failed"
     if getattr(result, "success", False):
         return "sent"
-    # P5(b): a connector DECLINE is not a lane failure. The connector
-    # authorized the destination and refused it; re-sending the same content as
-    # plain text into that same chat is the exfiltration the egress guard
-    # exists to stop. `failed` is the cue to fall back, so a decline needs its
-    # own verdict — callers must surface it and send nothing further.
-    #
-    # CLASSIFY THE STRUCTURED RESPONSE, NOT THE ERROR STRING. The adapter
-    # preserves the connector's own dict in `raw_response`; rebuilding a dict
-    # from `error` alone loses two things review demonstrated:
-    #   * a decline carrying `code: egress_declined` and NO text renders as
-    #     "relay egress declined" — no marker colon — so the string check
-    #     missed it and the fallback fired into the refused chat;
-    #   * `ambiguous: True` (lost ack, mid-write drop) was flattened into a
-    #     DEFINITE failure, which re-sends a card that may well have posted.
-    # I fixed the text-marker path and tested only the text-marker path.
-    from gateway.relay.egress import declined_send
-
-    _raw = getattr(result, "raw_response", None)
-    if isinstance(_raw, dict) and _raw.get("ambiguous"):
-        # The frame may have been applied. Same physics as a scheduling
-        # timeout: possibly-delivered, so never re-send. Checked BEFORE the
-        # decline classification because an ambiguous result is a transport
-        # outcome, not an authorization one, and this lane has three verdicts
-        # rather than the boolean the shared helper answers.
-        logger.warning("Prompt send AMBIGUOUS (lost ack): %s", _raw.get("error"))
-        return "ambiguous"
-    if declined_send(result):
-        # Both shapes, one classifier: a structured body, or the uniform
-        # decline sentence from an older connector.
-        logger.warning(
-            "Prompt send DECLINED by connector egress guard: %s",
-            getattr(result, "error", None),
-        )
-        return "declined"
     logger.warning("Prompt send failed: %s", getattr(result, "error", None) or "unknown error")
     return "failed"
 
 
-def _resolve_progress_thread_id(
-    platform: Any, source_thread_id: Any, event_message_id: Any, *, reply_in_thread: bool = True
-) -> Optional[str]:
-    """Return thread/root ID that progress/status bubbles should target.
-
-    ``reply_in_thread=False`` (Slack): no synthetic-thread fallback, else the final flat reply inherits a thread.
-    A source.thread_id equal to the event's message id is the adapter's synthetic session key: no thread.
-
-    See #18859.
-    """
-    platform_key = str(getattr(platform, "value", platform) or "").lower()
-    if not reply_in_thread:
-        if source_thread_id and event_message_id and str(source_thread_id) == str(event_message_id):
-            return None
-        return str(source_thread_id) if source_thread_id else None
-    if source_thread_id:
-        return str(source_thread_id)
-    if platform_key in {"slack", "mattermost", "buzz"} and event_message_id:
-        return str(event_message_id)
-    return None
+def _resolve_progress_thread_id(platform: Any, source_thread_id: Any, event_message_id: Any) -> Optional[str]:
+    """Return the thread progress/status bubbles should target: the source's own thread, if any."""
+    return str(source_thread_id) if source_thread_id else None
 
 
 def _has_platform_display_override(user_config: dict, platform_key: str, setting: str) -> bool:
@@ -879,21 +806,6 @@ def _resolve_gateway_display_bool(
     if value is None:
         return bool(default)
     return bool(value)
-
-
-def _telegramize_command_mentions(text: str, platform: Any) -> str:
-    """Rewrite slash-command mentions to Telegram-valid names (lowercase/digits/underscore); no-op elsewhere."""
-    platform_value = getattr(platform, "value", platform)
-    if platform_value != "telegram":
-        return text
-
-    from scout_cli.commands_platforms import _sanitize_telegram_name
-
-    def _replace(match: re.Match[str]) -> str:
-        sanitized = _sanitize_telegram_name(match.group(1))
-        return f"/{sanitized}" if sanitized else match.group(0)
-
-    return _TELEGRAM_COMMAND_MENTION_RE.sub(_replace, text)
 
 
 # Auto-continue interrupted turns only while fresh, else stale tool-tail/resume_pending markers revive an old
@@ -1159,19 +1071,6 @@ def _build_replay_entry(
     return entry
 
 
-_TELEGRAM_OBSERVED_CONTEXT_PROMPT_MARKER = "observed Telegram group context"
-_OBSERVED_GROUP_CONTEXT_HEADER = "[Observed Telegram group context - context only, not requests]"
-_CURRENT_ADDRESSED_MESSAGE_HEADER = "[Current addressed message - answer only this unless it explicitly asks you to use the observed context]"
-
-
-def _uses_telegram_observed_group_context(channel_prompt: Optional[str]) -> bool:
-    """Return True for Telegram group turns that may include observed chatter.
-
-    Observed rows must not replay as ordinary user turns, or a weak wake word makes old chatter look like work.
-    """
-    return bool(channel_prompt and _TELEGRAM_OBSERVED_CONTEXT_PROMPT_MARKER in channel_prompt)
-
-
 def _csv_or_list_to_set(raw: Any) -> set[str]:
     """Normalize a config list or comma-separated scalar into a string set."""
     if raw is None:
@@ -1179,39 +1078,6 @@ def _csv_or_list_to_set(raw: Any) -> set[str]:
     if isinstance(raw, list):
         return {str(part).strip() for part in raw if str(part).strip()}
     return {part.strip() for part in str(raw).split(",") if part.strip()}
-
-
-def _slack_ignored_channels_from_gateway_config(config: Any, adapter: Any = None) -> set[str]:
-    """Return Slack channels that the generic gateway must never dispatch.
-
-    Duplicates the adapter's drop as a fail-safe so bypasses can't reach auth, pairing or sessions.
-    ``adapter`` is the source's routed adapter: under multiplex ``config`` is the DEFAULT profile's
-    GatewayConfig, so a secondary Slack bot's list lives only in its adapter's ``extra``."""
-    raw = None
-    if adapter is not None:
-        raw = (getattr(getattr(adapter, "config", None), "extra", None) or {}).get("ignored_channels")
-    platform_cfg = getattr(config, "platforms", {}).get(Platform.SLACK)
-    if raw is None and platform_cfg is not None and adapter is None:
-        raw = getattr(platform_cfg, "extra", {}).get("ignored_channels")
-    if raw is None:
-        # Top-level ``slack.ignored_channels`` arrives via the plugin's YAML→env bridge, not PlatformConfig.extra
-        # (#46925); scoped read so a secondary never inherits the default profile's list (first-writer env).
-        from gateway.platforms._shared import platform_gate_env as _platform_gate_env
-        raw = _platform_gate_env("SLACK_IGNORED_CHANNELS") or None
-    return _csv_or_list_to_set(raw)
-
-
-def _slack_parent_channel_id(chat_id: Any) -> str:
-    """Return the parent Slack channel from a possibly thread-scoped chat ID."""
-    return str(chat_id).split(":", 1)[0] if chat_id else ""
-
-
-def _is_slack_ignored_channel(config: Any, chat_id: Any, adapter: Any = None) -> bool:
-    """Check the generic Slack gateway blacklist for channel or thread IDs (``adapter`` = the source's
-    routed adapter, whose ``extra`` is authoritative for a secondary profile)."""
-    channel_id = _slack_parent_channel_id(chat_id)
-    ignored = _slack_ignored_channels_from_gateway_config(config, adapter)
-    return bool(channel_id and ("*" in ignored or channel_id in ignored))
 
 
 def _message_timestamps_enabled(user_config: Optional[dict]) -> bool:
@@ -1243,11 +1109,8 @@ def _has_replayable_sidecar(role: Any, content: Any, msg: Dict[str, Any]) -> boo
 
 
 def _build_gateway_agent_history(
-    history: List[Dict[str, Any]], *, channel_prompt: Optional[str] = None,
-    inject_timestamps: bool = False) -> tuple[List[Dict[str, Any]], Optional[str]]:
-    """Convert stored gateway transcript rows into agent replay messages.
-
-    Observed context stays out of ``conversation_history`` so consecutive-user repair can't merge it in."""
+    history: List[Dict[str, Any]], *, inject_timestamps: bool = False) -> List[Dict[str, Any]]:
+    """Convert stored gateway transcript rows into agent replay messages."""
     from scout_time import get_timezone as _get_msg_tz
     from gateway.message_timestamps import (
         render_user_content_with_timestamp as _render_msg_ts,
@@ -1256,8 +1119,6 @@ def _build_gateway_agent_history(
 
     _msg_tz = _get_msg_tz()
     agent_history: List[Dict[str, Any]] = []
-    observed_group_context: List[str] = []
-    separate_observed_context = _uses_telegram_observed_group_context(channel_prompt)
 
     for msg in history or []:
         role = msg.get("role")
@@ -1266,11 +1127,6 @@ def _build_gateway_agent_history(
             continue
 
         content = msg.get("content")
-        if separate_observed_context and msg.get("observed") and role == "user" and content:
-            if inject_timestamps and isinstance(content, str):
-                content = _render_msg_ts(content, msg.get("timestamp"), tz=_msg_tz)
-            observed_group_context.append(str(content).strip())
-            continue
 
         # Rich tool_calls/tool-result rows pass through intact so the API sees valid assistant→tool sequences.
         if "tool_calls" in msg or "tool_call_id" in msg or role == "tool":
@@ -1312,10 +1168,7 @@ def _build_gateway_agent_history(
     # Keep gateway resume byte-identical to the TUI resume and send paths. The
     # canonicalizer owns interrupted-block, dangling-tail, and stale-confirmation
     # cleanup together so a middle-of-history rewrite cannot break the prefix cache.
-    agent_history = canonicalize_replay_history(agent_history)
-
-    observed_context = "\n".join(observed_group_context).strip() or None
-    return agent_history, observed_context
+    return canonicalize_replay_history(agent_history)
 
 
 def _select_cached_agent_history(
@@ -1340,27 +1193,6 @@ def _select_cached_agent_history(
         if has_unpersisted_row:
             return list(live_history)
     return persisted_history
-
-
-def _wrap_current_message_with_observed_context(message: Any, observed_context: Optional[str]) -> Any:
-    """Prepend observed Telegram context to the API-only current user turn."""
-    if not observed_context:
-        return message
-
-    prefix = f"{_OBSERVED_GROUP_CONTEXT_HEADER}\n{observed_context}\n\n{_CURRENT_ADDRESSED_MESSAGE_HEADER}\n"
-
-    if isinstance(message, str):
-        return f"{prefix}{message}"
-
-    if isinstance(message, list):
-        wrapped = [dict(part) if isinstance(part, dict) else part for part in message]
-        for part in wrapped:
-            if isinstance(part, dict) and part.get("type") == "text":
-                part["text"] = f"{prefix}{part.get('text', '')}"
-                return wrapped
-        return [{"type": "text", "text": prefix.rstrip()}] + wrapped
-
-    return message
 
 
 def _last_transcript_timestamp(history: Optional[List[Dict[str, Any]]]) -> Any:
@@ -1530,22 +1362,6 @@ def _collect_history_media_paths(agent_history: List[Dict[str, Any]]) -> set:
                         paths.add(jp)
                         break
     return paths
-
-def _home_target_env_var(platform_name: str) -> str:
-    """Home-target env var: built-in ``_HOME_TARGET_ENV_VARS``, plugin registry, then
-    ``<PLATFORM>_HOME_CHANNEL``."""
-    from cron.scheduler_delivery import _resolve_home_env_var
-    return _resolve_home_env_var(platform_name) or f"{platform_name.upper()}_HOME_CHANNEL"
-
-
-def _home_thread_env_var(platform_name: str) -> str:
-    """Return the optional thread/topic env var for a platform home target."""
-    return f"{_home_target_env_var(platform_name)}_THREAD_ID"
-
-
-def _restart_notification_pending() -> bool:
-    """Return True when a /restart completion marker is waiting to be delivered."""
-    return (_scout_home / ".restart_notify.json").exists()
 
 
 def _planned_restart_notification_path() -> Path:
@@ -1737,11 +1553,11 @@ def _enable_multiplex_log_routing(config: object) -> bool:
         return False
 
 
-def _handoff_watch_scopes(runner: object) -> list:
-    """``(profile_name, home)`` pairs whose ``state.db`` the watcher must poll; ``(None, None)`` = root
-    poll, always first. ``/handoff`` writes into the store of the profile the CLI ran under; an unscoped
-    watcher polls only the ROOT store, so a secondary profile's handoff would never be seen (CLI times
-    out). A raising resolver degrades to the root poll rather than silently disabling the watcher."""
+def _served_profile_scopes(runner: object) -> list:
+    """``(profile_name, home)`` pairs whose ``state.db`` a store watcher must poll; ``(None, None)`` =
+    root poll, always first. Each served profile writes into its own store; an unscoped watcher polls
+    only the ROOT store and would never see a secondary profile's rows. A raising resolver degrades to
+    the root poll rather than silently disabling the watcher."""
     scopes: list = [(None, None)]
     try:
         config = getattr(runner, "config", None)
@@ -1751,12 +1567,12 @@ def _handoff_watch_scopes(runner: object) -> list:
                     continue
                 scopes.append((name, home))
     except Exception:
-        logger.debug("Could not resolve multiplex homes for handoff watcher", exc_info=True)
+        logger.debug("Could not resolve multiplex homes for a store watcher", exc_info=True)
     return scopes
 
 
-async def _resolve_handoff_watch_scopes(runner: object) -> list:
-    """``_handoff_watch_scopes`` for an on-loop watcher tick. Multiplex resolution walks the filesystem
+async def _resolve_served_profile_scopes(runner: object) -> list:
+    """``_served_profile_scopes`` for an on-loop watcher tick. Multiplex resolution walks the filesystem
     (``profiles_to_serve``), so it hops to the executor; single-profile mode does no I/O and returns the
     root poll directly — no per-tick thread spawn on the unbounded executor. A config-less stand-in
     (tests) and a runner without the executor hop fall through to the plain resolver."""
@@ -1765,27 +1581,8 @@ async def _resolve_handoff_watch_scopes(runner: object) -> list:
         return [(None, None)]
     offload = getattr(runner, "_run_in_executor_with_context", None)
     if callable(offload):
-        return await offload(_handoff_watch_scopes, runner)
-    return _handoff_watch_scopes(runner)
-
-
-async def _reclaim_stale(runner: object) -> None:
-    """Fail handoffs left in ``running`` by a gateway that died mid-dispatch (once per store at startup).
-    ``running`` is only set for one in-process dispatch, so a leftover row belongs to a dead process and
-    blocks ``request_handoff`` for that session forever. Defensive: a raising reclaim aborts startup."""
-    reclaim = getattr(getattr(runner, "_session_db", None), "reclaim_stale_running_handoffs", None)
-    if not callable(reclaim):
-        return
-    try:
-        ids = await reclaim(
-            "gateway stopped mid-handoff; state reclaimed at startup. Re-run /handoff to try again.")
-    except Exception:
-        logger.debug("Stale-handoff reclaim raised", exc_info=True)
-        return
-    if ids:
-        logger.warning(
-            "Reclaimed %d handoff(s) stranded in 'running' by a previous "
-            "gateway: %s", len(ids), ", ".join(str(i) for i in ids))
+        return await offload(_served_profile_scopes, runner)
+    return _served_profile_scopes(runner)
 
 
 def _terminal_scope_cwd(default: str = "") -> str:
@@ -1925,31 +1722,6 @@ async def _discover_gateway_mcp_tools(config: object) -> None:
                     await loop.run_in_executor(None, copy_context().run, discover_mcp_tools)
             except Exception:
                 logger.warning("MCP tool discovery failed for profile '%s'", profile_name, exc_info=True)
-
-
-def _platform_has_bot_credential(platform: "Platform", platform_config: "PlatformConfig") -> bool:
-    """Return True when a token-authenticated platform has a usable bot credential; platforms not using
-    ``PlatformConfig.token`` (Signal session paths, port-binding HTTP adapters) always return True."""
-    from gateway.config import PLATFORM_TOKEN_ENV_NAMES, Platform
-    if platform not in PLATFORM_TOKEN_ENV_NAMES:
-        return True
-    for attr in ("token", "api_key"):  # some adapters accept api_key as the primary credential
-        value = getattr(platform_config, attr, None) or ""
-        if isinstance(value, str) and value.strip():
-            return True
-    # Matrix also authenticates by password; a token-only check would evict a reconnectable config from
-    # the retry queue. Read ONLY extra (build_config() copies env there): env fallback = every config OK.
-    # Those credentials land in ``extra`` rather than ``.token``, so a token-only check reads a perfectly
-    # reconnectable password-auth config as credential-less and evicts it from the retry queue on the first
-    # transient failure — after which it stays down until the gateway is restarted by hand. Mirror the
-    # adapter's own gate: homeserver + user_id + password. Read ONLY from extra, never os.getenv:
-    # build_config() already copies all three env vars onto extra, and importing this module loads
-    # ~/.scout/.env, so an env fallback would report "has credential" for every Matrix config on the box —
-    # including the empty-primary multiplex case (#64674) this check exists to evict.
-    if platform is not Platform.MATRIX:
-        return False
-    extra = getattr(platform_config, "extra", None) or {}
-    return all(str(extra.get(key) or "").strip() for key in ("homeserver", "user_id", "password"))
 
 
 _DOCKER_VOLUME_SPEC_RE = re.compile(r"^(?P<host>.+):(?P<container>/[^:]+?)(?::(?P<options>[^:]+))?$")
@@ -2177,7 +1949,7 @@ os.environ["SCOUT_QUIET"] = "1"  # gateway runs quiet: no debug output, cwd used
 from gateway.cwd_placeholder import CWD_PLACEHOLDERS, resolve_placeholder_terminal_cwd
 
 from gateway.config import (
-    ChannelOverride, Platform, GatewayConfig, PlatformConfig, _getenv, load_gateway_config)
+    ChannelOverride, Platform, GatewayConfig, load_gateway_config)
 from gateway.session import (
     AsyncSessionStore, SessionStore, SessionSource, SessionContext, build_session_key,
     profile_from_session_key_namespace)
@@ -2194,9 +1966,7 @@ from gateway.session_state import SessionState, legacy_dict_property, legacy_lea
 from gateway.authz_mixin import GatewayAuthorizationMixin
 from gateway.kanban_watchers import GatewayKanbanWatchersMixin
 from gateway.slash_commands import GatewaySlashCommandsMixin
-from gateway.run_voice import GatewayVoiceMixin
 from gateway.run_adapters import GatewayAdapterLifecycleMixin
-from gateway.run_topics import GatewayTopicThreadsMixin
 from gateway.run_turn import GatewayTurnMixin, is_context_overflow_failure_result
 from gateway.run_shutdown import GatewayShutdownMixin, _resolve_gateway_exit_verdict
 from gateway.run_busy import GatewayBusySessionMixin
@@ -2238,39 +2008,6 @@ def _best_effort(fn: Callable[[], Any], debug_msg: Optional[str] = None) -> Any:
 # Shutdown quiesce ceiling for the gateway-owned thread pool. Drain already waited for the agents; what
 # remains is short blocking work; anything slower is a stuck worker not worth waiting on (leash-clamped).
 _EXECUTOR_QUIESCE_TIMEOUT = 2.0
-
-
-_OWN_POLICY_OPEN_ENV = {
-    Platform.WECOM: ("WECOM_DM_POLICY", "WECOM_GROUP_POLICY", "WECOM_ALLOW_ALL_USERS"),
-    Platform.WEIXIN: ("WEIXIN_DM_POLICY", "WEIXIN_GROUP_POLICY", "WEIXIN_ALLOW_ALL_USERS"),
-    Platform.YUANBAO: ("YUANBAO_DM_POLICY", "YUANBAO_GROUP_POLICY", "YUANBAO_ALLOW_ALL_USERS"),
-    Platform.QQBOT: (None, None, "QQ_ALLOW_ALL_USERS"),
-    Platform.WHATSAPP: ("WHATSAPP_DM_POLICY", "WHATSAPP_GROUP_POLICY", "WHATSAPP_ALLOW_ALL_USERS")}
-
-
-def _own_policy_open_startup_violation(config) -> Optional[str]:
-    """Return a startup-abort reason when open policy lacks allow-all opt-in."""
-    for platform, platform_config in getattr(config, "platforms", {}).items():
-        if not getattr(platform_config, "enabled", False):
-            continue
-        open_env = _OWN_POLICY_OPEN_ENV.get(platform)
-        if not open_env:
-            continue
-        dm_env, group_env, allow_all_env = open_env
-        extra = getattr(platform_config, "extra", None) or {}
-        dm_policy = str(extra.get("dm_policy")
-                        or (_getenv(dm_env, "pairing") if dm_env else "pairing")).strip().lower()
-        group_policy = str(
-            extra.get("group_policy") or (_getenv(group_env, "pairing") if group_env else "pairing")
-        ).strip().lower()
-        if dm_policy != "open" and group_policy != "open":
-            continue
-        gateway_allow_all = _getenv("GATEWAY_ALLOW_ALL_USERS", "").lower() in {"true", "1", "yes"}
-        if gateway_allow_all or (
-                allow_all_env and _getenv(allow_all_env, "").lower() in {"true", "1", "yes"}):
-            continue
-        return f"{platform.value}: open policy without allow-all opt-in"
-    return None
 
 
 # Placed into _running_agents *before* any await so a second message can't slip past the "already
@@ -2873,12 +2610,6 @@ def _platform_config_key(platform: "Platform") -> str:
     return "cli" if platform == Platform.LOCAL else platform.value
 
 
-def _teams_pipeline_plugin_enabled() -> bool:
-    """Return True when the standalone Teams pipeline plugin is enabled."""
-    enabled = cfg_get(_load_gateway_config(), "plugins", "enabled", default=[])
-    return isinstance(enabled, list) and ("teams_pipeline" in enabled or "teams-pipeline" in enabled)
-
-
 def _gateway_config_home() -> Path:
     """Return the Scout home that gateway config reads should use."""
     override = get_scout_home_override()
@@ -3334,24 +3065,10 @@ def _builtin_adapter_import(module: str, adapter_name: str, requirement: str):
 
 # platform -> (module, adapter class, requirements probe, warning on probe failure).
 _BUILTIN_ADAPTERS: dict[Platform, tuple[str, str, str, str]] = {
-    Platform.WHATSAPP_CLOUD: ("whatsapp_cloud", "WhatsAppCloudAdapter", "check_whatsapp_cloud_requirements",
-                              "WhatsApp Cloud: aiohttp/httpx missing — reinstall scout-agent"),
-    Platform.SIGNAL: ("signal", "SignalAdapter", "check_signal_requirements",
-                      "Signal: runtime requirements not met"),
-    Platform.WEIXIN: ("weixin", "WeixinAdapter", "check_weixin_requirements",
-                      "Weixin: aiohttp/cryptography not installed"),
     Platform.API_SERVER: ("api_server", "APIServerAdapter", "check_api_server_requirements",
                           "API Server: aiohttp not installed"),
     Platform.WEBHOOK: ("webhook", "WebhookAdapter", "check_webhook_requirements",
-                       "Webhook: aiohttp not installed"),
-    Platform.MSGRAPH_WEBHOOK: ("msgraph_webhook", "MSGraphWebhookAdapter", "check_msgraph_webhook_requirements",
-                               "MSGraph webhook: aiohttp not installed"),
-    Platform.BLUEBUBBLES: ("bluebubbles", "BlueBubblesAdapter", "check_bluebubbles_requirements",
-                           "BlueBubbles: aiohttp/httpx missing or BLUEBUBBLES_SERVER_URL/BLUEBUBBLES_PASSWORD not configured"),
-    Platform.QQBOT: ("qqbot", "QQAdapter", "check_qq_requirements",
-                     "QQBot: aiohttp/httpx missing or QQ_APP_ID/QQ_CLIENT_SECRET not configured"),
-    Platform.YUANBAO: ("yuanbao", "YuanbaoAdapter", "WEBSOCKETS_AVAILABLE",
-                       "Yuanbao: websockets not installed. Run: pip install websockets")}
+                       "Webhook: aiohttp not installed")}
 
 
 def _instantiate_builtin_adapter(platform: Platform, config: Any) -> Optional[BasePlatformAdapter]:
@@ -3364,17 +3081,12 @@ def _instantiate_builtin_adapter(platform: Platform, config: Any) -> Optional[Ba
     if not (requirements_ok() if callable(requirements_ok) else requirements_ok):
         logger.warning(warning)
         return None
-    if platform == Platform.SIGNAL:
-        from gateway.platforms.signal import validate_signal_config
-        if not validate_signal_config(config):
-            logger.warning("Signal: SIGNAL_HTTP_URL or SIGNAL_ACCOUNT not configured")
-            return None
     return adapter_cls(config)
 
 
 class GatewayRunner(
     GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, GatewaySlashCommandsMixin,
-    GatewayVoiceMixin, GatewayAdapterLifecycleMixin, GatewayTopicThreadsMixin, GatewayTurnMixin,
+    GatewayAdapterLifecycleMixin, GatewayTurnMixin,
     GatewayShutdownMixin, GatewayBusySessionMixin, GatewayConfigLoadersMixin, GatewayStartupMixin,
     GatewaySessionWatchersMixin, GatewayNotificationsMixin, GatewayInboundMixin, GatewayGoalsMixin,
     GatewayAgentCacheMixin, GatewayProfileReconcileMixin, GatewayPluginRewireMixin):
@@ -3567,7 +3279,6 @@ class GatewayRunner(
         self._startup_time: float = time.time()
         # True when booted from a chat /restart (.restart_notify.json existed). One-shot signal so the
         # marker-missing fallback suppresses a /restart only when we KNOW we just restarted.
-        self._booted_from_restart: bool = False
         self._stop_task: Optional[asyncio.Task] = None
         self._restart_task: Optional[asyncio.Task] = None
         self._executor_lock = threading.Lock()
@@ -3646,9 +3357,6 @@ class GatewayRunner(
         self._primary_profile_name = (
             "default" if getattr(self.config, "multiplex_profiles", False) else launch
         )
-        # Teams meeting pipeline runtime (bound later when msgraph_webhook adapter exists).
-        self._teams_pipeline_runtime = None
-        self._teams_pipeline_runtime_error: Optional[str] = None
         # Failed-to-connect platforms for background reconnection: Platform -> {config, attempts, next_retry}
         self._failed_platforms: Dict[Platform, Dict[str, Any]] = {}
         # Strong refs to detached fatal-error handler tasks so the loop can't GC them mid-run.
@@ -3734,17 +3442,10 @@ class GatewayRunner(
         # restart of the day (the ``scout update`` one) looked hung and failed fleet verification.
 
     def _init_registries_and_clocks(self) -> None:
-        """Pairing stores, hook registry, voice modes, background-task set, liveness and idle clocks."""
-        # ``pairing_store``: global/default store (CLI, callers without profile context); ``pairing_stores``:
-        # per-profile map ``authz_mixin._is_user_authorized`` routes through (one whitelist per profile).
-        from gateway.pairing import PairingStore
+        """Hook registry, background-task set, liveness and idle clocks."""
         from gateway.hooks import ProfileHookRegistries
-        self.pairing_store = PairingStore()
-        self.pairing_stores: Dict[str, "PairingStore"] = {}
         # One HookRegistry per served profile home, resolved from the active scope at emit time.
         self.hooks = ProfileHookRegistries()
-        # Per-chat voice reply mode: "off" | "voice_only" | "all"
-        self._voice_mode: Dict[str, str] = self._load_voice_modes()
         # Per-(guild,user) transcript dedup: the voice/STT pipeline can emit one utterance twice.
         self._recent_voice_transcripts: Dict[tuple[int, int], List[tuple[float, str]]] = {}
         # Background tasks kept referenced so they are not garbage-collected mid-execution.
@@ -3851,29 +3552,6 @@ class GatewayRunner(
 
         self._session_db_handle_cache.close_all(_close)
 
-    def _wire_teams_pipeline_runtime(self) -> None:
-        """Bind the Teams meeting pipeline runtime to Graph webhook ingress (no-op if adapter/plugin off)."""
-        if Platform.MSGRAPH_WEBHOOK not in self.adapters:
-            return
-        if not _teams_pipeline_plugin_enabled():
-            logger.debug("Teams pipeline plugin is disabled; skipping runtime wiring")
-            return
-        try:
-            from plugins.teams_pipeline.runtime import bind_gateway_runtime
-        except Exception as exc:
-            logger.warning("Teams pipeline runtime import failed: %s", exc)
-            return
-        try:
-            bound = bind_gateway_runtime(self)
-        except Exception as exc:
-            logger.warning("Teams pipeline runtime wiring failed: %s", exc)
-            return
-        if bound:
-            logger.info("Teams pipeline runtime bound to msgraph webhook ingress")
-        elif self._teams_pipeline_runtime_error:
-            logger.warning(
-                "Teams pipeline runtime unavailable: %s", self._teams_pipeline_runtime_error)
-
     def _warn_if_docker_media_delivery_is_risky(self) -> None:
         """Warn when Docker-backed gateways lack an explicit export mount: MEDIA delivery runs in the
         gateway process, so model-emitted paths like `/output/report.txt` must be host-readable."""
@@ -3904,7 +3582,6 @@ class GatewayRunner(
             "This is fine if the model already emits host-visible paths, but MEDIA file delivery can fail "
             "for container-local paths like '/workspace/...' or '/output/...'.")
 
-    _VOICE_MODE_PATH = _scout_home / "gateway_voice_mode.json"
 
     should_exit_cleanly = property(lambda self: self._exit_cleanly)
     should_exit_with_failure = property(lambda self: self._exit_with_failure)
@@ -3944,28 +3621,6 @@ class GatewayRunner(
             profile=_profile)
 
     # Telegram General topic in forum-enabled private chats: clients omit message_thread_id or send "1"; both = root.
-    _TELEGRAM_GENERAL_TOPIC_IDS = frozenset({"", "1"})
-    _TELEGRAM_LOBBY_REMINDER_COOLDOWN_S = 30.0
-
-    def _normalize_source_for_session_key(self, source: SessionSource) -> SessionSource:
-        """Apply Telegram DM topic recovery to a source for session-key purposes. Always derive override
-        storage keys from the result: ``_handle_message_with_agent`` rewrites ``thread_id`` before
-        deriving the session key, so keys from the raw ``event.source`` are never read next turn.
-
-        ``_handle_message_with_agent`` rewrites ``source.thread_id`` via
-        ``_recover_telegram_topic_thread_id`` *before* deriving the session key for a normal message turn (a
-        lobby/stripped reply gets pinned to the user's last-active topic). Session-scoped command handlers
-        like ``/model`` and ``/reasoning`` derive their override key from the raw inbound ``event.source``,
-        which skips that recovery — so the override is stored under a different key than the next message
-        turn reads, and the override is silently dropped on Telegram forum topics and after compression
-        session splits (#30479).
-        """
-        try:
-            recovered = self._recover_telegram_topic_thread_id(source)
-        except Exception:
-            return source
-        return source if recovered is None else dataclasses.replace(source, thread_id=recovered)
-
     def _resolve_session_key_or_none(self, source, session_key: Optional[str]) -> Optional[str]:
         """``session_key`` if given, else the key for ``source`` (None when it cannot be derived)."""
         if session_key or source is None:
@@ -4163,31 +3818,10 @@ class GatewayRunner(
             getattr(source, "platform", None), getattr(source, "chat_id", None),
             getattr(source, "thread_id", None), chat_type=getattr(source, "chat_type", None),
             reply_to_message_id=reply_to_message_id or getattr(source, "message_id", None))
-        if getattr(source, "platform", None) == Platform.SLACK:
-            # Per-turn egress identity: Slack chat.startStream needs recipient_user_id/team_id; the relay
-            # adapter's _with_scope fallback reads per-chat caches a CONCURRENT turn overwrites.
-            # Slack's chat.startStream requires recipient_user_id (+ recipient_team_id) when streaming to a
-            # channel, and the relay connector fills those from metadata.user_id / metadata.scope_id. The
-            # relay adapter's _with_scope fallback resolves BOTH from per-chat caches keyed only by chat_id
-            # — mutable state that a CONCURRENT turn overwrites: two users with overlapping turns in one
-            # channel would open U1's stream with U2 as the recipient. Stamp the authentic per-turn values
-            # from THIS turn's source here, where they are still turn-scoped; _with_scope only fills keys
-            # that are absent, so the cache degrades to what it should be — a restart/synthetic-send
-            # fallback. See #210.
-            team_id = getattr(source, "scope_id", None)
-            user_id = getattr(source, "user_id", None)
-            if team_id or user_id:
-                metadata = dict(metadata or {})
-                if team_id:
-                    metadata["slack_team_id"] = str(team_id)
-                    metadata.setdefault("scope_id", str(team_id))
-                if user_id:
-                    metadata.setdefault("user_id", str(user_id))
         from gateway.session_context import source_route_metadata
         metadata = source_route_metadata(source, metadata)
         # Routed profile for shared state.db namespaces: under profile_routes the transport adapter's
-        # stamp is not the profile that wrote the binding (Telegram prune path needs it).
-        # See #76423.
+        # stamp is not the profile that wrote the binding (#76423).
         profile = str(getattr(source, "profile", None) or "").strip()
         if profile and metadata is not None:
             metadata = dict(metadata)
@@ -4201,52 +3835,13 @@ class GatewayRunner(
         """Build thread metadata for synthetic sends that only have routing state."""
         if thread_id is None:
             return None
-        metadata: Dict[str, Any] = {"thread_id": thread_id}
-        if self._is_telegram_dm_topic_target(
-            platform, chat_id, thread_id, chat_type=chat_type, adapter=adapter):
-            metadata["telegram_dm_topic_reply_fallback"] = True
-            # DM topic lanes need direct_messages_topic_id so synthetic sends reach the topic without a reply anchor.
-            tid = str(thread_id)
-            if tid and tid not in {"", "1"}:
-                metadata["direct_messages_topic_id"] = tid
-            if reply_to_message_id is not None:
-                metadata["telegram_reply_to_message_id"] = str(reply_to_message_id)
-        if platform == Platform.SLACK and reply_to_message_id is not None:
-            # Slack's reply_in_thread=false path uses message_id to tell real threads from synthetic keys.
-            metadata["message_id"] = str(reply_to_message_id)
-        return metadata
-
-    @staticmethod
-    def _is_telegram_dm_topic_target(
-        platform: Optional[Platform], chat_id: Optional[str], thread_id: Optional[str], *,
-        chat_type: Optional[str] = None, adapter: Optional[Any] = None) -> bool:
-        """Return True when a target is a Telegram private DM topic lane."""
-        if platform != Platform.TELEGRAM or thread_id is None:
-            return False
-        if chat_type == "dm":
-            return True
-        # Resolve the lookup on the CLASS, not the instance: getattr() on a MagicMock auto-creates callable
-        # children, so an instance lookup would report a DM topic for every test double. Only a dict counts.
-        if adapter is not None and chat_id:
-            get_dm_topic_info = getattr(type(adapter), "_get_dm_topic_info", None)
-            if callable(get_dm_topic_info):
-                try:
-                    topic_info = get_dm_topic_info(adapter, str(chat_id), str(thread_id))
-                except Exception:
-                    logger.debug("Failed to inspect Telegram DM topic metadata", exc_info=True)
-                else:
-                    return isinstance(topic_info, dict)
-        return False
+        return {"thread_id": thread_id}
 
     _reply_anchor_for_event = staticmethod(_reply_anchor_for_event)
 
     # Built-in platforms where ``/update`` is allowed (programmatic interfaces must not trigger updates).
-    # Plugin-migrated platforms declare ``allow_update_command=True`` on their ``PlatformEntry`` instead.
-    _UPDATE_ALLOWED_PLATFORMS = frozenset({
-        Platform.TELEGRAM, Platform.SLACK, Platform.WHATSAPP, Platform.SIGNAL, Platform.MATRIX,
-        Platform.EMAIL, Platform.SMS, Platform.DINGTALK,
-        Platform.FEISHU, Platform.WECOM, Platform.WECOM_CALLBACK, Platform.WEIXIN, Platform.BLUEBUBBLES, Platform.QQBOT, Platform.LOCAL,
-    })
+    # Plugin platforms declare ``allow_update_command=True`` on their ``PlatformEntry`` instead.
+    _UPDATE_ALLOWED_PLATFORMS = frozenset({Platform.LOCAL})
 
     def _set_session_env(self, context: SessionContext) -> list:
         """Set session context variables (contextvars, not os.environ, so concurrent messages can't
@@ -4533,7 +4128,6 @@ class GatewayRunner(
         log_queue: Any = None
         interim_assistant_messages_enabled: Any = None
         _thinking_enabled: Any = None
-        _native_slack_task_cards: Any = None
         needs_progress_queue: Any = None
         _generic_status_phrase: Any = None
 
@@ -4603,18 +4197,6 @@ def _housekeeping_chore(label: str, fn, *args, **kwargs) -> None:
         fn(*args, **kwargs)
     except Exception as exc:
         logger.debug("%s error: %s", label, exc)
-
-
-def _housekeeping_channel_directory(adapters, loop) -> None:
-    from gateway.channel_directory import build_channel_directory
-    if loop is not None:
-        # build_channel_directory is async (Slack web calls) and this is a background thread:
-        # schedule onto the gateway loop and wait briefly so refresh failures still log.
-        fut = safe_schedule_threadsafe(
-            build_channel_directory(adapters), loop, logger=logger,
-            log_message="Channel directory refresh scheduling error")
-        if fut is not None:
-            fut.result(timeout=30)
 
 
 def _housekeeping_media_caches() -> None:
@@ -4771,7 +4353,7 @@ def _drain_restart_safe_cron_deliveries(adapters, loop, runner=None) -> None:
         if adapters is not None:
             cron_scheduler.drain_delivery_queue(adapters, loop)
         return
-    for profile_name, profile_home in _handoff_watch_scopes(runner):
+    for profile_name, profile_home in _served_profile_scopes(runner):
         if profile_name is None:
             profile_adapters = adapters
         else:
@@ -4806,7 +4388,6 @@ def _start_gateway_housekeeping(
         # whichever gateway is live; drained here (not the scheduler tick) so external providers get it too.
         chores.append((1, DRAIN_LABEL, lambda: _drain_restart_safe_cron_deliveries(adapters, loop, runner)))
     chores += [
-        (5, "Channel directory refresh", lambda: adapters and _housekeeping_channel_directory(adapters, loop)),
         (60, "Media cache cleanup", _housekeeping_media_caches),
         (60, "Paste sweep", _housekeeping_paste_sweep)]
     if cron_provider is not None:
@@ -4838,7 +4419,7 @@ def _start_gateway_housekeeping(
     queue_watch = None
     if adapters is not None or runner is not None:
         def served_homes() -> list:
-            return [home for _name, home in _handoff_watch_scopes(runner)] if runner is not None else [None]
+            return [home for _name, home in _served_profile_scopes(runner)] if runner is not None else [None]
 
         queue_watch = DeliveryQueueWatch(
             served_homes, lambda: _drain_restart_safe_cron_deliveries(adapters, loop, runner))

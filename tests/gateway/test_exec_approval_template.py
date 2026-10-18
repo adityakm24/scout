@@ -16,7 +16,7 @@ from gateway.run_turn_runner import _renders_exec_approval_buttons
 
 class _Plain(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True), Platform.HOMEASSISTANT)
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         return True

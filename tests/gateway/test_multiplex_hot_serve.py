@@ -19,7 +19,7 @@ from gateway.status import flush_runtime_status
 
 
 class _Adapter:
-    platform = Platform.DISCORD
+    platform = Platform.HOMEASSISTANT
 
     def __init__(self, token):
         self.token = token
@@ -58,7 +58,7 @@ def _runner(tmp_path, monkeypatch):
         token = (profile_home / ".env").read_text(encoding="utf-8") if (profile_home / ".env").exists() else ""
         if "DISCORD_BOT_TOKEN" not in token:
             return 0
-        runner._profile_adapters.setdefault(profile_name, {})[Platform.DISCORD] = _Adapter(token)
+        runner._profile_adapters.setdefault(profile_name, {})[Platform.HOMEASSISTANT] = _Adapter(token)
         return 1
 
     runner._start_one_profile_adapters = _start
@@ -88,7 +88,7 @@ async def test_opt_out_rescans_and_opt_in_waits_for_own_gateway_to_stop(tmp_path
     monkeypatch.setattr("gateway.status.live_gateway_pid_for_home", lambda h: own_pids.get(h))
     with patch("scout_cli.profiles.get_active_profile_name", return_value="default"):
         await runner._start_secondary_profile_adapters()
-        adapter = runner._profile_adapters["solo"][Platform.DISCORD]
+        adapter = runner._profile_adapters["solo"][Platform.HOMEASSISTANT]
         (solo / "config.yaml").write_text("gateway:\n  standalone: true\n")
         result = await runner.reconcile_served_profiles()
         assert result["removed"] == ["solo"]
@@ -145,7 +145,7 @@ async def test_profile_control_verbs_round_trip_and_refusals(tmp_path, monkeypat
         for handler, name in [(stop, "default"), (stop, "missing"), (start, "missing"),
                               (start, "worker"), (start, "default")]:
             assert (await asyncio.to_thread(handler, {"name": name}))["error"]
-        old = runner._profile_adapters["worker"][Platform.DISCORD]
+        old = runner._profile_adapters["worker"][Platform.HOMEASSISTANT]
         answer = await asyncio.to_thread(stop, {"name": "worker"})
         assert answer["unserved"] == "worker"
         assert answer["served_profiles"] == _served_record(home) == ["default"]
@@ -158,7 +158,7 @@ async def test_profile_control_verbs_round_trip_and_refusals(tmp_path, monkeypat
         answer = await asyncio.to_thread(start, {"name": "worker"})
         assert answer["served"] == "worker"
         assert answer["served_profiles"] == _served_record(home) == ["default", "worker"]
-        assert runner._profile_adapters["worker"][Platform.DISCORD].token.endswith("new-worker-token\n")
+        assert runner._profile_adapters["worker"][Platform.HOMEASSISTANT].token.endswith("new-worker-token\n")
 
 
 @pytest.mark.platforms("linux")
@@ -187,38 +187,6 @@ async def test_profile_lifecycle_over_real_control_socket(tmp_path, monkeypatch)
             await server.stop()
 
 
-@pytest.mark.asyncio
-async def test_created_then_credentialed_profile_is_served_without_restart(tmp_path, monkeypatch):
-    runner, home = _runner(tmp_path, monkeypatch)
-    alpha_dir = _mkprofile(home, "alpha", "DISCORD_BOT_TOKEN=alpha-token\n")
-    with patch("scout_cli.profiles.get_active_profile_name", return_value="default"):
-        await runner._start_secondary_profile_adapters()
-        alpha_adapter = runner._profile_adapters["alpha"][Platform.DISCORD]
-        assert _served_record(home) == ["default", "alpha"]
-
-        # 1. Created while running, no token yet: served (routes/prefixes/cron), zero adapters.
-        gamma_dir = _mkprofile(home, "gamma")
-        result = await runner.reconcile_served_profiles()
-        assert result["added"] == ["gamma"]
-        assert _served_record(home) == ["default", "alpha", "gamma"]
-        assert "gamma" in runner.pairing_stores
-        assert Platform.DISCORD not in runner._profile_adapters.get("gamma", {})
-
-        # 2. Token added afterwards: the rescan builds the adapter (never "adapter-less forever").
-        (gamma_dir / ".env").write_text("DISCORD_BOT_TOKEN=gamma-token\n", encoding="utf-8")
-        result = await runner.reconcile_served_profiles()
-        assert result["rescanned"] == ["gamma"]
-        assert runner._profile_adapters["gamma"][Platform.DISCORD].token.strip().endswith("gamma-token")
-
-        # 3. A no-op rescan and the whole sequence never touched alpha's live adapter.
-        assert await runner.reconcile_served_profiles() == {
-            "added": [], "removed": [], "rescanned": [], "reason": "request",
-            "served_profiles": ["default", "alpha", "gamma"],
-        }
-        assert runner._profile_adapters["alpha"][Platform.DISCORD] is alpha_adapter
-        assert alpha_adapter.disconnected is False
-        assert runner._started.count("alpha") == 1
-        assert profile_serve_signature(alpha_dir) == runner._served_profile_signatures["alpha"]
 
 
 @pytest.mark.asyncio
@@ -228,13 +196,13 @@ async def test_deleted_profile_is_torn_down_and_unrouted_others_untouched(tmp_pa
     gamma_dir = _mkprofile(home, "gamma", "DISCORD_BOT_TOKEN=gamma-token\n")
     with patch("scout_cli.profiles.get_active_profile_name", return_value="default"):
         await runner._start_secondary_profile_adapters()
-        alpha_adapter = runner._profile_adapters["alpha"][Platform.DISCORD]
-        gamma_adapter = runner._profile_adapters["gamma"][Platform.DISCORD]
+        alpha_adapter = runner._profile_adapters["alpha"][Platform.HOMEASSISTANT]
+        gamma_adapter = runner._profile_adapters["gamma"][Platform.HOMEASSISTANT]
         runner._agent_cache = {"agent:gamma:discord:dm:1": ("agent",), "agent:alpha:discord:dm:1": ("agent",)}
         evicted = []
         runner._evict_cached_agent = evicted.append
         reconnect = asyncio.get_running_loop().create_task(asyncio.sleep(3600))
-        runner._profile_failed_platforms = {"gamma": {Platform.TELEGRAM: reconnect}}
+        runner._profile_failed_platforms = {"gamma": {Platform.HOMEASSISTANT: reconnect}}
 
         from scout_constants import mark_named_profile_deleted
         mark_named_profile_deleted(gamma_dir)  # what ``delete_profile`` does before rmtree
@@ -247,7 +215,7 @@ async def test_deleted_profile_is_torn_down_and_unrouted_others_untouched(tmp_pa
     assert reconnect.cancelled()
     assert evicted == ["agent:gamma:discord:dm:1"]
     assert _served_record(home) == ["default", "alpha"]
-    assert runner._profile_adapters["alpha"][Platform.DISCORD] is alpha_adapter
+    assert runner._profile_adapters["alpha"][Platform.HOMEASSISTANT] is alpha_adapter
     assert alpha_adapter.disconnected is False
 
 
@@ -275,14 +243,14 @@ async def test_transient_start_failure_is_retried_on_next_reconcile(tmp_path, mo
         first = await runner.reconcile_served_profiles()
         assert first["added"] == ["gamma"]
         assert attempts == ["gamma"]
-        assert Platform.DISCORD not in runner._profile_adapters.get("gamma", {})
+        assert Platform.HOMEASSISTANT not in runner._profile_adapters.get("gamma", {})
         # Unacknowledged: the failed scan's signature must not survive ``_note_served_profiles``.
         assert "gamma" not in runner._served_profile_signatures
 
         second = await runner.reconcile_served_profiles()
         assert attempts == ["gamma", "gamma"]
         assert second["rescanned"] == ["gamma"]
-        assert runner._profile_adapters["gamma"][Platform.DISCORD].token.strip().endswith("gamma-token")
+        assert runner._profile_adapters["gamma"][Platform.HOMEASSISTANT].token.strip().endswith("gamma-token")
 
         # The deliberate park stays distinct: a MultiplexConfigError is acknowledged, not retried.
         from gateway.run import MultiplexConfigError
@@ -301,62 +269,6 @@ async def test_transient_start_failure_is_retried_on_next_reconcile(tmp_path, mo
         assert runner._served_profile_signatures["delta"] == profile_serve_signature(delta_dir)
 
 
-@pytest.mark.asyncio
-async def test_transient_secret_hydrate_failure_retries_through_real_start_path(tmp_path, monkeypatch):
-    """End to end through the real ``_start_one_profile_adapters``: the failure is raised inside
-    it at ``hydrate_profile_secret_sources`` (the network-dependent step of
-    ``_load_secondary_profile_config``), not at a mocked seam. The boot failure leaves the
-    profile served-but-unsigned; the next reconcile runs the real config load, profile scope,
-    adapter creation and connect to success."""
-    from types import SimpleNamespace
-
-    runner, home = _runner(tmp_path, monkeypatch)
-    del runner._start_one_profile_adapters  # instance stub off: exercise the real method
-    runner._register_config_hooks = lambda *a, **kw: None
-    runner._configure_profile_adapter = lambda *a: None
-    runner._sync_voice_mode_state_to_adapter = lambda *a: None
-    runner._restore_secondary_completion_ledgers = lambda *a: None
-    runner._adapter_credential_claim = lambda *a: None
-    runner._adapter_listener_claim = lambda *a: None
-    runner._busy_text_modes_by_profile = {}
-    runner._busy_input_modes_by_profile = {}
-    connected = []
-
-    async def _connect(adapter, platform):
-        connected.append(platform)
-        return True
-
-    async def _noop_added(profiles):
-        pass
-
-    runner._create_adapter = lambda platform, config: SimpleNamespace(platform=platform)
-    runner._connect_initial_adapter_with_timeout = _connect
-    runner._after_profiles_added = _noop_added
-
-    import scout_cli.env_loader as env_loader
-    hydrate_calls = []
-    real_hydrate = env_loader.hydrate_profile_secret_sources
-
-    def _flaky(home_arg):
-        hydrate_calls.append(str(home_arg))
-        if len(hydrate_calls) == 1:
-            raise OSError("secret backend unreachable")
-        return real_hydrate(home_arg)
-
-    monkeypatch.setattr(env_loader, "hydrate_profile_secret_sources", _flaky)
-
-    gamma_dir = _mkprofile(home, "gamma", "DISCORD_BOT_TOKEN=gamma-token\n")
-    with patch("scout_cli.profiles.get_active_profile_name", return_value="default"):
-        await runner._start_secondary_profile_adapters()
-        assert connected == []
-        assert "gamma" not in runner._served_profile_signatures
-        assert _served_record(home) == ["default", "gamma"]
-
-        result = await runner.reconcile_served_profiles()
-        assert result["rescanned"] == ["gamma"]
-        assert connected == [Platform.DISCORD]
-        assert runner._profile_adapters["gamma"][Platform.DISCORD].platform == Platform.DISCORD
-        assert runner._served_profile_signatures["gamma"] == profile_serve_signature(gamma_dir)
 
 
 @pytest.mark.asyncio
@@ -369,7 +281,7 @@ async def test_hot_added_profile_cannot_double_claim_a_live_secondary_token(tmp_
 
     async def _start(profile_name, profile_home, claimed):
         seen_claims[profile_name] = dict(claimed)
-        runner._profile_adapters.setdefault(profile_name, {})[Platform.DISCORD] = _Adapter("shared")
+        runner._profile_adapters.setdefault(profile_name, {})[Platform.HOMEASSISTANT] = _Adapter("shared")
         return 1
 
     runner._start_one_profile_adapters = _start
@@ -378,4 +290,4 @@ async def test_hot_added_profile_cannot_double_claim_a_live_secondary_token(tmp_
         _mkprofile(home, "dupe", "DISCORD_BOT_TOKEN=shared\n")
         await runner.reconcile_served_profiles()
     fp = GatewayRunner._adapter_credential_fingerprint(_Adapter("shared"))
-    assert seen_claims["dupe"].get((Platform.DISCORD, fp)) == "alpha"
+    assert seen_claims["dupe"].get((Platform.HOMEASSISTANT, fp)) == "alpha"

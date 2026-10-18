@@ -45,41 +45,6 @@ class _ExplodingScope(dict):
 
 # ── Cluster A: gateway/pairing.py allowlist reads ─────────────────────────
 
-class TestPairingAllowlistRead:
-    def test_scoped_value_wins(self, monkeypatch):
-        from gateway.pairing import _read_allowlist_env
-
-        monkeypatch.setenv("TELEGRAM_ALLOWED_USERS", "111")
-        ss.set_multiplex_active(True)
-        with _Scope({"TELEGRAM_ALLOWED_USERS": "222"}):
-            assert _read_allowlist_env("TELEGRAM_ALLOWED_USERS") == "222"
-
-    def test_scoped_miss_no_borrow(self, monkeypatch):
-        from gateway.pairing import _read_allowlist_env
-
-        monkeypatch.setenv("TELEGRAM_ALLOWED_USERS", "other-profile")
-        ss.set_multiplex_active(True)
-        with _Scope({"UNRELATED": "x"}):
-            assert _read_allowlist_env("TELEGRAM_ALLOWED_USERS") == ""
-
-    def test_unscoped_multiplex_falls_back_to_env(self, monkeypatch):
-        # Slack pattern: unscoped read under multiplex uses the process env.
-        from gateway.pairing import _read_allowlist_env
-
-        monkeypatch.setenv("TELEGRAM_ALLOWED_USERS", "own-env")
-        ss.set_multiplex_active(True)
-        assert _read_allowlist_env("TELEGRAM_ALLOWED_USERS") == "own-env"
-
-    def test_scope_failure_never_borrows_env(self, monkeypatch):
-        # A bound scope that errors must propagate -- a blanket suppress would
-        # silently borrow the default profile's os.environ allowlist.
-        from gateway.pairing import _read_allowlist_env
-
-        monkeypatch.setenv("TELEGRAM_ALLOWED_USERS", "other-profile")
-        ss.set_multiplex_active(True)
-        with _Scope(_ExplodingScope()):
-            with pytest.raises(RuntimeError, match="resolver boom"):
-                _read_allowlist_env("TELEGRAM_ALLOWED_USERS")
 
 # ── Cluster A: gateway/authz_mixin.py gate reads ───────────────────────────
 

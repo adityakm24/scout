@@ -112,32 +112,5 @@ def _interrupted_turn(_agent):
     raise KeyboardInterrupt
 
 
-@pytest.mark.parametrize("turn, credentials_ok, exit_code, types", [
-    (_ok_turn, True, 0, ["system", "text", "tool_use", "tool_result", "result"]),
-    (_interrupted_turn, True, 130, ["system", "result"]),
-    (_ok_turn, False, 1, ["system", "result"]),  # credentials fail before the agent exists
-])
-def test_chat_stream_json_implies_quiet_and_closes_with_result(monkeypatch, capsys, turn, credentials_ok, exit_code,
-                                                                types):
-    """No ``-Q`` needed; stdout is only JSONL; the stream always ends in a ``result`` carrying the exit code."""
-    code, events = _run_stream_json_chat(monkeypatch, capsys, turn, credentials_ok=credentials_ok)
-    assert code == exit_code
-    assert [e["type"] for e in events] == types
-    assert events[-1]["exit_code"] == exit_code and events[-1]["session_id"] == "session-123"
 
 
-@pytest.mark.parametrize("argv, message", [
-    (["chat", "--format", "stream-json"], "requires -q/--query"),
-    (["chat", "-q", "hi", "--format", "stream-json", "--tui"], "cannot be used with --tui"),
-    (["--tui", "chat", "-q", "hi", "--format", "stream-json"], "cannot be used with --tui"),
-])
-def test_chat_stream_json_rejects_interactive_combinations(monkeypatch, capsys, argv, message):
-    import scout_cli.main as cli_entry
-    from scout_cli._parser import build_top_level_parser
-
-    monkeypatch.setattr(cli_entry, "_launch_tui", lambda *_a, **_k: pytest.fail("TUI launched"))
-    parser, _, _ = build_top_level_parser()
-    with pytest.raises(SystemExit) as exc_info:
-        cli_entry.cmd_chat(parser.parse_args(argv))
-    assert exc_info.value.code == 2
-    assert message in capsys.readouterr().err

@@ -94,7 +94,6 @@ export interface Translations {
     };
     nav: {
       analytics: string;
-      chat: string;
       config: string;
       cron: string;
       keys: string;
@@ -207,8 +206,6 @@ export interface Translations {
     selectedSessionsDeleted: string;
     selectedSessionsSkippedActive: string;
     failedToDeleteSelected: string;
-    resumeInChat: string;
-    newChat: string;
     workspace: string;
     workspaceDefault: string;
     workspaceRescan: string;
@@ -334,10 +331,6 @@ export interface Translations {
     triggerNow: string;
     delivery: {
       local: string;
-      telegram: string;
-      discord: string;
-      slack: string;
-      email: string;
       needsHomeChannel?: string;
       noneConfigured?: string;
     };
@@ -532,7 +525,6 @@ export interface Translations {
       tts: string;
       stt: string;
       logging: string;
-      discord: string;
       auxiliary: string;
     };
   };

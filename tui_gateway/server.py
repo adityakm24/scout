@@ -1456,7 +1456,7 @@ def _resolve_session_platform() -> str:
 
 
 def _resolve_session_source(explicit: str | None) -> str:
-    """Session DB ``source``: an explicit caller value (plugin session tagged ``"telegram"``) is never
+    """Session DB ``source``: an explicit caller value (a plugin session tag) is never
     rewritten; only empty/None falls back to the env-resolved platform."""
     return explicit or _resolve_session_platform()
 

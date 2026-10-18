@@ -10,7 +10,6 @@ import { openSession } from '@/app/open-session'
 import {
   appViewForPath,
   CAPABILITIES_ROUTE,
-  MESSAGING_ROUTE,
   navigateToWorkspacePage,
   NEW_CHAT_ROUTE,
   routePathname,
@@ -47,12 +46,11 @@ export const $phoneChatsOpen = atom(true)
 /** Settings on a phone: its section list first (the desktop's rail), a section's page after a tap. */
 export const $phoneSettingsPage = atom(false)
 
-type TabId = 'capabilities' | 'chats' | 'dashboard' | 'messaging' | 'settings'
+type TabId = 'capabilities' | 'chats' | 'dashboard' | 'settings'
 
 const TAB_ROUTES: Record<Exclude<TabId, 'chats'>, string> = {
   capabilities: CAPABILITIES_ROUTE,
   dashboard: DASHBOARD_ROUTE,
-  messaging: MESSAGING_ROUTE,
   settings: SETTINGS_ROUTE
 }
 
@@ -169,7 +167,6 @@ const TABS: { filled: typeof MessageCircle; icon: typeof MessageCircle; id: TabI
   { filled: MessageCircleFilled, icon: MessageCircle, id: 'chats' },
   { filled: SunFilled, icon: Sun, id: 'dashboard' },
   { filled: SparklesFilled, icon: Sparkles, id: 'capabilities' },
-  { filled: MessagesFilled, icon: Messages, id: 'messaging' },
   { filled: SettingsFilled, icon: Settings, id: 'settings' }
 ]
 

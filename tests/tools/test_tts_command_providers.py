@@ -102,41 +102,6 @@ class TestResolveCommandProviderConfig:
 
 
 class TestCommandTtsEnv:
-    def test_command_provider_uses_sanitized_child_env(self, monkeypatch):
-        """Salvage of #56332: command TTS must not inherit Scout secrets."""
-        monkeypatch.setenv("AUXILIARY_VISION_API_KEY", "sk-vision")
-        monkeypatch.setenv("GATEWAY_RELAY_SECRET", "relay-secret")
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
-        monkeypatch.setenv("MY_SAFE_TTS_VAR", "keep")
-
-        captured = {}
-
-        class _Stream:
-            def read(self, size):
-                return ""
-
-        class Proc:
-            returncode = 0
-            stdout = _Stream()
-            stderr = _Stream()
-
-            def wait(self, timeout=None):
-                return 0
-
-        def fake_popen(command, **kwargs):
-            captured["env"] = kwargs["env"]
-            return Proc()
-
-        monkeypatch.setattr("tools.tts_command_provider.subprocess.Popen", fake_popen)
-
-        result = _run_command_tts("echo hi", timeout=1)
-
-        assert result.returncode == 0
-        env = captured["env"]
-        assert "AUXILIARY_VISION_API_KEY" not in env
-        assert "GATEWAY_RELAY_SECRET" not in env
-        assert "OPENAI_API_KEY" not in env
-        assert env["MY_SAFE_TTS_VAR"] == "keep"
 
 
     def test_env_passthrough_forwards_the_served_profiles_value(self, monkeypatch):

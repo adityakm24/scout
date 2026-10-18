@@ -38,8 +38,7 @@ def _consume_detached_handler_exception(task: "asyncio.Task") -> None:
         logger.error("Detached fatal-error handler task failed: %s", exc, exc_info=exc)
 
 
-# Audio exts for native audio delivery; Telegram's narrower sets stay separate (.m2a is audio to
-# Scout but not to sendAudio).
+# Audio exts for native audio delivery.
 _AUDIO_MIME_TYPES = {
     ".ogg": "audio/ogg", ".opus": "audio/opus", ".mp3": "audio/mpeg", ".m2a": "audio/mpeg",
     ".wav": "audio/wav", ".m4a": "audio/m4a", ".flac": "audio/flac"}
@@ -47,9 +46,6 @@ _AUDIO_EXTS = frozenset(_AUDIO_MIME_TYPES)
 # Outbound dispatch partition for MEDIA/local files (image batch vs send_video).
 _VIDEO_EXTS = frozenset({".mp4", ".mov", ".avi", ".mkv", ".webm", ".3gp"})
 _IMAGE_EXTS = frozenset({".jpg", ".jpeg", ".png", ".webp", ".gif"})
-# Telegram sendAudio accepts only MP3 / M4A; others go via sendVoice (Opus/OGG) or as a document.
-_TELEGRAM_AUDIO_ATTACHMENT_EXTS = frozenset({'.mp3', '.m4a'})
-_TELEGRAM_VOICE_EXTS = frozenset({'.ogg', '.opus'})
 
 
 def transcode_to_ogg_opus(path: str, *, bitrate: str = "32k", timeout: int = 60,
@@ -114,26 +110,11 @@ DEFAULT_BUSY_TEXT_HARD_CAP_SECONDS = 1.0
 
 
 def _thread_metadata_for_source(source, reply_to_message_id: str | None = None) -> dict | None:
-    """Platform-aware thread metadata for adapter sends. Telegram DM topics route with
-    ``message_thread_id`` + a reply anchor; anchorless synthetic/resumed sends fall back to
-    ``direct_messages_topic_id`` when supported."""
+    """Thread metadata for adapter sends."""
     thread_id = getattr(source, "thread_id", None)
-    platform = _platform_name(getattr(source, "platform", None))
     metadata = {"thread_id": thread_id} if thread_id is not None else {}
-    # Slack workspace identity is routing state: carry it so a multi-workspace Socket Mode
-    # gateway never falls back to its primary WebClient.
-    scope_id = getattr(source, "scope_id", None) if platform == "slack" else None
-    if scope_id:
-        metadata["slack_team_id"] = str(scope_id)
     if not metadata:
         return None
-    if platform == "telegram" and getattr(source, "chat_type", None) == "dm":
-        metadata["telegram_dm_topic_reply_fallback"] = True
-        if str(thread_id) not in {"", "1"}:
-            metadata["direct_messages_topic_id"] = str(thread_id)
-        anchor = reply_to_message_id or getattr(source, "message_id", None)
-        if anchor is not None:
-            metadata["telegram_reply_to_message_id"] = str(anchor)
     # Routed profile (multiplex / profile_routes): outbound prune paths must not assume the
     # adapter's static profile stamp.
     profile = str(getattr(source, "profile", None) or "").strip()
@@ -155,27 +136,10 @@ def _mark_notify_metadata(metadata: dict | None) -> dict:
 
 
 def _reply_anchor_for_event(event) -> str | None:
-    """Return reply_to id for platforms that need reply semantics."""
+    """Return the reply_to id for an inbound event."""
     override = getattr(event, "reply_anchor_override", None)
     if override is not None:
         return override  # the turn was redirected onto another message (#115001)
-    source = getattr(event, "source", None)
-    platform = _platform_name(getattr(source, "platform", None))
-    thread_id = getattr(source, "thread_id", None)
-    raw_message = getattr(event, "raw_message", None)
-    if (platform == "slack" and isinstance(raw_message, dict)
-            and raw_message.get("_scout_no_thread_response")):
-        # Slack reaction handoff = new top-level message; a message_id anchor would make
-        # _resolve_thread_ts() reply in a nonexistent thread.
-        return None
-    if platform == "telegram" and thread_id:
-        # Forum topics route by topic metadata (no reply); DM-topic lanes reply to the triggering
-        # message — replying to the topic seed/anchor can render outside the active lane.
-        if getattr(source, "chat_type", None) != "dm":
-            return None
-        return getattr(event, "message_id", None) or getattr(event, "reply_to_message_id", None)
-    if platform == "feishu" and thread_id and getattr(event, "reply_to_message_id", None):
-        return getattr(event, "reply_to_message_id", None)
     return getattr(event, "message_id", None)
 
 
@@ -190,17 +154,9 @@ def _media_failure_text(kind: str, file_name: "str | None" = None) -> str:
     return t("gateway.notify.media_delivery_failed", kind=kind_label)
 
 
-def should_send_media_as_audio(platform, ext: str, is_voice: bool = False) -> bool:
-    """True when a media file should use the platform's audio sender. Telegram: explicit
-    ``is_voice`` ([[audio_as_voice]]) routes ANY format to the voice sender (adapter transcodes
-    non-Opus); otherwise only sendAudio's MP3/M4A qualify — a plain Opus/OGG attachment is never
-    turned into a voice bubble, everything else → document. Other platforms: any audio ext."""
-    normalized_ext = (ext or "").lower()
-    if normalized_ext not in _AUDIO_EXTS:
-        return False
-    if _platform_name(platform) != "telegram":
-        return True
-    return is_voice or normalized_ext in _TELEGRAM_AUDIO_ATTACHMENT_EXTS
+def should_send_media_as_audio(ext: str) -> bool:
+    """True when a media file with extension *ext* should use the adapter's audio sender."""
+    return (ext or "").lower() in _AUDIO_EXTS
 
 
 def build_auto_tts_output_path(platform) -> str:
@@ -222,15 +178,6 @@ def build_auto_tts_output_path(platform) -> str:
     return audio_path
 
 
-def utf16_len(s: str) -> int:
-    """UTF-16 code units in *s* — Telegram's 4 096 limit counts those, so astral chars
-    (emoji, CJK Ext B) cost **two** units although Python's ``len()`` counts one.
-
-    Ported from nearai/ironclaw#2304 which discovered the same discrepancy in Rust's ``chars().count()``.
-    """
-    return len(s.encode("utf-16-le")) // 2
-
-
 def _custom_unit_to_cp(s: str, budget: int, len_fn) -> int:
     """Largest codepoint offset *n* with ``len_fn(s[:n]) <= budget`` (binary search)."""
     if len_fn(s) <= budget:
@@ -243,11 +190,6 @@ def _custom_unit_to_cp(s: str, budget: int, len_fn) -> int:
         else:
             hi = mid - 1
     return lo
-
-
-def _prefix_within_utf16_limit(s: str, limit: int) -> str:
-    """Longest prefix of *s* with UTF-16 length ≤ *limit*; never splits a surrogate pair."""
-    return s[:_custom_unit_to_cp(s, limit, utf16_len)]
 
 
 def is_network_accessible(host: str) -> bool:
@@ -328,15 +270,15 @@ def resolve_proxy_url(
     platform_env_var: str | None = None, *,
     target_hosts: str | list[str] | tuple[str, ...] | set[str] | None = None,
     configured: str | None = None) -> str | None:
-    """Proxy URL: *platform_env_var* (e.g. ``DISCORD_PROXY``) first, then the adapter's own YAML
-    value *configured* (``telegram.proxy_url``), then HTTPS_PROXY / HTTP_PROXY / ALL_PROXY (any
+    """Proxy URL: *platform_env_var* (e.g. ``<PLATFORM>_PROXY``) first, then the adapter's own YAML
+    value *configured* (``<platform>.proxy_url``), then HTTPS_PROXY / HTTP_PROXY / ALL_PROXY (any
     case), then the macOS system proxy — the latter two only when ``gateway.trust_env`` is true.
     None when nothing is found or NO_PROXY matches a target.
 
     *platform_env_var* is a per-adapter, per-profile-configurable setting (each proxy URL can
     embed credentials, e.g. ``http://user:pass@host``) so it is read scope-aware: under a
     secondary multiplex profile it comes from that profile's own ``.env``, not the shared
-    process env another profile's ``TELEGRAM_PROXY``/``DISCORD_PROXY``/etc. may hold; the YAML
+    process env another profile's ``<PLATFORM>_PROXY`` may hold; the YAML
     value is the same profile's, so a secondary keeps its configured route without any env
     bridge (#108440). The generic ``HTTPS_PROXY``/``HTTP_PROXY``/``ALL_PROXY`` fallback stays a raw
     process-env read — those are OS/system-level network settings, not a per-profile Scout concept."""
@@ -366,17 +308,6 @@ def _aiohttp_socks_connector(proxy_url: str):
         return None
 
 
-def proxy_kwargs_for_bot(proxy_url: str | None) -> dict:
-    """Kwargs for ``commands.Bot()`` / ``discord.Client()``: SOCKS → ``{"connector"}``,
-    HTTP → ``{"proxy": url}``, None → ``{}``."""
-    if not proxy_url:
-        return {}
-    if proxy_url.lower().startswith("socks"):
-        connector = _aiohttp_socks_connector(proxy_url)
-        return {"connector": connector} if connector is not None else {}
-    return {"proxy": proxy_url}
-
-
 def _config_section(name: str) -> dict:
     """Read-only ``config.yaml`` section ``name``; ``{}`` when unreadable/missing/not a dict."""
     try:
@@ -400,7 +331,7 @@ def gateway_trust_env() -> bool:
 
 def proxy_kwargs_for_aiohttp(proxy_url: str | None) -> tuple[dict, dict]:
     """``(session_kwargs, request_kwargs)`` for a standalone ``aiohttp.ClientSession``. With
-    aiohttp-socks every scheme uses a connector (mautrix-style libs never forward per-request
+    aiohttp-socks every scheme uses a connector (some client libs never forward per-request
     ``proxy=``); without it HTTP falls back to ``({}, {"proxy": url})`` and SOCKS is ignored."""
     if not proxy_url:
         return {}, {}
@@ -489,13 +420,6 @@ GATEWAY_SECRET_CAPTURE_UNSUPPORTED_MESSAGE = (
 UNAUTHORIZED_ACTION_NOTICE = (
     "This bot is private and you're not on its allowed list. If you own it, run "
     "`scout pairing approve {platform} <request-id>` on the host (`scout pairing list` shows the id).")
-
-
-def unauthorized_action_notice(platform: Any) -> str:
-    """Localized ``UNAUTHORIZED_ACTION_NOTICE`` for a ``Platform`` member or its string name.
-    Call it per refusal — never bind the result at import, or the language freezes."""
-    name = getattr(platform, "value", platform)
-    return t("gateway.unauthorized.action_notice", platform=str(name or "<platform>"))
 
 
 def safe_url_for_log(url: str, max_len: int = 80) -> str:
@@ -1920,7 +1844,6 @@ class BasePlatformAdapter(ABC):
         # Runner-owned boundary for normalized events: auth/profile state never lives in an adapter.
         self._platform_event_handler: Optional[Callable[[Dict[str, Any], Any], Awaitable[None]]] = None
         # Rewrites ``event.source.thread_id`` before session keying (Telegram DM topics).
-        self._topic_recovery_fn: Optional[Callable[[Any], Optional[str]]] = None
         self._running, self._fatal_error_retryable = False, True
         self._fatal_error_code: Optional[str] = None
         self._fatal_error_message: Optional[str] = None
@@ -1962,9 +1885,6 @@ class BasePlatformAdapter(ABC):
         self._busy_session_handler: Optional[Callable[[MessageEvent, str], Awaitable[bool]]] = None
         # Owning multiplex profile (None on primary); see _session_key_profile.
         self._owner_profile: Optional[str] = None
-        # Set by the runner on a secondary's port-binding adapter: serve via the default profile's
-        # shared listener (/p/<profile>/...) instead of binding a port (gateway/platforms/shared_ingress.py).
-        self._shared_listener_profile: Optional[str] = None
         # Registered by GatewayRunner (see set_authorization_check).
         self._authorization_check: Optional[Callable[[str, Optional[str], Optional[str]], bool]] = None
         # Auto-TTS on voice input: ``voice.auto_tts`` default plus per-chat /voice on|tts / off.
@@ -2021,11 +1941,6 @@ class BasePlatformAdapter(ABC):
         """Whether native streaming-draft updates (``send_draft``) work for this chat type;
         ``chat_id`` lets the relay adapter answer per negotiated capabilities. Consumers
         fall back to ``send`` + ``edit_message`` when False or ``send_draft`` raises."""
-        return False
-
-    def prefers_fresh_final_streaming(self, content: str, metadata: Optional[Dict[str, Any]] = None) -> bool:
-        """Whether the stream consumer should finalize with a *fresh* final message (best-effort
-        deleting the preview) instead of final-editing it (Telegram: keeps rich rendering)."""
         return False
 
     def streaming_overflow_limit(self) -> Optional[int]:
@@ -2314,31 +2229,6 @@ class BasePlatformAdapter(ABC):
         ``SessionSource``); the runner owns authorization and plugin dispatch: no callback = fail
         closed."""
         self._platform_event_handler = handler
-
-    def set_topic_recovery_fn(self, fn: Optional[Callable[[Any], Optional[str]]]) -> None:
-        """Install a thread_id-recovery hook (Telegram DM topic mode): called with ``event.source``
-        before session keying; a non-None return replaces ``source.thread_id``. ``None`` clears
-        it."""
-        self._topic_recovery_fn = fn
-
-    def _apply_topic_recovery(self, event: MessageEvent) -> None:
-        """Rewrite ``event.source.thread_id`` in place if the hook returns one."""
-        recover = getattr(self, "_topic_recovery_fn", None)
-        source = getattr(event, "source", None)
-        if recover is None or source is None:
-            return
-        try:
-            recovered = recover(source)
-            if recovered is None or str(recovered) == str(source.thread_id or ""):
-                return
-        except Exception:
-            logger.debug("topic recovery hook failed", exc_info=True)
-            return
-        try:
-            from gateway.session_identity import replace_source
-            event.source = replace_source(source, thread_id=str(recovered))  # keeps the pinned identity
-        except Exception:
-            logger.debug("topic recovery rewrite failed", exc_info=True)
 
     def set_busy_session_handler(self, handler: Optional[Callable[[MessageEvent, str], Awaitable[bool]]]) -> None:
         """Set an optional handler for messages arriving during active sessions."""
@@ -3180,7 +3070,7 @@ class BasePlatformAdapter(ABC):
         nothing), the user must see a failure notice instead of a silent drop (#66797).
         """
         ext = Path(media_path).suffix.lower()
-        if is_voice or should_send_media_as_audio(self.platform, ext, is_voice=is_voice):
+        if is_voice or should_send_media_as_audio(ext):
             text = _media_failure_text("audio")
         elif ext in _VIDEO_EXTS:
             text = _media_failure_text("video")
@@ -4005,11 +3895,6 @@ class BasePlatformAdapter(ABC):
         if self._drop_unresolved(event):
             return
         expected_session_key = str((event.metadata or {}).get("gateway_session_key") or "").strip()
-        # Explicitly routed events already name their destination; recovering a
-        # different topic would redirect them and yield before the session claim.
-        if (not expected_session_key and getattr(self, "_topic_recovery_fn", None) is not None
-                and event.source.platform == Platform.TELEGRAM and event.source.chat_type == "dm"):
-            await asyncio.to_thread(self._apply_topic_recovery, event)
         session_key = self._event_session_key(event)
         if expected_session_key and session_key != expected_session_key:
             logger.warning("Dropping internally routed event: expected session=%s derived=%s",
@@ -4159,15 +4044,12 @@ class BasePlatformAdapter(ABC):
     async def _play_tts_file(
         self, event: MessageEvent, text_content: str, tts_path: str, first: bool,
         metadata: Dict[str, Any], record_delivery: Callable) -> bool:
-        """Play one synthesized TTS file. Returns True when the ORIGINAL reply text rode
-        along as a Telegram caption (first file, ≤1024 chars) so the text send is skipped."""
-        caption = None
-        if first and self.platform == Platform.TELEGRAM and text_content and text_content[:1024] == text_content:
-            caption = text_content
+        """Play one synthesized TTS file. Returns True when the reply text rode along as the
+        audio's caption, so the text send is skipped (never, for the built-in adapters)."""
         tts_result = await self.play_tts(
-            chat_id=event.source.chat_id, audio_path=tts_path, caption=caption, metadata=metadata)
+            chat_id=event.source.chat_id, audio_path=tts_path, caption=None, metadata=metadata)
         record_delivery(tts_result)
-        return bool(caption and getattr(tts_result, "success", False))
+        return False
 
     async def _record_delivery_obligation(
         self, event: MessageEvent, session_key: str, text_content: str,
@@ -4258,7 +4140,7 @@ class BasePlatformAdapter(ABC):
             """MEDIA-tag files (``media_tag``) may route to send_voice; bare local files never
             do."""
             ext = Path(path).suffix.lower()
-            if media_tag and should_send_media_as_audio(self.platform, ext, is_voice=is_voice):
+            if media_tag and should_send_media_as_audio(ext):
                 result = await self.send_voice(chat_id=chat_id, audio_path=path, metadata=metadata, is_voice=is_voice)
             elif ext in _VIDEO_EXTS:
                 if media_tag:
@@ -4743,8 +4625,7 @@ class BasePlatformAdapter(ABC):
         user_id_alt: Optional[str] = None, chat_id_alt: Optional[str] = None, is_bot: bool = False,
         scope_id: Optional[str] = None, guild_id: Optional[str] = None,
         parent_chat_id: Optional[str] = None, message_id: Optional[str] = None,
-        role_authorized: bool = False, auto_thread_created: bool = False,
-        auto_thread_initial_name: Optional[str] = None) -> SessionSource:
+        role_authorized: bool = False) -> SessionSource:
         """Build a SessionSource; with ``gateway.profile_routes`` configured the matching
         profile is stamped on ``source.profile`` for per-profile SCOUT_HOME isolation."""
         def _opt(value) -> Optional[str]:
@@ -4771,9 +4652,7 @@ class BasePlatformAdapter(ABC):
             except Exception:
                 logger.warning("Profile resolution failed for %s/%s, defaulting to active profile",
                                self.platform, chat_id, exc_info=True)
-        source = SessionSource(**fields, profile=profile, role_authorized=role_authorized,
-                               auto_thread_created=auto_thread_created,
-                               auto_thread_initial_name=auto_thread_initial_name)
+        source = SessionSource(**fields, profile=profile, role_authorized=role_authorized)
         # Transport-only, kept out of to_dict(): the receiving adapter is authoritative this turn
         # even if profile_routes picks another runtime; the reject flag is consumed before auth.
         source._transport_adapter_ref = weakref.ref(self)
@@ -4800,7 +4679,7 @@ class BasePlatformAdapter(ABC):
                          len_fn: Optional["Callable[[str], int]"] = None) -> List[str]:
         """Split a long message into chunks preserving code blocks: a split inside a fence closes it
         at the chunk end and reopens it (same language tag) in the next; multi-chunk output gets
-        ``(1/3)`` indicators. ``len_fn`` overrides ``len`` (``utf16_len`` for Telegram)."""
+        ``(1/3)`` indicators. ``len_fn`` overrides ``len`` for platforms that count other units."""
         _len = len_fn or len
         if _len(content) <= max_length:
             return [content]

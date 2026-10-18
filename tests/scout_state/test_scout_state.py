@@ -1879,33 +1879,6 @@ class TestSchemaInit:
 
 
 
-    def test_telegram_topic_binding_roundtrip_requires_explicit_schema(self, tmp_path):
-        db = SessionDB(db_path=tmp_path / "state.db")
-        db.create_session(
-            session_id="topic-session",
-            source="telegram",
-            user_id="208214988",
-        )
-
-        assert db.get_telegram_topic_binding(chat_id="208214988", thread_id="17585") is None
-
-        db.bind_telegram_topic(
-            chat_id="208214988",
-            thread_id="17585",
-            user_id="208214988",
-            session_key="telegram:dm:208214988:thread:17585",
-            session_id="topic-session",
-        )
-
-        binding = db.get_telegram_topic_binding(chat_id="208214988", thread_id="17585")
-        assert binding is not None
-        assert binding["chat_id"] == "208214988"
-        assert binding["thread_id"] == "17585"
-        assert binding["user_id"] == "208214988"
-        assert binding["session_key"] == "telegram:dm:208214988:thread:17585"
-        assert binding["session_id"] == "topic-session"
-        assert db.get_meta("telegram_dm_topic_schema_version") == "3"
-        db.close()
 
 
 

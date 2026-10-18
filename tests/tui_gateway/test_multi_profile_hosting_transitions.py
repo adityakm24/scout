@@ -43,25 +43,6 @@ def two_homes(tmp_path, monkeypatch):
     return root, b
 
 
-def test_send_keeps_external_source_value_over_raw_dotenv(two_homes, monkeypatch):
-    """B's ``.env`` and B's secret manager both define SHARED_TOKEN; the installed scope (manager
-    wins) survives ``_load_scout_env`` for the routed ``send``."""
-    from scout_cli import env_loader
-    from scout_cli.send_cmd import _load_scout_env
-
-    root, b = two_homes
-    # B's secret manager already hydrated for this process (a hydrated home is not re-pulled).
-    monkeypatch.setattr(env_loader, "_SECRET_SOURCE_VALUES_BY_HOME",
-                        {str(b.resolve()): {"SHARED_TOKEN": "b-manager-fresh"}})
-    monkeypatch.setattr(env_loader, "_APPLIED_HOMES", {str(b.resolve())})
-    with server._session_profile_runtime_scope({"profile_home": str(b)}):
-        from agent.secret_scope import current_secret_scope, get_secret
-        assert get_secret("SHARED_TOKEN") == "b-manager-fresh"
-        _load_scout_env()
-        assert get_secret("SHARED_TOKEN") == "b-manager-fresh"
-        assert current_secret_scope()["B_ONLY_TOKEN"] == B_VAL
-
-
 def test_launch_body_survives_first_secondary_activation(two_homes):
     """Barrier: the launch RPC enters single-profile, B activates on another thread, the launch RPC
     resumes and still resolves its env-injected credential instead of raising."""

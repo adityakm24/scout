@@ -158,8 +158,7 @@ class GatewayNotificationsMixin:
         platform: Any
 
         def send_metadata(self):
-            from gateway.run import _non_conversational_metadata
-            return _non_conversational_metadata(self.metadata, platform=self.platform)
+            return self.metadata
 
         async def send(self, text: str):
             return await self.adapter.send(self.chat_id, text, metadata=self.send_metadata())
@@ -175,15 +174,10 @@ class GatewayNotificationsMixin:
 
     async def _deliver_platform_notice(self, source, content: str) -> None:
         """Deliver a setup/operational notice using platform-specific privacy rules."""
-        from gateway.run import _is_slack_ignored_channel
         adapter = self._delivery_adapter_for(source)
         if not adapter:
             return
         config = getattr(self, "config", None)
-        chat_id = getattr(source, "chat_id", None)
-        if config and getattr(source, "platform", None) == Platform.SLACK and _is_slack_ignored_channel(config, chat_id, adapter):
-            logger.info("Skipping Slack platform notice for configured ignored channel %s", chat_id)
-            return
         # The routed adapter carries ITS profile's ``platforms.<p>`` block; ``self.config`` is the
         # launch profile's, so a served secondary's ``notice_delivery: private`` would be ignored.
         adapter_config = getattr(adapter, "config", None)
@@ -396,7 +390,7 @@ class GatewayNotificationsMixin:
             for media_path, is_voice in non_image_media:
                 try:
                     ext = Path(media_path).suffix.lower()
-                    if should_send_media_as_audio(event.source.platform, ext, is_voice=is_voice):
+                    if should_send_media_as_audio(ext):
                         await adapter.send_voice(
                             chat_id=chat_id, audio_path=media_path, metadata=_thread_meta, is_voice=is_voice,
                         )
@@ -449,19 +443,6 @@ class GatewayNotificationsMixin:
                                 "Queued-lane final reconciled by editing message %s in place (no duplicate send).",
                                 _sc_msg_id,
                             )
-                        else:
-                            # P5(b): a DECLINE is not "editing unavailable". The
-                            # send below re-delivers the whole response to the
-                            # chat the connector just refused.
-                            from gateway.relay.egress import declined_send
-
-                            if declined_send(_edit_res):
-                                logger.warning(
-                                    "Queued-lane reconcile edit DECLINED by the "
-                                    "connector's egress guard; not falling back "
-                                    "to a send (the destination is not approved)."
-                                )
-                                return True
                     except Exception as _qe:
                         logger.debug("Queued-lane reconcile edit failed (%s); falling back to send.", _qe)
                 if not _reconciled:
@@ -732,7 +713,6 @@ class GatewayNotificationsMixin:
 
         False while the update is still running (caller may retry); True after a definitive send/skip.
         """
-        from gateway.run import _non_conversational_metadata
         paths = self._update_paths()
         if not paths.any_pending():
             return False
@@ -793,7 +773,7 @@ class GatewayNotificationsMixin:
                     msg = _update_failed_notice()
                     if output:
                         msg = t("gateway.update.last_lines", msg=msg, tail=_update_output_tail(output, 800))
-                await adapter.send(chat_id, msg, metadata=_non_conversational_metadata(metadata, platform=platform))
+                await adapter.send(chat_id, msg, metadata=metadata)
                 logger.info("Sent post-update notification to %s:%s (exit=%s)", platform_str, chat_id, exit_code)
         except Exception as e:
             logger.warning("Post-update notification failed: %s", e)
@@ -806,7 +786,7 @@ class GatewayNotificationsMixin:
     async def _send_restart_notification(self) -> Optional[tuple[str, str, Optional[str]]]:
         """Notify the chat that initiated /restart that the gateway is back."""
         from gateway.delivery import resolve_delivery_transport
-        from gateway.run import _scout_home, _non_conversational_metadata
+        from gateway.run import _scout_home
         notify_path = _scout_home / ".restart_notify.json"
         if not notify_path.exists():
             return None
@@ -832,14 +812,9 @@ class GatewayNotificationsMixin:
                 )
                 return None
             metadata = self._pending_marker_metadata(platform, chat_id, data, transport.adapter)
-            if data.get("delivered_via_upstream_relay") is True:
-                metadata = dict(metadata or {})
-                for field in ("user_id", "scope_id"):
-                    if data.get(field):
-                        metadata[field] = str(data[field])
             result = await transport.send(
                 platform, str(chat_id), t("gateway.startup.restarted"),
-                metadata=_non_conversational_metadata(metadata, platform=platform),
+                metadata=metadata,
             )
             # adapter.send() catches provider errors (e.g. "Chat not found") and returns
             # SendResult(success=False) rather than raising, so inspect the result before claiming success.
@@ -899,17 +874,10 @@ class GatewayNotificationsMixin:
 
     async def _send_home_channel_message(self, platform, home, transport, message: str, failure_fmt: str) -> bool:
         """Best-effort send to one home channel; True on success, failures logged with ``failure_fmt``."""
-        from gateway.run import _non_conversational_metadata
         try:
             metadata = self._thread_metadata_for_target(platform, home.chat_id, home.thread_id, adapter=transport.adapter)
-            if transport.is_relay:
-                metadata = dict(metadata or {})
-                if home.user_id:
-                    metadata["user_id"] = home.user_id
-                if home.scope_id:
-                    metadata["scope_id"] = home.scope_id
-            send_metadata = _non_conversational_metadata(metadata, platform=platform)
-            if send_metadata is not None or transport.is_relay:
+            send_metadata = metadata
+            if send_metadata is not None:
                 result = await transport.send(platform, str(home.chat_id), message, metadata=send_metadata)
             else:
                 result = await transport.adapter.send(str(home.chat_id), message)
@@ -1223,16 +1191,13 @@ class GatewayNotificationsMixin:
                      if name != primary and session_owned_by_profile(self.config, name, raw_sid)), None)
 
     def _resolve_injection_adapter(self, platform_name: str, source=None):
-        """Adapter for a synthetic-event platform: alias-aware transport resolver first (one
-        Platform.RELAY adapter fronts N logical platforms; native wins), literal ``p.value`` scan as
-        fallback for minimal runner stubs / exotic platform strings when the resolver can't run."""
+        """Adapter for a synthetic-event platform: the transport resolver first, literal ``p.value``
+        scan as fallback for minimal runner stubs / exotic platform strings when the resolver can't run."""
         from gateway.delivery import resolve_delivery_transport
         if source is not None:
             owner = self._transport_owner(source)
             if owner is not None:
                 return owner[0]
-            if getattr(source, "delivered_via_upstream_relay", False) is True:
-                return self.adapters.get(Platform.RELAY)
         # One resolver with authz/kanban/cron: a secondary's own map, or the primary's for a
         # shared-bot satellite; a disconnected secondary fails closed to ``{}``.
         adapters = self._adapters_for_profile(getattr(source, "profile", None))
@@ -1931,14 +1896,13 @@ class GatewayNotificationsMixin:
         return session_key in (getattr(adapter, "_active_sessions", None) or {})
 
     async def _send_watcher_message(self, platform_name: str, chat_id, thread_id, message_text: str, watcher: dict) -> None:
-        from gateway.run import _non_conversational_metadata
         source = await asyncio.to_thread(self._build_process_event_source, watcher)
         adapter = self._resolve_injection_adapter(platform_name, source)
         if adapter and chat_id:
             with _log_suppressed(logging.ERROR, "Watcher delivery error: %s"):
                 send_meta = {"thread_id": thread_id} if thread_id else None
                 await adapter.send(
-                    chat_id, message_text, metadata=_non_conversational_metadata(send_meta, platform=platform_name),
+                    chat_id, message_text, metadata=send_meta,
                 )
 
     @staticmethod

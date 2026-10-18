@@ -39,7 +39,7 @@ async def _run_one_tick(monkeypatch, runner):
 def _runner(adapter):
     runner = GatewayRunner.__new__(GatewayRunner)
     runner._running = True
-    runner.adapters = {Platform.TELEGRAM: adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
     runner._kanban_sub_fail_counts = {}
     runner._kanban_dispatcher_lock_handle = object()
     return runner
@@ -52,12 +52,12 @@ def _create_review_block(delivery_mode, *, reason="Tests need updates"):
             conn,
             title="existing implementation card",
             assignee="implementer",
-            session_id="agent:main:telegram:thread:chat-1:topic-7",
+            session_id="agent:main:homeassistant:thread:chat-1:topic-7",
         )
         kbn.add_notify_sub(
             conn,
             task_id=task_id,
-            platform="telegram",
+            platform="homeassistant",
             chat_id="chat-1",
             thread_id="topic-7",
             chat_type="thread",
@@ -86,7 +86,7 @@ def _unseen(task_id):
         _, events = kbn.unseen_events_for_sub(
             conn,
             task_id=task_id,
-            platform="telegram",
+            platform="homeassistant",
             chat_id="chat-1",
             thread_id="topic-7",
             kinds=["changes_requested"],

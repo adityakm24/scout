@@ -19,7 +19,7 @@ from gateway.session import SessionSource
 
 class _Adapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True), Platform.HOMEASSISTANT)
         self._text_batch_delay_seconds = 0.0
         self._text_batch_split_delay_seconds = 0.0
         self.dispatched: list = []
@@ -46,7 +46,7 @@ class _Adapter(BasePlatformAdapter):
 
 def _event(text: str) -> MessageEvent:
     return MessageEvent(text=text, message_type=MessageType.TEXT,
-                        source=SessionSource(platform=Platform.TELEGRAM, chat_id="c", chat_type="dm"))
+                        source=SessionSource(platform=Platform.HOMEASSISTANT, chat_id="c", chat_type="dm"))
 
 
 @pytest.mark.asyncio

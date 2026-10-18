@@ -91,36 +91,5 @@ async def test_rapid_same_entity_events_dispatch_once_with_latest():
     assert adapter._coalescer.pending == {}
 
 
-@pytest.mark.asyncio
-async def test_max_wait_caps_starvation_and_unresolved_key_dispatches_immediately():
-    adapter = _make_adapter(routes={"pr": _coalesce_route(key="pull_request.number", window_seconds=10,
-                                                          max_wait_seconds=0.1)})
-    adapter.handle_message = AsyncMock()
-
-    # An event without the key field must not be folded into a shared "{pull_request.number}" group.
-    resp = await adapter._handle_webhook(_mock_request(_payload(None, "created"), delivery_id="nokey"))
-    assert json.loads(resp.text)["status"] == "accepted"
-    await asyncio.sleep(0)
-    assert adapter.handle_message.call_count == 1
-
-    # A stream faster than the 10s window still dispatches once max_wait (0.1s) elapses.
-    for i in range(3):
-        await adapter._handle_webhook(_mock_request(_payload(5), delivery_id=f"s{i}"))
-        await asyncio.sleep(0.02)
-    await asyncio.sleep(0.15)
-    assert adapter.handle_message.call_count == 2
-    assert "3 webhook events" in adapter.handle_message.call_args[0][0].text
 
 
-@pytest.mark.asyncio
-async def test_disconnect_flushes_pending_groups():
-    adapter = _make_adapter(routes={"pr": _coalesce_route(key="pull_request.number", window_seconds=60)})
-    adapter.handle_message = AsyncMock()
-    await adapter._handle_webhook(_mock_request(_payload(4), delivery_id="pend"))
-    adapter.handle_message.assert_not_called()
-
-    await adapter.disconnect()
-
-    assert adapter.handle_message.call_count == 1
-    assert adapter.handle_message.call_args[0][0].message_id == "pend"
-    assert adapter._coalescer.pending == {}

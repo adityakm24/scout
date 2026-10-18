@@ -38,7 +38,7 @@ class RecordingAdapter:
 def _make_runner(adapter):
     runner = GatewayRunner.__new__(GatewayRunner)
     runner._running = True
-    runner.adapters = {Platform.TELEGRAM: adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
     runner._kanban_sub_fail_counts = {}
     return runner
 

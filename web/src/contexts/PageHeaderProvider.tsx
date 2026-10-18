@@ -34,7 +34,6 @@ export function PageHeaderProvider({
   );
   const displayTitle = titleOverride ?? defaultTitle;
 
-  const isChatRoute = pathname === "/chat" || pathname === "/chat/";
   /** Env jump-nav is wide — stack below title on small screens so KEYS stays readable. */
   const isEnvRoute =
     pathname === "/env" || pathname.startsWith("/env/");
@@ -64,9 +63,7 @@ export function PageHeaderProvider({
           <div
             className={cn(
               "flex w-full min-w-0 flex-1 gap-3 px-3 sm:h-full sm:gap-3 sm:px-6",
-              isChatRoute
-                ? "flex-row items-center"
-                : "flex-col justify-center sm:flex-row sm:items-center",
+              "flex-col justify-center sm:flex-row sm:items-center",
             )}
           >
             <div
@@ -109,9 +106,7 @@ export function PageHeaderProvider({
               <div
                 className={cn(
                   "flex min-w-0 sm:max-w-md sm:flex-1",
-                  isChatRoute
-                    ? "w-auto shrink-0 justify-end"
-                    : "w-full justify-start sm:justify-end",
+                  "w-full justify-start sm:justify-end",
                 )}
               >
                 {end}
@@ -125,9 +120,7 @@ export function PageHeaderProvider({
             "min-h-0 w-full min-w-0 flex-1 flex flex-col",
             // Bottom inset for scrolled pages lives on the route outlet wrapper in
             // `App.tsx` (`w-full min-w-0`) so it pads scrollable content, not flex chrome.
-            isChatRoute
-              ? "overflow-hidden"
-              : "overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]",
+            "overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]",
           )}
         >
           {children}

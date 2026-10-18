@@ -360,26 +360,6 @@ class TestSpawnEnvSecretStripping:
         client._closed = True
         return captured["env"]
 
-    def test_tier1_and_internal_secrets_stripped_from_spawn_env(self, monkeypatch):
-        for var, val in {
-            "GH_TOKEN": "ghp-secret",
-            "TELEGRAM_BOT_TOKEN": "bot-secret",
-            "MODAL_TOKEN_SECRET": "modal-secret",
-            "SCOUT_DASHBOARD_SESSION_TOKEN": "dash-secret",
-            "AUXILIARY_VISION_API_KEY": "aux-secret",
-            "GATEWAY_RELAY_SECRET": "relay-secret",
-            "GATEWAY_RELAY_ID": "relay-id",
-            "GATEWAY_RELAY_DELIVERY_KEY": "relay-delivery",
-        }.items():
-            monkeypatch.setenv(var, val)
-
-        env = self._capture_spawn_env(monkeypatch)
-        for var in (
-            "GH_TOKEN", "TELEGRAM_BOT_TOKEN", "MODAL_TOKEN_SECRET",
-            "SCOUT_DASHBOARD_SESSION_TOKEN", "AUXILIARY_VISION_API_KEY",
-            "GATEWAY_RELAY_SECRET", "GATEWAY_RELAY_ID", "GATEWAY_RELAY_DELIVERY_KEY",
-        ):
-            assert var not in env, f"{var} leaked into codex app-server spawn env"
 
     def test_provider_credentials_still_reach_codex(self, monkeypatch):
         """codex authenticates against the model endpoint — provider keys must

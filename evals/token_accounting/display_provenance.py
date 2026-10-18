@@ -32,7 +32,7 @@ def child(out: Path) -> None:
     runner.session_store = SessionStore(Path(os.environ["SCOUT_HOME"]) / "sessions", runner.config)
     runner._session_db = None
     runner.adapters = {}
-    source = SessionSource(platform=Platform.TELEGRAM, user_id="fixture", chat_id="fixture", chat_type="dm")
+    source = SessionSource(platform=Platform.API_SERVER, user_id="fixture", chat_id="fixture", chat_type="dm")
     entry = runner.session_store.get_or_create_session(source)
 
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer

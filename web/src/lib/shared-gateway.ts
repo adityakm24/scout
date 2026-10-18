@@ -26,10 +26,10 @@ export function sharedGatewayRestartedMessage(count: number): string {
 
 /** Raw `gateway_state` values (gateway/status.py) → what they mean for the user. */
 const GATEWAY_STATE_COPY: Record<string, string> = {
-  running: "Running — messaging channels are online",
+  running: "Running — cron, webhooks and the HTTP API are online",
   starting: "Starting up",
-  degraded: "Running with some channels offline — see Logs",
-  stopped: "Stopped — messaging channels are offline",
+  degraded: "Running with some platforms offline — see Logs",
+  stopped: "Stopped — cron, webhooks and the HTTP API are offline",
   startup_failed: "Failed to start — see Logs",
 };
 

@@ -12,37 +12,13 @@ For each platform:
 """
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
-import pytest
 
-from gateway.config import Platform, PlatformConfig
 
 
 # ---------------------------------------------------------------------------
 # Telegram
 # ---------------------------------------------------------------------------
-
-def _make_telegram_adapter(*, allowed_chats=None, require_mention=None, guest_mode=False):
-    from plugins.platforms.telegram.adapter import TelegramAdapter
-
-    extra = {"guest_mode": guest_mode}
-    if allowed_chats is not None:
-        extra["allowed_chats"] = allowed_chats
-    if require_mention is not None:
-        extra["require_mention"] = require_mention
-
-    adapter = object.__new__(TelegramAdapter)
-    adapter.platform = Platform.TELEGRAM
-    adapter.config = PlatformConfig(enabled=True, token="***", extra=extra)
-    adapter._bot = SimpleNamespace(id=999, username="scout_bot")
-    adapter._message_handler = AsyncMock()
-    adapter._mention_patterns = adapter._compile_mention_patterns()
-    # PR db50af910 added a TELEGRAM_ALLOWED_USERS allowlist gate to
-    # _should_process_message; stub it for tests that exercise the
-    # allowed-channels widening logic that runs after.
-    adapter._is_callback_user_authorized = lambda *_a, **_kw: True
-    return adapter
 
 
 def _tg_group_message(chat_id=-100, text="hello"):
@@ -71,81 +47,11 @@ def _tg_dm_message(text="hello"):
     )
 
 
-class TestTelegramAllowedChats:
-    def test_empty_is_no_restriction(self, monkeypatch):
-        monkeypatch.delenv("TELEGRAM_ALLOWED_CHATS", raising=False)
-        adapter = _make_telegram_adapter()
-        assert adapter._telegram_allowed_chats() == set()
-        assert adapter._should_process_message(_tg_group_message(-100)) is True
-
-    def test_list_form(self):
-        adapter = _make_telegram_adapter(allowed_chats=[-100, -200])
-        assert adapter._telegram_allowed_chats() == {"-100", "-200"}
-
-
-    def test_mention_cannot_bypass_whitelist(self):
-        """@mention in a non-allowed chat is still ignored."""
-        adapter = _make_telegram_adapter(allowed_chats=["-100"])
-        msg = _tg_group_message(-999, text="@scout_bot hello")
-        msg.entities = [SimpleNamespace(
-            type="mention", offset=0, length=len("@scout_bot"),
-        )]
-        assert adapter._should_process_message(msg) is False
-
-
-    def test_config_bridge(self, monkeypatch, tmp_path):
-        """slack-style config.yaml → env var bridge works."""
-        from gateway.config import load_gateway_config
-
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        (scout_home / "config.yaml").write_text(
-            "telegram:\n"
-            "  allowed_chats:\n"
-            "    - -100\n"
-            "    - -200\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.setenv("TELEGRAM_ALLOWED_CHATS", "__sentinel__")
-        monkeypatch.delenv("TELEGRAM_ALLOWED_CHATS")
-
-        load_gateway_config()
-
-        import os as _os
-        assert _os.environ["TELEGRAM_ALLOWED_CHATS"] == "-100,-200"
 
 
 # ---------------------------------------------------------------------------
 # DingTalk
 # ---------------------------------------------------------------------------
-
-def _make_dingtalk_adapter(*, allowed_chats=None, require_mention=None):
-    # Import lazily — DingTalk SDK may not be installed.
-    pytest.importorskip("plugins.platforms.dingtalk.adapter", reason="DingTalk adapter not importable")
-    from plugins.platforms.dingtalk.adapter import DingTalkAdapter
-
-    extra = {}
-    if allowed_chats is not None:
-        extra["allowed_chats"] = allowed_chats
-    if require_mention is not None:
-        extra["require_mention"] = require_mention
-
-    adapter = object.__new__(DingTalkAdapter)
-    adapter.platform = Platform.DINGTALK
-    adapter.config = PlatformConfig(enabled=True, extra=extra)
-    return adapter
-
-
-class TestDingTalkAllowedChats:
-    def test_empty_is_no_restriction(self, monkeypatch):
-        monkeypatch.delenv("DINGTALK_ALLOWED_CHATS", raising=False)
-        adapter = _make_dingtalk_adapter()
-        assert adapter._dingtalk_allowed_chats() == set()
-
-    def test_list_form(self):
-        adapter = _make_dingtalk_adapter(allowed_chats=["cidABC", "cidDEF"])
-        assert adapter._dingtalk_allowed_chats() == {"cidABC", "cidDEF"}
 
 
 # ---------------------------------------------------------------------------
@@ -178,30 +84,6 @@ class TestMattermostAllowedChannels:
         assert self._would_process("chan123", allowed_cfg=None, allowed_env="") is True
 
 
-    def test_config_bridge(self, monkeypatch, tmp_path):
-        from gateway.config import load_gateway_config
-
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        (scout_home / "config.yaml").write_text(
-            "mattermost:\n"
-            "  allowed_channels:\n"
-            "    - chanABC\n"
-            "    - chanDEF\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        # Pre-register the key with monkeypatch so teardown cleans it up
-        # even though load_gateway_config mutates os.environ directly
-        # (monkeypatch only restores keys it's touched via setenv/delenv;
-        # delenv on an absent key is a no-op for teardown purposes).
-        monkeypatch.setenv("MATTERMOST_ALLOWED_CHANNELS", "__sentinel__")
-        monkeypatch.delenv("MATTERMOST_ALLOWED_CHANNELS")
-
-        load_gateway_config()
-
-        import os as _os
-        assert _os.environ["MATTERMOST_ALLOWED_CHANNELS"] == "chanABC,chanDEF"
 
 
 # ---------------------------------------------------------------------------

@@ -9,8 +9,8 @@ past that); see the **routing table** at the end and read the area file before e
 
 ## What Scout Is
 
-Scout is a personal AI agent that runs the same agent core across a CLI, a messaging
-gateway (Telegram, Discord, Slack, ~20 platforms), a TUI, and an Electron desktop app. It
+Scout is a personal AI agent that runs the same agent core behind an Electron desktop app, a
+web dashboard and a mobile app (there is no human-facing terminal chat or messaging channel). It
 learns across sessions (memory + skills), delegates to subagents, runs scheduled jobs, and
 drives a real terminal and browser. It is extended primarily through **plugins and skills**,
 not by growing the core.
@@ -36,7 +36,7 @@ Taste-based "out of scope" closes are a human maintainer's call; the sweeper's j
 recognize design intent and *avoid wrongly closing a legitimate contribution*.
 
 Read the balance right: Scout ships a **lot**. Most merges are bug fixes to reported
-behavior, and the product surface (platforms, providers, models, desktop/TUI features)
+behavior, and the product surface (providers, models, desktop/web/mobile features)
 expands aggressively on purpose. The restraint below targets the **core agent + model tool
 schema**, the one place where every addition is paid for on every API call. "Smallest
 footprint" governs *how a capability is wired into the core*, not whether the product may
@@ -46,7 +46,7 @@ grow: expansive at the edges, conservative at the waist.
 
 - **Fix real bugs, well.** Reproduce the symptom on current `main`, point to the exact line
   where it manifests, and fix the whole bug class — sibling call paths included.
-- **Expand reach at the edges.** New adapters, channels, providers, models, desktop/TUI/
+- **Expand reach at the edges.** New providers, models, integrations, desktop/web/mobile/
   dashboard features land routinely, including large ones — as long as they integrate with
   the existing setup/config UX (`scout tools`, `scout setup`, auto-install) rather than
   bolting on a raw env var.
@@ -168,7 +168,7 @@ is "inside the Scout desktop app". The pattern:
   (`tools/registry.py`); a per-session answer does not belong there.
 - **Ask which identity you mean.** `SCOUT_DESKTOP=1` legitimately means "this backend was
   spawned by the app" (cron ticker, web-dist handling). It does NOT mean "a GUI is watching";
-  the embedded terminal pane (`scout --tui` against that backend) is the counterexample.
+  a headless `scout chat -q` run against that backend is the counterexample.
 
 Test: if the capability still makes sense with the client on another machine, it is
 session-scoped. Assert the GUI session gets the tool **with the env var absent**.
@@ -210,8 +210,7 @@ scout-agent/
 │   └── builtin_hooks/    # Always-registered gateway hooks (extension point; none shipped)
 ├── plugins/              # memory/, context_engine/, model-providers/, kanban/, image_gen/, ...
 ├── skills/               # Built-in skills (by category)   optional-skills/: shipped, not active
-├── ui-tui/               # Ink (React) terminal UI — `scout --tui`
-├── tui_gateway/          # Python JSON-RPC backend for TUI + Desktop — server.py + methods_*.py
+├── tui_gateway/          # Python JSON-RPC backend for the Desktop app — server.py + methods_*.py
 ├── apps/desktop/         # Electron desktop app (+ apps/shared JSON-RPC client)   web/: dashboard SPA
 ├── acp_adapter/          # ACP server (VS Code / Zed / JetBrains)
 ├── cron/                 # jobs.py + scheduler.py (+ scheduler_*.py)
@@ -300,7 +299,7 @@ families: `scout_state.py` (21), `gateway/run.py` (15), `tools/mcp_tool.py` (15)
 - **Don't wire in dead code without E2E validation.** Unshipped code was dead for a reason;
   E2E the real resolution chain with real imports against a temp `SCOUT_HOME` first.
 
-### TypeScript style (desktop, TUI, website, future TS packages)
+### TypeScript style (desktop, web, mobile, future TS packages)
 
 Small nanostores over component state when state is shared or read by distant UI; each
 feature owns its atoms (chat near chat, shared in `src/store`); rendering components use
@@ -498,8 +497,8 @@ extract, not to regex around it.
 | `gateway/` | `gateway/AGENTS.md` | Adapters, two message guards, streaming contract, background notifications, gateway vs desktop lifecycle, token locks, scoped secrets |
 | `tools/`, `toolsets.py`, `model_tools.py` | `tools/AGENTS.md` | Adding tools, registry, toolsets, delegation, cross-tool references, backends |
 | `plugins/`, `scout_cli/plugins*.py` | `plugins/AGENTS.md` | Plugin kinds, native compat contract, in-tree policy |
-| `tui_gateway/`, `ui-tui/` | `tui_gateway/AGENTS.md` | Process model, JSON-RPC transport, key surfaces, slash flow, dev commands |
-| `web/`, `scout_cli/web_routers/` | `web/AGENTS.md` | Dashboard embeds the real TUI; what React may and may not rebuild |
+| `tui_gateway/` | `tui_gateway/AGENTS.md` | Process model, JSON-RPC transport, key surfaces, slash flow, dev commands |
+| `web/`, `scout_cli/web_routers/` | `web/AGENTS.md` | Dashboard pages and the web routers behind them |
 | `apps/desktop/` | `apps/desktop/AGENTS.md`, `apps/desktop/src/AGENTS.md` | Desktop judgment guide; `serve` backend, slash palette curation, Bot Mode canonical chat |
 | `skills/`, `optional-skills/`, `agent/curator*.py` | `skills/AGENTS.md` | Frontmatter, HARDLINE authoring standards, curator |
 | `cron/`, kanban (`scout_cli/kanban*.py`, `tools/kanban_tools.py`, `plugins/kanban/`) | `cron/AGENTS.md` | Scheduler invariants, job fields, kanban board/dispatcher |

@@ -31,7 +31,7 @@ UID = "8693894969"
 def _source(profile=None):
     """Telegram DM shape: chat_id == user_id, thread_id None — same for every bot."""
     return SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_id=UID,
         chat_type="dm",
         user_id=UID,

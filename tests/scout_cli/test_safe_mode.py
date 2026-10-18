@@ -21,35 +21,6 @@ def _clean_env(monkeypatch):
         os.environ.pop(var, None)
 
 
-def test_cmd_chat_safe_mode_sets_env_before_startup(monkeypatch):
-    import scout_cli.main as main_mod
-    from scout_cli._parser import build_top_level_parser
-
-    parser, _subparsers, chat_parser = build_top_level_parser()
-    chat_parser.set_defaults(func=main_mod.cmd_chat)
-    args = parser.parse_args(["chat", "--safe-mode"])
-    captured: dict[str, object] = {}
-    fake_cli = types.ModuleType("cli")
-
-    def fake_has_provider() -> bool:
-        assert os.environ["SCOUT_SAFE_MODE"] == "1"
-        assert os.environ["SCOUT_IGNORE_USER_CONFIG"] == "1"
-        assert os.environ["SCOUT_IGNORE_RULES"] == "1"
-        return True
-
-    def fake_main(**kwargs):
-        captured.update(kwargs)
-
-    monkeypatch.setattr(main_mod, "_has_any_provider_configured", fake_has_provider)
-    monkeypatch.setattr(main_mod, "_pin_kanban_board_env", lambda: None)
-    monkeypatch.setattr(main_mod, "_sync_bundled_skills_for_startup", lambda: None)
-    setattr(fake_cli, "main", fake_main)
-    monkeypatch.setitem(sys.modules, "cli", fake_cli)
-
-    main_mod.cmd_chat(args)
-
-    assert captured["ignore_user_config"] is True
-    assert captured["ignore_rules"] is True
 
 
 

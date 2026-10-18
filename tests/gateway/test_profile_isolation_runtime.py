@@ -14,7 +14,6 @@ profile's path is used.  They are the productionized form of the manual smoke
 probes used to confirm the bug class.
 """
 
-import os
 from pathlib import Path
 
 import pytest
@@ -79,7 +78,6 @@ class TestSkillsHubPathResolution:
         assert b_index == prof_b / "skills" / ".hub" / "index-cache"
 
 
-
 class TestGatewayCacheDirResolution:
     """gateway/platforms/base.py cache getters must follow the active profile."""
 
@@ -93,22 +91,6 @@ class TestGatewayCacheDirResolution:
         assert str(a_seen).startswith(str(prof_a))
         assert str(b_seen).startswith(str(prof_b))
         assert a_seen != b_seen
-
-
-
-
-class TestRichSentStorePathResolution:
-    """gateway/rich_sent_store.py must honor the override, not read os.environ."""
-
-    def test_store_path_follows_override(self, two_profiles, monkeypatch):
-        prof_a, prof_b = two_profiles
-        # Ensure no ambient SCOUT_HOME env masks the test.
-        monkeypatch.delenv("SCOUT_HOME", raising=False)
-        import gateway.rich_sent_store as rss
-
-        b_seen = _under_override(prof_b, lambda: rss._store_path())
-        assert b_seen.startswith(str(prof_b))
-        assert b_seen.endswith(os.path.join("state", "rich_sent_index.json"))
 
 
 class TestGatewayHooksDirResolution:
@@ -181,30 +163,12 @@ class TestCheckpointManagerPathResolution:
         assert b_seen == prof_b / "checkpoints" / "store"
 
 
-class TestStickerCachePathResolution:
-    """gateway/sticker_cache.py's cache file must honor the active profile —
-    otherwise one profile's Telegram sticker-description cache leaks into a
-    different profile's under the multiplexed gateway."""
-
-    def test_cache_path_follows_override(self, two_profiles):
-        prof_a, prof_b = two_profiles
-        import gateway.sticker_cache as sc
-
-        a_seen = _under_override(prof_a, lambda: sc._resolve_cache_path())
-        b_seen = _under_override(prof_b, lambda: sc._resolve_cache_path())
-
-        assert a_seen == prof_a / "sticker_cache.json"
-        assert b_seen == prof_b / "sticker_cache.json"
-        assert a_seen != b_seen
-
-
 # ---------------------------------------------------------------------------
 # M2 — thread / executor context propagation
 # ---------------------------------------------------------------------------
 
 class TestThreadContextPropagation:
     """Worker threads must inherit the spawning turn's profile override."""
-
 
 
     def test_run_async_worker_preserves_override(self, two_profiles):

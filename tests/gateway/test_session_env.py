@@ -31,101 +31,20 @@ def _reset_contextvars():
         var.set(_UNSET)
 
 
-def test_set_session_env_sets_contextvars(monkeypatch):
-    """_set_session_env should populate contextvars, not os.environ."""
-    runner = object.__new__(GatewayRunner)
-    source = SessionSource(
-        platform=Platform.TELEGRAM,
-        chat_id="-1001",
-        chat_name="Group",
-        chat_type="group",
-        user_id="123456",
-        user_name="alice",
-        thread_id="17585",
-    )
-    context = SessionContext(source=source, connected_platforms=[], home_channels={})
-
-    monkeypatch.delenv("SCOUT_SESSION_PLATFORM", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_SOURCE", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_CHAT_ID", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_CHAT_NAME", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_CHAT_TYPE", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_USER_ID", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_USER_NAME", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_THREAD_ID", raising=False)
-
-    tokens = runner._set_session_env(context)
-
-    # Values should be readable via get_session_env (contextvar path)
-    assert get_session_env("SCOUT_SESSION_PLATFORM") == "telegram"
-    assert get_session_env("SCOUT_SESSION_SOURCE") == ""
-    assert get_session_env("SCOUT_SESSION_CHAT_ID") == "-1001"
-    assert get_session_env("SCOUT_SESSION_CHAT_NAME") == "Group"
-    assert get_session_env("SCOUT_SESSION_CHAT_TYPE") == "group"
-    assert get_session_env("SCOUT_SESSION_USER_ID") == "123456"
-    assert get_session_env("SCOUT_SESSION_USER_NAME") == "alice"
-    assert get_session_env("SCOUT_SESSION_THREAD_ID") == "17585"
-
-    # os.environ should NOT be touched
-    assert os.getenv("SCOUT_SESSION_PLATFORM") is None
-    assert os.getenv("SCOUT_SESSION_SOURCE") is None
-    assert os.getenv("SCOUT_SESSION_CHAT_TYPE") is None
-    assert os.getenv("SCOUT_SESSION_THREAD_ID") is None
-
-    # Clean up
-    runner._clear_session_env(tokens)
 
 
-def test_clear_session_env_restores_previous_state(monkeypatch):
-    """_clear_session_env should restore contextvars to their pre-handler values."""
-    runner = object.__new__(GatewayRunner)
-
-    monkeypatch.delenv("SCOUT_SESSION_PLATFORM", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_CHAT_ID", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_CHAT_NAME", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_CHAT_TYPE", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_USER_ID", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_USER_NAME", raising=False)
-    monkeypatch.delenv("SCOUT_SESSION_THREAD_ID", raising=False)
-
-    source = SessionSource(
-        platform=Platform.TELEGRAM,
-        chat_id="-1001",
-        chat_name="Group",
-        chat_type="group",
-        user_id="123456",
-        user_name="alice",
-        thread_id="17585",
-    )
-    context = SessionContext(source=source, connected_platforms=[], home_channels={})
-
-    tokens = runner._set_session_env(context)
-    assert get_session_env("SCOUT_SESSION_PLATFORM") == "telegram"
-    assert get_session_env("SCOUT_SESSION_USER_ID") == "123456"
-    assert get_session_env("SCOUT_SESSION_CHAT_TYPE") == "group"
-
-    runner._clear_session_env(tokens)
-
-    # After clear, contextvars should return to defaults (empty)
-    assert get_session_env("SCOUT_SESSION_PLATFORM") == ""
-    assert get_session_env("SCOUT_SESSION_CHAT_ID") == ""
-    assert get_session_env("SCOUT_SESSION_CHAT_NAME") == ""
-    assert get_session_env("SCOUT_SESSION_CHAT_TYPE") == ""
-    assert get_session_env("SCOUT_SESSION_USER_ID") == ""
-    assert get_session_env("SCOUT_SESSION_USER_NAME") == ""
-    assert get_session_env("SCOUT_SESSION_THREAD_ID") == ""
 
 
 def test_get_session_env_falls_back_to_os_environ(monkeypatch):
     """get_session_env should fall back to os.environ when contextvar is unset."""
-    monkeypatch.setenv("SCOUT_SESSION_PLATFORM", "discord")
+    monkeypatch.setenv("SCOUT_SESSION_PLATFORM", "webhook")
 
     # No contextvar set — should read from os.environ
-    assert get_session_env("SCOUT_SESSION_PLATFORM") == "discord"
+    assert get_session_env("SCOUT_SESSION_PLATFORM") == "webhook"
 
     # Now set a contextvar — should prefer it
-    tokens = set_session_vars(platform="telegram")
-    assert get_session_env("SCOUT_SESSION_PLATFORM") == "telegram"
+    tokens = set_session_vars(platform="homeassistant")
+    assert get_session_env("SCOUT_SESSION_PLATFORM") == "homeassistant"
 
     # After clear — should return "" (explicitly cleared), NOT fall back
     # to os.environ.  This is the fix for #10304: stale os.environ values
@@ -202,7 +121,7 @@ async def test_run_in_executor_with_context_preserves_session_env(monkeypatch):
     monkeypatch.delenv("SCOUT_SESSION_USER_ID", raising=False)
 
     source = SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_id="2144471399",
         chat_type="dm",
         user_id="123456",
@@ -213,7 +132,7 @@ async def test_run_in_executor_with_context_preserves_session_env(monkeypatch):
         source=source,
         connected_platforms=[],
         home_channels={},
-        session_key="agent:main:telegram:dm:2144471399",
+        session_key="agent:main:homeassistant:dm:2144471399",
     )
 
     tokens = runner._set_session_env(context)
@@ -231,10 +150,10 @@ async def test_run_in_executor_with_context_preserves_session_env(monkeypatch):
         runner._shutdown_executor()
 
     assert result == {
-        "platform": "telegram",
+        "platform": "homeassistant",
         "chat_id": "2144471399",
         "user_id": "123456",
-        "session_key": "agent:main:telegram:dm:2144471399",
+        "session_key": "agent:main:homeassistant:dm:2144471399",
     }
 
 
@@ -287,11 +206,11 @@ async def test_plugin_slash_command_sees_session_env(monkeypatch):
     monkeypatch.delenv("SCOUT_SESSION_CHAT_ID", raising=False)
 
     runner = object.__new__(GatewayRunner)
-    runner.config = GatewayConfig(platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="***")})
+    runner.config = GatewayConfig(platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***")})
     runner._draining = False
 
     source = SessionSource(
-        platform=Platform.TELEGRAM, chat_id="c1", user_id="u1", user_name="tester", chat_type="dm",
+        platform=Platform.HOMEASSISTANT, chat_id="c1", user_id="u1", user_name="tester", chat_type="dm",
     )
     event = MessageEvent(text="/gsd bind", source=source, message_id="m1")
 

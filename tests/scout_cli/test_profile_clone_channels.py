@@ -34,11 +34,11 @@ _SOURCE_ENV = (
 _SOURCE_CONFIG = {
     "model": {"default": "gpt-5", "provider": "openai"},
     "memory": {"provider": "builtin"},
-    "platforms": {"telegram": {"enabled": True, "token": "111111:default-telegram-token"},
-                  "discord": {"enabled": True}},
-    "telegram": {"reactions": True, "allowed_chats": "-100999"},
-    "discord": {"require_mention": False, "dm_role_auth_guild": "42"},
-    "gateway": {"multiplex_profiles": True, "profile_routes": [{"profile": "x", "platform": "telegram"}],
+    "platforms": {"homeassistant": {"enabled": True, "token": "111111:default-telegram-token"},
+                  "homeassistant": {"enabled": True}},
+    "homeassistant": {"reactions": True, "allowed_chats": "-100999"},
+    "homeassistant": {"require_mention": False, "dm_role_auth_guild": "42"},
+    "gateway": {"multiplex_profiles": True, "profile_routes": [{"profile": "x", "platform": "homeassistant"}],
                 "platform_connect_timeout": 45},
 }
 
@@ -67,77 +67,17 @@ def _fingerprints(profile_home: Path) -> set:
         return set(gm._credential_claims(gm._profile_gateway_config(profile_home)))
 
 
-def test_clone_strips_every_channel_credential_but_keeps_model_and_tool_keys(home):
-    source_claims = _fingerprints(home)
-    assert {p for p, _ in source_claims} >= {"telegram", "discord"}
-
-    profile_dir = create_profile("bot2", clone_config=True, no_alias=True)
-
-    assert _fingerprints(profile_dir).isdisjoint(source_claims)
-    assert shared_channel_credentials(profile_dir, home) == []
-    env_text = (profile_dir / ".env").read_text(encoding="utf-8")
-    assert "OPENAI_API_KEY=sk-model-key" in env_text and "FIRECRAWL_API_KEY=fc-tool-key" in env_text
-    assert "TELEGRAM" not in env_text and "DISCORD" not in env_text
-    assert "WHATSAPP_ENABLED" not in env_text and "API_SERVER_KEY" not in env_text
-    cfg = yaml.safe_load((profile_dir / "config.yaml").read_text(encoding="utf-8"))
-    assert cfg["model"] == _SOURCE_CONFIG["model"] and cfg["memory"] == _SOURCE_CONFIG["memory"]
-    assert (profile_dir / "SOUL.md").read_text(encoding="utf-8") == "Be helpful."
-    for section in ("platforms", "telegram", "discord"):
-        assert section not in cfg
-    # The clone must not think it is the host's multiplexer, but unrelated gateway knobs survive.
-    assert "multiplex_profiles" not in cfg["gateway"] and "profile_routes" not in cfg["gateway"]
-    assert cfg["gateway"]["platform_connect_timeout"] == 45
-    # The migrate preflight, which blocked with a duplicate finding per platform, is now clean.
-    plan = gm.build_migration_plan()
-    assert not plan.blocked, plan.blockers
 
 
-def test_clone_channels_opt_in_keeps_the_source_channels(home):
-    profile_dir = create_profile("twin", clone_config=True, no_alias=True, clone_channels=True)
-    assert _fingerprints(profile_dir) == _fingerprints(home)
-    assert set(shared_channel_credentials(profile_dir, home)) >= {"telegram", "discord"}
-    assert set(channel_platforms_configured(profile_dir)) >= {"telegram", "discord", "whatsapp", "api_server"}
-    assert gm.build_migration_plan().blocked
 
 
-def test_clone_all_drops_pairing_and_platform_state(home):
-    (home / "platforms" / "pairing").mkdir(parents=True)
-    (home / "platforms" / "pairing" / "telegram_approved.json").write_text("{}", encoding="utf-8")
-    (home / "discord_threads.json").write_text("{}", encoding="utf-8")
-    (home / "memories").mkdir()
-    (home / "memories" / "MEMORY.md").write_text("remember", encoding="utf-8")
-
-    profile_dir = create_profile("full", clone_all=True, no_alias=True)
-
-    assert not (profile_dir / "platforms").exists() and not (profile_dir / "discord_threads.json").exists()
-    assert (profile_dir / "memories" / "MEMORY.md").read_text(encoding="utf-8") == "remember"
-    assert _fingerprints(profile_dir) == set()
 
 
-def test_strip_env_file_keeps_comments_and_unknown_keys_verbatim(tmp_path):
-    env = tmp_path / ".env"
-    env.write_text("# header\nexport OPENAI_API_KEY=abc\n\nTELEGRAM_BOT_TOKEN=1:x\nMY_CUSTOM_THING=1\n", encoding="utf-8")
-    removed = strip_channel_env_file(env)
-    assert removed == {"telegram": ["TELEGRAM_BOT_TOKEN"]}
-    assert env.read_text(encoding="utf-8") == "# header\nexport OPENAI_API_KEY=abc\n\nMY_CUSTOM_THING=1\n"
 
 
 # --- post-merge review of #109502 (gaoanze888): clone safety + ownership-based inventory ---------
 
 
-def test_clone_all_never_writes_through_a_symlinked_source_env(home, tmp_path):
-    """A source whose ``.env`` is a symlink (shared secrets file) must keep its bot token: the clone
-    materializes the link before stripping instead of editing the target through it."""
-    shared = tmp_path / "shared-secrets.env"
-    shared.write_text(_SOURCE_ENV, encoding="utf-8")
-    (home / ".env").unlink()
-    (home / ".env").symlink_to(shared)
-
-    profile_dir = create_profile("full", clone_all=True, no_alias=True)
-
-    assert shared.read_text(encoding="utf-8") == _SOURCE_ENV
-    assert not (profile_dir / ".env").is_symlink()
-    assert "TELEGRAM_BOT_TOKEN" not in (profile_dir / ".env").read_text(encoding="utf-8")
 
 
 def test_clone_is_published_atomically_after_stripping(home, monkeypatch):
@@ -186,27 +126,5 @@ _SHARED_ENV = (
 )
 
 
-def test_ownership_inventory_strips_policy_relay_and_aliases_but_keeps_tool_credentials(home):
-    """Gateway-wide policy, relay identity and alias-prefixed keys are channel settings. HASS/TWILIO/EMAIL
-    credentials are shared with tools: they leave with the channel only when the source's gateway would
-    run that adapter (email here — complete creds, not disabled); an explicitly disabled channel means
-    the key is a tool credential and stays. Its policy keys (allowlists, ports) go regardless."""
-    (home / ".env").write_text(_SHARED_ENV, encoding="utf-8")
-    (home / "config.yaml").write_text(
-        yaml.safe_dump({"model": {"default": "gpt-5", "provider": "openai"},
-                        "platforms": {"homeassistant": {"enabled": False}, "sms": {"enabled": False}}}),
-        encoding="utf-8")
-
-    profile_dir = create_profile("bot3", clone_config=True, no_alias=True)
-
-    keys = {line.split("=", 1)[0] for line in (profile_dir / ".env").read_text(encoding="utf-8").splitlines()
-            if "=" in line and not line.startswith("#")}
-    assert keys == {"OPENAI_API_KEY", "HASS_TOKEN", "HASS_URL",
-                    "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER"}
 
 
-def test_clone_all_drops_directory_shaped_channel_state(home):
-    (home / "google_chat_user_tokens").mkdir()
-    (home / "google_chat_user_tokens" / "u@x.json").write_text("{}", encoding="utf-8")
-    profile_dir = create_profile("full", clone_all=True, no_alias=True)
-    assert not (profile_dir / "google_chat_user_tokens").exists()

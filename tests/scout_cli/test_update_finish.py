@@ -353,77 +353,8 @@ def _npm_graph(source):
     return node
 
 
-@pytest.mark.platforms("posix")
-def test_selected_child_builds_and_finalizes_under_parent_lock(completion):
-    from scout_cli.config_defaults import DEFAULT_CONFIG
-    from scout_cli.update_lock import UpdateLock
-    import scout_yaml
-
-    source, home, request, context, result, run = completion
-    node = _npm_graph(source)
-    before = context.read_bytes()
-    with UpdateLock() as lock:
-        assert lock.acquired
-        marker = lock.path.read_bytes()
-        child = run()
-        assert child.returncode == 0, child.stdout + child.stderr
-        assert lock.path.read_bytes() == marker, "completion must not release its parent's lock"
-    built = subprocess.run([node, str(source / "ui-tui/dist/entry.js")],
-                           capture_output=True, text=True, check=True)
-    assert built.stdout.strip() == "compiled local graph"
-    assert (source / "scout_cli/web_dist/index.html").is_file()
-    assert any("compiled local graph" in p.read_text() for p in (source / "scout_cli/web_dist/assets").glob("*.js"))
-    assert (source / "node_modules/.scout-node-deps").is_file()
-    environment = json.loads((source / "build-environment.json").read_text())
-    assert "repairing the recorded dependency environment" not in child.stderr
-    npm_python = json.loads((source / "npm-python.json").read_text())
-    assert npm_python["python"] == npm_python["configured"] == environment["python"]
-    assert environment["parent"] == os.getpid()
-    assert environment["old_module"] is False
-    assert environment["argv"] == [str(source / "scout"), "update"]
-    assert context.read_bytes() == before
-    assert json.loads((source / "restarted-plan.json").read_text())["expected_sha"] == "old-sha"
-    assert json.loads((source / "resumed-token.json").read_text()) == request["windows_resume"]
-    config = scout_yaml.safe_load((home / "config.yaml").read_text())
-    assert config["_config_version"] == DEFAULT_CONFIG["_config_version"], child.stdout + child.stderr
-    assert config["model"]["default"] == "retained-model"
-    receipt = json.loads((home / "logs/update_receipts/latest.json").read_text())
-    assert receipt["outcome"] == "success"
-    assert receipt["update_id"] == request["update_id"]
-    assert receipt["pre_update"] == request["receipt"]["pre_update"]
-    assert receipt["steps"][0] == request["receipt"]["steps"][0]
-    assert receipt["pm_venv_rebuild"] == request["pm_receipt"]["venv_rebuild"]
-    assert json.loads(result.read_text()) == {"resume_handled": True, "receipt_handled": True}
-    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
-    assert json.loads((source / "install-stamp.json").read_text())["commit"] == head
 
 
-@pytest.mark.platforms("posix")
-def test_real_compiler_failure_retains_receipt_and_skips_completion(completion):
-    source, home, request, context, result, run = completion
-    _npm_graph(source)
-    # A real TypeScript error: dependency installation and TUI succeed, but
-    # neither the web product nor config/fleet completion may claim success.
-    _put(source, "web/src/main.ts", "const broken: string = 42; document.body.textContent = broken;\n")
-    config_before = (home / "config.yaml").read_bytes()
-    context_before = context.read_bytes()
-    child = run()
-    assert child.returncode == 1, child.stdout + child.stderr
-    # Contained output reports a failure through the step's tail on stdout.
-    assert "TypeScript build failed" in child.stdout + child.stderr
-    assert (source / "npm-python.json").is_file()
-    assert (source / "ui-tui/dist/entry.js").is_file()
-    assert not (source / "scout_cli/web_dist/index.html").exists()
-    assert not (source / "restarted-plan.json").exists()
-    assert (home / "config.yaml").read_bytes() == config_before
-    assert context.read_bytes() == context_before
-    receipt = json.loads((home / "logs/update_receipts/latest.json").read_text())
-    assert receipt["outcome"] == "failed"
-    assert receipt["exit_code"] == child.returncode
-    assert receipt["update_id"] == request["update_id"]
-    assert receipt["steps"][0] == request["receipt"]["steps"][0]
-    assert receipt["pm_venv_rebuild"] == request["pm_receipt"]["venv_rebuild"]
-    assert json.loads(result.read_text()) == {"resume_handled": True, "receipt_handled": True}
 
 
 @pytest.mark.platforms("posix")

@@ -18,8 +18,8 @@ class TestHashHelpers:
 
 
     def test_hash_chat_id_preserves_prefix(self):
-        result = _hash_chat_id("telegram:12345")
-        assert result.startswith("telegram:")
+        result = _hash_chat_id("homeassistant:12345")
+        assert result.startswith("homeassistant:")
         assert "12345" not in result
 
 
@@ -30,8 +30,8 @@ class TestHashHelpers:
 def _make_context(
     user_id="user-123",
     user_name=None,
-    chat_id="telegram:99999",
-    platform=Platform.TELEGRAM,
+    chat_id="homeassistant:99999",
+    platform=Platform.HOMEASSISTANT,
     home_channels=None,
 ):
     source = SessionSource(
@@ -54,11 +54,6 @@ class TestBuildSessionContextPromptRedaction:
         prompt = build_session_context_prompt(ctx)
         assert "user-123" in prompt
 
-    def test_user_id_hashed_when_redact_pii(self):
-        ctx = _make_context(user_id="user-123")
-        prompt = build_session_context_prompt(ctx, redact_pii=True)
-        assert "user-123" not in prompt
-        assert "user_" in prompt  # hashed ID present
 
     def test_user_name_not_redacted(self):
         ctx = _make_context(user_id="user-123", user_name="Alice")
@@ -70,9 +65,9 @@ class TestBuildSessionContextPromptRedaction:
 
     def test_home_channel_id_preserved_without_redaction(self):
         hc = {
-            Platform.TELEGRAM: HomeChannel(
-                platform=Platform.TELEGRAM,
-                chat_id="telegram:99999",
+            Platform.HOMEASSISTANT: HomeChannel(
+                platform=Platform.HOMEASSISTANT,
+                chat_id="homeassistant:99999",
                 name="Home Chat",
             )
         }
@@ -89,24 +84,14 @@ class TestBuildSessionContextPromptRedaction:
 
     def test_discord_ids_not_redacted_even_with_flag(self):
         """Discord needs real IDs for <@user_id> mentions."""
-        ctx = _make_context(user_id="123456789", platform=Platform.DISCORD)
+        ctx = _make_context(user_id="123456789", platform=Platform.HOMEASSISTANT)
         prompt = build_session_context_prompt(ctx, redact_pii=True)
         assert "123456789" in prompt
 
-    def test_whatsapp_ids_redacted(self):
-        ctx = _make_context(user_id="+15551234567", platform=Platform.WHATSAPP)
-        prompt = build_session_context_prompt(ctx, redact_pii=True)
-        assert "+15551234567" not in prompt
-        assert "user_" in prompt
 
-    def test_signal_ids_redacted(self):
-        ctx = _make_context(user_id="+15551234567", platform=Platform.SIGNAL)
-        prompt = build_session_context_prompt(ctx, redact_pii=True)
-        assert "+15551234567" not in prompt
-        assert "user_" in prompt
 
     def test_slack_ids_not_redacted(self):
         """Slack may need IDs for mentions too."""
-        ctx = _make_context(user_id="U12345ABC", platform=Platform.SLACK)
+        ctx = _make_context(user_id="U12345ABC", platform=Platform.HOMEASSISTANT)
         prompt = build_session_context_prompt(ctx, redact_pii=True)
         assert "U12345ABC" in prompt

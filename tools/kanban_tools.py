@@ -1107,7 +1107,6 @@ def _resolve_notify_target() -> Optional[dict[str, Any]]:
         platform, chat_id = "tui", session_key
     chat_type = env("SCOUT_SESSION_CHAT_TYPE", "") or None
     thread_id = env("SCOUT_SESSION_THREAD_ID", "") or None
-    message_id = env("SCOUT_SESSION_MESSAGE_ID", "") or ""
     notifier_profile = env("SCOUT_SESSION_PROFILE", "")
     if not notifier_profile:
         from scout_cli.profiles import current_profile_name
@@ -1118,13 +1117,6 @@ def _resolve_notify_target() -> Optional[dict[str, Any]]:
             ("scope_id", env("SCOUT_SESSION_SCOPE_ID", "")),
             ("parent_chat_id", env("SCOUT_SESSION_PARENT_CHAT_ID", "")),
         ) if v}
-    if (platform.lower() == "telegram" and thread_id
-            and (chat_type or "").lower() in {"dm", "direct", "private"}):
-        delivery_metadata["telegram_dm_topic_reply_fallback"] = True
-        if str(thread_id) not in {"", "1"}:
-            delivery_metadata["direct_messages_topic_id"] = str(thread_id)
-        if message_id:
-            delivery_metadata["telegram_reply_to_message_id"] = str(message_id)
     return dict(
         platform=platform, chat_id=chat_id, chat_type=chat_type, thread_id=thread_id,
         user_id=env("SCOUT_SESSION_USER_ID", "") or None,

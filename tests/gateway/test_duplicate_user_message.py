@@ -62,7 +62,7 @@ def _bootstrap(monkeypatch, tmp_path):
         session_id="sess-dedup",
         created_at=datetime.now(),
         updated_at=datetime.now(),
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_type="group",
     )
     runner.session_store.load_transcript.return_value = []
@@ -89,7 +89,7 @@ def _event():
     return MessageEvent(
         text="hello world",
         source=SessionSource(
-            platform=Platform.TELEGRAM,
+            platform=Platform.HOMEASSISTANT,
             chat_id="-1001",
             chat_type="group",
             user_id="12345",
@@ -100,7 +100,7 @@ def _event():
 
 def _source():
     return SessionSource(
-        platform=Platform.TELEGRAM,
+        platform=Platform.HOMEASSISTANT,
         chat_id="-1001",
         chat_type="group",
         user_id="12345",

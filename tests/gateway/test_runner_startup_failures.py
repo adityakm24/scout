@@ -46,7 +46,7 @@ def test_is_global_startup_conflict_matches_lock_code_families(code, expected):
 
 class _RetryableFailureAdapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="***"), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True, token="***"), Platform.HOMEASSISTANT)
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         self._set_fatal_error(
@@ -68,7 +68,7 @@ class _RetryableFailureAdapter(BasePlatformAdapter):
 
 class _DisabledAdapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=False, token="***"), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=False, token="***"), Platform.HOMEASSISTANT)
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         raise AssertionError("connect should not be called for disabled platforms")
@@ -85,7 +85,7 @@ class _DisabledAdapter(BasePlatformAdapter):
 
 class _SuccessfulAdapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="***"), Platform.DISCORD)
+        super().__init__(PlatformConfig(enabled=True, token="***"), Platform.WEBHOOK)
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         return True
@@ -364,8 +364,8 @@ async def test_runner_degrades_gracefully_when_all_adapters_missing(monkeypatch,
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     config = GatewayConfig(
         platforms={
-            Platform.TELEGRAM: PlatformConfig(enabled=True, token="***"),
-            Platform.DISCORD: PlatformConfig(enabled=True, token="***"),
+            Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="***"),
+            Platform.WEBHOOK: PlatformConfig(enabled=True, token="***"),
         },
         sessions_dir=tmp_path / "sessions",
     )
@@ -396,7 +396,7 @@ async def test_runner_degrades_gracefully_when_all_adapters_missing(monkeypatch,
 class _NonRetryableFailureAdapter(BasePlatformAdapter):
     """Simulates a fatal config error like token collision."""
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="***"), Platform.DISCORD)
+        super().__init__(PlatformConfig(enabled=True, token="***"), Platform.WEBHOOK)
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         self._set_fatal_error(
@@ -424,7 +424,7 @@ async def test_runner_exits_with_ex_config_on_nonretryable_startup_error(monkeyp
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     config = GatewayConfig(
         platforms={
-            Platform.DISCORD: PlatformConfig(enabled=True, token="***")
+            Platform.WEBHOOK: PlatformConfig(enabled=True, token="***")
         },
         sessions_dir=tmp_path / "sessions",
     )
@@ -487,7 +487,7 @@ class _ForeignTokenLockAdapter(BasePlatformAdapter):
     ``retryable=True`` (so a mid-run reconnect can recover, #54167)."""
 
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="***"), Platform.TELEGRAM)
+        super().__init__(PlatformConfig(enabled=True, token="***"), Platform.HOMEASSISTANT)
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         return self._acquire_platform_lock(
@@ -505,90 +505,5 @@ class _ForeignTokenLockAdapter(BasePlatformAdapter):
         return {"id": chat_id}
 
 
-@pytest.mark.asyncio
-async def test_live_foreign_token_lock_at_startup_exits_ex_config(monkeypatch, tmp_path):
-    """Salvage of #83183 claim 1: a LIVE foreign holder of the bot token at
-    zero-connected startup is a single-writer conflict, not a transient blip.
-
-    ``_acquire_platform_lock`` deliberately emits the conflict retryable so a
-    *mid-run* reconnect can recover once the holder exits.  The startup router
-    used to key solely off that flag, so the gateway stayed alive, deaf, and
-    retry-queued forever instead of exiting 78 (EX_CONFIG)."""
-    monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
-    monkeypatch.setenv("SCOUT_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
-    # A live foreign holder: acquire_scoped_lock reports (False, record).
-    monkeypatch.setattr(
-        "gateway.status.acquire_scoped_lock",
-        lambda scope, identity, metadata=None: (
-            False,
-            {"pid": 424242, "start_time": 1, "scout_home": "/other/home", "profile": "other"},
-        ),
-    )
-    config = GatewayConfig(
-        platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="***")},
-        sessions_dir=tmp_path / "sessions",
-    )
-    runner = GatewayRunner(config)
-    monkeypatch.setattr(
-        runner, "_create_adapter", lambda platform, platform_config: _ForeignTokenLockAdapter()
-    )
-
-    ok = await runner.start()
-
-    assert ok is True
-    assert runner.should_exit_cleanly is True
-    assert runner.exit_code == GATEWAY_FATAL_CONFIG_EXIT_CODE
-    assert runner._failed_platforms == {}
-    state = read_runtime_status()
-    assert state["gateway_state"] == "startup_failed"
-    assert state["platforms"]["telegram"]["state"] == "fatal"
-    assert state["platforms"]["telegram"]["error_code"] == "telegram-bot-token_lock"
 
 
-@pytest.mark.asyncio
-async def test_token_lock_plus_retryable_peer_stays_alive(monkeypatch, tmp_path):
-    """A lock conflict alongside a genuinely transient peer failure is the
-    NS-609 mixed mode: the lock is parked fatal, the peer keeps its retry, and
-    the gateway stays alive (no exit 78)."""
-    monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
-    monkeypatch.setenv("SCOUT_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
-    monkeypatch.setattr(
-        "gateway.status.acquire_scoped_lock",
-        lambda scope, identity, metadata=None: (False, {"pid": 424242, "start_time": 1}),
-    )
-    config = GatewayConfig(
-        platforms={
-            Platform.TELEGRAM: PlatformConfig(enabled=True, token="***"),
-            Platform.DISCORD: PlatformConfig(enabled=True, token="***"),
-        },
-        sessions_dir=tmp_path / "sessions",
-    )
-    runner = GatewayRunner(config)
-
-    class _DiscordBlip(_RetryableFailureAdapter):
-        def __init__(self):
-            BasePlatformAdapter.__init__(
-                self, PlatformConfig(enabled=True, token="***"), Platform.DISCORD
-            )
-
-    monkeypatch.setattr(
-        runner,
-        "_create_adapter",
-        lambda platform, cfg: (
-            _ForeignTokenLockAdapter() if platform is Platform.TELEGRAM else _DiscordBlip()
-        ),
-    )
-
-    ok = await runner.start()
-    try:
-        assert ok is True
-        assert runner.should_exit_cleanly is False
-        assert runner.exit_code is None
-        assert set(runner._failed_platforms) == {Platform.DISCORD}
-        state = read_runtime_status()
-        # Alive, but Telegram is parked fatal: a serving-with-a-parked-platform boot is degraded.
-        assert state["gateway_state"] == "degraded"
-        assert state["platforms"]["telegram"]["state"] == "fatal"
-        assert state["platforms"]["discord"]["state"] == "retrying"
-    finally:
-        await runner.stop()

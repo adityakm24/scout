@@ -17,7 +17,7 @@ from gateway.session import SessionEntry, SessionSource, build_session_key
 
 class CaptureSlackAdapter(BasePlatformAdapter):
     def __init__(self):
-        super().__init__(PlatformConfig(enabled=True, token="fake-token"), Platform.SLACK)
+        super().__init__(PlatformConfig(enabled=True, token="fake-token"), Platform.HOMEASSISTANT)
         self.sent = []
         self.processing_hooks = []
 
@@ -76,9 +76,9 @@ def _make_incomplete_result() -> dict:
 def _make_runner(adapter: CaptureSlackAdapter) -> gateway_run.GatewayRunner:
     runner = object.__new__(gateway_run.GatewayRunner)
     runner.config = GatewayConfig(
-        platforms={Platform.SLACK: PlatformConfig(enabled=True, token="fake-token")}
+        platforms={Platform.HOMEASSISTANT: PlatformConfig(enabled=True, token="fake-token")}
     )
-    runner.adapters = {Platform.SLACK: adapter}
+    runner.adapters = {Platform.HOMEASSISTANT: adapter}
     runner._voice_mode = {}
     runner.hooks = SimpleNamespace(emit=AsyncMock(), loaded_hooks=False)
     runner.session_store = MagicMock()
@@ -87,7 +87,7 @@ def _make_runner(adapter: CaptureSlackAdapter) -> gateway_run.GatewayRunner:
         session_id="sess-1",
         created_at=datetime.now(),
         updated_at=datetime.now(),
-        platform=Platform.SLACK,
+        platform=Platform.HOMEASSISTANT,
         chat_type="channel",
     )
     runner.session_store.load_transcript.return_value = []
@@ -114,7 +114,7 @@ def _make_event() -> MessageEvent:
     return MessageEvent(
         text="hello",
         source=SessionSource(
-            platform=Platform.SLACK,
+            platform=Platform.HOMEASSISTANT,
             chat_id="C123",
             chat_type="channel",
             thread_id="171717",

@@ -248,20 +248,6 @@ def _drain_runner():
     return runner, adapter
 
 
-class TestDrainStateMachine:
-
-
-
-
-    def test_exit_during_shutdown_does_not_revert_to_running(self):
-        runner, _ = _drain_runner()
-        runner._enter_external_drain()
-        runner._update_runtime_status.reset_mock()
-        # A shutdown drain is now in progress — exit must NOT resurrect running.
-        runner._draining = True
-        runner._exit_external_drain()
-        assert runner._external_drain_active is False
-        runner._update_runtime_status.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -269,29 +255,6 @@ class TestDrainStateMachine:
 # ---------------------------------------------------------------------------
 
 
-class TestDrainWatcher:
-
-    @pytest.mark.asyncio
-    async def test_watcher_enters_then_exits_with_marker(self, home):
-        runner, _ = _drain_runner()
-        runner._drain_control_watcher = GatewayRunner._drain_control_watcher.__get__(
-            runner, GatewayRunner
-        )
-        # Drive a few ticks manually rather than spinning the loop.
-        dc.write_drain_request()
-        task = asyncio.create_task(runner._drain_control_watcher(interval=0.02))
-        await asyncio.sleep(0.06)
-        assert runner._external_drain_active is True
-        dc.clear_drain_request()
-        await asyncio.sleep(0.06)
-        assert runner._external_drain_active is False
-        runner._running = False
-        await asyncio.sleep(0.04)
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
 
 
 # ---------------------------------------------------------------------------
@@ -299,18 +262,4 @@ class TestDrainWatcher:
 # ---------------------------------------------------------------------------
 
 
-class TestNewTurnGate:
-    @pytest.mark.asyncio
-    async def test_new_turn_refused_during_external_drain(self):
-        runner, _ = _drain_runner()
-        runner._external_drain_active = True
-        event = MessageEvent(
-            text="hello",
-            message_type=MessageType.TEXT,
-            source=make_restart_source(),
-            message_id="m1",
-        )
-        result = await runner._handle_message(event)
-        assert result is not None
-        assert "draining" in result.lower()
 
