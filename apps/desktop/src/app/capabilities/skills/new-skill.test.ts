@@ -5,7 +5,11 @@ import { newSkillDocument, newSkillReady, readSkillFile, SKILL_DESCRIPTION_LIMIT
 
 describe('new skill document', () => {
   it('reads back as the name, description and instructions the user typed', () => {
-    const draft = { name: 'standup', description: 'Standup: "yesterday / today" notes.', instructions: 'List blockers first.' }
+    const draft = {
+      name: 'standup',
+      description: 'Standup: "yesterday / today" notes.',
+      instructions: 'List blockers first.'
+    }
     const { body, meta } = parseFrontmatter(newSkillDocument(draft))
     const fields = Object.fromEntries(meta)
 
@@ -22,7 +26,7 @@ describe('new skill document', () => {
     expect(newSkillReady({ ...draft, instructions: '  ' })).toBe(false)
   })
 
-  it('keeps an uploaded SKILL.md\'s other frontmatter and body through a save', () => {
+  it("keeps an uploaded SKILL.md's other frontmatter and body through a save", () => {
     const uploaded = [
       '---',
       'name: trip-planner',
@@ -51,6 +55,10 @@ describe('new skill document', () => {
   })
 
   it('treats a file without frontmatter as all instructions', () => {
-    expect(readSkillFile('Just do the thing.\n')).toEqual({ name: '', description: '', instructions: 'Just do the thing.' })
+    expect(readSkillFile('Just do the thing.\n')).toEqual({
+      name: '',
+      description: '',
+      instructions: 'Just do the thing.'
+    })
   })
 })

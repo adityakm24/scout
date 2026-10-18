@@ -56,7 +56,6 @@
           "exa"
           "fal"
           "firecrawl"
-          "honcho"
           "modal"
           "parallel-web"
           "tts-premium"

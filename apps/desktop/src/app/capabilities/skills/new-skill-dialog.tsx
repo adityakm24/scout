@@ -218,41 +218,41 @@ export function NewSkillDialog({
           </Field>
 
           {(!upload || upload.needsDescription) && (
-          <Field htmlFor="new-skill-description" label={c.description}>
-            <Input
-              aria-invalid={over}
-              id="new-skill-description"
-              onChange={event => setDescription(event.target.value)}
-              placeholder={c.descriptionPlaceholder}
-              value={description}
-            />
-            <div className="flex items-start justify-between gap-3">
-              <FieldHint error={over}>{c.descriptionHint}</FieldHint>
-              <span
-                className={cn(
-                  'shrink-0 text-[0.66rem] tabular-nums',
-                  over ? 'text-destructive' : 'text-muted-foreground'
-                )}
-              >
-                {description.trim().length}/{SKILL_DESCRIPTION_LIMIT}
-              </span>
-            </div>
-          </Field>
+            <Field htmlFor="new-skill-description" label={c.description}>
+              <Input
+                aria-invalid={over}
+                id="new-skill-description"
+                onChange={event => setDescription(event.target.value)}
+                placeholder={c.descriptionPlaceholder}
+                value={description}
+              />
+              <div className="flex items-start justify-between gap-3">
+                <FieldHint error={over}>{c.descriptionHint}</FieldHint>
+                <span
+                  className={cn(
+                    'shrink-0 text-[0.66rem] tabular-nums',
+                    over ? 'text-destructive' : 'text-muted-foreground'
+                  )}
+                >
+                  {description.trim().length}/{SKILL_DESCRIPTION_LIMIT}
+                </span>
+              </div>
+            </Field>
           )}
 
           {!upload && (
-          <Field htmlFor="new-skill-instructions" label={c.instructions}>
-            <Textarea
-              autoCapitalize="sentences"
-              autoCorrect="on"
-              className="min-h-40 resize-y"
-              id="new-skill-instructions"
-              onChange={event => setInstructions(event.target.value)}
-              placeholder={c.instructionsPlaceholder}
-              spellCheck
-              value={instructions}
-            />
-          </Field>
+            <Field htmlFor="new-skill-instructions" label={c.instructions}>
+              <Textarea
+                autoCapitalize="sentences"
+                autoCorrect="on"
+                className="min-h-40 resize-y"
+                id="new-skill-instructions"
+                onChange={event => setInstructions(event.target.value)}
+                placeholder={c.instructionsPlaceholder}
+                spellCheck
+                value={instructions}
+              />
+            </Field>
           )}
 
           {error && (

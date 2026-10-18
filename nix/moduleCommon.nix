@@ -474,10 +474,10 @@ let
           dependencies — no PYTHONPATH patching or collision risk.
 
           Use this for optional extras already declared in scout-agent's
-          pyproject.toml (e.g. "honcho", "voice").
+          pyproject.toml (e.g. "modal", "voice").
           Use extraPythonPackages for external packages not in pyproject.toml.
         '';
-        example = [ "honcho" ];
+        example = [ "modal" ];
       };
 
       # ── Service behaviour ──────────────────────────────────────────────

@@ -1273,9 +1273,6 @@ def _bootstrap_profile_dir(profile_dir: Path, source_dir: Optional[Path],
         _copytree_keep_junctions(source_skills, profile_dir / "skills", _non_exportable_entries, dirs_exist_ok=True)
     for relpath in _CLONE_SUBDIR_FILES:
         _clone_file(source_dir, profile_dir, relpath)
-    from scout_cli.profile_memory_config import active_memory_provider, clone_memory_provider_config
-    clone_memory_provider_config(source_dir, profile_dir,
-                                 active_memory_provider(_load_yaml_dict(source_dir / "config.yaml")))
     if sync_imports:
         from scout_cli.agent_import_sync import SYNC_MANIFEST_NAME  # lazy: keeps yaml/utils off the hot startup path
         _clone_file(source_dir, profile_dir, SYNC_MANIFEST_NAME)
@@ -1774,16 +1771,6 @@ def delete_profile(name: str, yes: bool = False) -> Path:
     from tools.mcp_tool_lifecycle import shutdown_mcp_servers
     shutdown_mcp_servers(scope=scout_home_key(profile_dir))
 
-    # Release this process's holographic memory-store connections into the profile. The
-    # Desktop's main serve process opens memory_store.db for every profile and is
-    # deliberately not stopped above; on Windows its handles fail rmtree with WinError 32.
-    # Inside serve (DELETE /api/profiles/<name>) the handles live here; from the CLI no-op.
-    with contextlib.suppress(Exception):  # best-effort: never block the delete on the release path
-        # 2c. See #88347.
-        from plugins.memory import import_provider_module
-        _released = import_provider_module("holographic", "store").MemoryStore.release_all_under(profile_dir)
-        if _released:
-            print(f"✓ Released {_released} memory-store connection(s) held by this process")
     with contextlib.suppress(Exception):
         from scout_state_registry import close_all_under as _close_session_dbs_under
         _closed = _close_session_dbs_under(profile_dir)
@@ -2266,44 +2253,6 @@ def _atomic_write_json(path: Path, data: dict) -> bool:
         return False
 
 
-def _migrate_honcho_profile_host(old_name: str, new_name: str, new_dir: Path) -> None:
-    """Rename Honcho host blocks for a renamed profile without changing peers."""
-    old_host = f"scout_{old_name}"
-    legacy_old_host = f"scout.{old_name}"
-    new_host = f"scout_{new_name}"
-    candidates = [
-        new_dir / "honcho.json", _get_default_scout_home() / "honcho.json", Path.home() / ".honcho" / "config.json"
-    ]
-    seen: set[Path] = set()
-    for path in candidates:
-        try:
-            resolved = path.resolve()
-        except OSError:
-            resolved = path
-        if resolved in seen or not path.is_file():
-            continue
-        seen.add(resolved)
-        try:
-            raw = json.loads(path.read_text(encoding="utf-8-sig"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        hosts = raw.get("hosts")
-        if not isinstance(hosts, dict):
-            continue
-        source_host = old_host if old_host in hosts else legacy_old_host
-        if source_host not in hosts:
-            continue
-        if new_host in hosts:
-            print(f"⚠ Honcho host block not migrated: {new_host} already exists in {path}")
-            continue
-        block = hosts[source_host]
-        if isinstance(block, dict) and "aiPeer" not in block:
-            block["aiPeer"] = old_name  # source_host is ``scout_<old>`` or legacy ``scout.<old>``
-        hosts[new_host] = hosts.pop(source_host)
-        if _atomic_write_json(path, raw):
-            print(f"✓ Honcho host updated: {source_host} → {new_host}")
-
-
 def _record_profile_rename(new_dir: Path, old_canon: str) -> None:
     """Append ``old_canon`` to the renamed profile's ``previous_names`` history.
     Best-effort: never raises, so a metadata write failure cannot fail the rename.
@@ -2392,8 +2341,6 @@ def rename_profile(old_name: str, new_name: str) -> Path:
     # write failure must never fail the rename itself.
     _record_profile_rename(new_dir, old_canon)
 
-    # 3. Update profile-scoped Honcho host blocks, preserving aiPeer identity
-    _migrate_honcho_profile_host(old_canon, new_canon, new_dir)
 
     # 4. Update wrapper script
     remove_wrapper_script(old_canon)

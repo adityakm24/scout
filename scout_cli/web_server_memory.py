@@ -226,13 +226,6 @@ def _read_memory_provider_existing_values(name: str) -> Dict[str, Any]:
         legacy_cfg = memory_cfg.get("provider_config")
         if isinstance(legacy_cfg, dict):
             values = {**legacy_cfg, **values}
-
-    # Holographic stores under plugins.scout-memory-store.
-    plugins_cfg = cfg.get("plugins")
-    if name == "holographic" and isinstance(plugins_cfg, dict):
-        holographic_cfg = plugins_cfg.get("scout-memory-store")
-        if isinstance(holographic_cfg, dict):
-            values.update(holographic_cfg)
     return values
 
 

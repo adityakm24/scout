@@ -217,17 +217,6 @@ class TestMemoryEndpoints:
 
         (get_scout_home() / "memories").mkdir(parents=True, exist_ok=True)
 
-    def test_status_and_select(self):
-        data = self.client.get("/api/memory").json()
-        assert "active" in data and "providers" in data and "builtin_files" in data
-
-        r = self.client.put("/api/memory/provider", json={"provider": "built-in"})
-        assert r.status_code == 200 and r.json()["active"] == ""
-
-        r = self.client.put(
-            "/api/memory/provider", json={"provider": "no-such-provider-xyz"}
-        )
-        assert r.status_code == 400
 
     def test_reset_targets(self):
         from scout_constants import get_scout_home

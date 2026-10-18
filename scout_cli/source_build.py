@@ -124,15 +124,6 @@ def build_update_products(project_root: Path, *, desktop: bool) -> None:
         # A current release/ can still sit beside a stale installed copy (an earlier
         # update rebuilt but never installed); healing must not wait for the next build.
         _refresh_installed_desktop_apps(project_root / "apps/desktop")
-    # A configured memory provider that no longer ships in core is installed from the
-    # catalog for every profile home sharing this venv (config, data and tool names
-    # unchanged). The update must finish even if the migration blows up.
-    try:
-        from scout_cli.memory_provider_migration import migrate_all_homes
-
-        migrate_all_homes()
-    except Exception as exc:
-        print(f"  ⚠ Memory provider migration skipped: {exc}")
 
 
 if __name__ == "__main__":

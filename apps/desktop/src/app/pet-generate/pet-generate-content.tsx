@@ -197,7 +197,7 @@ export function PetGenerateContent() {
 
   // Send the user to set up a key without closing — the overlay yields to the
   // settings route (useRouteOverlayActive) and reappears + re-checks on return.
-  const setupImageGen = () => navigate(`${SETTINGS_ROUTE}?tab=providers`)
+  const setupImageGen = () => navigate(`${SETTINGS_ROUTE}?tab=keys`)
 
   // Prompt input only belongs on the describe/draft screens (and never when
   // there's no backend to generate with).

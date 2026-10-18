@@ -12,21 +12,21 @@ const TEXT_ACTION_ICON = '[&_.codicon]:no-underline [&_svg]:no-underline'
 // fixed heights — so they stay snug and scale with content. Only icon buttons
 // (inherently square) carry the shared 4px radius.
 const buttonVariants = cva(
-  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-[2.5px] text-xs leading-4 font-medium whitespace-nowrap shadow-none transition-all duration-100 outline-none focus-visible:border-ring focus-visible:ring-[0.1875rem] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-default disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg text-xs leading-4 font-medium whitespace-nowrap shadow-none transition-all duration-150 outline-none focus-visible:border-ring focus-visible:ring-[0.1875rem] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-default disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       variant: {
         // Disabled reads as neutral, not as a faded accent (a 50% orange is muddy).
         default:
-          'bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-(--ui-bg-tertiary) disabled:text-(--ui-text-tertiary) disabled:opacity-100',
+          'bg-[#007aff] text-white shadow-[inset_0_0.5px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.18)] hover:bg-[#006ee6] active:bg-[#0062cc] dark:bg-[#0a84ff] dark:hover:bg-[#2492ff] disabled:bg-(--ui-bg-tertiary) disabled:text-(--ui-text-tertiary) disabled:shadow-none disabled:opacity-100',
         destructive:
-          'bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40',
-        // Quiet action — transparent fill with a 1.5px inset ring (no layout-shifting border).
+          'bg-[#ff3b30] text-white shadow-[inset_0_0.5px_0_rgba(255,255,255,0.25)] hover:bg-[#e6352b] focus-visible:ring-destructive/20 dark:bg-[#ff453a] dark:hover:bg-[#ff584e] dark:focus-visible:ring-destructive/40',
+        // Quiet action — subtle translucent fill with a crisp 1px inset border.
         outline:
-          'bg-transparent text-(--ui-text-primary) shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ui-stroke-secondary)_50%,transparent)] hover:bg-(--chrome-action-hover) hover:text-(--ui-text-primary)',
+          'bg-(--ui-bg-tertiary)/80 text-(--ui-text-primary) shadow-[inset_0_0.5px_0_rgba(255,255,255,0.08),inset_0_0_0_1px_var(--ui-stroke-secondary)] hover:bg-(--ui-bg-quaternary) hover:text-(--ui-text-primary)',
         // Soft-fill action (the default "non-primary button" look).
         secondary:
-          'bg-(--ui-bg-quaternary) text-(--ui-text-primary) hover:bg-(--chrome-action-hover) hover:text-(--ui-text-primary)',
+          'bg-(--ui-bg-quaternary) text-(--ui-text-primary) shadow-[inset_0_0.5px_0_rgba(255,255,255,0.08),inset_0_0_0_1px_var(--ui-stroke-tertiary)] hover:bg-(--chrome-action-hover) hover:text-(--ui-text-primary)',
         // Clickable tag/filter chip — the soft fill plus a hairline inset ring on
         // hover (shadow, not border, so nothing reflows).
         chip: 'bg-(--ui-bg-quaternary) text-(--ui-text-primary) hover:bg-(--chrome-action-hover) hover:shadow-[inset_0_0_0_0.5px_var(--ui-stroke-secondary)]',

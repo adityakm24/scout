@@ -570,7 +570,6 @@ export const api = {
     ),
   getConfig: (profile = getManagementProfile()) =>
     fetchJSON<Record<string, unknown>>(appendProfileParam("/api/config", profile)),
-  getDefaults: () => fetchJSON<Record<string, unknown>>("/api/config/defaults"),
   getSchema: () => fetchJSON<{ fields: Record<string, unknown>; category_order: string[] }>("/api/config/schema"),
   getModelInfo: (profile = getManagementProfile()) =>
     fetchJSON<ModelInfoResponse>(appendProfileParam("/api/model/info", profile)),
@@ -1133,34 +1132,6 @@ export const api = {
 
   // ── Admin: Memory provider ──────────────────────────────────────────
   getMemory: () => fetchJSON<MemoryStatus>("/api/memory"),
-  getMemoryProviderConfig: (provider: string) =>
-    fetchJSON<MemoryProviderConfig>(
-      `/api/memory/providers/${encodeURIComponent(provider)}/config`,
-    ),
-  updateMemoryProviderConfig: (provider: string, values: Record<string, unknown>) =>
-    fetchJSON<{ ok: boolean; active: string }>(
-      `/api/memory/providers/${encodeURIComponent(provider)}/config`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values }),
-      },
-    ),
-  setupMemoryProvider: (provider: string, values: Record<string, unknown> = {}) =>
-    fetchJSON<MemoryProviderSetupResponse>(
-      `/api/memory/providers/${encodeURIComponent(provider)}/setup`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values }),
-      },
-    ),
-  setMemoryProvider: (provider: string) =>
-    fetchJSON<{ ok: boolean; active: string }>("/api/memory/provider", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider }),
-    }),
   resetMemory: (target: "all" | "memory" | "user") =>
     fetchJSON<{ ok: boolean; deleted: string[] }>("/api/memory/reset", {
       method: "POST",

@@ -196,7 +196,6 @@ describe('connection registry cache', () => {
 
     expect(ensureGatewayAgent).toHaveBeenCalledTimes(1)
     expect(ensureGatewayAgent).toHaveBeenCalledWith('homelab', 'default', expect.anything())
-    expect(setLastUsed).toHaveBeenCalledWith('homelab')
   })
 
   it('preserves the established Primary-source launch behavior by default', async () => {
@@ -234,7 +233,6 @@ describe('connection registry cache', () => {
 
     expect(ensureGatewayAgent).toHaveBeenCalledTimes(1)
     expect(ensureGatewayAgent).toHaveBeenCalledWith('homelab', 'default', expect.anything())
-    expect(setLastUsed).toHaveBeenCalledWith('homelab')
   })
 
   it('boot restore yields to a source the user already picked while boot was settling', async () => {
@@ -283,7 +281,6 @@ describe('selectConnection', () => {
     expect(wipeSessionListsForGatewaySwitch).toHaveBeenCalledTimes(1)
     expect($newChatProfile.get()).toBe('default')
     expect(refreshActiveProfile).toHaveBeenCalledTimes(1)
-    expect(setLastUsed).toHaveBeenCalledWith('homelab')
   })
 
   it('does not reset or dial when the active source/profile is selected again', async () => {
@@ -411,7 +408,6 @@ describe('selectConnection', () => {
     expect(requestFreshSession).not.toHaveBeenCalled()
     expect($newChatProfile.get()).toBeNull()
     expect($pendingConnectionId.get()).toBeNull()
-    expect(setLastUsed).not.toHaveBeenCalled()
     expect($connection.get()?.connectionId).toBe('local')
   })
 
@@ -458,7 +454,6 @@ describe('selectConnection', () => {
         expect(wipeSessionListsForGatewaySwitch).not.toHaveBeenCalled()
         expect(requestFreshSession).not.toHaveBeenCalled()
         expect(refreshActiveProfile).not.toHaveBeenCalled()
-        expect(setLastUsed).not.toHaveBeenCalled()
       }
 
       // Auth is refreshed externally; the very next click must work with the
@@ -477,7 +472,6 @@ describe('selectConnection', () => {
       expect($newChatProfile.get()).toBe('scout')
       expect($showAllProfiles.get()).toBe(false)
       expect($activeSessionId.get()).toBeNull()
-      expect(setLastUsed).toHaveBeenCalledWith('homelab')
     }
   )
 
@@ -500,7 +494,6 @@ describe('selectConnection', () => {
     // is still active gets repainted and the user lands on a fresh draft there.
     expect(recoverActiveSourceAfterFailedGatewaySwitch).toHaveBeenCalledTimes(1)
     expect(requestFreshSession).toHaveBeenCalledTimes(1)
-    expect(setLastUsed).not.toHaveBeenCalled()
     expect($newChatProfile.get()).toBeNull()
     expect($pendingConnectionId.get()).toBeNull()
     expect($connection.get()?.connectionId).toBe('local')
@@ -595,8 +588,6 @@ describe('selectConnection', () => {
     expect($connection.get()?.connectionId).toBe('work-vps')
     expect(recoverActiveSourceAfterFailedGatewaySwitch).not.toHaveBeenCalled()
     expect(requestFreshSession).toHaveBeenCalledTimes(1)
-    expect(setLastUsed).toHaveBeenCalledTimes(1)
-    expect(setLastUsed).toHaveBeenCalledWith('work-vps')
     expect($gatewaySwitching.get()).toBe(false)
     expect($pendingConnectionId.get()).toBeNull()
   })
@@ -744,7 +735,6 @@ describe('selectConnection', () => {
 
       expect($connection.get()?.connectionId).toBe('homelab')
       expect($gatewaySwitching.get()).toBe(false)
-      expect(setLastUsed).toHaveBeenCalledWith('homelab')
       expect(requestFreshSession).toHaveBeenCalledTimes(1)
       expect(recoverActiveSourceAfterFailedGatewaySwitch).not.toHaveBeenCalled()
       expect($pendingConnectionId.get()).toBeNull()
@@ -860,7 +850,6 @@ describe('selectConnection', () => {
       expect($gatewaySwitching.get()).toBe(false)
       expect(recoverActiveSourceAfterFailedGatewaySwitch).toHaveBeenCalledTimes(1)
       expect(requestFreshSession).toHaveBeenCalledTimes(1)
-      expect(setLastUsed).not.toHaveBeenCalled()
       expect($connection.get()?.connectionId).toBe('local')
       expect($pendingConnectionId.get()).toBeNull()
     } finally {
@@ -936,7 +925,6 @@ describe('selectConnection', () => {
 
     expect(openGatewayAgent).not.toHaveBeenCalled()
     expect(ensureGatewayAgent).not.toHaveBeenCalled()
-    expect(setLastUsed).toHaveBeenCalledWith('homelab')
     expect($showAllProfiles.get()).toBe(true)
   })
 

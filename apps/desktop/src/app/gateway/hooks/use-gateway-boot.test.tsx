@@ -413,12 +413,10 @@ it('loads and tracks saved gateways without mounting the statusbar or Settings',
 
   expect($connectionsRegistry.get()).toEqual(registry)
   expect($desktopBoot.get().running).toBe(true)
-  expect(setLastUsed).not.toHaveBeenCalled()
 
   bootFetch.resolve()
   await flushAsync()
   expect($desktopBoot.get().running).toBe(false)
-  expect(setLastUsed).toHaveBeenCalledExactlyOnceWith(primaryConn.connectionId)
 
   const activeConnection = $connection.get()
   registry = {
@@ -440,7 +438,6 @@ it('loads and tracks saved gateways without mounting the statusbar or Settings',
   })
   expect($connectionsRegistry.get()).toEqual(registry)
   expect($connection.get()).toBe(activeConnection)
-  expect(setLastUsed).toHaveBeenCalledTimes(1)
 
   view.unmount()
   expect(listeners.size).toBe(0)
@@ -1056,7 +1053,6 @@ describe('useGatewayBoot remote reconnect loop (real hook, fake socket)', () => 
     expect($selectedStoredSessionId.get()).toBeNull()
     expect($gatewaySwitching.get()).toBe(false)
     // The switch committed: the registry remembers the new source as last-used.
-    expect(setLastUsed).toHaveBeenCalledWith('coder-remote')
 
     // Publishing the secondary must not relabel the primary socket. Returning
     // to its source should reuse that socket, not dial the secondary endpoint.

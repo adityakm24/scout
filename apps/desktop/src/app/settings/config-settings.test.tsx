@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen } from '@testing-library/react'
 import { atom } from 'nanostores'
-import { createRef } from 'react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -82,17 +81,14 @@ afterEach(() => {
 
 function renderConfigSettings(activeSectionId = 'safety') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const importInputRef = createRef<HTMLInputElement>()
 
   render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
-        <ConfigSettings activeSectionId={activeSectionId} importInputRef={importInputRef} />
+        <ConfigSettings activeSectionId={activeSectionId} />
       </QueryClientProvider>
     </MemoryRouter>
   )
-
-  return { importInputRef }
 }
 
 describe('ConfigSettings autosave', () => {

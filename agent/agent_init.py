@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 import sys
 import threading
 import time
@@ -26,7 +25,6 @@ from agent.context_compressor import ContextCompressor
 from agent.agent_runtime_helpers import _ra
 from agent.iteration_budget import IterationBudget, normalize_budget_warning_ratio
 from agent.memory_manager import StreamingContextScrubber
-from agent.memory_provider import is_core_memory_provider
 from agent.session_activity import ActivityProvenance
 from agent.model_metadata import (
     MINIMUM_CONTEXT_LENGTH, fetch_model_metadata, is_local_endpoint, query_ollama_num_ctx
@@ -49,28 +47,6 @@ logger = logging.getLogger("run_agent")
 
 
 # Deduped: the gateway builds a fresh AIAgent per message, so it would warn every turn.
-_warned_unavailable_providers: set[str] = set()
-
-
-def _warn_memory_provider_unavailable(name: str, reason: str = "") -> None:
-    """Warn once per provider that a configured memory provider is unavailable.
-
-    ``is_available()`` is a side-effect-free hot-path check and can't log itself; without this
-    the provider is silently dropped. ``reason`` (the provider's ``unavailable_reason()`` hint)
-    can only reach the user here, so it is appended when present.
-    """
-    if name in _warned_unavailable_providers:
-        return
-    _warned_unavailable_providers.add(name)
-    logger.warning(
-        "Memory provider %r is selected but reports unavailable — external memory "
-        "is disabled for this session (built-in memory still works). Check the "
-        "provider's credentials/config with 'scout memory status'. Note: "
-        "systemd/gateway services do not inherit ~/.scout/.env automatically; set "
-        "any required variables in the service environment.%s",
-        name,
-        f" {reason}" if reason else "",
-    )
 
 
 def _provider_default_routes(provider: str) -> set[str]:
@@ -316,7 +292,6 @@ def _normalize_run_budget_seconds(value) -> Optional[float]:
     except (TypeError, ValueError):
         return None
     return seconds if seconds > 0 else None  # NaN compares False → None
-
 
 
 def _refuse_checkpoint_required_on_codex_app_server(
@@ -1320,43 +1295,9 @@ def _init_memory(agent, _agent_cfg, skip_memory, platform, memory_manager=None):
                 )
                 agent._memory_store.load_from_disk()
 
-    # External memory provider plugin (one at a time, alongside built-in): memory.provider.
-    agent._memory_manager = None
-    if memory_manager is not None and not skip_memory:
-        # A caller that rebuilds the agent per turn (gateway api_server) hands back the session's
-        # already-initialized manager: providers keep their prefetch/retain state across turns instead
-        # of being re-initialized (#120116). No initialize_all — the providers are already bound.
-        agent._memory_manager = memory_manager
-    elif not skip_memory:
-        try:
-            _mem_provider_name = mem_config.get("provider", "") if mem_config else ""
-            if not is_core_memory_provider(_mem_provider_name):
-                from agent.memory_manager import MemoryManager as _MemoryManager
-                from plugins.memory import load_memory_provider as _load_mem
-                agent._memory_manager = _MemoryManager()
-                _mp = _load_mem(_mem_provider_name)
-                if _mp is None:
-                    # The provider left core for the catalog (or was never installed): fetch it once.
-                    from scout_cli.memory_provider_migration import recover_at_startup
-                    if recover_at_startup(_mem_provider_name):
-                        _mp = _load_mem(_mem_provider_name)
-                if _mp and _mp.is_available():
-                    agent._memory_manager.add_provider(_mp)
-                elif _mp is not None and _mem_provider_name not in _warned_unavailable_providers:
-                    # unavailable_reason() reads config/probes importlib — skip it once warned.
-                    _unavailable_reason = ""
-                    with suppress(Exception):
-                        _unavailable_reason = _mp.unavailable_reason()
-                    _warn_memory_provider_unavailable(_mem_provider_name, _unavailable_reason)
-                if agent._memory_manager.providers:
-                    agent._memory_manager.initialize_all(**_memory_provider_init_kwargs(agent, platform))
-                    _ra().logger.info("Memory provider '%s' activated", _mem_provider_name)
-                else:
-                    _ra().logger.debug("Memory provider '%s' not found or not available", _mem_provider_name)
-                    agent._memory_manager = None
-        except Exception as _mpe:
-            _ra().logger.warning("Memory provider plugin init failed: %s", _mpe)
-            agent._memory_manager = None
+    # Scout uses the built-in memory store only. A caller that rebuilds the agent per turn may
+    # still hand back a session's manager (#120116); nothing else creates one.
+    agent._memory_manager = memory_manager if memory_manager is not None and not skip_memory else None
 
     from agent.memory_manager import inject_memory_provider_tools
     inject_memory_provider_tools(agent)

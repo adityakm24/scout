@@ -170,9 +170,7 @@ export function ConfigField({
                 ? (optionLabels?.[option] ?? prettyName(option))
                 : schemaKey === 'display.personality'
                   ? c.none
-                  : schemaKey === 'memory.provider'
-                    ? c.builtinOnly
-                    : c.noneParen}
+                  : c.noneParen}
             </SelectItem>
           ))}
         </SelectContent>

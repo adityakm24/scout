@@ -3,7 +3,7 @@
 # callPackage auto-wires nixpkgs args; flake inputs are passed explicitly.
 # Users override via:
 #   pkgs.scout-agent.override { extraPythonPackages = [...]; }
-#   pkgs.scout-agent.override { extraDependencyGroups = [ "honcho" ]; }
+#   pkgs.scout-agent.override { extraDependencyGroups = [ "modal" ]; }
 {
   lib,
   stdenv,

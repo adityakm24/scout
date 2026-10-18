@@ -362,21 +362,6 @@ def readiness_only_in_beta(homes, monkeypatch):
     monkeypatch.setattr(web_server_memory, "_discover_memory_provider_statuses", _statuses)
 
 
-@pytest.mark.parametrize("call", [
-    pytest.param(lambda c: c.put("/api/memory/provider?profile=worker_beta", json={"provider": "mem0"}),
-                 id="memory-provider"),
-    pytest.param(lambda c: c.put("/api/dashboard/plugin-providers?profile=worker_beta",
-                                 json={"memory_provider": "mem0"}),
-                 id="plugin-providers"),
-])
-def test_memory_provider_readiness_is_judged_in_the_profile_being_written(
-    client, homes, readiness_only_in_beta, call
-):
-    resp = call(client)
-
-    assert resp.status_code == 200, resp.text
-    assert _cfg(homes["worker_beta"])["memory"]["provider"] == "mem0"
-    assert "memory" not in _cfg(homes["launch"])
 
 
 def test_local_models_quickstart_activates_into_the_named_profile(client, homes, monkeypatch):
@@ -452,16 +437,3 @@ def test_egress_status_reads_the_named_profiles_config(client, homes, monkeypatc
     assert resp.json()["text"] == "worker_beta"
 
 
-def test_memory_provider_setup_runs_in_the_named_profiles_home(client, homes, monkeypatch):
-    from scout_cli.config import get_scout_home
-    from scout_cli.web_routers import memory_providers as mp
-
-    monkeypatch.setattr(mp, "_memory_provider_manifest", lambda _name: {"name": "mem0"})
-    monkeypatch.setattr(mp, "_load_memory_provider", lambda _name: None)
-    monkeypatch.setattr(mp, "_install_memory_provider_setup",
-                        lambda name: {"ok": True, "provider": name, "home": str(get_scout_home())})
-
-    resp = client.post("/api/memory/providers/mem0/setup?profile=worker_beta", json={})
-
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["home"] == str(homes["worker_beta"])

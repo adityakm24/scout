@@ -162,13 +162,6 @@ export function getScoutConfigRecord(
   })
 }
 
-export function getScoutConfigDefaults(): Promise<ScoutConfigRecord> {
-  return fetchBoundConfigRecord(undefined, {
-    path: '/api/config/defaults',
-    timeoutMs: STARTUP_REQUEST_TIMEOUT_MS
-  })
-}
-
 export function getScoutConfigSchema(profile?: null | string): Promise<ConfigSchemaResponse> {
   return scoutApi<ConfigSchemaResponse>({
     ...profileScoped(profile),

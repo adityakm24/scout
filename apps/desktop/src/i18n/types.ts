@@ -962,6 +962,8 @@ export interface Translations {
       completionSoundPreview: string
     }
     sections: Record<string, string>
+    paneIntro: Record<string, string>
+    accountTitle: string
     searchPlaceholder: Record<'about' | 'config' | 'keys' | 'mcp' | 'sessions', string>
     modeOptions: Record<'light' | 'dark' | 'system', ModeOptionCopy>
     appearance: {

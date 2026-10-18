@@ -29,23 +29,8 @@ _log = logging.getLogger("scout_cli.web_server")
 # ---------------------------------------------------------------------------
 
 def _memory_provider_options() -> List[str]:
-    """Discovered memory providers for the ``memory.provider`` select.
-
-    Directory-scan only (no provider imports), so safe at module import time. ``""``
-    (built-in only) is always first; discovery failures degrade to the bundled defaults.
-    The literal ``builtin`` alias is deliberately NOT offered — built-in memory is not a
-    provider plugin; ``_normalize_memory_provider_name`` maps legacy aliases back to ``""``.
-
-    See #49513.
-    """
-    options = [""]
-    try:
-        from plugins.memory import list_memory_provider_names
-
-        options.extend(list_memory_provider_names())
-    except Exception:
-        options.extend(["honcho"])
-    return list(dict.fromkeys(options))
+    """Scout uses built-in memory only; ``""`` is its value."""
+    return [""]
 
 
 def _timezone_options() -> List[str]:

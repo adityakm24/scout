@@ -401,9 +401,11 @@ class _SyncSentencePCMStreamer:
 
 def _sync_sentence_to_pcm(text: str) -> tuple:
     """Synthesize *text* with the configured sync provider and return PCM."""
-    from tools.tts_tool import text_to_speech_tool
+    from tools.tts_tool import _get_provider, _load_tts_config, text_to_speech_tool
 
-    fd, tmp_path = tempfile.mkstemp(suffix=".mp3")
+    provider = _get_provider(_load_tts_config())
+    suffix = ".wav" if provider in {"mistral", "gemini", "neutts", "kittentts", "piper"} else ".mp3"
+    fd, tmp_path = tempfile.mkstemp(suffix=suffix)
     os.close(fd)
     extra = None
     try:

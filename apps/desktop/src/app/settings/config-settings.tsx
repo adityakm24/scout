@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react'
 import { useQuery } from '@tanstack/react-query'
-import type { ChangeEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
@@ -23,7 +23,7 @@ import {
 import { $disableF12, setDisableF12 } from '@/store/disable-f12'
 import { $alwaysExternalLinks, setAlwaysExternalLinks } from '@/store/external-links'
 import { $keepAwake, setKeepAwake } from '@/store/keep-awake'
-import { notify, notifyError } from '@/store/notifications'
+import { notifyError } from '@/store/notifications'
 import { normalizeProfileKey } from '@/store/profile'
 import { repoDiscoveryPolicyFromConfig, repoDiscoveryPolicySignature, scanAndRecordRepos } from '@/store/projects'
 import { $settingsRequestProfile } from '@/store/settings-scope'
@@ -41,13 +41,10 @@ import {
   diffConfig,
   enumOptionsFor,
   getNested,
-  isExternalMemoryProvider,
   sectionFieldEntries,
   setNested,
   voiceFieldVisible
 } from './helpers'
-import { MemoryConnect } from './memory/connect'
-import { ProviderConfigPanel } from './memory/provider-config-panel'
 import { EmptyState, ListRow, SettingsContent, SettingsSkeleton, ToggleRow } from './primitives'
 import { SettingsProfileScope } from './profile-scope'
 import { QuickEntrySettings } from './quick-entry-settings'
@@ -58,8 +55,7 @@ import { useSettingDeepLink } from './use-setting-deep-link'
 export function ConfigSettings({
   activeSectionId,
   subpage,
-  onConfigSaved,
-  importInputRef
+  onConfigSaved
 }: ConfigSettingsProps) {
   // Shared "Applies to" scope (null → the app's active profile). Remount the
   // inner page per scope so every draft/seed/autosave ref resets wholesale
@@ -70,7 +66,6 @@ export function ConfigSettings({
   return (
     <ConfigSettingsInner
       activeSectionId={activeSectionId}
-      importInputRef={importInputRef}
       key={scopeProfile ?? '__active__'}
       onConfigSaved={onConfigSaved}
       scopeProfile={scopeProfile}
@@ -84,14 +79,12 @@ interface ConfigSettingsProps {
   /** Undefined preserves the full section for existing embedded consumers. */
   subpage?: string
   onConfigSaved?: () => void
-  importInputRef: React.RefObject<HTMLInputElement | null>
 }
 
 function ConfigSettingsInner({
   activeSectionId,
   subpage,
   onConfigSaved,
-  importInputRef,
   scopeProfile
 }: ConfigSettingsProps & { scopeProfile: string | undefined }) {
   const { t } = useI18n()
@@ -341,39 +334,10 @@ function ConfigSettingsInner({
     return () => window.clearTimeout(timeout)
   }, [activeSectionId, config, schema, setSearchParams, subpage, targetField])
 
-  function handleImport(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-
-    if (!file) {
-      return
-    }
-
-    const reader = new FileReader()
-
-    reader.onload = () => {
-      try {
-        updateConfig(JSON.parse(String(reader.result)))
-        notify({ kind: 'success', title: c.imported, message: t.common.saving })
-      } catch (err) {
-        notifyError(err, c.invalidJson)
-      }
-    }
-
-    reader.readAsText(file)
-    e.target.value = ''
-  }
-
   const renderPage = (children: ReactNode) => (
     <SettingsContent>
       <SettingsProfileScope className="mb-5" />
       {children}
-      <input
-        accept=".json,application/json"
-        className="hidden"
-        onChange={handleImport}
-        ref={importInputRef}
-        type="file"
-      />
     </SettingsContent>
   )
 
@@ -461,11 +425,6 @@ function ConfigSettingsInner({
           {visibleFields.map(([key, field]) => (
             <div className="scroll-mt-6 rounded-lg" id={`setting-field-${key}`} key={key}>
               <ConfigField
-                descriptionExtra={
-                  key === 'memory.provider' && isExternalMemoryProvider(getNested(config, key)) ? (
-                    <MemoryConnect profile={scopeProfile} provider={String(getNested(config, key))} />
-                  ) : undefined
-                }
                 enumOptions={
                   key === 'tts.elevenlabs.voice_id'
                     ? enumOptionsFor(key, getNested(config, key), config, elevenLabsVoiceOptions ?? undefined)
@@ -477,13 +436,6 @@ function ConfigSettingsInner({
                 schemaKey={key}
                 value={getNested(config, key)}
               />
-              {key === 'memory.provider' && isExternalMemoryProvider(getNested(config, key)) ? (
-                <ProviderConfigPanel
-                  key={String(getNested(config, key))}
-                  profile={scopeProfile}
-                  provider={String(getNested(config, key))}
-                />
-              ) : null}
             </div>
           ))}
         </div>

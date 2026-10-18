@@ -1,71 +1,44 @@
 import { useStore } from '@nanostores/react'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
-import { codiconIcon } from '@/components/ui/codicon'
-import { KbdCombo } from '@/components/ui/kbd'
-import { Tip } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n'
-import { triggerHaptic } from '@/lib/haptics'
-import {
-  Archive,
-  Bell,
-  Cpu,
-  Download,
-  Globe,
-  Info,
-  Keyboard,
-  KeyRound,
-  RefreshCw,
-  Search,
-  Settings2,
-  ShieldLock,
-  Upload,
-  Wrench,
-  Zap
-} from '@/lib/icons'
+import { Bell, Keyboard, KeyRound, Settings2, ShieldLock, Wrench } from '@/lib/icons'
 import { isEditableTarget } from '@/lib/keybinds/combo'
 import { typeToFocusChar } from '@/lib/keybinds/composer-focus-keys'
-import { cn } from '@/lib/utils'
-import { getScoutConfigDefaults, getScoutConfigRecord, saveScoutConfig } from '@/scout'
-import { $commandPaletteOpen, openCommandPalettePage } from '@/store/command-palette'
-import { confirm } from '@/store/confirm'
+import { $commandPaletteOpen } from '@/store/command-palette'
 import { $activeConnectionId } from '@/store/connections'
-import { bindingsFor } from '@/store/keybinds'
-import { $localModelsEnabled } from '@/store/local-models-flag'
-import { notifyError } from '@/store/notifications'
 import { $settingsScopeProfile } from '@/store/settings-scope'
 
 import { useRouteEnumParam } from '../hooks/use-route-enum-param'
-import { OverlayIconButton } from '../overlays/overlay-chrome'
-import { OverlayMain, OverlayNav, type OverlayNavGroup, OverlaySplitLayout } from '../overlays/overlay-split-layout'
 import { OverlayView } from '../overlays/overlay-view'
 
-import { AboutSettings } from './about-settings'
 import { AppearanceSettings } from './appearance-settings'
 import { ConfigSettings } from './config-settings'
 import { SECTIONS } from './constants'
 import { KeybindSettings } from './keybind-settings'
-import { KEYS_VIEWS, KeysSettings, type KeysView } from './keys-settings'
+import { KeysSettings, type KeysView } from './keys-settings'
 import { movedSettingsTabRedirect } from './moved-tabs'
 import { NotificationsSettings } from './notifications-settings'
 import { SettingsBreadcrumbContext } from './primitives'
-import { PROVIDER_VIEWS, ProvidersSettings, type ProviderView } from './providers-settings'
-import { SessionsSettings } from './sessions-settings'
-import { SettingsSubpageHeader } from './subpage-navigation'
-import { resolveSettingsSubpage, settingsSubpageIcon, settingsSubpages } from './subpages'
+import {
+  filterSettingsSearchEntries,
+  type SettingsSearchEntry,
+  type SettingsSearchTarget,
+  settingsSearchTargetQuery
+} from './settings-search'
+import { SettingsAppleShell } from './settings-shell'
+import { settingsSubpageForLegacyLink, settingsSubpageIcon, settingsSubpages } from './subpages'
 import type { SettingsPageProps, SettingsView as SettingsViewId } from './types'
+import { useSettingsSearchCatalog } from './use-settings-search'
 import { vaultOwnerKey, VaultSettings } from './vault-settings'
 
 const SETTINGS_VIEWS: readonly SettingsViewId[] = [
   ...SECTIONS.map(s => `config:${s.id}` as SettingsViewId),
-  'providers',
   'keybinds',
   'keys',
   'vault',
-  'notifications',
-  'sessions',
-  'about'
+  'notifications'
 ]
 
 export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: SettingsPageProps) {
@@ -74,6 +47,9 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
   const { t } = useI18n()
   const navigate = useNavigate()
   const { hash, pathname, search } = useLocation()
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const searchCatalog = useSettingsSearchCatalog(true)
 
   // MCP and Plugins moved out of Settings into Capabilities. Keep old
   // `/settings?tab=mcp|plugins` deep links working — `useRouteEnumParam` would
@@ -90,16 +66,19 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
 
   const params = new URLSearchParams(search)
   const requestedSubpage = params.get('page')
-  const subpage = resolveSettingsSubpage(activeView, params)
-  const needsSubpageRedirect = Boolean(subpage && subpage !== requestedSubpage)
+  const pages = settingsSubpages(activeView)
+  const impliedPage = settingsSubpageForLegacyLink(activeView, params)
+  const pinnedPage = pages.find(page => page.id === (impliedPage ?? requestedSubpage))?.id
+  const needsSubpageRedirect = Boolean(pinnedPage && pinnedPage !== requestedSubpage)
   const subpageSearch = new URLSearchParams(search)
 
-  if (subpage) {
-    subpageSearch.set('page', subpage)
+  if (pinnedPage) {
+    subpageSearch.set('page', pinnedPage)
   }
 
   const openSettingsPage = useCallback(
     (view: SettingsViewId, page?: string) => {
+      setSearchQuery('')
       const next = new URLSearchParams(search)
 
       for (const key of [
@@ -120,10 +99,9 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
       }
 
       next.set('tab', view)
-      const destination = page ?? settingsSubpages(view)[0]?.id
 
-      if (destination) {
-        next.set('page', destination)
+      if (page) {
+        next.set('page', page)
       }
 
       navigate({ hash, pathname, search: `?${next}` }, { replace: true })
@@ -133,249 +111,35 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
 
   const setActiveView = useCallback((view: SettingsViewId) => openSettingsPage(view), [openSettingsPage])
 
-  // Providers subnav (Accounts vs API keys) lives in its own param so each
-  // sub-view is deep-linkable and survives a refresh.
-  const [providerView, setProviderView] = useRouteEnumParam<ProviderView>('pview', PROVIDER_VIEWS, 'accounts')
-  const [keysView] = useRouteEnumParam<KeysView>('kview', KEYS_VIEWS, 'tools')
+  const keysParam = params.get('kview')
+  const keysDetail: KeysView | null = keysParam === 'tools' || keysParam === 'settings' ? keysParam : null
 
-  // Jump to a section + its sub-view in one navigate. Two sequential setters
-  // would each read the same stale `search` and the second would clobber the
-  // first's `tab` — so the sub-view never opened on narrow screens.
-  const openSubView = useCallback(
-    (tab: SettingsViewId, param: string, value: string, fallback: string) => {
-      const params = new URLSearchParams(search)
+  const openKeysView = useCallback(
+    (view: KeysView) => {
+      setSearchQuery('')
+      const next = new URLSearchParams(search)
 
       for (const key of ['page', 'field', 'setting', 'key', 'aux', 'session', 'kind', 'label', 'origin']) {
-        params.delete(key)
+        next.delete(key)
       }
 
-      params.set('tab', tab)
-
-      if (value === fallback) {
-        params.delete(param)
-      } else {
-        params.set(param, value)
-      }
-
-      const qs = params.toString()
-      navigate({ hash, pathname, search: qs ? `?${qs}` : '' }, { replace: true })
+      next.set('tab', 'keys')
+      next.set('kview', view)
+      navigate({ hash, pathname, search: `?${next}` }, { replace: true })
     },
     [hash, navigate, pathname, search]
   )
 
-  const openProviderView = useCallback(
-    (view: ProviderView) => openSubView('providers', 'pview', view, 'accounts'),
-    [openSubView]
+  const openSearchTarget = useCallback(
+    (target: SettingsSearchTarget) => {
+      setSearchQuery('')
+      navigate({ hash, pathname, search: `?${settingsSearchTargetQuery(target)}` }, { replace: true })
+    },
+    [hash, navigate, pathname]
   )
-
-  const openKeysView = useCallback((view: KeysView) => openSubView('keys', 'kview', view, 'tools'), [openSubView])
-
-  const importInputRef = useRef<HTMLInputElement | null>(null)
-
-  const exportConfig = async () => {
-    try {
-      const cfg = await getScoutConfigRecord()
-      const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'scout-config.json'
-      a.click()
-      URL.revokeObjectURL(url)
-      triggerHaptic('success')
-    } catch (err) {
-      notifyError(err, t.settings.exportFailed)
-    }
-  }
-
-  const resetConfig = async () => {
-    const ok = await confirm({
-      confirmLabel: t.settings.resetToDefaults,
-      destructive: true,
-      title: t.settings.resetConfirm
-    })
-
-    if (!ok) {
-      return
-    }
-
-    try {
-      await saveScoutConfig(await getScoutConfigDefaults())
-      triggerHaptic('success')
-      onConfigSaved?.()
-    } catch (err) {
-      notifyError(err, t.settings.resetFailed)
-    }
-  }
-
-  const navGroups: OverlayNavGroup[] = useMemo(
-    () =>
-      (
-        [
-          ...SECTIONS.flatMap(s => {
-            const view = `config:${s.id}` as SettingsViewId
-
-            const entry = {
-              active: activeView === view,
-              icon: s.icon,
-              id: view,
-              label: t.settings.sections[s.id] ?? s.label,
-              onSelect: () => setActiveView(view)
-            }
-
-            // Credential Vault lives beside the Browser section: it feeds the
-            // browser's model-blind vault fill, so the two are one mental unit.
-            if (s.id === 'browser') {
-              return [
-                entry,
-                {
-                  active: activeView === 'vault',
-                  icon: ShieldLock,
-                  id: 'vault',
-                  label: t.settings.nav.vault,
-                  onSelect: () => setActiveView('vault')
-                }
-              ]
-            }
-
-            return [entry]
-          }),
-          {
-            active: activeView === 'notifications',
-            icon: Bell,
-            id: 'notifications',
-            label: t.settings.nav.notifications,
-            onSelect: () => setActiveView('notifications')
-          },
-          {
-            active: activeView === 'providers',
-            children: [
-              {
-                active: activeView === 'providers' && providerView === 'accounts',
-                icon: codiconIcon('account'),
-                id: 'pview:accounts',
-                label: t.settings.nav.providerAccounts,
-                onSelect: () => openProviderView('accounts')
-              },
-              {
-                active: activeView === 'providers' && providerView === 'keys',
-                icon: KeyRound,
-                id: 'pview:keys',
-                label: t.settings.nav.providerApiKeys,
-                onSelect: () => openProviderView('keys')
-              },
-              {
-                active: activeView === 'providers' && providerView === 'custom-endpoints',
-                icon: Globe,
-                id: 'pview:custom-endpoints',
-                label: t.settings.nav.providerCustomEndpoints,
-                onSelect: () => openProviderView('custom-endpoints')
-              },
-              // Local models ships behind the --local launch flag: no flag, no
-              // nav entry (the pane itself also refuses to render, so a stale
-              // ?pview=local deep link falls back to accounts-shaped emptiness
-              // rather than a hidden feature).
-              ...($localModelsEnabled.get()
-                ? [
-                    {
-                      active: activeView === 'providers' && providerView === 'local',
-                      icon: Cpu,
-                      id: 'pview:local',
-                      label: t.settings.nav.providerLocalModels,
-                      onSelect: () => openProviderView('local')
-                    }
-                  ]
-                : [])
-            ],
-            gapBefore: true,
-            icon: Zap,
-            id: 'providers',
-            label: t.settings.nav.providers,
-            onSelect: () => setActiveView('providers')
-          },
-          {
-            active: activeView === 'keybinds',
-            icon: Keyboard,
-            id: 'keybinds',
-            label: t.settings.nav.keybinds,
-            onSelect: () => setActiveView('keybinds')
-          },
-          {
-            active: activeView === 'keys',
-            children: [
-              {
-                active: activeView === 'keys' && keysView === 'tools',
-                icon: Wrench,
-                id: 'kview:tools',
-                label: t.settings.nav.keysTools,
-                onSelect: () => openKeysView('tools')
-              },
-              {
-                active: activeView === 'keys' && keysView === 'settings',
-                icon: Settings2,
-                id: 'kview:settings',
-                label: t.settings.nav.keysSettings,
-                onSelect: () => openKeysView('settings')
-              }
-            ],
-            icon: KeyRound,
-            id: 'keys',
-            label: t.settings.nav.apiKeys,
-            onSelect: () => setActiveView('keys')
-          },
-          {
-            active: activeView === 'sessions',
-            icon: Archive,
-            id: 'sessions',
-            label: t.settings.nav.sessions,
-            onSelect: () => setActiveView('sessions')
-          },
-          {
-            active: activeView === 'about',
-            gapBefore: true,
-            icon: Info,
-            id: 'about',
-            label: t.settings.nav.about,
-            onSelect: () => setActiveView('about')
-          }
-        ] as OverlayNavGroup[]
-      ).map(group => {
-        const view = group.id as SettingsViewId
-        const children = settingsSubpages(view)
-
-        return children.length
-          ? {
-              ...group,
-              children: children.map(page => ({
-                active: group.active && subpage === page.id,
-                icon: settingsSubpageIcon(page, group.icon),
-                id: `${view}:${page.id}`,
-                label: t.settings.subpages[page.labelKey],
-                onSelect: () => openSettingsPage(view, page.id)
-              }))
-            }
-          : group
-      }),
-    [
-      activeView,
-      keysView,
-      providerView,
-      subpage,
-      t,
-      setActiveView,
-      openProviderView,
-      openKeysView,
-      openSettingsPage,
-      openSubView
-    ]
-  )
-
-  const activeGroup = navGroups.find(group => group.active)
-  const activeChild = activeGroup?.children?.find(child => child.active)
 
   // Type-to-search: printable keystrokes on the Settings surface (outside any
-  // field) open the settings-scoped palette, seeded with the character — same
-  // reflex as the chat surface's type-to-focus, pointed at search instead.
+  // field) focus the sidebar search input and seed it with the character.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ($commandPaletteOpen.get() || isEditableTarget(event.target)) {
@@ -389,7 +153,8 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
       }
 
       event.preventDefault()
-      openCommandPalettePage('settings', char)
+      setSearchQuery(prev => `${prev}${char}`)
+      searchInputRef.current?.focus()
     }
 
     window.addEventListener('keydown', onKeyDown)
@@ -397,114 +162,152 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  // Fake search pill riding the card's top edge, dead-center and half off it.
-  // Clicking (or just typing) opens the ⌘K palette scoped to settings; while
-  // the palette is up the pill hands over to it — grows slightly and fades,
-  // then fades back when the palette closes. It sits outside the raised card,
-  // so it needs its own opaque glass surface to mask the content underneath.
-  const searchCombo = bindingsFor('nav.commandPalette')[0]
-  const paletteOpen = useStore($commandPaletteOpen)
+  const shellItems = [
+    ...SECTIONS.flatMap(section => {
+      const view = `config:${section.id}` as SettingsViewId
+      const entry = {
+        active: activeView === view,
+        icon: section.icon,
+        id: view,
+        label: t.settings.sections[section.id] ?? section.label,
+        onSelect: () => setActiveView(view)
+      }
 
-  const searchPill = (
-    <button
-      className={cn(
-        'flex h-(--titlebar-control-height) items-center gap-1.5 rounded-full border border-(--ui-stroke-secondary) bg-(--ui-chat-surface-background) px-2.5 text-(--ui-text-tertiary) shadow-sm transition-all duration-200 ease-out hover:text-foreground motion-reduce:transition-none',
-        paletteOpen && 'pointer-events-none scale-110 opacity-0'
-      )}
-      data-glass-opaque=""
-      onClick={() => {
-        triggerHaptic('open')
-        openCommandPalettePage('settings')
-      }}
-      tabIndex={paletteOpen ? -1 : undefined}
-      type="button"
-    >
-      <Search className="size-3" />
-      <span className="text-xs">{t.settings.search.pill}</span>
-      {searchCombo && <KbdCombo combo={searchCombo} size="sm" variant="ghost" />}
-    </button>
-  )
+      // Credential Vault lives beside the Browser section: it feeds the
+      // browser's model-blind vault fill, so the two are one mental unit.
+      return section.id === 'browser'
+        ? [
+            entry,
+            {
+              active: activeView === 'vault',
+              icon: ShieldLock,
+              id: 'vault' as SettingsViewId,
+              label: t.settings.nav.vault,
+              onSelect: () => setActiveView('vault')
+            }
+          ]
+        : [entry]
+    }),
+    {
+      active: activeView === 'notifications',
+      icon: Bell,
+      id: 'notifications' as SettingsViewId,
+      label: t.settings.nav.notifications,
+      onSelect: () => setActiveView('notifications')
+    },
+    {
+      active: activeView === 'keybinds',
+      icon: Keyboard,
+      id: 'keybinds' as SettingsViewId,
+      label: t.settings.nav.keybinds,
+      onSelect: () => setActiveView('keybinds')
+    },
+    {
+      active: activeView === 'keys',
+      icon: KeyRound,
+      id: 'keys' as SettingsViewId,
+      label: t.settings.nav.apiKeys,
+      onSelect: () => setActiveView('keys')
+    }
+  ]
 
-  const navFooter = (
-    <>
-      <Tip label={t.settings.exportConfig}>
-        <OverlayIconButton onClick={() => void exportConfig()}>
-          <Download />
-        </OverlayIconButton>
-      </Tip>
-      <Tip label={t.settings.importConfig}>
-        <OverlayIconButton
-          onClick={() => {
-            triggerHaptic('open')
-            importInputRef.current?.click()
-          }}
-        >
-          <Upload />
-        </OverlayIconButton>
-      </Tip>
-      <Tip label={t.settings.resetToDefaults}>
-        <OverlayIconButton
-          className="hover:text-destructive"
-          onClick={() => {
-            triggerHaptic('warning')
-            void resetConfig()
-          }}
-        >
-          <RefreshCw />
-        </OverlayIconButton>
-      </Tip>
-    </>
-  )
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return []
+    }
 
-  const activeSettingsContent =
-    activeView === 'config:appearance' ? (
-      <AppearanceSettings subpage={subpage} />
-    ) : activeView === 'about' ? (
-      <AboutSettings subpage={subpage} />
-    ) : activeView === 'keybinds' ? (
-      <KeybindSettings subpage={subpage} />
-    ) : activeView.startsWith('config:') ? (
-      <ConfigSettings
-        activeSectionId={activeView.slice('config:'.length)}
-        importInputRef={importInputRef}
-        onConfigSaved={onConfigSaved}
-        subpage={subpage}
-      />
-    ) : activeView === 'providers' ? (
-      <ProvidersSettings
-        key={scopeProfile}
-        onClose={onClose}
-        onConfigSaved={onConfigSaved}
-        onMainModelChanged={onMainModelChanged}
-        onViewChange={setProviderView}
-        view={providerView}
-      />
-    ) : activeView === 'keys' ? (
-      <KeysSettings view={keysView} />
-    ) : activeView === 'notifications' ? (
-      <NotificationsSettings subpage={subpage} />
-    ) : activeView === 'vault' ? (
-      <VaultSettings key={vaultOwnerKey(activeConnectionId, scopeProfile)} subpage={subpage} />
-    ) : (
-      <SessionsSettings subpage={subpage} />
+    const categoryEntries: SettingsSearchEntry[] = shellItems.map(item => ({
+      context: t.commandCenter.settings,
+      description: t.settings.paneIntro[item.id],
+      icon: item.icon,
+      id: `category:${item.id}`,
+      keywords: [item.label, item.id],
+      label: item.label,
+      target: { view: item.id }
+    }))
+
+    return filterSettingsSearchEntries(
+      [
+        ...categoryEntries,
+        ...searchCatalog.subpageEntries,
+        ...searchCatalog.settingEntries,
+        ...searchCatalog.configEntries,
+        ...searchCatalog.credentialEntries
+      ],
+      searchQuery
     )
+  }, [
+    searchCatalog.configEntries,
+    searchCatalog.credentialEntries,
+    searchCatalog.settingEntries,
+    searchCatalog.subpageEntries,
+    searchQuery,
+    shellItems,
+    t
+  ])
+
+  const activeItem = shellItems.find(item => item.active) ?? shellItems[0]
+  const showDetail = activeView === 'keys' ? keysDetail !== null : Boolean(pinnedPage)
+  const rows =
+    activeView === 'keys'
+      ? [
+          { icon: Wrench, id: 'tools', label: t.settings.nav.keysTools },
+          { icon: Settings2, id: 'settings', label: t.settings.nav.keysSettings }
+        ]
+      : pages.map(page => ({
+          icon: settingsSubpageIcon(page, activeItem.icon),
+          id: page.id,
+          label: t.settings.subpages[page.labelKey]
+        }))
+
+  const activeRow = rows.find(row => row.id === (activeView === 'keys' ? keysDetail : pinnedPage))
+
+  const detail = needsSubpageRedirect ? (
+    <Navigate replace to={{ hash, pathname, search: `?${subpageSearch}` }} />
+  ) : activeView === 'config:appearance' ? (
+    <AppearanceSettings subpage={pinnedPage} />
+  ) : activeView === 'keybinds' ? (
+    <KeybindSettings subpage={pinnedPage} />
+  ) : activeView.startsWith('config:') ? (
+    <ConfigSettings
+      activeSectionId={activeView.slice('config:'.length)}
+      onConfigSaved={onConfigSaved}
+      subpage={pinnedPage}
+    />
+  ) : activeView === 'keys' ? (
+    <KeysSettings view={keysDetail ?? 'tools'} />
+  ) : activeView === 'notifications' ? (
+    <NotificationsSettings subpage={pinnedPage} />
+  ) : (
+    <VaultSettings key={vaultOwnerKey(activeConnectionId, scopeProfile)} subpage={pinnedPage} />
+  )
 
   return (
-    <OverlayView closeLabel={t.settings.closeSettings} edgeBadge={searchPill} onClose={onClose}>
-      <OverlaySplitLayout>
-        <OverlayNav footer={navFooter} groups={navGroups} />
+    <OverlayView closeLabel={t.settings.closeSettings} onClose={onClose}>
+      <SettingsBreadcrumbContext.Provider value>
+        <SettingsAppleShell
+          active={activeItem}
+          detail={showDetail ? detail : null}
+          detailTitle={activeRow?.label}
+          items={shellItems}
+          onBack={() => setActiveView(activeView)}
+          onOpenRow={id => {
+            if (activeView === 'keys') {
+              openKeysView(id as KeysView)
 
-        <OverlayMain className="px-0 pb-0">
-          <SettingsBreadcrumbContext.Provider value>
-            {activeGroup && <SettingsSubpageHeader child={activeChild} group={activeGroup} />}
-            {needsSubpageRedirect ? (
-              <Navigate replace to={{ hash, pathname, search: `?${subpageSearch}` }} />
-            ) : (
-              activeSettingsContent
-            )}
-          </SettingsBreadcrumbContext.Provider>
-        </OverlayMain>
-      </OverlaySplitLayout>
+              return
+            }
+
+            openSettingsPage(activeView, id)
+          }}
+          onOpenTarget={openSearchTarget}
+          onSearchChange={setSearchQuery}
+          rows={rows}
+          searchInputRef={searchInputRef}
+          searchQuery={searchQuery}
+          searchResults={searchResults}
+        />
+      </SettingsBreadcrumbContext.Provider>
     </OverlayView>
   )
 }

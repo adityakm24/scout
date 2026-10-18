@@ -3,7 +3,7 @@ import { type MutableRefObject, useCallback, useRef } from 'react'
 import { setTerminalFontFamilyFromConfig } from '@/app/right-sidebar/terminal/terminal-font'
 import { BUILTIN_PERSONALITIES, normalizePersonalityValue, personalityNamesFromConfig } from '@/lib/chat-runtime'
 import { normalize } from '@/lib/text'
-import { getScoutConfig, getScoutConfigDefaults } from '@/scout'
+import { getScoutConfig } from '@/scout'
 import { setDisplayTimestampsFromConfig } from '@/store/display-timestamps'
 import { setShowReasoningFromConfig } from '@/store/reasoning-disclosure'
 import {
@@ -57,7 +57,7 @@ export function useScoutConfig({ activeSessionIdRef }: ScoutConfigOptions) {
       const selectionGeneration = getComposerSelectionGeneration()
 
       try {
-        const [config, defaults] = await Promise.all([getScoutConfig(), getScoutConfigDefaults().catch(() => ({}))])
+        const config = await getScoutConfig()
 
         const canPublish = () => profileRefreshEpochRef.current === profileRefreshEpoch && shouldPublish()
 
@@ -80,7 +80,6 @@ export function useScoutConfig({ activeSessionIdRef }: ScoutConfigOptions) {
           ...new Set([
             'none',
             ...BUILTIN_PERSONALITIES,
-            ...personalityNamesFromConfig(defaults),
             ...personalityNamesFromConfig(config)
           ])
         ])

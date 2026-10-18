@@ -44,33 +44,6 @@ def secondary_profile(monkeypatch, tmp_path):
         secret_scope.set_multiplex_active(False)
 
 
-def test_secondary_profile_memory_identity_never_inherits_default_environ(secondary_profile):
-    import plugins.memory.mem0 as mem0
-    import plugins.memory.openviking as openviking
-    import plugins.memory.retaindb as retaindb
-    import plugins.memory.supermemory as supermemory
-    from plugins.memory.honcho import client as honcho_client
-
-    cfg = mem0._load_config()
-    assert "user_id" not in cfg  # falls back to the gateway-native id, not the default's user
-    assert (cfg["agent_id"], cfg["host"], cfg["mode"]) == ("scout", "", "platform")
-
-    assert supermemory._resolve_container_tag("cfg_tag", "id") == "cfg_tag"
-    assert "default" not in supermemory._resolve_base_url("")
-
-    provider = retaindb.RetainDBMemoryProvider()
-    provider.initialize("s1", scout_home=str(secondary_profile))
-    assert provider._client.project == "scout-b"
-    assert "default" not in provider._client.base_url
-
-    settings = openviking._resolve_connection_settings({})
-    assert (settings["api_key"], settings["account"], settings["user"]) == ("", "", "")
-    assert "default" not in settings["endpoint"]
-    client = openviking._VikingClient("http://x", "k")
-    assert (client._account, client._user) == ("default", "default")  # the built-in tenant, not acct-default
-
-    assert honcho_client.resolve_active_host() != "host-default"
-    assert honcho_client._env_base_url() is None
 
 
 def test_mem0_oss_llm_never_borrows_default_profile_openai_key(secondary_profile):

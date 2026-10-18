@@ -107,7 +107,6 @@ export function settingsSubpageForTarget(view: SettingsView, field?: string, set
 }
 
 const LEGACY_SUBPAGE_TARGETS: Record<string, { params: string[]; page: string }> = {
-  sessions: { params: ['session'], page: 'archived' },
   vault: { params: ['kind', 'label', 'origin'], page: 'credentials' }
 }
 

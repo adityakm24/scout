@@ -7,8 +7,6 @@ import type {
   CuratorStatusResponse,
   DebugShareResponse,
   ElevenLabsVoicesResponse,
-  MemoryProviderConfig,
-  MemoryProviderOAuthStatus,
   MemoryStatusResponse
 } from '@/types/scout'
 
@@ -43,50 +41,6 @@ export function audioTranscribeRequestTimeoutMs(dataUrl: string): number {
   )
 
   return Math.min(AUDIO_TRANSCRIBE_MAX_REQUEST_TIMEOUT_MS, estimated)
-}
-
-// surface=declared serves the curated desktop schema; the dashboard consumes the raw plugin schema.
-export function getMemoryProviderConfig(provider: string, profile?: null | string): Promise<MemoryProviderConfig> {
-  return scoutApi<MemoryProviderConfig>({
-    ...profileScoped(profile),
-    path: `/api/memory/providers/${encodeURIComponent(provider)}/config?surface=declared`
-  })
-}
-
-export function saveMemoryProviderConfig(
-  provider: string,
-  values: Record<string, string>,
-  profile?: null | string
-): Promise<{ ok: boolean }> {
-  return scoutApi<{ ok: boolean }>({
-    ...profileScoped(profile),
-    path: `/api/memory/providers/${encodeURIComponent(provider)}/config?surface=declared`,
-    method: 'PUT',
-    body: { values }
-  })
-}
-
-// Memory-provider OAuth connect (provider-keyed; 404s for providers without an
-// OAuth flow). Profile-scoped: the grant lands in the active profile's config.
-export function startMemoryProviderOAuth(
-  provider: string,
-  profile?: null | string
-): Promise<MemoryProviderOAuthStatus> {
-  return scoutApi<MemoryProviderOAuthStatus>({
-    ...profileScoped(profile),
-    path: `/api/memory/providers/${encodeURIComponent(provider)}/oauth/start`,
-    method: 'POST'
-  })
-}
-
-export function getMemoryProviderOAuthStatus(
-  provider: string,
-  profile?: null | string
-): Promise<MemoryProviderOAuthStatus> {
-  return scoutApi<MemoryProviderOAuthStatus>({
-    ...profileScoped(profile),
-    path: `/api/memory/providers/${encodeURIComponent(provider)}/oauth/status`
-  })
 }
 
 // ---------------------------------------------------------------------------

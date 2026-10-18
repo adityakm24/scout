@@ -1,11 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useLayoutEffect, useState, useMemo } from "react";
 import {
   Code,
-  Download,
   FormInput,
-  RotateCcw,
   Search,
-  Upload,
   X,
   Settings2,
   FileText,
@@ -44,7 +41,6 @@ import { Button } from "@/ui/components/button";
 import { ListItem } from "@/ui/components/list-item";
 import { Spinner } from "@/ui/components/spinner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
-import { ConfirmDialog } from "@/ui/components/confirm-dialog";
 import { Input } from "@/ui/components/input";
 import { Badge } from "@/ui/components/badge";
 import { useI18n } from "@/i18n";
@@ -107,9 +103,6 @@ export default function ConfigPage() {
     Record<string, unknown>
   > | null>(null);
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
-  const [defaults, setDefaults] = useState<Record<string, unknown> | null>(
-    null,
-  );
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [yamlMode, setYamlMode] = useState(false);
@@ -118,9 +111,7 @@ export default function ConfigPage() {
   const [yamlSaving, setYamlSaving] = useState(false);
   const [configPath, setConfigPath] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("");
-  const [confirmReset, setConfirmReset] = useState(false);
   const { toast, showToast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { t } = useI18n();
   const { setEnd } = usePageHeader();
 
@@ -180,10 +171,6 @@ export default function ConfigPage() {
         setSchema(fields);
         setCategoryOrder(resp.category_order ?? []);
       })
-      .catch(() => {});
-    api
-      .getDefaults()
-      .then(setDefaults)
       .catch(() => {});
     // getConfigRaw is profile-scoped (fetchJSON appends ?profile=), so its
     // `path` reflects the switched profile's config.yaml. /api/status's
@@ -304,67 +291,6 @@ export default function ConfigPage() {
     }
   };
 
-  const handleReset = () => {
-    if (!defaults || !config) return;
-    // Scope the reset to what the user is currently looking at:
-    //   - search mode → the matched fields
-    //   - form mode   → the active category's fields
-    // Resetting the whole config here was a footgun (issue reported by @ykmfb001):
-    // the button sits next to the category tabs and users reasonably assumed
-    // "reset this tab", not "wipe my entire config.yaml".
-    const scopedFields = isSearching ? searchMatchedFields : activeFields;
-    if (scopedFields.length === 0) return;
-    setConfirmReset(true);
-  };
-
-  const executeReset = () => {
-    if (!defaults || !config) return;
-    setConfirmReset(false);
-    const scopedFields = isSearching ? searchMatchedFields : activeFields;
-    if (scopedFields.length === 0) return;
-    const scopeLabel = isSearching
-      ? t.config.searchResults
-      : prettyCategoryName(activeCategory);
-    let next: Record<string, unknown> = config;
-    for (const [key] of scopedFields) {
-      next = setNestedValue(next, key, getNestedValue(defaults, key));
-    }
-    setConfig(next);
-    showToast(
-      t.config.resetScopeToast.replace("{scope}", scopeLabel),
-      "success",
-    );
-  };
-
-  const handleExport = () => {
-    if (!config) return;
-    const blob = new Blob([JSON.stringify(config, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "scout-config.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const imported = JSON.parse(reader.result as string);
-        setConfig(imported);
-        showToast(t.config.configImported, "success");
-      } catch {
-        showToast(t.config.invalidJson, "error");
-      }
-    };
-    reader.readAsText(file);
-  };
-
   /* ---- Loading ---- */
   if (!config || !schema) {
     return (
@@ -442,55 +368,6 @@ export default function ConfigPage() {
           </code>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 sm:shrink-0">
-          <Button
-            ghost
-            size="icon"
-            onClick={handleExport}
-            title={t.config.exportConfig}
-            aria-label={t.config.exportConfig}
-          >
-            <Download />
-          </Button>
-          <Button
-            ghost
-            size="icon"
-            onClick={() => fileInputRef.current?.click()}
-            title={t.config.importConfig}
-            aria-label={t.config.importConfig}
-          >
-            <Upload />
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={handleImport}
-          />
-          {!yamlMode &&
-            (() => {
-              const resetScopeLabel = isSearching
-                ? t.config.searchResults
-                : prettyCategoryName(activeCategory);
-              const resetTitle = t.config.resetScopeTooltip.replace(
-                "{scope}",
-                resetScopeLabel,
-              );
-              return (
-                <Button
-                  ghost
-                  size="icon"
-                  onClick={handleReset}
-                  title={resetTitle}
-                  aria-label={resetTitle}
-                >
-                  <RotateCcw />
-                </Button>
-              );
-            })()}
-
-          <div className="w-px h-5 bg-border mx-1" />
-
           <Button
             size="sm"
             outlined={!yamlMode}
@@ -657,22 +534,6 @@ export default function ConfigPage() {
         </div>
       )}
       <PluginSlot name="config:bottom" />
-      <ConfirmDialog
-        open={confirmReset}
-        onCancel={() => setConfirmReset(false)}
-        onConfirm={executeReset}
-        title={t.config.confirmResetScope.replace(
-          "{scope}",
-          isSearching
-            ? t.config.searchResults
-            : prettyCategoryName(activeCategory),
-        )}
-        description={`This will reset ${
-          (isSearching ? searchMatchedFields : activeFields).length
-        } field(s) to their default values.`}
-        destructive
-        confirmLabel={t.config.resetDefaults}
-      />
     </div>
   );
 }

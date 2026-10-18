@@ -5,12 +5,9 @@ import type { ScoutGateway } from '@/scout'
 import type { EnvVarInfo } from '@/types/scout'
 
 export type SettingsView =
-  | 'about'
   | 'keybinds'
   | 'keys'
   | 'notifications'
-  | 'providers'
-  | 'sessions'
   | 'vault'
   | `config:${string}`
 

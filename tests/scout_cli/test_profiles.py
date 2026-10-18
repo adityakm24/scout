@@ -218,25 +218,6 @@ class TestCreateProfile:
         assert (profile_dir / ".env").read_text(encoding="utf-8-sig").strip() == "KEY=val"
         assert (profile_dir / "SOUL.md").read_text(encoding="utf-8-sig") == "Be helpful."
 
-    def test_clone_config_copies_only_the_active_memory_providers_config(self, profile_env):
-        """#120115: --clone carried ``memory.provider: hindsight`` but not hindsight's own config,
-        so the clone booted with memory silently unavailable. Only the ACTIVE provider's
-        ``<provider>/`` dir / ``<provider>.json`` travels; another provider's leftovers stay behind."""
-        tmp_path = profile_env
-        default_home = tmp_path / ".scout"
-        (default_home / "config.yaml").write_text("memory:\n  provider: hindsight\n")
-        (default_home / "hindsight").mkdir()
-        payload = '{"mode": "local_embedded", "bank_id": "scout", "apiKey": "hs-secret"}'
-        (default_home / "hindsight" / "config.json").write_text(payload)
-        (default_home / "mem0.json").write_text('{"agent_id": "scout"}')
-
-        profile_dir = create_profile("coder", clone_config=True, no_alias=True)
-
-        cloned = profile_dir / "hindsight" / "config.json"
-        assert cloned.read_text() == payload
-        if os.name != "nt":
-            assert stat.S_IMODE(cloned.stat().st_mode) == 0o600
-        assert not (profile_dir / "mem0.json").exists()
 
     @pytest.mark.parametrize("provider", ["../outside", "a/b", "..", "hind sight"])
     def test_clone_config_ignores_unsafe_memory_provider_names(self, profile_env, provider):
@@ -1108,32 +1089,6 @@ class TestRenameProfile:
         assert new_dir.is_dir()
         assert new_dir == tmp_path / ".scout" / "profiles" / "newname"
 
-    def test_renames_root_honcho_host_without_changing_ai_peer(self, profile_env):
-        tmp_path = profile_env
-        create_profile("ssi_health", no_alias=True)
-        honcho_path = tmp_path / ".scout" / "honcho.json"
-        honcho_path.write_text(json.dumps({
-            "hosts": {
-                "scout.ssi_health": {
-                    "recallMode": "hybrid",
-                    "writeFrequency": "async",
-                    "sessionStrategy": "per-session",
-                    "saveMessages": True,
-                    "peerName": "user-peer",
-                    "aiPeer": "ssi_health",
-                    "workspace": "scout",
-                    "enabled": True,
-                }
-            }
-        }), encoding="utf-8")
-
-        with patch("scout_cli.profiles.check_alias_collision", return_value="skip"):
-            rename_profile("ssi_health", "heimdall")
-
-        cfg = json.loads(honcho_path.read_text(encoding="utf-8-sig"))
-        assert "scout.ssi_health" not in cfg["hosts"]
-        assert cfg["hosts"]["scout_heimdall"]["aiPeer"] == "ssi_health"
-        assert cfg["hosts"]["scout_heimdall"]["peerName"] == "user-peer"
 
     def test_multiplexed_rename_unroutes_old_then_hot_serves_new(self, profile_env):
         """Under a live multiplexer the old name is tombstoned + unrouted BEFORE the directory

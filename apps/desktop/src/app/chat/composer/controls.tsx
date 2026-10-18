@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils'
 import { $hudMode, closeHud, resetHudLayout } from '@/store/hud'
 
 import { ACTIVE_ICON_BTN, GHOST_ICON_BTN, PRIMARY_ICON_BTN } from './control-classes'
-import { ReasoningPill } from './reasoning-pill'
 import type { ChatBarState } from './types'
 
 // Re-exported: `context-menu.tsx` and other row neighbours have always reached
@@ -59,7 +58,6 @@ export function ComposerControls({
           thing that must survive every width. */}
       {minimal ? null : (
         <>
-          {hideModelPill || compactModelPill ? null : <ReasoningPill disabled={disabled} model={state.model} />}
           <ReadAloudButton active={autoSpeak} disabled={disabled} onToggle={onToggleAutoSpeak} />
         </>
       )}

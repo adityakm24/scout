@@ -35,17 +35,6 @@ def _via_honcho_client(p: Path, monkeypatch) -> dict:
     return {"workspace": cfg.workspace_id, "container_tag": None}
 
 
-@pytest.mark.parametrize("filename, loader", [
-    ("mem0.json", _via_shared_reader),
-    ("supermemory.json", _via_supermemory),
-    ("honcho.json", _via_honcho_client),
-])
-def test_plugin_config_json_tolerates_bom(tmp_path, monkeypatch, filename, loader):
-    target = tmp_path / filename
-    target.parent.mkdir(parents=True, exist_ok=True)
-    _write_bom_json(target, {"workspace": "bom-ws", "container_tag": "bom-tag", "enabled": True, "mode": "local_embedded"})
-    loaded = loader(target, monkeypatch)
-    assert "bom" in str(loaded.get("workspace") or loaded.get("container_tag"))
 
 
 def test_qwen_cli_tokens_tolerate_bom(tmp_path, monkeypatch):

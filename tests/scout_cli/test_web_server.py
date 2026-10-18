@@ -706,64 +706,8 @@ class TestWebServerEndpoints:
         return {field["key"]: field for field in payload["fields"]}
 
 
-    def test_openviking_dashboard_persists_typed_recall_values(self):
-        from scout_cli.config import load_config
 
-        resp = self.client.put(
-            "/api/memory/providers/openviking/config",
-            json={
-                "values": {
-                    "endpoint": "http://127.0.0.1:1933",
-                    "recall_limit": "12",
-                    "recall_score_threshold": "0.42",
-                    "recall_max_injected_chars": "8000",
-                    "profile_token_budget": "7000",
-                    "recall_timeout_seconds": "2.5",
-                    "recall_request_timeout_seconds": "1.5",
-                    "recall_full_read_limit": "5",
-                    "recall_prefer_abstract": True,
-                    "recall_resources": False,
-                }
-            },
-        )
 
-        assert resp.status_code == 200
-        config = load_config()["memory"]["openviking"]
-        assert config["recall_limit"] == 12
-        assert config["recall_score_threshold"] == 0.42
-        assert config["profile_token_budget"] == 7000
-        assert config["recall_prefer_abstract"] is True
-        assert config["recall_resources"] is False
-
-    def test_openviking_dashboard_rejects_out_of_range_recall_value(self):
-        resp = self.client.put(
-            "/api/memory/providers/openviking/config",
-            json={
-                "values": {
-                    "endpoint": "http://127.0.0.1:1933",
-                    "recall_limit": 101,
-                }
-            },
-        )
-
-        assert resp.status_code == 400
-
-    def test_openviking_dashboard_rejects_blocked_endpoint_before_saving(self):
-        from scout_cli.config import load_config
-
-        resp = self.client.put(
-            "/api/memory/providers/openviking/config",
-            json={
-                "values": {
-                    "endpoint": "http://169.254.169.254/latest/meta-data/credential",
-                }
-            },
-        )
-
-        assert resp.status_code == 400
-        assert "credential" not in resp.json()["detail"]
-        memory_config = load_config().get("memory", {})
-        assert "openviking" not in memory_config
 
 
     # A user-installed memory provider with a DECLARED config surface (``config_schema.py``, flat
@@ -832,124 +776,12 @@ CONFIG_SCHEMA = ProviderConfigSchema(
         (plugin_dir / "config_schema.py").write_text(self._FLATPROV_SCHEMA, encoding="utf-8")
         return plugin_dir
 
-    def test_declared_surface_put_writes_config_and_secret(self):
-        from scout_constants import get_scout_home
-        from scout_cli.config import load_env
-
-        self._install_flatprov()
-        resp = self.client.put(
-            "/api/memory/providers/flatprov/config?surface=declared",
-            json={
-                "values": {
-                    "mode": "local_external",
-                    "api_url": "http://localhost:8888",
-                    "api_key": "fp-declared-key",
-                }
-            },
-        )
-
-        assert resp.status_code == 200
-        assert resp.json() == {"ok": True}
-        assert load_env()["FLATPROV_API_KEY"] == "fp-declared-key"
-
-        config_path = get_scout_home() / "flatprov" / "config.json"
-        provider_config = json.loads(config_path.read_text(encoding="utf-8"))
-        assert provider_config["mode"] == "local_external"
-        assert provider_config["api_url"] == "http://localhost:8888"
-        assert "api_key" not in provider_config
 
 
-    def test_post_memory_provider_setup_routes_python_deps_through_pm(self, monkeypatch):
-        """Dashboard dependency setup publishes through PM, never direct pip."""
-        import subprocess as _subprocess
-
-        import scout_cli.web_server as web_server
-        from scout_cli import memory_setup
-
-        prepared = []
-        monkeypatch.setattr(
-            memory_setup,
-            "prepare_memory_provider_dependencies",
-            lambda name: (prepared.append(name) or ({}, "installed")),
-        )
-
-        # Any direct pip/uv subprocess from the memory-provider pip path is
-        # a regression; external-dep checks may still run subprocess, so only
-        # trip on pip-flavored commands.
-        real_run = _subprocess.run
-
-        def guarded_run(command, **kwargs):
-            flat = command if isinstance(command, str) else " ".join(map(str, command))
-            assert "pip install" not in flat, f"direct pip call leaked: {flat}"
-            return real_run(command, **kwargs)
-
-        monkeypatch.setattr(web_server.subprocess, "run", guarded_run)
-
-        resp = self.client.post("/api/memory/providers/honcho/setup", json={"values": {}})
-
-        assert resp.status_code == 200
-        data = resp.json()
-        pip_rows = [row for row in data["results"] if row["kind"] == "pip"]
-        assert pip_rows and pip_rows[0]["status"] == "installed"
-        assert pip_rows[0]["command"] == "scout pm install"
-        assert prepared == ["honcho"]
 
 
-    def test_put_memory_provider_config_writes_config_and_secret(self):
-        from scout_constants import get_scout_home
-        from scout_cli.config import load_config, load_env
-
-        self._install_flatprov()
-        resp = self.client.put(
-            "/api/memory/providers/flatprov/config",
-            json={
-                "values": {
-                    "mode": "local_external",
-                    "api_url": "http://localhost:8888",
-                    "api_key": "fp-test-key",
-                    "bank_id": "ben-bank",
-                    "recall_budget": "high",
-                }
-            },
-        )
-
-        assert resp.status_code == 200
-        assert resp.json() == {"ok": True, "active": "flatprov"}
-        assert load_config()["memory"]["provider"] == "flatprov"
-        assert load_env()["FLATPROV_API_KEY"] == "fp-test-key"
-
-        config_path = get_scout_home() / "flatprov" / "config.json"
-        provider_config = json.loads(config_path.read_text(encoding="utf-8"))
-        assert provider_config["mode"] == "local_external"
-        assert provider_config["api_url"] == "http://localhost:8888"
-        assert provider_config["bank_id"] == "ben-bank"
-        assert provider_config["recall_budget"] == "high"
-        assert "api_key" not in provider_config
 
 
-    def test_get_memory_provider_config_does_not_return_secret(self):
-        self._install_flatprov()
-        self.client.put(
-            "/api/memory/providers/flatprov/config",
-            json={
-                "values": {
-                    "mode": "cloud",
-                    "api_url": "https://api.example.invalid",
-                    "api_key": "secret-value",
-                    "bank_id": "scout",
-                    "recall_budget": "mid",
-                }
-            },
-        )
-
-        resp = self.client.get("/api/memory/providers/flatprov/config")
-
-        assert resp.status_code == 200
-        data = resp.json()
-        fields = self._provider_field_map(data)
-        assert fields["api_key"]["is_set"] is True
-        assert fields["api_key"]["value"] == ""
-        assert "secret-value" not in json.dumps(data)
 
 
     # ── Memory provider config (Honcho host-block backend) ──────────────
@@ -978,64 +810,8 @@ CONFIG_SCHEMA = ProviderConfigSchema(
         return path
 
 
-    def test_put_honcho_writes_host_block_root_and_secret(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("HOME", str(tmp_path))
-        monkeypatch.setenv("HONCHO_API_KEY", "guard")
-        monkeypatch.delenv("HONCHO_API_KEY")
-        self._seed_local_honcho()
-        from scout_constants import get_scout_home
-        from scout_cli.config import load_config, load_env
-
-        resp = self.client.put(
-            "/api/memory/providers/honcho/config?surface=declared",
-            json={
-                "values": {
-                    "apiKey": "hch-test-key",
-                    "baseUrl": "https://honcho.example.dev",
-                    "environment": "local",
-                    "workspace": "myws",
-                    "peerName": "eri",
-                    "aiPeer": "scout",
-                    "sessionStrategy": "per-repo",
-                }
-            },
-        )
-
-        assert resp.status_code == 200
-        assert resp.json() == {"ok": True}
-        assert load_config()["memory"]["provider"] == "honcho"
-        assert load_env()["HONCHO_API_KEY"] == "hch-test-key"
-
-        cfg = json.loads((get_scout_home() / "honcho.json").read_text(encoding="utf-8"))
-        # baseUrl is root-scoped; the rest live in the active host block.
-        assert cfg["baseUrl"] == "https://honcho.example.dev"
-        assert cfg["hosts"]["scout"]["workspace"] == "myws"
-        assert cfg["hosts"]["scout"]["peerName"] == "eri"
-        assert cfg["hosts"]["scout"]["environment"] == "local"
-        assert cfg["hosts"]["scout"]["sessionStrategy"] == "per-repo"
-        # The key lands where the client reads first; GET keeps it write-only.
-        assert cfg["hosts"]["scout"]["apiKey"] == "hch-test-key"
 
 
-    def test_get_honcho_config_does_not_return_secret(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("HOME", str(tmp_path))
-        monkeypatch.setenv("HONCHO_API_KEY", "guard")
-        monkeypatch.delenv("HONCHO_API_KEY")
-        self._seed_local_honcho()
-
-        self.client.put(
-            "/api/memory/providers/honcho/config?surface=declared",
-            json={"values": {"apiKey": "secret-value"}},
-        )
-
-        resp = self.client.get("/api/memory/providers/honcho/config?surface=declared")
-
-        assert resp.status_code == 200
-        data = resp.json()
-        fields = self._provider_field_map(data)
-        assert fields["apiKey"]["is_set"] is True
-        assert fields["apiKey"]["value"] == ""
-        assert "secret-value" not in json.dumps(data)
 
 
     # ── GET /api/media (remote image display) ───────────────────────────

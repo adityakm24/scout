@@ -24,10 +24,10 @@ from scout_cli.config import redact_key
 from scout_cli.web_deps import late
 from scout_cli.web_server_files import _path_is_under
 from scout_cli.web_server_gateway import _restart_gateway_after
-from scout_cli.web_server_memory import _normalize_memory_provider_name, _require_memory_provider_ready
+from scout_cli.web_server_memory import _normalize_memory_provider_name
 from scout_cli.web_models import (
     BackupRequest, CredentialPoolAdd, HookCreate, HookDelete, ImportRequest, MemoryEntriesWrite,
-    MemoryProviderSelect, MemoryReset, WebhookCreate, WebhookEnabledToggle,
+    MemoryReset, WebhookCreate, WebhookEnabledToggle,
 )
 from scout_cli.web_routers._common import (
     config_scoped_to_thread, config_write_scope, destructive_profile, http_failure,
@@ -423,27 +423,6 @@ async def get_memory_status(profile: Optional[str] = None):
         return {"active": active, "providers": _discover_memory_provider_statuses(), "builtin_files": files}
 
     return await config_scoped_to_thread(profile, _run)
-
-
-@router.put("/api/memory/provider")
-async def set_memory_provider(body: MemoryProviderSelect, profile: Optional[str] = None):
-    provider = _normalize_memory_provider_name(body.provider)
-
-    def _run():
-        # Readiness resolves through load_config()/_discover_memory_provider_statuses(), so it
-        # MUST run inside the scope: outside it a provider configured only in the target profile
-        # reads as "not ready" (refused) and one configured only in the launch profile reads as
-        # ready and gets written into the target as a broken setting.
-        with config_write_scope(profile):
-            _require_memory_provider_ready(provider)
-            cfg = load_config()
-            if not isinstance(cfg.get("memory"), dict):
-                cfg["memory"] = {}
-            cfg["memory"]["provider"] = provider
-            save_config(cfg)
-        return {"ok": True, "active": provider}
-
-    return await asyncio.to_thread(_run)
 
 
 def _memory_char_limits() -> Dict[str, int]:

@@ -14,12 +14,8 @@ command. A hook with no concrete consumer is speculative infrastructure and is r
 
 ## What may live in this tree (policy)
 
-- **No new in-tree memory providers (May 2026).** `plugins/memory/` is closed (honcho, mem0,
-  supermemory, byterover, holographic, openviking, retaindb stay; bug fixes welcome; hindsight moved
-  to the plugin catalog in Sep 2026 — `plugin-catalog/hindsight.yaml`, auto-installed by
-  `scout_cli/memory_provider_migration.py` for homes still configured for it). New
-  backends ship as standalone repos implementing the same `MemoryProvider` ABC, discovered through
-  the same path, integrated via `scout memory setup` / `post_setup()`.
+- **Built-in memory only.** Scout uses the built-in MEMORY.md/USER.md store; external memory
+  provider plugins are not supported and are never activated.
 - **No new third-party-product plugins (June 2026).** Observability/metrics backends, vendor SaaS
   connectors, analytics dashboards, paid-service tie-ins ship as standalone plugin repos
   (`~/.scout/plugins/` or pip entry point) promoted in Discord `#plugins-skills-and-skins`. Reason:

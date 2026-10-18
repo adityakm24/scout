@@ -51,7 +51,6 @@ export function useSettingsSearchCatalog(enabled: boolean) {
   const {
     data: envVars,
     isError: envVarsError,
-    isFetching: envVarsFetching,
     refetch: refetchEnvVars
   } = useQuery({
     queryKey: ['desktop-settings-search-env-vars'],
@@ -108,16 +107,16 @@ export function useSettingsSearchCatalog(enabled: boolean) {
   // Field/key results wait for the current profile's data rather than briefly
   // pointing into the previous one.
   const configEntries =
-    configQuery.isFetching || schemaQuery.isFetching || configQuery.isError || schemaQuery.isError
+    configQuery.isError || schemaQuery.isError || !schemaQuery.data?.fields || !configQuery.data
       ? []
-      : buildConfigSearchEntries(schemaQuery.data?.fields, configQuery.data, {
+      : buildConfigSearchEntries(schemaQuery.data.fields, configQuery.data, {
           fieldDescriptions: t.settings.fieldDescriptions,
           fieldLabels: t.settings.fieldLabels,
           sections: t.settings.sections
         })
 
   const credentialEntries = buildCredentialSearchEntries(
-    envVarsFetching || envVarsError ? null : envVars,
+    envVarsError ? null : envVars,
     {
       settings: t.settings.nav.keysSettings,
       tools: t.settings.nav.keysTools

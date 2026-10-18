@@ -8,15 +8,19 @@ from pm import install_hint
 import sys
 
 
-def _cmd_memory_off():
-    from scout_cli.config import load_config, save_config
-    config = load_config()
-    if not isinstance(config.get("memory"), dict):
-        config["memory"] = {}
-    config["memory"]["provider"] = ""
-    save_config(config)
-    print("\n  ✓ Memory provider: built-in only")
-    print("  Saved to config.yaml\n")
+def _cmd_memory_status():
+    from scout_cli.config import load_config
+    from scout_constants import display_scout_home, get_scout_home
+    mem = load_config().get("memory")
+    mem = mem if isinstance(mem, dict) else {}
+    print("\n  Memory: built-in")
+    for key, label in (("memory_enabled", "Agent notes (MEMORY.md)"), ("user_profile_enabled", "User profile (USER.md)")):
+        print(f"  {label}: {'on' if mem.get(key, True) else 'off'}")
+    print(f"  Files: {display_scout_home()}/memories/")
+    for name in ("MEMORY.md", "USER.md"):
+        path = get_scout_home() / "memories" / name
+        print(f"    {name}: {path.stat().st_size if path.exists() else 0} bytes")
+    print()
 
 
 def _cmd_memory_reset(args):
@@ -58,14 +62,10 @@ def _cmd_memory_reset(args):
 
 
 def cmd_memory(args):
-    sub = getattr(args, "memory_command", None)
-    if sub == "off":
-        _cmd_memory_off()
-    elif sub == "reset":
+    if getattr(args, "memory_command", None) == "reset":
         _cmd_memory_reset(args)
     else:
-        from scout_cli.memory_setup import memory_command
-        memory_command(args)
+        _cmd_memory_status()
 
 
 # (args attribute, acp flag) — forwarded in this order.

@@ -975,12 +975,6 @@ test('resolveProfileApiRequest uses exact method and path eligibility for mixed 
     { backendProfile: 'iris', requestPath: '/api/skills' }
   )
   assert.deepEqual(
-    resolveProfileApiRequest('iris', '/api/config/defaults', {
-      requestMethod: 'GET'
-    }),
-    { backendProfile: null, requestPath: '/api/config/defaults?profile=iris' }
-  )
-  assert.deepEqual(
     resolveProfileApiRequest('iris', '/api/model/recommended-default?provider=openrouter', {
       requestMethod: 'GET'
     }),

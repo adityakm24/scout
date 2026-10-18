@@ -421,7 +421,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
                 # IS the default package, so a launcher that pinned the plain
                 # default would look correct while it shipped a second
                 # runtime to anyone who customises theirs.
-                extraDependencyGroups = [ "honcho" ];
+                extraDependencyGroups = [ "modal" ];
                 backend = {
                   mode = "serve";
                   port = 9231;
@@ -1309,7 +1309,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
         # Verify extraDependencyGroups passes through to python.nix
         extra-dependency-groups = let
           scoutWithGroups = scout-agent.override {
-            extraDependencyGroups = [ "honcho" ];
+            extraDependencyGroups = [ "modal" ];
           };
         in pkgs.runCommand "scout-extra-dependency-groups" { } ''
           set -e

@@ -25,8 +25,7 @@ import { deferred } from '../../../test/deferred'
 import { useScoutConfig } from './use-scout-config'
 
 vi.mock('@/scout', () => ({
-  getScoutConfig: vi.fn(),
-  getScoutConfigDefaults: vi.fn().mockResolvedValue({})
+  getScoutConfig: vi.fn()
 }))
 
 const WORKSPACE_CWD_KEY = 'scout.desktop.workspace-cwd'

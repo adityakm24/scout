@@ -730,16 +730,7 @@ export const SECTIONS: DesktopConfigSection[] = [
     keys: [
       'memory.memory_enabled',
       'memory.user_profile_enabled',
-      'memory.memory_char_limit',
-      'memory.user_char_limit',
-      'memory.provider',
-      'context.engine',
       'compression.enabled',
-      'compression.threshold',
-      'compression.codex_gpt55_autoraise',
-      'compression.target_ratio',
-      'compression.protect_last_n',
-      'auxiliary.compression.timeout'
     ]
   },
   {
@@ -795,15 +786,10 @@ export const SECTIONS: DesktopConfigSection[] = [
       'checkpoints.max_snapshots',
       'agent.max_turns',
       'agent.api_max_retries',
-      'agent.service_tier',
       'agent.tool_use_enforcement',
-      'delegation.model',
-      'delegation.provider',
       'delegation.max_iterations',
       'delegation.max_concurrent_children',
       'delegation.child_timeout_seconds',
-      'delegation.reasoning_effort',
-      'updates.non_interactive_local_changes'
     ]
   }
 ]
@@ -816,6 +802,5 @@ export interface ModeOption {
 
 export const MODE_OPTIONS: ModeOption[] = [
   { id: 'light', label: 'Light', icon: Sun },
-  { id: 'dark', label: 'Dark', icon: Moon },
-  { id: 'system', label: 'System', icon: Monitor }
+  { id: 'dark', label: 'Dark', icon: Moon }
 ]

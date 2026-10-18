@@ -313,11 +313,6 @@ async def _lifespan(app: "FastAPI"):
 app = FastAPI(title="Scout Agent", version=get_version_info().base_version, lifespan=_lifespan)
 
 
-# Memory-provider OAuth connect routes live in the memory layer, not here.
-from scout_cli.memory_oauth import router as _memory_oauth_router  # noqa: E402
-
-app.include_router(_memory_oauth_router)
-
 # Session token for sensitive endpoints. The desktop shell mints it via
 # SCOUT_DASHBOARD_SESSION_TOKEN; otherwise fresh per server start. It dies with
 # the process and is injected into the SPA HTML so only the web UI can use it.
@@ -941,7 +936,6 @@ from scout_cli.web_routers import (  # noqa: E402
     display as _display_routes,
     sessions as _sessions_routes,
     profiles as _profiles_routes,
-    memory_providers as _memory_providers_routes,
     config_env as _config_env_routes,
     models as _models_routes,
     oauth as _oauth_routes,
@@ -968,7 +962,6 @@ app.include_router(_actions_routes.status_router)
 app.include_router(_sessions_routes.list_router)
 app.include_router(_profiles_routes.sessions_router)
 app.include_router(_sessions_routes.search_router)
-app.include_router(_memory_providers_routes.router)
 app.include_router(_config_env_routes.config_router)
 app.include_router(_models_routes.router)
 app.include_router(_config_env_routes.router)

@@ -1,19 +1,12 @@
 import { useStore } from '@nanostores/react'
-import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
-import { useDebounced } from '@/app/hooks/use-debounced'
 import { LanguageSwitcher } from '@/components/language-switcher'
-import { SearchField } from '@/components/ui/search-field'
 import { SegmentedControl } from '@/components/ui/segmented-control'
 import { Slider } from '@/components/ui/slider'
-import type { DesktopMarketplaceSearchItem } from '@/global'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
-import { Check, Download, Loader2, Palette, Trash2 } from '@/lib/icons'
-import { selectableCardClass } from '@/lib/selectable-card'
-import { normalize } from '@/lib/text'
-import { cn } from '@/lib/utils'
+import { Palette } from '@/lib/icons'
 import { saveScoutConfig } from '@/scout'
 import { $backdrop, setBackdrop } from '@/store/backdrop'
 import { $composerPopoutGesturesEnabled, setComposerPopoutGesturesEnabled } from '@/store/composer-popout'
@@ -23,7 +16,6 @@ import { $introSplash, setIntroSplash } from '@/store/intro-splash'
 import { $fileBrowserOpen, setFileBrowserOpen } from '@/store/layout'
 import { $showModelPricing, setShowModelPricing } from '@/store/model-pricing'
 import { notifyError } from '@/store/notifications'
-import { $activeGatewayProfile, $profiles, normalizeProfileKey } from '@/store/profile'
 import { $reactionsEnabled, setReactionsEnabled } from '@/store/reactions-enabled'
 import { $reasoningCollapsedByDefault, setReasoningCollapsedByDefault } from '@/store/reasoning-disclosure'
 import { $sessionListDensity, type SessionListDensity, setSessionListDensity } from '@/store/session-list-density'
@@ -62,10 +54,7 @@ import {
 import { $userBubbleTransparency, setUserBubbleTransparency } from '@/store/user-bubble-transparency'
 import { $vibeHeartsEnabled, setVibeHeartsEnabled } from '@/store/vibe-hearts-enabled'
 import { $zoomPercent, setZoomPercent } from '@/store/zoom'
-import { getBaseColors, useTheme } from '@/themes/context'
-import { installVscodeThemeFromMarketplace } from '@/themes/install'
-import type { DesktopTheme } from '@/themes/types'
-import { $marketplaceInstalls, isUserTheme, removeUserTheme } from '@/themes/user-themes'
+import { useTheme } from '@/themes/context'
 
 import { setScoutConfigCache, useScoutConfigRecord } from '../hooks/use-config-record'
 
@@ -126,202 +115,12 @@ function ResumeLastSessionSetting() {
   )
 }
 
-function ThemePreview({ name, mode }: { name: string; mode: 'light' | 'dark' }) {
-  // Preview in the *current* mode: the dark palette in Dark, and the light
-  // palette in Light — synthesizing one for dark-only themes — so every card
-  // tracks the Light/Dark toggle, exactly like the app itself does.
-  const c = getBaseColors(name, mode)
-
-  return (
-    <div
-      className="h-20 overflow-hidden rounded-xl border shadow-xs"
-      style={{ backgroundColor: c.background, borderColor: c.border }}
-    >
-      <div className="flex h-full">
-        <div
-          className="w-12 border-r"
-          style={{
-            backgroundColor: c.sidebarBackground ?? c.muted,
-            borderColor: c.sidebarBorder ?? c.border
-          }}
-        />
-        <div className="flex flex-1 flex-col gap-2 p-3">
-          <div className="h-2.5 w-16 rounded-full" style={{ backgroundColor: c.foreground }} />
-          <div className="h-2 w-24 rounded-full" style={{ backgroundColor: c.mutedForeground }} />
-          <div className="mt-auto flex justify-end">
-            <div
-              className="h-5 w-16 rounded-full border"
-              style={{
-                backgroundColor: c.userBubble ?? c.muted,
-                borderColor: c.userBubbleBorder ?? c.border
-              }}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 const UI_SCALE_PRESETS = ['90', '100', '110', '125', '150', '175'] as const
 const ids = SETTING_IDS.appearance
 type UiScalePreset = (typeof UI_SCALE_PRESETS)[number]
 
 function matchUiScalePreset(percent: number): UiScalePreset | null {
   return UI_SCALE_PRESETS.find(preset => Number(preset) === percent) ?? null
-}
-
-const compactNumber = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
-
-/**
- * Live VS Code Marketplace theme search (the same backend as the Cmd-K "Install
- * theme…" page). Renders below the local grid when there's a query: each row
- * downloads + converts + installs via `installVscodeThemeFromMarketplace` and
- * activates it. Extensions already imported locally are marked installed.
- */
-function MarketplaceThemeResults({
-  query,
-  installs,
-  onInstalled
-}: {
-  query: string
-  installs: ReadonlyMap<string, DesktopTheme>
-  onInstalled: (name: string) => void
-}) {
-  const { t } = useI18n()
-  const copy = t.commandCenter.installTheme
-  const debounced = useDebounced(query.trim(), 300)
-  const [installingId, setInstallingId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const search = useQuery({
-    enabled: debounced.length > 0,
-    queryFn: () => window.scoutDesktop?.themes?.searchMarketplace(debounced) ?? Promise.resolve([]),
-    queryKey: ['marketplace-themes-settings', debounced],
-    staleTime: 5 * 60 * 1000
-  })
-
-  // Already installed → just re-activate it; never re-download what we have.
-  const select = (item: DesktopMarketplaceSearchItem) => {
-    const owned = installs.get(item.extensionId)
-
-    if (owned) {
-      triggerHaptic('crisp')
-      onInstalled(owned.name)
-
-      return
-    }
-
-    void install(item)
-  }
-
-  const install = async (item: DesktopMarketplaceSearchItem) => {
-    if (installingId) {
-      return
-    }
-
-    setInstallingId(item.extensionId)
-    setError(null)
-
-    try {
-      const theme = await installVscodeThemeFromMarketplace(item.extensionId)
-
-      triggerHaptic('crisp')
-      onInstalled(theme.name)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : copy.error)
-    } finally {
-      setInstallingId(null)
-    }
-  }
-
-  if (!debounced) {
-    return null
-  }
-
-  const header = (
-    <p className="mb-2 mt-4 text-[length:var(--conversation-caption-font-size)] font-medium text-(--ui-text-tertiary)">
-      From the VS Code Marketplace
-    </p>
-  )
-
-  if (search.isLoading) {
-    return (
-      <>
-        {header}
-        <p className="flex items-center gap-2 text-[length:var(--conversation-caption-font-size)] text-(--ui-text-tertiary)">
-          <Loader2 className="size-3.5 animate-spin" />
-          {copy.loading}
-        </p>
-      </>
-    )
-  }
-
-  if (search.isError) {
-    return (
-      <>
-        {header}
-        <p className="text-[length:var(--conversation-caption-font-size)] text-(--ui-red)">{copy.error}</p>
-      </>
-    )
-  }
-
-  const results = search.data ?? []
-
-  if (results.length === 0) {
-    return (
-      <>
-        {header}
-        <p className="text-[length:var(--conversation-caption-font-size)] text-(--ui-text-tertiary)">{copy.empty}</p>
-      </>
-    )
-  }
-
-  return (
-    <>
-      {header}
-      {error && <p className="mb-2 text-[length:var(--conversation-caption-font-size)] text-(--ui-red)">{error}</p>}
-      <div className="grid gap-2 sm:grid-cols-2">
-        {results.map(item => {
-          const busy = installingId === item.extensionId
-          const done = installs.has(item.extensionId)
-
-          return (
-            <button
-              className={cn(
-                'flex items-center gap-2.5 px-2.5 py-2 text-left disabled:opacity-60',
-                selectableCardClass({ prominent: done })
-              )}
-              disabled={Boolean(installingId) && !busy}
-              key={item.extensionId}
-              onClick={() => select(item)}
-              type="button"
-            >
-              <Palette className="size-4 shrink-0 text-(--ui-text-tertiary)" />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[length:var(--conversation-text-font-size)] font-medium">
-                  {item.displayName}
-                </span>
-                <span className="block truncate text-[length:var(--conversation-caption-font-size)] text-(--ui-text-tertiary)">
-                  {item.publisher}
-                  {item.installs > 0 ? ` · ${copy.installs(compactNumber.format(item.installs))}` : ''}
-                </span>
-              </span>
-              <span className="shrink-0 text-(--ui-text-tertiary)">
-                {busy ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : done ? (
-                  <Check className="size-4 text-(--ui-green)" />
-                ) : (
-                  <Download className="size-4" />
-                )}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </>
-  )
 }
 
 // Keys a range input treats as a step, so the peek can flash the live window
@@ -405,7 +204,7 @@ interface AppearanceSettingsProps {
 
 export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
   const { t, isSavingLocale } = useI18n()
-  const { themeName, mode, resolvedMode, availableThemes, setTheme, setMode } = useTheme()
+  const { mode, resolvedMode, setMode } = useTheme()
   const toolViewMode = useStore($toolViewMode)
   const toolViewShadowed = useStore($modeShadowed('toolViewMode'))
   const hideCodeDiffs = useStore($hideCodeDiffs)
@@ -435,9 +234,6 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
   const backdrop = useStore($backdrop)
   const introSplash = useStore($introSplash)
   const showModelPricing = useStore($showModelPricing)
-  const installs = useStore($marketplaceInstalls)
-  const profiles = useStore($profiles)
-  const activeProfileKey = normalizeProfileKey(useStore($activeGatewayProfile))
   const a = t.settings.appearance
 
   // A pointer held on the intensity slider when this overlay closes (Escape
@@ -460,35 +256,12 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
       }
     }
 
-  const [query, setQuery] = useState('')
   const show = (id: AppearanceSubpageId) => subpage === undefined || subpage === id
 
   useSettingDeepLink('config:appearance', page => page !== undefined && show(page as AppearanceSubpageId))
 
-  // One box does double duty: filter installed themes live (below), and run a
-  // name search against the VS Code Marketplace (the Cmd-K "Install theme…"
-  // backend) for anything not already installed.
-  const needle = normalize(query)
-
-  const filteredThemes = availableThemes
-    .filter(
-      theme =>
-        !needle ||
-        theme.label.toLowerCase().includes(needle) ||
-        theme.name.toLowerCase().includes(needle) ||
-        theme.description.toLowerCase().includes(needle)
-    )
-    // Active theme first; stable sort keeps the rest in their original order.
-    .sort((a, b) => Number(b.name === themeName) - Number(a.name === themeName))
-
-  // Themes save per profile. Surface that only when the user actually has more
-  // than one profile (single-profile installs never see the distinction).
-  const showProfileNote = profiles.length > 1
-
-  const activeProfileName =
-    profiles.find(profile => normalizeProfileKey(profile.name) === activeProfileKey)?.name ?? activeProfileKey
-
   const modeOptions = MODE_OPTIONS.map(({ id, icon }) => ({ icon, id, label: t.settings.modeOptions[id].label }))
+  const modeValue = mode === 'light' || mode === 'dark' ? mode : resolvedMode
 
   const toolOptions = [
     { id: 'product', label: a.product },
@@ -571,92 +344,12 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
                     setMode(id)
                   }}
                   options={modeOptions}
-                  value={mode}
+                  value={modeValue}
                 />
-              }
-              below={
-                <>
-                  {/* One search box: filters your installed themes (the grid)
-                      and live-searches the VS Code Marketplace below. */}
-                  <SearchField
-                    containerClassName="mt-3 w-full"
-                    inputClassName="flex-1"
-                    onChange={setQuery}
-                    placeholder={a.themeSearchPlaceholder}
-                    value={query}
-                  />
-
-                  {/* The dedicated theme page uses the page scroller rather
-                      than clipping its gallery inside another scroll area. */}
-                  <div className={cn('mt-3', subpage === undefined && 'max-h-96 overflow-y-auto pr-1')}>
-                    {filteredThemes.length === 0 ? (
-                      needle ? (
-                        <p className="text-[length:var(--conversation-caption-font-size)] text-(--ui-text-tertiary)">
-                          No installed themes match "{query.trim()}".
-                        </p>
-                      ) : null
-                    ) : (
-                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                        {filteredThemes.map(theme => {
-                          const active = themeName === theme.name
-                          const removable = isUserTheme(theme.name)
-
-                          return (
-                            <div className="group relative" key={theme.name}>
-                              <button
-                                className={cn('w-full p-2 text-left', selectableCardClass({ active, prominent: true }))}
-                                onClick={() => {
-                                  triggerHaptic('crisp')
-                                  setTheme(theme.name)
-                                }}
-                                type="button"
-                              >
-                                <ThemePreview mode={resolvedMode} name={theme.name} />
-                                <div className="mt-3 px-1">
-                                  <div className="truncate text-[length:var(--conversation-text-font-size)] font-medium">
-                                    {theme.label}
-                                  </div>
-                                  <div className="mt-0.5 line-clamp-2 text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
-                                    {theme.description}
-                                  </div>
-                                </div>
-                              </button>
-                              {removable && (
-                                <button
-                                  aria-label={a.removeTheme}
-                                  className="absolute right-1.5 top-1.5 grid size-6 place-items-center rounded-md bg-(--ui-bg-elevated)/80 text-(--ui-text-tertiary) opacity-0 backdrop-blur-sm transition hover:text-(--ui-red) focus-visible:opacity-100 group-hover:opacity-100"
-                                  onClick={() => {
-                                    triggerHaptic('crisp')
-                                    removeUserTheme(theme.name)
-
-                                    // Re-normalize off the now-missing skin → default.
-                                    if (active) {
-                                      setTheme(theme.name)
-                                    }
-                                  }}
-                                  type="button"
-                                >
-                                  <Trash2 className="size-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                    <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />
-                  </div>
-                  {showProfileNote && (
-                    <p className="mt-3 text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
-                      {a.themeProfileNote(activeProfileName)}
-                    </p>
-                  )}
-                </>
               }
               description={a.themeDesc}
               id={settingElementId(ids.theme)}
-              title={a.themeTitle}
-              wide
+              title={a.colorMode}
             />
           )}
 

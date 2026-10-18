@@ -75,7 +75,6 @@ describe('settings subpage routing', () => {
       ['keybinds', 'page=shortcuts&setting=keybinds.hud-modifier', 'hud-gesture'],
       ['notifications', 'setting=notifications.completion-sound', 'sounds'],
       ['config:advanced', 'setting=advanced.keep-awake', 'desktop'],
-      ['sessions', 'session=archived-id', 'archived'],
       ['vault', 'kind=login', 'credentials'],
       ['vault', 'label=Example', 'credentials'],
       ['vault', 'origin=https%3A%2F%2Fexample.com', 'credentials'],

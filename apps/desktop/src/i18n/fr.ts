@@ -1115,7 +1115,7 @@ export const frOverrides = {
       intro:
         'Exclusif au desktop. Le mode contrôle la luminosité ; le thème contrôle la palette et le chrome de la conversation.',
       colorMode: 'Mode couleur',
-      colorModeDesc: 'Choisissez un mode fixe ou laissez Scout suivre le paramètre système.',
+      colorModeDesc: 'Choisissez clair ou sombre.',
       toolViewTitle: "Affichage des appels d'outil",
       toolViewDesc:
         'Le mode Produit masque les charges utiles brutes ; le mode Technique affiche les entrées/sorties complètes.',
@@ -1228,7 +1228,7 @@ export const frOverrides = {
       technical: 'Technique',
       technicalDesc: 'Inclure les arguments/résultats bruts des outils et les détails de bas niveau.',
       themeTitle: 'Thème',
-      themeDesc: "Palettes desktop uniquement. Le mode sélectionné s'applique par-dessus.",
+      themeDesc: 'Clair ou sombre pour tout le bureau.',
       themeSearchPlaceholder: 'Rechercher dans vos thèmes ou sur le Marketplace VS Code…',
       themeProfileNote: profile => `Enregistré pour le profil ${profile} — chaque profil conserve son propre thème.`,
       installTitle: 'Installer depuis VS Code',

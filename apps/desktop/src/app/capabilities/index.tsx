@@ -71,9 +71,7 @@ export function CapabilitiesView({
   const { data: skills, isError: skillsFailed, error: skillsError } = useSkillsQuery(scope.profile)
 
   const refreshCapabilities = useCallback(async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: SKILLS_QUERY_KEY }),
-    ])
+    await Promise.all([queryClient.invalidateQueries({ queryKey: SKILLS_QUERY_KEY })])
 
     invalidateSlashCompletions()
   }, [])
@@ -83,7 +81,8 @@ export function CapabilitiesView({
   // Rotating placeholder nudges from the user's own data — teach that search
   // understands categories and tool names, not just titles.
   const searchHints = useMemo(
-    () => (mode === 'skills' && skills?.length ? skillSearchTerms(skills).map(term => t.common.tryHint(term)) : undefined),
+    () =>
+      mode === 'skills' && skills?.length ? skillSearchTerms(skills).map(term => t.common.tryHint(term)) : undefined,
     [mode, skills, t]
   )
 
@@ -111,7 +110,7 @@ export function CapabilitiesView({
         query={query}
         skills={skills ?? []}
       />
-    ),
+    )
   } satisfies Record<CapabilityMode, () => React.ReactNode>
 
   return (

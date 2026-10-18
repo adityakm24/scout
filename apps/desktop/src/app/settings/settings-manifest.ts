@@ -217,20 +217,6 @@ export const SETTINGS_MANIFEST = {
       })
     }
   },
-  sessions: {
-    autoArchive: {
-      subpage: 'archived',
-      keywords: ['archive', 'stale', 'cleanup', 'old chats', 'days', 'after'],
-      copy: t => ({ label: t.settings.sessions.autoArchiveTitle, description: t.settings.sessions.autoArchiveDesc })
-    }
-  },
-  about: {
-    updates: {
-      subpage: 'updates',
-      keywords: ['update', 'auto update', 'download', 'release', 'version'],
-      copy: t => ({ label: t.settings.about.updates })
-    }
-  }
 } as const satisfies Record<string, Record<string, SettingDefinition>>
 
 export type ManifestViewKey = keyof typeof SETTINGS_MANIFEST

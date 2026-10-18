@@ -11,16 +11,8 @@ export const OTHER_SUBPAGES: Record<string, { id: string; labelKey: string }[]> 
     { id: 'alerts', labelKey: 'notificationAlerts' },
     { id: 'sounds', labelKey: 'notificationSounds' }
   ],
-  sessions: [
-    { id: 'archived', labelKey: 'archivedSessions' },
-    { id: 'default-directory', labelKey: 'defaultDirectory' }
-  ],
   vault: [
     { id: 'credentials', labelKey: 'vaultCredentials' },
     { id: 'sources', labelKey: 'vaultSources' }
-  ],
-  about: [
-    { id: 'updates', labelKey: 'appUpdates' },
-    { id: 'uninstall', labelKey: 'uninstall' }
   ]
 }

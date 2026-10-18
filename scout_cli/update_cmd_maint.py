@@ -858,12 +858,6 @@ def _sync_profiles_after_update() -> None:
             print()
             print(f"→ Seeded .env for {len(backfilled)} profile(s) (copied from default): {', '.join(backfilled)}")
 
-    with suppress(Exception):
-        from plugins.memory import import_provider_module
-        synced = import_provider_module("honcho", "cli").sync_honcho_profiles_quiet()
-        if synced:
-            print(f"\n-> Honcho: synced {synced} profile(s)")
-
 
 def _refresh_cua_driver_after_update() -> None:
     """Reconcile an installed optional package, never a user-selected external binary."""

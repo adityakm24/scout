@@ -472,28 +472,12 @@ export function Picker({ ctx }: { ctx: OnboardingContext }) {
 
   const select = (p: OAuthProvider) => void startProviderOAuth(p, ctx)
 
-  // "Run models locally" leaves the picker for Settings -> Providers ->
-  // Local Models, where install/download live. First-run: persist the skip
-  // (same contract as ChooseLaterLink) so the blocking overlay never
-  // re-nags; manual mode just closes. window.location keeps this picker
-  // router-independent (it renders outside the route tree on first run).
-  const openLocalModels = () => {
-    if (manual) {
-      closeManualOnboarding()
-    } else {
-      dismissFirstRunOnboarding()
-    }
-
-    window.location.hash = '#/settings?tab=providers&pview=local'
-  }
-
   return (
     <div className="grid gap-2">
       <div className="grid max-h-[60dvh] gap-2 overflow-y-auto p-1">
         {/* The no-account path: everything runs on this machine. Shipped
             behind the --local launch flag. (Fireworks moved into the
             expanded list on main.) */}
-        {$localModelsEnabled.get() ? <LocalModelsProviderRow onClick={openLocalModels} /> : null}
         {/* Fireworks leads the list, matching CANONICAL_PROVIDERS. */}
         <FireworksProviderRow onClick={() => openKeyForm('FIREWORKS_API_KEY')} />
         {ordered.map(p => (

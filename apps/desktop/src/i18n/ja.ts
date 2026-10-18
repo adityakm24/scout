@@ -564,7 +564,7 @@ export const ja = defineLocale({
       intro:
         'デスクトップ専用の表示設定です。モードは明るさ、テーマはアクセントカラーとチャット面のスタイルを制御します。',
       colorMode: 'カラーモード',
-      colorModeDesc: '固定モードを選ぶか、Scout をシステム設定に合わせます。',
+      colorModeDesc: 'ライトかダークを選びます。',
       toolViewTitle: 'ツール呼び出しの表示',
       toolViewDesc: 'プロダクト表示は生のツールペイロードを隠し、テクニカル表示は入出力をすべて表示します。',
       hideCodeDiffsTitle: 'コードの差分を非表示',
@@ -670,7 +670,7 @@ export const ja = defineLocale({
       technical: 'テクニカル',
       technicalDesc: '生のツール引数、結果、低レベルの詳細を含めます。',
       themeTitle: 'テーマ',
-      themeDesc: 'デスクトップ専用のパレットです。選択したモードの上に適用されます。',
+      themeDesc: 'デスクトップ全体をライトかダークにします。',
       themeProfileNote: profile =>
         `「${profile}」プロファイルに保存されます。プロファイルごとに個別のテーマを保持します。`,
       installTitle: 'VS Code から導入',

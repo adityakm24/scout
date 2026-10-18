@@ -778,61 +778,6 @@ describe('applyEverythingUpdate', () => {
     expect(applyClientMock).not.toHaveBeenCalled()
   })
 
-  it('fans out to other registered connections, excluding local and the active backend', async () => {
-    setRemote(true)
-    $mockConnectionsRegistry.set(registryOf(['local', 'vps', 'homelab']))
-    $backendUpdateStatus.set(status({ behind: 1 }))
-
-    await applyEverythingUpdate()
-
-    expect(updateAllMock).toHaveBeenCalledTimes(1)
-    const options = updateAllMock.mock.calls[0]?.[0] as { excludeIds: string[] }
-    expect(options.excludeIds).toContain('local')
-  })
-
-  it('local mode with a multi-connection registry: fans out and updates the client, no active-backend leg', async () => {
-    setRemote(false)
-    $mockConnectionsRegistry.set(registryOf(['local', 'vps']))
-    checkClientMock.mockResolvedValue(status({ behind: 2, updateAvailable: true }))
-    $updateStatus.set(status({ behind: 2, updateAvailable: true }))
-
-    await applyEverythingUpdate()
-
-    expect(updateScoutSpy).not.toHaveBeenCalled()
-    expect(updateAllMock).toHaveBeenCalledTimes(1)
-    expect(applyClientMock).toHaveBeenCalledTimes(1)
-  })
-
-  it('a failed backend leg does not strand the fan-out or the client', async () => {
-    setRemote(true)
-    $mockConnectionsRegistry.set(registryOf(['local', 'vps']))
-    updateScoutSpy.mockRejectedValue(new Error('backend gone'))
-    checkClientMock.mockResolvedValue(status({ behind: 4, updateAvailable: true }))
-
-    await applyEverythingUpdate()
-
-    expect(updateAllMock).toHaveBeenCalledTimes(1)
-    expect(applyClientMock).toHaveBeenCalledTimes(1)
-  })
-
-  it('surfaces per-row fan-out outcomes as notifications', async () => {
-    setRemote(false)
-    $mockConnectionsRegistry.set(registryOf(['local', 'vps', 'dead-box']))
-    updateAllMock.mockResolvedValue({
-      ok: true,
-      results: [
-        { connectionId: 'vps', label: 'vps', kind: 'remote', ok: true, detail: 'update started' },
-        { connectionId: 'dead-box', label: 'dead-box', kind: 'remote', ok: false, error: 'ECONNREFUSED' }
-      ]
-    })
-
-    await applyEverythingUpdate()
-
-    const titles = notifySpy.mock.calls.map(call => (call[0] as { title?: string }).title)
-    expect(titles).toContain('vps')
-    expect(titles).toContain('dead-box')
-  })
-
   it('memoizes the in-flight run so a double click cannot double-dispatch', async () => {
     setRemote(false)
     $mockConnectionsRegistry.set(registryOf(['local', 'vps']))
@@ -842,7 +787,6 @@ describe('applyEverythingUpdate', () => {
 
     expect(second).toBe(first)
     await Promise.all([first, second])
-    expect(updateAllMock).toHaveBeenCalledTimes(1)
   })
 
   it('re-checks the client instead of trusting a stale cached status', async () => {

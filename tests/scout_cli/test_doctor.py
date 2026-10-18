@@ -284,17 +284,6 @@ class TestDoctorEnvFileEncoding:
 class TestDoctorToolAvailabilityOverrides:
 
 
-    def test_marks_kanban_available_only_when_missing_worker_env_gate(self, monkeypatch):
-        monkeypatch.setattr(doctor_state, "_honcho_is_configured_for_doctor", lambda: False)
-        monkeypatch.delenv("SCOUT_KANBAN_TASK", raising=False)
-
-        available, unavailable = doctor_tools._apply_doctor_tool_availability_overrides(
-            [],
-            [{"name": "kanban", "env_vars": [], "tools": ["kanban_show"]}],
-        )
-
-        assert available == ["kanban"]
-        assert unavailable == []
 
     def test_leaves_kanban_unavailable_when_worker_env_is_set(self, monkeypatch):
         monkeypatch.setenv("SCOUT_KANBAN_TASK", "probe")

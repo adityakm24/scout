@@ -278,7 +278,6 @@ wake = [
   "sounddevice==0.5.5",
   "numpy==2.4.3",
 ]
-honcho = ["honcho-ai==2.2.0"]
 # Platform sub-extras / alias extras — declared so pm.extras.ANCHORS names
 # only real extras (contract: tests/pm/test_extras.py). Each is
 # lazy-installed at first use via pm.ensure_import(name) and therefore
@@ -309,15 +308,6 @@ wake-porcupine = ["pvporcupine==4.0.3"]
 # can re-sync exactly the pin from core.
 doc-extract = ["firecrawl-anydoc==0.2.4"]
 trace-upload = ["huggingface-hub==1.24.0"]
-# Cloud memory providers are opt-in PM extras. They stay outside [all],
-# like honcho, so a quarantined release cannot break fresh installs.
-supermemory = ["supermemory==3.50.0"]
-# mem0ai pulls qdrant-client → grpcio, which has no win_arm64 wheel — same
-# win32-arm64 gate as faster-whisper. mem0 is lazy-installed, so on arm64 the
-# provider is simply unavailable.
-mem0 = [
-  "mem0ai==2.0.10; platform_machine != 'ARM64' or sys_platform != 'win32'",
-]
 # Image resize recovery for the vision tools. Pillow is now a CORE dependency
 # (see the main `dependencies` list above) since the byte/pixel shrink paths are on
 # the default vision-embed path and the mid-session lazy install deadlocked the
@@ -386,14 +376,12 @@ termux = [
   # Baseline Android / Termux path for reliable fresh installs.
   "scout-agent[cron]",
   "scout-agent[mcp]",
-  "scout-agent[honcho]",
   "scout-agent[acp]",
 ]
 termux-all = [
   # Best-effort "install all" profile for Termux. Same policy as [all]:
   # only includes extras that are not prepared on demand by PM.
-  # Backends like honcho lazy-install at
-  # first use, so they're no longer eager-installed here.
+  # Lazily-installed backends are not eager-installed here.
   "scout-agent[termux]",
   "scout-agent[google]",
   "scout-agent[homeassistant]",
@@ -446,7 +434,7 @@ all = [
   #
   # Removed from [all] on 2026-05-12 (covered by lazy-install):
   #   anthropic, exa, firecrawl, parallel-web, fal, edge-tts,
-  #   modal, daytona, vercel, honcho, voice (faster-whisper),
+  #   modal, daytona, vercel, voice (faster-whisper),
   #   bedrock, tts-premium (elevenlabs)
   "scout-agent[cron]",
   "scout-agent[pty]",
@@ -509,8 +497,6 @@ opt-in-extras = ["kittentts"]
 # single-authority for WHICH extra is supported WHERE.
 
 [tool.scout.extras-platforms]
-# qdrant-client → grpcio (via mem0ai) has no win_arm64 wheel.
-mem0 = "platform_machine != 'ARM64' or sys_platform != 'win32'"
 # Match the engine dependency markers so PM refuses an unsupported install.
 wake-openwakeword = "(platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or sys_platform != 'darwin')"
 # faster-whisper's closure is prebuilt-only: ctranslate2 has no win_arm64 wheel and onnxruntime
@@ -607,7 +593,6 @@ google-auth = false
 google-auth-httplib2 = false
 google-auth-oauthlib = false
 h2 = false
-honcho-ai = false
 httplib2 = false
 httpx = false
 httpx2 = false
@@ -616,7 +601,6 @@ jinja2 = false
 langfuse = "2026-09-09T16:01:26Z"
 maturin = false
 mcp = false
-mem0ai = false
 mistralai = false
 modal = false
 nemo-relay = false
@@ -656,7 +640,6 @@ snowballstemmer = false
 sounddevice = false
 soundfile = "2026-06-06T08:58:48Z"
 starlette = false
-supermemory = false
 tenacity = false
 ty = false
 tzdata = false

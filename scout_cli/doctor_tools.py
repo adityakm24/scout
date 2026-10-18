@@ -142,13 +142,10 @@ def _doctor_web_capability_rows() -> list[tuple[str, str, str]]:
 
 def _apply_doctor_tool_availability_overrides(available: list[str], unavailable: list[dict]) -> tuple[list[str], list[dict]]:
     """Adjust runtime-gated tool availability for doctor diagnostics."""
-    from scout_cli.doctor_state import _honcho_is_configured_for_doctor
     updated_available, updated_unavailable = list(available), []
     for item in unavailable:
         if _is_kanban_worker_env_gate(item):
             gated = "kanban"
-        elif item.get("name") == "honcho" and _honcho_is_configured_for_doctor():
-            gated = "honcho"
         else:
             updated_unavailable.append(item)
             continue
