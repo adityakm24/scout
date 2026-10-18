@@ -3102,8 +3102,25 @@ def _parse_cli_args(parser, subparsers, argv):
     return args
 
 
+_APP_ONLY_MESSAGE = (
+    "Scout is used through its apps (desktop, web and mobile); there is no command line for people.\n"
+    "The `scout` command runs only inside the agent's own terminal and the Scout backend.")
+
+
+def _require_app_context() -> None:
+    """Refuse to run outside the app backend and the agent's terminal.
+
+    ``scout-server`` exports ``SCOUT_AGENT`` and every process the backend starts (the
+    agent's terminal, kanban workers, gateway restarts) inherits it; a person's shell does not.
+    """
+    if not os.environ.get("SCOUT_AGENT"):
+        print(_APP_ONLY_MESSAGE, file=sys.stderr)
+        sys.exit(2)
+
+
 def main():
     """Main entry point for scout CLI."""
+    _require_app_context()
     _set_process_title()
     _warn_if_unsupervised_pid1()
     _advertise_agent_env()

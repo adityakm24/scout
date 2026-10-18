@@ -478,8 +478,7 @@ build-backend = "setuptools.build_meta"
 
 [project.scripts]
 scout = "scout_cli.main:main"
-scout-agent = "agent.legacy_cli:main"
-scout-acp = "acp_adapter.entry:main"
+scout-server = "scout_cli.server_entry:main"
 
 [tool.scout]
 # Extras that only an explicit selection installs (setup, sync_venv). Bundles

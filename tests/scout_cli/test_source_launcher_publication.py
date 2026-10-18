@@ -29,8 +29,6 @@ def fixture_tree(tmp_path, monkeypatch):
         destination = repo / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, destination)
-    (repo / "acp_adapter").mkdir()
-    (repo / "acp_adapter" / "__init__.py").write_text("", encoding="utf-8")
     entry = (
         "import json, os, sys\n"
         "def main():\n"
@@ -40,7 +38,7 @@ def fixture_tree(tmp_path, monkeypatch):
         "    return 7\n"
         "if __name__ == '__main__':\n    sys.exit(main())\n"
     )
-    for path in (repo / "scout_cli/main.py", repo / "acp_adapter/entry.py"):
+    for path in (repo / "scout_cli/main.py", repo / "scout_cli/server_entry.py"):
         path.write_text(entry, encoding="utf-8")
     # Windows resolves its default under LOCALAPPDATA, not HOME.
     if os.name == "nt":
@@ -261,8 +259,8 @@ def test_boot_migrates_legacy_conveniences_to_selected_runtime(tmp_path, monkeyp
 
     result = _launchers.expose_cli()
     assert result["ok"], result
-    assert set(result["written"]) == {"scout", "scout-acp"}
-    for name in ("scout", "scout-acp"):
+    assert "scout" in result["written"]
+    for name in ("scout",):
         run = subprocess.run([str(out / name), "quoted argument"], cwd=tmp_path,
                              capture_output=True, text=True, timeout=30, encoding="utf-8")
         assert run.returncode == 7, run.stderr

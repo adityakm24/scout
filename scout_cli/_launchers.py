@@ -86,13 +86,13 @@ def installation_command(repo_root: Path, args=(), *, module: str = "scout_cli.m
 
 #: Launcher command names — keep in lockstep with scripts/install.ps1
 #: Publish-UserCommand and scout_cli/_install_repair.py.
-WINDOWS_BIN_LAUNCHERS = ("scout", "scout-acp")
+WINDOWS_BIN_LAUNCHERS = ("scout", "scout-server")
 
 #: command name -> (entry module, callable) — mirrors pyproject.toml
 #: [project.scripts].
 ENTRY_POINTS = {
     "scout": ("scout_cli.main", "main"),
-    "scout-acp": ("acp_adapter.entry", "main"),
+    "scout-server": ("scout_cli.server_entry", "main"),
 }
 
 
@@ -363,8 +363,7 @@ def _publish_conveniences(root: Path, out_dir: Path, names, *, create: bool = Tr
         if (not create or target.exists() or target.is_symlink()) and not _owns_launcher(target, root):
             continue
         before = target.lstat().st_mtime_ns if target.exists() or target.is_symlink() else None
-        command = ([str(root / ".scout/bin/scout"), "--run-module", "run_agent"]
-                   if name == "scout-agent" else [str(root / ".scout/bin" / name)])
+        command = [str(root / ".scout/bin" / name)]
         if _write_shell(target, command) is None:
             raise OSError(f"could not publish launcher {target}")
         published[target] = before != target.lstat().st_mtime_ns
@@ -459,7 +458,7 @@ def expose_cli(project_root: Path | None = None, *, create: bool = True) -> dict
                 dirs.append(directory)
         written = []
         for directory in dirs:
-            published = _publish_conveniences(root, directory, (*WINDOWS_BIN_LAUNCHERS, "scout-agent"), create=create)
+            published = _publish_conveniences(root, directory, WINDOWS_BIN_LAUNCHERS, create=create)
             written.extend(path.name for path, changed in published.items() if changed)
         return {"ok": True, "written": written}
     except OSError as exc:
@@ -573,7 +572,7 @@ def _symlink_sealed_launchers(payload_bin) -> dict:
     written: list[str] = []
     try:
         link_dir.mkdir(parents=True, exist_ok=True)
-        for name in ("scout", "scout-agent", "scout-acp"):
+        for name in ("scout", "scout-server"):
             source = payload_bin / name
             if not source.is_file():
                 continue

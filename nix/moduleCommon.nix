@@ -1072,6 +1072,9 @@ let
     {
       SCOUT_HOME = scoutHome;
       SCOUT_MANAGED = managedSystem;
+      # These units are the hosted backend: `scout` runs only in its context
+      # (scout_cli.main._require_app_context), never in a person's shell.
+      SCOUT_AGENT = "true";
     };
 
   processPath =

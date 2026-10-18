@@ -285,12 +285,9 @@ def _hermetic_environment(tmp_path, monkeypatch):
     for name in _SCOUT_BEHAVIORAL_VARS:
         monkeypatch.delenv(name, raising=False)
 
-    # Honcho's fallback host/config resolution legitimately reads the user's
-    # global ~/.honcho/config.json. Keep HOME stable (subprocess tests depend
-    # on it), but pin the host so ordinary tests cannot inherit a developer's
-    # defaultHost and silently select the wrong nested config block. Tests of
-    # custom host resolution override/delete this explicitly.
-    monkeypatch.setenv("SCOUT_HONCHO_HOST", "scout")
+    # Tests run as the agent: the `scout` command only runs in the app backend's
+    # context (scout_cli.main._require_app_context). Tests of the gate unset it.
+    monkeypatch.setenv("SCOUT_AGENT", "true")
 
     # 3. Isolate both inputs to profile/root resolution. SCOUT_HOME alone
     #    is insufficient: get_default_scout_root() resolves the native root

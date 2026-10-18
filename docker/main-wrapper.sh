@@ -76,8 +76,10 @@ cd /opt/data
 # directory, not /opt/data.
 cd "$_scout_orig_cwd"
 
+# The container is the hosted backend: `scout-server` serves the apps' API and
+# the web app. There is no human CLI.
 if [ $# -eq 0 ]; then
-    drop scout
+    drop scout-server --host 0.0.0.0 --port 9119
 fi
 
 # A leading flag is a scout global option (`-p <profile> gateway run`), never an executable:
@@ -94,4 +96,4 @@ case "$1" in
 esac
 
 # Scout subcommand pass-through.
-drop scout "$@"
+drop scout-server "$@"

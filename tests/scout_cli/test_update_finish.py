@@ -81,7 +81,7 @@ def completion(tmp_path, monkeypatch):
          f"_config_version: {DEFAULT_CONFIG['_config_version'] - 1}\nmodel:\n  default: retained-model\n")
     env = {key: value for key, value in os.environ.items()
            if not key.startswith(("SCOUT_", "PYTHON", "PYTEST_", "VIRTUAL_ENV", "npm_", "NPM_"))}
-    env.update(HOME=str(home), SCOUT_HOME=str(home / ".scout"),
+    env.update(HOME=str(home), SCOUT_HOME=str(home / ".scout"), SCOUT_AGENT="true",
                SCOUT_RUNTIME_DIR=str(tmp_path / "store"),
                PYTHONPATH="/obsolete/pre-pm/site-packages", PYTHONHOME="/obsolete/python",
                NPM_CONFIG_OFFLINE="true", NPM_CONFIG_CACHE=str(tmp_path / "npm-cache"))

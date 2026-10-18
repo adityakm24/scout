@@ -92,8 +92,8 @@ class TestExposeCli:
         # An owned ACP entry must be repaired even without an owned scout
         # sibling admitting this directory. Its old target is already gone.
         extra.mkdir()
-        dangling = root / "venv/bin/scout-acp"
-        acp = extra / "scout-acp"
+        dangling = root / "venv/bin/scout-server"
+        acp = extra / "scout-server"
         acp.symlink_to(dangling)
         assert not acp.exists() and acp.is_symlink()
         foreign = b"#!/bin/sh\n# user-owned caf\xc3\xa9 command\nexit 19\n"
@@ -101,12 +101,12 @@ class TestExposeCli:
             (extra / "scout").write_bytes(foreign)
         wrapper_dir.mkdir(parents=True)
         (wrapper_dir / "scout").write_bytes(foreign)
-        foreign_link = wrapper_dir / "scout-acp"
-        foreign_target = home / "other-install/scout-acp"
+        foreign_link = wrapper_dir / "scout-server"
+        foreign_target = home / "other-install/scout-server"
         foreign_link.symlink_to(foreign_target)
         before = {path: path.lstat().st_mtime_ns for path in (wrapper_dir, wrapper_dir / "scout", foreign_link)}
 
-        assert _launchers.expose_cli(create=False) == {"ok": True, "written": ["scout-acp"]}
+        assert _launchers.expose_cli(create=False) == {"ok": True, "written": ["scout-server"]}
         assert acp.is_file() and not acp.is_symlink() and os.access(acp, os.X_OK)
         assert not dangling.exists()
         assert not (extra / "scout-agent").exists()
@@ -125,8 +125,8 @@ class TestExposeCli:
         home, root = fake_install
         result = _launchers.expose_cli()
         assert result["ok"] is True
-        assert sorted(result["written"]) == ["scout", "scout-acp", "scout-agent"]
-        for name in ("scout", "scout-agent", "scout-acp"):
+        assert sorted(result["written"]) == ["scout", "scout-server"]
+        for name in ("scout", "scout-server"):
             wrapper = home / ".local" / "bin" / name
             body = wrapper.read_text(encoding="utf-8-sig")
             assert str(root) in body
@@ -147,7 +147,7 @@ class TestExposeCli:
         assert (wrapper_dir / "scout").read_text(encoding="utf-8-sig") == foreign
         assert "scout" not in result["written"]
         # The other two had no file at all — those ARE written.
-        assert sorted(result["written"]) == ["scout-acp", "scout-agent"]
+        assert sorted(result["written"]) == ["scout-server"]
 
     @posix_only
     def test_config_gate_disables(self, fake_install, monkeypatch):
@@ -180,7 +180,7 @@ class TestExposeCli:
         (payload / "bin").mkdir(parents=True)
         (payload / "repo").mkdir()
         _write_bundled_stamp(payload / "repo")
-        for name in ("scout", "scout-agent", "scout-acp"):
+        for name in ("scout", "scout-server"):
             (payload / "bin" / name).write_text("\x7fELF fake shim\n", encoding="utf-8")
         monkeypatch.setenv("SCOUT_INSTALL_ROOT", str(payload / "repo"))
         if not create:
@@ -242,7 +242,7 @@ def test_direct_packaged_cli_exposes_shims_before_electron(tmp_path):
     bin_dir = payload / "bin"
     bin_dir.mkdir()
     code = f"import sys; sys.path.insert(0, {str(Path(__file__).resolve().parents[2])!r}); from scout_cli.main import main; main()"
-    for name in ("scout", "scout-agent", "scout-acp"):
+    for name in ("scout", "scout-server"):
         shim = bin_dir / name
         shim.write_text(f'#!/bin/sh\nexec {shlex.join([sys.executable, "-I", "-c", code])} "$@"\n', encoding="utf-8")
         shim.chmod(0o755)
@@ -254,7 +254,7 @@ def test_direct_packaged_cli_exposes_shims_before_electron(tmp_path):
     result = subprocess.run([str(bin_dir / "scout"), "--help"], env=env,
                             capture_output=True, text=True, timeout=30, encoding="utf-8")
     assert result.returncode == 0, result.stderr
-    for name in ("scout", "scout-agent", "scout-acp"):
+    for name in ("scout", "scout-server"):
         assert (home / ".local/bin" / name).is_symlink()
         assert (home / ".local/bin" / name).resolve() == bin_dir / name
 
@@ -272,7 +272,7 @@ class TestSymlinkSealedLaunchers:
         monkeypatch.setattr(Path, "home", staticmethod(lambda: home))
         payload_bin = tmp_path / "Scout.app" / "Contents" / "Resources" / "agent-payload" / "bin"
         payload_bin.mkdir(parents=True)
-        for name in ("scout", "scout-agent", "scout-acp"):
+        for name in ("scout", "scout-server"):
             (payload_bin / name).write_text("fake mach-o shim\n", encoding="utf-8")
         return home, payload_bin
 
@@ -280,8 +280,8 @@ class TestSymlinkSealedLaunchers:
         home, payload_bin = payload
         result = _launchers._symlink_sealed_launchers(payload_bin)
         assert result["ok"] is True
-        assert sorted(result["written"]) == ["scout", "scout-acp", "scout-agent"]
-        for name in ("scout", "scout-agent", "scout-acp"):
+        assert sorted(result["written"]) == ["scout", "scout-server"]
+        for name in ("scout", "scout-server"):
             link = home / ".local" / "bin" / name
             assert link.is_symlink()
             assert os.readlink(link) == str(payload_bin / name)
@@ -317,4 +317,4 @@ class TestSymlinkSealedLaunchers:
         result = _launchers._symlink_sealed_launchers(payload_bin)
         assert (link_dir / "scout").read_text(encoding="utf-8-sig") == "#!/bin/sh\n# pipx launcher\n"
         assert os.readlink(link_dir / "scout-agent") == str(other)
-        assert sorted(result["written"]) == ["scout-acp"]
+        assert sorted(result["written"]) == ["scout-server"]

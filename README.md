@@ -12,10 +12,10 @@ money, changing your accounts.
 | Surface | What it is |
 |---|---|
 | **Desktop app** | A native window for macOS, Windows and Linux (`apps/desktop/`). |
-| **Web app** | A browser dashboard served by your own Scout (`scout dashboard`, `web/`). |
+| **Web app** | The website, served by the Scout backend (`web/`). |
 | **Phone app** | iOS and Android (`mobile/`), with live progress on the lock screen and notifications while the app is closed. |
 
-Scout itself runs on a machine you own. The apps connect to it; nothing is hosted for you.
+The Scout backend runs on a server. The apps connect to it; Scout is used only through the apps.
 
 ## What it can do
 
@@ -30,44 +30,31 @@ Scout itself runs on a machine you own. The apps connect to it; nothing is hoste
 - **Your choice of model.** Bring a key for any supported provider, or run a local model.
 - **Integrations.** Incoming webhooks, an OpenAI-compatible HTTP API and Home Assistant.
 
-## Getting started
+## Running the backend
 
-Scout runs from a checkout of this repository.
-
-```bash
-git clone https://github.com/adityakm24/scout.git
-cd scout
-./setup-scout.sh     # installs Python, Node and dependencies into Scout's own environment
-source ./activate    # puts that environment on your shell's PATH
-scout setup          # choose a model provider and enter its key
-scout desktop        # build and open the desktop app
-```
-
-To use Scout from a browser instead, run `scout dashboard`; it opens the web app on port 9119. The phone app
-pairs with a running Scout; see [`mobile/AGENTS.md`](mobile/AGENTS.md) for building it.
-
-The `scout` command is for setup and administration, not for chatting. There is no terminal chat:
-conversations happen in the apps.
-
-## Administration
+There is no command line for people. A server runs the backend, and every app connects to it:
 
 ```bash
-scout model          # switch provider or model
-scout tools          # turn tools on or off
-scout skills         # browse, install and manage skills
-scout cron list      # see scheduled tasks
-scout gateway        # background service for cron, webhooks and the HTTP API
-scout doctor         # check the install if something looks wrong
+docker build -t scout .
+docker run -p 9119:9119 -v scout-data:/opt/data scout
 ```
 
-API keys and other secrets go in `~/.scout/.env`; everything else is in `~/.scout/config.yaml`.
+Outside Docker, the process entry point is `scout-server --host 0.0.0.0 --port 9119`. It serves the
+apps' API and the website, runs scheduled jobs, and starts the gateway for webhooks, the HTTP API and
+Home Assistant. Secrets go in `.env` and settings in `config.yaml` under the data directory.
+
+The desktop app connects to the backend URL in `apps/desktop/backend.json`, which is fixed at build time.
+
+The `scout` command exists only for the agent: it runs inside the agent's own terminal and the backend's
+subprocesses, and refuses to run anywhere else.
 
 ## Developing
 
 ```bash
 source ./activate
 scripts/run_tests.sh                 # Python test suite (always use this, never bare pytest)
-cd apps/desktop && npm run dev       # desktop app with live reload
+scout-server                         # backend on 127.0.0.1:9119
+cd apps/desktop && npm run dev       # desktop app with live reload, connected to it
 ```
 
 [`AGENTS.md`](AGENTS.md) describes the architecture and the rules for changing it, with a guide per
