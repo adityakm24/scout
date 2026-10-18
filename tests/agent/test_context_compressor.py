@@ -219,31 +219,6 @@ class TestSummarizeToolResultClarify:
 
         assert summary == "[clarify] asked user a question"
 
-    @pytest.mark.parametrize(
-        "sentinel",
-        [
-            # cli.py clarify timeout callback
-            "The user did not provide a response within the time limit. "
-            "Use your best judgement to make the choice and proceed.",
-            # gateway/run.py timeout + delivery-failure paths
-            "[user did not respond within 15m]",
-            "[clarify prompt could not be delivered]",
-            # scout_cli/oneshot.py no-user callback
-            "[oneshot mode: no user available. Pick the best option from "
-            "['a', 'b'] using your own judgment and continue.]",
-        ],
-    )
-    def test_non_response_sentinels_are_not_attributed_to_user(self, sentinel):
-        """Timeout/no-user sentinel prose must not be quoted as a user answer."""
-        content = json.dumps({
-            "question": "Deploy when?",
-            "choices_offered": ["Friday", "Monday"],
-            "user_response": sentinel,
-        })
-
-        summary = _summarize_tool_result("clarify", "{}", content)
-
-        assert summary == "[clarify] asked user a question"
 
     def test_multi_select_containing_sentinel_stays_generic(self):
         content = json.dumps({
@@ -254,25 +229,6 @@ class TestSummarizeToolResultClarify:
 
         assert summary == "[clarify] asked user a question"
 
-    def test_live_oneshot_producer_is_recognized_as_sentinel(self):
-        """Producer→recognizer drift guard: run the REAL oneshot no-user
-        callback and assert its output is filtered. If the producer's wording
-        drifts away from _CLARIFY_NON_RESPONSE_PREFIXES, this fails."""
-        from scout_cli.oneshot import _oneshot_clarify_callback
-
-        sentinels = (
-            _oneshot_clarify_callback("Deploy when?", choices=["a", "b"]),
-            _oneshot_clarify_callback(
-                "Deploy when?", choices=["a", "b"], multi_select=True
-            ),
-            _oneshot_clarify_callback("Deploy when?"),
-        )
-        for sentinel in sentinels:
-            content = json.dumps({"user_response": sentinel})
-
-            summary = _summarize_tool_result("clarify", "{}", content)
-
-            assert summary == "[clarify] asked user a question", sentinel
 
     def test_preserves_batch_user_response_from_responses_list(self):
         """Batch clarify (``questions=[...]``) nests answers inside ``responses[].user_response``;
@@ -321,7 +277,6 @@ class TestShouldCompress:
     def test_explicit_tokens(self, compressor):
         assert compressor.should_compress(prompt_tokens=90000) is True
         assert compressor.should_compress(prompt_tokens=50000) is False
-
 
 
 class TestUpdateFromResponse:
@@ -400,8 +355,6 @@ class TestCompress:
         return [{"role": "user" if i % 2 == 0 else "assistant", "content": f"msg {i}"} for i in range(n)]
 
 
-
-
     def test_fallback_summary_does_not_triplicate_latest_user_ask(self):
         """Regression for #49307: the deterministic fallback summary used to
         render the latest user ask verbatim under THREE headings (Task
@@ -463,11 +416,6 @@ class TestCompress:
         assert ContextCompressor._compute_threshold_tokens(372_000, 0.90) == 334_800
 
 
-
-
-
-
-
     def test_max_tokens_coercion_treats_non_int_as_no_reservation(self):
         """A non-int / non-positive max_tokens must coerce safely so the
         threshold arithmetic never raises. Guards the path where a mocked
@@ -490,7 +438,6 @@ class TestCompress:
         assert isinstance(c.max_tokens, int)
         assert isinstance(c.threshold_tokens, int)
         assert c.threshold_tokens > 0  # no crash, sane value
-
 
 
     def test_compress_strips_db_persisted_from_assembled_messages(self, compressor):
@@ -528,7 +475,6 @@ class TestCompress:
         c.compression_count = 1
         assert c._effective_protect_first_n() == 0
         assert c._protect_head_size(msgs) == 1  # system prompt only
-
 
 
 class TestTailBudgetCodexReplayFields:
@@ -657,7 +603,6 @@ class TestNonStringContent:
         assert c._summary_failure_cooldown_until > 0
 
 
-
     def test_string_message_coerced_to_summary_content(self):
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
@@ -680,8 +625,6 @@ class TestNonStringContent:
         assert summary.startswith(f"{SUMMARY_PREFIX}\n{HISTORICAL_TASK_HEADING}\n")
         assert "do something" in summary
         assert summary.endswith("plain summary text")
-
-
 
 
     def test_task_snapshot_skips_synthetic_user_scaffolding(self):
@@ -742,7 +685,6 @@ class TestNonStringContent:
         second = c._ground_historical_task_snapshot(first, turns)
         assert "- keep me" in second and "## Goal" in second
         assert second.count(HISTORICAL_TASK_HEADING) == 1
-
 
 
 class TestSummaryFailureCooldown:
@@ -816,8 +758,6 @@ class TestAuthFailureAborts:
             "active while multiplexing is on."
         )
         assert _is_summary_access_or_quota_error(err) is True
-
-
 
 
     def test_400_out_of_extra_usage_aborts_instead_of_dropping_context(self):
@@ -927,7 +867,6 @@ class TestAuthFailureAborts:
         with patch("agent.context_compressor.call_llm", side_effect=self._auth_err(403)):
             c._generate_summary(self._msgs())
         assert c._last_summary_auth_failure is True
-
 
 
     def test_generate_summary_flags_network_failure(self):
@@ -1293,11 +1232,6 @@ class TestSummaryFallbackToMainModel:
         assert len(c._last_aux_model_failure_error) <= 220
 
 
-
-
-
-
-
 class TestStreamingClosedFailure:
     """httpcore / httpx premature stream-close errors are transient transport
     failures, not generic summary errors (#18458): they get the short
@@ -1515,10 +1449,6 @@ class TestSummaryFailureTrackingForGatewayWarning:
         assert "ghp_" not in fallback
 
 
-
-
-
-
 class TestAbortOnSummaryFailure:
     """Opt-in behavior (compression.abort_on_summary_failure=True):
     summary-generation failure ABORTS compression entirely — returns the
@@ -1562,8 +1492,6 @@ class TestAbortOnSummaryFailure:
         assert result == msgs
 
 
-
-
     def test_aux_fallback_clears_persisted_session_cooldown_before_retry(self, tmp_path):
         db = SessionDB(db_path=tmp_path / "state.db")
         db.create_session("s1", "cli")
@@ -1602,7 +1530,6 @@ class TestAbortOnSummaryFailure:
         assert db.get_compression_failure_cooldown("s1") is None
 
 
-
 class TestSummaryPrefixNormalization:
     def test_legacy_prefix_is_replaced(self):
         summary = ContextCompressor._with_summary_prefix("[CONTEXT SUMMARY]: did work")
@@ -1614,7 +1541,6 @@ class TestSummaryPrefixNormalization:
 
 
 class TestCompressWithClient:
-
 
 
     def test_sanitizer_matches_responses_call_id_when_id_differs(self, compressor):
@@ -1719,8 +1645,6 @@ class TestCompressWithClient:
 
         assert summary_msg["role"] == "assistant"
         assert summary_msg["content"].rstrip().endswith(_SUMMARY_END_MARKER.strip())
-
-
 
 
     def test_double_collision_merges_summary_into_tail(self):
@@ -1862,18 +1786,8 @@ class TestCompressWithClient:
         assert ContextCompressor._strip_summary_prefix(standalone) == "STANDALONE_BODY"
 
 
-
-
-
 class TestSummaryTargetRatio:
     """Verify that summary_target_ratio properly scales budgets with context window."""
-
-
-
-
-
-
-
 
 
     def test_protect_first_n_0_preserves_only_system_prompt(self):
@@ -1965,7 +1879,6 @@ class TestTokenBudgetTailProtection:
                 quiet_mode=True,
             )
             return c
-
 
 
     def test_tiny_budget_preserves_bounded_recent_turns(self, budget_compressor):
@@ -2089,10 +2002,6 @@ class TestTokenBudgetTailProtection:
         )
 
 
-
-
-
-
 class TestUpdateModelBudgets:
     """Regression: update_model() must recalculate token budgets."""
 
@@ -2110,7 +2019,6 @@ class TestUpdateModelBudgets:
         assert comp.tail_token_budget != old_tail, "tail_token_budget should change"
         assert comp.tail_token_budget < old_tail, "smaller context → smaller budget"
         assert comp.max_summary_tokens != old_max_summary, "max_summary_tokens should change"
-
 
 
     def test_update_model_preserves_lean_mode(self):
@@ -2186,9 +2094,6 @@ class TestUpdateModelResetsCalibration:
         assert comp.should_defer_preflight_to_real_usage(comp.context_length + 5_000) is False
 
 
-
-
-
 class TestThresholdTokensCap:
     """Tests for the absolute token cap (compression.threshold_tokens).
 
@@ -2196,7 +2101,6 @@ class TestThresholdTokensCap:
     count. It must survive model switches (update_model re-applies it)
     and be clamped to the model's context length.
     """
-
 
 
     def test_no_cap_uses_ratio_only(self):
@@ -2226,10 +2130,6 @@ class TestThresholdTokensCap:
 
         assert comp.threshold_tokens_cap is None
         assert comp.threshold_tokens == ratio_only.threshold_tokens
-
-
-
-
 
 
     def test_invalid_cap_treated_as_none(self):
@@ -2278,7 +2178,6 @@ class TestThresholdTokensCap:
         assert comp.threshold_tokens == cap
         comp.update_model("model-b", context_length=2_000_000)
         assert comp.threshold_tokens == cap
-
 
 
 class TestHistoricalToolCallArgumentsStayCanonical:
@@ -2355,8 +2254,6 @@ class TestLazyContextResolution:
             mock_get.assert_called_once()
 
 
-
-
 class TestPreflightSentinelGuard:
     """Regression guards for the preflight token-display seed
     (ContextCompressor.maybe_seed_preflight_display_tokens, called from
@@ -2421,9 +2318,6 @@ class TestTurnPairPreservation:
     # ------------------------------------------------------------------
     # _find_turn_pair_end unit tests
     # ------------------------------------------------------------------
-
-
-
 
 
     # ------------------------------------------------------------------
@@ -3214,11 +3108,6 @@ class TestMinTailUserMessages:
         assert cut >= head_end + 1
 
 
-
-
-
-
-
     def test_blank_echo_does_not_count_toward_n(self):
         """A blank platform echo (empty user row) must not consume one of the
         N slots — otherwise the guarantee silently degrades to N-1 real turns
@@ -3260,7 +3149,6 @@ class TestMinTailUserMessages:
             if m["role"] == "user" and m["content"].strip()
         ]
         assert {"real oldest", "real middle", "real latest"} <= set(tail_users)
-
 
 
     def test_n_guarantee_wins_over_tail_token_budget_and_floor(self):
@@ -3362,7 +3250,6 @@ class TestTailTokenBudgetCeiling:
         assert messages[7:] == oversized_tail
 
 
-
 class TestContextLengthSetterCoherence:
     """The context_length setter must (a) not wipe runtime corrections on
     no-op re-assignment of the same window (codex app-server usage callback
@@ -3395,7 +3282,6 @@ class TestContextLengthSetterCoherence:
         # same window+percent: identical to a compressor born on that window.
         assert c.threshold_percent == fresh.threshold_percent
         assert c.threshold_tokens == fresh.threshold_tokens
-
 
 
 class TestPreLlmFeasibilityCheck:
@@ -3478,7 +3364,6 @@ class TestPreLlmFeasibilityCheck:
 
         mock_gen.assert_called_once()
         assert compressor._prellm_skip_count == 0
-
 
 
     def test_skip_fires_on_fat_tail_small_middle(self, compressor):

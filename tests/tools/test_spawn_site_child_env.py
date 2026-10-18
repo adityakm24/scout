@@ -40,37 +40,11 @@ def _compute_host_seen(child_env, monkeypatch, names):
         sup.shutdown()
 
 
-def _openviking_server_seen(child_env, monkeypatch, names):
-    import subprocess
-
-    import plugins.memory.openviking as ov
-
-    out = child_env / "seen.json"
-    probe = _probe_script(child_env / "openviking-server", out, names)
-    monkeypatch.setattr(ov, "_local_openviking_port_is_open", lambda host, port: False)
-    monkeypatch.setattr(ov.shutil, "which", lambda name: str(probe))
-    real_popen, children = subprocess.Popen, []
-
-    def _record(*args, **kwargs):
-        children.append(real_popen(*args, **kwargs))
-        return children[-1]
-
-    monkeypatch.setattr(ov.subprocess, "Popen", _record)
-    state, _ = ov._start_local_openviking_server("http://127.0.0.1:1933")
-    assert state == ov._LOCAL_SERVER_STARTED
-    children[0].wait(timeout=30)
-    return json.loads(out.read_text(encoding="utf-8-sig"))
-
-
 def test_compute_host_is_scout_and_keeps_its_full_environment(child_env, monkeypatch):
     # It runs agent turns for the dashboard, so it needs what the turn needs: keys set only in the
     # process env (Docker -e, systemd) are not in any .env for it to reload (#65895).
     _plant(monkeypatch)
     names = [*_TIER1, _PROVIDER]
     assert _compute_host_seen(child_env, monkeypatch, names) == {n: f"fake-{n.lower()}" for n in names}
-
-
-
-
 
 

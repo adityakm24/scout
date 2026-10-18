@@ -69,6 +69,7 @@ class WinHome:
             "LOCALAPPDATA": str(local),
             "APPDATA": str(roaming),
             "SCOUT_HOME": str(self.scout_home),
+            "SCOUT_AGENT": "true",
             "PYTHONPATH": str(REPO_ROOT),
             "PYTHONUNBUFFERED": "1",
             "NO_COLOR": "1",

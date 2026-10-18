@@ -268,8 +268,6 @@ class TestClaudeCodeImport:
         assert not any("Read(" in p for p in allow)
 
 
-
-
     def test_slash_commands_reported_skipped(self, report):
         items = {i["kind"]: i for i in report["items"]}
         assert items["slash-commands"]["status"] == "skipped"
@@ -439,7 +437,6 @@ class TestExistingMemoryStorePreserved:
         memory.parent.mkdir(parents=True, exist_ok=True)
         memory.write_text(EXISTING_MEMORY, encoding="utf-8")
         return scout_home
-
 
 
     def test_import_preserves_existing_entry_verbatim(
@@ -674,15 +671,6 @@ class TestExistingConfigPreserved:
 
 class TestCliWiring:
 
-    def test_rejects_unknown_agent(self):
-        import argparse
-        from scout_cli.subcommands.import_agent import build_import_agent_parser
-
-        parser = argparse.ArgumentParser()
-        subparsers = parser.add_subparsers(dest="command")
-        build_import_agent_parser(subparsers, cmd_import_agent=lambda a: None)
-        with pytest.raises(SystemExit):
-            parser.parse_args(["import-agent", "cursor"])
 
     def test_command_dry_run_via_cli_writes_nothing(
             self, claude_tree, scout_home, capsys):

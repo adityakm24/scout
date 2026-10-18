@@ -453,29 +453,3 @@ class TestSameNameUserMcpTable:
         assert parsed["mcp_servers"]["other"]["command"] == "o"
 
 
-    def test_cli_migrate_dry_run_json_reports_without_writing(self, tmp_path, monkeypatch, capsys):
-        """`scout codex-runtime migrate --dry-run --json` is the supported automation seam:
-        drive it through the real ``scout`` argparse tree so the subcommand registration in
-        scout_cli/main.py stays pinned, and honour ``CODEX_HOME`` like every codex sibling."""
-        import json
-
-        import scout_cli.main as main
-
-        codex_home = tmp_path / "alt-codex"
-        codex_home.mkdir()
-        target = codex_home / "config.toml"
-        target.write_text('[mcp_servers.gbrain]\ncommand = "existing-gbrain"\n', encoding="utf-8")
-        monkeypatch.setenv("CODEX_HOME", str(codex_home))
-        monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
-        monkeypatch.setattr(
-            "scout_cli.config.load_config",
-            lambda: {"mcp_servers": {"gbrain": {"command": "projected"}, "other": {"command": "o"}}})
-        parser, _subparsers = main._build_cli_parser()
-        args = parser.parse_args(["codex-runtime", "migrate", "--dry-run", "--json"])
-        rc = args.func(args)
-        payload = json.loads(capsys.readouterr().out)
-        assert rc == 0
-        assert payload["dry_run"] is True and payload["written"] is False
-        assert payload["preserved_user_servers"] == ["gbrain"]
-        assert payload["target_path"] == str(target)
-        assert target.read_text(encoding="utf-8") == '[mcp_servers.gbrain]\ncommand = "existing-gbrain"\n'

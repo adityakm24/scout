@@ -59,9 +59,11 @@ def hermetic_env(home: Path, extra: dict[str, str] | None = None) -> dict[str, s
     assert home != real_user_home(), f"refusing to run a probe against the real HOME: {home}"
     env = {k: v for k, v in os.environ.items()
            if not (k.endswith(_STRIP_SUFFIXES) or k.startswith(_STRIP_PREFIXES)) and k not in _DROP}
+    env["SCOUT_AGENT"] = "true"  # the agent context: `scout` refuses a person's shell
     env.update(
         HOME=str(home),
         SCOUT_HOME=str(home / ".scout"),
+        SCOUT_AGENT="true",
         XDG_STATE_HOME=str(home / ".local" / "state"),
         PYTHONPATH=str(REPO_ROOT),
         NO_COLOR="1",

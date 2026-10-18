@@ -58,6 +58,7 @@ def hermetic_env(home: Path, extra: dict[str, str] | None = None) -> dict[str, s
     assert home != real_user_home() and home / ".scout" != real_user_home() / ".scout", home
     env = {k: v for k, v in os.environ.items()
            if not (k.endswith(_STRIP_SUFFIXES) or k.startswith(_STRIP_PREFIXES))}
+    env["SCOUT_AGENT"] = "true"  # the agent context: `scout` refuses a person's shell
     for var in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy", "XDG_STATE_HOME",
                 "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME",
                 # no route to the developer's systemd --user bus: a child can never see or touch the
@@ -67,6 +68,7 @@ def hermetic_env(home: Path, extra: dict[str, str] | None = None) -> dict[str, s
     env.update(
         HOME=str(home),
         SCOUT_HOME=str(home / ".scout"),
+        SCOUT_AGENT="true",
         XDG_STATE_HOME=str(home / ".local" / "state"),
         PYTHONPATH=str(REPO_ROOT),
         NO_COLOR="1",

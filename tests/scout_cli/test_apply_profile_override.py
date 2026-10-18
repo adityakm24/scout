@@ -71,33 +71,6 @@ def _run_apply_profile_override(
     return os.environ.get("SCOUT_HOME")
 
 
-@pytest.mark.parametrize("argv", [
-    ["scout", "profile", "list"],
-    ["scout", "profile", "use", "default"],
-    ["scout", "uninstall"],
-    ["scout", "uninstall", "--dry-run"],
-    ["scout", "uninstall", "--help"],
-])
-@pytest.mark.parametrize("exported_home", [False, True])
-def test_missing_sticky_profile_allows_recovery_commands(
-    tmp_path, monkeypatch, capsys, argv, exported_home,
-):
-    root = tmp_path / ".scout"
-    result = _run_apply_profile_override(
-        tmp_path, monkeypatch, scout_home=str(root) if exported_home else None,
-        active_profile="ray",
-        create_active_profile=False, argv=argv,
-    )
-
-    assert result == str(root)
-    assert "saved profile 'ray' no longer exists; running this recovery command" in capsys.readouterr().err
-    if argv[1:3] == ["profile", "use"]:
-        from scout_cli.profile_cmd import cmd_profile
-
-        cmd_profile(SimpleNamespace(profile_action="use", profile_name="default"))
-        assert not (root / "active_profile").exists()
-    else:
-        assert (root / "active_profile").read_text(encoding="utf-8-sig") == "ray"
 
 
 @pytest.mark.parametrize("argv, expect_hint", [

@@ -1,11 +1,3 @@
-"""User-editable plugin/auth JSON survives a Windows-editor BOM.
-
-Notepad and PowerShell ``>`` prepend U+FEFF when saving; ``json.loads`` rejects it
-("Unexpected UTF-8 BOM") and every loader below degrades to defaults, so a user who
-edited mem0.json / honcho.json / supermemory.json lost the
-whole config with no error (Qwen CLI creds raised ``qwen_auth_read_failed``). Same
-class as the auth-store/.env sweep; these were the missed sibling readers.
-"""
 
 import json
 from pathlib import Path
@@ -17,24 +9,6 @@ def _write_bom_json(path: Path, payload: dict) -> Path:
     path.write_text(json.dumps(payload), encoding="utf-8-sig")
     assert path.read_bytes().startswith(b"\xef\xbb\xbf")  # the BOM must really be on disk
     return path
-
-
-def _via_shared_reader(p: Path, monkeypatch) -> dict:
-    from utils import read_json_or_empty  # mem0 / honcho CLI all read through this
-    return read_json_or_empty(p)
-
-
-def _via_supermemory(p: Path, monkeypatch) -> dict:
-    from plugins.memory.supermemory import _load_supermemory_config
-    return _load_supermemory_config(str(p.parent))
-
-
-def _via_honcho_client(p: Path, monkeypatch) -> dict:
-    from plugins.memory.honcho.client import HonchoClientConfig
-    cfg = HonchoClientConfig.from_global_config(config_path=p)
-    return {"workspace": cfg.workspace_id, "container_tag": None}
-
-
 
 
 def test_qwen_cli_tokens_tolerate_bom(tmp_path, monkeypatch):

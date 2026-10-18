@@ -92,6 +92,7 @@ class Board:
     def env(self) -> dict[str, str]:
         env = {k: v for k, v in os.environ.items()
                if not k.startswith("SCOUT_") and not k.endswith(("_API_KEY", "_TOKEN"))}
+        env["SCOUT_AGENT"] = "true"  # the agent context: `scout` refuses a person's shell
         env.pop("PYTEST_CURRENT_TEST", None)
         env.update({
             "HOME": str(self.home), "SCOUT_HOME": str(self.scout_home),

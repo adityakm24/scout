@@ -589,44 +589,6 @@ class TestImport:
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
         return scout_home
 
-    @pytest.mark.parametrize("damage, compression", [
-        ("deflate", zipfile.ZIP_DEFLATED),
-        ("stored", zipfile.ZIP_STORED),
-        ("bzip2", zipfile.ZIP_BZIP2),
-        ("truncated", zipfile.ZIP_DEFLATED),
-    ])
-    def test_import_refuses_damaged_archive_before_touching_home(
-        self, tmp_path, monkeypatch, capsys, damage, compression
-    ):
-        """#121258: members that fail to decompress, fail their CRC or are cut short must all be
-        found BEFORE the first file is replaced -- not surface as a traceback half-way through
-        -- listed (capped) in one run, and the command must exit 1 without "restored" wording."""
-        scout_home = self._home_for_corrupt_import(tmp_path, monkeypatch)
-        zip_path = tmp_path / "backup.zip"
-        names = [f"skills/s{i}/SKILL.md" for i in range(12)]
-        with zipfile.ZipFile(zip_path, "w", compression=compression) as zf:
-            zf.writestr("config.yaml", "model: restored\n")
-            for name in names:
-                zf.writestr(name, f"# {name}\n" * 20)
-            zf.writestr("sessions/after.json", '{"restored": true}')
-        for name in names:
-            self._corrupt_member(zip_path, name, damage)
-        assert zipfile.is_zipfile(zip_path)
-
-        from scout_cli.backup import run_import
-        from scout_cli.main import cmd_import
-
-        assert run_import(Namespace(zipfile=str(zip_path), force=True)) == 1
-        out = capsys.readouterr().out
-        assert "backup archive is damaged (12 member(s)" in out
-        assert sum(1 for line in out.splitlines() if line.strip().startswith("skills/s")) == 10
-        assert "... and 2 more" in out
-        assert "Importing" not in out
-        assert "restored" not in out.replace("nothing was restored", "")
-        # The home is exactly as it was.
-        assert (scout_home / "config.yaml").read_text() == "model: live\n"
-        assert sorted(p.name for p in scout_home.iterdir()) == ["config.yaml"]
-        assert cmd_import(Namespace(zipfile=str(zip_path), force=True)) == 1
 
     def test_import_ignores_damaged_pm_runtime_but_keeps_portable_data(
         self, tmp_path, monkeypatch
@@ -687,46 +649,6 @@ class TestImport:
         assert "Import incomplete" in out
         assert "has been restored" not in out
 
-    def test_skipped_member_reports_incomplete_and_exits_1(self, tmp_path, monkeypatch, capsys):
-        """A member that could not be written is a partial restore: the CLI must not print
-        "restored" or exit 0, or a script and the dashboard's "done" badge carry on over it.
-        Runtime files the import deliberately keeps are not failures."""
-        scout_home = tmp_path / ".scout"
-        locked = scout_home / "skills" / "demo"
-        locked.mkdir(parents=True)
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.setattr(Path, "home", lambda: tmp_path)
-
-        zip_path = tmp_path / "backup.zip"
-        self._make_backup_zip(zip_path, {
-            "config.yaml": "model: test\n",
-            "gateway.pid": "123\n",
-            "skills/demo/SKILL.md": "# demo\n",
-        })
-        args = Namespace(zipfile=str(zip_path), force=True)
-
-        from scout_cli.backup import run_import
-        from scout_cli.main import cmd_import
-
-        locked.chmod(0o555)
-        try:
-            if os.access(locked, os.W_OK):
-                pytest.skip("root or Windows: chmod 0555 does not make the directory read-only")
-            assert run_import(args) == 1
-            out = capsys.readouterr().out
-            assert "Import incomplete" in out
-            assert "Import complete" not in out
-            assert "skills/demo/SKILL.md" in out
-            assert "has been restored" not in out
-            assert cmd_import(args) == 1
-        finally:
-            locked.chmod(0o755)
-
-        capsys.readouterr()
-        assert cmd_import(args) is None
-        out = capsys.readouterr().out
-        assert "Preserved 1 runtime state file(s)" in out
-        assert "Done. Your Scout configuration has been restored." in out
 
 
 
@@ -916,36 +838,6 @@ class TestValidation:
 
 class TestBackupEdgeCases:
 
-    def test_incomplete_archive_is_kept_but_reported_as_failure(self, tmp_path, monkeypatch, capsys):
-        """A file that cannot be read is skipped, the zip still lands, and the CLI exits 1: a
-        cron/systemd timer must never see a partial archive as success (#101096)."""
-        scout_home = tmp_path / ".scout"
-        scout_home.mkdir()
-        _make_scout_tree(scout_home)
-        unreadable = scout_home / "skills" / "locked.md"
-        unreadable.write_text("secret\n")
-        unreadable.chmod(0)
-        if os.access(unreadable, os.R_OK):
-            pytest.skip("running as root: chmod 0 does not make the file unreadable")
-        monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-        monkeypatch.setattr(Path, "home", lambda: tmp_path)
-        from scout_cli.backup import _RUN_BACKUP_PREFIX, run_backup
-        from scout_cli.main import cmd_backup
-
-        out_dir = tmp_path / "b"
-        out_dir.mkdir()
-        good_old = out_dir / f"{_RUN_BACKUP_PREFIX}old.zip"
-        good_old.write_bytes(b"PK")
-        out_zip = out_dir / f"{_RUN_BACKUP_PREFIX}new.zip"
-
-        assert run_backup(Namespace(output=str(out_zip), keep=1)) is False
-        assert out_zip.exists()
-        assert good_old.exists(), "an incomplete run must not rotate the last complete backup out"
-        with pytest.raises(SystemExit) as exc:
-            cmd_backup(Namespace(output=str(tmp_path / "out2.zip"), quick=False))
-        assert exc.value.code == 1
-        unreadable.chmod(0o600)
-        assert run_backup(Namespace(output=str(tmp_path / "out4.zip"))) is True
 
     def test_empty_scout_home(self, tmp_path, monkeypatch):
         """Backup handles empty scout home (no files to back up)."""

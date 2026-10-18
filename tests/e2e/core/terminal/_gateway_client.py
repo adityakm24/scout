@@ -76,6 +76,7 @@ def _minimal_env(home: Path, scout_home: Path, token: str, extra: dict[str, str]
     tmpdir.mkdir(parents=True, exist_ok=True)
     env.update(
         HOME=str(home), SCOUT_HOME=str(scout_home), PYTHONPATH=str(REPO_ROOT),
+        SCOUT_AGENT="true",  # the backend's context: `scout` refuses a person's shell
         TMPDIR=str(tmpdir), SCOUT_DASHBOARD_SESSION_TOKEN=token, PYTHONUNBUFFERED="1",
         NO_COLOR="1",
         # The child's HOME *is* the sandbox, so its "real" root (expanduser('~')/.scout) is the tmp

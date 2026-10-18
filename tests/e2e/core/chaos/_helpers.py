@@ -119,9 +119,11 @@ def hermetic_env(home: Path, scout_home: Path, tag: str) -> dict[str, str]:
             or k in {"PYTEST_CURRENT_TEST"}
         )
     }
+    env["SCOUT_AGENT"] = "true"  # the agent context: `scout` refuses a person's shell
     env.update({
         "HOME": str(home),
         "SCOUT_HOME": str(scout_home),
+        "SCOUT_AGENT": "true",
         "OPENAI_API_KEY": "sk-fake-chaos",
         "PYTHONPATH": str(REPO_ROOT),
         "PYTHONUNBUFFERED": "1",

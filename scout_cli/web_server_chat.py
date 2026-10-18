@@ -1,10 +1,7 @@
 """Dashboard WebSocket plumbing: WS client/origin/auth gates and the Scout Console worker pool."""
 
 import logging
-import atexit
-import concurrent.futures
 import hmac
-import threading
 import urllib.request
 from fastapi import WebSocket
 from typing import Optional
@@ -184,24 +181,3 @@ def _ws_auth_ok(ws: "WebSocket") -> bool:
     return _ws_auth_reason(ws)[0] is None
 
 
-# On timeout asyncio cancels the awaitable but the console thread keeps running;
-# a small dedicated pool caps the leak instead of exhausting the default pool.
-_CONSOLE_EXECUTOR_MAX_WORKERS = 4
-_console_executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
-_console_executor_lock = threading.Lock()
-
-
-def _get_console_executor() -> concurrent.futures.ThreadPoolExecutor:
-    """Lazily create the bounded console worker pool (once per process)."""
-    global _console_executor
-    if _console_executor is None:
-        with _console_executor_lock:
-            if _console_executor is None:
-                _console_executor = concurrent.futures.ThreadPoolExecutor(
-                    max_workers=_CONSOLE_EXECUTOR_MAX_WORKERS, thread_name_prefix="scout-console")
-                # Tear down on interpreter exit without waiting on in-flight
-                # workers: a stuck 60s console command must not block shutdown.
-                atexit.register(
-                    lambda: _console_executor
-                    and _console_executor.shutdown(wait=False, cancel_futures=True))
-    return _console_executor

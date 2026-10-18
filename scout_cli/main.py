@@ -147,37 +147,18 @@ from scout_cli.subcommands.model import build_model_parser
 from scout_cli.subcommands.setup import build_setup_parser
 
 from scout_cli.subcommands.login import build_login_parser
-from scout_cli.subcommands.logout import build_logout_parser
 from scout_cli.subcommands.auth import build_auth_parser
-from scout_cli.subcommands.status import build_status_parser
 from scout_cli.subcommands.pause import build_pause_parser
 from scout_cli.subcommands.planner import build_planner_parser
 from scout_cli.subcommands.webhook import build_webhook_parser
 from scout_cli.subcommands.hooks import build_hooks_parser
 from scout_cli.subcommands.doctor import build_doctor_parser
 from scout_cli.subcommands.verify import build_verify_parser
-from scout_cli.subcommands.security import build_security_parser
-from scout_cli.subcommands.approvals import build_approvals_parser
-from scout_cli.subcommands.dump import build_dump_parser
-from scout_cli.subcommands.debug import build_debug_parser
-from scout_cli.subcommands.backup import build_backup_parser
-from scout_cli.subcommands.import_cmd import build_import_cmd_parser
-from scout_cli.subcommands.import_agent import build_import_agent_parser
 from scout_cli.subcommands.config import build_config_parser
-from scout_cli.subcommands.skin import build_skin_parser
-from scout_cli.subcommands.console import build_console_parser
 from scout_cli.subcommands.update import build_update_parser
-from scout_cli.subcommands.uninstall import build_uninstall_parser
 from scout_cli.subcommands.dashboard import build_dashboard_parser, build_serve_parser
-from scout_cli.subcommands.gui import build_gui_parser
-from scout_cli.subcommands.logs import build_logs_parser
-from scout_cli.subcommands.prompt_size import build_prompt_size_parser
 from scout_cli.subcommands.memory import build_memory_parser
-from scout_cli.subcommands.acp import build_acp_parser
 from scout_cli.subcommands.tools import build_tools_parser
-from scout_cli.subcommands.insights import build_insights_parser
-from scout_cli.subcommands.usage import build_usage_parser
-from scout_cli.subcommands.monitoring import build_monitoring_parser
 from scout_cli.subcommands.skills import build_skills_parser
 from scout_cli.subcommands.plugins import build_plugins_parser
 from scout_cli.subcommands.mcp import build_mcp_parser
@@ -185,10 +166,8 @@ from scout_cli.subcommands.claw import build_claw_parser
 from scout_cli.subcommands.vault import build_vault_parser
 from scout_cli.subcommands.moa import build_moa_parser
 from scout_cli.subcommands.fallback import build_fallback_parser
-from scout_cli.subcommands.worktree import build_worktree_parser
 from scout_cli.subcommands.browser import build_browser_parser
 from scout_cli.subcommands.secrets import build_secrets_parser
-from scout_cli.subcommands.codex_runtime import build_codex_runtime_parser
 from scout_cli.subcommands.egress import build_egress_parser
 from scout_cli.subcommands.migrate import build_migrate_parser
 from scout_cli.subcommands.checkpoints import build_checkpoints_parser
@@ -196,10 +175,8 @@ from scout_cli.subcommands.bundles import build_bundles_parser
 from scout_cli.subcommands.curator import build_curator_parser
 from scout_cli.subcommands.pets import build_pets_parser
 from scout_cli.subcommands.google import build_google_parser
-from scout_cli.subcommands.journey import build_journey_parser
 from scout_cli.subcommands.computer_use import build_computer_use_parser
 from scout_cli.subcommands.sessions import build_sessions_parser
-from scout_cli.subcommands.completion import build_completion_parser
 
 
 def _require_tty(command_name: str) -> None:
@@ -586,10 +563,7 @@ from scout_cli.model_setup_flows import (
 )
 logger = logging.getLogger(__name__)
 from scout_cli.main_agent_cmds import (
-    cmd_acp,
-    cmd_insights,
     cmd_memory,
-    cmd_monitoring,
     cmd_skills,
     cmd_tools,
 )
@@ -666,9 +640,6 @@ from scout_cli.main_install_repair import (  # frozen updater surface: update_cm
     _resolve_update_branch,
     _update_marker_path,
     _venv_scripts_dir,
-)
-from scout_cli.main_desktop import (
-    cmd_gui,
 )
 from scout_cli.main_desktop import (  # frozen updater surface: update_cmd*.py resolve these via _m()
     _desktop_build_needed,
@@ -1716,24 +1687,16 @@ def _forward_command(name: str, module: str, attr: str, *, forward_return: bool 
 
 cmd_setup = _forward_command("cmd_setup", "scout_cli.setup", "run_setup_wizard", doc='Interactive setup wizard.')
 cmd_login = _forward_command("cmd_login", "scout_cli.auth", "login_command", doc='Authenticate Scout CLI with a provider.')
-cmd_logout = _forward_command("cmd_logout", "scout_cli.auth", "logout_command", doc='Clear provider authentication.')
 cmd_auth = _forward_command("cmd_auth", "scout_cli.auth_commands", "auth_command", doc='Manage pooled credentials.')
-cmd_status = _forward_command("cmd_status", "scout_cli.status", "show_status", doc='Show status of all components.')
 cmd_cron = _forward_command("cmd_cron", "scout_cli.cron", "cron_command", forward_return=True, doc='Cron job management.')
 cmd_webhook = _forward_command("cmd_webhook", "scout_cli.webhook", "webhook_command", doc='Webhook subscription management.')
 cmd_kanban = _forward_command("cmd_kanban", "scout_cli.kanban", "kanban_command", forward_return=True, doc='Multi-profile collaboration board.')
 cmd_project = _forward_command("cmd_project", "scout_cli.projects_cmd", "projects_command", forward_return=True, doc='Manage projects (named, multi-folder workspaces).')
 cmd_hooks = _forward_command("cmd_hooks", "scout_cli.hooks", "hooks_command", doc='Shell-hook inspection and management.')
 cmd_doctor = _forward_command("cmd_doctor", "scout_cli.doctor", "run_doctor", forward_return=True, doc='Check configuration and dependencies.')
-cmd_dump = _forward_command("cmd_dump", "scout_cli.dump", "run_dump", doc='Dump setup summary for support/debugging.')
-cmd_debug = _forward_command("cmd_debug", "scout_cli.debug", "run_debug", doc='Debug tools (share report, etc.).')
-cmd_skin = _forward_command("cmd_skin", "scout_cli.skin_cmd", "skin_command", doc='Skin management (list / use / set).')
-cmd_import = _forward_command("cmd_import", "scout_cli.backup", "run_import", forward_return=True, doc='Restore a Scout backup from a zip file.')
-cmd_prompt_size = _forward_command("cmd_prompt_size", "scout_cli.prompt_size", "cmd_prompt_size", doc='Show a byte/char breakdown of the system prompt + tool schemas.')
 cmd_plugins = _forward_command("cmd_plugins", "scout_cli.plugins_cmd", "plugins_command")
 cmd_mcp = _forward_command("cmd_mcp", "scout_cli.mcp_config", "mcp_command", forward_return=True)
 cmd_claw = _forward_command("cmd_claw", "scout_cli.claw", "claw_command")
-cmd_import_agent = _forward_command("cmd_import_agent", "scout_cli.agent_import", "import_agent_command")
 
 
 def cmd_model(args):
@@ -2030,27 +1993,8 @@ def cmd_verify(args):
     sys.exit(run_verify_command(args))
 
 
-def cmd_security(args):
-    """Dispatch `scout security <subcmd>`."""
-    sub = getattr(args, "security_command", None)
-    if sub in ("audit", None):
-        from scout_cli.security_audit import cmd_security_audit
-
-        # Default subcommand is `audit` when no subcmd is given.
-        code = cmd_security_audit(args)
-        sys.exit(int(code or 0))
-    print(f"unknown security subcommand: {sub}", file=sys.stderr)
-    sys.exit(2)
 
 
-def cmd_approvals(args):
-    """Dispatch `scout approvals <subcmd>`."""
-    from scout_cli.approvals_suggest import approvals_command
-
-    status = approvals_command(args)
-    if status:
-        sys.exit(status)
-    return status
 
 
 def cmd_config(args):
@@ -2066,14 +2010,6 @@ def cmd_config(args):
         sys.exit(1)
 
 
-def cmd_backup(args):
-    """Back up Scout home directory to a zip file."""
-    from scout_cli import backup
-
-    if getattr(args, "quick", False):
-        backup.run_quick_backup(args)
-    elif not backup.run_backup(args):
-        raise SystemExit(1)  # archive written but incomplete: never shell-success for a timer
 
 
 def _print_version_info(*, check_updates: bool = True) -> None:
@@ -2086,40 +2022,6 @@ def cmd_version(args):
     _print_version_info(check_updates=True)
 
 
-def cmd_uninstall(args):
-    """Uninstall Scout Agent (or just the Chat GUI with --gui).
-
-    ``--yes`` paths run from the desktop app's non-interactive cleanup scripts,
-    so the TTY gate applies only when we actually need to prompt.
-    """
-    # Machine-readable snapshot for the desktop uninstall UI; before any TTY gate.
-    if getattr(args, "gui_summary", False):
-        from scout_cli.gui_uninstall import gui_install_summary
-
-        print(json.dumps(gui_install_summary()))
-        return
-
-    if getattr(args, "data", False):
-        if not getattr(args, "yes", False) and not getattr(args, "dry_run", False):
-            _require_tty("uninstall --data")
-        from scout_cli.uninstall import run_data_uninstall
-
-        run_data_uninstall(args)
-        return
-
-    if getattr(args, "gui", False):
-        if not getattr(args, "yes", False):
-            _require_tty("uninstall --gui")
-        from scout_cli.uninstall import run_gui_uninstall
-
-        run_gui_uninstall(args)
-        return
-
-    if not getattr(args, "yes", False):
-        _require_tty("uninstall")
-    from scout_cli.uninstall import run_uninstall
-
-    run_uninstall(args)
 
 
 def _clear_bytecode_cache(root: Path) -> int:
@@ -2584,43 +2486,8 @@ def cmd_dashboard(args):
     )
 
 
-def cmd_completion(args, parser=None):
-    """Print shell completion script."""
-    from scout_cli import completion
-
-    shell = getattr(args, "shell", "bash")
-    generate = {"zsh": completion.generate_zsh, "fish": completion.generate_fish}.get(
-        shell, completion.generate_bash
-    )
-    print(generate(parser))
 
 
-def cmd_logs(args):
-    """View and filter Scout log files."""
-    from scout_cli.logs import tail_log, list_logs
-
-    log_name = getattr(args, "log_name", "agent") or "agent"
-
-    if log_name == "list":
-        list_logs()
-        return
-
-    tail_log(
-        log_name,
-        num_lines=getattr(args, "lines", 50),
-        follow=getattr(args, "follow", False),
-        level=getattr(args, "level", None),
-        session=getattr(args, "session", None),
-        since=getattr(args, "since", None),
-        component=getattr(args, "component", None),
-    )
-
-
-def cmd_console(args):
-    """Open the safe Scout command console."""
-    from scout_cli.console_engine import run_console_repl
-
-    return run_console_repl()
 
 
 # Top-level subcommands known WITHOUT plugin discovery (which costs 500ms+ of
@@ -2629,22 +2496,11 @@ def cmd_console(args):
 # entry would let a plugin command silently fail to parse.
 _BUILTIN_SUBCOMMANDS = frozenset(
     {
-        "acp", "approvals", "auth", "backup", "bundles", "checkpoints", "claw", "codex-runtime", "completion",
-        "computer-use",
-        "config", "console", "cron", "curator", "dashboard", "serve", "debug", "doctor",
-        "dump", "egress", "fallback", "gateway", "hooks", "import", "import-agent", "insights",
-        "gui", "desktop", "kanban", "login", "logout", "logs", "lsp", "mcp", "memory", "migrate", "moa",
-        "journey", "memory-graph", "learning",
-        "google", "model", "monitoring", "pause", "peer", "pets", "plugins", "profile",
-        "project", "proxy",
-        "prompt-size",
-        "resume",
-        "sessions", "setup",
-        "skin", "skills", "status", "tools", "uninstall", "update",
-        "usage", "vault",
-        "webhook", "worktree", "chat", "secrets", "security",
-        "browser",
-        "verify",
+        "auth", "browser", "bundles", "chat", "checkpoints", "claw", "computer-use", "config", "cron",
+        "curator", "dashboard", "doctor", "egress", "fallback", "gateway", "google", "hooks", "kanban",
+        "learning", "login", "lsp", "mcp", "memory", "memory-graph", "migrate", "moa", "model", "pause",
+        "peer", "pets", "plugins", "profile", "project", "proxy", "remind", "resume", "secrets", "serve",
+        "sessions", "setup", "skills", "todo", "tools", "update", "vault", "verify", "webhook",
         # Plugin commands missing from top-level --help is an accepted trade-off.
         "help",
     }
@@ -2976,13 +2832,11 @@ def _build_cli_parser():
     build_model_parser(subparsers, cmd_model=cmd_model)
     build_moa_parser(subparsers)
     build_fallback_parser(subparsers)
-    build_worktree_parser(subparsers)
     build_browser_parser(subparsers)
     build_secrets_parser(subparsers)
     # OUTBOUND egress firewall; ``scout proxy`` (gateway group) is the INBOUND one.
     build_egress_parser(subparsers)
     build_migrate_parser(subparsers)
-    build_codex_runtime_parser(subparsers)
     build_gateway_parser(
         subparsers, cmd_gateway=cmd_gateway, cmd_proxy=cmd_proxy
     )
@@ -2996,9 +2850,7 @@ def _build_cli_parser():
 
     build_setup_parser(subparsers, cmd_setup=cmd_setup)
     build_login_parser(subparsers, cmd_login=cmd_login)
-    build_logout_parser(subparsers, cmd_logout=cmd_logout)
     build_auth_parser(subparsers, cmd_auth=cmd_auth)
-    build_status_parser(subparsers, cmd_status=cmd_status)
     build_pause_parser(subparsers)
     build_planner_parser(subparsers)
     build_cron_parser(subparsers, cmd_cron=cmd_cron)
@@ -3016,17 +2868,8 @@ def _build_cli_parser():
     build_hooks_parser(subparsers, cmd_hooks=cmd_hooks)
     build_doctor_parser(subparsers, cmd_doctor=cmd_doctor)
     build_verify_parser(subparsers, cmd_verify=cmd_verify)
-    build_security_parser(subparsers, cmd_security=cmd_security)
-    build_approvals_parser(subparsers, cmd_approvals=cmd_approvals)
-    build_dump_parser(subparsers, cmd_dump=cmd_dump)
-    build_debug_parser(subparsers, cmd_debug=cmd_debug)
-    build_backup_parser(subparsers, cmd_backup=cmd_backup)
     build_checkpoints_parser(subparsers)
-    build_import_cmd_parser(subparsers, cmd_import=cmd_import)
-    build_import_agent_parser(subparsers, cmd_import_agent=cmd_import_agent)
     build_config_parser(subparsers, cmd_config=cmd_config)
-    build_skin_parser(subparsers, cmd_skin=cmd_skin)
-    build_console_parser(subparsers, cmd_console=cmd_console)
     build_skills_parser(subparsers, cmd_skills=cmd_skills)
     build_bundles_parser(subparsers)
     build_plugins_parser(subparsers, cmd_plugins=cmd_plugins)
@@ -3036,31 +2879,21 @@ def _build_cli_parser():
     build_curator_parser(subparsers)
     build_pets_parser(subparsers)
     build_google_parser(subparsers)
-    build_journey_parser(subparsers)
     build_memory_parser(subparsers, cmd_memory=cmd_memory)
     build_tools_parser(subparsers, cmd_tools=cmd_tools)
     build_computer_use_parser(subparsers)
     build_mcp_parser(subparsers, cmd_mcp=cmd_mcp)
     build_sessions_parser(subparsers, cmd_sessions=_cmd_sessions_lazy)
-    build_insights_parser(subparsers, cmd_insights=cmd_insights)
-    build_usage_parser(subparsers)
-    build_monitoring_parser(subparsers, cmd_monitoring=cmd_monitoring)
     build_claw_parser(subparsers, cmd_claw=cmd_claw)
     build_vault_parser(subparsers)
     build_update_parser(subparsers, cmd_update=cmd_update)
-    build_uninstall_parser(subparsers, cmd_uninstall=cmd_uninstall)
-    build_acp_parser(subparsers, cmd_acp=cmd_acp)
     build_profile_parser(subparsers, cmd_profile=cmd_profile)
-    build_completion_parser(subparsers, cmd_completion=cmd_completion, parser=parser)
     build_dashboard_parser(
         subparsers,
         cmd_dashboard=cmd_dashboard,
     )
     # "desktop" is canonical (Scout-Setup.exe tells users to run it, so it
     # must be the name --help shows); "gui" is a deprecated alias.
-    build_gui_parser(subparsers, cmd_gui=cmd_gui)
-    build_logs_parser(subparsers, cmd_logs=cmd_logs)
-    build_prompt_size_parser(subparsers, cmd_prompt_size=cmd_prompt_size)
     return parser, subparsers
 
 

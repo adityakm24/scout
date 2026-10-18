@@ -59,9 +59,11 @@ def hermetic_env(home: Path, scout_home: Path | None = None, proxy: str | None =
     assert fake != real_home and real_home / ".scout" not in (fake, *fake.parents), fake
     env = {k: v for k, v in os.environ.items()
            if not (k.endswith(_STRIP_SUFFIXES) or k.startswith(_STRIP_PREFIXES))}
+    env["SCOUT_AGENT"] = "true"  # the agent context: `scout` refuses a person's shell
     env.update(
         HOME=str(home),
         SCOUT_HOME=str(scout_home or home / ".scout"),
+        SCOUT_AGENT="true",
         PYTHONPATH=str(REPO_ROOT),
         NO_COLOR="1",
         TERM="dumb",

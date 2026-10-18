@@ -77,6 +77,7 @@ def child_env(home: Path, scout_home: Path) -> dict:
     env.update({
         "HOME": str(home),
         "SCOUT_HOME": str(scout_home),
+        "SCOUT_AGENT": "true",
         "PYTHONUNBUFFERED": "1",
         # The child's SCOUT_HOME *is* this chamber's private home, which the live-DB guard reads as
         # "the real Scout root"; HOME/SCOUT_HOME above already keep it off the production install.

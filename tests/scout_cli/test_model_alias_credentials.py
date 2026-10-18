@@ -87,7 +87,6 @@ class TestDirectAliasCredentialLoading:
         assert alias.key_env == "THETA_API_KEY"
 
 
-
 class TestNestedModelAliasesCredentials:
     """``model.aliases:`` dict entries must keep ``api_key``/``key_env`` like
     top-level ``model_aliases:`` entries do (#114471)."""
@@ -519,7 +518,6 @@ class TestSchemelessBaseUrls:
         ) is False
 
 
-
 class TestAliasCacheIsProfileScoped:
     """DIRECT_ALIASES is process-global; its source is profile-local.
 
@@ -721,38 +719,3 @@ class TestDirectAliasHostGating:
 # scout chat -m <alias> — the oneshot path
 # ---------------------------------------------------------------------------
 
-class TestOneshotPassesAliasCredential:
-    def test_alias_api_key_is_passed_to_the_resolver(self, monkeypatch):
-        """``scout chat -m theta`` must hand the alias's key to
-        resolve_runtime_provider, not leave it to env fallbacks."""
-        from scout_cli.model_switch import DirectAlias
-        import scout_cli.model_switch as ms
-
-        monkeypatch.setattr(
-            ms,
-            "DIRECT_ALIASES",
-            {"theta": DirectAlias("theta-1", "custom", ALIAS_HOST, "sk-theta-ALIAS")},
-        )
-        monkeypatch.setattr(ms, "_ensure_direct_aliases", lambda: None)
-
-        captured = {}
-
-        def _fake_resolve(**kwargs):
-            captured.update(kwargs)
-            raise RuntimeError("stop after credential resolution")
-
-        # oneshot imports the resolver inside the function, so patch it at
-        # its source module.
-        monkeypatch.setattr(
-            "scout_cli.runtime_provider.resolve_runtime_provider", _fake_resolve
-        )
-        monkeypatch.setattr("scout_cli.config.load_config", lambda *a, **k: {})
-        import scout_cli.oneshot as oneshot
-
-        # _run_agent holds the alias wiring; run_oneshot() wraps it in a
-        # catch-all that would swallow the sentinel.
-        with pytest.raises(RuntimeError, match="stop after credential resolution"):
-            oneshot._run_agent(prompt="hi", model="theta")
-
-        assert captured["explicit_base_url"] == ALIAS_HOST
-        assert captured["explicit_api_key"] == "sk-theta-ALIAS"

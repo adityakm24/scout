@@ -14,32 +14,11 @@ import argparse
 
 
 from scout_cli.subcommands.computer_use import build_computer_use_parser
-from scout_cli.subcommands.worktree import build_worktree_parser
 
 
 def _tree():
     parser = argparse.ArgumentParser(prog="scout")
     return parser, parser.add_subparsers(dest="command")
-
-
-
-
-
-
-def test_worktree_aliases_normalize_to_list(monkeypatch):
-    parser, sub = _tree()
-    build_worktree_parser(sub)
-    seen = {}
-    monkeypatch.setattr("scout_cli.worktree_cmd.cmd_worktree", lambda a: seen.setdefault("action", a.worktree_action))
-    ns = parser.parse_args(["worktree", "audit"])
-    ns.func(ns)
-    assert seen["action"] == "list"
-
-
-
-
-
-
 
 
 def test_computer_use_no_action_prints_help(capsys):

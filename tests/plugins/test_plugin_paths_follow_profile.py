@@ -7,20 +7,8 @@ Windows and under multiplex profile overrides. Every resolver below must land in
 from __future__ import annotations
 
 
-
-
 def _a2a_conversation(home):
     from plugins.platforms.a2a import protocol
     return protocol._conv_path("peer-x")
-
-
-def _mem0_qdrant(home):
-    from plugins.memory.mem0._oss_providers import vector_default_config
-    return vector_default_config("qdrant")["path"]
-
-
-def _openviking_log(home):
-    import plugins.memory.openviking as ov
-    return ov.get_scout_home() / ov._OPENVIKING_SERVER_LOG_RELATIVE_PATH
 
 

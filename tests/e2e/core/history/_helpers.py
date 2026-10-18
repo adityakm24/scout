@@ -31,7 +31,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 # Children get an ALLOWLISTED env: a developer or agent shell exports TERMINAL_CWD,
 # SCOUT_SESSION_*, AUXILIARY_*, provider keys ... any of which changes the child's prompt or
 # routing and would make a surface-switch comparison diverge for reasons outside the product.
-_ENV_ALLOW = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "USER", "LOGNAME", "SHELL", "SSL_CERT_FILE", "TZ")
+_ENV_ALLOW = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "USER", "LOGNAME", "SHELL", "SSL_CERT_FILE", "TZ", "SCOUT_AGENT")
 
 # No network from probes: no update check, models.dev fetch fails fast on a closed port.
 OFFLINE_CONFIG = "updates:\n  check: false\nmodels_dev:\n  url: http://127.0.0.1:9/api.json\n"

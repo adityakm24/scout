@@ -31,7 +31,7 @@ WORKTREE = Path(__file__).resolve().parents[4]
 REAL_HOME = Path(pwd.getpwuid(os.getuid()).pw_dir)
 UID = os.getuid()
 
-_ENV_ALLOW = ("LANG", "LC_ALL", "TZ", "TERM", "SHELL", "USER", "LOGNAME", "TMPDIR", "SSL_CERT_FILE")
+_ENV_ALLOW = ("LANG", "LC_ALL", "TZ", "TERM", "SHELL", "USER", "LOGNAME", "TMPDIR", "SSL_CERT_FILE", "SCOUT_AGENT")
 _SHIMMED = ("systemctl", "launchctl", "sudo", "loginctl", "journalctl")
 
 
@@ -101,6 +101,7 @@ def isolated_env(
     env.update(
         HOME=str(home),
         SCOUT_HOME=str(scout_home),
+        SCOUT_AGENT="true",
         # The pytest ancestor marks this child as guarded; its HOME is already the sandbox.
         SCOUT_STATE_DB_GUARD_BYPASS="1",
         XDG_RUNTIME_DIR=str(root / "run"),
