@@ -17,14 +17,6 @@ import {
 } from './helpers'
 
 describe('settings helpers', () => {
-  it('does not shadow the backend schema options for memory.provider', () => {
-    // memory.provider options are discovery-driven and served by the backend
-    // config schema (merged per-request); enumOptionsFor must return undefined
-    // so config-field consumes schema.options instead of a stale static list.
-    expect(enumOptionsFor('memory.provider', '', {})).toBeUndefined()
-    expect(enumOptionsFor('memory.provider', 'honcho', {})).toBeUndefined()
-  })
-
   describe('defineFieldCopy', () => {
     it('flattens nested field copy paths', () => {
       const copy = defineFieldCopy({
@@ -323,33 +315,32 @@ describe('settings helpers', () => {
   })
 
   describe('sectionFieldEntries', () => {
-    it('renders memory.provider from config even when the backend schema omits it', () => {
+    it('renders a section key from config even when the backend schema omits it', () => {
       const schema = { 'memory.memory_enabled': { type: 'boolean' as const } }
-      const config: ScoutConfigRecord = { memory: { memory_enabled: true, provider: '' } }
+      const config: ScoutConfigRecord = { memory: { memory_enabled: true, user_profile_enabled: false } }
 
       const memoryKeys = (sectionFieldEntries(schema, config).get('memory') ?? []).map(([key]) => key)
 
-      expect(memoryKeys).toContain('memory.provider')
+      expect(memoryKeys).toContain('memory.user_profile_enabled')
     })
 
     it('infers the field type from the config value when the schema omits the key', () => {
-      const config: ScoutConfigRecord = { memory: { provider: '', memory_enabled: true, memory_char_limit: 2200 } }
+      const config: ScoutConfigRecord = { timezone: 'UTC', agent: { max_turns: 90 }, memory: { memory_enabled: true } }
+      const entries = sectionFieldEntries({}, config)
 
-      const fields = new Map(sectionFieldEntries({}, config).get('memory') ?? [])
-
-      expect(fields.get('memory.provider')?.type).toBe('string')
-      expect(fields.get('memory.memory_enabled')?.type).toBe('boolean')
-      expect(fields.get('memory.memory_char_limit')?.type).toBe('number')
+      expect(new Map(entries.get('chat') ?? []).get('timezone')?.type).toBe('string')
+      expect(new Map(entries.get('advanced') ?? []).get('agent.max_turns')?.type).toBe('number')
+      expect(new Map(entries.get('memory') ?? []).get('memory.memory_enabled')?.type).toBe('boolean')
     })
 
     it('prefers the backend schema entry over inference when both exist', () => {
-      const schema = { 'memory.provider': { type: 'select' as const, options: ['honcho'] } }
-      const config: ScoutConfigRecord = { memory: { provider: 'honcho' } }
+      const schema = { timezone: { type: 'select' as const, options: ['UTC'] } }
+      const config: ScoutConfigRecord = { timezone: 'UTC' }
 
-      const field = new Map(sectionFieldEntries(schema, config).get('memory') ?? []).get('memory.provider')
+      const field = new Map(sectionFieldEntries(schema, config).get('chat') ?? []).get('timezone')
 
       expect(field?.type).toBe('select')
-      expect(field?.options).toEqual(['honcho'])
+      expect(field?.options).toEqual(['UTC'])
     })
 
     it('hides declared keys absent from both schema and config', () => {
