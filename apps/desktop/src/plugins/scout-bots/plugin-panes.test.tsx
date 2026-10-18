@@ -30,6 +30,9 @@ import { I18nProvider } from '@/i18n'
 import type * as DataModule from './data'
 import type * as RoutingModule from './routing'
 
+// These cover Bot Mode itself, which ships switched off for now.
+vi.mock('./availability', () => ({ BOTS_AVAILABLE: true }))
+
 const mocks = vi.hoisted(() => ({
   botChatOwnsWorkspace: vi.fn(() => false),
   paneVisibility: vi.fn(),

@@ -1,9 +1,8 @@
 import { useStore } from '@nanostores/react'
 import { useState } from 'react'
 
-import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n'
-import { Bell, Check, LayoutDashboard, Plus } from '@/lib/icons'
+import { Bell, Check, Plus } from '@/lib/icons'
 import { fmtDayTime, relativeTime } from '@/lib/time'
 import { $openTodoCount, $plannerTodos, $upcomingReminders, addTodo, toggleTodo } from '@/store/planner'
 
@@ -25,10 +24,6 @@ export function DashboardSidebarPane() {
       <SummaryTiles />
       <QuickAdd />
       <OpenTodos />
-      <Button className="mt-auto h-9 rounded-full text-[0.8125rem]" onClick={openDashboard} variant="secondary">
-        <LayoutDashboard className="size-4" />
-        {t.dashboard.openDashboard}
-      </Button>
     </div>
   )
 }

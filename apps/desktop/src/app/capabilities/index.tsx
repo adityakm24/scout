@@ -1,6 +1,7 @@
 import type * as React from 'react'
 import { useCallback, useMemo, useState } from 'react'
 
+import { ComingSoon } from '@/components/coming-soon'
 import { useI18n } from '@/i18n'
 import { queryClient } from '@/lib/query-client'
 import { invalidateSlashCompletions } from '@/lib/slash-completion-cache'
@@ -13,7 +14,6 @@ import { PageSearchShell } from '../page-search-shell'
 import type { SetStatusbarItemGroup } from '../shell/statusbar-controls'
 
 import { ConnectorsTab } from './connectors/connectors-tab'
-import { PluginsTab } from './plugins/plugins-tab'
 import { CapabilityScopeSelector, useCapabilityScope } from './scope-selector'
 import { SKILLS_QUERY_KEY, skillSearchTerms, useSkillsQuery } from './skills/skills-data'
 import { SkillsTab } from './skills/skills-tab'
@@ -98,17 +98,8 @@ export function CapabilitiesView({
         profile={scope.profile}
       />
     ),
-    // Agent plugins for the scoped profile and app-level desktop plugins.
-    plugins: () => (
-      <PluginsTab
-        key={`plugins-${scope.key}`}
-        onQueryChange={setQuery}
-        profile={scope.profile}
-        query={query}
-        scopeLabel={scope.label}
-        scopeSelector={scope.options.length > 1 ? <CapabilityScopeSelector compact scope={scope} /> : undefined}
-      />
-    ),
+    // Plugin management isn't available yet.
+    plugins: () => <ComingSoon description={t.common.pluginsComingSoon} />,
     skills: () => (
       <SkillsTab
         installedError={skillsError}

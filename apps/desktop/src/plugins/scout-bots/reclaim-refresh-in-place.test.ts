@@ -21,6 +21,9 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as I18nModule from './i18n'
 import type { RosterRow } from './types'
 
+// These cover Bot Mode itself, which ships switched off for now.
+vi.mock('./availability', () => ({ BOTS_AVAILABLE: true }))
+
 const { openBotCanonicalChat, onEvent } = vi.hoisted(() => ({
   onEvent: vi.fn((_type: string, listener: (event: { payload?: unknown }) => void) => {
     listeners.push(listener)

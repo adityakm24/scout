@@ -27,8 +27,6 @@ import {
 import { $activeGatewayProfile, $profiles } from '@/store/profile'
 import { $connection, $gatewayState } from '@/store/session'
 
-import { PluginActions } from '../capabilities/plugins/plugins-tab'
-
 import { PluginInstallModal } from './plugin-install-modal'
 
 const probePluginRepo = vi.fn()
@@ -38,7 +36,9 @@ const renderFlow = () =>
   render(
     <MemoryRouter initialEntries={['/capabilities?tab=plugins']}>
       <QueryClientProvider client={queryClient}>
-        <PluginActions profile={null} />
+        <button onClick={() => openPluginInstallRequest({ profile: null, repo: '' })} type="button">
+          Install from Git
+        </button>
         <PluginInstallModal />
       </QueryClientProvider>
     </MemoryRouter>

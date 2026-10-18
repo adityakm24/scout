@@ -489,6 +489,8 @@ export const en: Translations = {
   },
   common: {
     apply: 'Apply',
+    comingSoon: 'Coming soon',
+    pluginsComingSoon: 'Install and manage plugins that add panes, tools and views.',
     back: 'Back',
     save: 'Save',
     saving: 'Saving…',

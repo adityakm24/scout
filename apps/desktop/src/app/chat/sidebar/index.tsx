@@ -1590,6 +1590,9 @@ export function ChatSidebar({
                   (currentView === 'extension' && Boolean(item.route) && pathname === item.route)
 
                 const isNewSession = item.id === 'new-session'
+                // A tile left alone on its row (odd tile count) takes the full width.
+                const tiles = navItems.filter(entry => entry.id !== 'new-session')
+                const loneTile = !isNewSession && tiles.length % 2 === 1 && tiles[tiles.length - 1] === item
 
                 const button = (
                   <SidebarMenuButton
@@ -1683,7 +1686,7 @@ export function ChatSidebar({
                 // right-click for the directional "Open in split" submenu.
                 return (
                   <SidebarMenuItem
-                    className={cn('scout-stagger', isNewSession && 'col-span-2')}
+                    className={cn('scout-stagger', (isNewSession || loneTile) && 'col-span-2')}
                     key={item.id}
                     style={{ '--stagger-index': index } as React.CSSProperties}
                   >

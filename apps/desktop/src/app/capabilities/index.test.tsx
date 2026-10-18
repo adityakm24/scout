@@ -8,7 +8,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { queryClient } from '@/lib/query-client'
 import type * as ScoutApi from '@/scout'
 
-import { $catalogCardView } from './catalog/store'
 
 const getSkills = vi.fn()
 const getToolsets = vi.fn()
@@ -92,7 +91,6 @@ async function renderSkills() {
 }
 
 beforeEach(() => {
-  $catalogCardView.set(true)
   getSkills.mockResolvedValue([])
   getToolsets.mockResolvedValue([toolset()])
   setToolsetEnabled.mockResolvedValue({ ok: true, name: 'web', enabled: false })

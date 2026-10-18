@@ -528,6 +528,8 @@ export interface Translations {
   }
   common: {
     apply: string
+    comingSoon: string
+    pluginsComingSoon: string
     back: string
     save: string
     saving: string
