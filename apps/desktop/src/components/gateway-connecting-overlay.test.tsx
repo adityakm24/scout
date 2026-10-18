@@ -169,7 +169,7 @@ describe('connecting overlay vs recovery surface', () => {
 
     // Escape hatch is reachable; the connecting overlay bows out.
     expect(isRecoveryShown()).toBe(true)
-    expect(screen.getByRole('button', { name: /gateway settings/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy()
     expect(isConnectingShown()).toBe(false)
   })
 })

@@ -45,7 +45,6 @@ import { AboutSettings } from './about-settings'
 import { AppearanceSettings } from './appearance-settings'
 import { ConfigSettings } from './config-settings'
 import { SECTIONS } from './constants'
-import { GatewaySettings } from './gateway-settings'
 import { KeybindSettings } from './keybind-settings'
 import { KEYS_VIEWS, KeysSettings, type KeysView } from './keys-settings'
 import { movedSettingsTabRedirect } from './moved-tabs'
@@ -61,10 +60,6 @@ import { vaultOwnerKey, VaultSettings } from './vault-settings'
 const SETTINGS_VIEWS: readonly SettingsViewId[] = [
   ...SECTIONS.map(s => `config:${s.id}` as SettingsViewId),
   'providers',
-  'gateway',
-  // Legacy alias: the Connections page merged into Gateways. Kept in the enum
-  // so saved `?tab=connections` deep links still resolve (redirected below).
-  'connections',
   'keybinds',
   'keys',
   'vault',
@@ -138,13 +133,6 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
 
   const setActiveView = useCallback((view: SettingsViewId) => openSettingsPage(view), [openSettingsPage])
 
-  // Connections merged into the unified Gateways page: land old
-  // `?tab=connections` routes/bookmarks there instead of a dead entry.
-  useEffect(() => {
-    if (activeView === 'connections') {
-      setActiveView('gateway')
-    }
-  }, [activeView, setActiveView])
   // Providers subnav (Accounts vs API keys) lives in its own param so each
   // sub-view is deep-linkable and survives a refresh.
   const [providerView, setProviderView] = useRouteEnumParam<ProviderView>('pview', PROVIDER_VIEWS, 'accounts')
@@ -304,13 +292,6 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
             id: 'providers',
             label: t.settings.nav.providers,
             onSelect: () => setActiveView('providers')
-          },
-          {
-            active: activeView === 'gateway',
-            icon: Globe,
-            id: 'gateway',
-            label: t.settings.nav.gateway,
-            onSelect: () => setActiveView('gateway')
           },
           {
             active: activeView === 'keybinds',
@@ -480,10 +461,6 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
       <AppearanceSettings subpage={subpage} />
     ) : activeView === 'about' ? (
       <AboutSettings subpage={subpage} />
-    ) : activeView === 'gateway' || activeView === 'connections' ? (
-      // 'connections' renders the unified page too so the frame before
-      // the alias redirect lands doesn't flash the fallback view.
-      <GatewaySettings subpage={subpage} />
     ) : activeView === 'keybinds' ? (
       <KeybindSettings subpage={subpage} />
     ) : activeView.startsWith('config:') ? (

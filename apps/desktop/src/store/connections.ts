@@ -149,28 +149,6 @@ export async function refreshConnectionsRegistry(): Promise<DesktopConnectionsRe
   return registry
 }
 
-async function rememberConnection(connectionId: string): Promise<void> {
-  const setLastUsed = window.scoutDesktop?.connections?.setLastUsed
-
-  if (!setLastUsed) {
-    return
-  }
-
-  try {
-    const result = await withTimeout(
-      setLastUsed(connectionId),
-      SWITCH_REMEMBER_TIMEOUT_MS,
-      'Timed out remembering the last-used connection'
-    )
-
-    setConnectionsRegistry(result.registry)
-  } catch {
-    // The source is already usable. A read-only/full userData directory (or
-    // a stalled IPC) must not turn a successful backend switch into a false
-    // connection failure.
-  }
-}
-
 /**
  * The sidebar registry initializes in parallel with the primary gateway boot.
  * Wait for main's resolved descriptor before deciding whether the preferred
@@ -297,9 +275,7 @@ export async function initializeConnectionsRegistry(): Promise<DesktopConnection
     return registry
   }
 
-  if ($activeConnectionId.get() === preferredId) {
-    await rememberConnection(preferredId)
-  } else {
+  if ($activeConnectionId.get() !== preferredId) {
     await selectConnection(preferredId)
   }
 
@@ -389,8 +365,6 @@ export async function selectConnection(connectionId: string, options: SelectConn
     currentProfile !== targetProfile
 
   if (!switching) {
-    await rememberConnection(connectionId)
-
     return
   }
 
@@ -402,7 +376,6 @@ export async function selectConnection(connectionId: string, options: SelectConn
     // <source>::x exactly, never a bare profile string.
     captureNewChatSource()
     requestFreshSession()
-    await rememberConnection(connectionId)
 
     return
   }
@@ -523,7 +496,6 @@ export async function selectConnection(connectionId: string, options: SelectConn
     // already makes the latest source win; this guard also prevents an older
     // request from repainting its profile list after that newer activation.
     if (revision === switchRevision) {
-      await rememberConnection(connectionId)
 
       if (!restoreOnBoot) {
         $showAllProfiles.set(false)

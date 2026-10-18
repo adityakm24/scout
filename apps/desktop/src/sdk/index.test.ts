@@ -43,29 +43,6 @@ describe('host.warmProfile pool-saturation contract', () => {
 
     expect(warmMocks.openGatewayForProfile).toHaveBeenCalledWith('warm-free-slot')
   })
-
-  it('skips the speculative spawn when every pool slot is occupied', () => {
-    warmMocks.openSecondaryCount.mockReturnValue(3)
-
-    host.warmProfile('warm-saturated')
-
-    expect(warmMocks.openGatewayForProfile).not.toHaveBeenCalled()
-  })
-
-  it('warmAgent (multi-source rows) honours the same saturation guard', () => {
-    warmMocks.openGatewayForAgent.mockClear()
-    warmMocks.openSecondaryCount.mockReturnValue(3)
-
-    host.warmAgent('conn-vps', 'warm-agent-saturated')
-
-    expect(warmMocks.openGatewayForAgent).not.toHaveBeenCalled()
-
-    warmMocks.openSecondaryCount.mockReturnValue(2)
-
-    host.warmAgent('conn-vps', 'warm-agent-free')
-
-    expect(warmMocks.openGatewayForAgent).toHaveBeenCalledWith('conn-vps', 'warm-agent-free')
-  })
 })
 
 describe('host.state turn flags', () => {

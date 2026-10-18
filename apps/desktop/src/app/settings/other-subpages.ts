@@ -2,11 +2,6 @@
 // existing capability-gated bview=overview|plans flow rather than adding a
 // second route parameter that could disagree with a pending financial action.
 export const OTHER_SUBPAGES: Record<string, { id: string; labelKey: string }[]> = {
-  gateway: [
-    { id: 'connection', labelKey: 'gatewayConnection' },
-    { id: 'devices', labelKey: 'gatewayDevices' },
-    { id: 'managed-updates', labelKey: 'gatewayManagedUpdates' }
-  ],
   keybinds: [
     { id: 'shortcuts', labelKey: 'keyboardShortcuts' },
     { id: 'hud-gesture', labelKey: 'hudGesture' },

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { expect, test } from 'vitest'
 import afterPack from './after-pack.mjs'
-import { resolvePackagedAsarPath } from './backend-ready-artifact.mjs'
+import { resolvePackagedAsarPath } from './packaged-asar.mjs'
 
 // This is the Linux afterPack path on a real Linux host, not a fake host flag.
 // macOS adds Developer ID signing; its native release lane owns that proof.

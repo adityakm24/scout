@@ -1,8 +1,6 @@
 import { useStore } from '@nanostores/react'
 import { useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router'
 
-import { ConnectionSwitcher } from '@/app/chat/sidebar/connection-switcher'
 import { ProfileSwitcher } from '@/app/chat/sidebar/profile-dropdown-switcher'
 import type { CommandCenterSection } from '@/app/command-center'
 import { toggleTerminalPane } from '@/app/right-sidebar/terminal/reveal-focus'
@@ -76,7 +74,7 @@ import {
 } from '@/store/updates'
 import type { StatusResponse, UsageStats } from '@/types/scout'
 
-import { CRON_ROUTE, SETTINGS_ROUTE, WEBHOOKS_ROUTE } from '../../routes'
+import { CRON_ROUTE, WEBHOOKS_ROUTE } from '../../routes'
 import type { StatusbarItem } from '../statusbar-controls'
 
 const EMPTY_USAGE: UsageStats = { calls: 0, input: 0, output: 0, total: 0 }
@@ -470,12 +468,6 @@ export function useStatusbarItems({
         variant: 'action'
       },
       {
-        hidden: !sessionsShowing,
-        id: 'gateway-switcher',
-        lockedVisible: true,
-        render: () => <StatusbarGatewaySwitcher />
-      },
-      {
         // The rail's stand-in: the profile picker moves down here while the
         // colored strip is hidden, so switching profiles always has a door.
         hidden: !sessionsShowing || profileRailVisible,
@@ -727,8 +719,3 @@ export function useStatusbarItems({
   return { leftStatusbarItems, statusbarItems }
 }
 
-function StatusbarGatewaySwitcher() {
-  const navigate = useNavigate()
-
-  return <ConnectionSwitcher compact onConnect={() => navigate(`${SETTINGS_ROUTE}?tab=connections`)} />
-}

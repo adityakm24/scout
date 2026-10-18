@@ -55,57 +55,22 @@ import {
 import { runAppInstallerChecker } from './appinstaller-checker'
 import { installApplicationMenuAfterFirstWindow } from './application-menu-startup'
 import { stopBackendChild as stopBackendChildImpl, waitForBackendExit } from './backend-child'
-import {
-  type BackendOutputTail,
-  claimDecision,
-  createBackendOutputTail,
-  execText,
-  formatBackendExitLine,
-  isPidOnlyStartMarker,
-  pidOnlyStartMarker,
-  probeStartMarker,
-  processStartMarker,
-  REAP_PROBE_TIMEOUT_MS
-} from './backend-claim'
-import { dashboardFallbackArgs, serveBackendArgs } from './backend-command'
+import { execText } from './backend-claim'
 import { createBackendConnectionState } from './backend-connection-state'
 import { BackendDialClaims } from './backend-dial-claim'
-import type { HostBackendRecord } from './backend-discovery'
-import { buildDesktopBackendEnv, profileBackendParentEnv } from './backend-env'
-import { createBackendExitRecoveryLatch } from './backend-exit-recovery'
+import { buildDesktopBackendEnv } from './backend-env'
 import { isReauthRequiredError, waitForScoutReady } from './backend-health'
-import {
-  backendCommandMatches,
-  type BackendOwnershipEntry,
-  createBackendOwnership,
-  createBackendShutdownCoordinator
-} from './backend-ownership'
+import { createBackendShutdownCoordinator } from './backend-ownership'
 import { canImportScoutCli, PROBE_TIMEOUT_MS, shouldTrustScoutOverride, verifyScoutCli } from './backend-probes'
-import { waitForDashboardPortAnnouncement } from './backend-ready'
-import { recycleOwnedBackend } from './backend-recycle'
 import { isPidAliveWindows, waitForBackendRelease } from './backend-release-gate'
 import { createInstalledRuntimeGate } from './backend-resolution'
-import { createBackendServeSupportResolver } from './backend-serve-support'
-import {
-  isHostKeyChangedBootFailure,
-  isRetryableRemoteBootFailure,
-  isSshAuthFailedBootFailure,
-  shouldHoldBootProgressForReauth,
-  shouldLatchBackendStartFailure,
-  shouldLatchHostKeyChangedFailure,
-  shouldLatchRemoteReauthFailure,
-  shouldLatchSshAuthFailure
-} from './backend-start-failure'
-import { describeBootstrapFailure } from './bootstrap-failure-copy'
+import { shouldHoldBootProgressForReauth } from './backend-start-failure'
 import {
   detectRemoteDisplay,
   isWindowsBinaryPathInWsl,
   isWslEnvironment,
   resolveLinuxPasswordStore
 } from './bootstrap-platform'
-import { decideBootstrapRepair } from './bootstrap-repair-guard'
-import { runBootstrap } from './bootstrap-runner'
-import { bootstrapSnapshot } from './bootstrap-state'
 import {
   BROWSER_WINDOW_HEIGHT,
   BROWSER_WINDOW_MIN_HEIGHT,
@@ -117,90 +82,17 @@ import { detectBundleSkew } from './bundle-skew'
 import { detectBundleSwap, readBundleSwapStamp } from './bundle-swap'
 import { registerChatOnboardingWindow } from './chat-onboarding-window'
 import { provisionCliLinks } from './cli-provision'
-import { closeStopFailureMessage, finishWindowsCloseStop, type RuntimeLock } from './close-stop-kill'
 import { installCommandScreenshot } from './command-screenshot'
 import { composerImageTimestamp } from './composer-image-name'
 import { writeComposerPaste } from './composer-paste'
-import { applyConnectionChange, teardownSshState } from './connection-apply'
-import {
-  connectionInstallIds,
-  evictConnectionCaches,
-  rosterSourceErrors,
-  sshInventoryAttemptedAt,
-  sshRosterCache
-} from './connection-caches'
-import {
-  apiRequestRegistryConnectionId,
-  authModeFromStatus,
-  buildGatewayWsUrl,
-  buildGatewayWsUrlWithTicket,
-  connectionScopeKey,
-  cookiesHaveLiveSession,
-  cookiesHaveSession,
-  gatewayWsUrlIpcResult,
-  hostLabelFromBaseUrl,
-  isGatewayAuthRejection,
-  localProfileEntry,
-  modeIsRemoteLike,
-  normalizeRemoteBaseUrl,
-  normalizeRemoteHeaders,
-  normalizeRemoteProfileName,
-  normalizeSshConfig,
-  normAuthMode,
-  pathForRegistryBackendRequest,
-  pathWithGlobalRemoteProfile,
-  profileHasRemoteConnection,
-  profileRemoteOverride,
-  type ProfileRouteOptions,
-  profileSshOverride,
-  type RegistryBackendRequestScope,
-  resolveAuthMode,
-  resolveProfileApiRequest,
-  resolveProfileBackendRoute,
-  resolveRemoteSshDashboardProfile,
-  resolveTestWsUrl,
-  sanitizeRemoteHeaderValue,
-  savedProfileSsh,
-  tokenPreview,
-  unscopableMutatingRequest,
-  withTransientRetries
-} from './connection-config'
-import { applyConnectionConfigAtomically } from './connection-config-apply'
-import {
-  backendScopeKey,
-  backendScopePrefix,
-  buildAgentRoster,
-  connectionDialFieldsChanged,
-  connectionIdForPendingLogin,
-  mergeConnectionInput,
-  migrateV1ToRegistry,
-  normalizeConnectionInput,
-  normalizeRegistry,
-  parseBackendScopeKey,
-  reconcileAppliedGlobalConnection,
-  reconcileRegistryDrift,
-  registryDialConnectionId,
-  rememberSshEnumeration,
-  removeConnection,
-  type ResolvedConnectionDescriptor,
-  resolvedConnectionId,
-  resolveRegistryLocalRoute,
-  reuseMatchingPrimaryRemoteBackend,
-  reuseMatchingPrimarySshBackend,
-  setConnectionLaunchMode,
-  setLastUsedConnection,
-  setPrimaryConnection,
-  type SharedRegistryProfileScope,
-  shouldDeferLocalEnumeration,
-  shouldRetrySshInventory,
-  upsertConnection
-} from './connection-registry'
+import { connectionInstallIds, rosterSourceErrors, sshRosterCache } from './connection-caches'
+import { apiRequestRegistryConnectionId, buildGatewayWsUrl, buildGatewayWsUrlWithTicket, cookiesHaveSession, gatewayWsUrlIpcResult, hostLabelFromBaseUrl, isGatewayAuthRejection, modeIsRemoteLike, normalizeRemoteBaseUrl, normalizeRemoteHeaders, pathForRegistryBackendRequest, pathWithGlobalRemoteProfile, type ProfileRouteOptions, type RegistryBackendRequestScope, resolveProfileApiRequest, resolveProfileBackendRoute, sanitizeRemoteHeaderValue, withTransientRetries } from './connection-config'
+import { backendScopeKey, buildAgentRoster, registryDialConnectionId, rememberSshEnumeration, resolvedConnectionId } from './connection-registry'
 import type { RosterProfileMetadata } from './connection-registry'
 import { liveWindowState, overlayWindowState } from './connection-window-state'
 import { describeCrashReason, installCrashForensics } from './crash-forensics'
-import { adoptServedDashboardToken, resolveServedDashboardToken } from './dashboard-token'
+import { resolveServedDashboardToken } from './dashboard-token'
 import { resolveDesktopScoutHome, resolveDesktopUserData } from './data-paths'
-import { loadOrCreateInstallationId, sshOwnershipId } from './desktop-installation'
 import { formatDesktopLogLine, formatLogStamp } from './desktop-log-line'
 import {
   createDesktopProfilePreferences,
@@ -209,7 +101,6 @@ import {
   resolveDesktopConnectionRequest,
   resolveDesktopWindowLaunch
 } from './desktop-profile'
-import { registryPrimaryBootRoute, resolveDesktopRemoteRoute, v1SshTerminalPoolKey } from './desktop-remote-route'
 import {
   buildPosixCleanupScript,
   buildWindowsCleanupScript,
@@ -236,7 +127,6 @@ import {
   performFindAfterIndexingStarted,
   stopFind
 } from './find-in-page'
-import { createFirstRunSetupGate } from './first-run-setup-gate'
 import { registerFsIpc } from './fs-ipc'
 import type {
   GatewayFileSaveContext,
@@ -254,40 +144,11 @@ import {
 import { downloadViaOauthSessionToFile, downloadViaTokenToFile } from './gateway-file-download-transport'
 import { stopGatewayBeforeUpdate } from './gateway-stop-before-update'
 import { resolveGatewayVersion } from './gateway-version'
-import { probeGatewayWebSocket, spawnedBackendProbeOptions } from './gateway-ws-probe'
 import { windowsGitCandidates } from './git-binary-candidates'
 import { registerGitIpc } from './git-ipc'
 import { guestOnboardingEnabled } from './guest-onboarding'
-import { readAndConsumeHandoffResult } from './handoff-result'
-import {
-  assertExistingPathForOpen,
-  ATTACHMENT_UPLOAD_DEFAULT_MAX_BYTES,
-  clampDataUrlReadMaxMb,
-  DATA_URL_READ_DEFAULT_MAX_MB,
-  dataUrlReadMaxBytesFromMb,
-  DEFAULT_FETCH_TIMEOUT_MS,
-  enableBasicPasswordStoreEncryption,
-  encryptDesktopSecret as encryptDesktopSecretStrict,
-  homeRelativeAttachmentCandidates,
-  readFileDataUrlForIpc,
-  resolvePersistedRemoteToken,
-  resolveReadableFileForIpc,
-  resolveRemoteTokenPlainText,
-  resolveRequestedPathForIpc,
-  resolveTimeoutMs,
-  SAFE_STORAGE_ENCODING,
-  TEXT_PREVIEW_SOURCE_MAX_BYTES,
-  tightenSecretFileMode,
-  writeSecretFileAtomic
-} from './hardening'
-import {
-  type AttachedBackend,
-  attachOrReserveSpawn,
-  spawnLedgerPath,
-  type SpawnReservation
-} from './host-backend-attach'
-import { assertNoSecondLocalBackend, assertNotPassiveSpawn } from './host-backend-singleton'
-import { lookupPublishedSessionToken } from './host-published-token'
+import { assertExistingPathForOpen, ATTACHMENT_UPLOAD_DEFAULT_MAX_BYTES, clampDataUrlReadMaxMb, DATA_URL_READ_DEFAULT_MAX_MB, dataUrlReadMaxBytesFromMb, DEFAULT_FETCH_TIMEOUT_MS, enableBasicPasswordStoreEncryption, encryptDesktopSecret as encryptDesktopSecretStrict, homeRelativeAttachmentCandidates, readFileDataUrlForIpc, resolveReadableFileForIpc, resolveRequestedPathForIpc, resolveTimeoutMs, SAFE_STORAGE_ENCODING, TEXT_PREVIEW_SOURCE_MAX_BYTES, writeSecretFileAtomic } from './hardening'
+import { createPrimaryRemoteConnection, HOSTED_BACKEND_URL, hostedConnectionsRegistry } from './hosted-backend'
 import { requestHudClose } from './hud-close'
 import { cursorPointInWindow } from './hud-cursor'
 import { startHudGameOverlayWatch } from './hud-game-overlay'
@@ -299,7 +160,7 @@ import { snapHudBounds } from './hud-snap'
 import { createHudSnapShortcut } from './hud-snap-shortcut'
 import { buildHudWindowUrl } from './hud-url'
 import { resolveHudWindowing } from './hud-windowing'
-import { INSTALL_STAMP, installShape } from './install-stamp'
+import { INSTALL_STAMP } from './install-stamp'
 import type { InstallStamp } from './install-stamp'
 import { applyLaunchProfileOverride } from './launch-profile'
 import { CURL_TITLE_WRITE_OUT, parseCurlTitleResponse } from './link-title-curl'
@@ -309,33 +170,13 @@ import { createLinkTitleWindow, guardLinkTitleSession, readLinkTitleWindowTitle 
 import { CHROMIUM_LOG_FILENAME, enableLinuxCrashDiagnostics, linuxCrashDiagnostics } from './linux-crash-diagnostics'
 import { notifyLauncherWindowRevealed } from './linux-launcher-ready'
 import { decideNvidiaEglFallback, parseNvidiaDriverMajor } from './linux-nvidia-egl-fallback'
-import { createLocalBackendLifecycle, waitForTeardown } from './local-backend-lifecycle'
+import { waitForTeardown } from './local-backend-lifecycle'
 import { resolveIpcFileReadPath, resolveMediaStreamFile, resolvePreviewTargetPath } from './local-read-path'
 import { localSkinProfileKey, readLocalSkinPayload } from './local-skin'
 import { ACTIVE_LOG_POLL_MS, planLogRotation, reclaimActiveLogIfOversized } from './log-rotation'
 import { registerMachineProfile } from './machine-profile'
 import { createMainProcessLagWatchdog } from './main-process-lag-watchdog'
 import { ensureMainWindow } from './main-window-lifecycle'
-import {
-  assertManagedUpdatePreflightClear,
-  executeManagedRemoteUpdate,
-  fenceManagedSshBootstrapPublication,
-  ManagedConnectionUpdateGate,
-  managedSshDrainBlocker,
-  managedSshRecoveryScopes,
-  managedSshScopeRole,
-  managedSshTokenPersistencePlan,
-  managedSshUpdateAllRow,
-  MAX_MANAGED_SSH_RECOVERY_ATTEMPTS,
-  recoverManagedSshScopes,
-  refusedManagedSshUpdate,
-  type RemoteUpdateTarget,
-  runManagedSshUpdate,
-  validateCorrelationId,
-  waitForManagedRemoteClearance,
-  waitForManagedSshBootstrapFence,
-  waitForManagedUpdateOperations
-} from './managed-ssh-update'
 import { registerMcpOauthCallbackIpc } from './mcp-oauth-callback-ipc'
 import { createMediaProtocolHandler, MEDIA_PROTOCOL } from './media-protocol'
 import { fetchLocalMedia } from './media-range'
@@ -345,15 +186,8 @@ import {
   type NativeAccessTokenOptions,
   NativeAuthChangedError
 } from './native-access-token'
-import { oauthSessionIsLive, resolveJsonBody, resolveReadinessProbeAuth } from './native-auth-decisions'
-import {
-  nativeRefreshUrl,
-  type NativeTokenSet,
-  parseTokenResponse,
-  resolveLoginStrategy,
-  tokenNeedsRefresh
-} from './native-oauth'
-import { runNativeLogin } from './native-oauth-login'
+import { resolveJsonBody, resolveReadinessProbeAuth } from './native-auth-decisions'
+import { nativeRefreshUrl, type NativeTokenSet, parseTokenResponse, tokenNeedsRefresh } from './native-oauth'
 import { loadNativeTokenSet, type NativeTokenStoreIo, persistNativeTokenSet } from './native-token-store'
 import { planNoConsoleGitSpawn, setNoConsoleGitRoots, windowsGitHost } from './no-console-git'
 import { registerNativeNotifications } from './notification-ipc'
@@ -368,8 +202,6 @@ import {
   withoutInteractiveOauthLogin
 } from './oauth-rest-request'
 import { wireOauthSessionResponse } from './oauth-session-response'
-import { listWindowsProcesses, reapPackageRootedProcesses } from './package-process-reap'
-import { createParentStartMarkerResolver, parentWatchdogEnv } from './parent-process-identity'
 import { bundledPayload, installIdForRoot, type PayloadInfo } from './payload-backend'
 import { petOverlayClickThrough } from './pet-overlay'
 import { placePetOverlay, registerPetOverlayIpc } from './pet-overlay-ipc'
@@ -379,84 +211,28 @@ import {
   localRouteFallbackProfiles,
   undialedSshRouteSeeds
 } from './plugin-profile-routes'
-import { clampPoolLimits, parsePoolLimits, POOL_LIMITS_DEFAULTS } from './pool-limits'
-import { createPoolRetirer } from './pool-retire'
-import { createPoolRetirementClient } from './pool-retire-http'
-import {
-  assertPoolEntryStillOwned,
-  BackgroundSlotRetryBackoff,
-  BackgroundSlotRetryDeferredError,
-  isBackgroundSlotRetryDeferred,
-  isBackgroundSlotWaitTimeout,
-  LocalBackendSpawnCoordinator,
-  type LocalBackendSpawnPriority,
-  registerLocalBackendExitFinalizer,
-  releaseLocalBackendSlot,
-  releaseLocalBackendSlotAfterExit
-} from './pool-spawn-coordinator'
-import { createPoolStopper } from './pool-stop'
-import { poolTouchKeys } from './pool-touch-scope'
+import { type LocalBackendSpawnPriority } from './pool-spawn-coordinator'
 import { createKeepAwake } from './power-save'
 import { readPreUpdateBackupEnabled } from './pre-update-backup-config'
 import { capturePreviewContents } from './preview-capture'
 import { onPreviewWatchOwnerDestroyed, sendPreviewFileChangedToOwner } from './preview-file-watch'
-import { PreviewReachRegistry } from './preview-reach'
-import {
-  createPrimaryRemoteConnection,
-  FirstRunSetupResetError,
-  runPrimaryBackendStartup
-} from './primary-backend-startup'
-import { rehomePrimaryConnection } from './primary-connection-rehome'
+import type { PreviewReachRegistry } from './preview-reach'
 import { PrimaryProfilePin, resolveLaunchProfile } from './primary-profile-pin'
 import { applyDesktopIdentity, PRODUCT_IDENTITY } from './product-identity'
-import {
-  assertLocalProfileCanStart,
-  decideProfileDeleteAction,
-  dispatchConnectionScopedProfileDelete,
-  localProfilePoolKeys,
-  ProfileDeletionGate,
-  profileNameFromDeleteRequest,
-  resolveRouteProfile
-} from './profile-delete-routing'
+import { decideProfileDeleteAction, dispatchConnectionScopedProfileDelete, ProfileDeletionGate, profileNameFromDeleteRequest, resolveRouteProfile } from './profile-delete-routing'
 import { migrateActiveProfileIfMissing as migrateActiveProfileIfMissingPure } from './profile-migration'
 import { prepareProfileRenameLifecycle, profileRenameFromRequest } from './profile-rename-routing'
-import {
-  assembleSidebarSessionSlices,
-  buildSidebarSessionSliceParams,
-  fetchPrimaryProfileSessions,
-  fetchRegistrySessionRows,
-  fetchRemoteProfileSessions,
-  findRemoteOwnerProfileForSession,
-  hasPinnedRegistrySessionSource,
-  isAllProfilesSessionListRequest,
-  mergeProfileSessionWindow,
-  pathWithRemoteOwnerScope,
-  type RegistrySessionSource,
-  remoteProfileQueryScope,
-  shouldIncludeLocalRegistrySessionSource,
-  spliceRegistrySessionRows,
-  tagRegistrySessionResponse,
-  tagRemoteSessionRows
-} from './profile-session-routing'
+import { tagRegistrySessionResponse } from './profile-session-routing'
 import { createQuickEntryShortcut, quickEntryWindowBounds, sanitizeQuickEntrySettings } from './quick-entry'
 import { createQuitFinalization } from './quit-finalization'
-import { type ActiveWork, backendOwnedByApp, mergeActiveWork, normalizeActiveWork, quitPromptFor } from './quit-guard'
+import { type ActiveWork, mergeActiveWork, normalizeActiveWork, quitPromptFor } from './quit-guard'
 import {
   backendQuitNeedsWait,
   backendTeardownOptions,
   createQuitTeardownCoordinator,
   type QuitTeardownTask
 } from './quit-teardown'
-import * as remoteLifecycle from './remote-lifecycle'
-import {
-  attachPowerResumeRemoteRevalidation,
-  ensureHealthyPooledRemoteBackendForDispatch,
-  RemoteLivenessTracker,
-  RemoteRevalidationCoordinator,
-  revalidatePooledRemoteBackends,
-  revalidateRemoteConnection,
-  revalidateSuspectPooledRemoteBackends
-} from './remote-liveness'
+import { RemoteLivenessTracker, RemoteRevalidationCoordinator, revalidateRemoteConnection } from './remote-liveness'
 import { resolveRemoteOauthTicket, rosterSourceEnumerationTimeoutMs } from './remote-oauth-ticket'
 import { remoteSessionCookies } from './remote-session-cookies'
 import {
@@ -495,11 +271,7 @@ import {
 import { ensureLoginShellPath } from './shell-path'
 import { createSourcePythonBackend, resolveSourceInstallationBackend, type SourceBackend } from './source-backend'
 import { resolveSourcePython } from './source-python'
-import { createBootstrapCoordinator, sshConfigFingerprint } from './ssh-bootstrap-coordinator'
-import { collectSshConfigHosts, parseSshGOutput } from './ssh-config'
-import { createSshProbeConnection, pickLocalPort, redactSecrets, SshConnection } from './ssh-connection'
-import { createSshIsolatedKeepaliveRegistry } from './ssh-isolated-keepalive'
-import { createSshTeardownTracker } from './ssh-teardown'
+import { redactSecrets } from './ssh-connection'
 import { createStreamThrottle } from './stream-throttle'
 import { installSystemCaTrust } from './system-ca'
 import { nativeOverlayWidth as computeNativeOverlayWidth, titleBarOverlayOptions } from './titlebar-overlay-width'
@@ -516,22 +288,13 @@ import {
   windowOpacityFor,
   windowOpacityOptions
 } from './translucency'
-import { waitForUpdateClearance } from './update-gate'
-import { readLiveUpdateMarker, updateHandoffConflict, writeUpdateMarker } from './update-marker'
 import {
   resolveUpdaterMechanism,
   type UpdaterApplyResultWire,
   type UpdaterStatusWire,
   type UpdaterStrategy
 } from './updater'
-import {
-  observeUpdaterHandoff,
-  resolveInstallationLauncher,
-  resolveStagedUpdaterBinary,
-  resolveVenvDir,
-  spawnUpdaterProcess,
-  stagedUpdaterSupportsPrewrittenMarker
-} from './updater-process'
+import { resolveInstallationLauncher, resolveStagedUpdaterBinary, resolveVenvDir } from './updater-process'
 import { AppInstallerStrategy } from './updater/app-installer'
 import { createChannelAppInstallerStrategy } from './updater/app-installer'
 import { ChannelResolver, type ChannelTarget } from './updater/channel'
@@ -559,12 +322,7 @@ import { decodeWebText } from './web-text-decoder'
 import { windowAcceleratorAction } from './window-accelerator'
 import { enumerateWindowsFrontToBack, enumerationFailed, readWindowBelow } from './window-below'
 import { bindWindowChromeEvents } from './window-chrome-events'
-import {
-  appliedPrimaryWindowRoute,
-  registrySshPoolScopeByConnectionId,
-  registrySshScopeForWindowRoute,
-  WindowConnectionRouteRegistry
-} from './window-connection-route'
+import { WindowConnectionRouteRegistry } from './window-connection-route'
 import { registerWindowControlIpc, windowControlState } from './window-controls'
 import { createWindowOpenHandler } from './window-open-policy'
 import { installWindowRendererLifecycle } from './window-renderer-lifecycle'
@@ -580,13 +338,6 @@ import {
 } from './window-state'
 import { hiddenWindowsChildOptions } from './windows-child-options'
 import {
-  connectWindowsRemote,
-  detectRemotePlatform,
-  helper,
-  probeWindowsRemote,
-  terminateOwnedWindowsDashboardForUpdate
-} from './windows-remote-lifecycle'
-import {
   alreadyHasNoSandbox,
   buildNoSandboxRelaunchArgs,
   decideWindowsSandboxLaunch,
@@ -600,7 +351,7 @@ import {
   shouldRelaunchForRendererSandboxCrashLoop,
   writeSandboxMarker
 } from './windows-sandbox-fallback'
-import { buildPathExtCandidates, chooseUpdaterArgs, resolveVenvScoutCommand } from './windows-scout-path'
+import { buildPathExtCandidates, resolveVenvScoutCommand } from './windows-scout-path'
 import {
   alreadyHasDisableGpu,
   buildDisableGpuRelaunchArgs,
@@ -1009,18 +760,8 @@ const VENV_ROOT = path.join(ACTIVE_SCOUT_ROOT, 'venv')
 // avoids the confusing "marker exists but checkout is gone" state.
 const BOOTSTRAP_COMPLETE_MARKER = path.join(ACTIVE_SCOUT_ROOT, '.scout-bootstrap-complete')
 const BOOTSTRAP_MARKER_SCHEMA_VERSION = 1
-
-const DESKTOP_CONNECTION_CONFIG_PATH = path.join(app.getPath('userData'), 'connection.json')
-// v2 multi-connection registry (named agent sources). Lives BESIDE
-// connection.json — v1 stays on disk untouched so older builds sharing the
-// profile keep working; the registry imports from it once and then owns its
-// own file. Same secret posture as connection.json (encrypted tokens, 0600).
-const DESKTOP_CONNECTIONS_REGISTRY_PATH = path.join(app.getPath('userData'), 'connections.json')
-const DESKTOP_INSTALLATION_PATH = path.join(app.getPath('userData'), 'desktop-installation.json')
 const DESKTOP_UPDATE_CONFIG_PATH = path.join(app.getPath('userData'), 'updates.json')
 const DESKTOP_WINDOW_STATE_PATH = path.join(app.getPath('userData'), 'window-state.json')
-const DESKTOP_BACKEND_OWNERSHIP_PATH = path.join(app.getPath('userData'), 'backend-ownership.json')
-const DESKTOP_MANAGED_SSH_RECOVERY_PATH = path.join(app.getPath('userData'), 'managed-ssh-update-recovery.json')
 // active-profile.json records which Scout profile the desktop launches its
 // local backend as. When set, startScout() passes `scout --profile <name>
 // dashboard …`, which deterministically pins SCOUT_HOME (see
@@ -1580,111 +1321,16 @@ function registerMediaProtocol(): void {
 let mainWindow = null
 const backendConnectionState = createBackendConnectionState<ReturnType<typeof spawn>, any>()
 
-const localBackendLifecycle = createLocalBackendLifecycle<ChildProcess>({
-  stopChild: (child: ChildProcess): void => {
-    if (child.exitCode === null && child.signalCode === null) {
-      stopBackendChildImpl(child, { forceKillProcessTree, isWindows: IS_WINDOWS })
-    }
-  },
-  waitForExit: (child: ChildProcess): Promise<void> =>
-    waitForBackendExit(child, { forceKillProcessTree, isWindows: IS_WINDOWS }),
-  cancelSetup: (): void => {
-    firstRunSetupGate?.resetForRetry()
-    bootstrapAbortController?.abort()
-  }
-})
-
-function spawnOwnedBackend(...args: Parameters<typeof spawn>): ChildProcess {
-  const child = localBackendLifecycle.spawn((): ChildProcess => spawn(...args))
-  child.once('exit', (): boolean => localBackendLifecycle.release(child))
-  child.once('error', (): void => {
-    if (!child.pid) {
-      localBackendLifecycle.release(child)
-    }
-  })
-
-  return child
-}
 
 const remoteLiveness = new RemoteLivenessTracker()
 const remoteRevalidation = new RemoteRevalidationCoordinator()
-const registryDispatchRevalidation = new RemoteRevalidationCoordinator()
 // Single-owner reconnect/dial claim (#90812): reconnectGateway()'s in-flight
 // lock is per-renderer, so two windows racing one wake can both invoke the
 // backend ensure IPC and double-dial a pooled SSH backend. Main owns backend
 // lifecycles, so concurrent dials for one (connectionId, profile) scope
 // coalesce here — the second caller awaits the first spawn's result.
-const backendDialClaims = new BackendDialClaims()
-// True while connection-config:apply soft-rehomes the primary — suppresses the
-// backend-exit toast so an intentional kill doesn't look like a crash.
-let softRehomeInProgress = false
-// Primary-slot bookkeeping for the exit supervisor (#112344). `primaryStartsInFlight`
-// counts startScout() calls that have not settled; `primaryRecoverySuppressed`
-// is set by every intentional invalidate of the slot and cleared by the next
-// startScout(), so the dying child's stale exit never respawns behind a
-// re-home, a quit, or a latched boot failure.
-let primaryStartsInFlight = 0
-let primaryRecoverySuppressed = false
-const primaryExitRecovery = createBackendExitRecoveryLatch()
-// Additional per-profile backends, keyed by profile name. The PRIMARY backend
-// (the desktop's launch profile) stays managed by backendConnectionState +
-// startScout(); this pool only holds EXTRA profile
-// backends spawned lazily when a session belongs to a different profile. A user
-// with no named profiles never populates this map, so their experience is
-// byte-for-byte the single-backend behavior.
-const backendPool = new Map() // profile -> { process, port, token, connectionPromise, lastActiveAt }
+const backendDialClaims = new BackendDialClaims() // profile -> { process, port, token, connectionPromise, lastActiveAt }
 const profileDeletionGate = new ProfileDeletionGate()
-// Keep the pool light: cap concurrent profile backends (LRU eviction) and reap
-// idle ones. A user idles at exactly the primary backend; pool backends only
-// exist while a non-primary profile is actively being chatted through.
-// Pool sizing is a device preference (Settings → Advanced → pool rows), not a
-// launch constant: mutable at runtime, persisted in userData, applied live.
-// The legacy SCOUT_DESKTOP_POOL_* env vars remain the initial-value fallback
-// for scripted/headless setups; after launch the stored preference wins.
-const POOL_LIMITS_PATH = path.join(app.getPath('userData'), 'pool-limits.json')
-
-function readPersistedPoolLimits() {
-  try {
-    const limits = parsePoolLimits(fs.readFileSync(POOL_LIMITS_PATH, 'utf8'))
-    rememberLog(
-      `[pool-limits] loaded from ${POOL_LIMITS_PATH}: maxBackends=${limits.maxBackends}, idleMs=${limits.idleMs}`
-    )
-
-    return limits
-  } catch {
-    // No persisted file yet — fall back to the legacy env vars so scripted
-    // setups keep working. Log which source won: a silently-ignored env var
-    // here costs a scripted-setup user a debugging session.
-    const fromEnv = clampPoolLimits({
-      maxBackends: Number(process.env.SCOUT_DESKTOP_POOL_MAX) || undefined,
-      idleMs: Number(process.env.SCOUT_DESKTOP_POOL_IDLE_MS) || undefined
-    })
-
-    if (fromEnv.maxBackends !== POOL_LIMITS_DEFAULTS.maxBackends || fromEnv.idleMs !== POOL_LIMITS_DEFAULTS.idleMs) {
-      rememberLog(
-        `[pool-limits] no saved file; using env-var overrides: maxBackends=${fromEnv.maxBackends}, idleMs=${fromEnv.idleMs}`
-      )
-    } else {
-      rememberLog('[pool-limits] no saved file and no env overrides; using defaults')
-    }
-
-    return fromEnv
-  }
-}
-
-function persistPoolLimits(limits) {
-  try {
-    fs.mkdirSync(path.dirname(POOL_LIMITS_PATH), { recursive: true })
-    // Atomic write: write to a temp file in the same directory, then rename.
-    // A crash mid-write would otherwise leave truncated JSON and silently
-    // lose the user's saved sizing.
-    const tmpPath = `${POOL_LIMITS_PATH}.tmp`
-    fs.writeFileSync(tmpPath, JSON.stringify(limits, null, 2), 'utf8')
-    fs.renameSync(tmpPath, POOL_LIMITS_PATH)
-  } catch (error) {
-    rememberLog(`[pool-limits] write failed: ${error.message}`)
-  }
-}
 
 // rememberLog() state. Declared here, before the top-level
 // readPersistedPoolLimits() call below, because that call logs during module
@@ -1695,143 +1341,10 @@ let desktopLogBuffer = ''
 let desktopLogFlushTimer = null
 let desktopLogFlushPromise = Promise.resolve()
 
-let poolLimits = readPersistedPoolLimits()
-// Hard cap on local backends that are starting OR running (the LRU eviction
-// above is soft — it spares keepalive-fresh entries). Follows the live
-// preference: setPoolLimits() pushes a new max into the coordinator.
-const localBackendSpawnCoordinator = new LocalBackendSpawnCoordinator(poolLimits.maxBackends)
-const backgroundSlotRetryBackoff = new BackgroundSlotRetryBackoff()
-// How long a spawn may wait for a free local slot. Must stay under the
-// renderer's BACKEND_BOOT_WAIT_TIMEOUT_MS (45s, src/lib/with-timeout.ts) so
-// the queued ticket fails before the renderer does and the user sees why.
-const POOL_SLOT_WAIT_MS = 30_000
-
 function spawnPriorityFrom(value: unknown): LocalBackendSpawnPriority {
   return value === 'foreground' ? 'foreground' : 'background'
 }
 
-// Foreground intent for a dial whose pool entry does not exist yet: a user
-// click that joins an in-flight backendDialClaims claim never re-enters
-// ensureBackend(), and the claim owner may still be awaiting poolStopper /
-// registry resolution before backendPool.set(). The local spawn takes the mark
-// right before its slot request; the IPC handler that set it clears it once
-// the claim settles, so a dial that never reaches a slot request (primary
-// route, remote scope, a guard rejection) cannot leave it for a later
-// hydration spawn of the same key to pick up.
-const pendingForegroundSpawns = new Set<string>()
-
-function takeForegroundSpawn(...poolKeys: string[]): boolean {
-  let marked = false
-
-  for (const poolKey of poolKeys) {
-    marked = pendingForegroundSpawns.delete(poolKey) || marked
-  }
-
-  return marked
-}
-
-// Upgrade a pooled entry (running, spawning, or queued for a slot) to
-// foreground so a queued slot wait can take the reserved foreground slot.
-function promotePoolEntry(entry: any): void {
-  entry.spawnPriority = 'foreground'
-  entry.localBackendSpawnRequest?.promote?.('foreground')
-}
-
-// Background hydration backs off after a slot timeout. Foreground opens bypass the cooldown.
-function logPoolSpawnFailure(label: string, error: unknown): void {
-  if (isBackgroundSlotRetryDeferred(error)) {
-    return
-  }
-
-  if (isBackgroundSlotWaitTimeout(error)) {
-    rememberLog(`Profile backend ${label} slot wait timed out (background); retry is backing off`)
-  } else {
-    rememberLog(
-      `Scout backend for profile ${label} failed to start: ${error instanceof Error ? error.message : String(error)}`
-    )
-  }
-}
-
-// Apply foreground intent to the dial claim for `scopeKey`: an entry already
-// in the pool is promoted directly, otherwise the intent is marked for the
-// spawn the claim owner is about to start. Returns the cleanup that clears a
-// mark the dial never consumed.
-function applySpawnPriority(scopeKey: string, spawnPriority: LocalBackendSpawnPriority): () => void {
-  // The renderer's socket-close event may beat its parking IPC. Main owns
-  // this fence too, so that race cannot resurrect the retired generation.
-  for (const key of poolTouchKeys(scopeKey)) {
-    poolRetirer.assertCanOpen(key, spawnPriority)
-  }
-
-  if (spawnPriority !== 'foreground') {
-    return () => undefined
-  }
-
-  const existing = backendPool.get(scopeKey)
-
-  if (existing) {
-    promotePoolEntry(existing)
-  } else {
-    pendingForegroundSpawns.add(scopeKey)
-  }
-
-  return () => void pendingForegroundSpawns.delete(scopeKey)
-}
-
-function poolMaxBackends() {
-  return poolLimits.maxBackends
-}
-
-function poolIdleMs() {
-  return poolLimits.idleMs
-}
-
-/**
- * Apply new limits live: persist, then converge the running pool — evict
- * LRU backends down to the new max, and let the (already running) idle
- * reaper handle a shortened idle window on its next tick. Returns the
- * limits actually in force (post-clamp).
- */
-function setPoolLimits(raw) {
-  poolLimits = clampPoolLimits(raw)
-  persistPoolLimits(poolLimits)
-  localBackendSpawnCoordinator.setLimit(poolLimits.maxBackends)
-  void evictLruPoolBackends(poolMaxBackends()).catch((error: Error): void =>
-    rememberLog(`Pool LRU eviction failed: ${String(error)}`)
-  )
-  startPoolIdleReaper()
-
-  return { ...poolLimits }
-}
-
-// A backend touched within this window has a live renderer socket (the keepalive
-// pings every 60s for every open profile). LRU eviction must spare these — a
-// concurrent multi-profile session keeps several backends "fresh" at once, and
-// killing one to honor the soft cap would abort a running agent.
-//
-// The window is intentionally MUCH wider than the 60s ping cadence:
-//   * 1 missed ping    = +60s of apparent silence
-//   * WSL2 IPC stall  = the renderer's `scout:backend:touch` roundtrips
-//                       through 9p; a single brief 9p hiccup can stretch a
-//                       ping to ~30s of observed silence (#95189: gateways
-//                       exited every ~2 min on WSL2 because the previous
-//                       90s window left no headroom — one delayed ping
-//                       pushed a live backend past the threshold and the
-//                       cap-driven eviction killed the active profile's
-//                       backend mid-session, re-minting runtime ids and
-//                       re-allocating pooled gateway secondaries ~700×/day).
-//   * 3× ping + 60s headroom = ~4 min, comfortable margin for two missed
-//     pings + WSL2 IPC stall. The hard ceiling for the cap-eligible set is
-//     pool idle window above (default 10 min) — this constant only governs the
-//     "is this backend plausibly still alive" question for LRU eviction,
-//     not when the idle reaper definitively tears a backend down.
-const POOL_KEEPALIVE_FRESH_MS = Math.max(
-  120_000,
-  Number(process.env.SCOUT_DESKTOP_POOL_KEEPALIVE_FRESH_MS) || 4 * 60_000
-)
-
-let poolIdleReaper = null
-let backendOrphanReapPromise = null
 // Auto-reload budget for renderer crashes, shared by EVERY window (primary,
 // secondary session, instance) so a crash loop anywhere is suppressed after
 // the same budget instead of reloading per-window forever. A deterministic
@@ -1866,18 +1379,6 @@ let bootstrapAbortController = null
 // repair can force the installer without destroying provenance about how the
 // install was created. Cleared once the reinstall is under way.
 let bootstrapRepairRequested = false
-// Counter for in-flight repair attempts. Reset on a clean boot completion
-// (see runBootstrap -> ensureRuntime resolve path). Each successive repair
-// in the same failure episode increments this; once it crosses
-// MAX_BOOTSTRAP_REPAIR_SOFT_ATTEMPTS the guard escalates from "soft restart"
-// to "hard reinstall" so a transient backend stall (issue #74874) stops
-// looping the user through a destructive venv reinstall.
-let bootstrapRepairAttempt = 0
-const MAX_BOOTSTRAP_REPAIR_SOFT_ATTEMPTS = 3
-let connectionConfigCache = null
-let connectionConfigCacheMtime = null
-let connectionRegistryCache = null
-let connectionRegistryCacheMtime = null
 const remoteHeaderSessions = new WeakSet<object>()
 const remoteWsHeaderStore = createRemoteWsHeaderStore()
 const previewWatchers = new Map()
@@ -2260,214 +1761,6 @@ function broadcastBootProgress() {
   webContents.send('scout:boot-progress', bootProgressState)
 }
 
-// Bootstrap-event broadcast channel + state. The bootstrap runner emits a
-// stream of events (manifest, stage, log, complete, failed) that the renderer
-// install overlay subscribes to. We also keep a running snapshot:
-//   - manifest: the stage list (rendered as a checklist in the overlay)
-//   - stages:   per-stage state ('pending' | 'running' | 'succeeded' |
-//               'skipped' | 'failed') keyed by stage name
-//   - active:   true while a bootstrap is in flight; false otherwise
-//   - error:    last 'failed' event's error message
-//   - log:      bounded ring buffer of the last 200 log lines for the
-//               "Show details" affordance in the overlay
-//
-// The snapshot is queryable via the scout:bootstrap:get IPC handler so a
-// reloaded renderer (e.g. devtools reload during dev) recovers state.
-// Bootstrap log ring: bounded buffer so a long install (npm + playwright
-// downloads can emit thousands of lines) doesn't grow unbounded in memory
-// AND so the renderer's getBootstrapState() reply stays a reasonable size.
-// We keep enough to cover an entire failed stage's transcript so the
-// 'Copy output' button gives the user actually-actionable context, not
-// just the last few lines.
-const BOOTSTRAP_LOG_RING_MAX = 500
-
-let bootstrapState = {
-  active: false,
-  manifest: null,
-  stages: {},
-  error: null,
-  log: [],
-  startedAt: null,
-  completedAt: null,
-  setupChoice: null,
-  unsupportedPlatform: null
-}
-
-let firstRunSetupGate = null
-
-function broadcastBootstrapEvent(ev) {
-  if (ev.type === 'manifest') {
-    bootstrapState.manifest = ev
-    bootstrapState.active = true
-    bootstrapState.setupChoice = null
-    bootstrapState.startedAt = bootstrapState.startedAt || Date.now()
-    bootstrapState.stages = {}
-
-    for (const stage of ev.stages || []) {
-      bootstrapState.stages[stage.name] = { state: 'pending', json: null, durationMs: null, error: null }
-    }
-  } else if (ev.type === 'stage') {
-    bootstrapState.stages[ev.name] = {
-      state: ev.state,
-      durationMs: ev.durationMs ?? null,
-      json: ev.json ?? null,
-      error: ev.error ?? null
-    }
-  } else if (ev.type === 'log') {
-    bootstrapState.log.push({ ts: Date.now(), stage: ev.stage || null, line: ev.line, stream: ev.stream || 'stdout' })
-
-    if (bootstrapState.log.length > BOOTSTRAP_LOG_RING_MAX) {
-      bootstrapState.log.splice(0, bootstrapState.log.length - BOOTSTRAP_LOG_RING_MAX)
-    }
-  } else if (ev.type === 'complete') {
-    bootstrapState.active = false
-    bootstrapState.completedAt = Date.now()
-    bootstrapState.error = null
-    bootstrapState.unsupportedPlatform = null
-  } else if (ev.type === 'failed') {
-    bootstrapState.active = false
-    bootstrapState.error = ev.error || 'unknown error'
-    bootstrapState.setupChoice = null
-  } else if (ev.type === 'unsupported-platform') {
-    bootstrapState.active = false
-    bootstrapState.setupChoice = null
-    bootstrapState.unsupportedPlatform = {
-      platform: ev.platform,
-      activeRoot: ev.activeRoot,
-      installCommand: ev.installCommand,
-      docsUrl: ev.docsUrl
-    }
-  } else if (ev.type === 'setup-choice') {
-    bootstrapState.active = false
-    bootstrapState.error = null
-    bootstrapState.manifest = null
-    bootstrapState.stages = {}
-    bootstrapState.setupChoice = ev.active
-      ? {
-          platform: ev.platform,
-          activeRoot: ev.activeRoot,
-          local: ev.local || 'none',
-          bundled: installShape() === 'bundled'
-        }
-      : null
-    bootstrapState.unsupportedPlatform = null
-  } else if (ev.type === 'dismissed') {
-    resetBootstrapSnapshot()
-  }
-
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    return
-  }
-
-  const { webContents } = mainWindow
-
-  if (!webContents || webContents.isDestroyed()) {
-    return
-  }
-
-  webContents.send('scout:bootstrap:event', ev)
-}
-
-function getBootstrapState() {
-  return bootstrapSnapshot(bootstrapState)
-}
-
-function resetBootstrapSnapshot(): void {
-  bootstrapState = {
-    active: false,
-    manifest: null,
-    stages: {},
-    error: null,
-    log: [],
-    startedAt: null,
-    completedAt: null,
-    setupChoice: null,
-    unsupportedPlatform: null
-  }
-}
-
-function promptFirstRunSetupChoice(backend) {
-  broadcastBootstrapEvent({
-    type: 'setup-choice',
-    active: true,
-    platform: backend.platform || process.platform,
-    activeRoot: backend.activeRoot || ACTIVE_SCOUT_ROOT,
-    local: backend.local || 'none',
-    bundled: installShape() === 'bundled'
-  })
-}
-
-function hideFirstRunSetupChoice() {
-  if (bootstrapState.setupChoice) {
-    broadcastBootstrapEvent({ type: 'setup-choice', active: false })
-  }
-}
-
-function getFirstRunSetupGate() {
-  if (!firstRunSetupGate) {
-    firstRunSetupGate = createFirstRunSetupGate({
-      hideChoice: hideFirstRunSetupChoice,
-      log: rememberLog,
-      onStuck: (_backend, stuckAfterMs) => {
-        updateBootProgress(
-          {
-            error: null,
-            message: `Still waiting for first-run setup choice after ${Math.round(stuckAfterMs / 1000)} seconds`,
-            phase: 'bootstrap.choice',
-            progress: 12,
-            running: true
-          },
-          { allowDecrease: true }
-        )
-      },
-      promptChoice: promptFirstRunSetupChoice
-    })
-  }
-
-  return firstRunSetupGate
-}
-
-async function waitForFirstRunSetupChoice(backend) {
-  const gate = getFirstRunSetupGate()
-
-  if (!gate.shouldGate(backend)) {
-    return 'continue-local'
-  }
-
-  updateBootProgress(
-    {
-      error: null,
-      message: 'Waiting for first-run setup choice',
-      phase: 'bootstrap.choice',
-      progress: 12,
-      running: true
-    },
-    { allowDecrease: true }
-  )
-
-  return gate.wait(backend)
-}
-
-function continueFirstRunLocalBootstrap() {
-  getFirstRunSetupGate().continueLocal()
-}
-
-function abandonFirstRunSetupChoiceForRemoteApply() {
-  const gate = getFirstRunSetupGate()
-
-  if (!gate.hasWaiter()) {
-    return false
-  }
-
-  const resumedGatedConnection = gate.abandonForRemoteApply()
-
-  if (resumedGatedConnection) {
-    broadcastBootstrapEvent({ type: 'dismissed' })
-  }
-
-  return resumedGatedConnection
-}
-
 // The latched reauth failure whose hold has already been logged, so a burst of
 // dropped updates from one in-flight sibling attempt logs once, not per event.
 let bootProgressHeldFor: Error | null = null
@@ -2551,24 +1844,6 @@ function directoryExists(filePath) {
   }
 }
 
-// --- in-app update mutual exclusion (#50238) -------------------------------
-// The Tauri updater writes SCOUT_HOME/.scout-update-in-progress for the whole
-// duration of an `--update` run (see update.rs UpdateMarkerGuard). If the user
-// relaunches the desktop mid-update — because the window vanished with no
-// progress and looks crashed — a fresh instance must NOT spawn its own local
-// backend: that backend re-locks the venv shim, the updater's straggler cleanup
-// (`force_kill_other_scout`, taskkill /IM scout.exe) kills it, the launch
-// fails with the 45s "backend didn't come up" error, and the relaunch/kill
-// cycle loops. Instead the fresh instance parks until the update finishes, then
-// brings the backend up itself (it is the surviving instance — the updater's
-// own relaunch hits our single-instance lock and quits). Marker parsing +
-// staleness self-heal live in update-marker.ts (unit-tested).
-
-// How long we'll park the launch waiting for a live update to finish before
-// giving up and starting the backend anyway (belt-and-suspenders alongside the
-// marker's own age ceiling; covers a stuck-but-alive updater).
-const UPDATE_WAIT_TIMEOUT_MS = 20 * 60 * 1000
-const UPDATE_WAIT_POLL_MS = 1000
 // How long the desktop lingers on the "updating, don't reopen" overlay after
 // spawning the detached updater, before it quits to release the venv shim. The
 // old 600ms was long enough to register the child process but far too short for
@@ -2577,180 +1852,6 @@ const UPDATE_WAIT_POLL_MS = 1000
 // couple of seconds lets the message land and bridges the gap until the
 // updater's own progress window appears. (#50419)
 const UPDATE_HANDOFF_DWELL_MS = 2500
-
-// Gate deps shared by the primary-window boot path and the pool-backend
-// spawn path. Consulting the on-disk marker, the in-process updateInFlight
-// flag, AND the successful detached hand-off state is load-bearing (#73822):
-// applyUpdates stops its own backend before committing the update hand-off.
-// A marker-only gate lets the renderer's reconnect respawn a backend during
-// that critical section, racing the update and leaving a live process on the
-// runtime being replaced.
-// The hand-off state closes the later Windows `cmd start` wrapper gap: the
-// wrapper exits 0 before the real PowerShell script claims the marker, and
-// `finally` clears updateInFlight immediately after the hand-off is accepted.
-function updateGateDeps() {
-  return {
-    hasLiveMarker: () => Boolean(readLiveUpdateMarker(SCOUT_HOME)),
-    isUpdateInFlight: () => updateInFlight,
-    isHandoffActive: () => isQuittingForHandoff
-  }
-}
-
-// One-shot guard for the automatic bundle-swap relaunch below: the relaunched
-// instance carries this flag so a stamp that still mismatches (unreadable
-// resources, exotic packaging) can never produce a relaunch loop.
-const BUNDLE_SWAP_RELAUNCH_FLAG = '--scout-bundle-swap-relaunched'
-
-// How long the parked instance waits for its own scheduled exit to land before
-// giving up and booting the stale build anyway. Better a torn renderer with a
-// banner than a window that never comes back.
-const BUNDLE_SWAP_RELAUNCH_FAILSAFE_MS = 15_000
-
-// The detached updater swaps the packaged bundle on disk AFTER `scout update`
-// exits (posix.sh mac_swap / windows.ps1). An instance reopened mid-update —
-// the #50238 gesture the gate above exists for — was launched from the
-// PRE-swap bundle, and the updater's `open` leg then merely focuses us (single
-// instance), so no process ever loads the new build. Letting boot proceed here
-// runs the new runtime under the old renderer: exactly the skew
-// detectRendererSkew() warns about, except the Updates card already says
-// "latest", so the warning's own remedy has nothing to run.
-//
-// This is the earliest point where the swap is PROVABLE — it happens while we
-// are parked on the gate, so checking any sooner (at `ready`, before the gate)
-// only ever compares a stamp with itself. Relaunching here also keeps the
-// boot-progress window up for the whole wait instead of leaving the user with
-// no window at all.
-//
-// Returns true when the relaunch was scheduled; the caller must park rather
-// than continue booting, because the process exits underneath it.
-function relaunchIntoSwappedBundle() {
-  if (!IS_PACKAGED || process.argv.includes(BUNDLE_SWAP_RELAUNCH_FLAG)) {
-    return false
-  }
-
-  if (!detectBundleSwap(INSTALL_STAMP, readBundleSwapStamp(process.resourcesPath))) {
-    return false
-  }
-
-  rememberLog('[updates] app bundle was swapped during the update; relaunching into the new build')
-
-  try {
-    app.relaunch({
-      args: [...buildNoSandboxRelaunchArgs(process.argv.slice(1)), BUNDLE_SWAP_RELAUNCH_FLAG]
-    })
-  } catch (err) {
-    rememberLog(`[updates] bundle-swap relaunch failed: ${err?.message || err}; continuing with the current build`)
-
-    return false
-  }
-
-  void exitAfterBackendShutdown(0)
-
-  return true
-}
-
-// Block until no live update is in progress (or we hit the wait timeout).
-// Emits a boot-progress phase so the renderer shows "Update in progress…"
-// rather than a frozen splash. Returns true if it parked at all.
-async function waitForUpdateToFinish() {
-  let announced = false
-
-  const outcome = await waitForUpdateClearance(updateGateDeps(), {
-    signal: localBackendLifecycle.signal,
-    onWaitTick: async reason => {
-      if (!announced) {
-        announced = true
-        rememberLog(`[updates] update in progress (${reason}); deferring backend start until it finishes`)
-      }
-
-      await advanceBootProgress(
-        'backend.update-wait',
-        'An update is finishing — Scout will start automatically when it completes…',
-        12
-      )
-    },
-    pollMs: UPDATE_WAIT_POLL_MS,
-    timeoutMs: UPDATE_WAIT_TIMEOUT_MS
-  })
-
-  // The detached hand-off script (scripts/desktop-update/windows.ps1) runs hidden;
-  // its result file is the ONLY way the user learns a detached update
-  // failed. Consume it exactly once, here, right where boot passes the
-  // update gate — success gets a log line, failure gets a real dialog
-  // (previously a failed detached update was indistinguishable from
-  // "nothing happened").
-  try {
-    const result = readAndConsumeHandoffResult(SCOUT_HOME)
-
-    if (result && result.ok && result.manual) {
-      // Update landed but the user must act (reopen/reinstall/sandbox). On
-      // machines with no shim browser and no notifier this dialog is the
-      // FIRST time the message is visible — it must not be a log line.
-      rememberLog(`[updates] detached update finished with manual action (branch ${result.branch}): ${result.message}`)
-      dialog.showMessageBox({
-        type: 'warning',
-        title: 'Scout update',
-        message: 'The update finished, but needs one more step',
-        detail: result.message
-      })
-    } else if (result && result.ok) {
-      rememberLog(`[updates] detached update finished OK (branch ${result.branch})`)
-    } else if (result) {
-      rememberLog(`[updates] detached update FAILED (exit ${result.exitCode}): ${result.message}`)
-      const handoffLogPath = path.join(SCOUT_HOME, 'logs', 'desktop-update-handoff.log')
-
-      // Async so boot is not blocked behind the dialog; the response handlers
-      // reuse the menu's open-updates path (queued until the renderer is ready)
-      // and the same reveal primitive as 'scout:logs:reveal'.
-      void dialog
-        .showMessageBox({
-          type: 'error',
-          title: 'Scout update',
-          message: "Scout couldn't finish updating",
-          detail:
-            "You're still on the previous version and can keep using it. Try the update again, or open the update log to report the problem.\n\n" +
-            `Details: ${result.message}`,
-          buttons: ['Try again', 'Open log', 'Close'],
-          defaultId: 0,
-          cancelId: 2,
-          noLink: true
-        })
-        .then(({ response }) => {
-          if (response === 0) {
-            sendOpenUpdatesRequested()
-          } else if (response === 1) {
-            shell.showItemInFolder(handoffLogPath)
-          }
-        })
-    }
-  } catch (err) {
-    rememberLog(`[updates] could not read hand-off result: ${err.message}`)
-  }
-
-  if (outcome === 'cancelled') {
-    localBackendLifecycle.assertCanStart()
-  }
-
-  if (outcome === 'clear') {
-    return false
-  }
-
-  if (outcome === 'timeout') {
-    rememberLog('[updates] update still in progress after wait timeout; starting backend anyway')
-  } else if (relaunchIntoSwappedBundle()) {
-    await advanceBootProgress('backend.update-restart', 'Restarting Scout to load the updated app…', 14)
-    // Park while the scheduled exit lands so this stale build never starts a
-    // backend; the failsafe below only runs if the exit somehow does not.
-    await new Promise(resolve => setTimeout(resolve, BUNDLE_SWAP_RELAUNCH_FAILSAFE_MS))
-    rememberLog(
-      `[updates] relaunch did not land within ${BUNDLE_SWAP_RELAUNCH_FAILSAFE_MS}ms; continuing with the current build`
-    )
-  } else {
-    rememberLog('[updates] update finished; proceeding with backend start')
-  }
-
-  return true
-}
 
 function unpackedPathFor(filePath) {
   return filePath.replace(/app\.asar(?=$|[\\/])/, 'app.asar.unpacked')
@@ -2816,21 +1917,6 @@ async function unwrapWindowsVenvScoutCommand(command, backendArgs) {
     basename: p => path.basename(p),
     rememberLog
   })
-}
-
-// Does the resolved runtime understand the `serve` subcommand? The desktop
-// spawns `scout serve`; runtimes older than serve only have `dashboard`. We
-// detect support so getBackendArgsForRuntime() can route old runtimes through
-// the legacy `dashboard --no-open` form instead of crashing on an unknown
-// subcommand (would brick every user mid-upgrade — #54568 follow-up).
-// Fast-path / probe / cache strategy: see backend-serve-support.ts header.
-const backendSupportsServe = createBackendServeSupportResolver(SCOUT_HOME, rememberLog)
-
-// Given a resolved backend whose args target `serve`, return the args the
-// runtime actually understands: unchanged when `serve` is supported, or
-// rewritten to `dashboard --no-open` for older runtimes.
-async function getBackendArgsForRuntime(backend) {
-  return (await backendSupportsServe(backend)) ? backend.args : dashboardFallbackArgs(backend.args)
 }
 
 function normalizeExecutablePathForCompare(commandPath) {
@@ -3032,34 +2118,6 @@ function getVenvPython(venvRoot) {
   return path.join(venvRoot, IS_WINDOWS ? path.join('Scripts', 'python.exe') : path.join('bin', 'python'))
 }
 
-// Windows console-window flashes are governed by the *parent's* console, not by
-// each child spawn. A GUI-subsystem parent (pythonw.exe) has no console, so every
-// console-subsystem child it spawns (git, gh, cmd, ...) must allocate its own —
-// which flashes a window. A console-subsystem parent (python.exe) instead owns a
-// single console that all of its children inherit, so none of them flash.
-//
-// Note this change adds no new creationflag: the backend spawn is ALREADY wrapped
-// in hiddenWindowsChildOptions() (windowsHide: true), but that setting is INERT
-// against pythonw.exe — a GUI-subsystem process has no console for it to act on.
-// Switching the backend to the venv's console python.exe is what makes the
-// existing wrapper load-bearing: with windowsHide the process comes up owning a
-// *windowless* console (verified at runtime — it has an attachable console whose
-// window handle is NULL), and its children inherit that one windowless console
-// instead of each allocating a visible one.
-//
-// This makes "no flashing windows" a property of the one backend launch rather
-// than a flag that has to be remembered at every descendant spawn site. Restoring
-// console python also restores stdout, so the backend announces its port on the
-// normal SCOUT_DASHBOARD_READY stdout line and no ready-file side channel is
-// needed.
-
-function makeDashboardReadyFile() {
-  const dir = path.join(app.getPath('userData'), 'backend-ready')
-  fs.mkdirSync(dir, { recursive: true })
-
-  return path.join(dir, `dashboard-${process.pid}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.json`)
-}
-
 // resolveGitBinary — locate git.exe on Windows. A fresh installer-driven
 // install only has PortableGit under %LOCALAPPDATA%\scout\git (never on
 // PATH), so a bare spawn('git') ENOENTs and self-update checks fail with
@@ -3185,10 +2243,6 @@ function resolveGhBinary() {
   _ghBinaryCache = selected || findOnPath('gh') || 'gh'
 
   return _ghBinaryCache
-}
-
-function recentScoutLog() {
-  return scoutLog.slice(-20).join('\n')
 }
 
 // ─── Self-update (git-pull against the running backend's scout root) ──────
@@ -3375,8 +2429,6 @@ async function checkUpdates(opts: { force?: boolean } = {}): Promise<UpdaterStat
   // this is the only production door to the checkout arms.
   return resolveCheckoutUpdateStrategy().check(opts)
 }
-
-let updateInFlight = false
 
 // ── bundled / App Installer helpers ─────────────────────────────────────────
 
@@ -3651,10 +2703,7 @@ function isLightVariant(): boolean {
 async function teardownBundledBackend(): Promise<void> {
   isQuittingForHandoff = true
 
-  const results = await Promise.allSettled([
-    teardownPrimaryBackendAndWait(backendTeardownOptions('reconnect')),
-    stopAllPoolBackends()
-  ])
+  const results = await Promise.allSettled([teardownPrimaryBackendAndWait(backendTeardownOptions('reconnect'))])
 
   const errors = results.filter(result => result.status === 'rejected').map(result => result.reason)
 
@@ -3671,7 +2720,6 @@ async function restoreBundledBackend(): Promise<void> {
     await teardownBundledBackend()
   } finally {
     isQuittingForHandoff = false
-    updateInFlight = false
   }
 
   backendStartFailure = null
@@ -3894,413 +2942,12 @@ function forceKillProcessTree(pid) {
   execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], hiddenWindowsChildOptions({ stdio: 'ignore' }))
 }
 
-function holderPidsFromLockFile(lockPath: string): Pick<RuntimeLock, 'holderPids' | 'held'> {
-  try {
-    const raw = fs.readFileSync(lockPath, 'utf8').trim()
-
-    if (!raw) {
-      return { holderPids: [] }
-    }
-
-    let pid = Number(raw)
-
-    if (!Number.isInteger(pid)) {
-      const parsed = JSON.parse(raw) as { pid?: unknown }
-      pid = Number(typeof parsed === 'object' && parsed ? parsed.pid : parsed)
-    }
-
-    return Number.isInteger(pid) && pid > 0 ? { holderPids: [pid] } : { holderPids: [] }
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException | null)?.code
-
-    // Can't read the file: a live holder may be why. Do not clear it.
-    if (code === 'EBUSY' || code === 'EPERM' || code === 'EACCES') {
-      return { holderPids: [], held: true }
-    }
-
-    return { holderPids: [] }
-  }
-}
-
-function collectCloseStopLocks(): RuntimeLock[] {
-  const roots = [SCOUT_HOME]
-  const profilesRoot = path.join(SCOUT_HOME, 'profiles')
-
-  try {
-    for (const name of fs.readdirSync(profilesRoot)) {
-      roots.push(path.join(profilesRoot, name))
-    }
-  } catch {
-    // No profiles directory — the default home lock is enough.
-  }
-
-  const locks: RuntimeLock[] = []
-
-  for (const root of roots) {
-    const lockPath = path.join(root, 'gateway.lock')
-
-    try {
-      if (!fs.statSync(lockPath).isFile()) {
-        continue
-      }
-    } catch {
-      continue
-    }
-
-    locks.push({ path: lockPath, ...holderPidsFromLockFile(lockPath) })
-  }
-
-  return locks
-}
-
-// Captured before teardown drops the handles. Node keeps each process handle
-// open until exit is observed, so a PID read from a still-running child here
-// cannot have been reused by an unrelated process.
-function collectOwnedBackendChildren(): ChildProcess[] {
-  const children = [backendConnectionState.getProcess(), ...[...backendPool.values()].map(entry => entry?.process)]
-
-  return children.filter(
-    (child): child is ChildProcess => Boolean(child) && Number.isInteger(child.pid) && child.pid > 0
-  )
-}
-
-// Close/stop, after the graceful teardown, pool stop and straggler reap: the
-// same tree-kill for any owned child that is still running, an inventory of
-// those PIDs, and a clear of only the locks no live holder owns. Never throws;
-// returns the failure for the caller to surface once cleanup is done.
-function windowsCloseStopOwnedBackends(children: ChildProcess[]): Error | null {
-  if (!IS_WINDOWS) {
-    return null
-  }
-
-  try {
-    const running = children.filter(child => child.exitCode === null && child.signalCode === null)
-
-    const result = finishWindowsCloseStop(
-      running.map(child => child.pid as number),
-      collectCloseStopLocks(),
-      {
-        killTree: forceKillProcessTree,
-        isPidAlive: isPidAliveWindows,
-        clearLock: lockPath => {
-          fs.rmSync(lockPath, { force: true })
-        }
-      }
-    )
-
-    for (const failure of result.taskkillFailures) {
-      rememberLog(`[close-stop] taskkill PID ${failure.pid} failed: ${failure.error}`)
-    }
-
-    for (const failure of result.lockErrors) {
-      rememberLog(`[close-stop] could not clear unheld lock ${failure.path}: ${failure.error}`)
-    }
-
-    if (result.clearedLocks.length) {
-      rememberLog(`[close-stop] cleared unheld lock(s): ${result.clearedLocks.join(', ')}`)
-    }
-
-    return result.liveFailure ? new Error(closeStopFailureMessage(result)) : null
-  } catch (error) {
-    return error instanceof Error ? error : new Error(String(error))
-  }
-}
-
-function writeBackendOwnership(contents) {
-  fs.mkdirSync(path.dirname(DESKTOP_BACKEND_OWNERSHIP_PATH), { recursive: true })
-  const tempPath = `${DESKTOP_BACKEND_OWNERSHIP_PATH}.${process.pid}.tmp`
-
-  try {
-    fs.writeFileSync(tempPath, contents, { encoding: 'utf8', mode: 0o600 })
-    fs.renameSync(tempPath, DESKTOP_BACKEND_OWNERSHIP_PATH)
-  } finally {
-    try {
-      fs.rmSync(tempPath, { force: true })
-    } catch {
-      void 0
-    }
-  }
-}
-
-// execText and processStartMarker moved to backend-claim.ts (#93608) so the
-// claim/probe policy is testable — including on Windows CI with real
-// PowerShell — without booting Electron. main.ts calls through the module.
-
-async function backendCommandForPid(pid) {
-  try {
-    const command = IS_WINDOWS ? 'powershell.exe' : 'ps'
-
-    const args = IS_WINDOWS
-      ? [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          `(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}').CommandLine`
-        ]
-      : ['-p', String(pid), '-o', 'command=']
-
-    return (await execText(command, args)) || null
-  } catch {
-    return null
-  }
-}
-
-async function processIdentityMatches(identity, timeoutMs: number = 30_000) {
-  // Degraded PID-only identity (#93608): the start-marker probe failed while
-  // the child was verifiably alive, so only PID liveness can be checked here.
-  // backendIdentityMatches layers the command-line check on top before
-  // anything destructive relies on the answer.
-  if (isPidOnlyStartMarker(identity.startMarker)) {
-    try {
-      process.kill(identity.pid, 0)
-
-      return true
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException | null)?.code
-
-      return code === 'ESRCH' || code === 'ENOENT' ? false : code === 'EPERM' ? true : undefined
-    }
-  }
-
-  try {
-    return (await processStartMarker(identity.pid, timeoutMs)) === identity.startMarker
-  } catch (error) {
-    return error?.code === 'ENOENT' || error?.code === 'ESRCH' ? false : undefined
-  }
-}
-
-async function backendIdentityMatches(identity) {
-  const processMatches = await processIdentityMatches(identity, REAP_PROBE_TIMEOUT_MS)
-
-  if (processMatches !== true) {
-    return processMatches
-  }
-
-  const command = await backendCommandForPid(identity.pid)
-
-  return command === null ? undefined : backendCommandMatches(command)
-}
-
-// True when the recorded parent Electron is still running (same PID AND start
-// marker); false when it is gone or its PID was reused; undefined when the
-// ownership record predates parent tracking. Undefined deliberately falls back
-// to the pre-parent reap behaviour so legacy orphan cleanup keeps working.
-async function backendParentMatches(entry) {
-  if (!Number.isInteger(entry.parentPid) || typeof entry.parentStartMarker !== 'string' || !entry.parentStartMarker) {
-    return undefined
-  }
-
-  try {
-    return (await processStartMarker(entry.parentPid, REAP_PROBE_TIMEOUT_MS)) === entry.parentStartMarker
-  } catch (error) {
-    return error?.code === 'ENOENT' || error?.code === 'ESRCH' ? false : undefined
-  }
-}
-
-async function stopOwnedBackend(identity) {
-  const matches = await processIdentityMatches(identity, REAP_PROBE_TIMEOUT_MS)
-
-  if (matches === false) {
-    return
-  }
-
-  if (matches !== true) {
-    // Identity probe failed (not confirmed gone): preserve the record so a
-    // later launch retries the stop instead of dropping it and leaking the
-    // backend. reapOrphans keeps the entry when stop() throws.
-    throw new Error(`Could not verify backend PID ${identity.pid} before stopping it.`)
-  }
-
-  if (IS_WINDOWS) {
-    try {
-      forceKillProcessTree(identity.pid)
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
-      const stillThere = await processIdentityMatches(identity, REAP_PROBE_TIMEOUT_MS)
-
-      if (stillThere !== false) {
-        throw new Error(`taskkill failed for backend PID ${identity.pid}: ${detail}`)
-      }
-
-      rememberLog(`taskkill reported failure for already-gone backend PID ${identity.pid}: ${detail}`)
-    }
-  } else {
-    try {
-      process.kill(-identity.pid, 'SIGTERM')
-    } catch {
-      try {
-        process.kill(identity.pid, 'SIGTERM')
-      } catch {
-        return
-      }
-    }
-
-    const deadline = Date.now() + 1500
-
-    while (Date.now() < deadline) {
-      if ((await processIdentityMatches(identity, REAP_PROBE_TIMEOUT_MS)) !== true) {
-        return
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 50))
-    }
-
-    // Revalidate immediately before escalation so PID reuse cannot target a
-    // replacement process.
-    if ((await processIdentityMatches(identity, REAP_PROBE_TIMEOUT_MS)) === true) {
-      try {
-        process.kill(-identity.pid, 'SIGKILL')
-      } catch {
-        process.kill(identity.pid, 'SIGKILL')
-      }
-    }
-  }
-
-  await new Promise(resolve => setTimeout(resolve, 50))
-  const remaining = await processIdentityMatches(identity, REAP_PROBE_TIMEOUT_MS)
-
-  if (remaining !== false) {
-    throw new Error(`Backend PID ${identity.pid} did not stop cleanly.`)
-  }
-}
-
-const backendOwnership = createBackendOwnership({
-  matchesIdentity: backendIdentityMatches,
-  matchesParent: backendParentMatches,
-  stop: stopOwnedBackend,
-  store: {
-    read: () => {
-      try {
-        return fs.readFileSync(DESKTOP_BACKEND_OWNERSHIP_PATH, 'utf8')
-      } catch {
-        return null
-      }
-    },
-    write: writeBackendOwnership,
-    // A corrupt ownership file is moved aside instead of being rewritten
-    // away by the reap sweep — its records are the only pointer to any
-    // still-running backends it described (#89298).
-    quarantine: () => {
-      const parked = `${DESKTOP_BACKEND_OWNERSHIP_PATH}.corrupt`
-
-      try {
-        fs.renameSync(DESKTOP_BACKEND_OWNERSHIP_PATH, parked)
-        rememberLog(`Backend ownership file was unreadable; moved to ${parked}`)
-      } catch {
-        // Nothing to move (or no permission) — the sweep already skipped.
-      }
-    }
-  }
-})
-
-const desktopParentStartMarker = createParentStartMarkerResolver({
-  load: () => processStartMarker(process.pid),
-  onError: error => {
-    const detail = error instanceof Error ? error.message : String(error)
-
-    rememberLog(
-      `Could not resolve the Desktop process start marker; starting the backend with PID-only parent tracking: ${detail}`
-    )
-  }
-})
-
-async function claimBackendChild(
-  child: ChildProcess & { scoutBackendIdentity?: BackendOwnershipEntry },
-  command: string,
-  profile: string,
-  nonce: string,
-  outputTail: BackendOutputTail | null = null
-): Promise<BackendOwnershipEntry> {
-  // Probe/claim policy lives in backend-claim.ts (#93608): a marker probe
-  // that fails against a LIVE child degrades to PID-only identity — matching
-  // createParentStartMarkerResolver — instead of killing a healthy backend
-  // over a flaky Get-Process (PS 5.1 cold starts, #87169). Only a child that
-  // actually died keeps the fail-closed throw, now carrying its stderr tail.
-  const probe = await probeStartMarker(child.pid)
-  const decision = claimDecision(child.exitCode === null && !child.killed, probe)
-
-  if (decision.action === 'fail') {
-    await localBackendLifecycle.stop(child)
-    throw new Error(
-      `Scout backend (PID ${child.pid}) died before its identity could be recorded: ${decision.reason}${outputTail?.describe() ?? ''}`
-    )
-  }
-
-  let startMarker
-
-  if (decision.action === 'degrade') {
-    startMarker = pidOnlyStartMarker(child.pid)
-    rememberLog(
-      `WARNING: process start marker probe failed for live Scout backend PID ${child.pid}; ` +
-        `claiming with PID-only identity instead of stopping it: ${decision.reason}`
-    )
-  } else {
-    startMarker = decision.startMarker
-  }
-
-  try {
-    const identity = await backendOwnership.claim({
-      command,
-      nonce,
-      pid: child.pid,
-      profile,
-      startMarker,
-      // Record the spawning Electron so reapOrphans can tell an orphaned
-      // backend (parent gone) from one owned by a live instance — a live
-      // parent's backend is never reaped (#87295).
-      parentPid: process.pid,
-      parentStartMarker: await desktopParentStartMarker()
-    })
-
-    child.scoutBackendIdentity = identity
-
-    return identity
-  } catch (error) {
-    await localBackendLifecycle.stop(child)
-    throw new Error(
-      `Could not persist ownership for the Scout backend: ${error.message}${outputTail?.describe() ?? ''}`
-    )
-  }
-}
-
-function releaseBackendChild(child) {
-  const identity = child?.scoutBackendIdentity
-
-  if (!identity) {
-    return
-  }
-
-  try {
-    backendOwnership.release(identity)
-  } catch (error) {
-    rememberLog(`Could not release backend ownership for PID ${identity.pid}: ${error.message}`)
-  }
-}
-
-function reapOrphanedBackendsOnce() {
-  if (!backendOrphanReapPromise) {
-    backendOrphanReapPromise = backendOwnership
-      .reapOrphans()
-      .then(pids => {
-        if (pids.length) {
-          rememberLog(`Reaped orphaned desktop backend PID(s): ${pids.join(', ')}`)
-        }
-      })
-      .catch(error => {
-        backendOrphanReapPromise = null
-        throw error
-      })
-  }
-
-  return backendOrphanReapPromise
-}
-
 // Stop app-owned Windows backends before replacing application outputs.
 // PM generations can retain live readers. Gateway draining/restart belongs to
 // `scout update`; neither venv scans nor a second fleet stop belong here.
 async function stopBackendsForUpdate(): Promise<void> {
   if (IS_WINDOWS) {
-    await Promise.all([teardownPrimaryBackendAndWait(backendTeardownOptions('reconnect')), stopAllPoolBackends()])
+    await teardownPrimaryBackendAndWait(backendTeardownOptions('reconnect'))
   }
 }
 
@@ -4325,14 +2972,8 @@ async function releaseBackendLock(updateRoot: string, tag: string): Promise<{ un
     initialPids.push(scoutProcess.pid)
   }
 
-  for (const entry of backendPool.values()) {
-    if (entry.process && Number.isInteger(entry.process.pid)) {
-      initialPids.push(entry.process.pid)
-    }
-  }
-
   // No backend comes back after an uninstall: stay silent, like a quit.
-  await Promise.all([teardownPrimaryBackendAndWait(backendTeardownOptions('quit')), stopAllPoolBackends()])
+  await teardownPrimaryBackendAndWait(backendTeardownOptions('quit'))
 
   // Uninstall deletes the whole runtime. Drain separately-running gateways
   // through the CLI, rather than targeting a gateway worker by PID.
@@ -4368,12 +3009,6 @@ async function releaseBackendLock(updateRoot: string, tag: string): Promise<{ un
 
         if (currentScoutProcess && Number.isInteger(currentScoutProcess.pid)) {
           stragglers.push(currentScoutProcess.pid)
-        }
-
-        for (const entry of backendPool.values()) {
-          if (entry.process && Number.isInteger(entry.process.pid)) {
-            stragglers.push(entry.process.pid)
-          }
         }
 
         return stragglers
@@ -4422,124 +3057,10 @@ async function releaseBackendLock(updateRoot: string, tag: string): Promise<{ un
 // only this apply action changed.
 async function applyUpdates(): Promise<UpdaterApplyResultWire> {
   return updateOperation.apply(async (): Promise<UpdaterApplyResultWire> => {
-    updateInFlight = true
-    let handedOff: boolean = false
+    const packaged: UpdaterStrategy | null = await resolvePackagedUpdateStrategy()
 
-    try {
-      const packaged: UpdaterStrategy | null = await resolvePackagedUpdateStrategy()
-      const result: UpdaterApplyResultWire = await (packaged ?? resolveCheckoutUpdateStrategy()).apply()
-      handedOff = result.handedOff === true
-
-      return result
-    } finally {
-      if (!handedOff) {
-        updateInFlight = false
-      }
-    }
+    return (packaged ?? resolveCheckoutUpdateStrategy()).apply()
   })
-}
-
-async function handOffWindowsBootstrapRecovery(reason) {
-  if (!IS_WINDOWS || !IS_PACKAGED) {
-    return false
-  }
-
-  // A bundled install does not own %LOCALAPPDATA%\scout — the updater
-  // would try to heal a tree the app never created. The payload IS the
-  // runtime; recovery means reinstalling the app, not spawning the
-  // updater. (ensureRuntime's bundled guard also short-circuits before
-  // this call; this is the belt-and-suspenders check.)
-  if (installShape() === 'bundled') {
-    rememberLog('[bootstrap] refusing updater recovery hand-off on a bundled install; reinstall the app')
-
-    return false
-  }
-
-  const updater = resolveUpdaterBinary()
-
-  if (!updater) {
-    return false
-  }
-
-  const handoffConflict = updateHandoffConflict(SCOUT_HOME)
-
-  if (handoffConflict) {
-    // Same hazard as applyUpdates (#75778): a live foreign updater already
-    // owns the marker. Spawning another here would overwrite its claim and
-    // race a second updater over the same install tree. The live updater
-    // is already working on this exact install and will restart us when
-    // it finishes, so treat this the same as a successful hand-off instead
-    // of clobbering it with our own.
-    rememberLog(`[bootstrap] refusing recovery hand-off: ${handoffConflict.message}`)
-    isQuittingForHandoff = true
-    setTimeout(() => {
-      app.quit()
-    }, UPDATE_HANDOFF_DWELL_MS)
-
-    return true
-  }
-
-  const updateRoot = resolveUpdateRoot()
-  const { branch: configuredBranch } = readDesktopUpdateConfig()
-
-  // Recovery can run without Python. Keep the chosen branch; do not guess a replacement.
-  const branch: string = configuredBranch || DEFAULT_UPDATE_BRANCH
-
-  const updaterArgs: string[] = chooseUpdaterArgs({ runtimeUsable: await isSourceRuntimeUsable(updateRoot) }, branch)
-
-  await stopBackendsForUpdate()
-
-  const child = spawnUpdaterProcess(updater, updaterArgs, {
-    cwd: SCOUT_HOME,
-    env: {
-      ...process.env,
-      SCOUT_HOME,
-      SCOUT_INSTALL_ROOT: updateRoot
-    },
-    detached: true,
-    stdio: 'ignore'
-  })
-
-  // Same marker pre-write as applyUpdates — see comment there. The recovery
-  // hand-off has the same window where the renderer can respawn a backend
-  // before the updater writes its own marker, and the same stale-updater
-  // exclusion: a pre-#74782 binary would refuse its own pre-written claim and
-  // strand the very recovery meant to heal the install.
-  if (Number.isInteger(child.pid) && stagedUpdaterSupportsPrewrittenMarker(updater)) {
-    writeUpdateMarker(SCOUT_HOME, child.pid)
-  } else if (Number.isInteger(child.pid)) {
-    rememberLog(
-      `[bootstrap] skipping marker pre-write: staged updater predates self-adopt (${updater}); it would refuse its own claim`
-    )
-  }
-
-  rememberLog(
-    `[bootstrap] handed off ${reason} recovery to updater: ${updater} ${updaterArgs.join(' ')}; exiting desktop to release app.asar`
-  )
-  // Same dwell as the in-app update hand-off (#50419): give the updater's
-  // window time to appear before we vanish, so the recovery doesn't look like
-  // a crash and provoke a mid-recovery relaunch. The dwell doubles as the
-  // hand-off settle window (#66753): a spawn error or early updater death
-  // returns false so the caller falls through to its next recovery path
-  // instead of quitting into nothing.
-  const dwellStartedAt = Date.now()
-  const handoffOutcome = await observeUpdaterHandoff(child, UPDATE_HANDOFF_DWELL_MS)
-
-  if (!handoffOutcome.ok) {
-    rememberLog(`[bootstrap] recovery hand-off not viable, staying alive: ${handoffOutcome.message}`)
-
-    return false
-  }
-
-  isQuittingForHandoff = true
-  setTimeout(
-    () => {
-      app.quit()
-    },
-    Math.max(0, UPDATE_HANDOFF_DWELL_MS - (Date.now() - dwellStartedAt))
-  )
-
-  return true
 }
 
 // The running app's .app bundle (packaged macOS): execPath is
@@ -4639,28 +3160,6 @@ function readCanonicalInstallStamp() {
   } catch {
     return null
   }
-}
-
-function writeBootstrapMarker(payload) {
-  fs.mkdirSync(path.dirname(BOOTSTRAP_COMPLETE_MARKER), { recursive: true })
-
-  const merged = {
-    schemaVersion: BOOTSTRAP_MARKER_SCHEMA_VERSION,
-    pinnedCommit: payload.pinnedCommit || null,
-    pinnedBranch: payload.pinnedBranch || null,
-    completedAt: new Date().toISOString(),
-    desktopVersion: app.getVersion()
-  }
-
-  writeFileAtomic(BOOTSTRAP_COMPLETE_MARKER, JSON.stringify(merged, null, 2) + '\n', 'utf8')
-
-  // The checkout's own install stamp is written by the Python completion tail
-  // (scout_cli/source_completion.py) during the products stage, from the
-  // checkout itself. The desktop never synthesizes it: the checkout is the
-  // authority for its runtime identity, and a desktop-written copy would
-  // clobber the completion tail's richer provenance.
-
-  return merged
 }
 
 function resolveWebDist() {
@@ -5075,146 +3574,6 @@ interface ResolvedScoutBackend {
   isPackaged?: boolean
   platform?: NodeJS.Platform
   readyFile?: boolean
-}
-
-async function ensureRuntime(
-  backend: ResolvedScoutBackend,
-  assertStillOwned: () => void
-): Promise<ResolvedScoutBackend> {
-  localBackendLifecycle.assertCanStart()
-  assertStillOwned()
-
-  if (!backend.bootstrap) {
-    await advanceBootProgress('runtime.external', `Using ${backend.label}`, 32)
-
-    return backend
-  }
-
-  // backend.kind === 'bootstrap-needed' means resolveScoutBackend couldn't
-  // find anything to spawn. Hand off to the bootstrap runner which drives the
-  // platform installer, writes the bootstrap-complete marker on success, then
-  // we re-resolve to get the now-installed backend.
-  //
-  // Phase 1D status: bootstrap runs but events go to desktop.log only
-  // (renderer window isn't created until later in startBackend). Phase 1E
-  // will rewire startup to spawn the window first and route bootstrap events
-  // to a renderer-side install overlay.
-  //
-  // The artifact kind forbids bootstrap even when a caller requests repair.
-  if (backend.kind === 'bootstrap-needed' && installShape() === 'bundled') {
-    rememberLog('[bootstrap] REFUSING installer on a bundled install; payload missing or damaged — reinstall the app')
-
-    const bundledError: Error & { isBootstrapFailure?: boolean } = new Error(
-      'This app bundles its own Scout runtime, but the runtime files are missing or damaged. Reinstall Scout Desktop to restore it.'
-    )
-
-    bundledError.isBootstrapFailure = true
-    bootstrapFailure = bundledError
-    throw bundledError
-  }
-
-  if (backend.kind === 'bootstrap-needed') {
-    rememberLog('[bootstrap] no Scout install found; starting first-launch bootstrap')
-
-    if (await handOffWindowsBootstrapRecovery('bootstrap-needed')) {
-      const handoffError: Error & { isBootstrapFailure?: boolean; bootstrapHandedOff?: boolean } = new Error(
-        'Scout recovery was handed off to Scout Setup. The desktop will restart when recovery completes.'
-      )
-
-      handoffError.isBootstrapFailure = true
-      handoffError.bootstrapHandedOff = true
-      bootstrapFailure = handoffError
-      throw handoffError
-    }
-
-    // Eagerly flip the bootstrap UI state to 'active' so the renderer
-    // shows the install overlay BEFORE the runner finishes fetching the
-    // manifest (which on slow networks can take tens of seconds and would
-    // otherwise leave the user staring at the generic 'Preparing' splash).
-    // We emit a synthetic manifest with an empty stages list -- the real
-    // manifest event will overwrite it once install.ps1 -Manifest returns.
-    try {
-      broadcastBootstrapEvent({
-        type: 'manifest',
-        stages: [],
-        protocolVersion: null
-      })
-    } catch {
-      void 0
-    }
-
-    localBackendLifecycle.assertCanStart()
-    bootstrapAbortController = new AbortController()
-
-    // The repair request has been honoured by reaching the installer; clear it
-    // so a later boot isn't forced through bootstrap again.
-    bootstrapRepairRequested = false
-    bootstrapRepairAttempt = 0
-
-    const bootstrapResult = await runBootstrap({
-      installStamp: backend.installStamp,
-      activeRoot: backend.activeRoot,
-      sourceRepoRoot: SOURCE_REPO_ROOT,
-      scoutHome: SCOUT_HOME,
-      logRoot: path.join(SCOUT_HOME, 'logs'),
-      abortSignal: bootstrapAbortController.signal,
-      onEvent: ev => {
-        // Tee every bootstrap event to (a) the desktop log for forensics
-        // and (b) the renderer for live progress UI. Either may be absent;
-        // tolerate both gracefully so a renderer crash doesn't stall the
-        // bootstrap and a log-write failure doesn't suppress the UI signal.
-        try {
-          rememberLog(`[bootstrap] ${JSON.stringify(ev)}`)
-        } catch {
-          void 0
-        }
-
-        try {
-          broadcastBootstrapEvent(ev)
-        } catch {
-          void 0
-        }
-      },
-      writeMarker: writeBootstrapMarker,
-      gitBinary: resolveGitBinary()
-    })
-
-    bootstrapAbortController = null
-
-    if (bootstrapResult.cancelled) {
-      const cancelledError = new Error('Scout install was cancelled.') as any
-      cancelledError.isBootstrapFailure = true
-      cancelledError.bootstrapCancelled = true
-      bootstrapFailure = cancelledError
-      throw cancelledError
-    }
-
-    if (!bootstrapResult.ok) {
-      // Plain lead sentence + trailing "Details:" line; the install overlay
-      // shows this verbatim and offers Reload and retry / Open logs itself.
-      const bootstrapError = new Error(
-        describeBootstrapFailure(bootstrapResult.failedStage, bootstrapResult.error)
-      ) as any
-
-      bootstrapError.isBootstrapFailure = true
-      bootstrapError.failedStage = bootstrapResult.failedStage || null
-      // Latch the failure so subsequent startScout() calls return this
-      // same error without re-running install.ps1.  Cleared by the
-      // scout:bootstrap:reset IPC (renderer's "Reload and retry").
-      bootstrapFailure = bootstrapError
-      throw bootstrapError
-    }
-
-    rememberLog('[bootstrap] bootstrap complete; marker written. Re-resolving backend.')
-
-    // Resolve the newly published launcher after the installer completes.
-    return ensureRuntime(
-      await installedRuntimeGate.afterInstall(() => resolveScoutBackend(backend.args)),
-      assertStillOwned
-    )
-  }
-
-  throw new Error(`Unexpected bootstrap backend: ${backend.kind}`)
 }
 
 // Assemble a single-file multipart/form-data body (FastAPI `UploadFile`
@@ -6333,43 +4692,6 @@ function watchDirectory(owner, rawDir) {
   return { id, path: watchDir }
 }
 
-// Best-effort read of a gateway's advertised auth providers, cached per base
-// URL for the life of the process. Used by the oauth pre-flight guard to tell
-// a password-provider gateway (which cannot satisfy the bearer/cookie checks
-// by design) from a real OAuth one. Any failure returns [] so callers keep the
-// strict guard — backends predating /api/auth/providers are unaffected.
-const gatewayAuthProvidersCache = new Map<string, any[]>()
-
-async function gatewayAuthProviders(baseUrl, headers = {}) {
-  const cached = gatewayAuthProvidersCache.get(baseUrl)
-
-  if (cached) {
-    return cached
-  }
-
-  let providers = []
-
-  try {
-    const body = (await fetchPublicJson(
-      `${baseUrl}/api/auth/providers`,
-      requestOptionsWithHeaders({ timeoutMs: 8_000 }, headers)
-    )) as any
-
-    if (Array.isArray(body?.providers)) {
-      providers = body.providers
-        .filter(p => p && typeof p === 'object')
-        .map(p => ({ name: String(p.name || ''), supportsPassword: Boolean(p.supports_password) }))
-        .filter(p => p.name)
-    }
-
-    gatewayAuthProvidersCache.set(baseUrl, providers)
-  } catch {
-    // Optional metadata — an unreadable list keeps the strict guard.
-  }
-
-  return providers
-}
-
 // Build the readiness probe for a connection's auth mode. A gated gateway
 // must be probed with the SAME credentials the rest of the connection uses:
 // an anonymous probe 401s forever against a live session, and it can never
@@ -6460,26 +4782,6 @@ function getWindowState(win = mainWindow) {
     darwinMajor: IS_MAC ? DARWIN_MAJOR : 0,
     ...windowControlState(win, !IS_WINDOWS && IS_WSL)
   }
-}
-
-function sendBackendExit(payload) {
-  // Intentional soft re-home (gateway mode apply) kills the child on purpose —
-  // don't surface the "backend stopped" error toast / boot-failure path.
-  if (softRehomeInProgress) {
-    return
-  }
-
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    return
-  }
-
-  const { webContents } = mainWindow
-
-  if (!webContents || webContents.isDestroyed()) {
-    return
-  }
-
-  webContents.send('scout:backend-exit', payload)
 }
 
 function sendClosePreviewRequested() {
@@ -6665,15 +4967,6 @@ function registerPowerResumeListeners() {
     powerMonitor.on('on-battery', () => broadcastBatteryState(true))
     powerMonitor.on('on-ac', () => broadcastBatteryState(false))
     onBatteryPower = powerMonitor.isOnBatteryPower()
-    // Pooled remote/SSH backends are also suspect after a wake (#93910): the
-    // renderer nudge above only re-drives the PRIMARY socket, while pooled
-    // tunnels have no renderer loop of their own. Bounded + coalesced inside;
-    // never a hot loop.
-    attachPowerResumeRemoteRevalidation({
-      log: rememberLog,
-      powerMonitor,
-      revalidate: () => revalidateSuspectPoolAfterResume()
-    })
   } catch {
     // powerMonitor is unavailable before app 'ready' on some platforms; the
     // caller registers after 'ready', so this should not normally throw.
@@ -7329,56 +5622,6 @@ function getOauthSessionForUrl(url, { connectionId = '', pendingAuthMode = '', p
   return sess
 }
 
-// Cold-start cookie-jar warm-up. A `persist:` partition materialized via
-// session.fromPartition() loads its on-disk cookie store LAZILY: the very first
-// cookies.get() on a fresh cold start can resolve BEFORE the jar has finished
-// hydrating from disk and return an empty array — even though the user is
-// signed in. That false-negative used to make hasLiveOauthSession() report
-// "not signed in", which on the initial boot path (startScout → the renderer's
-// single-shot boot() with no retry) surfaced as the "Scout couldn't start"
-// OAuth overlay that vanishes the instant the user clicks Retry.
-//
-// We force the store to hydrate once, up front: flushStorageData() then a
-// throwaway cookies.get(). The promise is memoized so every caller awaits the
-// same single warm-up. Best-effort — any error resolves so we fall back to the
-// live read (which then does its own bounded re-check).
-// Memoized per PARTITION: per-connection jars (#92183) hydrate independently.
-const oauthCookieWarmups = new Map()
-
-function warmOauthCookieStore(url?) {
-  const partition = resolveOauthPartitionForUrl(url)
-  const pending = oauthCookieWarmups.get(partition)
-
-  if (pending) {
-    return pending
-  }
-
-  const warmup = (async () => {
-    const sess = getOauthSessionForUrl(url)
-
-    if (!sess) {
-      // App not ready yet — don't memoize a no-op; let a later call retry.
-      oauthCookieWarmups.delete(partition)
-
-      return
-    }
-
-    try {
-      // flushStorageData() forces Chromium to reconcile the in-memory cookie
-      // monster with the on-disk SQLite store; the subsequent get() then reads
-      // a populated jar rather than racing the lazy first-access load.
-      sess.flushStorageData?.()
-      await sess.cookies.get({})
-    } catch {
-      // Best effort; the real read below re-checks with bounded retries.
-    }
-  })()
-
-  oauthCookieWarmups.set(partition, warmup)
-
-  return warmup
-}
-
 // Bare + prefixed variants of the session cookies live in
 // connection-config.ts (cookiesHaveSession / cookiesHaveLiveSession). See
 // that module for details.
@@ -7422,85 +5665,6 @@ async function hasOauthSessionCookie(baseUrl, { connectionId = '', pendingAuthMo
     } catch {
       return false
     }
-  }
-}
-
-// Like hasOauthSessionCookie, but returns true when EITHER a live access-token
-// cookie OR a (longer-lived) refresh-token cookie is present. This is the right
-// "is the user signed in at all?" check: an expired AT with a live RT is still
-// a connectable session because the gateway rotates a fresh AT server-side on
-// the next authenticated request. Gating on the AT alone forces a needless full
-// re-login every ~15 min. Used for the Settings "connected" indicator and as a
-// cheap early-out before attempting a network round-trip in resolveRemoteBackend.
-async function hasLiveOauthSession(baseUrl) {
-  const sess = getOauthSessionForUrl(baseUrl)
-
-  if (!sess) {
-    return false
-  }
-
-  const parsed = new URL(baseUrl)
-
-  const readLive = async () => {
-    try {
-      const cookies = await sess.cookies.get({ url: baseUrl })
-
-      return cookiesHaveLiveSession(cookies)
-    } catch {
-      try {
-        const cookies = await sess.cookies.get({ domain: parsed.hostname })
-
-        return cookiesHaveLiveSession(cookies)
-      } catch {
-        return false
-      }
-    }
-  }
-
-  // First read against the (possibly still-hydrating) jar.
-  if (await readLive()) {
-    return true
-  }
-
-  // Cold-start false-negative guard. A `persist:` partition's cookie store
-  // loads lazily, so the FIRST read on a fresh boot can come back empty even
-  // for a signed-in user — the exact race that produced the transient "Scout
-  // couldn't start / not signed in" overlay that Retry always cleared. Before
-  // trusting a negative, force the store to hydrate and re-read a couple of
-  // times with a short backoff. A genuinely signed-out user still resolves
-  // false quickly (≤ ~180ms); a signed-in user racing the load now wins.
-  await warmOauthCookieStore(baseUrl)
-
-  for (const delayMs of [30, 60, 90]) {
-    if (await readLive()) {
-      return true
-    }
-
-    await new Promise(resolve => setTimeout(resolve, delayMs))
-  }
-
-  return readLive()
-}
-
-async function clearOauthSession(baseUrl) {
-  const sess = getOauthSessionForUrl(baseUrl)
-
-  if (!sess) {
-    return
-  }
-
-  try {
-    const cookies = await sess.cookies.get(baseUrl ? { url: baseUrl } : {})
-    await Promise.all(
-      cookies.map(c => {
-        const scheme = c.secure ? 'https' : 'http'
-        const cookieUrl = `${scheme}://${c.domain.replace(/^\./, '')}${c.path || '/'}`
-
-        return sess.cookies.remove(cookieUrl, c.name).catch(() => undefined)
-      })
-    )
-  } catch {
-    // Best effort — a stale cookie self-expires anyway.
   }
 }
 
@@ -8108,70 +6272,12 @@ function setSecretStoragePolicy(next: SecretStoragePolicy) {
 }
 
 /**
- * Keychain availability as the renderer should see it. With encryption
- * opted out this must NOT probe safeStorage — isEncryptionAvailable() is
- * itself a keychain touch that raises the macOS dialog this feature exists
- * to avoid. We report `true` so no plain-text warning banners fire: storing
- * plaintext is the user's chosen (default) mode, not a degraded state.
- */
-function probeSecureTokenStorage(): boolean {
-  if (!secretStoragePolicy().on) {
-    return true
-  }
-
-  try {
-    return Boolean(safeStorage.isEncryptionAvailable())
-  } catch {
-    return false
-  }
-}
-
-/**
- * Rewrite every stored desktop secret (v1 connection.json token/headers +
- * per-profile overrides, v2 registry connections, native OAuth token store)
- * through `reencode`. Returns true when any store was rewritten. Shared by
- * the one-shot legacy migration and the Settings encryption toggle.
+ * Rewrite every stored desktop secret (the native OAuth token store) through
+ * `reencode`. Returns true when any store was rewritten. Shared by the
+ * one-shot legacy migration and the Settings encryption toggle.
  */
 function rewriteAllStoredSecrets(shouldRewrite: (secret: any) => boolean, reencode: (secret: any) => any): boolean {
   let touched = false
-
-  const rewriteBlock = (block: any) => {
-    if (!block || typeof block !== 'object') {
-      return block
-    }
-
-    const next = { ...block, ...(block.token ? { token: reencode(block.token) } : {}) }
-
-    if (block.headers && typeof block.headers === 'object') {
-      next.headers = Object.fromEntries(Object.entries(block.headers).map(([k, v]) => [k, reencode(v)]))
-    }
-
-    return next
-  }
-
-  const blockNeedsRewrite = (o: any) =>
-    shouldRewrite(o?.token) ||
-    Object.values(o?.headers && typeof o.headers === 'object' ? o.headers : {}).some(shouldRewrite)
-
-  // v1 connection.json.
-  const config = readDesktopConnectionConfig()
-
-  if (blockNeedsRewrite(config.remote) || Object.values(config.profiles || {}).some(blockNeedsRewrite)) {
-    touched = true
-    writeDesktopConnectionConfig({
-      ...config,
-      remote: rewriteBlock(config.remote),
-      profiles: Object.fromEntries(Object.entries(config.profiles || {}).map(([k, v]) => [k, rewriteBlock(v)]))
-    })
-  }
-
-  // v2 connections.json registry.
-  const registry = readDesktopConnectionsRegistry()
-
-  if (registry.connections?.some(blockNeedsRewrite)) {
-    touched = true
-    writeDesktopConnectionsRegistry({ ...registry, connections: registry.connections.map(rewriteBlock) })
-  }
 
   // Native OAuth token store: baseUrl → blob.
   const io = _nativeTokenStoreIo()
@@ -8377,54 +6483,6 @@ function decryptRemoteHeaders(headers) {
   return out
 }
 
-/**
- * Turn an editor payload of remote gateway headers into stored secret
- * envelopes. The payload map is authoritative (a name missing from it is
- * cleared); per-name values are:
- *   - non-empty string  → new plaintext value, encrypted like a token
- *   - null              → keep the currently stored envelope for that name
- *                         (the editor shows a set-but-hidden secret)
- *   - envelope object   → stored verbatim (hand-edited import path)
- * Name filtering (forbidden/managed headers) happens in
- * normalizeRemoteHeaders at the registry/config layer.
- */
-function encryptIncomingRemoteHeaders(raw, existing, options: { allowPlainText?: boolean } = {}) {
-  const out = {}
-  const stored = normalizeRemoteHeaders(existing)
-
-  for (const [name, value] of Object.entries(raw || {})) {
-    const key = String(name || '').trim()
-
-    if (!key) {
-      continue
-    }
-
-    if (typeof value === 'string') {
-      const trimmed = value.trim()
-
-      if (trimmed) {
-        out[key] = encryptDesktopSecret(trimmed, { allowPlainText: options.allowPlainText === true })
-      }
-
-      continue
-    }
-
-    if (value === null) {
-      if (stored[key]) {
-        out[key] = stored[key]
-      }
-
-      continue
-    }
-
-    if (value && typeof value === 'object') {
-      out[key] = value
-    }
-  }
-
-  return out
-}
-
 function rememberRemoteWsHeaders(wsUrl, headers = {}) {
   remoteWsHeaderStore.remember(wsUrl, headers)
 }
@@ -8491,429 +6549,13 @@ function installRemoteHeaderRules() {
   installRemoteHeaderRulesOnSession(session.defaultSession)
 }
 
-// Validate + normalize the per-profile remote overrides map read from disk.
-// Drops malformed names/entries and keeps only the recognized fields so a
-// hand-edited or stale connection.json can't inject junk into resolution.
-function sanitizeConnectionProfiles(raw: Record<string, any>) {
-  if (!raw || typeof raw !== 'object') {
-    return {}
-  }
-
-  const out = {}
-
-  for (const [name, entry] of Object.entries(raw)) {
-    if (!entry || typeof entry !== 'object') {
-      continue
-    }
-
-    if (name !== 'default' && !PROFILE_NAME_RE.test(name)) {
-      continue
-    }
-
-    if (entry.mode === 'ssh') {
-      const ssh = normalizeSshConfig(entry)
-
-      if (ssh) {
-        if (entry.token && typeof entry.token === 'object') {
-          ssh.token = entry.token
-        }
-
-        out[name] = ssh
-      }
-
-      continue
-    }
-
-    const cleaned: {
-      mode: 'remote' | 'local'
-      url?: string
-      authMode?: string
-      token?: object
-      headers?: object
-      remoteProfile?: string
-      savedSsh?: object
-    } = {
-      mode: modeIsRemoteLike(entry.mode) ? entry.mode : 'local'
-    }
-
-    if (cleaned.mode === 'local') {
-      const savedSsh = normalizeSshConfig(entry.savedSsh)
-
-      if (savedSsh) {
-        cleaned.savedSsh = savedSsh
-      }
-    }
-
-    const url = String(entry.url || '').trim()
-
-    if (url) {
-      cleaned.url = url
-    }
-
-    cleaned.authMode = normAuthMode(entry.authMode)
-
-    if ((entry as any).token && typeof entry.token === 'object') {
-      cleaned.token = entry.token
-    }
-
-    // A URL-remote per-profile override can map its Desktop routing label
-    // onto the backend's profile namespace (same contract as SSH remoteProfile).
-    const remoteProfileName = normalizeRemoteProfileName((entry as any).remoteProfile)
-
-    if (remoteProfileName) {
-      cleaned.remoteProfile = remoteProfileName.remoteProfile
-    }
-
-    const headers = normalizeRemoteHeaders((entry as any).headers)
-
-    if (Object.keys(headers).length > 0) {
-      cleaned.headers = headers
-    }
-
-    out[name] = cleaned
-  }
-
-  return out
+// The app has no connection settings of its own: one hosted backend, fixed at build time.
+function readDesktopConnectionConfig(): any {
+  return { mode: 'remote', remote: { url: HOSTED_BACKEND_URL, authMode: 'token' }, profiles: {} }
 }
 
-function readDesktopConnectionConfig() {
-  // Check if file changed on disk since last read (e.g. modified by another
-  // process or an external tool).  Our own writes update the cache inline
-  // via writeDesktopConnectionConfig, but external changes would be missed.
-  let mtime = null
-
-  try {
-    mtime = fs.statSync(DESKTOP_CONNECTION_CONFIG_PATH).mtimeMs
-  } catch {
-    mtime = null
-  }
-
-  if (connectionConfigCache && connectionConfigCacheMtime === mtime) {
-    return connectionConfigCache
-  }
-
-  let config = { mode: 'local', remote: {}, profiles: {} }
-
-  try {
-    const raw = fs.readFileSync(DESKTOP_CONNECTION_CONFIG_PATH, 'utf8')
-    // Tighten an install written before this file was owner-only. Every write
-    // now goes out at 0600, but a file already on disk keeps its old 0644 bits
-    // until something chmods it, and waiting for the user's next Settings save
-    // would leave it group/other-readable indefinitely. Runs on a cache miss
-    // only (once per launch, plus after an external edit); chmod moves ctime,
-    // not mtime, so it cannot invalidate the cache it sits inside.
-    //
-    // Deliberately BEFORE JSON.parse, not after: a truncated or hand-mangled
-    // connection.json still contains the token bytes, and parse throws into the
-    // catch below, which swallows the error and falls back to local mode. With
-    // the tighten after the parse, exactly the file that is both corrupt AND
-    // world-readable would be the one file never tightened — and nothing would
-    // ever retry it, because the fallback config is not written back. The chmod
-    // needs only the path, so it has no reason to wait for valid JSON.
-    tightenSecretFileMode(DESKTOP_CONNECTION_CONFIG_PATH)
-
-    const parsed = JSON.parse(raw)
-
-    // NOT done here: migrating a legacy non-safeStorage token payload to
-    // ciphertext at rest. Deferred deliberately — it has to honor the opt-in
-    // plaintext choice PR #62319 adds (re-encrypting it converts a portable
-    // credential into a keychain-bound one and can lose the token), write
-    // through sanitizeConnectionProfiles below rather than persisting raw
-    // `parsed`, and tell the user to ROTATE, since every existing backup copy
-    // still holds the old secret. Do not add it without those three.
-
-    if (parsed && typeof parsed === 'object') {
-      const remote = parsed.remote && typeof parsed.remote === 'object' ? parsed.remote : {}
-      // authMode lives on the remote sub-object: 'oauth' (cookie + ws-ticket)
-      // or 'token' (legacy static session token). Default to 'token' for
-      // backward compatibility with configs written before OAuth support.
-      remote.authMode = remote.authMode === 'oauth' ? 'oauth' : 'token'
-      config = {
-        mode: parsed.mode === 'ssh' ? 'ssh' : modeIsRemoteLike(parsed.mode) ? parsed.mode : 'local',
-        remote,
-        // Per-profile remote overrides: each profile may point at its own
-        // backend (local spawn or its own remote URL). Preserved verbatim so
-        // profileRemoteOverride() can resolve them; normalized lazily on save.
-        profiles: sanitizeConnectionProfiles(parsed.profiles)
-      }
-    }
-  } catch {
-    // Missing or malformed connection settings should fall back to local.
-  }
-
-  connectionConfigCache = config
-  connectionConfigCacheMtime = mtime
-
-  return config
-}
-
-function writeDesktopConnectionConfig(config) {
-  fs.mkdirSync(path.dirname(DESKTOP_CONNECTION_CONFIG_PATH), { recursive: true })
-  // Owner-only, not writeFileAtomic: this is the single choke point for every
-  // connection.json write (the IPC save/apply handlers and
-  // persistSshConnectionToken all land here), and the file carries the
-  // safeStorage-encrypted gateway token plus its URL and SSH host/user/keyPath.
-  // safeStorage keeps the token opaque; 0600 keeps the whole record — and the
-  // fields that are NOT encrypted — off other local accounts, matching
-  // native-oauth-tokens.json and desktop-installation.json.
-  writeSecretFileAtomic(DESKTOP_CONNECTION_CONFIG_PATH, JSON.stringify(config, null, 2))
-  connectionConfigCache = config
-  connectionConfigCacheMtime = fs.statSync(DESKTOP_CONNECTION_CONFIG_PATH).mtimeMs
-}
-
-// ── v2 connection registry (multi-source) ──────────────────────────────────
-
-/**
- * Read the v2 registry, importing from v1 connection.json exactly once (when
- * connections.json does not exist yet). Same mtime-cache + tighten-mode
- * discipline as readDesktopConnectionConfig; a corrupt registry degrades to
- * local-only via normalizeRegistry rather than throwing at boot.
- *
- * An EXISTING registry is additionally reconciled against v1 when the two have
- * drifted — see reconcileRegistryDrift. The one-shot migration cannot cover a
- * user who registered nothing and then pointed Settings -> Gateway at a remote,
- * and until that heals, every launch re-homes them onto a local backend.
- */
-function readDesktopConnectionsRegistry() {
-  let mtime = null
-
-  try {
-    mtime = fs.statSync(DESKTOP_CONNECTIONS_REGISTRY_PATH).mtimeMs
-  } catch {
-    mtime = null
-  }
-
-  if (connectionRegistryCache && connectionRegistryCacheMtime === mtime) {
-    return connectionRegistryCache
-  }
-
-  let registry
-
-  if (mtime === null) {
-    // First run on this build: import the v1 single-connection config. The v1
-    // file is NOT modified or deleted — older builds keep reading it. The
-    // migration is deterministic over the v1 input, so even if two processes
-    // race the first run (updater relaunch, second window), both derive the
-    // same registry and the later atomic write is a no-op content-wise.
-    registry = migrateV1ToRegistry(readDesktopConnectionConfig())
-
-    try {
-      writeDesktopConnectionsRegistry(registry)
-    } catch {
-      // Write failed (full disk, read-only userData). Keep the migrated
-      // registry in memory so list/save keep working this session instead of
-      // hard-failing every scout:connections:* call.
-      connectionRegistryCache = registry
-      connectionRegistryCacheMtime = null
-    }
-
-    return connectionRegistryCache
-  }
-
-  try {
-    // Same rationale as connection.json: tighten BEFORE parse so a corrupt
-    // file that still holds token bytes gets its mode fixed anyway.
-    tightenSecretFileMode(DESKTOP_CONNECTIONS_REGISTRY_PATH)
-    registry = normalizeRegistry(JSON.parse(fs.readFileSync(DESKTOP_CONNECTIONS_REGISTRY_PATH, 'utf8')))
-  } catch {
-    // Whole-file corruption (truncated write, mangled hand-edit). The
-    // degraded local-only registry keeps boot working, but the file BYTES are
-    // the user's connection data — preserve them in a sidecar BEFORE any
-    // later write (drift reconcile, connection save) overwrites the file
-    // (#94246: recovery must never be data loss).
-    preserveCorruptRegistrySidecar()
-    registry = normalizeRegistry(null)
-  }
-
-  if (registry?.quarantined?.length) {
-    rememberLog(
-      `[connections] ${registry.quarantined.length} malformed registry entr${registry.quarantined.length === 1 ? 'y was' : 'ies were'} quarantined (kept under "quarantined" in connections.json); healthy connections loaded normally.`
-    )
-  }
-
-  // Heal v1 -> v2 drift: the v1 global route names a remote this registry has
-  // never heard of, so the live descriptor resolves to no connectionId and the
-  // launch pick sends the window somewhere else. Persist so the repair is a
-  // one-time event rather than a recomputation on every read; a failed write
-  // still returns the healed registry for this session.
-  const reconciled = reconcileRegistryDrift(registry, readDesktopConnectionConfig())
-
-  if (reconciled.changed) {
-    registry = reconciled.registry
-
-    try {
-      writeDesktopConnectionsRegistry(registry)
-
-      return connectionRegistryCache
-    } catch {
-      connectionRegistryCache = registry
-      connectionRegistryCacheMtime = null
-
-      return registry
-    }
-  }
-
-  connectionRegistryCache = registry
-  connectionRegistryCacheMtime = mtime
-
-  return registry
-}
-
-// Copy an unparseable connections.json aside (once per corruption event) so a
-// later registry write can never destroy the only copy of the user's saved
-// connections (#94246). Best effort: failure to preserve must not block boot.
-function preserveCorruptRegistrySidecar() {
-  try {
-    const rawText = fs.readFileSync(DESKTOP_CONNECTIONS_REGISTRY_PATH, 'utf8')
-
-    if (!rawText.trim()) {
-      return
-    }
-
-    const sidecar = `${DESKTOP_CONNECTIONS_REGISTRY_PATH}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`
-
-    if (!fs.existsSync(sidecar)) {
-      fs.writeFileSync(sidecar, rawText, { mode: 0o600 })
-    }
-
-    rememberLog(
-      `[connections] connections.json could not be parsed; preserved the original file at ${sidecar} and continuing with a local-only registry. No connection data was deleted.`
-    )
-  } catch {
-    // The read itself failed (missing file, permissions) — nothing to save.
-  }
-}
-
-function writeDesktopConnectionsRegistry(registry) {
-  fs.mkdirSync(path.dirname(DESKTOP_CONNECTIONS_REGISTRY_PATH), { recursive: true })
-  // Owner-only for the same reason as connection.json: entries carry
-  // safeStorage-encrypted tokens plus URLs and SSH host/user/keyPath.
-  writeSecretFileAtomic(DESKTOP_CONNECTIONS_REGISTRY_PATH, JSON.stringify(registry, null, 2))
-  connectionRegistryCache = registry
-  connectionRegistryCacheMtime = fs.statSync(DESKTOP_CONNECTIONS_REGISTRY_PATH).mtimeMs
-}
-
-/**
- * Renderer-facing view of a registry entry: token bytes never cross the IPC
- * boundary — the renderer gets a preview + set flag, mirroring
- * sanitizeDesktopConnectionConfig.
- */
-function sanitizeRegistryConnection(entry) {
-  const { token, headers, ...rest } = entry
-  const decrypted = decryptDesktopSecret(token)
-  // Last-known stable backend identity (from roster enumeration / Test) so
-  // Settings can hint "Same backend as <label>" on connections that are two
-  // addresses for one box. Display-only; absent until a probe has seen it.
-  const knownInstallId = connectionInstallIds.get(entry.id)?.id
-
-  return {
-    ...rest,
-    tokenSet: Boolean(decrypted),
-    tokenPreview: tokenPreview(decrypted),
-    ...(knownInstallId ? { installId: knownInstallId } : {}),
-    // Header VALUES are secrets (Cloudflare Access client secrets etc.) and
-    // never cross the IPC boundary — the renderer only needs the names to
-    // render the edit form.
-    headerNames: headers && typeof headers === 'object' ? Object.keys(headers) : []
-  }
-}
-
-function sanitizeConnectionsRegistry(registry = readDesktopConnectionsRegistry()) {
-  // Same keyring signal the v1 sanitize exposes: lets the Connections panel
-  // offer the plain-text opt-in on keyring-less Linux instead of failing.
-  // Policy-aware: never touches safeStorage while encryption is opted out.
-  const secureTokenStorage = probeSecureTokenStorage()
-
-  return {
-    version: registry.version,
-    primary: registry.primary,
-    launchMode: registry.launchMode,
-    lastUsed: registry.lastUsed,
-    secureTokenStorage,
-    connections: registry.connections.map(sanitizeRegistryConnection),
-    // Surface quarantined-entry NOTICES only (reason + best-effort label) —
-    // the raw entries can carry token envelopes and stay in the file (#94246).
-    quarantined: (registry.quarantined || []).map(q => ({
-      reason: String(q?.reason || 'unknown'),
-      label:
-        q && q.entry && typeof q.entry === 'object' && typeof (q.entry as any).label === 'string'
-          ? (q.entry as any).label
-          : ''
-    }))
-  }
-}
-
-/**
- * Save (create or edit) a registry connection from a renderer payload.
- * Edits merge over the stored entry (mergeConnectionInput) so fields the
- * editor doesn't carry — ssh `remoteScoutPath`/`remoteProfile` —
- * survive a rename. Token handling mirrors coerceDesktopConnectionConfig: an
- * incoming plaintext token is encrypted (honoring the same allowPlainTextToken
- * opt-in seam as Settings → Gateway); an absent token field inherits the
- * stored envelope on edit; switching auth away from 'token' clears it
- * (normalizeConnectionInput drops tokens on non-token entries).
- */
-async function saveRegistryConnection(input: any = {}) {
-  const registry = readDesktopConnectionsRegistry()
-  const existing = input.id ? registry.connections.find(c => c.id === input.id) : null
-  const incomingToken = typeof input.token === 'string' ? input.token.trim() : ''
-
-  const token = resolvePersistedRemoteToken({
-    incomingToken,
-    persistToken: true,
-    existingToken: existing?.token,
-    allowPlainText: input.allowPlainTextToken,
-    encryptSecret: encryptDesktopSecret
-  })
-
-  // Extra gateway headers arrive as plaintext strings from the editor (or
-  // envelopes from a hand-edited import). Encrypt plaintext values the same
-  // way tokens are stored; a null/empty value drops that header. An absent
-  // `headers` field inherits the stored set via mergeConnectionInput.
-  const headers =
-    input.headers && typeof input.headers === 'object'
-      ? encryptIncomingRemoteHeaders(input.headers, existing?.headers, {
-          allowPlainText: input.allowPlainTextToken
-        })
-      : input.headers
-
-  const merged = mergeConnectionInput({ ...input, token, headers }, existing)
-  const entry = normalizeConnectionInput(merged, registry)
-
-  // Token-auth remotes must actually have a token to be dialable. OAuth
-  // entries authenticate via cookies/native tokens instead.
-  if (entry.kind === 'remote' && entry.authMode !== 'oauth' && !decryptDesktopSecret(entry.token)) {
-    throw new Error('Remote gateway session token is required.')
-  }
-
-  if (existing && connectionDialFieldsChanged(existing, entry)) {
-    managedConnectionUpdateGate.assertCanMutate(entry.id)
-  }
-
-  writeDesktopConnectionsRegistry(upsertConnection(registry, entry))
-
-  // A dial-material edit (endpoint/auth/ssh routing — NOT a label rename)
-  // leaves pooled backends under `conn:<id>::*` and renderer sockets pointing
-  // at the OLD target while the UI shows the new one. Recycle them: stop this
-  // connection's pooled backends/tunnels and tell renderers to dispose+redial
-  // their secondaries for this connection id.
-  if (existing && connectionDialFieldsChanged(existing, entry)) {
-    await stopRegistryConnectionBackends(entry.id)
-    // The id now names a different machine: its cached roster/identity describe the old one,
-    // and a cached ssh inventory is never retried (`shouldRetrySshInventory`).
-    evictConnectionCaches(entry.id)
-    broadcastConnectionsChanged({ connectionId: entry.id, reason: 'updated' })
-  } else {
-    // Every OTHER successful save (a brand-new connection, a label rename)
-    // must still republish the registry snapshot, or windows that didn't
-    // perform the save — and the switcher menu fed by $connectionsRegistry —
-    // keep painting the stale list until reload (#95393). 'saved' is a pure
-    // registry-refresh signal: no sockets moved, so listeners must not
-    // dispose or redial anything for it.
-    broadcastConnectionsChanged({ connectionId: entry.id, reason: 'saved' })
-  }
-
-  return sanitizeRegistryConnection(entry)
+function readDesktopConnectionsRegistry(): any {
+  return hostedConnectionsRegistry()
 }
 
 // Last-used profile and explicit app-wide default share the existing desktop
@@ -9008,237 +6650,6 @@ function migrateActiveProfileIfMissing() {
   })
 }
 
-// Sanitize a connection config into the renderer-facing shape. With no
-// `profile` this describes the global/default connection (the existing
-// behavior); with a `profile` it describes that profile's per-profile remote
-// override (or an empty "local/inherit" view when the profile has none).
-async function sanitizeDesktopConnectionConfig(config = readDesktopConnectionConfig(), profile = null) {
-  const key = connectionScopeKey(profile)
-  const scoped = key ? config.profiles?.[key] || null : null
-  const block = key ? scoped || {} : config.remote || {}
-
-  const envOverride = key ? false : Boolean(process.env.SCOUT_DESKTOP_REMOTE_URL)
-  const savedMode = key ? scoped?.mode : config.mode
-  const ssh = savedMode === 'ssh' ? normalizeSshConfig(block) : null
-
-  const savedSsh = savedMode === 'local' ? (key ? savedProfileSsh(config, key) : normalizeSshConfig(block)) : null
-
-  const remoteToken = decryptDesktopSecret(block.token)
-  const authMode = normAuthMode(block.authMode)
-  const remoteUrl = envOverride ? String(process.env.SCOUT_DESKTOP_REMOTE_URL || '') : String(block.url || '')
-  const mode = envOverride ? 'remote' : savedMode === 'ssh' ? 'ssh' : modeIsRemoteLike(savedMode) ? savedMode : 'local'
-
-  // Whether the OS keyring (safeStorage) can encrypt the saved token. When
-  // false the renderer knows to offer the plain-text opt-in in Settings →
-  // Gateway. With keychain encryption opted out (the default) this reports
-  // true WITHOUT touching safeStorage — probing is itself a keychain touch
-  // that raises the macOS password dialog (see probeSecureTokenStorage).
-  const secureTokenStorage = probeSecureTokenStorage()
-
-  // Whether the renderer should warn that the saved token sits in plain text.
-  // resolveRemoteTokenPlainText keeps this silent while keychain encryption is
-  // opted out (the default) — plain text is the chosen mode there, not a
-  // degraded state — and fires only when the token is plain AND the machine
-  // cannot secure it (see probeSecureTokenStorage). The env override supplies
-  // its token from the environment, so it never reports as plain text here.
-  const remoteTokenPlainText = resolveRemoteTokenPlainText({ envOverride, secureTokenStorage, token: block.token })
-
-  let remoteOauthConnected = false
-
-  if (authMode === 'oauth' && remoteUrl) {
-    try {
-      // Display signal: treat a live RT cookie as "connected" even if the AT
-      // cookie has lapsed — the gateway refreshes the AT on the next request,
-      // so the session is still usable. A stored native bearer token (cookieless
-      // RFC 8252 flow) counts as connected too — otherwise a completed native
-      // sign-in shows "not connected" in Settings. The authoritative liveness
-      // check is the ws-ticket mint in resolveRemoteBackend at actual connect time.
-      remoteOauthConnected = oauthSessionIsLive(hasNativeSession(remoteUrl), await hasLiveOauthSession(remoteUrl))
-    } catch {
-      remoteOauthConnected = false
-    }
-  }
-
-  return {
-    mode,
-    // Echo the scope back so the UI knows which profile (if any) this reflects.
-    profile: key,
-    remoteAuthMode: authMode,
-    remoteOauthConnected,
-    remoteUrl,
-    remoteTokenPreview: tokenPreview(remoteToken),
-    remoteTokenSet: Boolean(remoteToken),
-    // Whether the OS keyring can encrypt a token; drives the plain-text opt-in
-    // affordance in Settings → Gateway on keyring-less Linux.
-    secureTokenStorage,
-    // Whether the saved token is persisted in plain text while this machine
-    // cannot secure it (drives the warning banner in Settings → Gateway).
-    remoteTokenPlainText,
-    sshHost: (ssh || savedSsh)?.host || '',
-    sshUser: (ssh || savedSsh)?.user || '',
-    sshPort: (ssh || savedSsh)?.port || null,
-    sshKeyPath: (ssh || savedSsh)?.keyPath || '',
-    sshRemoteScoutPath: (ssh || savedSsh)?.remoteScoutPath || '',
-    sshRemoteProfile: (ssh || savedSsh)?.remoteProfile || '',
-    // The env override only forces the global/primary connection; a per-profile
-    // scope is never overridden by SCOUT_DESKTOP_REMOTE_URL.
-    envOverride
-  }
-}
-
-// Build + validate a `{ url, authMode, token }` remote block. OAuth gateways
-// authenticate via the login-window session cookie (verified at connect time in
-// resolveRemoteBackend), so only token-auth remotes require a saved token.
-function buildRemoteBlock(remoteUrl, authMode, token, headers?: object, remoteProfile?: string) {
-  if (authMode !== 'oauth' && !decryptDesktopSecret(token)) {
-    throw new Error('Remote gateway session token is required.')
-  }
-
-  const block: {
-    url: string
-    authMode: string
-    token: object
-    headers?: object
-    remoteProfile?: string
-  } = {
-    url: normalizeRemoteBaseUrl(remoteUrl),
-    authMode,
-    token
-  }
-
-  const remoteHeaders = normalizeRemoteHeaders(headers)
-
-  if (Object.keys(remoteHeaders).length > 0) {
-    block.headers = remoteHeaders
-  }
-
-  const remoteProfileName = normalizeRemoteProfileName(remoteProfile)
-
-  if (remoteProfileName) {
-    block.remoteProfile = remoteProfileName.remoteProfile
-  }
-
-  return block
-}
-
-function coerceDesktopConnectionConfig(input: any = {}, existing = readDesktopConnectionConfig(), options: any = {}) {
-  const persistToken = options.persistToken !== false
-  const key = connectionScopeKey(input.profile)
-  // 'remote' persists a remote-shaped block; anything else collapses to local.
-  const mode = input.mode === 'ssh' ? 'ssh' : modeIsRemoteLike(input.mode) ? input.mode : 'local'
-  const remoteLike = modeIsRemoteLike(mode)
-
-  // The block being edited: a per-profile entry or the global remote block.
-  const rawExistingBlock = key ? existing.profiles?.[key] || {} : existing.remote || {}
-  // remote↔local toggles preserve a real remote URL; leaving SSH for a remote
-  // starts from an empty block.
-  const existingMode = key ? existing.profiles?.[key]?.mode : existing.mode
-  const leavingSsh = rawExistingBlock.mode === 'ssh' && mode !== 'ssh' && mode !== 'local'
-  const existingBlock = leavingSsh ? {} : rawExistingBlock
-  const remoteUrl = String(input.remoteUrl ?? existingBlock.url ?? '').trim()
-  // authMode: explicit input wins; otherwise inherit the saved value, default 'token'.
-  const authMode = resolveAuthMode(input.remoteAuthMode, existingBlock.authMode)
-  const incomingToken = typeof input.remoteToken === 'string' ? input.remoteToken.trim() : ''
-
-  const remoteHeaders =
-    input.remoteHeaders && typeof input.remoteHeaders === 'object' ? input.remoteHeaders : existingBlock.headers
-
-  // Persist decision lives in hardening.resolvePersistedRemoteToken so the
-  // IPC-propagation seam (allowPlainTextToken → encryptDesktopSecret opt-in) is
-  // covered by a focused regression test. Pass allowPlainText through RAW — the
-  // helper coerces with `=== true`, so a truthy-non-true value never enables
-  // plain-text storage, and that strictness is asserted in exactly one place.
-  const nextToken = resolvePersistedRemoteToken({
-    incomingToken,
-    persistToken,
-    existingToken: existingBlock.token,
-    allowPlainText: input.allowPlainTextToken,
-    encryptSecret: encryptDesktopSecret
-  })
-
-  if (mode === 'ssh') {
-    const sshBlock = buildSshBlock(input, savedProfileSsh(existing, key) || rawExistingBlock)
-
-    if (key) {
-      const profiles = { ...(existing.profiles || {}), [key]: sshBlock }
-
-      return {
-        mode: existing.mode === 'ssh' || modeIsRemoteLike(existing.mode) ? existing.mode : 'local',
-        remote: existing.remote || {},
-        profiles
-      }
-    }
-
-    return { mode: 'ssh', remote: sshBlock, profiles: existing.profiles || {} }
-  }
-
-  if (key) {
-    // Per-profile scope: a remote entry pins this profile to its own backend; a
-    // local entry clears the override so the profile inherits the default.
-    const profiles = { ...(existing.profiles || {}) }
-
-    if (remoteLike) {
-      profiles[key] = {
-        mode,
-        ...buildRemoteBlock(remoteUrl, authMode, nextToken, remoteHeaders, input.remoteProfile)
-      }
-    } else {
-      const localEntry = localProfileEntry(rawExistingBlock)
-
-      if (localEntry) {
-        profiles[key] = localEntry
-      } else {
-        delete profiles[key]
-      }
-    }
-
-    return {
-      mode: existing.mode === 'ssh' || modeIsRemoteLike(existing.mode) ? existing.mode : 'local',
-      remote: existing.remote || {},
-      profiles
-    }
-  }
-
-  const nextRemote = remoteLike
-    ? buildRemoteBlock(remoteUrl, authMode, nextToken, remoteHeaders)
-    : existingMode === 'ssh'
-      ? rawExistingBlock
-      : { url: remoteUrl ? normalizeRemoteBaseUrl(remoteUrl) : remoteUrl, authMode, token: nextToken }
-
-  // Preserve per-profile overrides when saving the global connection.
-  return { mode, remote: nextRemote, profiles: existing.profiles || {} }
-}
-
-// Build an SSH connection block from a save payload, preserving an
-// already-adopted dashboard token from the existing block (the token is minted
-// + reconciled at bootstrap, never user-entered). `mode: 'ssh'` is stamped so
-// normalizeSshConfig/profileSshOverride recognize it.
-function buildSshBlock(input: any, existingBlock: any = {}) {
-  // `??` (not `||`) so an explicit '' (user CLEARED the field) wins over the
-  // saved value; only a truly absent (undefined) field inherits.
-  const merged = normalizeSshConfig({
-    mode: 'ssh',
-    host: input.sshHost ?? existingBlock.host,
-    user: input.sshUser ?? existingBlock.user,
-    port: input.sshPort ?? existingBlock.port,
-    keyPath: input.sshKeyPath ?? existingBlock.keyPath,
-    remoteScoutPath: input.sshRemoteScoutPath ?? existingBlock.remoteScoutPath,
-    remoteProfile: input.sshRemoteProfile ?? existingBlock.remoteProfile
-  })
-
-  if (!merged) {
-    throw new Error('SSH host is required.')
-  }
-
-  // Carry forward an already-adopted dashboard token unless the host changed
-  // (a different host invalidates the old dashboard's token).
-  if (existingBlock.token && existingBlock.host === merged.host) {
-    merged.token = existingBlock.token
-  }
-
-  return merged
-}
-
 // Build a remote backend connection descriptor from an already-resolved remote
 // config. Handles both auth models (OAuth ws-ticket vs static session token)
 // and is shared by the per-profile, env, and global resolution paths. `token`
@@ -9275,7 +6686,7 @@ async function buildRemoteConnection(
       baseUrl,
       mode: 'remote',
       source,
-      authMode: 'oauth',
+      authMode: 'oauth' as const,
       remoteHost: host || undefined,
       remoteIdentity,
       remoteKind,
@@ -9301,7 +6712,7 @@ async function buildRemoteConnection(
     baseUrl,
     mode: 'remote',
     source,
-    authMode: 'token',
+    authMode: 'token' as const,
     remoteHost: host || undefined,
     remoteIdentity,
     remoteKind,
@@ -9309,343 +6720,6 @@ async function buildRemoteConnection(
     token,
     wsUrl
   }
-}
-
-const sshConnections = new Map<string, any>()
-
-const sshIsolatedKeepalives = createSshIsolatedKeepaliveRegistry({
-  log: chunk => sshRememberLog(chunk)
-})
-
-const desktopInstallationId = loadOrCreateInstallationId(DESKTOP_INSTALLATION_PATH)
-
-// Managed SSH update lifecycle (#93042): while an update owns a registered
-// SSH connection, the gate pauses new dials and dial-material mutations for
-// that connection id; the durable recovery journal below survives a crash
-// mid-transaction so the next launch can restore every drained scope.
-const managedConnectionUpdateGate = new ManagedConnectionUpdateGate(
-  connectionId =>
-    readManagedSshRecoveryRecords().find(record => record.connectionId === connectionId)?.correlationId || null
-)
-
-const managedConnectionUpdates = new Map<string, Promise<any>>()
-const managedConnectionRecoveries = new Map<string, Promise<void>>()
-const managedPrimaryRestoreOwners = new Map<string, { correlationId: string; profile: string; source: any }>()
-let managedUpdateQuitWait: Promise<void> | null = null
-let managedUpdateQuitWaitDone = false
-
-function assertCanMutateManagedPrimaryRouting() {
-  const durableIds = readManagedSshRecoveryRecords().map(record => record.connectionId)
-
-  const ids = new Set([
-    ...managedConnectionUpdates.keys(),
-    ...managedConnectionRecoveries.keys(),
-    ...managedPrimaryRestoreOwners.keys(),
-    ...durableIds
-  ])
-
-  if (ids.size > 0) {
-    const error: any = new Error(
-      `Primary connection routing cannot change while managed SSH update recovery is pending for ${[...ids].join(', ')}.`
-    )
-
-    error.code = 'managed-update-in-progress'
-    throw error
-  }
-}
-
-function readManagedSshRecoveryRecords(): any[] {
-  try {
-    const stat = fs.lstatSync(DESKTOP_MANAGED_SSH_RECOVERY_PATH)
-
-    if (!stat.isFile() || stat.isSymbolicLink() || !tightenSecretFileMode(DESKTOP_MANAGED_SSH_RECOVERY_PATH)) {
-      throw new Error('Managed SSH recovery journal is not a safe owner-only file.')
-    }
-
-    const payload = JSON.parse(fs.readFileSync(DESKTOP_MANAGED_SSH_RECOVERY_PATH, 'utf8'))
-
-    if (payload?.version !== 1 || !Array.isArray(payload.records)) {
-      throw new Error('Managed SSH recovery journal has an unsupported shape.')
-    }
-
-    const valid = payload.records.every(record => {
-      if (
-        !record ||
-        typeof record !== 'object' ||
-        typeof record.connectionId !== 'string' ||
-        record.source?.kind !== 'ssh' ||
-        record.source?.id !== record.connectionId ||
-        !['prepared', 'launching'].includes(record.phase) ||
-        (record.attempts !== undefined && (!Number.isSafeInteger(record.attempts) || record.attempts < 0)) ||
-        !Array.isArray(record.scopes) ||
-        record.scopes.length > 256
-      ) {
-        return false
-      }
-
-      try {
-        validateCorrelationId(record.correlationId)
-      } catch {
-        return false
-      }
-
-      const scopesValid = record.scopes.every(
-        scope =>
-          scope &&
-          typeof scope === 'object' &&
-          typeof scope.key === 'string' &&
-          scope.key.length <= 256 &&
-          typeof scope.profile === 'string' &&
-          scope.profile.length > 0 &&
-          scope.profile.length <= 128 &&
-          ['legacy', 'primary', 'registry'].includes(scope.kind) &&
-          (scope.kind === 'primary' || scope.key.length > 0)
-      )
-
-      const identities = record.scopes.map(scope => `${scope.kind}\0${scope.key}\0${scope.profile}`)
-
-      return (
-        scopesValid &&
-        new Set(identities).size === identities.length &&
-        record.scopes.filter(scope => scope.kind === 'primary').length <= 1
-      )
-    })
-
-    if (!valid) {
-      throw new Error('Managed SSH recovery journal contains an invalid record.')
-    }
-
-    return payload.records
-  } catch (cause: any) {
-    if (cause?.code === 'ENOENT') {
-      return []
-    }
-
-    const error: any = new Error(
-      'Managed SSH recovery state is unreadable or malformed; refusing connection startup and edits.'
-    )
-
-    error.code = 'managed-update-recovery-unavailable'
-    error.cause = cause
-    throw error
-  }
-}
-
-function writeManagedSshRecoveryRecords(records) {
-  fs.mkdirSync(path.dirname(DESKTOP_MANAGED_SSH_RECOVERY_PATH), { recursive: true })
-  writeSecretFileAtomic(
-    DESKTOP_MANAGED_SSH_RECOVERY_PATH,
-    JSON.stringify({ version: 1, records, updatedAt: new Date().toISOString() }, null, 2)
-  )
-}
-
-function persistManagedSshRecovery(source, correlationId, scopes) {
-  const prefix = backendScopePrefix(source.id)
-  const recoveryScopes = managedSshRecoveryScopes(scopes, prefix)
-
-  const records = readManagedSshRecoveryRecords().filter(record => record.connectionId !== source.id)
-  records.push({
-    connectionId: source.id,
-    correlationId: validateCorrelationId(correlationId),
-    createdAt: new Date().toISOString(),
-    phase: 'prepared',
-    scopes: recoveryScopes,
-    // Registry secrets are already safeStorage envelopes. Persist the exact
-    // connection snapshot so crash recovery does not silently switch hosts or
-    // credentials after a Settings edit.
-    source
-  })
-  writeManagedSshRecoveryRecords(records)
-}
-
-function markManagedSshRecoveryLaunching(connectionId, correlationId) {
-  const records = readManagedSshRecoveryRecords()
-
-  const index = records.findIndex(
-    record => record.connectionId === connectionId && record.correlationId === correlationId
-  )
-
-  if (index < 0) {
-    throw new Error('Managed SSH recovery record disappeared before remote update launch.')
-  }
-
-  records[index] = { ...records[index], phase: 'launching' }
-  writeManagedSshRecoveryRecords(records)
-}
-
-function recordManagedSshRecoveryAttempt(connectionId, correlationId, attempts) {
-  const records = readManagedSshRecoveryRecords()
-
-  const index = records.findIndex(
-    record => record.connectionId === connectionId && record.correlationId === correlationId
-  )
-
-  if (index >= 0) {
-    records[index] = { ...records[index], attempts }
-    writeManagedSshRecoveryRecords(records)
-  }
-}
-
-function clearManagedSshRecovery(connectionId, correlationId) {
-  const records = readManagedSshRecoveryRecords()
-
-  const remaining = records.filter(
-    record => record.connectionId !== connectionId || record.correlationId !== correlationId
-  )
-
-  if (remaining.length === records.length) {
-    return
-  }
-
-  if (remaining.length > 0) {
-    writeManagedSshRecoveryRecords(remaining)
-  } else {
-    try {
-      fs.unlinkSync(DESKTOP_MANAGED_SSH_RECOVERY_PATH)
-    } catch (error: any) {
-      if (error?.code !== 'ENOENT') {
-        throw error
-      }
-    }
-  }
-}
-
-const sshBootstrapCoordinator = createBootstrapCoordinator()
-
-const sshTeardowns = createSshTeardownTracker()
-
-function sshScopeKey(profile) {
-  return connectionScopeKey(profile) || ''
-}
-
-function sshOwnershipKey(profile) {
-  return sshOwnershipId(desktopInstallationId, sshScopeKey(profile))
-}
-
-function sshRememberLog(chunk) {
-  rememberLog(redactSecrets(String(chunk == null ? '' : chunk)))
-}
-
-async function sshProbeReuseProof(baseUrl, token, spawnNonce) {
-  try {
-    const proof: any = await fetchJson(`${baseUrl}/api/ssh/ownership`, token)
-
-    return remoteLifecycle.classifySshReuseProof(proof, spawnNonce)
-  } catch (error: any) {
-    if (/^(401|403|404):/.test(String(error?.message || ''))) {
-      return 'authenticated-stale'
-    }
-
-    throw error
-  }
-}
-
-async function teardownSshConnection(profile) {
-  const scope = sshScopeKey(profile)
-  sshIsolatedKeepalives.stop(scope)
-  const state = sshConnections.get(scope)
-
-  if (!state) {
-    return
-  }
-
-  sshConnections.delete(scope)
-
-  // Kill the owned remote serve --isolated *before* closing the SSH
-  // transport. Spawn detaches with setsid/nohup, so closing the tunnel
-  // alone leaves the backend at pid 1 holding state.db (#91668).
-  // Windows remotes use a different lifecycle (connectWindowsRemote) and
-  // are left to a follow-up; POSIX is the leak that OOM'd gateways.
-  await sshTeardowns.track(state.ssh, (): Promise<void> =>
-    teardownSshState(
-      {
-        ...state,
-        ownershipId: state.ownershipId || sshOwnershipKey(profile)
-      },
-      {
-        cleanupRemote:
-          state.remotePlatform === 'Windows'
-            ? async () => {
-                // connectWindowsRemote does not share POSIX lock/kill. Stay
-                // silent on the kill path, but leave a log so quit is not a
-                // mysterious no-op on Windows remotes.
-                sshRememberLog('[ssh] skip remote serve teardown on Windows remotes; POSIX disconnect does not apply')
-              }
-            : remoteLifecycle.disconnect
-      }
-    )
-  )
-}
-
-// CRITICAL: this must mirror resolveRemoteBackend's precedence, not just return
-// any cached SSH state. A per-profile token/OAuth override wins over a global
-// SSH connection — so if the active profile resolves to a NON-SSH backend, the
-// terminal must NOT fall through to a global SSH host.
-function activeSshTerminalTarget(webContentsId?: number) {
-  const windowRoute = typeof webContentsId === 'number' ? windowConnectionRoutes.get(webContentsId) : null
-
-  if (windowRoute?.registryScoped && windowRoute.connectionId) {
-    const scope = registrySshScopeForWindowRoute(windowRoute, readDesktopConnectionsRegistry())
-
-    if (!scope) {
-      return null
-    }
-
-    const state = sshConnections.get(scope)
-
-    if (state && state.ssh) {
-      return { ssh: state.ssh, scope }
-    }
-
-    // The pool's single writer publishes under the per-profile bootstrap key
-    // while stamping the entry with its registry connection id (#97345), so a
-    // composite-key miss must still resolve the live tunnel by that identity
-    // instead of reporting 'pending' forever.
-    const pooledScope = registrySshPoolScopeByConnectionId(sshConnections, windowRoute.connectionId)
-    const pooledState = pooledScope === null ? null : sshConnections.get(pooledScope)
-
-    return pooledState && pooledState.ssh ? { ssh: pooledState.ssh, scope: pooledScope } : 'pending'
-  }
-
-  const profile = windowRoute?.profile ?? primaryProfileKey()
-  const config = readDesktopConnectionConfig()
-
-  const route = resolveDesktopRemoteRoute({
-    config,
-    env: {
-      token: process.env.SCOUT_DESKTOP_REMOTE_TOKEN,
-      url: process.env.SCOUT_DESKTOP_REMOTE_URL
-    },
-    profile,
-    registry: readDesktopConnectionsRegistry()
-  })
-
-  if (!route || route.kind !== 'ssh') {
-    return null
-  }
-
-  const scope = v1SshTerminalPoolKey(route, profile)
-
-  const state = sshConnections.get(scope)
-
-  return state && state.ssh ? { ssh: state.ssh, scope } : 'pending'
-}
-
-async function ensureTerminalBackend(webContentsId: number) {
-  const windowRoute = windowConnectionRoutes.get(webContentsId)
-
-  // Claim-guarded (#90812): opening a terminal pane can race a renderer's own
-  // reconnect dial for the same (connectionId, profile) scope; coalescing
-  // here avoids bootstrapping a second SSH tunnel / remote dashboard.
-  if (windowRoute?.registryScoped && windowRoute.connectionId) {
-    return backendDialClaims.run(backendScopeKey(windowRoute.connectionId, windowRoute.profile), () =>
-      ensureRegistryBackend(windowRoute.connectionId, windowRoute.profile)
-    )
-  }
-
-  const profile = windowRoute?.profile ?? primaryProfileKey()
-
-  return backendDialClaims.run(backendScopeKey(null, profile), () => ensureBackend(profile))
 }
 
 // Loopback reach for the browser pane. Scoped to the SSH connection that
@@ -9672,800 +6746,34 @@ async function resetPreviewReach(webContentsId?: number) {
   await Promise.allSettled(open.map(entry => entry.registry.closeAll()))
 }
 
-/**
- * Rewrite a gateway-loopback URL into one this machine can actually load.
- *
- * Returns the URL unchanged when no rewrite is needed or possible — a local
- * backend (the address is already true), a non-loopback host, or a url
- * remote with no tunnel to borrow. Callers must not treat an unchanged URL as
- * failure; the pane explains an unreachable one on its own.
- */
-async function reachablePreviewUrl(webContentsId: number, rawUrl: string): Promise<string> {
-  let target = activeSshTerminalTarget(webContentsId)
-
-  if (target === 'pending') {
-    await ensureTerminalBackend(webContentsId).catch(() => undefined)
-    target = activeSshTerminalTarget(webContentsId)
-  }
-
-  if (!target || target === 'pending') {
-    // No SSH transport behind this renderer's gateway. Another window's
-    // forward must never be reused for this preview.
-    await resetPreviewReach(webContentsId)
-
-    return rawUrl
-  }
-
-  const { scope, ssh } = target as { scope: string; ssh: any }
-  let reach = previewReachByWebContents.get(webContentsId)
-
-  if (!reach || reach.scope !== scope) {
-    await resetPreviewReach(webContentsId)
-    reach = { registry: new PreviewReachRegistry(), scope }
-    previewReachByWebContents.set(webContentsId, reach)
-  }
-
-  try {
-    const rewritten = await reach.registry.resolve(rawUrl, {
-      cancel: (localPort, remotePort) => ssh.cancelForward(localPort, remotePort),
-      forward: (localPort, remotePort, remoteHost) => ssh.forward(localPort, remotePort, remoteHost),
-      isCurrent: () => sshConnections.get(scope)?.ssh === ssh,
-      // pickLocalPort predates the typed surface here and infers `unknown`.
-      pickLocalPort: () => pickLocalPort() as Promise<number>
-    })
-
-    return rewritten || rawUrl
-  } catch (error: any) {
-    sshRememberLog(`preview reach failed for ${rawUrl}: ${error?.message || error}`)
-
-    return rawUrl
-  }
+// The hosted backend has no tunnel to borrow, so a preview URL is loaded as is;
+// the pane explains an unreachable one on its own.
+async function reachablePreviewUrl(_webContentsId: number, rawUrl: string): Promise<string> {
+  return rawUrl
 }
 
-async function effectiveSshConfigFingerprint(sshConfig) {
-  const ssh =
-    process.platform === 'win32'
-      ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'OpenSSH', 'ssh.exe')
-      : 'ssh'
-
-  const args = ['-G']
-
-  if (sshConfig.port) {
-    args.push('-p', String(sshConfig.port))
-  }
-
-  if (sshConfig.keyPath) {
-    args.push('-i', sshConfig.keyPath)
-  }
-
-  args.push('--', sshConfig.user ? `${sshConfig.user}@${sshConfig.host}` : sshConfig.host)
-  const output = await execText(ssh, args, { timeout: 10_000 })
-
-  return crypto.createHash('sha256').update(output).digest('hex')
-}
-
-async function bootstrapSshConnection(
-  profile,
-  sshConfig,
-  reuseToken,
-  source,
-  resolvedEffectiveFingerprint?,
-  metadata: any = {}
-) {
-  const scope = sshScopeKey(profile)
-  const effectiveConfigFingerprint = resolvedEffectiveFingerprint || (await effectiveSshConfigFingerprint(sshConfig))
-  const resolvedConfig = { ...sshConfig, effectiveConfigFingerprint }
-  const fingerprint = sshConfigFingerprint(scope, resolvedConfig)
-
-  return sshBootstrapCoordinator.start(
-    scope,
-    fingerprint,
-    lease => bootstrapSshConnectionInner(profile, resolvedConfig, reuseToken, source, metadata, fingerprint, lease),
-    metadata
-  )
-}
-
-// Tear down a bootstrap result whose publication lost the managed-update
-// fence: exact-terminate the serve this bootstrap owns (never a foreign one),
-// drop its forward and transport, and surface a fence error so the managed
-// updater refuses to mutate a remote install with an unfenced serve.
-async function rollbackSshBootstrapResult(ssh, result, profile, sshConfig, boundaryError) {
-  const cleanupErrors: string[] = []
-  const scope = sshScopeKey(profile)
-
-  try {
-    const expected = {
-      ownershipId: result.ownershipId,
-      pid: result.pid,
-      spawnNonce: result.spawnNonce,
-      profile: resolveRemoteSshDashboardProfile(sshConfig.remoteProfile, profile),
-      scoutPath: result.scoutPath,
-      scoutHome: result.scoutHome,
-      startedAt: result.startedAt,
-      creationTimeNs: result.creationTimeNs,
-      creationTime: result.creationTime
-    }
-
-    if (result.platform?.os === 'Windows') {
-      await terminateOwnedWindowsDashboardForUpdate(
-        ssh,
-        { scoutPath: result.scoutPath, scoutHome: result.scoutHome, python: result.pythonPath },
-        expected
-      )
-    } else if (result.platform?.os === 'Linux' || result.platform?.os === 'Darwin') {
-      await remoteLifecycle.terminateOwnedDashboardForUpdate(ssh, expected)
-    } else {
-      cleanupErrors.push(`unsupported remote platform ${result.platform?.os || 'unknown'}`)
-    }
-  } catch (error: any) {
-    cleanupErrors.push(String(error?.message || error))
-  }
-
-  try {
-    await ssh.cancelForward(result.localPort, result.remotePort)
-  } catch (error: any) {
-    cleanupErrors.push(String(error?.message || error))
-  }
-
-  try {
-    await ssh.close()
-  } catch (error: any) {
-    cleanupErrors.push(String(error?.message || error))
-  }
-
-  if (sshConnections.get(scope)?.ssh === ssh) {
-    sshIsolatedKeepalives.stop(scope)
-    sshConnections.delete(scope)
-  }
-
-  if (cleanupErrors.length > 0) {
-    const unsafe: any = new Error(
-      `An SSH bootstrap crossed the managed-update gate and its exact owned serve could not be fenced: ${cleanupErrors.join('; ')}`
-    )
-
-    unsafe.code = 'managed-update-bootstrap-fence-failed'
-    unsafe.unsafeManagedBootstrap = true
-    unsafe.cause = boundaryError
-    throw unsafe
-  }
-}
-
-async function bootstrapSshConnectionInner(profile, sshConfig, reuseToken, source, metadata, fingerprint, lease) {
-  const scope = sshScopeKey(profile)
-  const hostLabel = sshConfig.user ? `${sshConfig.user}@${sshConfig.host}` : sshConfig.host
-  const existing = sshConnections.get(scope)
-
-  if (existing && existing.fingerprint !== fingerprint) {
-    await teardownSshConnection(profile)
-  }
-
-  let ssh = sshConnections.get(scope)?.ssh
-
-  if (ssh && !(await ssh.isAlive())) {
-    try {
-      await ssh.close()
-    } catch {
-      void 0
-    }
-
-    ssh = null
-    sshIsolatedKeepalives.stop(scope)
-    sshConnections.delete(scope)
-  }
-
-  const created = !ssh
-
-  let removeForceCleanup = () => {}
-
-  if (created) {
-    ssh = new SshConnection(
-      { host: sshConfig.host, user: sshConfig.user, port: sshConfig.port, keyPath: sshConfig.keyPath },
-      {
-        rememberLog: sshRememberLog,
-        ownershipId: sshOwnershipKey(profile),
-        scope,
-        effectiveConfigFingerprint: sshConfig.effectiveConfigFingerprint
-      }
-    )
-    removeForceCleanup = lease.onForceCleanup(() => ssh.close())
-    await ssh.open({ signal: lease.signal })
-  }
-
-  let result: any
-
-  try {
-    if (metadata.registryConnectionId) {
-      managedConnectionUpdateGate.assertCanDial(metadata.registryConnectionId, metadata.managedUpdateCorrelation || '')
-    }
-
-    const platform = await detectRemotePlatform(ssh, sshConfig.remoteScoutPath || '')
-    const lifecycle = platform.os === 'Windows' ? connectWindowsRemote : remoteLifecycle.connect
-    result = await lifecycle({
-      ssh,
-      platform,
-      profile: resolveRemoteSshDashboardProfile(sshConfig.remoteProfile, profile),
-      remoteScoutPath: sshConfig.remoteScoutPath || '',
-      ownershipId: sshOwnershipKey(profile),
-      reuseToken: reuseToken || '',
-      forward: (localPort, remotePort) => ssh.forward(localPort, remotePort),
-      cancelForward: (localPort, remotePort) => ssh.cancelForward(localPort, remotePort),
-      pickLocalPort,
-      waitForScout: (baseUrl, token) => waitForScout(baseUrl, token, lease.signal, 'token'),
-      probeReuseProof: sshProbeReuseProof,
-      adoptServedToken: adoptServedDashboardToken,
-      rememberLog: sshRememberLog,
-      guestOnboarding: GUEST_ONBOARDING,
-      signal: lease.signal
-    })
-  } catch (error: any) {
-    if (created) {
-      try {
-        await ssh.close()
-      } catch {
-        void 0
-      }
-    } else {
-      // The cached master was reused but the lifecycle probe against it
-      // failed ("Could not verify the existing SSH backend"). Keeping the
-      // stale entry means every subsequent boot re-attempts through the same
-      // wedged master/tunnel and fails identically until the user re-enters
-      // the connection details (whose changed fingerprint forces a teardown).
-      // Tear it down now so the next attempt — automatic retry included —
-      // bootstraps a fresh master, which is exactly what manual re-entry
-      // did (#82679).
-      try {
-        await teardownSshConnection(profile)
-      } catch {
-        void 0
-      }
-    }
-
-    const err = new Error(error.message) as any
-    err.sshError = error.kind || 'unknown'
-    err.isSshBootstrap = true
-    throw err
-  }
-
-  try {
-    lease.assertCurrent()
-  } catch (error) {
-    await rollbackSshBootstrapResult(ssh, result, profile, sshConfig, error)
-    throw error
-  }
-
-  await fenceManagedSshBootstrapPublication({
-    assertCanPublish: () => {
-      if (metadata.registryConnectionId) {
-        managedConnectionUpdateGate.assertCanDial(
-          metadata.registryConnectionId,
-          metadata.managedUpdateCorrelation || ''
-        )
-      }
-    },
-    publish: () => {
-      persistSshConnectionToken(profile, source, result.token, metadata.registryConnectionId)
-      removeForceCleanup()
-      sshConnections.set(scope, {
-        ssh,
-        fingerprint,
-        ownershipId: result.ownershipId || sshOwnershipKey(profile),
-        localPort: result.localPort,
-        remotePort: result.remotePort,
-        pid: result.pid,
-        host: sshConfig.host,
-        hostLabel,
-        scoutVersion: result.scoutVersion || '',
-        remotePlatform: result.platform?.os || '',
-        reused: result.reused,
-        spawnNonce: result.spawnNonce,
-        creationTimeNs: result.creationTimeNs,
-        creationTime: result.creationTime,
-        startedAt: result.startedAt,
-        scoutPath: result.scoutPath,
-        scoutHome: result.scoutHome,
-        pythonPath: result.pythonPath,
-        remoteProfile: resolveRemoteSshDashboardProfile(sshConfig.remoteProfile, profile),
-        registryConnectionId:
-          metadata.registryConnectionId ||
-          (typeof source === 'string' && source.startsWith('registry:') ? source.slice('registry:'.length) : ''),
-        // Never infer primary ownership from a non-composite scope key: legacy
-        // per-profile pools also use bare keys. Only startScout' explicit call
-        // site may label a registry-qualified SSH scope as the primary backend.
-        primaryRegistryScope: metadata.primaryRegistryScope === true
-      })
-      sshIsolatedKeepalives.start(scope, { baseUrl: result.baseUrl, token: result.token })
-    },
-    rollback: error => rollbackSshBootstrapResult(ssh, result, profile, sshConfig, error)
-  })
-
-  sshRememberLog(
-    `[ssh] connection ${result.reused ? 'REUSED' : 'spawned'} dashboard: ` +
-      `${result.scoutVersion || 'scout (version unknown)'} at ${result.scoutPath || '?'}`
-  )
-
-  const connection = await buildRemoteConnection(
-    result.baseUrl,
-    'token',
-    result.token,
-    source,
-    hostLabel,
-    'ssh',
-    result.ownershipId
-  )
-
-  return {
-    ...connection,
-    remoteScoutVersion: result.scoutVersion || '',
-    ssh: {
-      effectiveConfigFingerprint: sshConfig.effectiveConfigFingerprint,
-      host: sshConfig.host,
-      keyPath: sshConfig.keyPath,
-      port: sshConfig.port,
-      remoteScoutPath: sshConfig.remoteScoutPath,
-      remoteProfile: sshConfig.remoteProfile,
-      user: sshConfig.user
-    }
-  }
-}
-
-function persistSshConnectionToken(profile, source, token, registryConnectionId = '') {
-  try {
-    const persistence = managedSshTokenPersistencePlan(source, registryConnectionId)
-    const id = persistence.registryConnectionId
-    const encrypted = encryptDesktopSecret(token)
-
-    // A primary legacy route can also be qualified with a stable registry id.
-    // Mirror the adopted per-serve token to both stores so the next primary
-    // launch and a later registry-scoped launch reuse the same owned process.
-    if (id) {
-      const registry = readDesktopConnectionsRegistry()
-      const entry = registry.connections.find(c => c.id === id)
-
-      if (entry && entry.kind === 'ssh') {
-        writeDesktopConnectionsRegistry(upsertConnection(registry, { ...entry, token: encrypted }))
-      }
-    }
-
-    if (!persistence.legacySource) {
-      return
-    }
-
-    const config = readDesktopConnectionConfig()
-
-    if (persistence.legacySource === 'profile') {
-      const key = connectionScopeKey(profile)
-
-      if (key && config.profiles?.[key]?.mode === 'ssh') {
-        config.profiles[key].token = encrypted
-        writeDesktopConnectionConfig(config)
-      }
-    } else if (config.mode === 'ssh' && config.remote) {
-      config.remote.token = encrypted
-      writeDesktopConnectionConfig(config)
-    }
-  } catch (error: any) {
-    sshRememberLog(`[ssh] could not persist served token: ${error.message}`)
-  }
-}
-
-// Resolve the remote backend for a given profile, or null when that profile
-// should run a LOCAL backend. Precedence:
-//   1. explicit per-profile remote override (connection.json `profiles[name]`)
-//   2. env override (SCOUT_DESKTOP_REMOTE_URL/_TOKEN) — applies app-wide
-//   3. global remote (connection.json `mode: 'remote'`)
-// A null/empty profile resolves the env/global remote, so legacy callers and
-// the connection test (which pass no profile) are unchanged.
+// Resolve the hosted backend connection; it serves every profile.
 async function resolveRemoteBackend(
-  profile,
-  options: { forceRegistryPrimary?: boolean; poolKey?: string; primary?: boolean } = {}
+  _profile?,
+  _options: { forceRegistryPrimary?: boolean; poolKey?: string; primary?: boolean } = {}
 ) {
-  const profileKey = String(profile || '').trim() || 'default'
+  // `scout serve` injects its session token into the page it serves.
+  const token = await resolveServedDashboardToken(HOSTED_BACKEND_URL, null, { rememberLog })
 
-  const managedPrimary = options.primary
-    ? [...managedPrimaryRestoreOwners.values()].find(owner => owner.profile === profileKey)
-    : null
-
-  if (managedPrimary) {
-    // A managed update is restoring the primary: dial the exact connection
-    // snapshot the transaction captured, not whatever routing says now.
-    const source = managedPrimary.source
-    const sshConfig = managedSshConfig(source, profileKey)
-
-    if (!sshConfig) {
-      throw new Error(`SSH connection "${source.label}" has no host configured.`)
-    }
-
-    managedConnectionUpdateGate.assertCanDial(source.id, managedPrimary.correlationId)
-
-    const currentRoute = resolveDesktopRemoteRoute({
-      config: readDesktopConnectionConfig(),
-      env: {
-        token: process.env.SCOUT_DESKTOP_REMOTE_TOKEN,
-        url: process.env.SCOUT_DESKTOP_REMOTE_URL
-      },
-      profile: profileKey,
-      registry: readDesktopConnectionsRegistry()
-    })
-
-    const persistenceSource =
-      currentRoute?.kind === 'ssh' && currentRoute.connectionId === source.id
-        ? currentRoute.source
-        : `registry:${source.id}`
-
-    const connection = await bootstrapSshConnection(
-      persistenceSource === 'profile' ? profileKey : null,
-      sshConfig,
-      decryptDesktopSecret(source.token),
-      persistenceSource,
-      undefined,
-      {
-        managedScope: 'primary',
-        managedUpdateCorrelation: managedPrimary.correlationId,
-        primaryRegistryScope: true,
-        registryConnectionId: source.id
-      }
-    )
-
-    return { ...connection, connectionId: source.id }
+  if (!token) {
+    throw new Error(`The Scout backend at ${HOSTED_BACKEND_URL} did not provide a session token.`)
   }
 
-  const config = readDesktopConnectionConfig()
-  const registry = readDesktopConnectionsRegistry()
-
-  const route = options.forceRegistryPrimary
-    ? registryPrimaryBootRoute(registry)
-    : resolveDesktopRemoteRoute({
-        config,
-        env: {
-          token: process.env.SCOUT_DESKTOP_REMOTE_TOKEN,
-          url: process.env.SCOUT_DESKTOP_REMOTE_URL
-        },
-        profile,
-        registry
-      })
-
-  if (!route) {
-    return null
-  }
-
-  let connection
-
-  if (route.kind === 'ssh') {
-    if (route.connectionId) {
-      managedConnectionUpdateGate.assertCanDial(route.connectionId)
-    }
-
-    connection = await bootstrapSshConnection(
-      route.source === 'profile' ? profile : null,
-      route.ssh,
-      decryptDesktopSecret(route.token),
-      route.source,
-      undefined,
-      {
-        managedScope: options.primary ? 'primary' : options.poolKey ? 'pool' : 'transient',
-        poolKey: options.poolKey || '',
-        primaryRegistryScope: options.primary === true && Boolean(route.connectionId),
-        registryConnectionId: route.connectionId || ''
-      }
-    )
-  } else {
-    const token =
-      route.authMode === 'oauth' ? null : route.source === 'env' ? route.token : decryptDesktopSecret(route.token)
-
-    connection = await buildRemoteConnection(
-      route.url,
-      route.authMode,
-      token,
-      route.source,
-      undefined,
-      'url',
-      undefined,
-      route.headers
-    )
-  }
-
-  return route.connectionId ? { ...connection, connectionId: route.connectionId } : connection
+  return buildRemoteConnection(HOSTED_BACKEND_URL, 'token', token, 'hosted')
 }
 
-// A remote profile's sessions live on its remote host's state.db, not on a local
-// file the primary can open — so reads for it must route to the remote backend,
-// not the local-disk fast path. These three helpers drive that (see
-// interceptSessionReadForRemote).
-function profileHasRemoteOverride(profile) {
-  return profileHasRemoteConnection(readDesktopConnectionConfig(), profile)
-}
-
-function configuredRemoteProfileNames() {
-  const config = readDesktopConnectionConfig()
-
-  return Object.keys(config.profiles || {}).filter(name => profileHasRemoteConnection(config, name))
-}
-
-// True when the app is in app-global remote mode (Settings → "All profiles" →
-// Remote, or the env override): a SINGLE remote backend serves every
-// profile via ?profile=.
-// Distinct from per-profile overrides — here there's one host for all.
+// One hosted backend serves every profile via ?profile=.
 function globalRemoteActive() {
-  if (process.env.SCOUT_DESKTOP_REMOTE_URL) {
-    return true
-  }
-
-  const mode = readDesktopConnectionConfig().mode
-
-  if (modeIsRemoteLike(mode) || mode === 'ssh') {
-    return true
-  }
-
-  // Registry-primary transport (#91564/#90316): a registered remote/ssh
-  // gateway promoted to primary via connections.json makes the primary
-  // backend remote even while the v1 config.mode still says 'local'. Every
-  // consumer of this flag ("one remote host serves every profile") must see
-  // that, or the local-entry routes delegate into a primary that now dials
-  // remote — respawning the exact loopback children the resolver rung in
-  // desktop-remote-route.ts eliminates.
-  return registryPrimaryIsRemote()
+  return true
 }
 
-// True when the v2 registry PRIMARY names a non-local connection. Mirrors the
-// registry fallback rung in resolveDesktopRemoteRoute.
-function registryPrimaryIsRemote() {
-  try {
-    const registry = readDesktopConnectionsRegistry()
-    const entry = registry.connections.find(c => c.id === registry.primary)
-
-    return Boolean(entry && (entry.kind === 'remote' || entry.kind === 'ssh'))
-  } catch {
-    return false
-  }
-}
-
-// True when the PRIMARY profile's backend resolves to a remote host —
-// i.e. resolveRemoteBackend(primaryProfileKey()) would return a descriptor
-// rather than null. Mirrors that function's precedence (per-profile override →
-// env → global) so a startScout() failure can be classified as remote (never
-// latch — transient, must stay retryable) vs local (latch to break install
-// loops) BEFORE the throwing resolve/mint runs.
 function primaryBackendIsRemote() {
-  return Boolean(profileHasRemoteOverride(primaryProfileKey())) || globalRemoteActive()
-}
-
-// GET a profile's resolved backend (remote pool or local primary), parsed JSON.
-async function fetchJsonForProfile(profile, path) {
-  return requestJsonForProfile(profile, path, 'GET')
-}
-
-// Issue an arbitrary method against a profile's resolved backend, parsed JSON.
-async function requestJsonForProfile(profile: string, path: string, method: string, body?: string) {
-  const conn = await ensureBackend(profile)
-
-  return fetchJsonForBackend(conn, path, { method, body, timeoutMs: DEFAULT_FETCH_TIMEOUT_MS })
-}
-
-async function probeRemoteAuthMode(rawUrl) {
-  // Determine how a remote gateway expects callers to authenticate, WITHOUT
-  // sending any credentials. ``/api/status`` is public on every Scout
-  // gateway (it backs the liveness probe) and reports:
-  //   auth_required: true  → OAuth gate is engaged (cookie + ws-ticket auth)
-  //   auth_required: false → loopback/--insecure: legacy session-token auth
-  // ``/api/auth/providers`` (also public, only meaningful when gated) gives
-  // the human-facing provider name(s) for the login button label.
-  //
-  // The settings UI calls this as the user types a URL so it can render an
-  // OAuth login button vs a session-token entry box. Network/parse failures
-  // surface as ``reachable: false`` rather than throwing, so a half-typed or
-  // unreachable URL degrades to "can't tell yet" instead of a hard error.
-  const baseUrl = normalizeRemoteBaseUrl(rawUrl)
-
-  let status
-
-  try {
-    status = await fetchPublicJson(`${baseUrl}/api/status`, { timeoutMs: 8_000 })
-  } catch (error: any) {
-    return {
-      baseUrl,
-      reachable: false,
-      authMode: 'unknown',
-      providers: [],
-      version: null,
-      error: error instanceof Error ? error.message : String(error)
-    }
-  }
-
-  const authRequired = authModeFromStatus(status) === 'oauth'
-  let providers = []
-
-  if (authRequired) {
-    // Best-effort: a gated gateway exposes the registered providers so the
-    // button can read "Sign in with SpaceshipResearch" instead of a generic
-    // label, and so a username/password provider can be distinguished from
-    // an OAuth-redirect one (``supports_password``). A failure here doesn't
-    // change the auth mode, so swallow it.
-    try {
-      const body = (await fetchPublicJson(`${baseUrl}/api/auth/providers`, { timeoutMs: 8_000 })) as any
-
-      if (Array.isArray(body?.providers)) {
-        providers = body.providers
-          .filter(p => p && typeof p === 'object')
-          .map(p => ({
-            name: String(p.name || ''),
-            displayName: String(p.display_name || p.name || ''),
-            supportsPassword: Boolean(p.supports_password)
-          }))
-          .filter(p => p.name)
-      }
-    } catch {
-      // Provider listing is optional metadata; the auth mode is already known.
-    }
-  }
-
-  return {
-    baseUrl,
-    reachable: true,
-    authMode: authRequired ? 'oauth' : 'token',
-    providers,
-    version: status?.version || null,
-    error: null
-  }
-}
-
-async function testDesktopConnectionConfig(input: any = {}) {
-  if (input.mode === 'ssh') {
-    const sshConfig = normalizeSshConfig({
-      mode: 'ssh',
-      host: input.sshHost,
-      user: input.sshUser,
-      port: input.sshPort,
-      keyPath: input.sshKeyPath,
-      remoteScoutPath: input.sshRemoteScoutPath
-    })
-
-    if (!sshConfig) {
-      return { reachable: false, sshError: 'unreachable', error: 'SSH host is required.' }
-    }
-
-    const ssh = createSshProbeConnection(
-      { host: sshConfig.host, user: sshConfig.user, port: sshConfig.port, keyPath: sshConfig.keyPath },
-      { rememberLog: sshRememberLog }
-    )
-
-    try {
-      // One bounded retry on TIMEOUT only: a cold Windows backend's first
-      // PowerShell exec can exceed the budget (observed live), and a timeout is
-      // indeterminate — unlike auth/host-key/unreachable, which are verdicts.
-      let attempt = 0
-
-      for (;;) {
-        try {
-          await ssh.open()
-          const platform: any = await detectRemotePlatform(ssh, sshConfig.remoteScoutPath || '')
-          let scoutPath
-          let scoutVersion
-          let supported
-
-          if (platform.os === 'Windows') {
-            const runtime = platform
-            scoutPath = runtime.scoutPath
-            const inspection = await helper(ssh, runtime, 'inspect', [runtime.scoutPath])
-            scoutVersion = inspection.version
-            supported = inspection.supported
-          } else {
-            scoutPath = await remoteLifecycle.locateScout(ssh, sshConfig.remoteScoutPath || '')
-            scoutVersion = await remoteLifecycle.probeScoutVersion(ssh, scoutPath)
-            supported = await remoteLifecycle.remoteSupportsSshOwnership(ssh, scoutPath)
-          }
-
-          if (!supported) {
-            return {
-              reachable: false,
-              sshError: 'update-required',
-              error: 'Update Scout on the remote host before connecting with Desktop SSH.'
-            }
-          }
-
-          return {
-            reachable: true,
-            sshError: null,
-            error: null,
-            remotePlatform: `${platform.os}/${platform.arch}`,
-            remoteScoutPath: scoutPath,
-            remoteScoutVersion: scoutVersion,
-            host: sshConfig.user ? `${sshConfig.user}@${sshConfig.host}` : sshConfig.host
-          }
-        } catch (error: any) {
-          if (error?.kind === 'timeout' && attempt === 0) {
-            attempt += 1
-            sshRememberLog('[ssh] test probe timed out once; retrying')
-
-            continue
-          }
-
-          throw error
-        }
-      }
-    } catch (error: any) {
-      return { reachable: false, sshError: error.kind || 'unknown', error: error.message }
-    } finally {
-      try {
-        await ssh.close()
-      } catch {
-        void 0
-      }
-    }
-  }
-
-  const config = coerceDesktopConnectionConfig(input, readDesktopConnectionConfig(), { persistToken: false })
-  const key = connectionScopeKey(input.profile)
-  // The block under test: a per-profile entry or the global remote. Coerce has
-  // already normalized the URL and resolved token inheritance for the scope.
-  const block = key ? config.profiles?.[key] || null : config.remote
-
-  const wantRemote =
-    modeIsRemoteLike(block?.mode) || (!key && modeIsRemoteLike(config.mode)) || (modeIsRemoteLike(input.mode) && block)
-
-  // Test ``/api/status`` through the connection's real auth path. Self-hosted
-  // gateways may protect it, and an anonymous success/failure would not prove
-  // that the OAuth cookie/native bearer or configured token is reusable. For
-  // a remote config we normalize the URL from the input; for local we fall
-  // back to the resolved/started backend.
-  let baseUrl
-  let token = null
-  let authMode = 'token'
-  let testHeaders = {}
-
-  if (wantRemote && block?.url) {
-    baseUrl = normalizeRemoteBaseUrl(block.url)
-    authMode = normAuthMode(block.authMode)
-    testHeaders = decryptRemoteHeaders(block.headers)
-
-    if (authMode !== 'oauth') {
-      token = decryptDesktopSecret(block.token)
-    }
-  } else {
-    const remote = (await resolveRemoteBackend(key)) || (await startScout())
-    baseUrl = remote.baseUrl
-    token = remote.token
-    authMode = normAuthMode(remote.authMode)
-    testHeaders = remote.headers || {}
-  }
-
-  const status = (await fetchConnectionStatus(baseUrl, authMode, token, testHeaders)) as any
-
-  // The HTTP status check above proves the backend is reachable, but the chat
-  // surface only works once the renderer's live WebSocket to ``/api/ws``
-  // connects — a separate transport with separate server-side guards (Host/
-  // Origin, ws-ticket/token auth). Validating only the HTTP side produced a
-  // false-positive "reachable" while the real boot still failed with "Could not
-  // connect to Scout gateway". Mirror the renderer's connect here so the test
-  // reflects the full path the app actually uses.
-  const wsUrl = await resolveTestWsUrl(baseUrl, authMode, token, {
-    mintTicket: url => mintGatewayWsTicket(url, testHeaders)
-  })
-
-  // Skip the WS leg only when the runtime genuinely lacks a WebSocket (so an
-  // older Electron/Node never fails the test spuriously); Electron's main
-  // process ships a global WebSocket on every supported version.
-  if (wsUrl && typeof globalThis.WebSocket === 'function') {
-    const probe = await probeGatewayWebSocket(wsUrl, { WebSocketImpl: globalThis.WebSocket, headers: testHeaders })
-
-    if (!probe.ok) {
-      throw new Error(
-        `Reached the gateway over HTTP, but the live WebSocket (/api/ws) connection failed: ${probe.reason} ` +
-          'The HTTP check can pass while the WebSocket is blocked by a proxy, firewall, or gateway auth/origin guard.'
-      )
-    }
-  }
-
-  return {
-    ok: true,
-    baseUrl,
-    version: status?.version || null
-  }
-}
-
-async function fetchConnectionStatus(baseUrl, authMode, token, headers = {}) {
-  // Native PKCE bearer first, OAuth session cookies second — the same two
-  // credentials real traffic uses, in the same order (fetchJsonForBackend).
-  return fetchJsonForBackend({ baseUrl, authMode, token, headers }, '/api/status', { timeoutMs: 8_000 })
+  return true
 }
 
 function resetBootProgressForReconnect() {
@@ -10496,33 +6804,13 @@ function resetScoutConnectionState({ soft = false }: { soft?: boolean } = {}): v
   }
 }
 
-// Every deliberate emptying of the primary slot goes through here so the
-// dying child's stale exit reads as intentional (see primaryRecoverySuppressed).
 function invalidatePrimaryConnection() {
-  primaryRecoverySuppressed = true
-
   return backendConnectionState.invalidate()
 }
 
-// Re-home the primary backend: reset connection state, then wait for the live
-// dashboard process to actually exit (SIGKILL after 5s) so the next
-// startScout() spawns fresh instead of racing the dying one. Shared by the
-// connection-config and profile switch flows.
+// Drop the hosted connection so the next startScout() dials again.
 async function teardownPrimaryBackendAndWait({ soft = false }: { soft?: boolean } = {}): Promise<void> {
-  const stopping = backendConnectionState.stopProcess(localBackendLifecycle.stop)
-
-  if (soft) {
-    softRehomeInProgress = true
-  }
-
-  try {
-    resetScoutConnectionState({ soft })
-    await stopping
-  } finally {
-    if (soft) {
-      softRehomeInProgress = false
-    }
-  }
+  resetScoutConnectionState({ soft })
 }
 
 function sendConnectionApplied() {
@@ -10539,21 +6827,6 @@ function sendConnectionApplied() {
   webContents.send('scout:connection:applied')
 }
 
-// Registry lifecycle push: a connection was removed or materially edited, so
-// every window must tear down (and, for edits, re-dial) its secondary sockets
-// scoped to that connection. Without this, a removed remote source keeps
-// its renderer WebSocket open and streaming as a ghost, and an edited one
-// keeps talking to the OLD endpoint until idle-reap.
-function broadcastConnectionsChanged(payload: { connectionId: string; reason: 'removed' | 'saved' | 'updated' }) {
-  for (const win of BrowserWindow.getAllWindows()) {
-    const { webContents } = win
-
-    if (webContents && !webContents.isDestroyed()) {
-      webContents.send('scout:connections:changed', payload)
-    }
-  }
-}
-
 // The profile the primary (window) backend was actually LAUNCHED as. Pinned by
 // startScout() and cleared when the primary is torn down; while a primary is
 // live this must NOT follow active-profile.json (see primary-profile-pin.ts).
@@ -10565,30 +6838,17 @@ function primaryProfileKey() {
 
 // Options describing the current connection setup for `resolveProfileBackendRoute`.
 function profileRouteOptions(
-  profile: string | null | undefined,
+  _profile: string | null | undefined,
   request?: { method?: string; path?: string }
 ): ProfileRouteOptions {
-  const config = readDesktopConnectionConfig()
-  const sshOverride = profileSshOverride(config, profile)
-  const urlOverride = profileRemoteOverride(config, profile)
-  const key = connectionScopeKey(profile) || primaryProfileKey()
-
+  // One hosted backend serves every profile; requests carry `?profile=`.
   return {
-    // A desktop profile can be only a client-side routing alias. Keep backend
-    // endpoint filters in the target's namespace (e.g. mara → default for a
-    // managed SSH, gris → main-gris for a URL-remote per-profile host).
-    backendProfile: sshOverride?.remoteProfile || urlOverride?.remoteProfile,
-    globalRemote: globalRemoteActive(),
+    globalRemote: true,
     primaryProfile: primaryProfileKey(),
-    profileRemoteOverride: Boolean(urlOverride || sshOverride),
-    // The primary profile's own backend resolves to a remote host (its
-    // per-profile override, env, or global). Unknown sub-profiles on that
-    // gateway must route THROUGH it, not spawn local backends (#88296).
-    primaryRemoteActive: primaryBackendIsRemote(),
-    // A stored per-profile entry (local or remote) — pins this profile to
-    // its own backend; absent entries inherit the primary's remote.
-    ownEntry: Boolean((config.profiles || {})[key]),
-    isolatedBackend: ISOLATED_BACKEND,
+    profileRemoteOverride: false,
+    primaryRemoteActive: true,
+    ownEntry: false,
+    isolatedBackend: false,
     requestMethod: request?.method,
     requestPath: request?.path
   }
@@ -10606,103 +6866,17 @@ async function ensureBackend(
   } = {}
 ): Promise<Awaited<ReturnType<typeof backendConnectionState.getPromise>>> {
   const key = profile && String(profile).trim() ? String(profile).trim() : primaryProfileKey()
-  const spawnPriority = spawnPriorityFrom(opts.spawnPriority)
-  poolRetirer.assertCanOpen(key, spawnPriority)
-  const passive = Boolean(opts.passive)
 
   profileDeletionGate.assertCanStart(key)
 
-  // The REQUEST is part of the routing decision (case 5/6): resolving without
-  // it would collapse a profile onto the shared backend that the caller's
-  // resolveProfileApiRequest deliberately kept pooled, and the unscopable
-  // destructive write would execute against the primary's home after all.
-  const routeOpts = profileRouteOptions(key, opts.request)
-  const route = resolveProfileBackendRoute(key, routeOpts)
+  const route = resolveProfileBackendRoute(key, profileRouteOptions(key, opts.request))
+  const connection = await startScout()
 
-  if (route.backend === 'primary') {
-    const connection = await startScout()
-    setWslBridgeProfileState(key, connection.mode !== 'remote')
-
-    // A shared backend still owes the caller its profile scope, so renderer-side
-    // WebSocket, filesystem, and cache routing target the selected profile.
-    // `sharedPrimary` marks this as the shared-primary route: pooled backends
-    // also carry `profile`, so only this descriptor gets the flag. The
-    // unshared primary carries its own key too: a profile-less descriptor
-    // reads as "default" downstream, which breaks per-source profile memory
-    // (the primary IS "default" only when it actually booted as default).
-    return route.descriptorProfile
-      ? { ...connection, profile: route.descriptorProfile, sharedPrimary: true }
-      : { ...connection, profile: key }
-  }
-
-  // A backend for this key may still be dying (idle reap, LRU eviction, a
-  // just-finished delete). Wait for its bounded exit before reusing or
-  // spawning, so two children never share one profile's SCOUT_HOME.
-  const stopping = poolStopper.inFlight(key)
-
-  if (stopping) {
-    await stopping
-  }
-
-  const existing = backendPool.get(key)
-
-  if (existing) {
-    if (!passive) {
-      existing.lastActiveAt = Date.now()
-    }
-
-    if (spawnPriority === 'foreground') {
-      promotePoolEntry(existing)
-    }
-
-    const connection = await existing.connectionPromise
-    setWslBridgeProfileState(key, connection.mode !== 'remote')
-
-    return connection
-  }
-
-  assertNotPassiveSpawn(passive, key)
-  // The hard slot is released only after the evicted child exits. Wait for
-  // that teardown before entering the spawn queue; otherwise a successful LRU
-  // choice still leaves this wake racing the old child for the slot. A
-  // concurrent dial may have installed this key meanwhile — reuse it.
-  await evictLruPoolBackends(poolMaxBackends() - 1)
-
-  if (backendPool.get(key)) {
-    return ensureBackend(profile, opts)
-  }
-
-  const entry = {
-    process: null,
-    port: null,
-    token: null,
-    connectionPromise: null,
-    lastActiveAt: Date.now(),
-    remoteBaseUrl: null,
-    releaseLocalBackendSlot: null,
-    localBackendSlotKey: null,
-    localBackendSpawnRequest: null,
-    spawnPriority
-  }
-
-  entry.connectionPromise = spawnPoolBackend(key, entry, {
-    unscopableRequest: unscopableMutatingRequest(routeOpts)
-  }).catch(async error => {
-    // Land the failure in desktop.log: without this a spawn that dies before
-    // its child exists (guard rejection, runtime resolution) leaves no trace
-    // beyond renderer-side rejections users never see in a bundle.
-    logPoolSpawnFailure(`"${key}"`, error)
-
-    await teardownFailedLocalBackend(key, entry)
-    throw error
-  })
-  backendPool.set(key, entry)
-  startPoolIdleReaper()
-
-  const connection = await entry.connectionPromise
-  setWslBridgeProfileState(key, connection.mode !== 'remote')
-
-  return connection
+  // The hosted backend serves every profile; the descriptor still carries the
+  // profile so renderer WebSocket, filesystem and cache routing target it.
+  return route.descriptorProfile
+    ? { ...connection, profile: route.descriptorProfile, sharedPrimary: true }
+    : { ...connection, profile: key }
 }
 
 // ── Registry-scoped backends (multi-connection, PR 2 of the campaign) ──────
@@ -10713,1467 +6887,17 @@ async function ensureBackend(
 // pool under the composite key from backendScopeKey() and reuse the same pool
 // entry lifecycle (LRU, idle reaper, touch) as per-profile local backends.
 async function ensureRegistryBackend(
-  connectionId,
+  _connectionId,
   profile,
-  managedUpdateCorrelation = '',
+  _managedUpdateCorrelation = '',
   opts: { passive?: boolean; spawnPriority?: LocalBackendSpawnPriority } = {}
 ) {
-  const spawnPriority = spawnPriorityFrom(opts.spawnPriority)
-  const passive = Boolean(opts.passive)
-  const registry = readDesktopConnectionsRegistry()
-  const id = registryDialConnectionId(connectionId, registry.primary)
-  const source = registry.connections.find(c => c.id === id)
-
-  if (!source) {
-    throw new Error(`No connection with id "${id}".`)
-  }
-
-  if (source.kind === 'ssh') {
-    managedConnectionUpdateGate.assertCanDial(id, managedUpdateCorrelation)
-  }
-
-  const profileKey = String(profile ?? '').trim() || 'default'
-  let resolvedRegistrySshConfig
-  let registryEffectiveFingerprintPromise: null | Promise<string> = null
-
-  const resolveRegistrySshConfig = () => {
-    if (source.kind !== 'ssh') {
-      return null
-    }
-
-    if (!resolvedRegistrySshConfig) {
-      resolvedRegistrySshConfig = normalizeSshConfig({
-        mode: 'ssh',
-        host: source.host,
-        user: source.user,
-        port: source.port,
-        keyPath: source.keyPath,
-        remoteScoutPath: source.remoteScoutPath,
-        remoteProfile: source.remoteProfile || (profileKey === 'default' ? '' : profileKey)
-      })
-    }
-
-    return resolvedRegistrySshConfig
-  }
-
-  const resolveRegistryEffectiveFingerprint = () => {
-    if (!registryEffectiveFingerprintPromise) {
-      const sshConfig = resolveRegistrySshConfig()
-
-      registryEffectiveFingerprintPromise = sshConfig
-        ? effectiveSshConfigFingerprint(sshConfig)
-        : Promise.reject(new Error(`SSH connection "${source.label}" has no host configured.`))
-    }
-
-    return registryEffectiveFingerprintPromise
-  }
-
-  // The v2 registry is migrated from (but intentionally coexists with) the
-  // v1 primary connection config. Reuse the already-booted primary descriptor
-  // when both identities match; otherwise a default-profile registry request
-  // opens a second SSH dashboard under a different scope and the competing
-  // lifecycle probes repeatedly tear down each other's tunnel.
-  const primary = await reuseMatchingPrimarySshBackend({
-    connectionId: id,
-    effectiveFingerprint: resolveRegistryEffectiveFingerprint,
-    ensurePrimary: () => ensureBackend(profile, { passive, spawnPriority }),
-    profile,
-    registry,
-    source
-  })
-
-  if (primary) {
-    return {
-      ...primary,
-      profile: profileKey,
-      connectionId: id
-    }
-  }
-
-  const sharedPrimary: (ResolvedConnectionDescriptor & SharedRegistryProfileScope) | null =
-    await reuseMatchingPrimaryRemoteBackend({
-      connectionId: id,
-      ensurePrimary: ensureBackend,
-      profile,
-      registry,
-      source
-    })
-
-  if (sharedPrimary) {
-    return sharedPrimary
-  }
-
-  if (source.kind === 'local') {
-    // The registry's 'local' entry means THIS machine's runtime — always.
-    // ensureBackend() follows the v1 routing table, which resolves to a
-    // REMOTE descriptor when the v1 global mode is remote (or the profile
-    // has its own remote override). A migrated remote-mode user would then
-    // see the roster's "This device" rows enumerate + dial the remote box
-    // (every profile duplicated, -slug handles forced). Delegate only when
-    // the v1 route is genuinely local; otherwise spawn/reuse a forced-local
-    // child pooled under the composite 'conn:local::<profile>' key so it
-    // can't collide with the v1 remote descriptor cached at the bare key.
-    profileDeletionGate.assertCanStart(profileKey)
-
-    const rawProfile = String(profile ?? '').trim()
-
-    const localProfileExists = rawProfile
-      ? directoryExists(path.join(SCOUT_HOME, 'profiles', rawProfile.toLowerCase()))
-      : undefined
-
-    // Pass the raw profile, not profileKey: profileKey collapses null to
-    // 'default' and would refuse an unprofiled enumeration as a concrete dial.
-    const localRoute = resolveRegistryLocalRoute(rawProfile || null, {
-      globalRemote: globalRemoteActive(),
-      profileRemoteOverride: Boolean(profileHasRemoteOverride(profileKey)),
-      ...(rawProfile ? { localProfileExists } : {})
-    })
-
-    if (localRoute.refuse) {
-      throw new Error(localRoute.refuse)
-    }
-
-    if (localRoute.delegate) {
-      return ensureBackend(profile, { passive, spawnPriority })
-    }
-
-    const stoppingLocal = poolStopper.inFlight(localRoute.poolKey)
-
-    if (stoppingLocal) {
-      await stoppingLocal
-    }
-
-    const existingLocal = backendPool.get(localRoute.poolKey)
-
-    if (existingLocal) {
-      if (!passive) {
-        existingLocal.lastActiveAt = Date.now()
-      }
-
-      if (spawnPriority === 'foreground') {
-        promotePoolEntry(existingLocal)
-      }
-
-      return existingLocal.connectionPromise
-    }
-
-    assertNotPassiveSpawn(passive, localRoute.poolKey)
-    await evictLruPoolBackends(poolMaxBackends() - 1)
-
-    // The registry may have changed while we waited for an eviction. Never
-    // start a child from a removed or edited connection's old descriptor.
-    if (readDesktopConnectionsRegistry() !== registry || backendPool.get(localRoute.poolKey)) {
-      return ensureRegistryBackend(connectionId, profile, managedUpdateCorrelation, opts)
-    }
-
-    const localEntry = {
-      process: null,
-      port: null,
-      token: null,
-      connectionPromise: null,
-      lastActiveAt: Date.now(),
-      remoteBaseUrl: null,
-      releaseLocalBackendSlot: null,
-      localBackendSlotKey: null,
-      localBackendSpawnRequest: null,
-      spawnPriority
-    }
-
-    localEntry.connectionPromise = spawnPoolBackend(profileKey, localEntry, {
-      forceLocal: true,
-      poolKey: localRoute.poolKey
-    }).catch(async error => {
-      // Same trace rule as the v1 pool path: a forced-local child whose spawn
-      // rejects before the child exists must still land in desktop.log.
-      logPoolSpawnFailure(`"${profileKey}" (forced-local)`, error)
-
-      await teardownFailedLocalBackend(localRoute.poolKey, localEntry)
-      throw error
-    })
-    backendPool.set(localRoute.poolKey, localEntry)
-    startPoolIdleReaper()
-
-    return localEntry.connectionPromise
-  }
-
-  const key = backendScopeKey(id, profile)
-  const existing = backendPool.get(key)
-
-  if (existing) {
-    if (!passive) {
-      existing.lastActiveAt = Date.now()
-    }
-
-    const connectionPromise = existing.connectionPromise
-
-    // A remote process can die while its local SSH forward stays LISTENing.
-    // Validate the exact cached descriptor at dispatch time; background
-    // revalidation is renderer-driven and may never run while the Bots pane is
-    // closed. Concurrent clicks share one retire/reconnect sequence.
-    return registryDispatchRevalidation.run(connectionPromise, () =>
-      ensureHealthyPooledRemoteBackendForDispatch({
-        connectionPromise,
-        currentConnectionPromise: () => backendPool.get(key)?.connectionPromise || null,
-        probe: (connection, requestPath, options) => fetchJsonForBackend(connection, requestPath, options),
-        reconnect: () => ensureRegistryBackend(id, profile, '', { passive }),
-        retire: async (error: any) => {
-          // A late failure from an old descriptor must never tear down a newer
-          // entry that another caller has already installed.
-          if (backendPool.get(key) !== existing) {
-            return
-          }
-
-          rememberLog(
-            `Pooled remote backend "${key}" failed its dispatch probe (${error?.message || error}); reconnecting on demand.`
-          )
-          await stopPoolBackend(key)
-
-          if (source.kind === 'ssh') {
-            await sshBootstrapCoordinator.cancelAndWait(key)
-            await teardownSshConnection(key)
-          }
-        }
-      })
-    )
-  }
-
-  assertNotPassiveSpawn(passive, key)
-  await evictLruPoolBackends(poolMaxBackends() - 1)
-
-  if (readDesktopConnectionsRegistry() !== registry || backendPool.get(key)) {
-    return ensureRegistryBackend(connectionId, profile, managedUpdateCorrelation, opts)
-  }
-
-  const entry = {
-    process: null,
-    port: null,
-    token: null,
-    connectionPromise: null,
-    lastActiveAt: Date.now(),
-    remoteBaseUrl: null
-  }
-
-  entry.connectionPromise = connectRegistryBackend(
-    source,
-    profile,
-    key,
-    entry,
-    resolveRegistrySshConfig(),
-    source.kind === 'ssh' ? resolveRegistryEffectiveFingerprint() : null,
-    managedUpdateCorrelation
-  ).catch(error => {
-    if (backendPool.get(key) === entry) {
-      backendPool.delete(key)
-    }
-
-    throw error
-  })
-  backendPool.set(key, entry)
-  startPoolIdleReaper()
-
-  return entry.connectionPromise
-}
-
-// Dial a non-local registry connection for one profile. Never spawns a local
-// child (entry.process stays null — stopPoolBackend/evict already tolerate
-// that shape from remote per-profile overrides).
-async function connectRegistryBackend(
-  source,
-  profile,
-  key,
-  poolEntry,
-  resolvedSshConfig?,
-  resolvedEffectiveFingerprint?: null | Promise<string>,
-  managedUpdateCorrelation = '',
-  tokenPersistenceSource = ''
-) {
-  const profileKey = String(profile ?? '').trim() || 'default'
-
-  if (source.kind === 'ssh') {
-    // The composite key doubles as the ssh scope so each (connection, profile)
-    // pair owns its own tunnel + remote dashboard; the profile that re-homes
-    // the REMOTE process is the entry's remoteProfile or the requested one —
-    // never the composite string.
-    const sshConfig = resolvedSshConfig
-
-    if (!sshConfig) {
-      throw new Error(`SSH connection "${source.label}" has no host configured.`)
-    }
-
-    const connection = await bootstrapSshConnection(
-      key,
-      sshConfig,
-      decryptDesktopSecret(source.token),
-      tokenPersistenceSource || `registry:${source.id}`,
-      resolvedEffectiveFingerprint ? await resolvedEffectiveFingerprint : undefined,
-      {
-        managedScope: 'pool',
-        managedUpdateCorrelation,
-        poolKey: key,
-        registryConnectionId: source.id
-      }
-    )
-
-    poolEntry.remoteBaseUrl = connection.baseUrl
-
-    // SSH backends always run on a remote host — their POSIX paths can never
-    // be opened through this machine's wsl.exe. Register the profile as
-    // bridge-inactive so file panels/dialogs don't spawn wsl.exe (visible
-    // black window on WSL-less Windows) for remote paths. The v1 path does
-    // this in ensureBackend(); the registry SSH path was missing it.
-    setWslBridgeProfileState(profileKey, false)
-
-    return {
-      ...connection,
-      profile: profileKey,
-      connectionId: source.id,
-      // The remote process runs as this profile; the desktop-side profile key
-      // is only the routing label. scout:api uses it to translate explicit
-      // self-profile query filters into the backend's namespace.
-      remoteProfile: sshConfig.remoteProfile || '',
-      logs: scoutLog.slice(-80),
-      ...getWindowState()
-    }
-  }
-
-  // remote: one gateway host serves every profile of that source,
-  // scoped per request — the descriptor carries the profile + connectionId so
-  // renderer-side WS minting and REST scoping target the right agent.
-  const token = source.authMode === 'oauth' ? null : decryptDesktopSecret(source.token)
-
-  const connection = await buildRemoteConnection(
-    source.url,
-    normAuthMode(source.authMode),
-    token,
-    `registry:${source.id}`,
-    undefined,
-    'url',
-    undefined,
-    source.headers
-  )
-
-  await waitForRemoteScout(connection)
-  poolEntry.remoteBaseUrl = connection.baseUrl
-
-  // Remote backends live on another host too — disable the WSL path
-  // bridge for their profiles for the same reason as the SSH branch above.
-  setWslBridgeProfileState(profileKey, false)
-
-  return {
-    ...connection,
-    profile: profileKey,
-    connectionId: source.id,
-    // One host, many profiles: REST paths must carry ?profile= (same contract
-    // as the global-remote shared-primary route).
-    sharedRemote: true,
-    logs: scoutLog.slice(-80),
-    ...getWindowState()
-  }
-}
-
-// Restore one scope while its connection-wide managed-update gate is still
-// held. The caller supplies the connection snapshot captured before drain so
-// a Settings edit during a long update cannot silently reconnect the old
-// session to a different host or token context.
-async function ensureManagedSshBackend(source, profile, correlationId) {
-  return ensureManagedSshBackendAtKey(source, profile, backendScopeKey(source.id, profile), correlationId)
-}
-
-async function ensureManagedSshBackendAtKey(source, profile, key, correlationId, tokenPersistenceSource = '') {
-  managedConnectionUpdateGate.assertCanDial(source.id, correlationId)
-  const existing = backendPool.get(key)
-
-  if (existing) {
-    existing.lastActiveAt = Date.now()
-
-    return existing.connectionPromise
-  }
-
-  const entry = {
-    process: null,
-    port: null,
-    token: null,
-    connectionPromise: null,
-    lastActiveAt: Date.now(),
-    remoteBaseUrl: null
-  }
-
-  entry.connectionPromise = connectRegistryBackend(
-    source,
-    profile,
-    key,
-    entry,
-    managedSshConfig(source, profile),
-    null,
-    correlationId,
-    tokenPersistenceSource
-  ).catch(error => {
-    if (backendPool.get(key) === entry) {
-      backendPool.delete(key)
-    }
-
-    throw error
-  })
-  backendPool.set(key, entry)
-  startPoolIdleReaper()
-
-  return entry.connectionPromise
-}
-
-async function restoreManagedPrimarySshBackend(source, profile, correlationId) {
-  managedConnectionUpdateGate.assertCanDial(source.id, correlationId)
-  const profileKey = String(profile || '').trim() || 'default'
-
-  if (managedPrimaryRestoreOwners.size > 0 && !managedPrimaryRestoreOwners.has(source.id)) {
-    throw new Error('Another managed SSH primary restore is already in progress.')
-  }
-
-  managedPrimaryRestoreOwners.set(source.id, { correlationId, profile: profileKey, source })
-  backendConnectionState.invalidate()
-
-  try {
-    return await startScout()
-  } finally {
-    if (managedPrimaryRestoreOwners.get(source.id)?.correlationId === correlationId) {
-      managedPrimaryRestoreOwners.delete(source.id)
-    }
-  }
-}
-
-function managedSshConfig(source, profile = '') {
-  const profileKey = String(profile ?? '').trim() || 'default'
-
-  return normalizeSshConfig({
-    mode: 'ssh',
-    host: source.host,
-    user: source.user,
-    port: source.port,
-    keyPath: source.keyPath,
-    remoteScoutPath: source.remoteScoutPath,
-    remoteProfile: source.remoteProfile || (profileKey === 'default' ? '' : profileKey)
-  })
-}
-
-async function captureManagedSshScopes(source) {
-  const prefix = backendScopePrefix(source.id)
-  const config = readDesktopConnectionConfig()
-  const registry = readDesktopConnectionsRegistry()
-
-  const routeForProfile = profile =>
-    resolveDesktopRemoteRoute({
-      config,
-      env: {
-        token: process.env.SCOUT_DESKTOP_REMOTE_TOKEN,
-        url: process.env.SCOUT_DESKTOP_REMOTE_URL
-      },
-      profile,
-      registry
-    })
-
-  const pooled = [...backendPool.entries()]
-    .filter(([key]) => {
-      const state = sshConnections.get(key)
-      const route = routeForProfile(String(key))
-
-      return (
-        managedSshScopeRole({
-          connectionId: source.id,
-          key: String(key),
-          prefix,
-          routeConnectionId: route?.kind === 'ssh' ? route.connectionId : '',
-          state
-        }) === 'pool'
-      )
-    })
-    .map(([key, entry]) => ({
-      drained: false,
-      entry,
-      forwardRestored: false,
-      key,
-      profile: String(key).startsWith(prefix) ? String(key).slice(prefix.length) || 'default' : String(key),
-      registryScoped: String(key).startsWith(prefix),
-      reuseToken: '',
-      state: null,
-      unsafeDrainFailure: false
-    }))
-
-  const pooledKeys = new Set(pooled.map(scope => scope.key))
-
-  const primary = [...sshConnections.entries()]
-    .filter(
-      ([key, state]) =>
-        !pooledKeys.has(key) &&
-        managedSshScopeRole({ connectionId: source.id, key: String(key), prefix, state }) === 'primary'
-    )
-    .map(([key, state]) => ({
-      drained: false,
-      entry: { connectionPromise: backendConnectionState.getPromise() },
-      forwardRestored: false,
-      key,
-      primary: true,
-      profile: String(primaryProfileKey() || 'default'),
-      reuseToken: '',
-      state,
-      unsafeDrainFailure: false
-    }))
-
-  const primaryPromise = backendConnectionState.getPromise()
-  const primaryProfile = String(primaryProfileKey() || 'default')
-  const primaryRoute = routeForProfile(primaryProfile)
-
-  if (
-    primary.length === 0 &&
-    primaryPromise &&
-    primaryRoute?.kind === 'ssh' &&
-    primaryRoute.connectionId === source.id
-  ) {
-    primary.push({
-      drained: false,
-      entry: { connectionPromise: primaryPromise },
-      forwardRestored: false,
-      key: primaryRoute.source === 'profile' ? sshScopeKey(primaryProfile) : sshScopeKey(null),
-      primary: true,
-      profile: primaryProfile,
-      reuseToken: '',
-      state: null,
-      unsafeDrainFailure: false
-    })
-  }
-
-  if (primary.length > 1) {
-    throw new Error('Managed SSH update found multiple primary scopes; refusing an ambiguous drain.')
-  }
-
-  const captured: any[] = [...pooled, ...primary]
-
-  // An already-started bootstrap may not have published sshConnections yet.
-  // Join every bootstrap qualified to this registry id. Its final boundary
-  // rechecks the managed gate and exact-terminates any serve it created, so no
-  // pre-claim dial can publish while the updater mutates the remote install.
-  await waitForManagedSshBootstrapFence(sshBootstrapCoordinator.active, source.id)
-
-  for (const scope of captured) {
-    try {
-      const descriptor: any = await scope.entry.connectionPromise
-
-      // Every independently spawned profile has its own random served token.
-      // Keep it on the scope—not one mutable connection snapshot—so restore
-      // can authenticate/reuse the exact process it captured.
-      scope.reuseToken = String(descriptor?.token || '')
-    } catch (error: any) {
-      if (error?.unsafeManagedBootstrap === true) {
-        throw error
-      }
-      // A still-pending pooled scope remains part of the restore worklist even
-      // if its original dial loses the race with the update gate.
-    }
-
-    scope.state = sshConnections.get(scope.key) || null
-  }
-
-  return captured
-}
-
-function remoteUpdateTargetFromState(state): RemoteUpdateTarget {
-  if (!state?.ssh || !state?.scoutPath || !state?.scoutHome) {
-    throw new Error('The managed SSH scope does not carry a complete remote runtime identity.')
-  }
-
-  if (!['Darwin', 'Linux', 'Windows'].includes(state.remotePlatform)) {
-    throw new Error(`Unsupported managed SSH update platform: ${state.remotePlatform || 'unknown'}.`)
-  }
-
-  return {
-    ssh: state.ssh,
-    platform: state.remotePlatform,
-    scoutPath: state.scoutPath,
-    scoutHome: state.scoutHome,
-    ...(state.pythonPath ? { pythonPath: state.pythonPath } : {})
-  }
-}
-
-async function openManagedSshUpdateTransport(
-  source
-): Promise<{ close: () => Promise<void>; target: RemoteUpdateTarget }> {
-  const config = managedSshConfig(source)
-
-  if (!config) {
-    throw new Error(`SSH connection "${source.label}" has no host configured.`)
-  }
-
-  const ssh = createSshProbeConnection(
-    { host: config.host, user: config.user, port: config.port, keyPath: config.keyPath },
-    { rememberLog: sshRememberLog }
-  )
-
-  await ssh.open()
-
-  try {
-    const platform: any = await detectRemotePlatform(ssh, config.remoteScoutPath || '')
-
-    if (platform.os === 'Windows') {
-      const runtime = platform.scoutPath ? platform : await probeWindowsRemote(ssh, config.remoteScoutPath || '')
-
-      return {
-        close: () => ssh.close(),
-        target: {
-          ssh,
-          platform: 'Windows',
-          scoutPath: runtime.scoutPath,
-          scoutHome: runtime.scoutHome,
-          pythonPath: runtime.python
-        }
-      }
-    }
-
-    const scoutPath = await remoteLifecycle.locateScout(ssh, config.remoteScoutPath || '')
-    const scoutHome = await remoteLifecycle.probeRemoteScoutHome(ssh)
-
-    return {
-      close: () => ssh.close(),
-      target: { ssh, platform: platform.os, scoutPath, scoutHome }
-    }
-  } catch (error) {
-    await ssh.close()
-    throw error
-  }
-}
-
-async function drainManagedSshScope(scope) {
-  const state = scope.state
-  let forwardClosed = false
-
-  try {
-    if (!state) {
-      return
-    }
-
-    if (state.localPort && state.remotePort) {
-      await state.ssh.cancelForward(state.localPort, state.remotePort)
-      forwardClosed = true
-    }
-
-    const expected = {
-      ownershipId: state.ownershipId,
-      pid: state.pid,
-      spawnNonce: state.spawnNonce,
-      profile: state.remoteProfile || '',
-      scoutPath: state.scoutPath,
-      scoutHome: state.scoutHome,
-      startedAt: state.startedAt,
-      creationTimeNs: state.creationTimeNs,
-      creationTime: state.creationTime
-    }
-
-    if (state.remotePlatform === 'Windows') {
-      await terminateOwnedWindowsDashboardForUpdate(
-        state.ssh,
-        { scoutPath: state.scoutPath, scoutHome: state.scoutHome, python: state.pythonPath },
-        expected
-      )
-    } else if (state.remotePlatform === 'Linux' || state.remotePlatform === 'Darwin') {
-      await remoteLifecycle.terminateOwnedDashboardForUpdate(state.ssh, expected)
-    } else {
-      throw new Error(`Unsupported managed SSH update platform: ${state.remotePlatform || 'unknown'}.`)
-    }
-  } catch (error: any) {
-    // Ownership refusal is a no-kill result. Keep the original pool/state and
-    // restore its exact forward in place; routing it through generic stale
-    // cleanup could discard the create-time fence that just refused the kill.
-    scope.unsafeDrainFailure = true
-
-    if (state && state.localPort && state.remotePort && scope.reuseToken) {
-      try {
-        // A failed cancel may mean the old tunnel is still healthy. Prove that
-        // exact token first; only recreate the forward when cancellation was
-        // confirmed, avoiding a duplicate-bind attempt that masks recovery.
-        if (!forwardClosed) {
-          await waitForScout(`http://127.0.0.1:${state.localPort}`, scope.reuseToken, undefined, 'token')
-        } else {
-          await state.ssh.forward(state.localPort, state.remotePort)
-          await waitForScout(`http://127.0.0.1:${state.localPort}`, scope.reuseToken, undefined, 'token')
-        }
-
-        scope.forwardRestored = true
-      } catch (restoreError: any) {
-        error.message = `${error.message} The original forward also failed to recover: ${restoreError?.message || restoreError}`
-      }
-    }
-
-    throw error
-  } finally {
-    if (!scope.unsafeDrainFailure) {
-      scope.drained = true
-
-      if (scope.primary) {
-        backendConnectionState.invalidate()
-      } else if (backendPool.get(scope.key) === scope.entry) {
-        backendPool.delete(scope.key)
-      }
-
-      if (state && sshConnections.get(scope.key) === state) {
-        sshIsolatedKeepalives.stop(scope.key)
-        sshConnections.delete(scope.key)
-      }
-    }
-  }
-}
-
-async function updateManagedSshConnection(source, correlationId) {
-  const sourceSnapshot = { ...source }
-  const scopes = await captureManagedSshScopes(sourceSnapshot)
-  const blocker = managedSshDrainBlocker(scopes)
-
-  if (blocker) {
-    return refusedManagedSshUpdate(source.id, correlationId, blocker.message, blocker.reason)
-  }
-
-  let ephemeral: null | { close: () => Promise<void>; target: RemoteUpdateTarget } = null
-  let launchAttempted = false
-  const firstState = scopes.find(scope => scope.state)?.state
-
-  const target = firstState
-    ? remoteUpdateTargetFromState(firstState)
-    : (ephemeral = await openManagedSshUpdateTransport(sourceSnapshot)).target
-
-  return runManagedSshUpdate({
-    connectionId: source.id,
-    correlationId,
-    scopes,
-    preflightRemote: () => assertManagedUpdatePreflightClear(target, correlationId),
-    drainScope: drainManagedSshScope,
-    updateRemote: () =>
-      executeManagedRemoteUpdate(target, correlationId, {}, async () => {
-        markManagedSshRecoveryLaunching(source.id, correlationId)
-        launchAttempted = true
-      }),
-    awaitRestoreClearance: () =>
-      waitForManagedRemoteClearance(target, correlationId, { requireTerminal: launchAttempted }),
-    closeTransports: async () => {
-      const transports = new Set<any>(
-        scopes
-          .filter(scope => scope.drained)
-          .map(scope => scope.state?.ssh)
-          .filter(Boolean)
-      )
-
-      await Promise.allSettled([...transports].map(ssh => ssh.close()))
-
-      if (ephemeral) {
-        await ephemeral.close()
-      }
-    },
-    restoreScope: scope => {
-      if (scope.unsafeDrainFailure) {
-        if (!scope.forwardRestored) {
-          throw new Error(`The original ${scope.profile} SSH forward could not be restored safely.`)
-        }
-
-        return scope.entry.connectionPromise
-      }
-
-      const scopedSource = scope.reuseToken
-        ? { ...sourceSnapshot, token: encryptDesktopSecret(scope.reuseToken) }
-        : sourceSnapshot
-
-      if (scope.primary) {
-        return restoreManagedPrimarySshBackend(scopedSource, scope.profile, correlationId)
-      }
-
-      return scope.registryScoped
-        ? ensureManagedSshBackend(scopedSource, scope.profile, correlationId)
-        : ensureManagedSshBackendAtKey(scopedSource, scope.profile, scope.key, correlationId, 'profile')
-    },
-    prepareRecovery: async () => persistManagedSshRecovery(sourceSnapshot, correlationId, scopes),
-    completeRecovery: async () => clearManagedSshRecovery(source.id, correlationId),
-    releaseGate: () => managedConnectionUpdateGate.release(source.id, correlationId)
-  })
-}
-
-async function recoverManagedSshUpdate(record) {
-  const connectionId = record.connectionId
-
-  if (managedConnectionRecoveries.has(connectionId) || managedConnectionUpdates.has(connectionId)) {
-    return
-  }
-
-  const recoveryCorrelation = record.correlationId
-
-  if (!managedConnectionUpdateGate.claim(connectionId, recoveryCorrelation)) {
-    return
-  }
-
-  const operation = (async () => {
-    let transport: null | { close: () => Promise<void>; target: RemoteUpdateTarget } = null
-
-    try {
-      transport = await openManagedSshUpdateTransport(record.source)
-
-      const { attempts, disposition, results } = await recoverManagedSshScopes<any>({
-        attempts: record.attempts ?? 0,
-        scopes: record.scopes,
-        awaitClearance: () =>
-          waitForManagedRemoteClearance(transport!.target, record.correlationId, {
-            requireTerminal: record.phase === 'launching'
-          }),
-        afterClearance: async () => {
-          await transport!.close()
-          transport = null
-        },
-        restoreScope: scope =>
-          scope.kind === 'primary'
-            ? restoreManagedPrimarySshBackend(record.source, scope.profile, recoveryCorrelation)
-            : scope.kind === 'legacy'
-              ? ensureManagedSshBackendAtKey(record.source, scope.profile, scope.key, recoveryCorrelation, 'profile')
-              : ensureManagedSshBackend(record.source, scope.profile, recoveryCorrelation),
-        completeRecovery: async () => clearManagedSshRecovery(connectionId, record.correlationId),
-        recordFailedAttempt: async next => recordManagedSshRecoveryAttempt(connectionId, record.correlationId, next)
-      })
-
-      const unrestored = record.scopes
-        .filter((_scope, index) => results[index]?.status === 'rejected')
-        .map(scope => scope.profile)
-
-      if (disposition === 'complete') {
-        sshRememberLog(
-          `[ssh-update] restored ${record.scopes.length} scope(s) from durable recovery for ${connectionId}`
-        )
-      } else if (disposition === 'abandon') {
-        sshRememberLog(
-          `[ssh-update] durable recovery for ${connectionId} stopped after ${attempts} attempt(s); ` +
-            `connection released with ${unrestored.length} scope(s) not restored (${unrestored.join(', ')}). ` +
-            'Reconnecting starts them again.'
-        )
-      } else {
-        sshRememberLog(
-          `[ssh-update] durable recovery for ${connectionId} left ${unrestored.length} scope(s) pending ` +
-            `(attempt ${attempts} of ${MAX_MANAGED_SSH_RECOVERY_ATTEMPTS}); will retry next launch`
-        )
-      }
-    } catch (error: any) {
-      sshRememberLog(
-        `[ssh-update] durable recovery for ${connectionId} remains pending: ${String(error?.message || error)}`
-      )
-    } finally {
-      if (transport) {
-        await transport.close().catch(() => undefined)
-      }
-
-      managedConnectionUpdateGate.release(connectionId, recoveryCorrelation)
-      managedConnectionRecoveries.delete(connectionId)
-    }
-  })()
-
-  managedConnectionRecoveries.set(connectionId, operation)
-  await operation
-}
-
-async function resumeManagedSshRecoveries() {
-  await Promise.allSettled(readManagedSshRecoveryRecords().map(record => recoverManagedSshUpdate(record)))
-}
-
-// Stop every pooled backend and ssh scope owned by a registry connection —
-// called when the connection is removed from the registry.
-async function stopRegistryConnectionBackends(connectionId) {
-  const prefix = backendScopePrefix(connectionId)
-
-  for (const key of [...backendPool.keys()]) {
-    if (String(key).startsWith(prefix)) {
-      stopPoolBackend(key)
-    }
-  }
-
-  const sshScopes = new Set([
-    ...[...sshConnections.keys()].filter(scope => String(scope).startsWith(prefix)),
-    ...[...sshBootstrapCoordinator.active].map(entry => entry.scope).filter(scope => String(scope).startsWith(prefix))
-  ])
-
-  await Promise.all(
-    [...sshScopes].map(async scope => {
-      await sshBootstrapCoordinator.cancelAndWait(scope)
-      await teardownSshConnection(scope)
-    })
-  )
-}
-
-// Mark a pool profile as recently used so the idle reaper spares it. The
-// renderer calls this when it opens a profile's chat WS and periodically while
-// streaming, since the main process can't see the direct renderer↔backend WS.
-// It also reports whether a prompt turn currently leases the backend: a
-// foreground dial that must retire a resident skips leased ones early. That
-// flag is an optimisation, never the proof — the backend probe is (see
-// pool-retire.ts). Shape from #104871 by @bounce12340.
-function touchPoolBackend(profile, options: { activeTurn?: boolean } = {}) {
-  for (const key of poolTouchKeys(profile)) {
-    const entry = backendPool.get(key)
-
-    if (entry) {
-      entry.lastActiveAt = Date.now()
-
-      if (typeof options.activeTurn === 'boolean') {
-        entry.activeTurn = options.activeTurn
-      }
-
-      return
-    }
-  }
-}
-
-// Evict least-recently-used SPAWNED pool backends until at most `keep` remain —
-// but only ever evict backends without a live renderer socket (stale beyond the
-// keepalive window). When every backend is actively kept alive we let the pool
-// exceed the soft cap rather than kill a running session. Process-less
-// descriptor entries (remote registry sources, per-profile remote
-// overrides — `entry.process === null`) are excluded from the cap entirely:
-// they hold no local process, so counting them used to let a roster refresh
-// across N registered remote connections LRU-evict a REAL local backend that
-// was merely idle past the keepalive window. Descriptors are still reclaimed
-// by the idle reaper.
-async function evictLruPoolBackends(keep) {
-  return poolRetirer.evictTo(Math.max(0, keep), POOL_KEEPALIVE_FRESH_MS)
-}
-
-function startPoolIdleReaper() {
-  if (poolIdleReaper) {
-    return
-  }
-
-  poolIdleReaper = setInterval(() => {
-    const now = Date.now()
-
-    for (const [profile, entry] of [...backendPool.entries()]) {
-      if (now - (entry.lastActiveAt || 0) > poolIdleMs()) {
-        // Remote descriptors hold no child/slot. Local children require the
-        // same admission authority as foreground and LRU reclamation.
-        const retiring = entry.process ? poolRetirer.retireIdle(profile, poolIdleMs()) : stopPoolBackend(profile)
-
-        void retiring.catch(error => rememberLog(`Pool idle retirement failed: ${String(error)}`))
-      }
-    }
-
-    if (backendPool.size === 0 && poolIdleReaper) {
-      clearInterval(poolIdleReaper)
-      poolIdleReaper = null
-    }
-  }, 60_000)
-
-  if (typeof poolIdleReaper.unref === 'function') {
-    poolIdleReaper.unref()
-  }
-}
-
-const failedLocalBackendTeardowns = new WeakMap<object, Promise<void>>()
-
-function teardownFailedLocalBackend(poolKey: string, entry: any): Promise<void> {
-  const existing = failedLocalBackendTeardowns.get(entry)
-
-  if (existing) {
-    return existing
-  }
-
-  if (backendPool.get(poolKey) === entry) {
-    backendPool.delete(poolKey)
-  }
-
-  const child = entry.process
-
-  const teardown = releaseLocalBackendSlotAfterExit(
-    (): void => releaseLocalBackendSlot(entry),
-    async (): Promise<void> => {
-      await localBackendLifecycle.stop(child)
-
-      releaseBackendChild(child)
-    }
-  )
-
-  // Keep the settled promise in the WeakMap for the lifetime of this entry.
-  // Error + exit + outer catch may all request cleanup; none may run it twice.
-  failedLocalBackendTeardowns.set(entry, teardown)
-
-  return teardown
-}
-
-// Spawn an additional dashboard backend pinned to a named profile. Mirrors the
-// local-spawn portion of startScout() but without the boot-progress UI,
-// bootstrap, or remote handling (those belong to the primary backend only).
-// `opts.forceLocal` skips remote resolution entirely (the registry 'local'
-// entry means THIS machine regardless of the v1 routing table); `opts.poolKey`
-// is the backendPool key when it differs from the profile name (composite
-// registry scopes) so the exit/error cleanup evicts the right entry. Tracked by
-// the local lifecycle so quit waits for (and fences) a start still in flight.
-interface PoolBackendStartOptions {
-  forceLocal?: boolean
-  poolKey?: string
-  unscopableRequest?: boolean
-}
-
-type PoolBackendConnection = Awaited<ReturnType<typeof backendConnectionState.getPromise>>
-
-function spawnPoolBackend(
-  profile: string,
-  entry: any,
-  opts: PoolBackendStartOptions = {}
-): Promise<PoolBackendConnection> {
-  return localBackendLifecycle.start((): Promise<PoolBackendConnection> => runPoolBackendStart(profile, entry, opts))
-}
-
-async function runPoolBackendStart(
-  profile: string,
-  entry: any,
-  opts: PoolBackendStartOptions = {}
-): Promise<PoolBackendConnection> {
-  const poolKey = opts.poolKey || profile
-
-  await reapOrphanedBackendsOnce()
-  profileDeletionGate.assertCanStart(profile)
-
-  // A profile may point at its OWN remote backend (connection.json
-  // `profiles[name]`), or inherit the app-wide remote (env / global settings).
-  // In either case there is no local child to spawn — we just verify the
-  // remote is reachable and hand back its connection descriptor. The pool
-  // entry keeps `entry.process === null`, which stopPoolBackend/evict already
-  // tolerate.
-  const remote = opts.forceLocal ? null : await resolveRemoteBackend(profile, { poolKey })
-  profileDeletionGate.assertCanStart(profile)
-
-  if (remote) {
-    await waitForRemoteScout(remote)
-
-    // Recorded on the entry so revalidation can probe this descriptor without
-    // awaiting connectionPromise, which may still be pending for a sibling.
-    entry.remoteBaseUrl = remote.baseUrl
-
-    return {
-      ...remote,
-      profile,
-      logs: scoutLog.slice(-80),
-      ...getWindowState()
-    }
-  }
-
-  // Everything below starts a LOCAL `scout serve` child. Multiplex-only says
-  // the host has exactly one, and routing (resolveProfileBackendRoute case 6)
-  // keeps local profiles off this path — this is the backstop that makes the
-  // pool spawn path genuinely unreachable rather than merely unused.
-  // Same options object the router reads, so the guard cannot drift from it
-  // (profileRouteOptions folds the per-profile SSH override into
-  // profileRemoteOverride; a hand-rolled term here missed that).
-  const guardRoute = profileRouteOptions(profile)
-
-  assertNoSecondLocalBackend(poolKey, {
-    isolated: guardRoute.isolatedBackend,
-    primaryRemoteActive: guardRoute.primaryRemoteActive,
-    profileRemoteOverride: opts.forceLocal ? false : guardRoute.profileRemoteOverride,
-    unscopableRequest: opts.unscopableRequest
-  })
-
-  // Bound the slot wait BELOW the renderer's backend-boot budget (45s): once
-  // the renderer has given up on this spawn, a ticket still queued for the
-  // pool-idle window (10 min) would hold the pool key hostage and every
-  // later click on the profile would join that stale wait. Failing here
-  // surfaces the "all N slots busy" reason instead of a generic boot timeout.
-  // The caller stamped entry.spawnPriority from its own request; a foreground
-  // dial that joined the claim before this entry existed left a mark instead.
-  if (takeForegroundSpawn(poolKey, profile)) {
-    entry.spawnPriority = 'foreground'
-  }
-
-  const spawnPriority: LocalBackendSpawnPriority = spawnPriorityFrom(entry.spawnPriority)
-
-  assertPoolEntryStillOwned(poolKey, entry, backendPool, localBackendLifecycle.signal)
-
-  if (spawnPriority === 'background' && !backgroundSlotRetryBackoff.canAttempt(poolKey)) {
-    throw new BackgroundSlotRetryDeferredError(profile)
-  }
-
-  // The arbiter subscribes to the actual coordinator queue, so a later
-  // foreground promotion receives reclamation too, not just fresh starts.
-  const spawnRequest = localBackendSpawnCoordinator.request(poolKey, {
-    timeoutMs: POOL_SLOT_WAIT_MS,
-    priority: spawnPriority
-  })
-
-  entry.localBackendSlotKey = poolKey
-  entry.localBackendSpawnRequest = spawnRequest
-
-  if (spawnRequest.queued) {
-    rememberLog(
-      `Profile backend "${profile}" waiting for a free local slot (${localBackendSpawnCoordinator.activeCount}/${poolMaxBackends()} busy, ${localBackendSpawnCoordinator.queuedCount} queued)`
-    )
-  }
-
-  const cancelRequest = (): void => {
-    spawnRequest.cancel()
-  }
-
-  localBackendLifecycle.signal.addEventListener('abort', cancelRequest, { once: true })
-
-  try {
-    entry.releaseLocalBackendSlot = await spawnRequest.acquired
-    backgroundSlotRetryBackoff.clear(poolKey)
-  } catch (error) {
-    if (isBackgroundSlotWaitTimeout(error)) {
-      backgroundSlotRetryBackoff.recordFailure(poolKey)
-    }
-
-    throw error
-  } finally {
-    localBackendLifecycle.signal.removeEventListener('abort', cancelRequest)
-  }
-
-  if (entry.localBackendSpawnRequest === spawnRequest) {
-    entry.localBackendSpawnRequest = null
-  }
-
-  assertPoolEntryStillOwned(poolKey, entry, backendPool, localBackendLifecycle.signal)
-
-  const token = crypto.randomBytes(32).toString('base64url')
-
-  // Same update mutual exclusion as the primary window's waitForLocalStart
-  // (#73822): pool backends spawn from the same venv, so an ungated respawn
-  // during applyUpdates' critical section starts a backend on the runtime
-  // being replaced. No boot-progress UI here — pool backends boot
-  // silently for background profiles — so we only log while parked.
-  {
-    let poolAnnounced = false
-
-    await waitForUpdateClearance(updateGateDeps(), {
-      signal: localBackendLifecycle.signal,
-      isCancelled: (): boolean => backendPool.get(poolKey) !== entry,
-      onWaitTick: reason => {
-        if (!poolAnnounced) {
-          poolAnnounced = true
-          rememberLog(`[updates] update in progress (${reason}); deferring pool backend start for profile "${profile}"`)
-        }
-      },
-      pollMs: UPDATE_WAIT_POLL_MS,
-      timeoutMs: UPDATE_WAIT_TIMEOUT_MS
-    })
-  }
-
-  profileDeletionGate.assertCanStart(profile)
-
-  // --profile wins over the inherited SCOUT_HOME env (see _apply_profile_override
-  // step 3 in scout_cli/main.py), so the child re-homes to this profile.
-  // --port 0: the OS assigns an ephemeral port; the child announces it on stdout.
-  const backendArgs = ['--profile', profile, 'serve', '--host', '127.0.0.1', '--port', '0']
-
-  const backend = await ensureRuntime(await resolveScoutBackend(backendArgs), () =>
-    assertPoolEntryStillOwned(poolKey, entry, backendPool, localBackendLifecycle.signal)
-  )
-
-  // Route old runtimes (no `serve`) through the legacy `dashboard --no-open`.
-  backend.args = await getBackendArgsForRuntime(backend)
-  assertPoolEntryStillOwned(poolKey, entry, backendPool, localBackendLifecycle.signal)
-  const scoutCwd = resolveScoutCwd()
-  const webDist = resolveWebDist()
-  const readyFile = backend.readyFile ? makeDashboardReadyFile() : null
-
-  // Guard BEFORE the "Starting" line: a profile that only exists on a remote
-  // backend (remote-primary desktop asked for a forced-local child) rejects
-  // here, and logging "Starting" first left an orphaned line with no READY
-  // and no exit — the exact undiagnosable burst signature in remote-gateway
-  // user bundles (Aug 2026, Dash's report).
-  assertLocalProfileCanStart(profile, profileDeletionGate, key =>
-    directoryExists(path.join(SCOUT_HOME, 'profiles', key))
-  )
-  rememberLog(`Starting Scout backend for profile "${profile}" via ${backend.label}`)
-
-  const parentStartMarker = await desktopParentStartMarker()
-  const backendNonce = crypto.randomBytes(16).toString('hex')
-  const parentIdentityEnv = parentWatchdogEnv(process.pid, parentStartMarker, backendNonce)
-  assertPoolEntryStillOwned(poolKey, entry, backendPool, localBackendLifecycle.signal)
-
-  const child = spawnOwnedBackend(
-    backend.command,
-    backend.args,
-    hiddenWindowsChildOptions({
-      cwd: scoutCwd,
-      env: {
-        // Never another profile's dotenv credentials from the Desktop env (#68367).
-        ...profileBackendParentEnv({ scoutHome: SCOUT_HOME, profile }),
-        SCOUT_HOME,
-        ...backend.env,
-        // Pin the gateway's tool/terminal cwd to the same directory we chose for
-        // the child process. Inherited TERMINAL_CWD (or a stale config bridge)
-        // can still point at the install dir even when spawn cwd is home.
-        TERMINAL_CWD: scoutCwd,
-        SCOUT_DASHBOARD_SESSION_TOKEN: token,
-        // Marks this dashboard backend as desktop-spawned so it runs the cron
-        // scheduler tick loop (the gateway isn't running under the app).
-        SCOUT_DESKTOP: '1',
-        // Exact parent identity lets the backend self-exit after an unclean
-        // Desktop death without mistaking a reused PID for its owner. If the
-        // optional marker probe fails, retain legacy PID-only tracking.
-        ...parentIdentityEnv,
-        SCOUT_WEB_DIST: webDist,
-        ...(readyFile ? { SCOUT_DESKTOP_READY_FILE: readyFile } : {})
-      },
-      shell: backend.shell,
-      stdio: ['ignore', 'pipe', 'pipe']
-    })
-  )
-
-  entry.process = child
-  entry.token = token
-  registerLocalBackendExitFinalizer(backendPool, poolKey, entry, () => releaseLocalBackendSlot(entry))
-  // Buffer stdout+stderr from the instant of spawn (#93608): an early crash's
-  // traceback must survive into the claim error and the before-ready exit
-  // message instead of a bare exit code. rememberLog attaches later, after
-  // the claim, and would miss anything printed before it.
-  const outputTail = createBackendOutputTail()
-  outputTail.attach(child)
-
-  let ready = false
-  let rejectStart = null
-
-  const startFailed = new Promise((_resolve, reject) => {
-    rejectStart = reject
-  })
-
-  // Exit/error can now arrive while the ownership claim is still pending.
-  startFailed.catch(() => {})
-
-  child.once('error', error => {
-    rememberLog(`Scout backend for profile "${profile}" failed to start: ${error.message}`)
-    void teardownFailedLocalBackend(poolKey, entry).catch(cleanupError => {
-      rememberLog(
-        `Scout backend for profile "${profile}" cleanup failed: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`
-      )
-    })
-    rejectStart?.(error)
-  })
-  child.once('exit', (code, signal) => {
-    rememberLog(formatBackendExitLine(`Scout backend for profile "${profile}" exited`, code, signal, outputTail))
-    releaseBackendChild(child)
-
-    if (!ready) {
-      rejectStart?.(
-        new Error(
-          `Scout backend for profile "${profile}" exited before it became ready (${signal || code}).${outputTail.describe()}`
-        )
-      )
-    }
-  })
-
-  // Start watching for the READY announcement BEFORE any await (#60323):
-  // stdout is already flowing into the tail, and Node streams never replay
-  // consumed chunks to late listeners — a sentinel printed while
-  // claimBackendChild runs would otherwise be lost forever, timing out a
-  // healthy backend. The tail-buffer accessor covers any residual gap.
-  const portAnnouncement = waitForDashboardPortAnnouncement(child, {
-    bufferedOutput: () => outputTail.text(),
-    describeOutputTail: () => outputTail.describe(),
-    readyFile
-  })
-
-  portAnnouncement.catch(() => {})
-  await claimBackendChild(child, `${backend.command} ${backend.args.join(' ')}`, profile, backendNonce, outputTail)
-  assertPoolEntryStillOwned(poolKey, entry, backendPool, localBackendLifecycle.signal)
-
-  child.stdout.on('data', rememberLog)
-  child.stderr.on('data', rememberLog)
-
-  const port = await Promise.race([portAnnouncement, startFailed])
-  assertPoolEntryStillOwned(poolKey, entry, backendPool, localBackendLifecycle.signal)
-
-  if (readyFile) {
-    fs.unlink(readyFile, () => {})
-  }
-
-  entry.port = port
-
-  const baseUrl = `http://127.0.0.1:${port}`
-  await Promise.race([waitForScout(baseUrl, token), startFailed])
-  assertPoolEntryStillOwned(poolKey, entry, backendPool, localBackendLifecycle.signal)
-  ready = true
-
-  const childAlive = () => child.exitCode === null && !child.killed
-
-  const authToken = await adoptServedDashboardToken(baseUrl, token, {
-    childAlive,
-    label: `Scout backend for profile "${profile}"`,
-    rememberLog
-  })
-
-  assertPoolEntryStillOwned(poolKey, entry, backendPool, localBackendLifecycle.signal)
-
-  entry.token = authToken
-
-  // Verify the WebSocket session token before declaring backend ready.
-  // HTTP /api/status can pass while WS auth fails (separate transport, separate guards).
-  const wsUrl = `ws://127.0.0.1:${port}/api/ws?token=${encodeURIComponent(authToken)}`
-
-  // Our own child: a cold start can stall its loop past the base budget (#96177).
-  const wsProbe = await probeGatewayWebSocket(wsUrl, {
-    WebSocketImpl: globalThis.WebSocket,
-    ...spawnedBackendProbeOptions(childAlive)
-  })
-
-  assertPoolEntryStillOwned(poolKey, entry, backendPool, localBackendLifecycle.signal)
-
-  if (!wsProbe.ok) {
-    throw new Error(
-      `Scout backend for profile "${profile}" is HTTP-reachable but the WebSocket (/api/ws) rejected the session token: ${wsProbe.reason}`
-    )
-  }
-
-  return {
-    baseUrl,
-    mode: 'local',
-    source: 'local',
-    authMode: 'token',
-    token: authToken,
-    profile,
-    wsUrl,
-    logs: scoutLog.slice(-80),
-    ...getWindowState()
-  }
-}
-
-// Bounded, deduplicated pool teardown (see pool-stop.ts): every stop path —
-// idle reaper, LRU eviction, profile delete/rename, quit — shares one
-// in-flight stop per key and retains the process handle until the bounded
-// physical shutdown promise resolves. Previously
-// SIGTERM + immediate entry delete dropped the handle and a slow child
-// survived detached under PID 1.
-const poolStopper = createPoolStopper({
-  pool: backendPool,
-  // localBackendLifecycle is the single owner of local child stop semantics:
-  // stopChild triggers its stop (stop + bounded exit wait + slot release);
-  // waitForExit resolves when that same stop promise settles. Remote /
-  // SSH-isolated pool entries keep `process: null` — child exit is immediate
-  // there, so the same in-flight fence carries only the bootstrap drain +
-  // SSH teardown below (#106935).
-  stopChild: child => {
-    void localBackendLifecycle.stop(child as ChildProcess | null | undefined)
-  },
-  waitForExit: child => localBackendLifecycle.stop(child as ChildProcess | null | undefined),
-  afterStop: async key => {
-    try {
-      await sshBootstrapCoordinator.cancelAndWait(key, () => teardownSshConnection(key))
-    } catch (err) {
-      // The idle reaper calls stopPoolBackend un-awaited; a failed SSH teardown
-      // must not surface as an unhandled rejection or block the pool fence.
-      sshRememberLog(`[ssh-teardown] ${key}: ${String(err)}`)
-    }
-  }
-})
-
-function stopPoolBackend(profile: string): Promise<void> {
-  const entry = backendPool.get(profile)
-
-  const stopping = releaseLocalBackendSlotAfterExit(
-    () => releaseLocalBackendSlot(entry),
-    () => poolStopper.stop(profile)
-  )
-
-  // Fire-and-forget callers still need diagnostics; awaiters receive the
-  // rejection, while physical ownership and the exit finalizer remain live.
-  void stopping.catch(error => {
-    rememberLog(`Profile backend "${profile}" stop failed: ${error instanceof Error ? error.message : String(error)}`)
-  })
-
-  return stopping
-}
-
-// Tell every window the pooled backend under `poolKey` is being retired so the
-// renderer parks that scope (wantOpen=false) instead of redialing into the
-// slot it just vacated. Fired BEFORE the SIGTERM (pool-retire.ts contract).
-function broadcastPoolBackendRetiring(poolKey: string) {
-  for (const win of BrowserWindow.getAllWindows()) {
-    const { webContents } = win
-
-    if (webContents && !webContents.isDestroyed()) {
-      webContents.send('scout:pool:retiring', { poolKey })
-    }
-  }
-}
-
-const poolRetirer = createPoolRetirer({
-  pool: backendPool,
-  coordinator: localBackendSpawnCoordinator,
-  ...createPoolRetirementClient(fetchJson),
-  stopBackend: stopPoolBackend,
-  onRetiring: broadcastPoolBackendRetiring,
-  log: rememberLog
-})
-
-localBackendLifecycle.signal.addEventListener('abort', poolRetirer.dispose, { once: true })
-
-async function teardownPoolBackendAndWait(profile) {
-  await Promise.all(localProfilePoolKeys(profile).map(key => stopPoolBackend(key)))
-}
-
-async function stopAllPoolBackends() {
-  const entries = [...backendPool.values()]
-  await poolStopper.stopAll()
-  entries.forEach(releaseLocalBackendSlot)
-}
-
-/**
- * Last teardown act on Windows: kill orphaned tools still running out of
- * THIS install's artifact root, so no straggler pins the package silo
- * (0x80070020 on the next activation). The managed tool store is NOT a quit
- * root — it is machine-scoped and shared with the surviving gateway and
- * other installs; image locks there are the updater's pause/resume job.
- * Runs after the graceful backend teardown, skips the pids it owned and
- * every live Scout runtime process, so it is only the net for what
- * detached. Best effort throughout; see package-process-reap.ts.
- */
-function reapInstallRootedStragglers(excludePids: number[]): void {
-  if (!IS_WINDOWS) {
-    return
-  }
-
-  const payloadRoot = installShape() === 'bundled' ? process.resourcesPath : null
-
-  try {
-    reapPackageRootedProcesses({
-      installRoots: [payloadRoot],
-      listProcesses: () =>
-        listWindowsProcesses(
-          (file, args, options) =>
-            execFileSync(file, args, {
-              ...hiddenWindowsChildOptions({ encoding: 'utf8', timeout: options.timeout }),
-              windowsHide: options.windowsHide
-            }) as unknown as string
-        ),
-      killProcess: pid => process.kill(pid, 'SIGKILL'),
-      selfPid: process.pid,
-      excludePids,
-      isWindows: true,
-      log: message => rememberLog(message)
-    })
-  } catch (err) {
-    rememberLog(`[package-reap] skipped: ${(err as Error).message}`)
-  }
+  // Every registry id names the one hosted backend.
+  return ensureBackend(profile, opts)
 }
 
 const backendShutdown = createBackendShutdownCoordinator(async (): Promise<void> => {
-  const ownedChildren = IS_WINDOWS ? collectOwnedBackendChildren() : []
-  const localShutdown = localBackendLifecycle.shutdown()
-  const primary = backendConnectionState.getProcess()
-  const primaryStop = teardownPrimaryBackendAndWait(backendTeardownOptions('quit'))
-  const pooledStops = stopAllPoolBackends()
-
-  if (poolIdleReaper) {
-    clearInterval(poolIdleReaper)
-    poolIdleReaper = null
-  }
-
-  await waitForTeardown([localShutdown, primaryStop, pooledStops], 7_000)
-
-  reapInstallRootedStragglers(Number.isInteger(primary?.pid) ? [primary.pid] : [])
-
-  // Verify last, so a surviving child cannot skip the teardown above.
-  const closeStopFailure = windowsCloseStopOwnedBackends(ownedChildren)
-
-  if (closeStopFailure) {
-    rememberLog(`[close-stop] ${closeStopFailure.message}`)
-
-    throw closeStopFailure
-  }
+  await waitForTeardown([teardownPrimaryBackendAndWait(backendTeardownOptions('quit'))], 7_000)
 })
 
 const quitTeardown = createQuitTeardownCoordinator(() => app.quit())
@@ -12185,18 +6909,6 @@ const quitFinalization = createQuitFinalization({
     app.exit(code)
   }
 })
-
-async function teardownSshForQuit(): Promise<void> {
-  for (const scope of sshConnections.keys()) {
-    void teardownSshConnection(scope || null).catch((error: unknown): void =>
-      rememberLog(`SSH teardown failed: ${error instanceof Error ? error.message : String(error)}`)
-    )
-  }
-
-  await sshTeardowns.finish(sshBootstrapCoordinator.promises(), (): Promise<void> =>
-    sshBootstrapCoordinator.forceCleanupAll()
-  )
-}
 
 async function exitAfterBackendShutdown(code) {
   try {
@@ -12232,12 +6944,8 @@ async function prepareProfileDeleteRequest(request) {
 
   if (decision.action === 'teardown-primary') {
     writeActiveDesktopProfile('default')
-    await Promise.all([teardownPrimaryBackendAndWait(), teardownPoolBackendAndWait(decision.profile)])
-
-    return decision.profile
+    await teardownPrimaryBackendAndWait()
   }
-
-  await teardownPoolBackendAndWait(decision.profile)
 
   return decision.profile
 }
@@ -12252,7 +6960,7 @@ async function prepareProfileRenameRequest(request) {
     restartPrimaryBackend: async () => {
       await startScout()
     },
-    teardownPoolBackendAndWait,
+    teardownPoolBackendAndWait: async () => undefined,
     teardownPrimaryBackendAndWait,
     writeActiveDesktopProfile: profile => {
       writeActiveDesktopProfile(profile)
@@ -12260,267 +6968,16 @@ async function prepareProfileRenameRequest(request) {
   })
 }
 
-// ── Attach-first: one backend per HOST (multiplex-only) ───────────────────
-// Escape hatch: a dedicated, private backend for this app instead of the host's.
-const ISOLATED_BACKEND = process.env.SCOUT_DESKTOP_ISOLATED_BACKEND === '1'
-const ATTACHED_LIVENESS_POLL_MS = 15_000
-let attachedBackendMonitor: NodeJS.Timeout | null = null
-let hostSpawnReservation: SpawnReservation | null = null
-
-function stopAttachedBackendMonitor() {
-  if (attachedBackendMonitor) {
-    clearInterval(attachedBackendMonitor)
-    attachedBackendMonitor = null
-  }
-}
-
-/**
- * An attached backend has no child process, so `child.exit` can never drive
- * recovery. Poll its readiness instead; a backend that dies under us
- * invalidates the connection and hands the respawn to the same supervisor path
- * a dead child would (which re-runs discovery and spawns, since the host now
- * has no backend).
- */
-function startAttachedBackendMonitor(attached: AttachedBackend) {
-  stopAttachedBackendMonitor()
-
-  attachedBackendMonitor = setInterval(() => {
-    void waitForScout(attached.baseUrl, attached.token, undefined, 'token', {}, { alreadyBound: true }).catch(() => {
-      stopAttachedBackendMonitor()
-      rememberLog(`[attach] attached backend on ${attached.baseUrl} (pid ${attached.pid}) is gone; recovering`)
-      invalidatePrimaryConnection()
-      scheduleUnexpectedPrimaryRecovery({ error: 'The Scout backend this app attached to exited.', ready: true })
-    })
-  }, ATTACHED_LIVENESS_POLL_MS)
-
-  attachedBackendMonitor.unref?.()
-}
-
-/** Discover and attach to the host's running backend; null means "spawn one". */
-function attachToRunningHostBackend(): Promise<AttachedBackend | null> {
-  const options = { isolated: ISOLATED_BACKEND, ledgerPath: spawnLedgerPath(SCOUT_HOME, path.join) }
-
-  return attachOrReserveSpawn(options, hostBackendAttachDeps(), hostSpawnGateDeps())
-    .then(outcome => {
-      if ('attached' in outcome) {
-        releaseHostSpawnReservation()
-
-        return outcome.attached
-      }
-
-      hostSpawnReservation = outcome.reservation
-
-      return null
-    })
-    .catch(error => {
-      // Discovery must never be able to block boot: fall through to spawning.
-      rememberLog(`[attach] host backend discovery failed (${error.message}); spawning our own`)
-
-      return null
-    })
-}
-
-function hostBackendAttachDeps() {
-  return {
-    log: rememberLog,
-    readLedger: (target: string) => {
-      try {
-        return fs.readFileSync(target, 'utf8')
-      } catch {
-        return null
-      }
-    },
-    probeWebSocket: (wsUrl: string) => probeGatewayWebSocket(wsUrl, { WebSocketImpl: globalThis.WebSocket }),
-    publishedTokenFor: (record: HostBackendRecord) =>
-      lookupPublishedSessionToken(
-        record,
-        {
-          home: os.homedir(),
-          lockDir: process.env.SCOUT_GATEWAY_LOCK_DIR,
-          platform: process.platform,
-          stateHome: process.env.XDG_STATE_HOME
-        },
-        {
-          lstat: target => fs.lstatSync(target),
-          readFile: target => fs.readFileSync(target, 'utf8'),
-          uid: typeof process.getuid === 'function' ? process.getuid() : null
-        }
-      ),
-    resolveServedToken: (baseUrl: string) => resolveServedDashboardToken(baseUrl, ''),
-    // A ledger record is written only after its backend binds, so a refused
-    // port is a dead record (a hard-killed backend leaves both the record and
-    // its published token behind), not one still starting.
-    waitForReady: (baseUrl: string, token: string) =>
-      waitForScout(baseUrl, token, undefined, 'token', {}, { alreadyBound: true })
-  }
-}
-
-function hostSpawnGatePath() {
-  return path.join(SCOUT_HOME, 'desktop-backend-spawn.json')
-}
-
-function hostSpawnGateDeps() {
-  return {
-    now: () => Date.now(),
-    read: () => {
-      try {
-        const record = JSON.parse(fs.readFileSync(hostSpawnGatePath(), 'utf8'))
-        const owner = Number(record?.pid)
-
-        if (!Number.isInteger(owner) || owner <= 0) {
-          return null
-        }
-
-        // A gate whose owner is gone is no gate at all.
-        try {
-          process.kill(owner, 0)
-        } catch {
-          return null
-        }
-
-        return { ownerAlive: true, startedAt: Number(record?.startedAt) || 0 }
-      } catch {
-        return null
-      }
-    },
-    take: () => {
-      const gatePath = hostSpawnGatePath()
-
-      try {
-        fs.writeFileSync(gatePath, JSON.stringify({ pid: process.pid, startedAt: Date.now() }), { mode: 0o600 })
-      } catch {
-        // A gate we cannot write is a race we cannot win; spawning anyway is
-        // exactly today's behaviour, so never fail boot over it.
-      }
-
-      return () => {
-        try {
-          fs.unlinkSync(gatePath)
-        } catch {
-          // Already gone / never written.
-        }
-      }
-    },
-    sleep: (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
-  }
-}
-
-function releaseHostSpawnReservation() {
-  hostSpawnReservation?.release()
-  hostSpawnReservation = null
-}
-
 function startScout({ supervisorRecovery = false }: { supervisorRecovery?: boolean } = {}): Promise<
   Awaited<ReturnType<typeof backendConnectionState.getPromise>>
 > {
-  primaryRecoverySuppressed = false
-  primaryStartsInFlight += 1
-
-  const start: Promise<Awaited<ReturnType<typeof backendConnectionState.getPromise>>> = localBackendLifecycle.start(
-    () => runScoutStart({ supervisorRecovery })
-  )
-
-  const releaseStart = (): void => {
-    primaryStartsInFlight -= 1
-  }
-
-  // Ordering contract: this reaction is registered on the SAME promise the
-  // caller receives, before any caller `.catch`, so releaseStart has already
-  // run (primaryStartsInFlight back to 0) when runPrimaryRecoverySpawn's
-  // `.catch` evaluates primaryRecoveryState(). Returning a derived promise
-  // (start.then(...)) or wrapping `start` would invert that order: every
-  // pre-ready retry would see hasPendingStart:true, be refused, and leave the
-  // recovery claim stuck with no retry and no UI.
-  void start.then(releaseStart, releaseStart)
-
-  return start
+  return runScoutStart({ supervisorRecovery })
 }
 
 // A quit or update handoff kills renderers while their windows can still report
 // live; the renderer lifecycle must treat that as teardown, not a crash to reload.
 function rendererTeardownInProgress(): boolean {
   return isQuittingForHandoff || backendShutdown.hasStarted()
-}
-
-function primaryRecoveryState() {
-  return {
-    hasCurrentOwner: backendConnectionState.getProcess() !== null || backendConnectionState.getPromise() !== null,
-    hasPendingStart: primaryStartsInFlight > 0,
-    intentionalTeardown: primaryRecoverySuppressed || isQuittingForHandoff || backendShutdown.hasStarted()
-  }
-}
-
-function reportPrimaryRecoveryCrashLoop(code: number | null, signal: string | null): boolean {
-  if (!primaryExitRecovery.isCrashLooping()) {
-    return false
-  }
-
-  const message =
-    'Scout backend keeps crashing right after it restarts; not restarting it again. Relaunch Scout Desktop.'
-
-  rememberLog(`[supervisor] ${message}`)
-  sendBackendExit({ code, signal, error: message })
-
-  return true
-}
-
-const firstLine = (text: string): string => (text || '').split('\n').find(Boolean) || ''
-
-function runPrimaryRecoverySpawn(code: number | null, signal: string | null) {
-  startScout({ supervisorRecovery: true }).catch(respawnError => {
-    rememberLog(`[supervisor] backend respawn failed: ${firstLine(respawnError.message)}`)
-
-    // Terminal boot failures still own their existing recovery UI. Only a
-    // supervisor-owned respawn that failed transiently before ready may spend
-    // another bounded recovery slot.
-    const latched = latchedBootFailure()
-
-    if (latched) {
-      rememberLog(`[supervisor] respawn refused: boot failure latched: ${firstLine(latched.message)}`)
-
-      return
-    }
-
-    // releaseStart (startScout) already ran: same-promise reaction order, so
-    // hasPendingStart is false here. See the ordering contract in startScout.
-    if (primaryExitRecovery.retryAfterFailedStart(primaryRecoveryState())) {
-      rememberLog('[supervisor] backend respawn failed before ready; retrying within crash-loop budget')
-      runPrimaryRecoverySpawn(code, signal)
-
-      return
-    }
-
-    reportPrimaryRecoveryCrashLoop(code, signal)
-  })
-}
-
-// A ready primary child died. When its exit leaves the primary slot with no
-// owner and no start in flight (outside an intentional teardown), the
-// supervisor owns the respawn (#112344): the stale-classified exit used to
-// "log and return", and recovery then hinged on the renderer noticing its
-// socket drop — a 9 h engine-less window when it did not. Pool children are
-// deliberately not consulted: they never own the window backend.
-function scheduleUnexpectedPrimaryRecovery({
-  code = null,
-  signal = null,
-  error = null,
-  ready = false
-}: { code?: number | null; error?: string | null; ready?: boolean; signal?: string | null } = {}) {
-  if (!ready) {
-    return false
-  }
-
-  const claimed = primaryExitRecovery.claim(primaryRecoveryState())
-
-  if (!claimed) {
-    return reportPrimaryRecoveryCrashLoop(code, signal)
-  }
-
-  rememberLog('[supervisor] backend exit left no primary owner and no start in flight; respawning')
-  sendBackendExit({ code, signal, ...(error ? { error } : {}) })
-  runPrimaryRecoverySpawn(code, signal)
-
-  return true
 }
 
 /**
@@ -12537,41 +6994,22 @@ function latchedBootFailure(): Error | null {
 async function runScoutStart({ supervisorRecovery = false }: { supervisorRecovery?: boolean } = {}): Promise<
   Awaited<ReturnType<typeof backendConnectionState.getPromise>>
 > {
-  // Only the single-instance lock holder may reap/spawn/claim the desktop
-  // backend. A lock-losing instance must stay inert even if some path reaches
-  // here (e.g. the deferred-quit window before `ready`): its reapOrphans()
-  // otherwise SIGTERMs the running instance's live backend (#87295).
+  void supervisorRecovery
+
   if (!isPrimaryInstance) {
     rememberLog('[boot] non-primary instance: skipping backend machinery')
     throw new Error('Scout Desktop is already running in another window.')
   }
 
-  await reapOrphanedBackendsOnce()
-  localBackendLifecycle.assertCanStart()
-
-  // Latched-failure short-circuit: once bootstrap has failed in this
-  // process, every subsequent startScout() call re-throws the same error
-  // without re-running install.ps1. This prevents the renderer's
-  // ensureGatewayOpen retries (and any other getConnection callers) from
-  // restarting a 5-10 minute install loop while the user is still reading
-  // the failure overlay.
-  //
-  // A confirmed remote reauth rejection is likewise terminal until the user
-  // signs in. Short-circuiting here keeps the boot-failure overlay latched and
-  // its "Sign in" button clickable, instead of re-driving boot on every retry.
-  //
-  // Deliberately silent: this runs on every proxied request while a failure is
-  // latched (ensureBackend -> startScout), so a log line here would flood the
-  // bounded rememberLog ring and evict the lines that explain the original
-  // failure. The supervisor logs the refusal once in runPrimaryRecoverySpawn.
+  // A confirmed reauth rejection stays latched until the user retries; this
+  // runs on every proxied request, so it stays silent.
   const latched = latchedBootFailure()
 
   if (latched) {
     throw latched
   }
 
-  // E2E: simulate a boot failure without breaking the real backend. The boot
-  // progresses a few steps, then fails with the given error message.
+  // E2E: simulate a boot failure without breaking the real backend.
   if (BOOT_FAKE_ERROR) {
     await advanceBootProgress('backend.resolve', 'Resolving Scout backend', 8)
     const error = new Error(BOOT_FAKE_ERROR) as any
@@ -12586,455 +7024,46 @@ async function runScoutStart({ supervisorRecovery = false }: { supervisorRecover
     return existingConnectionPromise
   }
 
-  // Seed active-profile.json from legacy signals BEFORE the first
-  // profile-dependent read (`primaryBackendIsRemote()` on the next line, then
-  // `primaryProfileKey()` inside the connection IIFE below). Without this,
-  // remote-mode users whose preference file is missing (first boot after
-  // update) resolve primaryProfileKey() to 'default' inside the IIFE, then
-  // the remote branch returns and never runs the migration. Runs once;
-  // no-op when the preference file already exists.
   migrateActiveProfileIfMissing()
 
   const connectionAttempt = backendConnectionState.startAttempt()
+  // One launch-profile decision per attempt (#108417): a profile remembered
+  // mid-startup becomes the NEXT boot's preference.
+  const { routingProfile: primaryProfile } = resolveLaunchProfile(readActiveDesktopProfile)
 
-  // ONE launch-profile decision for this attempt (#108417): routing pin,
-  // --profile argv, and the child env all derive from the same read, so a
-  // scout:profile:remember landing mid-startup becomes the NEXT boot's
-  // preference instead of splitting routing identity from the launch
-  // argument. (The pin below still honors a live primary — but a primary
-  // being live means startScout never got here.)
-  const { argvProfile: activeProfile, routingProfile: primaryProfile } = resolveLaunchProfile(readActiveDesktopProfile)
-
-  // Pin the routing table to the profile this primary actually boots as; a
-  // later scout:profile:remember must not retarget requests mid-life.
   primaryProfilePin.pin(primaryProfile)
-
-  // Legacy path callers without an explicit profile belong to the primary
-  // window backend. Profile-scoped callers still pass their key directly.
   setActiveGatewayProfile(primaryProfile)
 
-  // Classify this boot BEFORE the throwing resolve/mint runs: a remote failure
-  // must NOT latch (it's transient — see shouldLatchBackendStartFailure), while
-  // a local failure latches to break install-restart loops.
-  let attemptedRemote = managedPrimaryRestoreOwners.size > 0 || primaryBackendIsRemote()
-
   const connectionPromise = (async () => {
-    const connectRemote = async remote => {
-      // resolveRemote() may take arbitrarily long (settings resolve / ws-ticket
-      // mint). If a newer attempt started meanwhile (e.g. the user switched
-      // remotes and Apply invalidated this attempt), bail before probing.
-      backendConnectionState.assertCurrentAttempt(connectionAttempt)
-
-      await advanceBootProgress('backend.remote', `Connecting to remote Scout backend at ${remote.baseUrl}`, 24)
-      await waitForRemoteScout(remote)
-
-      // Second async boundary: the health probe itself can outlive the
-      // attempt. A late success here must not publish a stale descriptor.
-      backendConnectionState.assertCurrentAttempt(connectionAttempt)
-
-      updateBootProgress({
-        phase: 'backend.ready',
-        message: 'Remote Scout backend is ready',
-        progress: 94,
-        running: true,
-        error: null
-      })
-
-      return createPrimaryRemoteConnection(remote, scoutLog.slice(-80), getWindowState())
-    }
-
     await advanceBootProgress('backend.resolve', 'Resolving Scout backend', 8)
-    // Resolve for the desktop's primary profile so a per-profile remote
-    // override on the active profile is honored (falls back to env / global).
-
-    // GUI launches (Finder/Dock, desktop launchers) inherit a minimal PATH
-    // that skips the user's shell profiles. Merge the login-shell PATH into
-    // process.env BEFORE resolving the runtime or spawning the backend, so
-    // both the Electron-side resolvers and the whole backend subtree (tool
-    // availability checks, stdio MCP servers) can find Homebrew-, nvm-, and
-    // ~/.local/bin-installed CLIs. Single-flight with the whenReady warmup;
-    // failure-hardened — a broken shell profile never blocks boot.
-    const loginShellPath = await ensureLoginShellPath()
-
-    if (loginShellPath.applied) {
-      rememberLog('[env] merged login-shell PATH into process.env for backend spawn')
-    } else if (loginShellPath.reason && !['win32', 'unchanged'].includes(loginShellPath.reason)) {
-      rememberLog(`[env] login-shell PATH resolution unavailable (${loginShellPath.reason}); keeping inherited PATH`)
-    }
-
-    const token = crypto.randomBytes(32).toString('base64url')
-    // Pin the desktop's chosen profile via the global --profile flag. A launch
-    // override is persisted into active-profile.json before startScout, so
-    // Scout.exe --profile <name> and scout -p <name> desktop both land here.
-    // Null (no stored preference, no launch flag) keeps the legacy bare serve
-    // so the child still follows the sticky active_profile file.
-    // `activeProfile` is the SAME decision that pinned routing above — never
-    // re-read here (#108417). (--port 0: the OS assigns an ephemeral port; the
-    // child announces it on stdout.)
-    const backendArgs = serveBackendArgs(activeProfile || undefined)
-
-    const setup = await runPrimaryBackendStartup({
-      signal: localBackendLifecycle.signal,
-      assertCurrentAttempt: () => backendConnectionState.assertCurrentAttempt(connectionAttempt),
-      attachHostBackend: attachToRunningHostBackend,
-      connectRemote,
-      ensureLocalRuntime: backend =>
-        ensureRuntime(backend, () => backendConnectionState.assertCurrentAttempt(connectionAttempt)),
-      prepareLocalBackend: async () => {
-        await advanceBootProgress('backend.runtime', 'Resolving Scout runtime', 28)
-
-        return resolveScoutBackend(backendArgs)
-      },
-      resolveRemote: () => {
-        // Classify immediately before each throwing resolve. This callback runs
-        // both for an already-saved remote and after first-run remote Apply.
-        attemptedRemote = managedPrimaryRestoreOwners.size > 0 || primaryBackendIsRemote()
-
-        return resolveRemoteBackend(primaryProfile, { primary: true })
-      },
-      selectRegistryPrimary: async () => {
-        // The pre-update resolve can miss a registry primary (stale cache, v1
-        // mode=local winning the first read). Re-read after the update gate
-        // and select launchMode=primary before any local attach or spawn.
-        connectionRegistryCache = null
-        connectionRegistryCacheMtime = null
-        attemptedRemote = true
-
-        return resolveRemoteBackend(primaryProfile, { primary: true, forceRegistryPrimary: true })
-      },
-      waitForDecision: waitForFirstRunSetupChoice,
-      // Mutual exclusion with an in-app update (#50238). Remote connections
-      // return before this waiter; local starts park until the updater exits.
-      waitForLocalStart: waitForUpdateToFinish
-    })
-
+    const remote = await resolveRemoteBackend(primaryProfile, { primary: true })
+    // The resolve can outlive this attempt; a late success must not publish.
     backendConnectionState.assertCurrentAttempt(connectionAttempt)
+    setWslBridgeProfileState(primaryProfile, false)
 
-    if (setup.kind === 'remote') {
-      // Paths from the remote backend belong to a host the Windows desktop
-      // cannot open via wsl.exe — disable WSL path bridging so native dialogs
-      // and file panels don't spawn wsl.exe (or the interactive install prompt
-      // on WSL-less machines) for unresolvable paths. (#66433)
-      setWslBridgeProfileState(primaryProfile, false)
-
-      return setup.connection
-    }
-
-    // Multiplex-only: a backend was already running on this host and we attached
-    // to it. Nothing was spawned, so there is no child to own — liveness is
-    // polled instead (startAttachedBackendMonitor).
-    if (setup.kind === 'attached') {
-      const attached = setup.attached
-
-      setWslBridgeProfileState(primaryProfile, true)
-      startAttachedBackendMonitor(attached)
-
-      updateBootProgress({
-        phase: 'backend.ready',
-        message: 'Attached to the running Scout backend',
-        progress: 94,
-        running: true,
-        error: null
-      })
-
-      return {
-        baseUrl: attached.baseUrl,
-        mode: 'local',
-        source: 'local',
-        authMode: 'token',
-        attached: true,
-        token: attached.token,
-        profile: primaryProfile,
-        wsUrl: attached.wsUrl,
-        logs: scoutLog.slice(-80),
-        ...getWindowState()
-      }
-    }
-
-    // Local WSL backend — paths are bridgeable.
-    setWslBridgeProfileState(primaryProfile, true)
-
-    stopAttachedBackendMonitor()
-
-    const backend = setup.backend
-    // Route old runtimes (no `serve`) through the legacy `dashboard --no-open`.
-    backend.args = await getBackendArgsForRuntime(backend)
+    await advanceBootProgress('backend.remote', `Connecting to the Scout backend at ${remote.baseUrl}`, 24)
+    await waitForRemoteScout(remote)
     backendConnectionState.assertCurrentAttempt(connectionAttempt)
-    const scoutCwd = resolveScoutCwd()
-    const webDist = resolveWebDist()
-    const readyFile = backend.readyFile ? makeDashboardReadyFile() : null
-
-    await advanceBootProgress('backend.spawn', `Starting Scout backend via ${backend.label}`, 84)
-    rememberLog(`Starting Scout backend via ${backend.label}`)
-
-    const profile = primaryProfile
-    const parentStartMarker = await desktopParentStartMarker()
-    const backendNonce = crypto.randomBytes(16).toString('hex')
-    const parentIdentityEnv = parentWatchdogEnv(process.pid, parentStartMarker, backendNonce)
-
-    backendConnectionState.assertCurrentAttempt(connectionAttempt)
-
-    const scoutProcess = spawnOwnedBackend(
-      backend.command,
-      backend.args,
-      hiddenWindowsChildOptions({
-        cwd: scoutCwd,
-        env: {
-          // Never another profile's dotenv credentials from the Desktop env (#68367).
-          ...profileBackendParentEnv({ scoutHome: SCOUT_HOME, profile: activeProfile }),
-          // Explicitly pin SCOUT_HOME for the child so Python's get_scout_home()
-          // resolves to the SAME location our resolveScoutHome() picked. Without
-          // this pin, Python falls back to ~/.scout on every platform — fine on
-          // mac/linux (where our default matches), but on Windows our default is
-          // %LOCALAPPDATA%\scout, which differs from C:\Users\<u>\.scout.
-          // Mismatch would split config / sessions / .env / logs across two
-          // directories. install.ps1 sets SCOUT_HOME via setx; the desktop
-          // can't reliably do that, so we set it inline for every spawn.
-          SCOUT_HOME,
-          ...backend.env,
-          TERMINAL_CWD: scoutCwd,
-          SCOUT_DASHBOARD_SESSION_TOKEN: token,
-          // Marks this dashboard backend as desktop-spawned so it runs the cron
-          // scheduler tick loop (the gateway isn't running under the app).
-          SCOUT_DESKTOP: '1',
-          // Exact parent identity lets the backend self-exit after an unclean
-          // Desktop death without mistaking a reused PID for its owner. If the
-          // optional marker probe fails, retain legacy PID-only tracking.
-          ...parentIdentityEnv,
-          SCOUT_WEB_DIST: webDist,
-          ...(readyFile ? { SCOUT_DESKTOP_READY_FILE: readyFile } : {})
-        },
-        shell: backend.shell,
-        stdio: ['ignore', 'pipe', 'pipe']
-      })
-    )
-
-    // Buffer stdout+stderr from the instant of spawn (#93608): an early
-    // crash's traceback must survive into the claim error and the
-    // before-ready exit message shown by the boot UI. rememberLog attaches
-    // later, after the claim, and would miss anything printed before it.
-    const primaryOutputTail = createBackendOutputTail()
-    primaryOutputTail.attach(scoutProcess)
-
-    // Start watching for the READY announcement BEFORE any await (#60323):
-    // claimBackendChild can take seconds (its Windows Get-Process probe cold
-    // start alone runs 2-8s) and advanceBootProgress awaits renderer IPC.
-    // stdout is already flowing into the tail, and Node streams never replay
-    // consumed chunks to late listeners, so a sentinel printed during that
-    // window was lost forever — the wait then hit its 90s timeout and a
-    // healthy backend was killed (deterministic on Windows, racy on
-    // macOS/Linux). The tail-buffer accessor covers any residual gap.
-    const portAnnouncement = waitForDashboardPortAnnouncement(scoutProcess, {
-      bufferedOutput: () => primaryOutputTail.text(),
-      describeOutputTail: () => primaryOutputTail.describe(),
-      readyFile
-    })
-
-    // Mark handled so an early rejection (child dies during the claim) can't
-    // surface as an unhandled rejection before the Promise.race below attaches.
-    portAnnouncement.catch(() => {})
-
-    const processOwner = await backendConnectionState.claimProcess(
-      connectionAttempt,
-      scoutProcess,
-      (child: ChildProcess): ReturnType<typeof claimBackendChild> =>
-        claimBackendChild(
-          child,
-          `${backend.command} ${backend.args.join(' ')}`,
-          profile,
-          backendNonce,
-          primaryOutputTail
-        )
-    )
-
-    if (!processOwner) {
-      await localBackendLifecycle.stop(scoutProcess)
-      releaseBackendChild(scoutProcess)
-      throw new Error('Scout backend start was superseded by a newer connection attempt.')
-    }
-
-    scoutProcess.stdout.on('data', rememberLog)
-    scoutProcess.stderr.on('data', rememberLog)
-    let backendReady = false
-    let rejectBackendStart = null
-
-    const backendStartFailed = new Promise((_resolve, reject) => {
-      rejectBackendStart = reject
-    })
-
-    scoutProcess.once('error', error => {
-      releaseBackendChild(scoutProcess)
-
-      if (!backendConnectionState.clearForCurrentProcess(processOwner)) {
-        rememberLog(`Ignoring stale Scout backend error: ${error.message}`)
-        scheduleUnexpectedPrimaryRecovery({ error: error.message, ready: backendReady })
-        rejectBackendStart?.(new Error('Scout backend start was superseded by a newer connection attempt.'))
-
-        return
-      }
-
-      // The CURRENT owner failed to start: its routing identity must not
-      // outlive it. A newer attempt already re-pins on its own decision
-      // (#108417), and the stale branch above never reaches this clear.
-      primaryProfilePin.clear()
-
-      rememberLog(`Scout backend failed to start: ${error.message}`)
-      updateBootProgress(
-        {
-          error: error.message,
-          message: `Scout backend failed to start: ${error.message}`,
-          phase: 'backend.error',
-          running: false
-        },
-        { allowDecrease: true }
-      )
-      sendBackendExit({ code: null, signal: null, error: error.message })
-      rejectBackendStart?.(error)
-    })
-    scoutProcess.once('exit', (code, signal) => {
-      releaseBackendChild(scoutProcess)
-
-      if (!backendConnectionState.clearForCurrentProcess(processOwner)) {
-        rememberLog(formatBackendExitLine('Ignoring stale Scout backend exit', code, signal, primaryOutputTail))
-
-        scheduleUnexpectedPrimaryRecovery({ code, signal, ready: backendReady })
-
-        if (!backendReady) {
-          rejectBackendStart?.(new Error('Scout backend start was superseded by a newer connection attempt.'))
-        }
-
-        return
-      }
-
-      rememberLog(formatBackendExitLine('Scout backend exited', code, signal, primaryOutputTail))
-
-      // The current primary child is gone; release its routing pin so the
-      // next startScout() re-reads active-profile.json instead of re-pinning
-      // the dead child's profile (#108417). Supervisor respawns go through
-      // startScout, which makes a fresh decision — a respawn cannot inherit
-      // a pin from a process that no longer exists.
-      primaryProfilePin.clear()
-
-      if (!scheduleUnexpectedPrimaryRecovery({ code, signal, ready: backendReady })) {
-        sendBackendExit({ code, signal })
-      }
-
-      if (!backendReady) {
-        const message = `Scout backend exited before it became ready (${signal || code}).${primaryOutputTail.describe()}`
-        updateBootProgress(
-          {
-            error: message,
-            message,
-            phase: 'backend.error',
-            running: false
-          },
-          { allowDecrease: true }
-        )
-        rejectBackendStart?.(
-          new Error(
-            `Scout backend exited before it became ready (${signal || code}). Log: ${DESKTOP_LOG_PATH}\n${recentScoutLog()}`
-          )
-        )
-      }
-    })
-
-    await advanceBootProgress('backend.port', 'Waiting for Scout backend to launch', 86)
-    backendConnectionState.assertCurrentAttempt(connectionAttempt)
-
-    // Discover the ephemeral port the child bound to
-    const port = await Promise.race([portAnnouncement, backendStartFailed])
-    backendConnectionState.assertCurrentAttempt(connectionAttempt)
-
-    if (readyFile) {
-      fs.unlink(readyFile, () => {})
-    }
-
-    const baseUrl = `http://127.0.0.1:${port}`
-    await advanceBootProgress('backend.wait', 'Waiting for Scout backend to become ready', 90)
-    backendConnectionState.assertCurrentAttempt(connectionAttempt)
-    await Promise.race([waitForScout(baseUrl, token), backendStartFailed])
-    backendConnectionState.assertCurrentAttempt(connectionAttempt)
-    backendReady = true
-    // The host now has a bound, registered backend: the next launcher will
-    // discover and attach to it, so the spawn gate is done.
-    releaseHostSpawnReservation()
-    primaryExitRecovery.reset()
-    backendStartFailure = null
-
-    const childAlive = () => scoutProcess.exitCode === null && !scoutProcess.killed
-
-    const authToken = await adoptServedDashboardToken(baseUrl, token, {
-      childAlive,
-      rememberLog
-    })
-
-    backendConnectionState.assertCurrentAttempt(connectionAttempt)
-
-    // Verify the WebSocket session token before declaring backend ready.
-    const wsUrl = `ws://127.0.0.1:${port}/api/ws?token=${encodeURIComponent(authToken)}`
-
-    // Same policy as the pool path: our own child may still be cold-starting (#96177).
-    const wsProbe = await probeGatewayWebSocket(wsUrl, {
-      WebSocketImpl: globalThis.WebSocket,
-      ...spawnedBackendProbeOptions(childAlive)
-    })
-
-    backendConnectionState.assertCurrentAttempt(connectionAttempt)
-
-    if (!wsProbe.ok) {
-      throw new Error(
-        `Local Scout backend is HTTP-reachable but the WebSocket (/api/ws) rejected the session token: ${wsProbe.reason}`
-      )
-    }
 
     updateBootProgress({
       phase: 'backend.ready',
-      message: 'Scout backend is ready. Finalizing desktop startup',
+      message: 'Scout backend is ready',
       progress: 94,
       running: true,
       error: null
     })
 
-    // A successful boot (including a soft restart that the repair-guard
-    // chose over a hard reinstall, see #74874) means any in-flight repair
-    // attempt counter has been honoured — reset it so the next genuine
-    // failure starts fresh from attempt 1 instead of inheriting the
-    // accumulated count of the resolved episode.
-    bootstrapRepairAttempt = 0
-
-    return {
-      baseUrl,
-      mode: 'local',
-      source: 'local',
-      authMode: 'token',
-      token: authToken,
-      profile,
-      wsUrl,
-      logs: scoutLog.slice(-80),
-      ...getWindowState()
-    }
+    return createPrimaryRemoteConnection(remote, scoutLog.slice(-80), getWindowState())
   })().catch(async error => {
-    releaseHostSpawnReservation()
-
     if (!backendConnectionState.clearPromiseForAttempt(connectionAttempt)) {
       throw error
     }
 
-    // The startup attempt this pin belongs to is being torn down: release its
-    // routing identity so a later start re-reads the preference. The
-    // attempt guard above means a superseded attempt's failure never clears
-    // a newer attempt's pin (#108417).
+    // Release this attempt's routing identity so a later start re-reads the
+    // preference (#108417).
     primaryProfilePin.clear()
 
-    await backendConnectionState.stopProcess(localBackendLifecycle.stop)
-
-    if (error instanceof FirstRunSetupResetError) {
-      throw error
-    }
-
     const message = error instanceof Error ? error.message : String(error)
-    const hostKeyChanged = isHostKeyChangedBootFailure(error)
-    const sshAuthFailed = isSshAuthFailedBootFailure(error)
 
     const statusCode = Number(
       error && typeof error === 'object' && Number.isInteger((error as any).statusCode)
@@ -13042,37 +7071,11 @@ async function runScoutStart({ supervisorRecovery = false }: { supervisorRecover
         : NaN
     )
 
-    // Only latch LOCAL boot failures. A remote failure (lapsed session / mint
-    // timeout / host briefly unreachable across sleep) is transient and has no
-    // child 'exit' handler to clear the cache — latching it would wedge the app
-    // on "session expired" until a full restart, defeating reconnect, the
-    // "Sign out & sign in" reload, and the wake-recovery revalidate path.
-    // A supervisor-owned respawn never latches (see the predicate).
-    if (shouldLatchBackendStartFailure({ attemptedRemote, supervisorRecovery })) {
-      backendStartFailure = error instanceof Error ? error : new Error(message)
-    }
+    // A confirmed reauth rejection can't self-heal; everything else (backend
+    // down, network blip across sleep) is transient and stays retryable.
+    const isReauth = isReauthRequiredError(error)
 
-    // A host-key CHANGE is the terminal exception among remote failures: SSH
-    // fails closed until the user verifies the change and clears the stale
-    // known_hosts entry, so retrying re-drives the identical doomed boot (one
-    // bundle showed 157 consecutive failures over 2.5h). Latch it like a local
-    // failure — reset/repair/apply-config clear the latch after the user fixes
-    // known_hosts.
-    if (shouldLatchHostKeyChangedFailure({ attemptedRemote, isReauth: false, isHostKeyChanged: hostKeyChanged })) {
-      backendStartFailure = error instanceof Error ? error : new Error(message)
-    }
-
-    // Rejected SSH credentials are just as terminal (#72698): BatchMode ssh
-    // keeps failing until the user loads the key or edits the connection, and
-    // an unlatched failure lets every api call re-drive boot and hide the
-    // overlay out from under its Gateway settings button.
-    if (shouldLatchSshAuthFailure({ attemptedRemote, isReauth: false, isSshAuthFailed: sshAuthFailed })) {
-      backendStartFailure = error instanceof Error ? error : new Error(message)
-    }
-
-    // A confirmed reauth rejection latches separately: it can't self-heal, and
-    // leaving it unlatched hides the overlay's "Sign in" button on every retry.
-    if (shouldLatchRemoteReauthFailure({ attemptedRemote, isReauth: isReauthRequiredError(error) })) {
+    if (isReauth) {
       remoteReauthFailure = error instanceof Error ? error : new Error(message)
     }
 
@@ -13081,18 +7084,7 @@ async function runScoutStart({ supervisorRecovery = false }: { supervisorRecover
         error: message,
         message: `Desktop boot failed: ${message}`,
         phase: 'backend.error',
-        // Renderer contract for the self-heal loop (#82679): a transient
-        // REMOTE failure (dropped SSH/HTTP registered connection, mint
-        // timeout) is retryable — the renderer re-attempts the boot with
-        // bounded backoff. Local failures, confirmed reauth rejections,
-        // host-key changes, and rejected SSH credentials are not: those end in
-        // the recovery overlay / sign-in affordance.
-        retryable: isRetryableRemoteBootFailure({
-          attemptedRemote,
-          isReauth: isReauthRequiredError(error),
-          isHostKeyChanged: hostKeyChanged,
-          isSshAuthFailed: sshAuthFailed
-        }),
+        retryable: !isReauth,
         running: false,
         statusCode: Number.isInteger(statusCode) ? statusCode : undefined
       },
@@ -14883,19 +8875,8 @@ async function connectDesktopProfileRoute(
   // both land here. The claim key mirrors ensureBackend()'s own profile
   // normalization so every spelling of the primary coalesces onto one dial.
   const scopeKey = backendScopeKey(route.connectionId, route.profile)
-  const clearSpawnPriority = applySpawnPriority(scopeKey, spawnPriority)
 
-  let connection
-
-  try {
-    connection = await backendDialClaims.run(scopeKey, () =>
-      route.connectionId
-        ? ensureRegistryBackend(route.connectionId, route.profile, '', { spawnPriority })
-        : ensureBackend(route.profile, { spawnPriority })
-    )
-  } finally {
-    clearSpawnPriority()
-  }
+  const connection = await backendDialClaims.run(scopeKey, () => ensureBackend(route.profile, { spawnPriority }))
 
   // Every republish carries LIVE window state (#102451): the backend pool entry
   // (and the getWindowState() snapshot startScout baked into it) outlives
@@ -14968,20 +8949,14 @@ function recordWindowConnectionRoute(sender: Electron.WebContents, route: unknow
 }
 
 ipcMain.on('scout:connection:active-route', (event, route) => recordWindowConnectionRoute(event.sender, route))
-// Reconnect-after-wake recovery. A REMOTE primary backend has no child process,
-// so the 'exit'/'error' handlers that would clear a dead connection promise never
-// fire — once the remote becomes unreachable across a sleep/wake the renderer
-// re-dials the same dead descriptor forever and the composer stays stuck on
-// "Starting Scout…". Before the renderer's backoff loop reconnects, it asks us
-// to confirm the cached PRIMARY backend is still reachable; if a remote one is
-// not, we drop the cache so the next getConnection() rebuilds it. Local backends
-// self-heal via their child 'exit' handler, so we never touch them here.
+// Reconnect-after-wake recovery. The hosted backend has no child process whose
+// exit would clear a dead connection, so before the renderer's backoff loop
+// reconnects it asks us to confirm the cached connection is still reachable;
+// if not, we drop the cache so the next getConnection() rebuilds it.
 ipcMain.handle('scout:connection:revalidate', async () => {
   const connectionPromise = backendConnectionState.getPromise()
 
   if (!connectionPromise) {
-    await revalidatePool()
-
     return { ok: true, rebuilt: false }
   }
 
@@ -14989,109 +8964,17 @@ ipcMain.handle('scout:connection:revalidate', async () => {
   // share this primary connection. Coalesce simultaneous requests so one outage
   // produces one failure observation rather than exhausting the whole streak.
   return remoteRevalidation.run(connectionPromise, async () => {
-    const [result] = await Promise.all([
-      revalidateRemoteConnection({
-        connectionPromise,
-        currentConnectionPromise: () => backendConnectionState.getPromise(),
-        log: rememberLog,
-        probe: (connection, path, options) => fetchJsonForBackend(connection, path, options),
-        resetConnection: () => resetScoutConnectionState({ soft: true }),
-        tracker: remoteLiveness
-      }),
-      revalidatePool()
-    ])
-
-    // A rebuilt SSH connection must also tear down its tunnel/master before the
-    // renderer re-dials (which only happens after this handler resolves), so the
-    // fresh bootstrap can't reattach to a dying transport.
-    if (result.rebuilt) {
-      const conn = await connectionPromise.catch(() => null)
-
-      if (conn?.remoteKind === 'ssh') {
-        const profile = primaryProfileKey()
-        await sshBootstrapCoordinator.cancelAndWait(sshScopeKey(profile))
-        await teardownSshConnection(profile)
-      }
-    }
-
-    return result
-  })
-})
-
-// Pooled remote descriptors get the same treatment as the primary: they have no
-// child process to signal their host's death, and the renderer's keepalive touch
-// spares them from the idle reaper, so nothing else can retire a dead one.
-function revalidatePool() {
-  return revalidatePooledRemoteBackends({
-    entries: backendPool.entries(),
-    log: rememberLog,
-    probe: (connection, path, options) => fetchJsonForBackend(connection, path, options),
-    stopBackend: stopPoolBackend,
-    tracker: remoteLiveness
-  })
-}
-
-// Re-dial one retired pool key through the SAME claim-guarded ensure path a
-// renderer dial takes (#90812), so a resume-driven rebuild and a concurrent
-// renderer reconnect coalesce onto one spawn instead of racing.
-function redialPoolBackendAfterResume(poolKey: string) {
-  const { connectionId, profile } = parseBackendScopeKey(poolKey)
-
-  return backendDialClaims.run(poolKey, () =>
-    connectionId ? ensureRegistryBackend(connectionId, profile) : ensureBackend(profile)
-  )
-}
-
-// Identity for coalescing post-resume sweeps in the shared revalidation
-// coordinator: overlapping resume/unlock/network-restore kicks join the one
-// in-flight sweep instead of stacking probes.
-const suspectPoolSweepScope = {}
-
-// Sleep/wake recovery for POOLED remote/SSH backends (#93910). The primary
-// renderer socket already has wake-path probe/reconnect nudges, but pooled
-// descriptors (Bots pane, secondary connections) kept serving dead SSH
-// tunnels after macOS resume: no child 'exit' fires for a remote, and the
-// background failure-streak policy takes several rounds to drop one. On
-// resume every pooled remote is suspect — probe each once (bounded), tear
-// down the dead ones (pool entry + SSH bootstrap + tunnel/master) and rebuild
-// them through the claim-guarded dial path.
-function revalidateSuspectPoolAfterResume() {
-  return remoteRevalidation.run(suspectPoolSweepScope, () =>
-    revalidateSuspectPooledRemoteBackends({
-      entries: backendPool.entries(),
+    return revalidateRemoteConnection({
+      connectionPromise,
+      currentConnectionPromise: () => backendConnectionState.getPromise(),
       log: rememberLog,
       probe: (connection, path, options) => fetchJsonForBackend(connection, path, options),
-      rebuild: poolKey => redialPoolBackendAfterResume(poolKey),
-      retire: async poolKey => {
-        await stopPoolBackend(poolKey)
-        // The pool key doubles as the SSH scope for registry SSH backends and
-        // resolves through sshScopeKey() for bare-profile remotes; both
-        // teardown calls no-op when the scope holds no SSH state.
-        await sshBootstrapCoordinator.cancelAndWait(poolKey)
-        await teardownSshConnection(poolKey)
-      },
+      resetConnection: () => resetScoutConnectionState({ soft: true }),
       tracker: remoteLiveness
     })
-  )
-}
-
-ipcMain.handle('scout:backend:touch', async (_event, profile, options) => {
-  touchPoolBackend(profile, options)
-
-  return { ok: true }
-})
-// Pool sizing (Settings → Advanced): device-local, live-applied. Main is
-// authoritative (it owns the pool and the persisted copy); the returned
-// limits are what actually took effect post-clamp.
-ipcMain.handle('scout:pool-limits:get', async () => ({ ...poolLimits }))
-ipcMain.handle('scout:pool-limits:set', async (_event, raw) => {
-  const next = setPoolLimits({
-    maxBackends: typeof raw?.maxBackends === 'number' ? raw.maxBackends : poolLimits.maxBackends,
-    idleMs: typeof raw?.idleMs === 'number' ? raw.idleMs : poolLimits.idleMs
   })
-
-  return { ok: true, limits: next }
 })
+
 ipcMain.handle('scout:gateway:ws-url', async (_event, profile) => {
   return gatewayWsUrlIpcResult(() => freshGatewayWsUrl(profile))
 })
@@ -15165,132 +9048,26 @@ const hudIpc = registerHudIpc({
   }
 })
 
-ipcMain.handle('scout:backend:recycle', async (_event, profile) => {
-  // Models-page recovery after a code-skew 503 (#97046): kill the owned
-  // SSH serve (if any) before the local child so reconnect cannot reuse a
-  // stale lockfile. Soft primary teardown keeps the renderer shell mounted.
-  await recycleOwnedBackend({
-    notifyApplied: sendConnectionApplied,
-    primaryProfile: primaryProfileKey(),
-    profile: typeof profile === 'string' ? profile : '',
-    teardownPool: teardownPoolBackendAndWait,
-    teardownPrimary: () => teardownPrimaryBackendAndWait({ soft: true }),
-    teardownSsh: value => teardownSshConnection(value || null)
-  })
+ipcMain.handle('scout:backend:recycle', async () => {
+  // Models-page recovery after a code-skew 503 (#97046): drop the connection
+  // and re-dial; the renderer shell stays mounted.
+  await teardownPrimaryBackendAndWait({ soft: true })
+  sendConnectionApplied()
 
   return { ok: true }
 })
-ipcMain.handle('scout:bootstrap:reset', async () => {
-  // Renderer's "Reload and retry" path. Clear the latched failure and
-  // reset connection state so the next startScout() call restarts the
-  // full backend flow (including a fresh runBootstrap pass).
-  rememberLog('[bootstrap] reset requested by renderer; clearing latched failure')
+ipcMain.handle('scout:backend:retry', async () => {
+  // Renderer's Retry: drop the current connection and any latched failure so
+  // the next startScout() dials the hosted backend again.
+  rememberLog('[boot] retry requested by renderer')
   await teardownPrimaryBackendAndWait()
   bootstrapFailure = null
   backendStartFailure = null
   remoteReauthFailure = null
-  getFirstRunSetupGate().resetForRetry()
-  resetBootstrapSnapshot()
 
   return { ok: true }
-})
-ipcMain.handle('scout:bootstrap:repair', async (): Promise<{ ok: boolean; bundled?: boolean; error?: string }> => {
-  // A bundled install's payload is immutable and sealed at build time —
-  // "repair" would re-run the installer against a separate
-  // %LOCALAPPDATA%\scout tree the app doesn't own. The only repair for a
-  // damaged bundle is reinstalling the app itself. Refuse without touching
-  // bootstrapRepairRequested so a stale renderer can't drive an install.
-  if (installShape() === 'bundled') {
-    rememberLog('[bootstrap] repair refused on a bundled install; repair means reinstalling the app')
-
-    return { ok: false, error: 'bundled-immutable' }
-  }
-
-  // Forceful repair: force the next startScout() through the full installer
-  // (refreshing a broken/partial venv) and clear any latched failure + live
-  // connection. The renderer reloads afterwards to re-drive the boot flow.
-  //
-  // We do NOT delete the bootstrap marker here. Repair is also reachable from
-  // transient backend errors on a perfectly healthy install, and deleting the
-  // marker in that case stranded the app in first-run setup with no way back
-  // (#72166). The explicit flag carries the intent instead.
-  bootstrapRepairAttempt += 1
-
-  // Probe the live backend process so the guard can distinguish "venv is
-  // genuinely broken" (force reinstall) from "backend is just transiently
-  // stalled under GIL pressure" (#74874 — `event loop stalled` followed by
-  // `ws ready frame send failed`, then renderer keeps reporting dead).
-  const primaryProc = backendConnectionState.getProcess()
-
-  const primaryBackendAlive = Boolean(
-    primaryProc &&
-    (primaryProc as { exitCode?: number | null }).exitCode === null &&
-    (primaryProc as { signalCode?: string | null }).signalCode === null
-  )
-
-  const repairDecision = decideBootstrapRepair({
-    attempt: bootstrapRepairAttempt,
-    maxSoftAttempts: MAX_BOOTSTRAP_REPAIR_SOFT_ATTEMPTS,
-    primaryBackendAlive
-  })
-
-  rememberLog(
-    `[bootstrap] repair requested by renderer; forcing reinstall + clearing latched failure ` +
-      `(attempt=${repairDecision.attempt}/${MAX_BOOTSTRAP_REPAIR_SOFT_ATTEMPTS}, ` +
-      `primaryBackendAlive=${primaryBackendAlive}, ` +
-      `hardReinstall=${repairDecision.hardReinstall}): ${repairDecision.reason}`
-  )
-
-  // The guard may decide the install is healthy enough that a restart
-  // (without touching the venv) is the right answer. Translate that into
-  // the existing flag: if the guard said "soft restart", we skip the
-  // "bypass active runtime" path inside startScout() and fall through
-  // to the normal restart branch, which just kills the current child
-  // and respawns it against the same venv. See #74874 — this is what
-  // breaks the infinite reinstall loop the user hit.
-  bootstrapRepairRequested = repairDecision.hardReinstall
-  bootstrapFailure = null
-  backendStartFailure = null
-  remoteReauthFailure = null
-  getFirstRunSetupGate().resetForRepair()
-  await teardownPrimaryBackendAndWait()
-
-  return { ok: true }
-})
-ipcMain.handle('scout:bootstrap:continue-local', async () => {
-  rememberLog('[bootstrap] local install selected by renderer; continuing first-launch bootstrap')
-  continueFirstRunLocalBootstrap()
-
-  return { ok: true }
-})
-ipcMain.handle('scout:bootstrap:cancel', async () => {
-  // Renderer's Cancel button during first-launch install. Abort the running
-  // install script (SIGTERM via the runner's abortSignal). runBootstrap
-  // resolves with { cancelled: true }, which surfaces the recovery overlay.
-  if (bootstrapAbortController) {
-    try {
-      bootstrapAbortController.abort()
-    } catch {
-      void 0
-    }
-
-    return { ok: true, cancelled: true }
-  }
-
-  return { ok: false, cancelled: false }
 })
 ipcMain.handle('scout:boot-progress:get', async () => bootProgressState)
-ipcMain.handle('scout:bootstrap:get', async () => getBootstrapState())
-ipcMain.handle('scout:local-backend:probe', async () => {
-  // Resolution only. ensureRuntime/runBootstrap must not start from a hover
-  // or a click that has not confirmed the install.
-  const backend = await resolveScoutBackend([])
-
-  return { bootstrapNeeded: backend?.kind === 'bootstrap-needed' }
-})
-ipcMain.handle('scout:connection-config:get', async (_event, profile) =>
-  sanitizeDesktopConnectionConfig(readDesktopConnectionConfig(), profile)
-)
 ipcMain.handle('scout:plugin-profile-routes', async (_event, rawProfileNames) => {
   const fallbackProfileNames = Array.isArray(rawProfileNames)
     ? rawProfileNames
@@ -15359,51 +9136,6 @@ ipcMain.handle('scout:plugin-profile-routes', async (_event, rawProfileNames) =>
 
   return buildRegistryProfileRoutes({ agents, sources: registry.connections })
 })
-ipcMain.handle('scout:ssh-config:hosts', async () => ({ hosts: collectSshConfigHosts() }))
-ipcMain.handle('scout:ssh-config:resolve', async (_event, host) => {
-  const value = String(host || '').trim()
-
-  if (!value) {
-    throw new Error('SSH host is required.')
-  }
-
-  const ssh =
-    process.platform === 'win32'
-      ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'OpenSSH', 'ssh.exe')
-      : 'ssh'
-
-  return new Promise((resolve, reject) => {
-    const child = spawn(ssh, ['-G', '--', value], hiddenWindowsChildOptions({ stdio: ['ignore', 'pipe', 'pipe'] }))
-    let stdout = ''
-    let stderr = ''
-
-    const timer = setTimeout(() => {
-      child.kill()
-      reject(new Error('SSH config resolution timed out.'))
-    }, 10_000)
-
-    child.stdout.on('data', chunk => {
-      stdout += String(chunk)
-    })
-    child.stderr.on('data', chunk => {
-      stderr += String(chunk)
-    })
-    child.once('error', error => {
-      clearTimeout(timer)
-      reject(error)
-    })
-    child.once('close', code => {
-      clearTimeout(timer)
-
-      if (code !== 0) {
-        reject(new Error(stderr.trim() || 'Could not resolve SSH host.'))
-      } else {
-        resolve(parseSshGOutput(stdout))
-      }
-    })
-  })
-})
-ipcMain.handle('scout:connection-config:test', async (_event, payload) => testDesktopConnectionConfig(payload))
 
 // ── Opt-in keychain encryption for stored secrets ───────────────────────────
 // get returns the current policy without touching safeStorage; set flips it
@@ -15415,151 +9147,7 @@ ipcMain.handle('scout:secret-storage:set', async (_event: any, on: any) => apply
 // Storage-level CRUD for named agent sources. Routing/pooling consumption of
 // the registry lands separately; these handlers only manage the persisted
 // list, so they are safe to ship ahead of the switchover.
-ipcMain.handle('scout:connections:list', async () => sanitizeConnectionsRegistry())
-ipcMain.handle('scout:connections:save', async (_event, payload) => {
-  const saved = await saveRegistryConnection(payload)
-
-  return { ok: true, connection: saved, registry: sanitizeConnectionsRegistry() }
-})
-ipcMain.handle('scout:connections:remove', async (_event, id) => {
-  const key = String(id || '')
-  managedConnectionUpdateGate.assertCanMutate(key)
-  const registry = removeConnection(readDesktopConnectionsRegistry(), key)
-  writeDesktopConnectionsRegistry(registry)
-  // Tear down anything the removed connection still had running: pooled
-  // backends under its composite keys and any ssh tunnel scopes it owned.
-  await stopRegistryConnectionBackends(key)
-  // …and everything cached ABOUT it. Ids are recycled label slugs, so re-adding "Mac mini"
-  // gets `mac-mini` back — with the removed machine's profile list still cached under it.
-  evictConnectionCaches(key)
-  // And the renderer side: without this push, secondaries scoped to the
-  // removed connection keep their WebSocket open (remote has no local
-  // process to kill) and stream ghost events until page reload.
-  broadcastConnectionsChanged({ connectionId: key, reason: 'removed' })
-  desktopProfilePreferences.connectionRemoved(key)
-
-  return { ok: true, registry: sanitizeConnectionsRegistry(registry) }
-})
-ipcMain.handle('scout:connections:set-primary', async (_event, id) => {
-  assertCanMutateManagedPrimaryRouting()
-  const registry = setPrimaryConnection(readDesktopConnectionsRegistry(), String(id || ''))
-  writeDesktopConnectionsRegistry(registry)
-
-  return { ok: true, registry: sanitizeConnectionsRegistry(registry) }
-})
-ipcMain.handle('scout:connections:set-launch-mode', async (_event, mode) => {
-  assertCanMutateManagedPrimaryRouting()
-  const registry = setConnectionLaunchMode(readDesktopConnectionsRegistry(), String(mode || ''))
-  writeDesktopConnectionsRegistry(registry)
-
-  return { ok: true, registry: sanitizeConnectionsRegistry(registry) }
-})
-ipcMain.handle('scout:connections:set-last-used', async (_event, id) => {
-  const registry = setLastUsedConnection(readDesktopConnectionsRegistry(), String(id || ''))
-  writeDesktopConnectionsRegistry(registry)
-
-  return { ok: true, registry: sanitizeConnectionsRegistry(registry) }
-})
-ipcMain.handle('scout:connections:test', async (_event, id) => {
-  const registry = readDesktopConnectionsRegistry()
-  const entry = registry.connections.find(c => c.id === String(id || ''))
-
-  if (!entry) {
-    throw new Error(`No connection with id "${String(id || '')}".`)
-  }
-
-  // The ssh probe path in testDesktopConnectionConfig never consults v1
-  // connection state, so mapping the entry onto it is safe.
-  if (entry.kind === 'ssh') {
-    const result = await testDesktopConnectionConfig({
-      mode: 'ssh',
-      sshHost: entry.host,
-      sshUser: entry.user,
-      sshPort: entry.port,
-      sshKeyPath: entry.keyPath,
-      sshRemoteScoutPath: entry.remoteScoutPath
-    })
-
-    if (result?.reachable) {
-      sshInventoryAttemptedAt.delete(entry.id)
-      sshRosterCache.delete(entry.id)
-      await probeSshProfileInventory(entry)
-    }
-
-    return result
-  }
-
-  // Remote/local probe built DIRECTLY from the registry entry. Routing
-  // through coerceDesktopConnectionConfig would use v1 connection.json as the
-  // `existing` base: an entry with a broken/absent token would inherit the v1
-  // global remote's token and send it to THIS entry's URL (cross-host
-  // credential transmission + a false "reachable"), and testing the local
-  // entry would probe whatever v1's global mode points at instead of the
-  // app-managed local backend.
-  let baseUrl
-  let token = null
-  let authMode = 'token'
-  let testHeaders = {}
-
-  if (entry.kind === 'local') {
-    const local = await startScout()
-    baseUrl = local.baseUrl
-    token = local.token
-    authMode = normAuthMode(local.authMode)
-  } else {
-    baseUrl = normalizeRemoteBaseUrl(entry.url)
-    authMode = normAuthMode(entry.authMode)
-    testHeaders = decryptRemoteHeaders(entry.headers)
-
-    if (authMode !== 'oauth') {
-      token = decryptDesktopSecret(entry.token)
-
-      if (!token) {
-        throw new Error('This connection has no saved session token. Edit the connection and paste one.')
-      }
-    }
-  }
-
-  const status = (await fetchConnectionStatus(baseUrl, authMode, token, testHeaders)) as any
-
-  // The Test button is the cheapest moment to (re)learn this backend's stable
-  // identity for the same-backend roster collapse + Settings hint.
-  rememberConnectionInstallId(entry.id, status)
-
-  // Same HTTP+WS two-leg check as testDesktopConnectionConfig: HTTP alone is
-  // a false positive when the WebSocket leg is blocked.
-  const wsUrl = await resolveTestWsUrl(baseUrl, authMode, token, {
-    mintTicket: url => mintGatewayWsTicket(url, testHeaders)
-  })
-
-  if (wsUrl && typeof globalThis.WebSocket === 'function') {
-    const probe = await probeGatewayWebSocket(wsUrl, { WebSocketImpl: globalThis.WebSocket, headers: testHeaders })
-
-    if (!probe.ok) {
-      throw new Error(
-        `Reached the gateway over HTTP, but the live WebSocket (/api/ws) connection failed: ${probe.reason} ` +
-          'The HTTP check can pass while the WebSocket is blocked by a proxy, firewall, or gateway auth/origin guard.'
-      )
-    }
-  }
-
-  return { ok: true, baseUrl, version: status?.version || null }
-})
-
-// ── Union agent roster + registry ws-url + fan-out updates (phase 3-5) ─────
-
-// Enumerate every registered connection's profiles concurrently and flatten
-// into the union roster. Eager REST enumeration, lazy sockets: local + already
-// -dialed sources answer instantly; unreachable ones return an error entry
-// instead of failing the whole roster. ssh sources that have never been dialed
-// are SKIPPED (connect-on-demand — dialing every ssh box just to list agents
-// would spawn tunnels the user never asked for); once dialed, their pooled
-// descriptor serves the enumeration like any remote. Last-known SSH profile
-// lists are reused so switching the window back to local does not empty Bot Mode.
-// Connection caches live in ./connection-caches, which states (and tests) the invariant they share:
-// each is keyed by connection id and is only valid while that id names the same machine, so
-// removing a connection or re-pointing it must evict them (`evictConnectionCaches`).
-const SSH_INVENTORY_RETRY_MS = 60_000
+ipcMain.handle('scout:connections:list', async () => hostedConnectionsRegistry())
 
 // Stable backend identity per registered connection: the `install_id` its
 // /api/status reports (absent on backends older than the field). Enumeration
@@ -15603,64 +9191,6 @@ async function probeConnectionInstallId(connectionId: string, descriptor: any): 
   }
 }
 
-async function probeSshProfileInventory(connection) {
-  if (
-    !shouldRetrySshInventory(
-      sshRosterCache.has(connection.id),
-      sshInventoryAttemptedAt.get(connection.id),
-      Date.now(),
-      SSH_INVENTORY_RETRY_MS
-    )
-  ) {
-    return
-  }
-
-  sshInventoryAttemptedAt.set(connection.id, Date.now())
-
-  const sshConfig = normalizeSshConfig({
-    mode: 'ssh',
-    host: connection.host,
-    user: connection.user,
-    port: connection.port,
-    keyPath: connection.keyPath,
-    remoteScoutPath: connection.remoteScoutPath
-  })
-
-  if (!sshConfig) {
-    return
-  }
-
-  const ssh = createSshProbeConnection(
-    { host: sshConfig.host, user: sshConfig.user, port: sshConfig.port, keyPath: sshConfig.keyPath },
-    { rememberLog: sshRememberLog }
-  )
-
-  try {
-    await ssh.open()
-    const profiles = await remoteLifecycle.listRemoteScoutProfiles(ssh)
-
-    if (profiles.length > 0) {
-      sshRosterCache.set(connection.id, profiles)
-    }
-
-    // Backend identity, on the session we already have open: without it an ssh connection has no
-    // install id at all, so two addresses for one machine never collapse into one roster row
-    // (#88828 wired this for remote/local only, through /api/status).
-    connectionInstallIds.set(connection.id, {
-      id: await remoteLifecycle.readRemoteInstallId(ssh),
-      ts: Date.now()
-    })
-  } catch (error: any) {
-    sshRememberLog(`[ssh] profile inventory failed for ${connection.id}: ${error?.message || error}`)
-  } finally {
-    try {
-      await ssh.close()
-    } catch {
-      void 0
-    }
-  }
-}
-
 async function enumerateRegistryAgentSources(registry = readDesktopConnectionsRegistry()) {
   // One dead source must not wedge the whole roster: ensureRegistryBackend on
   // an unreachable remote can block up to the 45s readiness timeout, and the
@@ -15700,41 +9230,7 @@ async function enumerateRegistryAgentSources(registry = readDesktopConnectionsRe
         }
 
         try {
-          // SSH roster listing must never spawn a dashboard. A stale
-          // sshConnections key used to fall into ensureRegistryBackend and
-          // respawn Spark/Mini every Bot Mode poll (~5s), then the mux died
-          // (ECONNRESET / liveness probe drop).
-          if (connection.kind === 'ssh') {
-            await probeSshProfileInventory(connection)
-            // The inventory probe learns the backend's install id on its own session; carrying it
-            // here is what lets two ssh addresses for one machine collapse to one row.
-            raw = {
-              connection,
-              profiles: null,
-              error: 'connect-on-demand',
-              installId: connectionInstallIds.get(connection.id)?.id
-            }
-          } else {
-            // Same connect-on-demand courtesy for the forced-local path: when
-            // the primary route is remote, enumerating "This device" would
-            // SPAWN a local backend this user has never asked for — a phantom
-            // `default` agent that also forces -device handle disambiguation
-            // onto the real one (remote-gateway-only desktops showed their main
-            // agent twice, Aug 17 2026). Enumerate the local source only when
-            // it is the delegate route (local-primary desktops, unchanged
-            // behavior) or a forced-local child is ALREADY pooled (the user
-            // opened one).
-            if (connection.kind === 'local') {
-              const localRoute = resolveRegistryLocalRoute('default', {
-                globalRemote: globalRemoteActive(),
-                profileRemoteOverride: Boolean(profileHasRemoteOverride(primaryProfileKey()))
-              })
-
-              if (shouldDeferLocalEnumeration(localRoute, backendPool.keys(), connection.id)) {
-                return { connection, profiles: null, error: 'connect-on-demand' }
-              }
-            }
-
+          {
             // Claim-guarded (#90812): this ~5s roster poll can race a renderer's
             // own reconnect dial for the same connection; coalescing avoids
             // bootstrapping a second SSH tunnel / remote dashboard.
@@ -15883,128 +9379,6 @@ ipcMain.handle('scout:gateway:ws-url-for', async (_event, payload) => {
   return gatewayWsUrlIpcResult(() => registryGatewayWsUrlHandler(payload))
 })
 
-// Transactional update for a Desktop-managed SSH install. Unlike the generic
-// fleet fan-out below, this path owns the remote serve lifecycle: it gates new
-// dials, drains only exact Desktop-owned processes, runs the launcher outside
-// those serves, proves the correlated receipt, and restores every prior scope.
-async function requestManagedSshUpdate(rawId) {
-  const connectionId = String(rawId || '').trim()
-  const existing = managedConnectionUpdates.get(connectionId)
-
-  if (existing) {
-    return existing
-  }
-
-  const correlationId = crypto.randomUUID()
-  const registry = readDesktopConnectionsRegistry()
-  const source = registry.connections.find(connection => connection.id === connectionId)
-
-  if (!source) {
-    return refusedManagedSshUpdate(connectionId, correlationId, `No connection with id "${connectionId}".`)
-  }
-
-  if (source.kind !== 'ssh') {
-    return refusedManagedSshUpdate(
-      connectionId,
-      correlationId,
-      'Only registered Desktop-managed SSH connections can use this update lifecycle.'
-    )
-  }
-
-  if (!managedConnectionUpdateGate.claim(connectionId, correlationId)) {
-    return refusedManagedSshUpdate(connectionId, correlationId, 'A managed update is already in progress.')
-  }
-
-  const operation = (async () => {
-    try {
-      return await updateManagedSshConnection(source, correlationId)
-    } catch (error: any) {
-      return refusedManagedSshUpdate(connectionId, correlationId, String(error?.message || error))
-    } finally {
-      managedConnectionUpdateGate.release(connectionId, correlationId)
-      managedConnectionUpdates.delete(connectionId)
-    }
-  })()
-
-  managedConnectionUpdates.set(connectionId, operation)
-
-  return operation
-}
-
-ipcMain.handle('scout:connections:update-managed', async (_event, rawId) => requestManagedSshUpdate(rawId))
-
-// Fan out `scout update` to every registered connection at once. Each
-// dispatch reports independently so one dead LAN box can't wedge the batch. Local reuses the
-// app's own update pipeline; Desktop-managed SSH uses the transactional
-// drain/update/restore lifecycle; URL remotes POST their backend updater.
-ipcMain.handle('scout:connections:update-all', async (_event, payload) => {
-  const registry = readDesktopConnectionsRegistry()
-
-  // Optional renderer-side exclusions: the everything-update flow dispatches
-  // the ACTIVE backend through its own detailed-progress path and chains the
-  // local client apply LAST (it relaunches the app), so it excludes those ids
-  // here to avoid double-dispatch. No payload keeps the Settings button's
-  // original all-rows behavior byte-identical.
-  const excludeIds = new Set<string>(
-    Array.isArray((payload as any)?.excludeIds) ? (payload as any).excludeIds.map((id: unknown) => String(id)) : []
-  )
-
-  const results = await Promise.all(
-    registry.connections
-      .filter(connection => !excludeIds.has(connection.id))
-      .map(async connection => {
-        const base = { connectionId: connection.id, label: connection.label, kind: connection.kind }
-
-        try {
-          if (connection.kind === 'local') {
-            // The app-managed runtime updates through the same pipeline as the
-            // Settings → Updates button (marker + venv gate + relaunch flow).
-            const result: any = await applyUpdates()
-
-            return { ...base, ok: result?.ok !== false, detail: result?.message || 'update started' }
-          }
-
-          if (connection.kind === 'ssh') {
-            return managedSshUpdateAllRow(base, await requestManagedSshUpdate(connection.id))
-          }
-
-          // Claim-guarded (#90812): coalesce with a concurrent renderer dial
-          // for the same connection instead of bootstrapping a second backend.
-          const descriptor: any = await backendDialClaims.run(backendScopeKey(connection.id, null), () =>
-            ensureRegistryBackend(connection.id, null)
-          )
-
-          const body: any = await postJsonForBackend(descriptor, '/api/scout/update', {}, { timeoutMs: 15_000 })
-
-          if (body?.ok === false) {
-            // The backend refused (docker/nix/externally-managed installs) —
-            // surface ITS message, per-row, instead of failing the batch.
-            return {
-              ...base,
-              ok: false,
-              skipped: true,
-              reason: body?.error || 'backend-refused',
-              detail: body?.message
-            }
-          }
-
-          return { ...base, ok: true, detail: body?.message || 'update started' }
-        } catch (error: any) {
-          return { ...base, ok: false, error: String(error?.message || error) }
-        }
-      })
-  )
-
-  return { ok: true, results }
-})
-
-// Convenience wrappers around the bearer-aware descriptor request path.
-// Native OAuth sessions are cookieless, so these must not bypass
-// fetchJsonForBackend and fall straight through to the cookie partition.
-async function postJsonForBackend(descriptor, path, body, opts: any = {}) {
-  return fetchJsonForBackend(descriptor, path, { ...opts, body: body ?? {}, method: 'POST' })
-}
-
 // GET twin of postJsonForBackend.
 async function getJsonForBackend(descriptor, path, opts: any = {}) {
   return fetchJsonForBackend(descriptor, path, opts)
@@ -16051,242 +9425,6 @@ async function fetchJsonForBackend(
   })
 }
 
-ipcMain.handle('scout:connection-config:probe', async (_event, rawUrl) => probeRemoteAuthMode(rawUrl))
-ipcMain.handle('scout:connection-config:oauth-login', async (_event, rawUrl, rawOpts) => {
-  // Capability-gated login (RFC 8252). Probe the gateway's public /api/status
-  // for supported auth_flows and /api/auth/providers for provider capabilities:
-  //   - all providers support password → always use the embedded login window
-  //     (password providers require the dashboard login form; native PKCE
-  //     can never complete for that provider shape)
-  //   - advertises "native_pkce" AND at least one non-password provider →
-  //     run the system-browser + loopback + PKCE flow
-  //   - older gateway with no provider metadata → fall back to the auth_flows
-  //     check (existing compatibility)
-  //   - a failed native login reports the error rather than auto-falling back
-  //     to the embedded flow — one sign-in action opens at most one window.
-  const baseUrl = normalizeRemoteBaseUrl(rawUrl)
-  // Order login attempts without interrupting rotation of the existing session.
-  const authIsCurrent: () => boolean = nativeAccessTokenCoordinator.beginLogin(baseUrl)
-
-  // A registry-editor sign-in can run BEFORE the draft connection is saved:
-  // settle the id the save will reuse (returned so the renderer pins it into
-  // the draft) so the login window writes its session cookies into the
-  // per-connection jar the saved connection will actually read — not the
-  // legacy shared jar an unmatched URL would fall back to, where the session
-  // is both unreadable by the new connection and able to evict a same-host
-  // primary's cookie (#92183 isolation hole). '' → URL-matched behavior.
-  let loginConnectionId = ''
-
-  try {
-    loginConnectionId = connectionIdForPendingLogin({
-      connectionId: rawOpts?.connectionId,
-      label: rawOpts?.label,
-      registry: readDesktopConnectionsRegistry()
-    })
-  } catch {
-    loginConnectionId = ''
-  }
-
-  // The draft's intended entry shape (kind/authMode the save will persist).
-  // The identity branch in oauth-partition.ts gates the pre-save private jar
-  // on it: only a cookie-auth remote draft earns its own jar up front; a
-  // token draft signs in on the legacy jar — the jar the saved
-  // entry reads — so login and read can never disagree. Invalid or missing
-  // values fail closed to the legacy jar in the resolver.
-  const pendingKind = typeof rawOpts?.kind === 'string' ? rawOpts.kind : ''
-  const pendingAuthMode = typeof rawOpts?.authMode === 'string' ? rawOpts.authMode : ''
-
-  let statusBody: any = null
-
-  try {
-    statusBody = await fetchPublicJson(`${baseUrl}/api/status`, { timeoutMs: 8_000 })
-  } catch {
-    // Can't read status — fall through to the embedded flow, which has its
-    // own error handling and works against any gated gateway.
-  }
-
-  const authRequired = statusBody && authModeFromStatus(statusBody) === 'oauth'
-  const providers = authRequired ? await gatewayAuthProviders(baseUrl) : []
-
-  const strategy = resolveLoginStrategy(statusBody, { providers })
-
-  // A newer login/logout can finish during the status/provider probes. Do not
-  // open a browser or login window for an attempt that no longer owns auth.
-  if (!authIsCurrent()) {
-    throw new NativeAuthChangedError()
-  }
-
-  if (strategy === 'native') {
-    try {
-      const tokens = await runNativeLogin(baseUrl, {
-        // Route the browser-open through the single external-open path so it
-        // gets the WSL handling and the open-failure modal. Fail fast (throw)
-        // so runNativeLogin reports the real reason instead of waiting out the
-        // loopback timeout.
-        openExternal: async url => {
-          const result = await openExternalUrl(url)
-
-          if (result.ok === false) {
-            throw new Error(
-              result.reason === 'failed' && result.message
-                ? result.message
-                : 'Could not open the system browser for native sign-in'
-            )
-          }
-        },
-        postJson: (url, body, opts) => postJsonNoAuth(url, body, opts),
-        rememberLog
-      })
-
-      if (!authIsCurrent()) {
-        throw new NativeAuthChangedError()
-      }
-
-      nativeAccessTokenCoordinator.storeTokens(baseUrl, tokens)
-      // Confirmed sign-in — release the reauth latch so the next
-      // startScout() re-dials instead of replaying the stale rejection.
-      remoteReauthFailure = null
-
-      return { ok: true, baseUrl, connected: true, connectionId: loginConnectionId || undefined }
-    } catch (error) {
-      rememberLog(`[native-oauth] native login failed (${error instanceof Error ? error.message : String(error)})`)
-
-      return {
-        ok: false,
-        error: error instanceof Error ? error.message : String(error),
-        connected: false,
-        connectionId: loginConnectionId || undefined
-      }
-    }
-  }
-
-  // Legacy embedded-webview cookie flow.
-  await openOauthLoginWindow(baseUrl, {
-    connectionId: loginConnectionId,
-    pendingAuthMode,
-    pendingKind
-  })
-
-  const connected = await hasOauthSessionCookie(baseUrl, {
-    connectionId: loginConnectionId,
-    pendingAuthMode,
-    pendingKind
-  })
-
-  // Only a CONFIRMED sign-in releases the latch. A cancelled/closed login
-  // window must leave it set, or the overlay's "Sign in" button starts
-  // flickering again on the next retry.
-  if (!authIsCurrent()) {
-    throw new NativeAuthChangedError()
-  }
-
-  if (connected) {
-    // A confirmed cookie login supersedes any older native identity.
-    nativeAccessTokenCoordinator.clearTokens(baseUrl)
-    remoteReauthFailure = null
-  }
-
-  return { ok: true, baseUrl, connected, connectionId: loginConnectionId || undefined }
-})
-ipcMain.handle('scout:connection-config:oauth-logout', async (_event, rawUrl) => {
-  const baseUrl = normalizeRemoteBaseUrl(rawUrl)
-
-  // Also drop any native (RFC 8252) bearer tokens for this gateway so a
-  // logout clears BOTH auth shapes.
-  // Clear before awaiting cookie I/O: a pending login/refresh cannot restore
-  // logout, and a later login must not be erased when cookie clearing settles.
-  nativeAccessTokenCoordinator.clearTokens(baseUrl)
-  await clearOauthSession(baseUrl)
-
-  // Report against the SAME liveness notion the Settings indicator uses
-  // (AT-or-RT cookie, or a native token) so a logout that left any session
-  // behind is reflected as still-connected rather than silently signed-out.
-  const connected = (await hasLiveOauthSession(baseUrl)) || hasNativeSession(baseUrl)
-
-  return { ok: true, connected }
-})
-
-ipcMain.handle('scout:connection-config:save', async (_event, payload) => {
-  assertCanMutateManagedPrimaryRouting()
-  const config = coerceDesktopConnectionConfig(payload)
-  writeDesktopConnectionConfig(config)
-
-  return sanitizeDesktopConnectionConfig(config, payload?.profile)
-})
-ipcMain.handle('scout:connection-config:apply', async (_event, payload) => {
-  assertCanMutateManagedPrimaryRouting()
-  const previousConfig = readDesktopConnectionConfig()
-  const previousRegistry = readDesktopConnectionsRegistry()
-  const config = coerceDesktopConnectionConfig(payload, previousConfig)
-
-  const key = connectionScopeKey(payload?.profile)
-  const scope = key || ''
-  const nextRegistry = key ? previousRegistry : reconcileAppliedGlobalConnection(previousRegistry, config)
-
-  // Primary apply: the applied window's recorded route still names the source
-  // it just LEFT, and a profile-less re-dial is answered from that record
-  // (resolveDesktopConnectionRequest), so the renderer kept dialing the gateway
-  // the user switched away from and every later reconnect re-asked the same
-  // stale question (#92352). Re-point the record at the newly applied primary
-  // in the same step as the notify: both run only after the config/registry
-  // write has committed, so a rolled-back apply can never leave a record
-  // naming a source that did not land. A profile-scoped apply (v1 per-profile
-  // override) leaves the registry primary untouched, so it keeps the bare notify.
-  const applyPrimaryRoute = () => {
-    const win = mainWindow
-
-    if (win && !win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
-      const previous = windowConnectionRoutes.get(win.webContents.id)
-
-      recordWindowConnectionRoute(
-        win.webContents,
-        appliedPrimaryWindowRoute(nextRegistry, previous?.profile ?? primaryProfileKey())
-      )
-    }
-
-    sendConnectionApplied()
-  }
-
-  const notifyApplied = key ? sendConnectionApplied : applyPrimaryRoute
-
-  await applyConnectionConfigAtomically({
-    previousConfig,
-    previousRegistry,
-    nextConfig: config,
-    nextRegistry,
-    // Exercise the same authenticated REST + real WebSocket legs before either
-    // config file changes. A rejected OAuth session or blocked /api/ws leaves
-    // the previous primary/current connection intact.
-    preflight: !key && modeIsRemoteLike(config.mode) ? () => testDesktopConnectionConfig(payload) : undefined,
-    writeConfig: writeDesktopConnectionConfig,
-    writeRegistry: writeDesktopConnectionsRegistry,
-    apply: () =>
-      applyConnectionChange({
-        cancelAndWait: value => sshBootstrapCoordinator.cancelAndWait(value),
-        isPrimary: !key || key === primaryProfileKey(),
-        rehomePrimary: () =>
-          rehomePrimaryConnection({
-            clearLocalBootstrapFailure: () => {
-              // A remote connection bypasses local runtime/bootstrap failures. Clear
-              // the local-install latch so unsupported/failure escape paths can re-home.
-              bootstrapFailure = null
-            },
-            mode: config.mode,
-            notifyConnectionApplied: notifyApplied,
-            resumeFirstRunRemote: abandonFirstRunSetupChoiceForRemoteApply,
-            teardownPrimaryBackend: teardownPrimaryBackendAndWait
-          }),
-        scope,
-        sendApplied: notifyApplied,
-        stopPool: stopPoolBackend,
-        teardownPrimary: () => teardownPrimaryBackendAndWait({ soft: true }),
-        teardownSsh: value => teardownSshConnection(value || null)
-      })
-  })
-
-  return sanitizeDesktopConnectionConfig(config, payload?.profile)
-})
-
 ipcMain.handle('scout:profile:default:get', async () => desktopProfilePreferences.getDefault())
 ipcMain.handle('scout:profile:default:set', async (_event, route) => desktopProfilePreferences.setDefault(route))
 ipcMain.handle('scout:profile:get', async () => ({ profile: readActiveDesktopProfile() }))
@@ -16297,12 +9435,9 @@ ipcMain.handle('scout:profile:remember', async (_event, name) => ({
   profile: writeActiveDesktopProfile(name)
 }))
 ipcMain.handle('scout:profile:set', async (_event, name) => {
-  assertCanMutateManagedPrimaryRouting()
   const next = writeActiveDesktopProfile(name)
 
-  // Switching profiles is a backend re-home: relaunch the dashboard under the
-  // new SCOUT_HOME. Pool backends keep their own homes, so only the primary
-  // is torn down.
+  // Switching profiles re-dials the hosted backend under the new profile.
   await teardownPrimaryBackendAndWait()
   mainWindow?.reload()
 
@@ -16352,370 +9487,6 @@ ipcMain.handle('scout:window:readBelow', async event => {
   return readWindowBelow(process.pid, { x, y, width, height }, titlesAvailable)
 })
 
-// Re-route remote-profile session requests to the owning remote backend. Returns
-// `undefined` when not interceptable (caller takes the normal local path), else
-// the response. Reads tag the profile as ?profile=<name>; mutations carry it in
-// request.profile. Either way, a remote profile's session lives only on its
-// remote host, so the request must go there (where it serves its own state.db).
-//   GET    /api/profiles/sessions        → splice each remote profile's rows in
-//   GET    /api/sessions/{id}[/messages] → read from remote
-//   DELETE /api/sessions/{id}            → delete on remote
-//   PATCH  /api/sessions/{id}            → rename/archive on remote
-async function interceptSessionRequestForRemote(request, registryConnectionId = null) {
-  if (typeof request?.path !== 'string') {
-    return undefined
-  }
-
-  const method = (request.method || 'GET').toUpperCase()
-
-  let parsed
-
-  try {
-    parsed = new URL(request.path, 'http://x')
-  } catch {
-    return undefined
-  }
-
-  const { pathname, searchParams } = parsed
-
-  if (method === 'GET' && pathname === '/api/profiles/sessions') {
-    const remoteProfiles = configuredRemoteProfileNames()
-
-    const registrySources = await pooledRegistrySessionSources(
-      shouldIncludeLocalRegistrySessionSource(registryConnectionId, !globalRemoteActive())
-    )
-
-    if (remoteProfiles.length === 0 && registrySources.length === 0) {
-      return undefined // no remote profiles and no connected registry gateways → local fast path
-    }
-
-    if (
-      !hasPinnedRegistrySessionSource(registryConnectionId, request?.profile, registrySources, !globalRemoteActive())
-    ) {
-      // Do not manufacture a partial all-gateways response while the selected
-      // registry backend is still dialing or has just gone idle. The caller
-      // falls back to the direct pinned route, which is slower but complete
-      // for the gateway the renderer actually selected.
-      return undefined
-    }
-
-    const requested = (searchParams.get('profile') || 'all').trim() || 'all'
-
-    if (requested !== 'all') {
-      return profileHasRemoteOverride(requested) ? remoteSessionList(requested, searchParams) : undefined
-    }
-
-    return mergeRemoteProfileSessions(searchParams, remoteProfiles, registrySources)
-  }
-
-  // Batched sidebar slices. With no remote profiles the local batched endpoint
-  // (one DB open per profile) serves it directly — take the fast path. When
-  // remotes exist, fan the three slices back out to the per-slice
-  // /api/profiles/sessions path (which already merges remote rows correctly) and
-  // reassemble; local profiles fall back to three primary reads there, but
-  // remote correctness is preserved.
-  if (method === 'GET' && pathname === '/api/profiles/sessions/sidebar') {
-    const remoteProfiles = configuredRemoteProfileNames()
-
-    const registrySources = await pooledRegistrySessionSources(
-      shouldIncludeLocalRegistrySessionSource(registryConnectionId, !globalRemoteActive())
-    )
-
-    if (remoteProfiles.length === 0 && registrySources.length === 0) {
-      return undefined // local fast path → batched endpoint's single DB open
-    }
-
-    if (
-      !hasPinnedRegistrySessionSource(registryConnectionId, request?.profile, registrySources, !globalRemoteActive())
-    ) {
-      return undefined
-    }
-
-    const { recents: recentsSp, cron: cronSp, messaging: messagingSp } = buildSidebarSessionSliceParams(searchParams)
-
-    const [recents, cron, messaging] = await Promise.all([
-      fetchProfilesSessionSlice(recentsSp, remoteProfiles, registrySources),
-      fetchProfilesSessionSlice(cronSp, remoteProfiles, registrySources),
-      fetchProfilesSessionSlice(messagingSp, remoteProfiles, registrySources)
-    ])
-
-    return assembleSidebarSessionSlices(recents, cron, messaging)
-  }
-
-  // Per-session read/mutation. Owner is in ?profile= (reads) or request.profile
-  // (mutations). Two remote shapes:
-  //  - per-profile override: route to that profile's own remote, sans profile
-  //    param (it serves its own state.db natively).
-  //  - global remote mode: ONE backend serves every profile via ?profile=, so
-  //    route there and KEEP the profile param so it opens the right state.db.
-  if (/^\/api\/sessions\/[^/]+(\/messages)?$/.test(pathname)) {
-    let profile = (searchParams.get('profile') || request.profile || '').trim()
-
-    if (!profile) {
-      // No explicit owner hint (#85834). The list endpoints above already know
-      // which remote profile owns each row (remoteSessionList tags s.profile),
-      // but a caller without a hint used to fall straight through to the LOCAL
-      // backend and 404 on its state.db even though the session lives on a
-      // remote. Consult the same remote lists to find the owner; only fall
-      // through when the id is genuinely unknown remotely.
-      const sessionId = decodeURIComponent(pathname.split('/')[3] || '')
-      profile = (await remoteOwnerProfileForSession(sessionId)) || ''
-
-      if (!profile) {
-        return undefined
-      }
-    }
-
-    // Preserve every non-profile query param (limit/offset/order pagination —
-    // stripping them made getAllSessionMessages loop the same default page
-    // against paginating remote backends).
-    const passthroughParams = new URLSearchParams(searchParams)
-    passthroughParams.delete('profile')
-    const passthroughQuery = passthroughParams.toString()
-
-    if (profileHasRemoteOverride(profile)) {
-      // #64999: the override's remote can be a multi-profile backend — an
-      // unscoped read opens its launch-profile state.db, so a resume 4007s
-      // even though the row exists under its real owner. Scope the read the
-      // same way the list fetch does; a legacy single-profile scope ('')
-      // keeps the path bare.
-      const ownerScope =
-        remoteProfileQueryScope(profile, profileSshOverride(readDesktopConnectionConfig(), profile)?.remoteProfile) ||
-        profile
-
-      if (method === 'GET') {
-        return fetchJsonForProfile(
-          profile,
-          pathWithRemoteOwnerScope(passthroughQuery ? `${pathname}?${passthroughQuery}` : pathname, ownerScope)
-        )
-      }
-
-      const body = request.body && typeof request.body === 'object' ? { ...request.body } : request.body
-
-      if (body && ownerScope) {
-        ;(body as Record<string, unknown>).profile = ownerScope
-      }
-
-      return requestJsonForProfile(profile, pathname, method, body)
-    }
-
-    if (globalRemoteActive()) {
-      // Single global backend: keep ?profile= so it opens the right state.db.
-      passthroughParams.set('profile', profile)
-      const path = `${pathname}?${passthroughParams.toString()}`
-
-      if (method === 'GET') {
-        return fetchJsonForProfile(null, path)
-      }
-
-      const body = request.body && typeof request.body === 'object' ? { ...request.body, profile } : { profile }
-
-      return requestJsonForProfile(null, path, method, body)
-    }
-
-    return undefined
-  }
-
-  return undefined
-}
-
-const rowsOf = data => (Array.isArray(data?.sessions) ? data.sessions : [])
-
-// A remote profile's session list. The fetch itself is profile-scoped
-// (fetchRemoteProfileSessions, #64999); the remote's own stamps carry the
-// authoritative identity — never relabel rows with the Desktop scope name.
-async function remoteSessionList(profile, searchParams) {
-  const sshOverride = profileSshOverride(readDesktopConnectionConfig(), profile)
-
-  const data = await fetchRemoteProfileSessions(profile, searchParams, fetchJsonForProfile, {
-    remoteProfileAlias: sshOverride?.remoteProfile
-  })
-
-  const rows = tagRemoteSessionRows(
-    rowsOf(data),
-    remoteProfileQueryScope(profile, sshOverride?.remoteProfile) || profile
-  )
-
-  return { ...(data as any), sessions: rows }
-}
-
-// #85834: find which remote profile owns a session id when the caller gave no
-// profile hint (pure lookup lives in profile-session-routing.ts). Results are
-// memoized briefly so a burst of hint-less reads (transcript + messages)
-// costs one sweep across the configured remotes.
-const remoteOwnerBySessionId = new Map<string, { at: number; profile: null | string }>()
-const REMOTE_OWNER_CACHE_TTL_MS = 30_000
-
-async function remoteOwnerProfileForSession(sessionId: string) {
-  if (!sessionId) {
-    return null
-  }
-
-  const remoteProfiles = configuredRemoteProfileNames()
-
-  if (remoteProfiles.length === 0) {
-    return null
-  }
-
-  const cached = remoteOwnerBySessionId.get(sessionId)
-
-  if (cached && Date.now() - cached.at < REMOTE_OWNER_CACHE_TTL_MS) {
-    return cached.profile
-  }
-
-  const owner = await findRemoteOwnerProfileForSession(sessionId, remoteProfiles, (profile, params) =>
-    remoteSessionList(profile, params)
-  ).catch(() => null)
-
-  remoteOwnerBySessionId.set(sessionId, { at: Date.now(), profile: owner })
-
-  return owner
-}
-
-// Resolve one /api/profiles/sessions slice with remote profiles spliced in —
-// the same branch logic as the GET /api/profiles/sessions intercept, but always
-// returns data (never `undefined`) so a batched caller can compose slices. A
-// specific local profile reads from the local primary; a remote-override profile
-// reads from its remote; 'all' merges every remote into the primary aggregate.
-async function fetchProfilesSessionSlice(searchParams, remoteProfiles, registrySources = null) {
-  const requested = (searchParams.get('profile') || 'all').trim() || 'all'
-
-  if (requested !== 'all') {
-    if (profileHasRemoteOverride(requested)) {
-      return remoteSessionList(requested, searchParams)
-    }
-
-    return fetchPrimaryProfileSessions(searchParams, fetchJsonForProfile)
-  }
-
-  return mergeRemoteProfileSessions(searchParams, remoteProfiles, registrySources)
-}
-
-// Unified list: primary's local aggregate, with each remote profile's stale local
-// rows/totals swapped for the remote's real ones, re-sorted by recency and
-// re-windowed to the requested page. A dead remote contributes nothing rather
-// than breaking the sidebar. Connected registry gateways' sessions are spliced
-// in too (#88880) — the unified Sessions list shows EVERY connected gateway's
-// chats, tagged with connection_id + profile so opens route correctly.
-async function mergeRemoteProfileSessions(searchParams, remoteProfiles, registrySourcesOverride = null) {
-  const limit = Math.max(1, Number(searchParams.get('limit')) || 20)
-  const offset = Math.max(0, Number(searchParams.get('offset')) || 0)
-  const order = searchParams.get('order') === 'created' ? 'started_at' : 'last_active'
-
-  const base = (await fetchPrimaryProfileSessions(searchParams, fetchJsonForProfile)) as any
-
-  // Over-fetch each remote from offset 0 (limit+offset rows) so the merged window
-  // is correct for this page — mirrors the primary's per-profile over-fetch.
-  const remoteParams = new URLSearchParams(searchParams)
-  remoteParams.set('limit', String(limit + offset))
-  remoteParams.set('offset', '0')
-
-  const remoteSet = new Set(remoteProfiles)
-  const merged = rowsOf(base).filter(s => !remoteSet.has(s?.profile))
-  const profileTotals = { ...(base.profile_totals || {}) }
-  let total = (Number(base.total) || 0) - remoteProfiles.reduce((n, p) => n + (profileTotals[p] || 0), 0)
-
-  // Swap each remote profile's stale local rows/total for the remote's real ones.
-  await Promise.all(
-    remoteProfiles.map(async name => {
-      const list = await remoteSessionList(name, remoteParams).catch(() => null)
-
-      if (!list) {
-        delete profileTotals[name] // dead remote → drop its stale local total too
-
-        return
-      }
-
-      const rows = rowsOf(list)
-      merged.push(...rows)
-      profileTotals[name] = Number(list.total) || rows.length
-      total += profileTotals[name]
-    })
-  )
-
-  // Registry gateways (v2 connections): splice every CONNECTED gateway's rows
-  // into the unified list. Only already-pooled backends are read — a sidebar
-  // refresh must never dial or spawn a backend (the Bot Mode roster-respawn
-  // trap). Reads omit include_hidden, so Bot Mode's hidden canonical chats
-  // stay out of the global list, same as local sessions.
-  const registrySources = registrySourcesOverride || (await pooledRegistrySessionSources())
-
-  if (registrySources.length) {
-    const registryRows = await fetchRegistrySessionRows(registrySources, remoteParams, (descriptor, path) =>
-      getJsonForBackend(descriptor, path, { timeoutMs: 10_000 })
-    )
-
-    const { added } = spliceRegistrySessionRows(merged, registryRows, profileTotals)
-    total += added
-  }
-
-  const recency = s => s?.[order] ?? s?.started_at ?? 0
-  merged.sort((a, b) => recency(b) - recency(a))
-
-  return {
-    ...(base as any),
-    sessions: mergeProfileSessionWindow(merged, offset, limit),
-    total,
-    profile_totals: profileTotals
-  }
-}
-
-// Every CONNECTED registry gateway as a session source: resolved descriptors
-// straight from the backend pool, never dialing. SSH sources contribute one
-// backend per pooled (connection, profile) scope; remote sources are one
-// shared host (any pooled scope's descriptor serves the cross-profile read).
-// The primary local connection is excluded for the legacy unpinned path — the
-// primary aggregate carries local rows there. A registry-pinned aggregate opts
-// in so forced-local backends remain visible when the legacy primary is remote.
-async function pooledRegistrySessionSources(includeLocal = false): Promise<RegistrySessionSource[]> {
-  const registry = readDesktopConnectionsRegistry()
-  const sources: RegistrySessionSource[] = []
-
-  for (const connection of registry.connections) {
-    if (connection.kind === 'local' && !includeLocal) {
-      continue
-    }
-
-    const prefix = backendScopePrefix(connection.id)
-
-    const pooled = [...backendPool.entries()].filter(
-      ([key, entry]) => key.startsWith(prefix) && entry.connectionPromise
-    )
-
-    if (pooled.length === 0) {
-      continue
-    }
-
-    const backends: Array<{ descriptor: unknown; profileLabel: null | string }> = []
-
-    const perProfile = connection.kind === 'ssh' || (includeLocal && connection.kind === 'local')
-
-    for (const [key, entry] of perProfile ? pooled : pooled.slice(0, 1)) {
-      try {
-        // Already-resolved for a connected backend; a still-dialing entry is
-        // skipped via the timeout guard rather than blocking the sidebar.
-        const descriptor = await Promise.race([
-          entry.connectionPromise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('pending')), 2_000))
-        ])
-
-        backends.push({
-          descriptor,
-          profileLabel: perProfile ? key.slice(prefix.length) || 'default' : null
-        })
-      } catch {
-        // Dead or still-connecting backend — contributes nothing this refresh.
-      }
-    }
-
-    if (backends.length) {
-      sources.push({ backends, connectionId: connection.id, kind: connection.kind })
-    }
-  }
-
-  return sources
-}
-
 async function dispatchRegistryApiRequest(
   request,
   registryConnectionId,
@@ -16763,14 +9534,6 @@ function registryConnectionKind(connectionId) {
   return source.kind
 }
 
-async function teardownConnectionScopedProfileBackend(connectionId, profile) {
-  const key = backendScopeKey(connectionId, profile)
-  await Promise.all([
-    poolStopper.stop(key),
-    sshBootstrapCoordinator.cancelAndWait(key).then(() => teardownSshConnection(key))
-  ])
-}
-
 async function handleScoutApiRequest(request) {
   // Registry-pinned request (request.connectionId): the renderer is working
   // against a REGISTERED gateway connection, so the data — cron jobs and their
@@ -16783,25 +9546,7 @@ async function handleScoutApiRequest(request) {
   const registryConnectionId = apiRequestRegistryConnectionId(request)
 
   if (registryConnectionId) {
-    if (isAllProfilesSessionListRequest(request?.method, request?.path)) {
-      const aggregate = await interceptSessionRequestForRemote(request, registryConnectionId)
-
-      if (aggregate !== undefined) {
-        return aggregate
-      }
-    }
-
     return dispatchRegistryApiRequest(request, registryConnectionId)
-  }
-
-  // Remote-profile session requests would otherwise hit the local primary off
-  // each profile's on-disk state.db — fine for local profiles, but a remote
-  // profile's sessions live on its remote host, so the UI's IDs 404 (or mutations
-  // no-op) the moment they run there. Route reads + mutations to the remote.
-  const rerouted = await interceptSessionRequestForRemote(request)
-
-  if (rerouted !== undefined) {
-    return rerouted
   }
 
   const profileRename = await prepareProfileRenameRequest(request)
@@ -16901,7 +9646,7 @@ ipcMain.handle('scout:api', async (_event, request) => {
         isDefaultProfile: profile => profile === 'default',
         isValidProfileName: profile => PROFILE_NAME_RE.test(profile),
         prepareLocal: localRequest => prepareProfileDeleteRequest(localRequest).then(() => undefined),
-        teardownConnection: (connectionId, profile) => teardownConnectionScopedProfileBackend(connectionId, profile)
+        teardownConnection: async () => undefined
       })
     }
 
@@ -17323,7 +10068,6 @@ app.on('before-quit', () => {
 // Close the pooled keep-alive sockets on quit so lingering connections can't
 // hold the event loop open or leak FDs past app teardown.
 app.on('will-quit', () => {
-  sshIsolatedKeepalives.stopAll()
   destroyKeepaliveAgents()
   nativeNotifications.dispose()
   quitFinalization.arm()
@@ -18438,11 +11182,6 @@ app.whenReady().then(() => {
 
   screen.on('display-removed', rehomePetOverlay)
 
-  // A hard crash can interrupt the in-memory restore loop after exact remote
-  // serves were drained. The owner-only recovery journal survives that crash;
-  // its worker waits for the install marker to clear, then reopens every scope
-  // captured by the original transaction before removing the journal entry.
-  void resumeManagedSshRecoveries()
   installApplicationMenuAfterFirstWindow({
     isMac: IS_MAC,
     buildMenu: buildApplicationMenu,
@@ -18492,35 +11231,9 @@ function configureSpellChecker() {
   }
 }
 
-// Does quitting take the agent down with the app? Reads the primary profile's
-// route through the same resolver resolveRemoteBackend uses, plus every backend
-// the quit teardown below will stop (spawned children, SSH-managed servers).
-// A route we can't resolve counts as owned: the lost-work warning is the safe
-// side to be wrong on.
+// The agent runs on the hosted backend, so quitting the app never stops its work.
 function quitStopsBackendWork(): boolean {
-  let primaryRouteKind: 'remote' | 'ssh' | null
-
-  try {
-    primaryRouteKind =
-      resolveDesktopRemoteRoute({
-        config: readDesktopConnectionConfig(),
-        env: {
-          token: process.env.SCOUT_DESKTOP_REMOTE_TOKEN,
-          url: process.env.SCOUT_DESKTOP_REMOTE_URL
-        },
-        profile: primaryProfileKey(),
-        registry: readDesktopConnectionsRegistry()
-      })?.kind ?? null
-  } catch {
-    return true
-  }
-
-  const ownedBackendCount =
-    (backendConnectionState.getProcess() ? 1 : 0) +
-    [...backendPool.values()].filter(entry => entry?.process).length +
-    sshConnections.size
-
-  return backendOwnedByApp({ ownedBackendCount, primaryRouteKind })
+  return false
 }
 
 // Ask before a quit kills a turn in flight. True when the quit was intercepted
@@ -18596,55 +11309,16 @@ app.on('before-quit', event => {
   minimizeToTray.beginQuit()
   mainProcessLagWatchdog.stop()
 
-  // A detached remote updater can outlive this Electron process. Do not tear
-  // down its SSH observer/restore transaction at the generic SSH shutdown
-  // deadline: join it first (BEFORE sealing the bootstrap coordinator, whose
-  // shutdown would refuse the restore dials), then re-enter before-quit for
-  // normal teardown. A crash still fails closed on next launch via the remote
-  // install-marker preflight in both POSIX and Windows lifecycle
-  // implementations.
-  if (
-    !managedUpdateQuitWaitDone &&
-    (managedUpdateQuitWait || managedConnectionUpdates.size > 0 || managedConnectionRecoveries.size > 0)
-  ) {
-    event.preventDefault()
-
-    if (!managedUpdateQuitWait) {
-      managedUpdateQuitWait = waitForManagedUpdateOperations(() => [
-        ...managedConnectionUpdates.values(),
-        ...managedConnectionRecoveries.values()
-      ]).finally(() => {
-        managedUpdateQuitWaitDone = true
-        app.quit()
-      })
-    }
-
-    return
-  }
-
-  // A prevented first quit leaves the renderer alive while teardown runs.
-  // Seal the SSH coordinator before touching connections so reconnect
-  // callbacks cannot recreate a backend for a registration whose app is
-  // already quitting (#91668).
-  sshBootstrapCoordinator.shutdown()
-
   const backendNeedsWait = backendQuitNeedsWait({
-    connectionPending: backendConnectionState.getPendingPromise() !== null || localBackendLifecycle.hasPending(),
-    poolPending: poolStopper.hasPending(),
+    connectionPending: backendConnectionState.getPendingPromise() !== null,
+    poolPending: false,
     processAttached: backendConnectionState.getProcess() !== null,
     shutdownPending: backendShutdown.isPending()
   })
 
-  const sshNeedsWait =
-    sshConnections.size > 0 || sshBootstrapCoordinator.promises().length > 0 || sshTeardowns.hasPending()
-
   const teardownTasks: QuitTeardownTask[] = [
     { run: (): Promise<void> => backendShutdown.run(), waitForCompletion: backendNeedsWait }
   ]
-
-  if (sshNeedsWait) {
-    teardownTasks.push({ run: teardownSshForQuit, waitForCompletion: true })
-  }
 
   if (quitTeardown.begin(teardownTasks)) {
     event.preventDefault()

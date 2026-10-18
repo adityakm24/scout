@@ -233,26 +233,6 @@ export const SETTINGS_MANIFEST = {
       copy: t => ({ label: t.settings.sessions.autoArchiveTitle, description: t.settings.sessions.autoArchiveDesc })
     }
   },
-  gateway: {
-    connectionMode: {
-      subpage: 'connection',
-      keywords: ['gateway', 'connection', 'local', 'remote', 'ssh', 'url', 'token', 'host', 'port', 'key'],
-      copy: t => ({ label: t.settings.gateway.modeTitle, description: t.settings.gateway.intro })
-    },
-    keychainEncryption: {
-      subpage: 'connection',
-      keywords: ['keychain', 'encrypt', 'secrets', 'secure storage', 'plain text'],
-      copy: t => ({
-        label: t.settings.gateway.keychainEncryptionTitle,
-        description: t.settings.gateway.keychainEncryptionDesc
-      })
-    },
-    diagnostics: {
-      subpage: 'connection',
-      keywords: ['diagnostics', 'logs', 'debug', 'report', 'troubleshoot'],
-      copy: t => ({ label: t.settings.gateway.diagnostics, description: t.settings.gateway.diagnosticsDesc })
-    }
-  },
   about: {
     updates: {
       subpage: 'updates',

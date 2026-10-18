@@ -23,12 +23,9 @@ import {
   ensureGatewayForAgent,
   ensureGatewayForProfile,
   openGatewayForAgent,
-  openGatewayForProfile,
-  openSecondaryCount
+  openGatewayForProfile
 } from '@/store/gateway'
 import { notifyError } from '@/store/notifications'
-import { $poolLimits } from '@/store/pool-limits'
-import { notifyRemoteOverrideAuthFailure } from '@/store/profile-remote-override'
 import { exitProjectScope } from '@/store/project-scope'
 import { $connection, clearComposerSelectionOwner, setComposerSelectionOwner, setConnection } from '@/store/session'
 import type { SessionOwnerRoute } from '@/store/session-request-router'
@@ -517,17 +514,6 @@ export function prewarmProfileBackend(name: string, connectionId: null | string 
     return
   }
 
-  // Prewarm/cap harmony (#91545): the pool caps spawned backends at the
-  // configured max, and a spawn over the cap LRU-evicts the warmest idle
-  // backend. A hover sweep across the rail therefore evicted backends for
-  // profiles the user was about to click — prewarming caused the exact churn
-  // it exists to prevent. Skip speculative spawns once every pool slot is
-  // occupied by an open socket; the real click still spawns on demand, it
-  // just doesn't get a head start.
-  if (openSecondaryCount() + 1 > $poolLimits.get().maxBackends) {
-    return
-  }
-
   prewarmedAt.set(scope, now)
   const dial = connection ? openGatewayForAgent(connection, key) : openGatewayForProfile(key)
   dial.catch(() => undefined)
@@ -976,43 +962,15 @@ export function selectProfile(name: string): void {
   // preference.
   const onPrimary = activeGatewayConnectionId() == null
 
-  const shouldRememberStartupProfile = onPrimary ? isLocalDesktopProfile(target) : Promise.resolve(false)
-
-  void Promise.all([activateOnCurrentSource(target), shouldRememberStartupProfile])
-    .then(([, shouldRemember]) => {
-      if (shouldRemember) {
+  void activateOnCurrentSource(target)
+    .then(() => {
+      if (onPrimary) {
         return window.scoutDesktop?.profile?.remember(target)
       }
 
       return undefined
     })
-    .catch((error: unknown) => {
-      if (!notifyRemoteOverrideAuthFailure(target, error)) {
-        notifyError(error, `Failed to switch to profile "${target}"`)
-      }
-    })
-}
-
-// Resolve persistence from the saved per-profile Desktop route, rather than the
-// live backend descriptor. A descriptor lookup is intentionally best-effort:
-// failure must not discard a successful local selection's startup preference.
-// Conversely, `ssh`, `remote`, and `cloud` here are per-profile overrides and
-// must never replace the local Desktop startup profile.
-async function isLocalDesktopProfile(target: string): Promise<boolean> {
-  const getConnectionConfig = window.scoutDesktop?.getConnectionConfig
-
-  if (!getConnectionConfig) {
-    return true
-  }
-
-  try {
-    return (await getConnectionConfig(target)).mode === 'local'
-  } catch {
-    // Preserve the pre-fix local-primary behavior when Electron's config bridge
-    // is temporarily unavailable. The next successful config read will still
-    // exclude any remote override.
-    return true
-  }
+    .catch((error: unknown) => notifyError(error, `Failed to switch to profile "${target}"`))
 }
 
 // Route a profile pick at the source the user is LOOKING at. $profiles is the
@@ -1061,11 +1019,7 @@ export function newSessionInProfile(name: string): void {
   leaveForeignProjectScope(target)
   requestFreshSession()
   // #81094: surface the failed dial instead of failing silently.
-  void activateOnCurrentSource(target).catch((error: unknown) => {
-    if (!notifyRemoteOverrideAuthFailure(target, error)) {
-      notifyError(error, `Failed to open profile "${target}"`)
-    }
-  })
+  void activateOnCurrentSource(target).catch((error: unknown) => notifyError(error, `Failed to open profile "${target}"`))
 }
 
 /** Start a draft owned by a specific registry agent. Foreground activation is
@@ -1164,12 +1118,3 @@ export function requestProfileCreate(): void {
   $profileCreateRequest.set($profileCreateRequest.get() + 1)
 }
 
-// Keepalive ping for the active pool backend so the main-process idle reaper
-// (which can't see the direct renderer↔backend WS) spares it. No-op for the
-// primary/default backend, which is never pooled.
-export function touchActiveGatewayBackend(): void {
-  // Always ping: the main process no-ops for non-pool (primary) backends, so we
-  // don't need to know which profile is primary from here.
-  const target = normalizeProfileKey($activeGatewayProfile.get())
-  void window.scoutDesktop?.touchBackend?.(target).catch(() => undefined)
-}

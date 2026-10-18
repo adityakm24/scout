@@ -16,7 +16,6 @@ import { useLocation, useNavigate } from 'react-router'
 import { formatRefValue } from '@/components/assistant-ui/directive-text'
 import { BootFailureOverlay } from '@/components/boot-failure-overlay'
 import { ConfirmHost } from '@/components/confirm-host'
-import { DesktopInstallOverlay } from '@/components/desktop-install-overlay'
 import { ExternalOpenFailedDialog } from '@/components/external-open-failed-dialog'
 import { FindBar } from '@/components/find-bar'
 import { GatewayConnectingOverlay } from '@/components/gateway-connecting-overlay'
@@ -46,7 +45,6 @@ import { reconnectGateway } from '@/store/gateway-reconnect'
 import { $interfaceMode, shownInMode } from '@/store/interface-mode'
 import { $pinnedSessionIds, pinSession, restoreWorktree, unpinSession } from '@/store/layout'
 import { notifyError } from '@/store/notifications'
-import { $poolLimitsSettingsRequest } from '@/store/pool-limits'
 import { $previewTarget } from '@/store/preview'
 import {
   $activeGatewayProfile,
@@ -160,7 +158,6 @@ import { $restartPreviewServer, useTitlebarToolContributions } from './panes'
 import { type AmbientGatewayRequest, createSessionRpcDispatcher } from './session-rpc-dispatcher'
 import { ChatRoutesSurface, SidebarSurface, StatusbarSurface, TerminalSurface } from './surfaces'
 import type { WiringActions, WiringApi } from './types'
-import { POOL_LIMITS_SETTINGS_ROUTE } from './wiring-routing'
 
 // Overlay views the controller mounts over the shell — lazy, load on demand.
 // The workspace-route full-page views (skills/messaging/artifacts) are the
@@ -188,7 +185,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
 
   const busyRef = useRef(false)
   const creatingSessionRef = useRef(false)
-  const poolLimitsSettingsSeenRef = useRef(0)
   const routeRequestSeenRef = useRef(0)
   const backendRestartSeenRef = useRef(0)
   const cronReviewSeenRef = useRef(0)
@@ -200,7 +196,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
 
   const gatewayState = useStore($gatewayState)
   const activeSessionId = useStore($activeSessionId)
-  const poolLimitsSettingsRequest = useStore($poolLimitsSettingsRequest)
   const routeRequest = useStore($routeRequest)
   const backendRestartRequest = useStore($backendRestartRequest)
   const cronReviewRequest = useStore($cronReviewRequest)
@@ -242,22 +237,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
         .catch(err => notifyError(err, translateNow('notifications.errors.restartScoutFailed')))
     }
   }, [backendRestartRequest])
-
-  // Pool-cap recovery is fired by the notification action, which has no router
-  // context. Keep navigation user-initiated: the counter changes only when the
-  // user clicks "Open Advanced Settings" on a pool-slot failure.
-  // eslint-disable-next-line no-restricted-syntax -- one-shot request-seen sentinel, not an atom mirror
-  useEffect(() => {
-    if (poolLimitsSettingsRequest === poolLimitsSettingsSeenRef.current) {
-      return
-    }
-
-    poolLimitsSettingsSeenRef.current = poolLimitsSettingsRequest
-
-    if (poolLimitsSettingsRequest > 0) {
-      navigate(POOL_LIMITS_SETTINGS_ROUTE)
-    }
-  }, [navigate, poolLimitsSettingsRequest])
 
   // eslint-disable-next-line no-restricted-syntax -- one-shot request-seen sentinel, not an atom mirror
   useEffect(() => {
@@ -1230,7 +1209,6 @@ export function ContribWiring({ children }: { children: ReactNode }) {
 
       {/* The full real overlay set (mirrors DesktopController's `overlays`). */}
       <RemoteDisplayBanner />
-      {!isAuxiliaryWindow() && <DesktopInstallOverlay />}
       {!isAuxiliaryWindow() && (
         <OnboardingChatGate enabled={gatewayState === 'open'} onKickoff={kickoffFirstChat} />
       )}

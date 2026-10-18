@@ -51,8 +51,7 @@ import {
   reportPrimaryGatewayState,
   type ScopedServerRequest,
   setPrimaryGateway,
-  setPrimaryGatewayConnection,
-  touchSecondaryGateways
+  setPrimaryGatewayConnection
 } from '@/store/gateway'
 import { type GatewayReconnectOptions, reconnectGateway, registerGatewayReconnect } from '@/store/gateway-reconnect'
 import {
@@ -64,12 +63,10 @@ import {
 } from '@/store/gateway-switch'
 import { watchLocalRuntimeJobs } from '@/store/local-runtime-jobs'
 import { notify, notifyError, RECOVERY_ACTIONS } from '@/store/notifications'
-import { loadPoolLimits } from '@/store/pool-limits'
 import {
   $activeGatewayProfile,
   normalizeProfileKey,
-  refreshActiveProfile,
-  touchActiveGatewayBackend
+  refreshActiveProfile
 } from '@/store/profile'
 import { requestBackendRestart } from '@/store/recovery-requests'
 import {
@@ -1297,18 +1294,9 @@ export function useGatewayBoot({
     // this a socket dropped during sleep sits closed until the user clicks.
     window.addEventListener('focus', onFocus)
 
-    // Pool limits are main-process state; mirror them once for the Settings
-    // rows and prewarmProfileBackend's saturation guard.
-    void loadPoolLimits()
-
-    // Keep live pool backends alive while this window is open (the main process
-    // can't observe the direct renderer↔backend WS). No-op for the primary.
+    // The socket pruner is otherwise event-driven: a socket spared by the
+    // min-lifetime grace with no store change afterwards would stay open forever.
     const keepaliveTimer = setInterval(() => {
-      touchActiveGatewayBackend()
-      touchSecondaryGateways()
-      // The pruner is otherwise event-driven: a socket spared by the
-      // min-lifetime grace with no store change afterwards would hold its
-      // pool slot forever.
       recomputeKeptGateways()
     }, 60_000)
 

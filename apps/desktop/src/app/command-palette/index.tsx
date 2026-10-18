@@ -34,7 +34,6 @@ import {
   Download,
   Egg,
   GitBranch,
-  Globe,
   type IconComponent,
   Info,
   KeyRound,
@@ -401,7 +400,7 @@ const sessionKeywords = (session: SessionEntry, ...tags: string[]): string[] =>
   [...tags, 'chat', 'session', session.preview, session.git_branch].filter((word): word is string => !!word)
 
 type NonConfigSettingsLabel =
-  'about' | 'archivedChats' | 'gateway' | 'keysSettings' | 'keysTools' | 'mcp' | 'providerAccounts' | 'providerApiKeys'
+  'about' | 'archivedChats' | 'keysSettings' | 'keysTools' | 'mcp' | 'providerAccounts' | 'providerApiKeys'
 
 const NON_CONFIG_SETTINGS: ReadonlyArray<{
   icon: IconComponent
@@ -420,23 +419,6 @@ const NON_CONFIG_SETTINGS: ReadonlyArray<{
     keywords: ['providers', 'api key', 'keys', 'secrets', 'tokens', 'egress', 'iron proxy', 'sandbox proxy'],
     labelKey: 'providerApiKeys',
     tab: 'providers&pview=keys'
-  },
-  {
-    icon: Globe,
-    // The Connections registry merged into the unified Gateways page.
-    keywords: [
-      'connection',
-      'connections',
-      'remote',
-      'multi',
-      'instances',
-      'ssh',
-      'cloud',
-      'add gateway',
-      'registry'
-    ],
-    labelKey: 'gateway',
-    tab: 'gateway'
   },
   {
     icon: KeyRound,

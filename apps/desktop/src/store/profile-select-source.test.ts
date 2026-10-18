@@ -202,28 +202,4 @@ describe('selectProfile startup preference (#79886)', () => {
     await vi.waitFor(() => expect(ensureGatewayForProfile).toHaveBeenCalledWith('tilly'))
     await vi.waitFor(() => expect(rememberProfile).toHaveBeenCalledWith('tilly'))
   })
-
-  it('does not replace the local startup preference for a profile SSH override', async () => {
-    activeGatewayConnectionId.mockReturnValue(null)
-
-    const getConnection = vi.fn(async () => ({ mode: 'remote', remoteKind: 'ssh' }))
-
-    const getConnectionConfig = vi.fn(async () => ({ mode: 'ssh' }))
-
-    ;(globalThis as { window?: unknown }).window = {
-      scoutDesktop: {
-        getConnection,
-        getConnectionConfig,
-        profile: { remember: rememberProfile }
-      }
-    }
-
-    selectProfile('macmini-scout')
-
-    await vi.waitFor(() => expect(ensureGatewayForProfile).toHaveBeenCalledWith('macmini-scout'))
-    await vi.waitFor(() => expect(getConnection).toHaveBeenCalledWith('macmini-scout'))
-    await new Promise(resolve => setTimeout(resolve, 0))
-
-    expect(rememberProfile).not.toHaveBeenCalled()
-  })
 })

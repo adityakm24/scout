@@ -56,19 +56,6 @@ declare global {
       // self-heal via the child 'exit' handler). `rebuilt` is true when a stale
       // remote cache was dropped.
       revalidateConnection: () => Promise<{ ok: boolean; rebuilt: boolean }>
-      // Keepalive: mark a pool profile backend as recently used so the idle
-      // reaper spares it while its chat is active. `activeTurn` reports whether
-      // a prompt turn leases the backend (early skip for cooperative
-      // retirement; the backend probe is the proof).
-      touchBackend: (profile?: string | null, options?: { activeTurn?: boolean }) => Promise<{ ok: boolean }>
-      // Pool sizing (Settings → Advanced): device-local, live-applied by the
-      // main process. get resolves the limits currently in force; set applies
-      // (and persists) new ones, evicting/reaping to converge immediately.
-      getPoolLimits: () => Promise<PoolLimits>
-      setPoolLimits: (limits: { maxBackends?: number; idleMs?: number }) => Promise<{
-        ok: boolean
-        limits: PoolLimits
-      }>
       getGatewayWsUrl: (profile?: null | string) => Promise<GatewayWsUrlResult>
       // Open (or focus) a standalone OS window for a single chat session so
       // the user can work with multiple chats side by side. Returns ok:false
@@ -179,39 +166,14 @@ declare global {
         onShown: (callback: () => void) => () => void
       }
       getBootProgress: () => Promise<DesktopBootProgress>
-      getConnectionConfig: (profile?: null | string) => Promise<DesktopConnectionConfig>
-      saveConnectionConfig: (payload: DesktopConnectionConfigInput) => Promise<DesktopConnectionConfig>
-      applyConnectionConfig: (payload: DesktopConnectionConfigInput) => Promise<DesktopConnectionConfig>
-      testConnectionConfig: (payload: DesktopConnectionConfigInput) => Promise<DesktopConnectionTestResult>
       // Opt-in OS-keychain encryption for stored gateway secrets (default
       // off). `get` never touches the OS keychain; `set` re-encodes stored
       // secrets and can throw when the keychain is unusable.
       getSecretStorageEncryption: () => Promise<{ on: boolean }>
       setSecretStorageEncryption: (on: boolean) => Promise<{ on: boolean }>
-      // v2 multi-connection registry: named agent sources, all persisted
-      // together (local + any number of remote/ssh instances).
+      // The connection registry: one entry, the hosted backend.
       connections: {
         list: () => Promise<DesktopConnectionsRegistry>
-        save: (
-          payload: DesktopRegistryConnectionInput
-        ) => Promise<{ ok: boolean; connection: DesktopRegistryConnection; registry: DesktopConnectionsRegistry }>
-        remove: (id: string) => Promise<{ ok: boolean; registry: DesktopConnectionsRegistry }>
-        setPrimary: (id: string) => Promise<{ ok: boolean; registry: DesktopConnectionsRegistry }>
-        setLaunchMode?: (
-          mode: 'last-used' | 'primary'
-        ) => Promise<{ ok: boolean; registry: DesktopConnectionsRegistry }>
-        setLastUsed?: (id: string) => Promise<{ ok: boolean; registry: DesktopConnectionsRegistry }>
-        test: (id: string) => Promise<DesktopConnectionTestResult>
-        // Drain/update/restore one Desktop-managed SSH install. External URL
-        // sources are refused without touching their processes.
-        updateManaged?: (id: string) => Promise<DesktopManagedConnectionUpdateResult>
-        // Fan out `scout update` to every registered connection; each row is
-        // independent.
-        // excludeIds skips connections the caller updates through another
-        // path (the everything-update flow's active backend + local client).
-        updateAll?: (options?: {
-          excludeIds?: string[]
-        }) => Promise<{ ok: boolean; results: DesktopConnectionUpdateResult[] }>
         // Registry lifecycle push: fired when a connection is removed or
         // materially edited so the renderer can dispose (and re-dial) the
         // secondary gateways scoped to it. Optional: older Electron mains
@@ -220,14 +182,6 @@ declare global {
           callback: (payload: { connectionId: string; reason: 'removed' | 'saved' | 'updated' }) => void
         ) => () => void
       }
-      sshConfigHosts: () => Promise<DesktopSshHostsResult>
-      sshResolveHost: (host: string) => Promise<DesktopSshResolveResult>
-      probeConnectionConfig: (remoteUrl: string) => Promise<DesktopConnectionProbeResult>
-      oauthLoginConnectionConfig: (
-        remoteUrl: string,
-        options?: DesktopOauthLoginOptions
-      ) => Promise<DesktopOauthLoginResult>
-      oauthLogoutConnectionConfig: (remoteUrl: string) => Promise<DesktopOauthLogoutResult>
       profile: {
         getDefault: () => Promise<DesktopProfileRoute | null>
         setDefault: (route: DesktopProfileRoute) => Promise<DesktopProfileRoute>
@@ -539,15 +493,9 @@ declare global {
       getOnBattery?: () => Promise<boolean>
       onBatteryChanged?: (callback: (onBattery: boolean) => void) => () => void
       onBootProgress: (callback: (payload: DesktopBootProgress) => void) => () => void
-      getBootstrapState: () => Promise<DesktopBootstrapState>
-      /** Resolve This device without starting an install. Missing on an older preload. */
-      probeLocalBackend?: () => Promise<{ bootstrapNeeded: boolean }>
-      continueBootstrapLocal: () => Promise<{ ok: boolean }>
+      /** Drop the current backend connection and any latched failure so the next boot dials again. */
+      retryBackendConnection: () => Promise<{ ok: boolean }>
       recycleBackend?: (profile?: null | string) => Promise<{ ok: boolean }>
-      resetBootstrap: () => Promise<{ ok: boolean }>
-      repairBootstrap: () => Promise<{ ok: boolean; error?: string }>
-      cancelBootstrap: () => Promise<{ ok: boolean; cancelled: boolean }>
-      onBootstrapEvent: (callback: (payload: DesktopBootstrapEvent) => void) => () => void
       getVersion: (scope?: { connectionId?: string; profile?: string }) => Promise<DesktopVersionInfo>
       getMachineProfile?: () => Promise<DesktopMachineProfile>
       /** The latest pm/venv/plugin-operation receipt (machine-readable):

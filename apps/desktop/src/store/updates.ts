@@ -18,7 +18,7 @@ import type {
 import { translateNow } from '@/i18n'
 import { persistString, storedString } from '@/lib/storage'
 import { checkScoutUpdate, getActionStatus, updateScout } from '@/scout'
-import { $connectionsRegistry, refreshConnectionsRegistry } from '@/store/connections'
+import { $connectionsRegistry } from '@/store/connections'
 import { reconnectGateway } from '@/store/gateway-reconnect'
 import { dismissNotification, notify } from '@/store/notifications'
 import { $connection } from '@/store/session'
@@ -1085,49 +1085,6 @@ async function runEverythingUpdate(): Promise<void> {
       $updateOverlayTarget.set('backend')
 
       await applyBackendUpdate().catch(() => null)
-    }
-
-    // 2. Fan out to every OTHER eligible registered connection. The active
-    //    backend was just updated (excluded), and the local runtime updates
-    //    with the client in step 3 (excluded). No registry/bridge → skip.
-    const bridge = window.scoutDesktop?.connections
-    const registry = $connectionsRegistry.get() ?? (await refreshConnectionsRegistry().catch(() => null))
-    const excludeIds = ['local']
-    const activeConnectionId = $connection.get()?.connectionId
-
-    if (isRemoteMode() && activeConnectionId && !excludeIds.includes(activeConnectionId)) {
-      excludeIds.push(activeConnectionId)
-    }
-
-    const remaining = (registry?.connections ?? []).filter(connection => !excludeIds.includes(connection.id))
-
-    if (bridge?.updateAll && remaining.length > 0) {
-      try {
-        const { results } = await bridge.updateAll({ excludeIds })
-
-        for (const row of results) {
-          if (row.ok) {
-            notify({ title: row.label, message: row.detail || translateNow('updates.everythingDispatched') })
-          } else if (row.skipped) {
-            notify({
-              title: row.label,
-              message: row.detail || row.reason || translateNow('updates.everythingSkipped')
-            })
-          } else {
-            notify({
-              kind: 'warning',
-              title: row.label,
-              message: row.error || row.detail || translateNow('updates.everythingRowFailed')
-            })
-          }
-        }
-      } catch (error) {
-        notify({
-          kind: 'warning',
-          title: translateNow('updates.everythingFanoutFailedTitle'),
-          message: error instanceof Error ? error.message : String(error)
-        })
-      }
     }
 
     // 3. The client last — its apply relaunches or hands off the app, so it

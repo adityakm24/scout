@@ -617,43 +617,18 @@ export interface Translations {
       signInAgain: string
       ipcBridgeUnavailable: string
     }
-    causes: {
-      exitedEarly: string
-      timedOut: string
-      permission: string
-      diskFull: string
-      portInUse: string
-      installMissing: string
-    }
     failure: {
       reconnecting: string
       title: string
       description: string
       details: string
-      remoteTitle: string
-      remoteDescription: string
       retry: string
-      repairInstall: string
-      useLocalGateway: string
-      gatewaySettings: string
-      back: string
       openLogs: string
-      repairHint: string
-      bundledReinstallHint: string
-      reinstallApp: string
-      remoteSignInHint: (signInLabel: string) => string
-      signOutAndSignIn: string
-      remoteFailureHint: string
       hideRecentLogs: string
       showRecentLogs: string
       signedInTitle: string
       signedInMessage: string
-      signInIncompleteTitle: string
-      signInIncompleteMessage: string
       signInFailed: string
-      signInToRemoteGateway: string
-      signInWithProvider: (provider: string) => string
-      identityProvider: string
     }
   }
 
@@ -810,7 +785,6 @@ export interface Translations {
       providerApiKeys: string
       providerCustomEndpoints: string
       providerLocalModels: string
-      gateway: string
       apiKeys: string
       keybinds: string
       keysTools: string
@@ -986,7 +960,7 @@ export interface Translations {
       completionSoundPreview: string
     }
     sections: Record<string, string>
-    searchPlaceholder: Record<'about' | 'config' | 'gateway' | 'keys' | 'mcp' | 'sessions', string>
+    searchPlaceholder: Record<'about' | 'config' | 'keys' | 'mcp' | 'sessions', string>
     modeOptions: Record<'light' | 'dark' | 'system', ModeOptionCopy>
     appearance: {
       title: string
@@ -1366,106 +1340,6 @@ export interface Translations {
       receiptVersions: (pre: string, post: string) => string
       scopesRestored: (profiles: string) => string
       scopeNotRestored: (profile: string, error: string) => string
-    }
-    gateway: {
-      loading: string
-      unavailableTitle: string
-      unavailableDesc: string
-      title: string
-      envOverride: string
-      intro: string
-      envOverrideTitle: string
-      envOverrideDesc: string
-      modeTitle: string
-      localTitle: string
-      localDesc: string
-      remoteTitle: string
-      remoteDesc: string
-      remoteAuthHint: string
-      remoteUrlTitle: string
-      remoteUrlDesc: string
-      probing: string
-      probeError: string
-      signedIn: string
-      signIn: string
-      signOut: string
-      signInWith: (provider: string) => string
-      authTitle: string
-      authSignedInPassword: string
-      authSignedInOauth: string
-      authNeedsPassword: string
-      authNeedsOauth: (provider: string) => string
-      tokenTitle: string
-      tokenDesc: string
-      existingToken: (value: string) => string
-      savedToken: string
-      pasteSessionToken: string
-      plainTextConfirmTitle: string
-      plainTextConfirmDesc: string
-      plainTextConfirmAction: string
-      plainTextStoredTitle: string
-      plainTextStoredDesc: string
-      keychainEncryptionTitle: string
-      keychainEncryptionDesc: string
-      keychainEncryptionFailed: string
-      testRemote: string
-      saveForRestart: string
-      saveAndReconnect: string
-      diagnostics: string
-      diagnosticsDesc: string
-      openLogs: string
-      incompleteTitle: string
-      incompleteSignIn: string
-      incompleteToken: string
-      incompleteSignInTest: string
-      incompleteTokenTest: string
-      enterUrlFirst: string
-      restartingTitle: string
-      savedTitle: string
-      restartingMessage: string
-      savedMessage: string
-      connectedTo: (baseUrl: string, version?: string) => string
-      reachableTitle: string
-      signedOutTitle: string
-      signedOutMessage: string
-      failedLoad: string
-      signInFailed: string
-      signOutFailed: string
-      testFailed: string
-      applyFailed: string
-      saveFailed: string
-      sshTitle: string
-      sshDesc: string
-      sshTrustHint: string
-      sshHostTitle: string
-      sshHostDesc: string
-      sshHostPick: string
-      sshHostPickTitle: string
-      sshHostPickDesc: string
-      sshHostCustom: string
-      sshUserTitle: string
-      sshUserDesc: string
-      sshUserPlaceholder: string
-      sshPortTitle: string
-      sshPortDesc: string
-      sshKeyTitle: string
-      sshKeyDesc: string
-      sshScoutPathTitle: string
-      sshScoutPathDesc: string
-      sshScoutPathPlaceholder: string
-      sshTestConnection: string
-      sshConnect: string
-      sshButtonsHint: string
-      sshReachable: (host: string, platform: string) => string
-      sshIncompleteHost: string
-      sshErrUnreachable: string
-      sshErrAuth: string
-      sshErrHostKey: string
-      sshErrNotInstalled: string
-      sshErrPlatform: string
-      sshErrTimeout: string
-      sshErrUpdateRequired: string
-      sshErrUnknown: string
     }
     keys: {
       loading: string
@@ -2321,34 +2195,6 @@ export interface Translations {
       unread: (count: number) => string
       needsInput: (count: number) => string
       working: (count: number) => string
-    }
-    remoteOverride: {
-      menuItem: string
-      badge: (host: string) => string
-      title: (profile: string) => string
-      description: string
-      urlLabel: string
-      urlPlaceholder: string
-      urlInvalid: string
-      tokenLabel: string
-      tokenPlaceholder: string
-      tokenSavedHint: string
-      plainTextOptIn: string
-      collisionWarning: (label: string) => string
-      confirmTitle: string
-      confirmNote: (profile: string, host: string) => string
-      confirmBack: string
-      connect: string
-      connecting: string
-      disconnect: string
-      savedTitle: string
-      savedMessage: (profile: string, host: string) => string
-      removedTitle: string
-      removedMessage: (profile: string) => string
-      removeFailed: string
-      authFailedTitle: string
-      authFailedMessage: (profile: string, host: string) => string
-      updateToken: string
     }
     actions: string
     color: string
@@ -3229,74 +3075,6 @@ export interface Translations {
     line: string
     nameSuggestion: (name: string) => string
   }
-  install: {
-    stageStates: Record<string, string>
-    oneTimeTitle: string
-    unsupportedDesc: (platform: string) => string
-    installCommand: string
-    copyCommand: string
-    viewDocs: string
-    installTo: string
-    retryAfterRun: string
-    setupChoiceTitle: string
-    setupChoiceDesc: string
-    setupChoiceDescLocal: string
-    connectExistingTitle: string
-    connectExistingShort: string
-    connectExistingDesc: string
-    installLocalTitle: string
-    installLocalDesc: string
-    useLocalTitle: string
-    useLocalDesc: string
-    bundledLocalDesc: string
-    localStartUnavailable: string
-    remoteSetupTitle: string
-    remoteSetupDesc: string
-    remoteUrlTitle: string
-    remoteUrlDesc: string
-    remoteUrlPlaceholder: string
-    probing: string
-    probeError: string
-    probeErrorDetails: string
-    identityProvider: string
-    authTitle: string
-    authNeedsOauth: (provider: string) => string
-    authSignedIn: string
-    connected: string
-    signIn: string
-    signInWith: (provider: string) => string
-    enterUrlFirst: string
-    signInIncomplete: string
-    tokenTitle: string
-    tokenDesc: string
-    pasteSessionToken: string
-    incompleteSignInTest: string
-    incompleteTokenTest: string
-    testConnection: string
-    testSucceeded: (baseUrl: string, version?: string) => string
-    applyRemote: string
-    backToSetup: string
-    failedTitle: string
-    settingUpTitle: string
-    finishingTitle: string
-    failedDesc: string
-    activeDesc: string
-    progress: (completed: number, total: number) => string
-    currentStage: (stage: string) => string
-    fetchingManifest: string
-    error: string
-    hideOutput: string
-    showOutput: string
-    lines: (count: number) => string
-    noOutput: string
-    cancelling: string
-    cancelInstall: string
-    transcriptSaved: string
-    copiedOutput: string
-    copyOutput: string
-    reloadRetry: string
-    openLogs: string
-  }
 
   onboarding: {
     headerTitle: string
@@ -4103,8 +3881,6 @@ export interface Translations {
     readOnlyTranscriptSendBlocked: string
     resumeStrandedTitle: string
     resumeStrandedBody: string
-    poolSlotTimeoutBody: string
-    poolSlotTimeoutOpenSettings: string
     resumeRetry: string
     nothingToBranch: string
     branchNeedsChat: string

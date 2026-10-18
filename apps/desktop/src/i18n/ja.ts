@@ -192,31 +192,13 @@ export const ja = defineLocale({
       title: 'Scout を起動できませんでした',
       description:
         'バックグラウンドゲートウェイが起動しませんでした。以下の回復手順をお試しください。チャットや設定は削除されません。',
-      remoteTitle: 'リモートゲートウェイへのサインインが必要です',
-      remoteDescription:
-        'リモートゲートウェイのセッションが期限切れです。再接続するにはもう一度サインインしてください。チャットや設定は削除されません。',
       retry: '再試行',
-      repairInstall: 'インストールを修復',
-      useLocalGateway: 'ローカルゲートウェイを使用',
-      gatewaySettings: 'ゲートウェイ設定',
-      back: '戻る',
       openLogs: 'ログを開く',
-      repairHint: '修復はインストーラーを再実行します。新しいマシンでは数分かかる場合があります。',
-      remoteSignInHint: signInLabel =>
-        `保存済みのリモートブラウザセッションからサインアウトし、${signInLabel}を開きます。代わりにバンドルされたバックエンドに切り替えるには「ローカルゲートウェイを使用」を選択してください。`,
-      signOutAndSignIn: 'サインアウトして再サインイン',
-      remoteFailureHint:
-        '「ゲートウェイ設定」でゲートウェイの URL とサインインを確認するか、ローカルゲートウェイに切り替えてください。',
       hideRecentLogs: '最近のログを非表示',
       showRecentLogs: '最近のログを表示',
       signedInTitle: 'サインインしました',
       signedInMessage: 'リモートゲートウェイに再接続中…',
-      signInIncompleteTitle: 'サインインが完了していません',
-      signInIncompleteMessage: '認証が完了する前にログインウィンドウが閉じられました。',
       signInFailed: 'サインインに失敗しました',
-      signInToRemoteGateway: 'リモートゲートウェイにサインイン',
-      signInWithProvider: provider => `${provider} でサインイン`,
-      identityProvider: 'ID プロバイダー'
     }
   },
 
@@ -385,11 +367,6 @@ export const ja = defineLocale({
       advancedOutput: '出力の制限',
       advancedDelegation: 'サブエージェント',
       advancedDesktop: 'デスクトップと起動',
-      gatewayConnection: 'このウィンドウ',
-      gatewayDevices: '保存済みの接続',
-      gatewayManagedUpdates: 'リモート更新',
-      gatewayManagedUpdatesUnavailable: 'リモート更新には、管理対象 SSH の更新に対応したデスクトップ版が必要です。',
-      gatewayManagedUpdatesEmpty: '保存済みの接続に SSH 接続を追加すると、ここで更新を管理できます。',
       keyboardShortcuts: 'キー割り当て',
       hudGesture: 'HUDジェスチャー',
       screenCapture: '画面キャプチャ',
@@ -431,7 +408,6 @@ export const ja = defineLocale({
       providerApiKeys: 'API キー',
       providerCustomEndpoints: 'カスタムエンドポイント',
       providerLocalModels: 'ローカルモデル',
-      gateway: 'ゲートウェイ',
       apiKeys: 'ツールとキー',
       keybinds: 'キーボードショートカット',
       keysTools: 'ツール',
@@ -574,7 +550,6 @@ export const ja = defineLocale({
     searchPlaceholder: {
       about: 'Scout Desktop について',
       config: '設定を検索…',
-      gateway: 'ゲートウェイ接続…',
       keys: 'API キーを検索…',
       mcp: 'MCP サーバーを検索…',
       sessions: 'アーカイブ済みセッションを検索…'
@@ -1075,122 +1050,6 @@ export const ja = defineLocale({
       replace: '置き換え',
       set: '設定',
       clear: 'クリア'
-    },
-    gateway: {
-      loading: 'ゲートウェイ設定を読み込み中...',
-      unavailableTitle: 'ゲートウェイ設定は利用できません',
-      unavailableDesc: 'デスクトップ IPC ブリッジはゲートウェイ設定を公開していません。',
-      title: 'ゲートウェイ接続',
-      envOverride: 'env オーバーライド',
-      intro:
-        'Scout Desktop はデフォルトで独自のローカルゲートウェイを起動します。別のマシンや信頼できるプロキシの背後で既に動作している Scout バックエンドをこのアプリで制御する場合は、リモートゲートウェイを使用してください。ゲートウェイ接続はマシン単位の設定で、プロファイルは接続したゲートウェイから検出されます。',
-      envOverrideTitle: '環境変数がこのデスクトップセッションを制御しています。',
-      envOverrideDesc:
-        '保存された設定を使用するには SCOUT_DESKTOP_REMOTE_URL と SCOUT_DESKTOP_REMOTE_TOKEN の設定を解除してください。',
-      localTitle: 'ローカルゲートウェイ',
-      localDesc:
-        'ローカルホストでプライベートな Scout バックエンドを起動します。これがデフォルトで、オフラインでも動作します。',
-      remoteTitle: 'リモートゲートウェイ',
-      remoteDesc:
-        'このデスクトップシェルをリモートの Scout バックエンドに接続します。ホスト型ゲートウェイは OAuth またはユーザー名とパスワードを使用します。自己ホスト型はセッショントークンを使用する場合があります。',
-      remoteUrlTitle: 'リモート URL',
-      remoteUrlDesc:
-        'リモートダッシュボードバックエンドのベース URL。/scout などのパスプレフィックスもサポートしています。',
-      probing: 'このゲートウェイの認証方法を確認中…',
-      probeError: 'このゲートウェイにまだ到達できません。URL を確認してください。応答後に認証方法が表示されます。',
-      signedIn: 'サインイン済み',
-      signIn: 'サインイン',
-      signOut: 'サインアウト',
-      signInWith: provider => `${provider} でサインイン`,
-      authTitle: '認証',
-      authSignedInPassword:
-        'このゲートウェイはユーザー名とパスワードを使用します。サインイン済みです。セッションは自動的に更新されます。',
-      authSignedInOauth:
-        'このゲートウェイは OAuth を使用します。サインイン済みです。セッションは自動的に更新されます。',
-      authNeedsPassword:
-        'このゲートウェイはユーザー名とパスワードを使用します。このデスクトップアプリを承認するにはサインインしてください。',
-      authNeedsOauth: provider =>
-        `このゲートウェイは OAuth を使用します。このデスクトップアプリを承認するには ${provider} でサインインしてください。`,
-      tokenTitle: 'セッショントークン',
-      tokenDesc:
-        'REST および WebSocket アクセスに使用するダッシュボードセッショントークン。保存済みトークンを維持するには空欄にしてください。',
-      existingToken: value => `既存のトークン ${value}`,
-      savedToken: '保存済み',
-      pasteSessionToken: 'セッショントークンを貼り付け',
-      plainTextConfirmTitle: 'ゲートウェイトークンを平文で保存しますか？',
-      plainTextConfirmDesc:
-        'このマシンで OS のキーリングサービスが見つからなかったため、トークンはアプリの接続設定ファイルに暗号化されずに保存され、このユーザーとして実行される任意のプロセスから読み取れる状態になります。暗号化して保存するには、システムのキーチェーン（Linux では GNOME Keyring または KWallet）をインストールまたは有効化してください。',
-      plainTextConfirmAction: '平文で保存',
-      plainTextStoredTitle: 'トークンは平文で保存されています',
-      plainTextStoredDesc:
-        'セキュアストレージが利用できないため、保存済みのトークンはこのマシンのアプリの接続設定ファイルに暗号化されずに保存されています。暗号化するには、システムのキーチェーン（Linux では GNOME Keyring または KWallet）をインストールまたは有効化してください。',
-      keychainEncryptionTitle: 'OS キーチェーンで保存済みのシークレットを暗号化',
-      keychainEncryptionDesc:
-        'デフォルトはオフです。オンにすると、ゲートウェイのトークンとサインイン資格情報がシステムのキーチェーン（Keychain Access、GNOME Keyring、Windows DPAPI）で暗号化されます。システムから許可やパスワードを求められる場合があります。オフの場合は、現在のユーザーのみが読める通常ファイルとして保存されます。',
-      keychainEncryptionFailed: 'シークレット暗号化の設定を変更できませんでした',
-      testRemote: 'リモートをテスト',
-      saveForRestart: '次回起動時のために保存',
-      saveAndReconnect: '保存して再接続',
-      diagnostics: '診断',
-      diagnosticsDesc: 'ファイルマネージャーで desktop.log を表示します。ゲートウェイの起動に失敗した際に役立ちます。',
-      openLogs: 'ログを開く',
-      incompleteTitle: 'リモートゲートウェイの設定が不完全です',
-      incompleteSignIn: 'リモートに切り替える前にリモート URL を入力してサインインしてください。',
-      incompleteToken: 'リモートに切り替える前にリモート URL とセッショントークンを入力してください。',
-      incompleteSignInTest: 'テストする前にリモート URL を入力してサインインしてください。',
-      incompleteTokenTest: 'テストする前にリモート URL とセッショントークンを入力してください。',
-      enterUrlFirst: '最初にリモート URL を入力してください。',
-      restartingTitle: 'ゲートウェイ接続を再起動中',
-      savedTitle: 'ゲートウェイ設定を保存しました',
-      restartingMessage: 'Scout Desktop は保存された設定を使用して再接続します。',
-      savedMessage: '次回起動時に保存されます。',
-      connectedTo: (baseUrl, version) => `${baseUrl}${version ? ` · Scout ${version}` : ''} に接続しました`,
-      reachableTitle: 'リモートゲートウェイに到達可能',
-      signedOutTitle: 'サインアウトしました',
-      signedOutMessage: 'リモートゲートウェイセッションをクリアしました。',
-      failedLoad: 'ゲートウェイ設定の読み込みに失敗しました',
-      signInFailed: 'サインインに失敗しました',
-      signOutFailed: 'サインアウトに失敗しました',
-      testFailed: 'リモートゲートウェイのテストに失敗しました',
-      applyFailed: 'ゲートウェイ設定を適用できませんでした',
-      saveFailed: 'ゲートウェイ設定を保存できませんでした',
-      sshTitle: 'SSH で接続',
-      sshDesc:
-        'Scout は SSH 経由でリモート上に起動され、このアプリにトンネルされます。リモート側で何かを起動・公開する必要はありません。ホストへの鍵ベースの SSH アクセスが前提です。',
-      sshTrustHint: '初回に提示されたホスト鍵を信頼して固定し、以後の変更は拒否します。',
-      sshHostTitle: 'ホスト',
-      sshHostDesc: 'user@host、または ~/.ssh/config の Host エイリアス。',
-      sshHostPick: 'ホストを選択…',
-      sshHostPickTitle: 'ホスト',
-      sshHostPickDesc: '~/.ssh/config の Host エイリアス、または「カスタム」で手入力。',
-      sshHostCustom: 'カスタム（手入力）…',
-      sshUserTitle: 'ユーザー',
-      sshUserDesc: '空欄 = ~/.ssh/config または現在のユーザー。',
-      sshUserPlaceholder: '~/.ssh/config から',
-      sshPortTitle: 'ポート',
-      sshPortDesc: '空欄 = 22 または ~/.ssh/config のポート。',
-      sshKeyTitle: '鍵ファイル',
-      sshKeyDesc: '秘密鍵のパス。空欄 = ssh-agent または ~/.ssh/config。',
-      sshScoutPathTitle: 'Scout パス（任意）',
-      sshScoutPathDesc: 'リモートの scout バイナリへのフルパス。空欄 = 自動検出。',
-      sshScoutPathPlaceholder: '自動検出',
-      sshTestConnection: 'SSH をテスト',
-      sshConnect: '接続',
-      sshButtonsHint: '「保存」は次回起動時に適用され、「接続」は今すぐ再接続します。',
-      sshReachable: (host, platform) => `接続可能: ${host}（${platform}）— Scout を検出`,
-      sshIncompleteHost: '接続する前に SSH ホストを入力してください。',
-      sshErrUnreachable: 'SSH でそのホストに到達できませんでした。ホスト、ポート、ネットワークを確認してください。',
-      sshErrAuth:
-        'SSH 認証に失敗しました。鍵を ssh-agent に読み込む（ssh-add）か、~/.ssh/config に IdentityFile を設定してください。Scout は非対話的に ssh を実行します。',
-      sshErrHostKey:
-        '前回の接続以降、ホスト鍵が変更されています。想定どおりか確認し、ssh-keygen -R <host> を実行してから再接続してください。',
-      sshErrNotInstalled:
-        'リモートホストに Scout がインストールされていません。リモートでインストールする（git clone https://github.com/adityakm24/scout.git && cd scout && ./scripts/install.sh）か、Scout パスを設定してください。',
-      sshErrPlatform:
-        'サポートされていないリモートプラットフォームです。Scout Desktop の SSH モードは Linux、macOS、Windows のリモートホストに対応しています。',
-      sshErrTimeout: 'SSH 接続がタイムアウトしました。ホストが到達不能、またはスリープ中の可能性があります。',
-      sshErrUpdateRequired: 'Desktop SSH で接続する前に、リモートホストの Scout を更新してください。',
-      sshErrUnknown: 'SSH 接続に失敗しました。'
     },
     keys: {
       loading: 'API キーと認証情報を読み込み中...',
@@ -1798,38 +1657,6 @@ export const ja = defineLocale({
         'Scout をローカルにインストールしてから、このコンピュータで新しいセッションを開きます。確認するまでインストールは始まりません。',
       installDeviceConfirm: 'ローカルにインストール',
       connectExistingInstead: '代わりに既存環境へ接続'
-    },
-    remoteOverride: {
-      menuItem: 'リモートホストに接続…',
-      badge: (host: string) => `${host} で実行中`,
-      title: (profile: string) => `${profile} をリモートホストに接続`,
-      description: 'このプロファイルのセッションは、このパソコンではなく指定したリモートの Scout で実行されます。',
-      urlLabel: 'リモートアドレス',
-      urlPlaceholder: 'https://scout.example.com',
-      urlInvalid: 'http:// または https:// で始まる完全なアドレスを入力してください',
-      tokenLabel: 'アクセストークン',
-      tokenPlaceholder: 'リモートのセッショントークンを貼り付け',
-      tokenSavedHint: 'トークンは保存済みです。空欄のままにすると保持されます。',
-      plainTextOptIn:
-        'このパソコンには安全な鍵ストレージがないため、トークンは暗号化されずにディスクへ保存されます。それでも保存する。',
-      collisionWarning: (label: string) =>
-        `「${label}」という名前のゲートウェイが設定に既に存在します。このプロファイル接続は別物であり、それを変更しません。`,
-      confirmTitle: 'このプロファイルをリモートホストに接続しますか？',
-      confirmNote: (profile: string, host: string) =>
-        `${profile} の新しいチャットは ${host} で実行されます。コマンドの実行やファイルの読み取りはこのパソコンではなくそのコンピュータで行われます。信頼できるホストにのみ接続してください。`,
-      confirmBack: '戻る',
-      connect: '接続',
-      connecting: '接続中…',
-      disconnect: 'リモート接続を解除',
-      savedTitle: 'プロファイルを接続しました',
-      savedMessage: (profile: string, host: string) => `${profile} は ${host} で実行されます`,
-      removedTitle: 'リモート接続を解除しました',
-      removedMessage: (profile: string) => `${profile} はこのパソコンで実行されます`,
-      removeFailed: 'リモート接続を解除できませんでした',
-      authFailedTitle: 'リモートホストが保存済みトークンを拒否しました',
-      authFailedMessage: (profile: string, host: string) =>
-        `${host} が ${profile} 用に保存されたトークンを拒否しました。リモート側で変更された可能性があります。`,
-      updateToken: '新しいトークンを入力…'
     },
     actions: 'アクション',
 
@@ -2797,81 +2624,6 @@ export const ja = defineLocale({
     line: 'やあ、どうぞ。Scout です。二分だけください、あなたに合わせて整えます。それから、本当にやりたいことに取りかかりましょう。\n\nまずは、何とお呼びすればいいですか。',
     nameSuggestion: (name: string) => `（よければ、${name} さんとお呼びします。）`
   },
-  install: {
-    stageStates: {
-      pending: '待機中',
-      running: 'インストール中',
-      succeeded: '完了',
-      skipped: 'スキップ',
-      failed: '失敗'
-    },
-    oneTimeTitle: 'Scout には一度限りのインストールが必要です',
-    unsupportedDesc: platform =>
-      `${platform} では自動の初回インストールはまだ利用できません。ターミナルを開いて以下のコマンドを実行し、このアプリを再起動してください。以降の起動ではこの手順はスキップされます。`,
-    installCommand: 'インストールコマンド',
-    copyCommand: 'コマンドをコピー',
-    viewDocs: 'インストールドキュメントを見る',
-    installTo: 'インストール先',
-    retryAfterRun: '実行しました — 再試行',
-    setupChoiceTitle: 'Scout Desktop をセットアップ',
-    setupChoiceDesc:
-      'すでに実行している Scout ゲートウェイに接続するか、このコンピューターに Scout をローカルインストールします。',
-    connectExistingTitle: '既存の Scout に接続',
-    connectExistingShort: '既存環境に接続',
-    connectExistingDesc:
-      'セッショントークンまたはブラウザーサインインでリモートバックエンドを使用します。ローカルインストールは開始されません。',
-    installLocalTitle: 'Scout をローカルにインストール',
-    installLocalDesc: 'Scout をダウンロードし、Python 環境を作成して、このコンピューターでバックエンドを実行します。',
-    localStartUnavailable:
-      'ローカルインストールを開始できません。Scout Desktop を再起動して、もう一度お試しください。',
-    remoteSetupTitle: '既存の Scout に接続',
-    remoteSetupDesc:
-      'ゲートウェイ URL を入力してください。Scout Desktop がトークンとブラウザーサインインのどちらが必要かを検出します。',
-    remoteUrlTitle: 'ゲートウェイ URL',
-    remoteUrlDesc: 'Scout ゲートウェイのベース URL を使用します。リモートの場合は https:// を含めてください。',
-    remoteUrlPlaceholder: 'https://gateway.example.com/scout',
-    probing: 'ゲートウェイ認証方式を検出中...',
-    probeError: 'その Scout ゲートウェイに到達できませんでした。',
-    identityProvider: 'ID プロバイダー',
-    authTitle: '認証',
-    authNeedsOauth: provider => `このゲートウェイをテストする前に ${provider} でサインインしてください。`,
-    authSignedIn: 'ブラウザーサインインが完了しました。',
-    connected: '接続済み',
-    signIn: 'サインイン',
-    signInWith: provider => `${provider} でサインイン`,
-    enterUrlFirst: '先にゲートウェイ URL を入力してください。',
-    signInIncomplete: '認証が完了する前にサインインウィンドウが閉じられました。',
-    tokenTitle: 'セッショントークン',
-    tokenDesc: 'リモートゲートウェイの .env ファイルからセッショントークンを貼り付けます。',
-    pasteSessionToken: 'セッショントークンを貼り付け',
-    incompleteSignInTest: 'OAuth で保護されたこのゲートウェイをテストする前にサインインしてください。',
-    incompleteTokenTest: 'このゲートウェイをテストする前にセッショントークンを入力してください。',
-    testConnection: '接続をテスト',
-    testSucceeded: (baseUrl, version) => `${baseUrl}${version ? ` (${version})` : ''} に接続しました。`,
-    applyRemote: '適用して再接続',
-    backToSetup: '戻る',
-    failedTitle: 'インストールに失敗しました',
-    settingUpTitle: 'Scout Agent を設定中',
-    finishingTitle: '仕上げ中',
-    failedDesc:
-      'インストール手順のいずれかが失敗しました。Windows では、別の Scout CLI またはデスクトップインスタンスが実行中の場合に発生することがあります。実行中の Scout インスタンスをすべて停止してから再試行してください。詳細は以下またはデスクトップログで確認できます。',
-    activeDesc:
-      'これは一回限りのセットアップです。Scout インストーラーが依存関係をダウンロードしてマシンを設定しています。以降の起動ではこの手順はスキップされます。',
-    progress: (completed, total) => `${total} ステップ中 ${completed} 完了`,
-    currentStage: stage => ` — 現在: ${stage}`,
-    fetchingManifest: 'インストーラーマニフェストを取得中...',
-    error: 'エラー',
-    hideOutput: 'インストーラーの出力を非表示',
-    showOutput: 'インストーラーの出力を表示',
-    lines: count => `${count} 行`,
-    noOutput: 'まだ出力がありません。',
-    cancelling: 'キャンセル中...',
-    cancelInstall: 'インストールをキャンセル',
-    transcriptSaved: 'フルトランスクリプトを保存しました:',
-    copiedOutput: 'コピーしました！',
-    copyOutput: '出力をコピー',
-    reloadRetry: '再読み込みして再試行'
-  },
 
   onboarding: {
     headerTitle: 'Scout Agent のセットアップをしましょう',
@@ -3737,9 +3489,6 @@ export const ja = defineLocale({
     resumeStrandedTitle: 'このセッションを読み込めませんでした',
     resumeStrandedBody:
       'このセッションへの接続に失敗し、自動再試行も停止しました。ゲートウェイが実行中か確認してから、もう一度お試しください。',
-    poolSlotTimeoutBody:
-      'すべてのローカルプロファイルバックエンドスロットが使用中です。「設定」→「詳細設定」で「Warm Bot Backends」を増やすか、アイドル状態のバックエンドが解放された後に再試行してください。',
-    poolSlotTimeoutOpenSettings: '詳細設定を開く',
     resumeRetry: '再試行',
     nothingToBranch: 'ブランチするものがありません',
     branchNeedsChat: 'ブランチする前にチャットを開始または再開してください。',

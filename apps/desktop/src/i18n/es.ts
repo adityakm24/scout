@@ -542,44 +542,19 @@ export const esOverrides = {
       signInAgain: 'Volver a iniciar sesión',
       ipcBridgeUnavailable: 'Scout Desktop no pudo comunicarse con su propia capa en segundo plano. Reinicia la app.'
     },
-    causes: {
-      exitedEarly: 'El servicio en segundo plano de Scout se detuvo justo después de iniciarse.',
-      timedOut: 'El servicio en segundo plano de Scout no respondió a tiempo.',
-      permission: 'Scout no pudo escribir en su carpeta de datos (problema de permisos).',
-      diskFull: 'El disco está lleno, así que Scout no pudo iniciarse.',
-      portInUse: 'Otro programa está usando el puerto de red que necesita Scout.',
-      installMissing: 'Falta parte de la instalación de Scout. Elige Reparar instalación para restaurarla.'
-    },
     failure: {
       reconnecting: 'Reconectando con Scout…',
       title: 'Scout no pudo iniciarse',
       description:
         'El servicio en segundo plano de Scout no arrancó. Prueba uno de los pasos de recuperación de abajo. Nada de esto elimina tus chats ni tus ajustes.',
       details: 'Detalles',
-      remoteTitle: 'Se requiere iniciar sesión en el gateway remoto',
-      remoteDescription:
-        'Tu sesión del gateway remoto caducó. Inicia sesión de nuevo para reconectar. Esto no elimina tus chats ni tu configuración.',
       retry: 'Reintentar',
-      repairInstall: 'Reparar instalación',
-      useLocalGateway: 'Usar gateway local',
-      gatewaySettings: 'Configuración del gateway',
-      back: 'Atrás',
       openLogs: 'Abrir registros',
-      repairHint: 'La reparación vuelve a ejecutar el instalador y puede tardar unos minutos en una máquina nueva.',
-      remoteSignInHint: signInLabel =>
-        `Cierra la sesión guardada del navegador remoto y abre ${signInLabel}. Usa el gateway local para cambiar al backend incluido.`,
-      signOutAndSignIn: 'Cerrar sesión e iniciar sesión',
-      remoteFailureHint: 'Revisa la URL e inicia sesión en Configuración del gateway, o cambia al gateway local.',
       hideRecentLogs: 'Ocultar registros recientes',
       showRecentLogs: 'Mostrar registros recientes',
       signedInTitle: 'Sesión iniciada',
       signedInMessage: 'Reconectando con el gateway remoto…',
-      signInIncompleteTitle: 'Inicio de sesión incompleto',
-      signInIncompleteMessage: 'La ventana de inicio de sesión se cerró antes de que terminara la autenticación.',
       signInFailed: 'No se pudo iniciar sesión',
-      signInToRemoteGateway: 'Iniciar sesión en el gateway remoto',
-      signInWithProvider: provider => `Iniciar sesión con ${provider}`,
-      identityProvider: 'tu proveedor de identidad'
     }
   },
   notifications: {
@@ -848,13 +823,6 @@ export const esOverrides = {
       advancedOutput: 'Límites de salida',
       advancedDelegation: 'Subagentes',
       advancedDesktop: 'Escritorio e inicio',
-      gatewayConnection: 'Esta ventana',
-      gatewayDevices: 'Conexiones guardadas',
-      gatewayManagedUpdates: 'Actualizaciones remotas',
-      gatewayManagedUpdatesUnavailable:
-        'Las actualizaciones remotas requieren una versión de escritorio compatible con actualizaciones SSH administradas.',
-      gatewayManagedUpdatesEmpty:
-        'Añade una conexión SSH en Conexiones guardadas para gestionar sus actualizaciones aquí.',
       keyboardShortcuts: 'Atajos de teclado',
       hudGesture: 'Gesto del HUD',
       screenCapture: 'Captura de pantalla',
@@ -880,7 +848,6 @@ export const esOverrides = {
       providerApiKeys: 'Claves API',
       providerCustomEndpoints: 'Endpoints personalizados',
       providerLocalModels: 'Modelos locales',
-      gateway: 'Gateway',
       apiKeys: 'Herramientas y claves',
       keybinds: 'Atajos de teclado',
       keysTools: 'Herramientas',
@@ -1126,7 +1093,6 @@ export const esOverrides = {
     searchPlaceholder: {
       about: 'Acerca de Scout Desktop',
       config: 'Buscar configuración...',
-      gateway: 'Conexión del gateway...',
       keys: 'Buscar claves API...',
       mcp: 'Buscar servidores MCP...',
       sessions: 'Buscar sesiones archivadas...'
@@ -1857,121 +1823,6 @@ export const esOverrides = {
       receiptVersions: (pre: string, post: string) => `${pre} → ${post}`,
       scopesRestored: (profiles: string) => `Perfiles restaurados: ${profiles}`,
       scopeNotRestored: (profile: string, error: string) => `No se restauró el perfil “${profile}”: ${error}`
-    },
-    gateway: {
-      loading: 'Cargando ajustes del gateway...',
-      unavailableTitle: 'Ajustes del gateway no disponibles',
-      unavailableDesc:
-        'Los ajustes de conexión solo se pueden cambiar desde la app Scout Desktop en el equipo que la ejecuta.',
-      title: 'Conexión del gateway',
-      envOverride: 'anulación de entorno',
-      intro:
-        'Local por predeterminado. Usa remoto cuando esta app deba controlar un backend de Scout en otro lugar. Anulaciones por perfil a continuación.',
-      envOverrideTitle: 'Esta conexión quedó fijada por la forma en que se inició Scout.',
-      envOverrideDesc:
-        'Un ajuste de inicio externo a la app eligió esta conexión, así que las opciones de abajo son de solo lectura. Reinicia Scout sin ese ajuste (o pregunta a quien lo configuró) para cambiarla aquí.',
-      modeTitle: 'Modo de conexión',
-      localTitle: 'Gateway local',
-      localDesc: 'Inicia un backend privado de Scout en localhost. Es el valor predeterminado y funciona sin conexión.',
-      remoteTitle: 'Gateway remoto',
-      remoteDesc: 'Conecta esta shell de escritorio a un backend remoto de Scout.',
-      remoteAuthHint:
-        'Los gateways alojados usan OAuth o usuario y contraseña; los autohospedados pueden usar un token de sesión.',
-      remoteUrlTitle: 'URL remota',
-      remoteUrlDesc: 'URL base del backend del dashboard remoto. Se admiten prefijos de ruta, por ejemplo /scout.',
-      probing: 'Comprobando cómo se autentica este gateway…',
-      probeError:
-        'Scout no puede llegar a esa dirección. Comprueba la URL y que el otro equipo esté ejecutando Scout; las opciones de inicio de sesión aparecen cuando responde.',
-      signedIn: 'Sesión iniciada',
-      signIn: 'Iniciar sesión',
-      signOut: 'Cerrar sesión',
-      signInWith: provider => `Iniciar sesión con ${provider}`,
-      authTitle: 'Autenticación',
-      authSignedInPassword:
-        'Este gateway usa usuario y contraseña. Ya iniciaste sesión; la sesión se actualiza automáticamente.',
-      authSignedInOauth: 'Este gateway usa OAuth. Ya iniciaste sesión; la sesión se actualiza automáticamente.',
-      authNeedsPassword: 'Este gateway usa usuario y contraseña. Inicia sesión para autorizar esta app de escritorio.',
-      authNeedsOauth: provider => `Este gateway usa OAuth. Inicia sesión con ${provider} para autorizar esta app.`,
-      tokenTitle: 'Token de sesión',
-      tokenDesc: 'Token de sesión del dashboard usado para REST y WebSocket. Déjalo vacío para conservar el guardado.',
-      existingToken: value => `Token existente ${value}`,
-      savedToken: 'guardado',
-      pasteSessionToken: 'Pegar token de sesión',
-      plainTextConfirmTitle: '¿Guardar el token de la puerta de enlace en texto plano?',
-      plainTextConfirmDesc:
-        'No se encontró ningún servicio de llavero del sistema en este equipo, así que el token se guardaría sin cifrar en el archivo de ajustes de conexión de la app, legible por cualquier proceso que se ejecute con este usuario. Instala o activa el llavero del sistema (GNOME Keyring o KWallet en Linux) para guardarlo cifrado.',
-      plainTextConfirmAction: 'Guardar como texto plano',
-      plainTextStoredTitle: 'Token guardado en texto plano',
-      plainTextStoredDesc:
-        'El almacenamiento seguro no está disponible, así que el token guardado está sin cifrar en el archivo de ajustes de conexión de la app en este equipo. Instala o activa el llavero del sistema (GNOME Keyring o KWallet en Linux) para cifrarlo.',
-      keychainEncryptionTitle: 'Cifrar los secretos guardados con el llavero del sistema',
-      keychainEncryptionDesc:
-        'Desactivado por defecto. Si está activado, los tokens del gateway y las credenciales de inicio de sesión se cifran con el llavero del sistema (Acceso a Llaveros, GNOME Keyring o DPAPI de Windows); es posible que el sistema te pida permiso o una contraseña. Si está desactivado, se guardan como archivos normales que solo tu cuenta de usuario puede leer.',
-      keychainEncryptionFailed: 'No se pudo cambiar el cifrado de secretos',
-      testRemote: 'Probar remoto',
-      saveForRestart: 'Guardar para el próximo reinicio',
-      saveAndReconnect: 'Guardar y reconectar',
-      diagnostics: 'Diagnóstico',
-      diagnosticsDesc: 'Muestra desktop.log en tu gestor de archivos; útil cuando el gateway no arranca.',
-      openLogs: 'Abrir registros',
-      incompleteTitle: 'Gateway remoto incompleto',
-      incompleteSignIn: 'Introduce una URL remota e inicia sesión antes de cambiar a remoto.',
-      incompleteToken: 'Introduce una URL remota y un token de sesión antes de cambiar a remoto.',
-      incompleteSignInTest: 'Introduce una URL remota e inicia sesión antes de probar.',
-      incompleteTokenTest: 'Introduce una URL remota y un token de sesión antes de probar.',
-      enterUrlFirst: 'Introduce primero una URL remota.',
-      restartingTitle: 'Reiniciando conexión del gateway',
-      savedTitle: 'Ajustes del gateway guardados',
-      restartingMessage: 'Scout Desktop se reconectará con los ajustes guardados.',
-      savedMessage: 'Guardado para el próximo reinicio.',
-      connectedTo: (baseUrl, version) => `Conectado a ${baseUrl}${version ? ` · Scout ${version}` : ''}`,
-      reachableTitle: 'Gateway remoto accesible',
-      signedOutTitle: 'Sesión cerrada',
-      signedOutMessage: 'Se borró la sesión del gateway remoto.',
-      failedLoad: 'No se pudieron cargar los ajustes del gateway',
-      signInFailed: 'No se pudo iniciar sesión',
-      signOutFailed: 'No se pudo cerrar sesión',
-      testFailed: 'Falló la prueba del gateway remoto',
-      applyFailed: 'No se pudieron aplicar los ajustes del gateway',
-      saveFailed: 'No se pudieron guardar los ajustes del gateway',
-      sshTitle: 'Conectar por SSH',
-      sshDesc:
-        'Scout se inicia en el equipo remoto mediante SSH y se conecta a esta app a través de un túnel; no tienes que iniciar ni exponer nada por tu cuenta. Requiere acceso SSH mediante claves que ya funcione con el host.',
-      sshTrustHint:
-        'La primera clave de host presentada se acepta y se fija; si cambia después, la conexión se rechaza.',
-      sshHostTitle: 'Host',
-      sshHostDesc: 'usuario@host o un alias Host de ~/.ssh/config.',
-      sshHostPick: 'Seleccionar un host…',
-      sshHostPickTitle: 'Host',
-      sshHostPickDesc: 'Un alias Host de ~/.ssh/config, o Personalizado para escribir uno.',
-      sshHostCustom: 'Personalizado (introducir manualmente)…',
-      sshUserTitle: 'Usuario',
-      sshUserDesc: 'En blanco = ~/.ssh/config o tu usuario actual.',
-      sshUserPlaceholder: 'desde ~/.ssh/config',
-      sshPortTitle: 'Puerto',
-      sshPortDesc: 'En blanco = 22 o el puerto de ~/.ssh/config.',
-      sshKeyTitle: 'Archivo de identidad',
-      sshKeyDesc: 'Ruta de la clave privada. En blanco = ssh-agent o ~/.ssh/config.',
-      sshScoutPathTitle: 'Ruta de Scout (opcional)',
-      sshScoutPathDesc: 'Ruta completa al binario remoto de Scout. En blanco = detección automática.',
-      sshScoutPathPlaceholder: 'detección automática',
-      sshTestConnection: 'Probar SSH',
-      sshConnect: 'Conectar',
-      sshButtonsHint: 'Guardar se aplica en el próximo inicio. Conectar vuelve a conectar ahora.',
-      sshReachable: (host, platform) => `Accesible: ${host} (${platform}) — se encontró Scout`,
-      sshIncompleteHost: 'Introduce un host SSH antes de conectar.',
-      sshErrUnreachable: 'No se pudo acceder a ese host por SSH. Revisa el host, el puerto y tu red.',
-      sshErrAuth:
-        'Falló la autenticación SSH. Carga tu clave en ssh-agent (ssh-add) o configura un IdentityFile en ~/.ssh/config; Scout ejecuta SSH de forma no interactiva.',
-      sshErrHostKey:
-        'La clave del host CAMBIÓ desde la última conexión. Confirma que sea un cambio esperado, ejecuta ssh-keygen -R <host> y vuelve a conectar.',
-      sshErrNotInstalled:
-        'Scout no está instalado en el host remoto. Instálalo allí (git clone https://github.com/adityakm24/scout.git && cd scout && ./scripts/install.sh) o indica la ruta de Scout.',
-      sshErrPlatform:
-        'Plataforma remota no compatible. El modo SSH de Scout Desktop admite hosts remotos Linux, macOS y Windows.',
-      sshErrTimeout: 'La conexión SSH agotó el tiempo de espera. Es posible que el host no responda o esté en reposo.',
-      sshErrUpdateRequired: 'Actualiza Scout en el host remoto antes de conectarte con Desktop SSH.',
-      sshErrUnknown: 'Falló la conexión SSH.'
     },
     keys: {
       loading: 'Cargando claves API y credenciales...',
@@ -2964,39 +2815,6 @@ export const esOverrides = {
       needsInput: (count: number) =>
         count === 1 ? '1 sesión espera tu respuesta' : `${count} sesiones esperan tu respuesta`,
       working: (count: number) => (count === 1 ? '1 sesión en ejecución' : `${count} sesiones en ejecución`)
-    },
-    remoteOverride: {
-      menuItem: 'Conectar a un host remoto…',
-      badge: (host: string) => `Se ejecuta en ${host}`,
-      title: (profile: string) => `Conectar ${profile} a un host remoto`,
-      description:
-        'Las sesiones de este perfil se ejecutarán en el Scout remoto que indiques, en lugar de en este equipo.',
-      urlLabel: 'Dirección remota',
-      urlPlaceholder: 'https://scout.example.com',
-      urlInvalid: 'Introduce una dirección completa que empiece por http:// o https://',
-      tokenLabel: 'Token de acceso',
-      tokenPlaceholder: 'Pega el token de sesión remota',
-      tokenSavedHint: 'Ya hay un token guardado. Déjalo en blanco para conservarlo.',
-      plainTextOptIn:
-        'Este equipo no tiene almacenamiento seguro de claves, así que el token se guardaría sin cifrar en el disco. Guardarlo de todos modos.',
-      collisionWarning: (label: string) =>
-        `Ya existe un gateway llamado “${label}” en Configuración. Esta conexión del perfil es independiente y no lo cambiará.`,
-      confirmTitle: '¿Conectar este perfil a un host remoto?',
-      confirmNote: (profile: string, host: string) =>
-        `Los chats nuevos de ${profile} se ejecutarán en ${host}. Ese equipo ejecutará comandos y leerá archivos allí, no en este. Conéctate solo a un host de confianza.`,
-      confirmBack: 'Atrás',
-      connect: 'Conectar',
-      connecting: 'Conectando…',
-      disconnect: 'Quitar conexión remota',
-      savedTitle: 'Perfil conectado',
-      savedMessage: (profile: string, host: string) => `${profile} ahora se ejecuta en ${host}`,
-      removedTitle: 'Conexión remota quitada',
-      removedMessage: (profile: string) => `${profile} ahora se ejecuta en este equipo`,
-      removeFailed: 'No se pudo quitar la conexión remota',
-      authFailedTitle: 'El host remoto rechazó el token guardado',
-      authFailedMessage: (profile: string, host: string) =>
-        `${host} rechazó el token guardado para ${profile}. Puede que se haya cambiado en el lado remoto.`,
-      updateToken: 'Introducir nuevo token…'
     },
     actions: 'Acciones',
     color: 'Color...',
@@ -4072,83 +3890,6 @@ export const esOverrides = {
   guidedGreeting: {
     line: 'Hola, pasa. Soy Scout. Dame dos minutos para prepararlo todo a tu medida y luego me pondremos a trabajar en algo que de verdad quieras hacer.\n\nPero antes, ¿cómo quieres que te llame?',
     nameSuggestion: (name: string) => `(También puedo llamarte simplemente ${name}, si lo prefieres.)`
-  },
-  install: {
-    stageStates: {
-      pending: 'Pendiente',
-      running: 'Instalando',
-      succeeded: 'Listo',
-      skipped: 'Omitido',
-      failed: 'Falló'
-    },
-    oneTimeTitle: 'Scout necesita una instalación única',
-    unsupportedDesc: platform =>
-      `La instalación automática del primer inicio aún no está disponible en ${platform}. Abre Terminal y ejecuta el comando de abajo; luego vuelve a abrir la app. Los siguientes inicios omitirán este paso.`,
-    installCommand: 'Comando de instalación',
-    copyCommand: 'Copiar comando',
-    viewDocs: 'Ver docs de instalación',
-    installTo: 'Se instalará en',
-    retryAfterRun: 'Ya lo ejecuté -- reintentar',
-    setupChoiceTitle: 'Configurar Scout Desktop',
-    setupChoiceDesc:
-      'Conecta esta app con un gateway de Scout que ya esté en ejecución o instala Scout localmente en este equipo.',
-    connectExistingTitle: 'Conectar con un Scout existente',
-    connectExistingShort: 'Conectar existente',
-    connectExistingDesc:
-      'Usa un backend remoto con un token de sesión o inicio de sesión en el navegador. No se iniciará ninguna instalación local.',
-    installLocalTitle: 'Instalar Scout localmente',
-    installLocalDesc: 'Descarga Scout, crea su entorno de Python y ejecuta el backend en este equipo.',
-    localStartUnavailable: 'No se pudo iniciar la instalación local. Reinicia Scout Desktop e inténtalo de nuevo.',
-    remoteSetupTitle: 'Conectar con un Scout existente',
-    remoteSetupDesc:
-      'Introduce la URL de tu gateway. Scout Desktop detectará si necesita un token o iniciar sesión en el navegador.',
-    remoteUrlTitle: 'URL del gateway',
-    remoteUrlDesc: 'Usa la URL base del gateway de Scout e incluye https:// si es remoto.',
-    remoteUrlPlaceholder: 'https://gateway.example.com/scout',
-    probing: 'Detectando la autenticación del gateway…',
-    probeError:
-      'Scout no puede llegar a esa dirección. Comprueba la URL y que el otro equipo esté ejecutando Scout; las opciones de inicio de sesión aparecen cuando responde.',
-    probeErrorDetails: 'Detalles',
-    identityProvider: 'tu proveedor de identidad',
-    authTitle: 'Autenticación',
-    authNeedsOauth: provider => `Inicia sesión con ${provider} antes de probar este gateway.`,
-    authSignedIn: 'Inicio de sesión en el navegador completado.',
-    connected: 'Conectado',
-    signIn: 'Iniciar sesión',
-    signInWith: provider => `Iniciar sesión con ${provider}`,
-    enterUrlFirst: 'Introduce primero la URL de un gateway.',
-    signInIncomplete: 'La ventana de inicio de sesión se cerró antes de completar la autenticación.',
-    tokenTitle: 'Token de sesión',
-    tokenDesc: 'Pega el token de sesión del archivo .env del gateway remoto.',
-    pasteSessionToken: 'Pegar token de sesión',
-    incompleteSignInTest: 'Inicia sesión antes de probar este gateway protegido con OAuth.',
-    incompleteTokenTest: 'Introduce un token de sesión antes de probar este gateway.',
-    testConnection: 'Probar conexión',
-    testSucceeded: (baseUrl, version) => `Conectado a ${baseUrl}${version ? ` (${version})` : ''}.`,
-    applyRemote: 'Aplicar y reconectar',
-    backToSetup: 'Atrás',
-    failedTitle: 'Falló la instalación',
-    settingUpTitle: 'Configurando Scout Agent',
-    finishingTitle: 'Terminando',
-    failedDesc:
-      'Uno de los pasos de configuración no terminó. Puede ocurrir si hay otra copia de Scout en ejecución, se cortó la conexión a internet o un antivirus bloqueó el instalador. Cierra las demás ventanas de Scout y elige Recargar y reintentar. Si vuelve a fallar, abre los registros y envíalos al soporte.',
-    activeDesc:
-      'Esta configuración se realiza una sola vez. El instalador de Scout está descargando dependencias y configurando tu máquina. Los siguientes inicios omitirán este paso.',
-    progress: (completed, total) => `${completed} de ${total} pasos completados`,
-    currentStage: stage => ` -- ahora: ${stage}`,
-    fetchingManifest: 'Obteniendo manifiesto del instalador...',
-    error: 'Error',
-    hideOutput: 'Ocultar salida del instalador',
-    showOutput: 'Mostrar salida del instalador',
-    lines: count => `${count} ${count === 1 ? 'línea' : 'líneas'}`,
-    noOutput: 'Aún no hay salida.',
-    cancelling: 'Cancelando...',
-    cancelInstall: 'Cancelar instalación',
-    transcriptSaved: 'Transcripción completa guardada en',
-    copiedOutput: '¡Copiado!',
-    copyOutput: 'Copiar salida',
-    reloadRetry: 'Recargar y reintentar',
-    openLogs: 'Abrir registros'
   },
   onboarding: {
     headerTitle: 'Vamos a configurar Scout Agent',
@@ -5243,9 +4984,6 @@ export const esOverrides = {
     resumeStrandedTitle: 'No se pudo cargar esta sesión',
     resumeStrandedBody:
       'No se pudo conectar con esta sesión y se agotaron los reintentos automáticos. Comprueba que el gateway esté en ejecución y vuelve a intentarlo.',
-    poolSlotTimeoutBody:
-      'Hay demasiados bots en ejecución a la vez para el límite de este equipo. Sube el límite en Configuración → Avanzado o espera a que termine uno y reinténtalo.',
-    poolSlotTimeoutOpenSettings: 'Abrir configuración avanzada',
     resumeRetry: 'Reintentar',
     nothingToBranch: 'No hay nada que ramificar',
     branchNeedsChat: 'Inicia o reanuda un chat antes de ramificar.',

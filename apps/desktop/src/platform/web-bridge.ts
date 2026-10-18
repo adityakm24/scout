@@ -143,7 +143,7 @@ const ABSENT = new Set(
     'onClosePreviewRequested onPreviewNav onOpenFolderRequested onOpenUpdatesRequested onDeepLink ' +
     'signalDeepLinkReady probePluginRepo installDesktopPlugin removeDesktopPlugin onWindowStateChanged ' +
     'onNotificationAction onNotificationActivate onPoolBackendRetiring onConnectionApplied ' +
-    'onPowerResume getOnBattery onBatteryChanged probeLocalBackend recycleBackend getMachineProfile relaunchApp ' +
+    'onPowerResume getOnBattery onBatteryChanged recycleBackend getMachineProfile relaunchApp ' +
     'getRemoteDisplayReason'
   ).split(' ')
 )

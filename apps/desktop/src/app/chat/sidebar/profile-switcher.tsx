@@ -86,11 +86,6 @@ import {
   sortByProfileOrder
 } from '@/store/profile'
 import { $profileDotStateByScope, type ProfileDotSummary, profileDotSummaryFor } from '@/store/profile-dot-state'
-import {
-  $profileRemoteOverrides,
-  openRemoteOverrideDialog,
-  refreshProfileRemoteOverrides
-} from '@/store/profile-remote-override'
 import { runExportProfileFlow, runImportProfileFlow } from '@/store/profile-share'
 import type { ProfileInfo } from '@/types/scout'
 
@@ -103,9 +98,7 @@ import { sessionDotClassName } from '../session-status-dot'
 import { ConnectionGlyph } from './connection-glyph'
 import { FleetGatewayMenuGroup } from './fleet-gateway-menu-group'
 import { buildRestGroups, countRestAgents, type FleetAgent, type FleetGroup, fleetRouteKey } from './fleet-rail'
-import { useLocalDeviceSwitch } from './local-device-switch'
 import { ProfileLaunchContextMenu, ProfileLaunchMenuSection } from './profile-launch-menu'
-import { ProfileRemoteOverrideDialog } from './profile-remote-override-dialog'
 import { useFleetRoster } from './use-fleet-roster'
 import { useProfilePrewarm } from './use-profile-prewarm'
 import { useProfileRailRefreshOnActive } from './use-profile-rail-refresh-on-active'
@@ -201,7 +194,6 @@ export function ProfileRail() {
   const gatewayProfile = useStore($activeGatewayProfile)
   const order = useStore($profileOrder)
   const colors = useStore($profileColors)
-  const remoteOverrides = useStore($profileRemoteOverrides)
   const multipleConnections = useStore($hasMultipleConnections)
   const registry = useStore($connectionsRegistry)
   const activeConnectionId = useStore($activeConnectionId)
@@ -223,7 +215,6 @@ export function ProfileRail() {
   const scrollContentRef = useRef<HTMLDivElement>(null)
   const [scrollMask, setScrollMask] = useState<string | undefined>()
   const [dragging, setDragging] = useState(false)
-  const { dialog: localDeviceDialog, request: requestLocalDevice } = useLocalDeviceSwitch()
 
   useFleetRoster(multipleConnections)
 
@@ -324,29 +315,7 @@ export function ProfileRail() {
         .finally(() => setPendingRoute(current => (current === key ? null : current)))
     }
 
-    if (agent.connectionKind !== 'local') {
-      commitRestSwitch(agent)
-
-      return
-    }
-
-    // Probe spinner only. The dialog — install confirm or fresh-session cue —
-    // must be on screen before selectConnection replaces the center.
-    const key = fleetRouteKey(agent.connectionId, agent.profile)
-    setPendingRoute(key)
-
-    void requestLocalDevice({
-      connectionId: agent.connectionId,
-      label: agent.connectionLabel,
-      profile: agent.profile,
-      replaceCenter: agent.profile === 'default'
-    }).then(accepted => {
-      setPendingRoute(current => (current === key ? null : current))
-
-      if (accepted) {
-        commitRestSwitch(agent)
-      }
-    })
+    commitRestSwitch(agent)
   }
 
   const restScope = (agent: FleetAgent): ProfileScope => ({ connectionId: agent.connectionId, profile: agent.profile })
@@ -439,16 +408,6 @@ export function ProfileRail() {
   // wiring.
   useProfileRailRefreshOnActive()
 
-  // Which profiles carry a per-profile remote override (connection.json
-  // profiles.<name>) — refreshed whenever the profile list changes so the
-  // rail's "remote" badge tracks create/rename/override edits.
-  const profileNames = profiles.map(profile => profile.name)
-  const profileNamesKey = profileNames.join('\u0000')
-
-  useEffect(() => {
-    void refreshProfileRemoteOverrides(profileNamesKey ? profileNamesKey.split('\u0000') : [])
-  }, [profileNamesKey])
-
   // Open the create dialog when the `profile.create` hotkey fires (the dialog
   // state lives here, so the global keybind bumps a request atom we watch).
   const createRequest = useStore($profileCreateRequest)
@@ -490,17 +449,11 @@ export function ProfileRail() {
                   key={profile.name}
                   label={profileLabel(profile)}
                   name={profile.name}
-                  // The legacy per-profile remote override predates the
-                  // gateway registry; once the rail shows machines directly
-                  // it only confuses, so it is offered on single-gateway
-                  // setups only.
-                  onConnectRemote={multipleConnections ? undefined : () => openRemoteOverrideDialog(profile.name)}
                   onDelete={() => setPendingDelete(profile)}
                   onEditSoul={() => setPendingSoul(profile.name)}
                   onRecolor={color => setProfileColor(profile.name, color)}
                   onRename={() => setPendingRename(profile)}
                   onSelect={() => selectProfile(profile.name)}
-                  remoteHost={remoteOverrides[normalizeProfileKey(profile.name)]?.host ?? null}
                 />
               ))}
             </div>
@@ -655,7 +608,6 @@ export function ProfileRail() {
           without first creating a throwaway second profile. */}
       <ProfilePill active={false} glyph="ellipsis" label={p.manageProfiles} onSelect={() => navigate(PROFILES_ROUTE)} />
 
-      {localDeviceDialog}
 
       {/* Multi-gateway discoverability: before a second source exists, a plug
           pinned beside Manage deep-links to the unified Gateways page. Once
@@ -724,7 +676,6 @@ export function ProfileRail() {
         scope={pendingRestSoul ? restScope(pendingRestSoul) : undefined}
       />
 
-      <ProfileRemoteOverrideDialog profileNames={profileNames} />
     </div>
   )
 }
@@ -1379,13 +1330,7 @@ interface ProfileSquareProps {
   onRecolor: (color: null | string) => void
   onRename: () => void
   onEditSoul: () => void
-  // Absent on multi-gateway setups: the legacy per-profile remote override
-  // is superseded by the fleet rail there.
-  onConnectRemote?: () => void
   onDelete: () => void
-  // hostname[:port] of this profile's remote override, or null when the
-  // profile runs locally. Drives the "remote" badge on the square.
-  remoteHost: null | string
 }
 
 // Hold this long without moving (a drag would have started first) to open the
@@ -1405,13 +1350,11 @@ function ProfileSquare({
   connectionId,
   label,
   name,
-  onConnectRemote,
   onDelete,
   onEditSoul,
   onRecolor,
   onRename,
-  onSelect,
-  remoteHost
+  onSelect
 }: ProfileSquareProps) {
   const { t } = useI18n()
   const p = t.profiles
@@ -1488,7 +1431,7 @@ function ProfileSquare({
                     {...attributes}
                     {...listeners}
                     aria-label={
-                      [remoteHost ? `${label} — ${p.remoteOverride.badge(remoteHost)}` : label, statusText]
+                      [label, statusText]
                         .filter(Boolean)
                         .join(', ') || label
                     }
@@ -1530,18 +1473,6 @@ function ProfileSquare({
                     onPointerUp={clearPress}
                   >
                     {profileShortLabel(label)}
-                    {/* The "remote" badge: a tiny globe pinned to the corner of an
-                        overridden profile's square, so which profiles leave this
-                        machine is visible at a glance (#91349). */}
-                    {remoteHost && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute -right-0.5 -top-0.5 grid size-2 place-items-center rounded-full bg-(--ui-panel-background)"
-                        data-slot="profile-remote-badge"
-                      >
-                        <Codicon name="globe" size="0.5rem" />
-                      </span>
-                    )}
                     {/* The profile's session rollup (#91710): bottom-right so it
                         never fights the remote globe. */}
                     {!active && summary && (
@@ -1554,7 +1485,7 @@ function ProfileSquare({
               </ContextMenuTrigger>
             </PopoverAnchor>
             <TooltipContent>
-              {[remoteHost ? `${label} · ${p.remoteOverride.badge(remoteHost)}` : label, statusText]
+              {[label, statusText]
                 .filter(Boolean)
                 .join(' · ')}
             </TooltipContent>
@@ -1589,12 +1520,6 @@ function ProfileSquare({
             <Codicon name="package" size="0.875rem" />
             <span>{p.exportMenu}</span>
           </ContextMenuItem>
-          {onConnectRemote && (
-            <ContextMenuItem onSelect={onConnectRemote}>
-              <Codicon name="globe" size="0.875rem" />
-              <span>{remoteHost ? p.remoteOverride.badge(remoteHost) : p.remoteOverride.menuItem}</span>
-            </ContextMenuItem>
-          )}
           <ContextMenuItem
             className="text-destructive focus:text-destructive"
             onSelect={onDelete}

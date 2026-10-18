@@ -541,46 +541,19 @@ export const frOverrides = {
       signInAgain: 'Se reconnecter',
       ipcBridgeUnavailable: 'Le pont IPC du desktop est indisponible.'
     },
-    causes: {
-      exitedEarly: "Le service en arrière-plan de Scout s'est arrêté juste après son démarrage.",
-      timedOut: "Le service en arrière-plan de Scout n'a pas répondu à temps.",
-      permission: "Scout n'a pas pu écrire dans son dossier de données (problème d'autorisation).",
-      diskFull: "Le disque est plein ; Scout n'a donc pas pu démarrer.",
-      portInUse: 'Un autre programme utilise le port réseau nécessaire à Scout.',
-      installMissing:
-        "Une partie de l'installation de Scout est manquante. Choisissez Réparer l'installation pour la restaurer."
-    },
     failure: {
       reconnecting: 'Reconnexion à Scout…',
       title: "Scout n'a pas pu démarrer",
       description:
         "Le gateway en arrière-plan n'a pas pu se lancer. Essayez l'une des étapes de récupération ci-dessous. Rien ici ne supprime vos conversations ou paramètres.",
       details: 'Détails',
-      remoteTitle: 'Connexion au gateway distante requise',
-      remoteDescription:
-        'Votre session de gateway distante a expiré. Connectez-vous à nouveau pour vous reconnecter. Rien ici ne supprime vos conversations ou paramètres.',
       retry: 'Réessayer',
-      repairInstall: "Réparer l'installation",
-      useLocalGateway: 'Utiliser le gateway local',
-      gatewaySettings: 'Paramètres du gateway',
-      back: 'Retour',
       openLogs: 'Ouvrir les journaux',
-      repairHint: "La réparation relance l'installateur et peut prendre quelques minutes sur une machine neuve.",
-      remoteSignInHint: signInLabel =>
-        `Déconnecte la session navigateur distante enregistrée, puis ouvre ${signInLabel}. Utilisez le gateway local pour passer au backend intégré.`,
-      signOutAndSignIn: 'Se déconnecter et se reconnecter',
-      remoteFailureHint:
-        "Vérifiez l'URL du gateway et la connexion dans les paramètres du gateway, ou passez au gateway local.",
       hideRecentLogs: 'Masquer les journaux récents',
       showRecentLogs: 'Afficher les journaux récents',
       signedInTitle: 'Connecté',
       signedInMessage: 'Reconnexion au gateway distante…',
-      signInIncompleteTitle: 'Connexion incomplète',
-      signInIncompleteMessage: "La fenêtre de connexion s'est fermée avant la fin de l'authentification.",
       signInFailed: 'Échec de la connexion',
-      signInToRemoteGateway: 'Se connecter au gateway distante',
-      signInWithProvider: provider => `Se connecter avec ${provider}`,
-      identityProvider: "votre fournisseur d'identité"
     }
   },
   notifications: {
@@ -848,13 +821,6 @@ export const frOverrides = {
       advancedOutput: 'Limites de sortie',
       advancedDelegation: 'Sous-agents',
       advancedDesktop: 'Desktop et démarrage',
-      gatewayConnection: 'Cette fenêtre',
-      gatewayDevices: 'Connexions enregistrées',
-      gatewayManagedUpdates: 'Mises à jour à distance',
-      gatewayManagedUpdatesUnavailable:
-        'Les mises à jour à distance nécessitent une version de Desktop prenant en charge les mises à jour SSH gérées.',
-      gatewayManagedUpdatesEmpty:
-        'Ajoutez une connexion SSH dans Connexions enregistrées pour gérer ses mises à jour ici.',
       keyboardShortcuts: 'Raccourcis clavier',
       hudGesture: 'Geste du HUD',
       screenCapture: "Capture d'écran",
@@ -880,7 +846,6 @@ export const frOverrides = {
       providerApiKeys: 'Clés API',
       providerCustomEndpoints: 'Points de terminaison personnalisés',
       providerLocalModels: 'Modèles locaux',
-      gateway: 'Gateway',
       apiKeys: 'Outils et clés',
       keybinds: 'Raccourcis clavier',
       keysTools: 'Outils',
@@ -1127,7 +1092,6 @@ export const frOverrides = {
     searchPlaceholder: {
       about: 'À propos de Scout Desktop',
       config: 'Rechercher dans les paramètres...',
-      gateway: 'Connexion au gateway...',
       keys: 'Rechercher des clés API...',
       mcp: 'Rechercher des serveurs MCP...',
       sessions: 'Rechercher des sessions archivées...'
@@ -1865,126 +1829,6 @@ export const frOverrides = {
       receiptVersions: (pre: string, post: string) => `${pre} → ${post}`,
       scopesRestored: (profiles: string) => `Profils restaurés : ${profiles}`,
       scopeNotRestored: (profile: string, error: string) => `Profil « ${profile} » non restauré : ${error}`
-    },
-    gateway: {
-      loading: 'Chargement des paramètres du gateway...',
-      unavailableTitle: 'Paramètres du gateway indisponibles',
-      unavailableDesc: "Le pont IPC du desktop n'expose pas les paramètres du gateway.",
-      title: 'Connexion au gateway',
-      envOverride: "remplacement par variable d'environnement",
-      intro:
-        'Local par défaut. Utilisez distant quand cette application doit piloter un backend Scout ailleurs. Remplacements par profil ci-dessous.',
-      envOverrideTitle: "Des variables d'environnement contrôlent cette session desktop.",
-      envOverrideDesc:
-        'Supprimez les variables SCOUT_DESKTOP_REMOTE_URL et SCOUT_DESKTOP_REMOTE_TOKEN pour utiliser le paramètre enregistré ci-dessous.',
-      modeTitle: 'Mode de connexion',
-      localTitle: 'Gateway local',
-      localDesc:
-        "Démarrer un backend Scout privé sur localhost. C'est la valeur par défaut et cela fonctionne hors ligne.",
-      remoteTitle: 'Gateway distant',
-      remoteDesc: 'Connecter ce shell desktop à un backend Scout distant.',
-      remoteAuthHint:
-        "Les gateways hébergés utilisent OAuth ou un nom d'utilisateur et un mot de passe ; les auto-hébergés peuvent utiliser un jeton de session.",
-      remoteUrlTitle: 'URL distante',
-      remoteUrlDesc:
-        'URL de base du backend de tableau de bord distant. Les préfixes de chemin sont pris en charge, par exemple /scout.',
-      probing: "Vérification de la méthode d'authentification de ce gateway…",
-      probeError:
-        "Impossible d'atteindre ce gateway pour le moment. Vérifiez l'URL — la méthode d'authentification apparaîtra une fois qu'il répondra.",
-      signedIn: 'Connecté',
-      signIn: 'Se connecter',
-      signOut: 'Se déconnecter',
-      signInWith: provider => `Se connecter avec ${provider}`,
-      authTitle: 'Authentification',
-      authSignedInPassword:
-        "Ce gateway utilise un nom d'utilisateur et un mot de passe. Vous êtes connecté ; la session se rafraîchit automatiquement.",
-      authSignedInOauth: 'Ce gateway utilise OAuth. Vous êtes connecté ; la session se rafraîchit automatiquement.',
-      authNeedsPassword:
-        "Ce gateway utilise un nom d'utilisateur et un mot de passe. Connectez-vous pour autoriser cette application desktop.",
-      authNeedsOauth: provider =>
-        `Ce gateway utilise OAuth. Connectez-vous avec ${provider} pour autoriser cette application desktop.`,
-      tokenTitle: 'Jeton de session',
-      tokenDesc:
-        "Le jeton de session du tableau de bord utilisé pour l'accès REST et WebSocket. Laissez vide pour conserver le jeton enregistré.",
-      existingToken: value => `Jeton existant ${value}`,
-      savedToken: 'enregistré',
-      pasteSessionToken: 'Coller le jeton de session',
-      plainTextConfirmTitle: 'Stocker le jeton du gateway en clair ?',
-      plainTextConfirmDesc:
-        'Aucun service de trousseau système n’a été trouvé sur cette machine : le jeton serait donc enregistré sans chiffrement dans le fichier des paramètres de connexion de l’application, lisible par tout processus exécuté par cet utilisateur. Installez ou activez le trousseau de votre système (GNOME Keyring ou KWallet sous Linux) pour un stockage chiffré.',
-      plainTextConfirmAction: 'Enregistrer en clair',
-      plainTextStoredTitle: 'Jeton stocké en clair',
-      plainTextStoredDesc:
-        'Le stockage sécurisé est indisponible : le jeton enregistré est donc stocké sans chiffrement dans le fichier des paramètres de connexion de l’application sur cette machine. Installez ou activez le trousseau de votre système (GNOME Keyring ou KWallet sous Linux) pour le chiffrer.',
-      keychainEncryptionTitle: 'Chiffrer les secrets enregistrés avec le trousseau du système',
-      keychainEncryptionDesc:
-        "Désactivé par défaut. Une fois activé, les jetons du gateway et les identifiants de connexion sont chiffrés avec le trousseau du système (Trousseaux d'accès, GNOME Keyring ou Windows DPAPI) ; le système peut demander une autorisation ou un mot de passe. Sinon, ils sont stockés dans des fichiers ordinaires lisibles uniquement par votre compte utilisateur.",
-      keychainEncryptionFailed: 'Impossible de modifier le chiffrement des secrets',
-      testRemote: 'Tester le distant',
-      saveForRestart: 'Enregistrer pour le prochain redémarrage',
-      saveAndReconnect: 'Enregistrer et se reconnecter',
-      diagnostics: 'Diagnostiques',
-      diagnosticsDesc:
-        'Afficher desktop.log dans votre gestionnaire de fichiers — utile quand le gateway ne démarre pas.',
-      openLogs: 'Ouvrir les journaux',
-      incompleteTitle: 'Gateway distant incomplet',
-      incompleteSignIn: 'Saisissez une URL distante et connectez-vous avant de passer en distant.',
-      incompleteToken: 'Saisissez une URL distante et un jeton de session avant de passer en distant.',
-      incompleteSignInTest: 'Saisissez une URL distante et connectez-vous avant de tester.',
-      incompleteTokenTest: 'Saisissez une URL distante et un jeton de session avant de tester.',
-      enterUrlFirst: "Saisissez d'abord une URL distante.",
-      restartingTitle: 'Reconnexion du gateway',
-      savedTitle: 'Paramètres du gateway enregistrés',
-      restartingMessage: 'Scout Desktop va se reconnecter avec les paramètres enregistrés — le shell reste ouvert.',
-      savedMessage: 'Enregistré pour le prochain redémarrage.',
-      connectedTo: (baseUrl, version) => `Connecté à ${baseUrl}${version ? ` · Scout ${version}` : ''}`,
-      reachableTitle: 'Gateway distant accessible',
-      signedOutTitle: 'Déconnecté',
-      signedOutMessage: 'Session du gateway distant effacée.',
-      failedLoad: 'Échec du chargement des paramètres du gateway',
-      signInFailed: 'Échec de la connexion',
-      signOutFailed: 'Échec de la déconnexion',
-      testFailed: 'Échec du test du gateway distant',
-      applyFailed: "Impossible d'appliquer les paramètres du gateway",
-      saveFailed: "Impossible d'enregistrer les paramètres du gateway",
-      sshTitle: 'Se connecter via SSH',
-      sshDesc:
-        "Scout est lancé sur la machine distante via SSH et acheminé vers cette application — rien à démarrer ou exposer soi-même. Nécessite un accès SSH par clé fonctionnel vers l'hôte.",
-      sshTrustHint:
-        "La première clé d'hôte présentée est approuvée et fixée ; les changements ultérieurs échouent en mode fermé.",
-      sshHostTitle: 'Hôte',
-      sshHostDesc: 'utilisateur@hôte, ou un alias Host de ~/.ssh/config.',
-      sshHostPick: 'Sélectionner un hôte…',
-      sshHostPickTitle: 'Hôte',
-      sshHostPickDesc: 'Un alias Host de ~/.ssh/config, ou Personnalisé pour en saisir un.',
-      sshHostCustom: 'Personnalisé (saisie manuelle)…',
-      sshUserTitle: 'Utilisateur',
-      sshUserDesc: 'Vide = ~/.ssh/config ou votre utilisateur actuel.',
-      sshUserPlaceholder: 'de ~/.ssh/config',
-      sshPortTitle: 'Port',
-      sshPortDesc: 'Vide = 22 ou le port de ~/.ssh/config.',
-      sshKeyTitle: "Fichier d'identité",
-      sshKeyDesc: 'Chemin de la clé privée. Vide = ssh-agent ou ~/.ssh/config.',
-      sshScoutPathTitle: 'Chemin Scout (facultatif)',
-      sshScoutPathDesc: 'Chemin complet vers le binaire scout distant. Vide = détection automatique.',
-      sshScoutPathPlaceholder: 'détection automatique',
-      sshTestConnection: 'Tester SSH',
-      sshConnect: 'Se connecter',
-      sshButtonsHint: "Enregistrer s'applique au prochain lancement. Connecter se reconnecte immédiatement.",
-      sshReachable: (host, platform) => `Accessible : ${host} (${platform}) — Scout trouvé`,
-      sshIncompleteHost: 'Saisissez un hôte SSH avant de vous connecter.',
-      sshErrUnreachable: "Impossible d'atteindre cet hôte via SSH. Vérifiez l'hôte, le port et votre réseau.",
-      sshErrAuth:
-        "Échec de l'authentification SSH. Chargez votre clé dans ssh-agent (ssh-add) ou définissez un IdentityFile dans ~/.ssh/config — Scout exécute ssh de manière non interactive.",
-      sshErrHostKey:
-        "La clé de l'hôte a changé depuis votre dernière connexion. Vérifiez que ce changement est attendu, puis exécutez ssh-keygen -R <host> et reconnectez-vous.",
-      sshErrNotInstalled:
-        "Scout n'est pas installé sur l'hôte distant. Installez-le là-bas (git clone https://github.com/adityakm24/scout.git && cd scout && ./scripts/install.sh) ou définissez le chemin Scout.",
-      sshErrPlatform:
-        'Plateforme distante non prise en charge. Le mode SSH de Scout Desktop supporte les hôtes distants Linux, macOS et Windows.',
-      sshErrTimeout: "Expiration de la connexion SSH. L'hôte peut être inaccessible ou en veille.",
-      sshErrUpdateRequired: "Mettez à jour Scout sur l'hôte distant avant de vous connecter avec Desktop SSH.",
-      sshErrUnknown: 'Échec de la connexion SSH.'
     },
     keys: {
       loading: 'Chargement des clés API et des identifiants...',
@@ -2979,39 +2823,6 @@ export const frOverrides = {
       needsInput: (count: number) =>
         count === 1 ? '1 session attend votre réponse' : `${count} sessions attendent votre réponse`,
       working: (count: number) => (count === 1 ? '1 session en cours' : `${count} sessions en cours`)
-    },
-    remoteOverride: {
-      menuItem: 'Se connecter à un hôte distant…',
-      badge: (host: string) => `S'exécute sur ${host}`,
-      title: (profile: string) => `Connecter ${profile} à un hôte distant`,
-      description:
-        "Les sessions de ce profil s'exécuteront sur le système Scout distant indiqué, plutôt que sur cet ordinateur.",
-      urlLabel: 'Adresse distante',
-      urlPlaceholder: 'https://scout.exemple.fr',
-      urlInvalid: 'Saisissez une adresse complète commençant par http:// ou https://',
-      tokenLabel: "Jeton d'accès",
-      tokenPlaceholder: 'Collez le jeton de session distant',
-      tokenSavedHint: 'Un jeton est déjà enregistré. Laissez ce champ vide pour le conserver.',
-      plainTextOptIn:
-        "Cet ordinateur ne dispose d'aucun stockage sécurisé pour les clés. Le jeton serait donc enregistré sans chiffrement sur le disque. L'enregistrer quand même.",
-      collisionWarning: (label: string) =>
-        `Un gateway nommé « ${label} » existe déjà dans les paramètres. Cette connexion de profil est indépendante et ne le modifiera pas.`,
-      confirmTitle: 'Connecter ce profil à un hôte distant ?',
-      confirmNote: (profile: string, host: string) =>
-        `Les nouvelles conversations de ${profile} s'exécuteront sur ${host}. Cet ordinateur distant exécutera les commandes et lira les fichiers qui s'y trouvent, pas ceux de cet appareil. Connectez-vous uniquement à un hôte de confiance.`,
-      confirmBack: 'Retour',
-      connect: 'Connecter',
-      connecting: 'Connexion…',
-      disconnect: 'Supprimer la connexion distante',
-      savedTitle: 'Profil connecté',
-      savedMessage: (profile: string, host: string) => `${profile} s'exécute désormais sur ${host}`,
-      removedTitle: 'Connexion distante supprimée',
-      removedMessage: (profile: string) => `${profile} s'exécute désormais sur cet ordinateur`,
-      removeFailed: 'Impossible de supprimer la connexion distante',
-      authFailedTitle: "L'hôte distant a refusé le jeton enregistré",
-      authFailedMessage: (profile: string, host: string) =>
-        `${host} a refusé le jeton enregistré pour ${profile}. Il a peut-être été modifié sur le système distant.`,
-      updateToken: 'Saisir un nouveau jeton…'
     },
     actions: 'Actions',
     color: 'Couleur…',
@@ -4091,82 +3902,6 @@ export const frOverrides = {
   guidedGreeting: {
     line: "Salut, entrez ! Je suis Scout. Donnez-moi deux minutes pour préparer les lieux à votre façon, puis nous nous attaquerons à quelque chose que vous voulez vraiment accomplir.\n\nMais d'abord, comment dois-je vous appeler ?",
     nameSuggestion: name => `(Je peux aussi simplement vous appeler ${name}, si vous préférez.)`
-  },
-  install: {
-    stageStates: {
-      pending: 'En attente',
-      running: 'Installation',
-      succeeded: 'Terminé',
-      skipped: 'Ignoré',
-      failed: 'Échoué'
-    },
-    oneTimeTitle: 'Scout nécessite une installation unique',
-    unsupportedDesc: platform =>
-      `L'installation automatisée au premier lancement n'est pas encore disponible sur ${platform}. Ouvrez le Terminal et exécutez la commande ci-dessous, puis relancez cette application. Les lancements suivants ignoreront cette étape.`,
-    installCommand: "Commande d'installation",
-    copyCommand: 'Copier la commande',
-    viewDocs: "Voir la documentation d'installation",
-    installTo: 'Sera installé dans',
-    retryAfterRun: "Je l'ai exécuté — réessayer",
-    setupChoiceTitle: 'Configurer Scout Desktop',
-    setupChoiceDesc:
-      'Connectez cette application à un gateway Scout que vous exécutez déjà, ou installez Scout localement sur cet ordinateur.',
-    connectExistingTitle: 'Se connecter à un Scout existant',
-    connectExistingShort: 'Connecter un existant',
-    connectExistingDesc:
-      'Utilisez un backend distant avec un jeton de session ou une connexion par navigateur. Aucune installation locale ne démarrera.',
-    installLocalTitle: 'Installer Scout localement',
-    installLocalDesc: 'Téléchargez Scout, créez son environnement Python et exécutez le backend sur cet ordinateur.',
-    localStartUnavailable: "L'installation locale n'a pas pu démarrer. Redémarrez Scout Desktop et réessayez.",
-    remoteSetupTitle: 'Se connecter à un Scout existant',
-    remoteSetupDesc:
-      "Entrez l'URL du gateway. Scout Desktop détectera s'il a besoin d'un jeton ou d'une connexion par navigateur.",
-    remoteUrlTitle: 'URL du gateway',
-    remoteUrlDesc: "Utilisez l'URL de base du gateway Scout, y compris https:// pour les connexions distantes.",
-    remoteUrlPlaceholder: 'https://gateway.example.com/scout',
-    probing: "Détection de l'authentification du gateway...",
-    probeError: "Impossible d'atteindre ce gateway Scout.",
-    probeErrorDetails: 'Détails',
-    identityProvider: "votre fournisseur d'identité",
-    authTitle: 'Authentification',
-    authNeedsOauth: provider => `Connectez-vous avec ${provider} avant de tester ce gateway.`,
-    authSignedIn: 'Connexion par navigateur terminée.',
-    connected: 'Connecté',
-    signIn: 'Se connecter',
-    signInWith: provider => `Se connecter avec ${provider}`,
-    enterUrlFirst: "Entrez d'abord une URL de gateway.",
-    signInIncomplete: "La fenêtre de connexion s'est fermée avant la fin de l'authentification.",
-    tokenTitle: 'Jeton de session',
-    tokenDesc: 'Collez le jeton de session issu du fichier .env du gateway distant.',
-    pasteSessionToken: 'Coller le jeton de session',
-    incompleteSignInTest: 'Connectez-vous avant de tester ce gateway protégé par OAuth.',
-    incompleteTokenTest: 'Entrez un jeton de session avant de tester ce gateway.',
-    testConnection: 'Tester la connexion',
-    testSucceeded: (baseUrl, version) => `Connecté à ${baseUrl}${version ? ` (${version})` : ''}.`,
-    applyRemote: 'Appliquer et se reconnecter',
-    backToSetup: 'Retour',
-    failedTitle: "Échec de l'installation",
-    settingUpTitle: 'Configuration de Scout Agent',
-    finishingTitle: 'Finalisation',
-    failedDesc:
-      "L'une des étapes d'installation a échoué. Sous Windows, cela peut arriver si une autre instance Scout CLI ou desktop est en cours d'exécution. Arrêtez toutes les instances Scout en cours, puis réessayez. Consultez les détails ci-dessous ou le journal du bureau pour la transcription complète.",
-    activeDesc:
-      "Il s'agit d'une configuration unique. Le programme d'installation de Scout télécharge les dépendances et configure votre machine. Les lancements suivants ignoreront cette étape.",
-    progress: (completed, total) => `${completed} sur ${total} étapes terminées`,
-    currentStage: stage => ` -- actuellement : ${stage}`,
-    fetchingManifest: "Récupération du manifeste d'installation...",
-    error: 'Erreur',
-    hideOutput: "Masquer la sortie de l'installateur",
-    showOutput: "Afficher la sortie de l'installateur",
-    lines: count => `${count} ligne${count === 1 ? '' : 's'}`,
-    noOutput: 'Aucune sortie pour le moment.',
-    cancelling: 'Annulation...',
-    cancelInstall: "Annuler l'installation",
-    transcriptSaved: 'Transcription complète enregistrée dans',
-    copiedOutput: 'Copié !',
-    copyOutput: 'Copier la sortie',
-    reloadRetry: 'Recharger et réessayer',
-    openLogs: 'Ouvrir les journaux'
   },
   onboarding: {
     headerTitle: 'Configurons Scout Agent pour vous',
@@ -5263,9 +4998,6 @@ export const frOverrides = {
     resumeStrandedTitle: 'Impossible de charger cette session',
     resumeStrandedBody:
       "La connexion à cette session a échoué et les nouvelles tentatives automatiques ont été abandonnées. Vérifiez que la Gateway est en cours d'exécution, puis réessayez.",
-    poolSlotTimeoutBody:
-      "Tous les emplacements de backend local sont occupés. Augmentez le nombre de backends de bots maintenus actifs dans Paramètres → Avancé, ou réessayez après l'éviction d'un backend inactif.",
-    poolSlotTimeoutOpenSettings: 'Ouvrir les paramètres avancés',
     resumeRetry: 'Réessayer',
     nothingToBranch: 'Aucune branche possible',
     branchNeedsChat: 'Démarrez ou reprenez une conversation avant de créer une branche.',

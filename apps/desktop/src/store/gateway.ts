@@ -865,8 +865,6 @@ async function openSecondary(entry: Secondary, spawnPriority: SpawnPriority = 'b
     if (g.activeKey === entry.scope) {
       publishActiveConnection(conn)
     }
-
-    void desktop.touchBackend?.(entry.scope).catch(() => undefined)
   })()
 
   entry.connectPromise = pending
@@ -1751,14 +1749,10 @@ export async function retainGatewayForSessionTurn(
     }
 
     cancelTurnLeaseRelease(key)
-    // Another session on the same scope may still hold a lease; report the
-    // scope's state, not this lease's.
-    publishTurnLease(scope, scopeHasTurnLease(scope))
     releaseRoute()
   }
 
   g.turnLeases.set(key, release)
-  publishTurnLease(scope, true)
 
   return release
 }
@@ -1773,13 +1767,6 @@ function scopeHasTurnLease(scope: string): boolean {
   }
 
   return false
-}
-
-// Tell main whether a prompt turn leases this scope's pooled backend. An early
-// skip for cooperative retirement (electron/pool-retire.ts), never the proof:
-// main asks the backend itself before stopping anything. From #104871.
-function publishTurnLease(scope: string, activeTurn: boolean): void {
-  void window.scoutDesktop?.touchBackend?.(scope, { activeTurn }).catch(() => undefined)
 }
 
 function releaseTerminalTurnLease(scope: string, event: GatewayEvent): void {
@@ -2258,24 +2245,6 @@ export function openSecondaryCount(): number {
   }
 
   return count
-}
-
-// Keep the idle reaper from killing a backend we still need: ping every live
-// secondary. The active one is pinged separately (touchActiveGatewayBackend).
-// "Live" means the socket is OPEN: a wantOpen entry stuck in its reconnect
-// backoff has no consumer on that backend, and pinging it anyway kept a
-// tile-pinned backend keepalive-fresh forever, so LRU eviction and the idle
-// reaper never freed its pool slot (#103375). Each ping also carries whether a
-// prompt turn leases the scope, so a foreground dial that must retire a
-// resident can skip leased ones early (the backend probe stays the proof).
-export function touchSecondaryGateways(): void {
-  const desktop = window.scoutDesktop
-
-  for (const entry of g.secondaries.values()) {
-    if (entry.wantOpen && isOpen(entry.gateway)) {
-      void desktop?.touchBackend?.(entry.scope, { activeTurn: scopeHasTurnLease(entry.scope) }).catch(() => undefined)
-    }
-  }
 }
 
 // A local child is pooled under the bare profile (legacy route) or

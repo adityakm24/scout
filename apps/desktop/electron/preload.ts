@@ -38,9 +38,6 @@ contextBridge.exposeInMainWorld('scoutDesktop', {
   getConnectionFor: payload => ipcRenderer.invoke('scout:connection:for', payload),
   getProfileRoutes: profiles => ipcRenderer.invoke('scout:plugin-profile-routes', profiles),
   revalidateConnection: () => ipcRenderer.invoke('scout:connection:revalidate'),
-  touchBackend: (profile, options) => ipcRenderer.invoke('scout:backend:touch', profile, options),
-  getPoolLimits: () => ipcRenderer.invoke('scout:pool-limits:get'),
-  setPoolLimits: limits => ipcRenderer.invoke('scout:pool-limits:set', limits),
   getGatewayWsUrl: profile => ipcRenderer.invoke('scout:gateway:ws-url', profile),
   // Registry-scoped fresh WS URL: { connectionId, profile } → result shape of
   // getGatewayWsUrl, minted against that connection's backend.
@@ -236,27 +233,13 @@ contextBridge.exposeInMainWorld('scoutDesktop', {
     }
   },
   getBootProgress: () => ipcRenderer.invoke('scout:boot-progress:get'),
-  getConnectionConfig: profile => ipcRenderer.invoke('scout:connection-config:get', profile),
-  saveConnectionConfig: payload => ipcRenderer.invoke('scout:connection-config:save', payload),
-  applyConnectionConfig: payload => ipcRenderer.invoke('scout:connection-config:apply', payload),
-  testConnectionConfig: payload => ipcRenderer.invoke('scout:connection-config:test', payload),
   // Opt-in OS-keychain encryption for stored gateway secrets (default off —
   // see secret-storage-policy.ts). get never touches the OS keychain.
   getSecretStorageEncryption: () => ipcRenderer.invoke('scout:secret-storage:get'),
   setSecretStorageEncryption: (on: boolean) => ipcRenderer.invoke('scout:secret-storage:set', on),
-  // v2 multi-connection registry: named agent sources (local / remote / cloud / ssh).
+  // The connection registry: one entry, the hosted backend.
   connections: {
     list: () => ipcRenderer.invoke('scout:connections:list'),
-    save: payload => ipcRenderer.invoke('scout:connections:save', payload),
-    remove: id => ipcRenderer.invoke('scout:connections:remove', id),
-    setPrimary: id => ipcRenderer.invoke('scout:connections:set-primary', id),
-    setLaunchMode: mode => ipcRenderer.invoke('scout:connections:set-launch-mode', mode),
-    setLastUsed: id => ipcRenderer.invoke('scout:connections:set-last-used', id),
-    test: id => ipcRenderer.invoke('scout:connections:test', id),
-    updateManaged: id => ipcRenderer.invoke('scout:connections:update-managed', id),
-    // Fan out `scout update` to every eligible registered connection.
-    // Optional excludeIds skips rows the caller updates through another path.
-    updateAll: options => ipcRenderer.invoke('scout:connections:update-all', options),
     // Registry lifecycle push (main → renderer): a connection was removed or
     // materially edited, so secondaries scoped to it must be disposed (and,
     // for edits, re-dialed at the new target).
@@ -267,16 +250,6 @@ contextBridge.exposeInMainWorld('scoutDesktop', {
       return () => ipcRenderer.removeListener('scout:connections:changed', listener)
     }
   },
-  sshConfigHosts: () => ipcRenderer.invoke('scout:ssh-config:hosts'),
-  sshResolveHost: host => ipcRenderer.invoke('scout:ssh-config:resolve', host),
-  probeConnectionConfig: remoteUrl => ipcRenderer.invoke('scout:connection-config:probe', remoteUrl),
-  // `options` lets a registry-editor draft sign in BEFORE it is saved: the
-  // main process settles the draft's connection id up front so the login
-  // window writes into the per-connection cookie jar the saved entry will
-  // read (not the legacy shared jar an unsaved URL would fall back to).
-  oauthLoginConnectionConfig: (remoteUrl, options) =>
-    ipcRenderer.invoke('scout:connection-config:oauth-login', remoteUrl, options),
-  oauthLogoutConnectionConfig: remoteUrl => ipcRenderer.invoke('scout:connection-config:oauth-logout', remoteUrl),
   profile: {
     getDefault: () => ipcRenderer.invoke('scout:profile:default:get'),
     setDefault: (route: DesktopProfileRoute) => ipcRenderer.invoke('scout:profile:default:set', route),
@@ -550,24 +523,8 @@ contextBridge.exposeInMainWorld('scoutDesktop', {
 
     return () => ipcRenderer.removeListener('scout:boot-progress', listener)
   },
-  // First-launch bootstrap progress -- emitted by the install.ps1 stage
-  // runner in main.ts (apps/desktop/electron/bootstrap-runner.ts).
-  // Renderer's install overlay subscribes to live events and queries the
-  // current snapshot via getBootstrapState() to recover after a devtools
-  // reload mid-bootstrap.
-  getBootstrapState: () => ipcRenderer.invoke('scout:bootstrap:get'),
-  probeLocalBackend: () => ipcRenderer.invoke('scout:local-backend:probe'),
-  continueBootstrapLocal: () => ipcRenderer.invoke('scout:bootstrap:continue-local'),
+  retryBackendConnection: () => ipcRenderer.invoke('scout:backend:retry'),
   recycleBackend: profile => ipcRenderer.invoke('scout:backend:recycle', profile),
-  resetBootstrap: () => ipcRenderer.invoke('scout:bootstrap:reset'),
-  repairBootstrap: () => ipcRenderer.invoke('scout:bootstrap:repair'),
-  cancelBootstrap: () => ipcRenderer.invoke('scout:bootstrap:cancel'),
-  onBootstrapEvent: callback => {
-    const listener = (_event, payload) => callback(payload)
-    ipcRenderer.on('scout:bootstrap:event', listener)
-
-    return () => ipcRenderer.removeListener('scout:bootstrap:event', listener)
-  },
   getVersion: () => ipcRenderer.invoke('scout:version'),
   relaunchApp: () => ipcRenderer.invoke('scout:app:relaunch'),
   getMachineProfile: () => ipcRenderer.invoke('scout:machine:profile'),

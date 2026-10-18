@@ -49,7 +49,6 @@ import { PROFILES_ROUTE } from '../../routes'
 
 import { FleetGatewayMenuGroup } from './fleet-gateway-menu-group'
 import { buildRestGroups, type FleetAgent, fleetRouteKey } from './fleet-rail'
-import { useLocalDeviceSwitch } from './local-device-switch'
 import { useFleetRoster } from './use-fleet-roster'
 import { useProfilePrewarm } from './use-profile-prewarm'
 
@@ -77,7 +76,6 @@ export function ProfileSwitcher({ compact = false }: { compact?: boolean }) {
   const roster = useStore($fleetRoster)
   const [createOpen, setCreateOpen] = useState(false)
   const [pendingRoute, setPendingRoute] = useState<null | string>(null)
-  const { dialog: localDeviceDialog, request: requestLocalDevice } = useLocalDeviceSwitch()
 
   useFleetRoster(multipleConnections)
 
@@ -137,27 +135,7 @@ export function ProfileSwitcher({ compact = false }: { compact?: boolean }) {
   }
 
   const switchToRest = (agent: FleetAgent) => {
-    if (agent.connectionKind !== 'local') {
-      commitRestSwitch(agent)
-
-      return
-    }
-
-    const key = fleetRouteKey(agent.connectionId, agent.profile)
-    setPendingRoute(key)
-
-    void requestLocalDevice({
-      connectionId: agent.connectionId,
-      label: agent.connectionLabel,
-      profile: agent.profile,
-      replaceCenter: agent.profile === 'default'
-    }).then(accepted => {
-      setPendingRoute(current => (current === key ? null : current))
-
-      if (accepted) {
-        commitRestSwitch(agent)
-      }
-    })
+    commitRestSwitch(agent)
   }
 
   const triggerLabel = showAll ? p.allProfiles : active ? profileLabel(active) : p.title
@@ -256,7 +234,6 @@ export function ProfileSwitcher({ compact = false }: { compact?: boolean }) {
         open={createOpen}
         profiles={profiles}
       />
-      {localDeviceDialog}
     </div>
   )
 }

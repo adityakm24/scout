@@ -35,7 +35,8 @@ export async function bundleElectronMain({ source, out, stamp, dev = false }) {
   // Defaults must run before bundled modules resolve paths or onboarding flags.
   // Dev bundles leave the environment alone so source-tree resolution keeps working.
   const envBanner = dev ? '' : environmentDefaultsBanner(process.env.SCOUT_BUNDLE_ENV_JSON || '{}')
-  const define = {}
+  const backend = JSON.parse(readFileSync(join(source, 'apps/desktop/backend.json'), 'utf8'))
+  const define = { __SCOUT_BACKEND_URL__: JSON.stringify(String(backend.url || '')) }
   if (!dev) {
     if (!stamp) throw new Error('A prepared install stamp is required')
     const raw = readFileSync(stamp, 'utf8')

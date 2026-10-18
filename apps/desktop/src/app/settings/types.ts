@@ -6,8 +6,6 @@ import type { EnvVarInfo } from '@/types/scout'
 
 export type SettingsView =
   | 'about'
-  | 'connections'
-  | 'gateway'
   | 'keybinds'
   | 'keys'
   | 'notifications'
