@@ -6,8 +6,8 @@ import { modeBound } from '@/store/interface-mode'
 const REASONING_COLLAPSED_BY_DEFAULT_STORAGE_KEY = 'scout.desktop.reasoning.collapsedByDefault'
 
 /** Desktop-local presentation preference; shared backend config must not be changed by a single window.
- *  Simple mode rests reasoning collapsed without touching this preference. */
-const $reasoningCollapsedByDefaultPref = atom(storedBoolean(REASONING_COLLAPSED_BY_DEFAULT_STORAGE_KEY, false))
+ *  Defaults to true so thinking blocks are collapsed into an expandable disclosure like ChatGPT. */
+const $reasoningCollapsedByDefaultPref = atom(storedBoolean(REASONING_COLLAPSED_BY_DEFAULT_STORAGE_KEY, true))
 
 $reasoningCollapsedByDefaultPref.subscribe(value => persistBoolean(REASONING_COLLAPSED_BY_DEFAULT_STORAGE_KEY, value))
 

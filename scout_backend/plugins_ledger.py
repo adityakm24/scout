@@ -301,3 +301,9 @@ class PluginLedgerMixin:
             self._hook_timeout_suppressed_until.clear()
         self._hook_failures_reported.clear()
         self._discovered = False
+        try:
+            from agent.nemoclaw_guardrails import install_builtin_nemoclaw_guardrails
+
+            install_builtin_nemoclaw_guardrails(self)
+        except Exception:
+            pass

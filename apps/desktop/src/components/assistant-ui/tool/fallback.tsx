@@ -20,6 +20,7 @@ import {
 import { useSessionView } from '@/app/chat/session-view'
 import { AnsiText } from '@/components/assistant-ui/ansi-text'
 import { MarkdownImage } from '@/components/assistant-ui/markdown-text'
+import { useTurnProcess } from '@/components/assistant-ui/thread/response-group'
 import { TimelineTimestamp } from '@/components/assistant-ui/thread/timeline-timestamp'
 import { ActivityIcon, activityKindForIcon } from '@/components/chat/activity-icon'
 import { useElapsedSeconds } from '@/components/chat/activity-timer'
@@ -976,6 +977,7 @@ const ToolRun: FC<PropsWithChildren<{ endIndex: number; startIndex: number }>> =
   startIndex
 }) => {
   const messageRunning = useAuiState(selectMessageRunning)
+  const turnProcess = useTurnProcess()
 
   const { completedAt, count, entryIds, key, live, startedAt, summary, approvalActivity } = useToolRun(
     startIndex,
@@ -990,7 +992,7 @@ const ToolRun: FC<PropsWithChildren<{ endIndex: number; startIndex: number }>> =
   const rowOpen = useStore(useMemo(() => $anyToolDisclosureOpen(entryIds), [entryIds]))
   const enterRef = useEnterAnimation(messageRunning, `tool-run:${key}`)
   const representedByApproval = !!approval && currentTurn && approvalActivity
-  const expanded = count < 2 || (persistedOpen ?? rowOpen)
+  const expanded = (turnProcess.active && turnProcess.open) || count < 2 || (persistedOpen ?? rowOpen)
   const collapsed = representedByApproval && !rowOpen && !persistedOpen
   const reduced = useReducedMotion()
 
@@ -1010,7 +1012,7 @@ const ToolRun: FC<PropsWithChildren<{ endIndex: number; startIndex: number }>> =
         ref={enterRef}
         transition={{ duration: reduced ? 0 : 0.22, ease: 'easeInOut' }}
       >
-        {count > 1 && !representedByApproval && (
+        {!turnProcess.active && count > 1 && !representedByApproval && (
           <ToolRunHeader
             completedAt={completedAt}
             live={live}
@@ -1020,7 +1022,7 @@ const ToolRun: FC<PropsWithChildren<{ endIndex: number; startIndex: number }>> =
             summary={summary}
           />
         )}
-        {count > 1 && live && !expanded && <ToolRunTicker>{children}</ToolRunTicker>}
+        {!turnProcess.active && count > 1 && live && !expanded && <ToolRunTicker>{children}</ToolRunTicker>}
         {expanded && <div className="grid min-w-0 max-w-full gap-(--tool-row-gap)">{children}</div>}
       </motion.div>
     </ToolRunDisclosureContext.Provider>
@@ -1044,6 +1046,7 @@ export const ToolGroupSlot: FC<PropsWithChildren<{ endIndex: number; startIndex:
   startIndex
 }) => {
   const showToolActivity = useStore($showToolActivity)
+  const turnProcess = useTurnProcess()
 
   // Joined rather than returned as an array: assistant-ui compares selector
   // results with `Object.is` and re-runs them on every store update, so a
@@ -1067,7 +1070,7 @@ export const ToolGroupSlot: FC<PropsWithChildren<{ endIndex: number; startIndex:
   // The run scaffold ("Explored N files") is part of the tool feed and follows
   // display.tool_progress. Children still mount so clarify, diffs, and failed
   // calls can render on their own.
-  if (!showToolActivity) {
+  if (!showToolActivity || (turnProcess.active && !turnProcess.open)) {
     return children
   }
 

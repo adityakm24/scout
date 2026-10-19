@@ -18,6 +18,7 @@
 # install` and `scout update` keep that check.
 # ============================================================================
 _SCOUT_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[ -n "${ZSH_VERSION:-}" ] && setopt localoptions nonomatch shwordsplit
 # Options: `--test-extras a,b` selects the test environment's runtime extras
 # (default: [all]); `--` ends options.
 # A bare `source ./activate` inherits the caller's positional parameters.
@@ -72,6 +73,7 @@ done
 if [ -z "$_scout_py" ]; then
     for _scout_store in "${SCOUT_RUNTIME_DIR:-}" "$_scout_repo/../tools" "${SCOUT_HOME:-$HOME/.scout}/tools"; do
         [ -n "$_scout_store" ] || continue
+        [ -d "$_scout_store" ] || continue
         for _scout_candidate in "$_scout_store"/python-*/bin/python3 "$_scout_store"/python-*/python.exe "$_scout_store"/python-*/bin/python "$_scout_store"/python-*/bin/python.exe; do
             [ -x "$_scout_candidate" ] && { _scout_py="$_scout_candidate"; break; }
         done
@@ -101,6 +103,7 @@ _scout_keys="$(printf '%s' "$_scout_json" | "$_scout_py" -c 'import json,sys; pr
 # and exported with every other key — no separate assignment here.
 __SCOUT_SAVED_PATH="$PATH"
 for _scout_k in $_scout_keys; do
+    [ -n "$_scout_k" ] || continue
     eval "__SCOUT_SAVED_$_scout_k=\"\${$_scout_k+set}\""
     eval "__SCOUT_PRIOR_$_scout_k=\${$_scout_k-__SCOUT_UNSET__}"
 done

@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 from tools.environments.docker import DockerEnvironment as _DockerEnvironment
 from tools.environments.local import LocalEnvironment as _LocalEnvironment
 from tools.environments.modal import ModalEnvironment as _ModalEnvironment
+from tools.environments.openshell import OpenShellEnvironment as _OpenShellEnvironment
 from tools.environments.singularity import SingularityEnvironment as _SingularityEnvironment
 from tools.environments.ssh import SSHEnvironment as _SSHEnvironment
 from tools.terminal_tool_config import _get_plugin_env_provider
@@ -48,7 +49,7 @@ def terminal_backend_unavailable_reason() -> Optional[str]:
 
 _VERCEL_SANDBOX_DEFAULT_CWD = "/vercel/sandbox"
 _SUPPORTED_VERCEL_RUNTIMES = ("node24", "node22", "python3.13")
-_BUILTIN_BACKENDS = "local, docker, singularity, modal, daytona, vercel_sandbox, ssh"
+_BUILTIN_BACKENDS = "openshell, local, docker, singularity, modal, daytona, vercel_sandbox, ssh"
 
 # Config -> kwargs shapers, driven by (out_key, config_key, default) tables. The container table's
 # (key, default) literal is intentionally greppable; tools/terminal_tool.py keeps its own for the AST test.
@@ -213,10 +214,14 @@ def _build_plugin_env(*, env_type, image, cwd, timeout, cc, task_id, **_):
     raise ValueError(f"Unknown environment type: {env_type}. Use {known}")
 
 
+def _build_openshell_env(*, image, cwd, timeout, cc, task_id, **_):
+    return _OpenShellEnvironment(cwd=cwd, timeout=timeout, task_id=task_id, image=image, container_config=cc)
+
+
 # Built-in backend -> builder. Anything else is looked up in the plugin registry.
-_ENV_BUILDERS = {"local": _build_local_env, "docker": _build_docker_env, "singularity": _build_singularity_env,
-                 "modal": _build_modal_env, "daytona": _build_daytona_env, "vercel_sandbox": _build_vercel_env,
-                 "ssh": _build_ssh_env}
+_ENV_BUILDERS = {"openshell": _build_openshell_env, "local": _build_local_env, "docker": _build_docker_env,
+                 "singularity": _build_singularity_env, "modal": _build_modal_env, "daytona": _build_daytona_env,
+                 "vercel_sandbox": _build_vercel_env, "ssh": _build_ssh_env}
 
 
 def _create_environment(env_type: str, image: str, cwd: str, timeout: int,
@@ -294,6 +299,7 @@ def _daytona_post(config: Dict[str, Any]) -> bool:
 
 
 _BACKEND_SPECS: Dict[str, Dict[str, Any]] = {
+    "openshell": {},
     "local": {},
     "docker": {"binary": (lambda: importlib.import_module("tools.environments.docker").find_docker(), "version",
                           "Docker is not installed — no docker executable in PATH or the usual install locations")},

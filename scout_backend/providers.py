@@ -79,6 +79,9 @@ SCOUT_OVERLAYS: Dict[str, ScoutOverlay] = {
     "nebius-token-factory": ScoutOverlay(extra_env_vars=("NEBIUS_API_KEY", "NEBIUS_TOKEN_FACTORY_API_KEY"),
                                           base_url_override="https://api.tokenfactory.nebius.com/v1",
                                           base_url_env_var="NEBIUS_BASE_URL"),
+    "mistral": ScoutOverlay(extra_env_vars=("MISTRAL_API_KEY",),
+                            base_url_override="https://api.mistral.ai/v1",
+                            base_url_env_var="MISTRAL_BASE_URL"),
     "ollama-cloud": ScoutOverlay(base_url_override="https://ollama.com/v1", base_url_env_var="OLLAMA_BASE_URL"),
     # Azure Foundry serves OpenAI- and Anthropic-style endpoints; transport comes from model.api_mode.
     "azure-foundry": ScoutOverlay(base_url_env_var="AZURE_FOUNDRY_BASE_URL"),
@@ -129,7 +132,8 @@ _ALIAS_GROUPS: Dict[str, Tuple[str, ...]] = {
     "bedrock": ("aws", "aws-bedrock", "amazon-bedrock", "amazon"), "arcee": ("arcee-ai", "arceeai"),
     "gmi": ("gmi-cloud", "gmicloud"), "fireworks": ("fireworks-ai", "fw"), "upstage": ("solar",),
     "actual": ("actual-computer", "actualcomputer", "aci"),
-    "nebius-token-factory": ("nebius", "nebius-tokenfactory", "nebius-tf", "token-factory", "tokenfactory"),
+    "nebius-token-factory": ("nebius", "nebius_serverless", "nebius-serverless", "nebius-tokenfactory", "nebius-tf", "token-factory", "tokenfactory"),
+    "mistral": ("mistralai", "mistral-ai"),
     "lmstudio": ("lmstudio", "lm-studio", "lm_studio"),
     # Local OpenAI-compatible servers route through the generic "custom" provider,
     # matching scout_backend.auth and scout_backend.models so every layer agrees. Issue #62213.

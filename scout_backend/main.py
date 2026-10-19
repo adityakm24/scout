@@ -648,7 +648,9 @@ from scout_backend.main_desktop import (  # frozen updater surface: update_cmd*.
     _desktop_packaged_executable,
     _install_rebuilt_desktop_app,
     _installed_desktop_apps,
+    cmd_gui,
 )
+from scout_backend.subcommands.gui import build_gui_parser
 from scout_backend.main_web_build import (
     _sweep_stale_bytecode_if_checkout_changed,
 )
@@ -2894,6 +2896,7 @@ def _build_cli_parser():
     )
     # "desktop" is canonical (Scout-Setup.exe tells users to run it, so it
     # must be the name --help shows); "gui" is a deprecated alias.
+    build_gui_parser(subparsers, cmd_gui=cmd_gui)
     return parser, subparsers
 
 

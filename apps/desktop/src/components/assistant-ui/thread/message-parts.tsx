@@ -15,6 +15,7 @@ import { ConnectorExecution, ConnectorTool } from '@/components/assistant-ui/con
 import { MarkdownText, MarkdownTextContent } from '@/components/assistant-ui/markdown-text'
 import { McpSetupTool } from '@/components/assistant-ui/mcp-setup-tool'
 import { AgentDeliveryNotice, deliveryTargetFromCommand } from '@/components/assistant-ui/thread/agent-delivery'
+import { useTurnProcess } from '@/components/assistant-ui/thread/response-group'
 import { TimelineTimestamp } from '@/components/assistant-ui/thread/timeline-timestamp'
 import { DelegateTool } from '@/components/assistant-ui/tool/delegate'
 import { ToolFallback, ToolGroupSlot } from '@/components/assistant-ui/tool/fallback'
@@ -90,9 +91,28 @@ const failedCallNeedsUser = (part: TimelineToolCallProps): boolean => {
 
 const ChainToolFallback: FC<TimelineToolCallProps> = props => {
   const showToolActivity = useStore($showToolActivity)
+  const turnProcess = useTurnProcess()
 
   // todo parts are hoisted to a dedicated panel above the message content.
   if (isTodoToolName(props.toolName)) {
+    return null
+  }
+
+  if (props.toolName === 'image_generate' && !settledWithoutResult(props) && generatedImageFromResult(props.result)) {
+    return <ImageGenerateTool {...props} />
+  }
+
+  if (props.toolName === 'clarify' && !settledWithoutResult(props)) {
+    return (
+      <>
+        <TimelineTimestamp className="mb-0.5 block" completedAt={props.completedAt} timestamp={props.timestamp} />
+        <ClarifyTool {...props} />
+      </>
+    )
+  }
+
+  // When the turn-level ChatGPT-style disclosure is collapsed, hide individual tool calls inside it.
+  if (turnProcess.active && !turnProcess.open) {
     return null
   }
 
@@ -124,19 +144,7 @@ const ChainToolFallback: FC<TimelineToolCallProps> = props => {
   }
 
   if (props.toolName === 'clarify') {
-    // Stopped on this question, never answered: history. ClarifyTool reads
-    // the session's live clarify request, so a later turn's question would
-    // otherwise paint onto this row as a second live card.
-    if (settledWithoutResult(props)) {
-      return <ToolFallback {...props} />
-    }
-
-    return (
-      <>
-        <TimelineTimestamp className="mb-0.5 block" completedAt={props.completedAt} timestamp={props.timestamp} />
-        <ClarifyTool {...props} />
-      </>
-    )
+    return <ToolFallback {...props} />
   }
 
   if (props.toolName === 'manage_catalog') {
@@ -172,11 +180,50 @@ type TimelineTextPartProps = TextMessagePartProps & { completedAt?: number; time
 
 const TimelineMarkdownText: FC<TimelineTextPartProps> = ({ completedAt, timestamp }) => {
   const { text } = useMessagePartText()
+  const turnProcess = useTurnProcess()
+  const messageId = useAuiState(s => s.message.id)
+
+  const isPreToolText = useAuiState(s => {
+    const parts = s.message.parts
+    let lastToolIdx = -1
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i]?.type === 'tool-call') {
+        lastToolIdx = i
+        break
+      }
+    }
+    if (lastToolIdx < 0) {
+      return false
+    }
+    for (let i = lastToolIdx + 1; i < parts.length; i++) {
+      const p = parts[i] as { type?: string; text?: string } | undefined
+      if (p?.type === 'text' && p.text === text) {
+        return false
+      }
+    }
+    return true
+  })
 
   // assistant-ui adds an empty continuation after a tool starts. It is not
   // prose yet and must not create paragraph spacing above pending approvals.
   if (!text.trim()) {
     return null
+  }
+
+  const isProcessText =
+    turnProcess.active && (messageId !== turnProcess.finalMessageId || isPreToolText)
+
+  if (isProcessText && !turnProcess.open) {
+    return null
+  }
+
+  if (isProcessText && turnProcess.open && messageId === turnProcess.finalMessageId) {
+    return (
+      <div className="my-1 border-l-2 border-(--ui-stroke-tertiary) pl-3 text-muted-foreground/90">
+        <TimelineTimestamp className="mb-0.5 block" completedAt={completedAt} timestamp={timestamp} />
+        <MarkdownText />
+      </div>
+    )
   }
 
   return (
@@ -199,28 +246,17 @@ const ThinkingDisclosure: FC<{
 }> = ({ children, completedAt, messageRunning = false, pending = false, timestamp, timerKey }) => {
   const { t } = useI18n()
   const reasoningCollapsedByDefault = useStore($reasoningCollapsedByDefault)
-  // `null` = no explicit user toggle yet. Live reasoning remains visible by
-  // default, unless the user opts into the low-jitter collapsed presentation.
+  const turnProcess = useTurnProcess()
+  // `null` = no explicit user toggle yet.
   const [userOpen, setUserOpen] = useState<boolean | null>(null)
   const elapsed = useElapsedSeconds(pending, timerKey)
   const thoughtFor = useMeasuredDuration(pending, timerKey)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const contentRef = useRef<HTMLDivElement | null>(null)
   const enterRef = useEnterAnimation(messageRunning, timerKey)
-  // A live preview that later settles must not unmount its body — that is the
-  // "turn settled and everything jumped" shift. Latch that we showed one so
-  // the clip stays. Groups that mount already complete (earlier thoughts in
-  // a still-running turn) never latch, so they stay collapsed.
-  const [sawLivePreview, setSawLivePreview] = useState(false)
 
-  if (pending && !sawLivePreview) {
-    setSawLivePreview(true)
-  }
-
-  // The collapsed-by-default preference outranks the latch: it opts out of
-  // live previews entirely, so there is nothing to hold open.
-  const showPreview = !reasoningCollapsedByDefault && (pending || sawLivePreview)
-  const open = userOpen ?? showPreview
+  const showPreview = !reasoningCollapsedByDefault && pending
+  const open = userOpen ?? (turnProcess.active && turnProcess.open ? true : showPreview)
   const isPreview = userOpen === null && showPreview
 
   // Three ways a finished block can report itself. With a measured duration it
@@ -338,6 +374,7 @@ const ReasoningAccordionGroup: FC<{ children?: ReactNode; endIndex: number; star
   startIndex
 }) => {
   const showReasoning = useStore($showReasoning)
+  const turnProcess = useTurnProcess()
   const messageId = useAuiState(s => s.message.id)
   const messageRunning = useAuiState(s => s.message.status?.type === 'running')
   // The guide's reasoning is it reading its own runbook ("Now step 4: offer
@@ -382,7 +419,7 @@ const ReasoningAccordionGroup: FC<{ children?: ReactNode; endIndex: number; star
     }, undefined)
   )
 
-  if (!hasContent || guidedChat || !showReasoning) {
+  if (!hasContent || guidedChat || !showReasoning || (turnProcess.active && !turnProcess.open)) {
     return null
   }
 
@@ -409,6 +446,7 @@ const ReasoningAccordionGroup: FC<{ children?: ReactNode; endIndex: number; star
 const ReasoningTextPart: ReasoningMessagePartComponent = () => {
   const { status, text } = useMessagePartReasoning()
   const messageRunning = useAuiState(s => s.message.status?.type === 'running')
+  const turnProcess = useTurnProcess()
 
   // The group above already hides grouped parts; this covers a Reasoning part
   // rendered without a ReasoningGroup wrapper (assistant-ui drops the group
@@ -416,7 +454,7 @@ const ReasoningTextPart: ReasoningMessagePartComponent = () => {
   const showReasoning = useStore($showReasoning)
   const textDirection = useForcedTextDirection()
 
-  if (!showReasoning) {
+  if (!showReasoning || (turnProcess.active && !turnProcess.open)) {
     return null
   }
 

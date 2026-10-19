@@ -296,8 +296,14 @@ DEFAULT_CONFIG = {
         "turn_liveness": {"timeout_s": 600.0, "poll_s": 15.0},
     },
 
+    "nemoclaw": {
+        "enabled": True,
+        "guardrails": "nemo_guardrails",
+        "sandbox": "openshell",
+    },
+
     "terminal": {
-        "backend": "local",
+        "backend": "openshell",
         "modal_mode": "auto",
         # Remote-backend connection-class failures (SSH host unreachable, Docker daemon down):
         # "warn" = structured degraded tool result with reason + retry hint; "fail" = raise error +

@@ -1,7 +1,11 @@
 import { ThreadPrimitive, useAuiState } from '@assistant-ui/react'
-import { type ComponentProps, createContext, useMemo } from 'react'
+import { type ComponentProps, createContext, type FC, useContext, useMemo, useState } from 'react'
 
-import { contentHasVisibleText, messageContentText, PROCESS_NOTIFICATION_RE } from './content'
+import { SCAFFOLD_LABEL_CLASS, SCAFFOLD_META_CLASS, ScaffoldRow } from '@/components/chat/scaffold-row'
+import { isTodoToolName } from '@/lib/todos'
+import { cn } from '@/lib/utils'
+
+import { contentHasVisibleText, messageContentText, partText, PROCESS_NOTIFICATION_RE } from './content'
 
 interface GroupMessage {
   role: string
@@ -23,6 +27,25 @@ export function responseMessageRole(message: GroupMessage): string {
 
 export const ResponseMessageIds = createContext<readonly string[]>([])
 
+export interface TurnProcessContextValue {
+  /** True when the turn has a unified ChatGPT-style collapsible header for thinking & tools. */
+  active: boolean
+  /** True when the user has clicked to expand the thinking & tool calls drawer. */
+  open: boolean
+  /** ID of the message carrying the visible final answer (stays outside the collapsed drawer). */
+  finalMessageId: string | null
+}
+
+const DEFAULT_TURN_PROCESS: TurnProcessContextValue = {
+  active: false,
+  open: false,
+  finalMessageId: null
+}
+
+export const TurnProcessContext = createContext<TurnProcessContextValue>(DEFAULT_TURN_PROCESS)
+
+export const useTurnProcess = (): TurnProcessContextValue => useContext(TurnProcessContext)
+
 interface ResponseMessagesProps {
   components: ComponentProps<typeof ThreadPrimitive.MessageByIndex>['components']
   indices: readonly number[]
@@ -40,6 +63,214 @@ interface ResponseSection {
   indices: number[]
   assistantIds: string[]
   response: boolean
+}
+
+interface TurnProcessSummary {
+  hasProcess: boolean
+  isRunning: boolean
+  reasoningCount: number
+  toolCount: number
+  toolNames: string[]
+  activeToolName: string | null
+  finalMessageId: string | null
+}
+
+function summarizeSectionProcess(messages: readonly unknown[], indices: readonly number[]): TurnProcessSummary {
+  let reasoningCount = 0
+  let toolCount = 0
+  let isRunning = false
+  let activeToolName: string | null = null
+  const toolNameSet = new Set<string>()
+  let lastMessageWithPostToolText: string | null = null
+  let lastMessageWithAnyText: string | null = null
+
+  for (const idx of indices) {
+    const msg = messages[idx] as
+      | {
+          id?: string
+          role?: string
+          status?: { type?: string }
+          content?: readonly {
+            type?: string
+            text?: string
+            toolName?: string
+            result?: unknown
+            completedAt?: number
+          }[]
+          metadata?: { custom?: Record<string, unknown> }
+        }
+      | undefined
+
+    if (!msg || msg.role !== 'assistant') {
+      continue
+    }
+
+    if (msg.status?.type === 'running') {
+      isRunning = true
+    }
+
+    const parts = Array.isArray(msg.content) ? msg.content : []
+    let lastToolIdx = -1
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]
+      if (!part) continue
+
+      if (part.type === 'reasoning' && typeof part.text === 'string' && part.text.trim().length > 0) {
+        reasoningCount += 1
+      } else if (part.type === 'tool-call') {
+        const name = typeof part.toolName === 'string' ? part.toolName : 'tool'
+        if (!isTodoToolName(name) && name !== 'react_to_message') {
+          toolCount += 1
+          lastToolIdx = i
+          toolNameSet.add(name)
+          if (part.result === undefined && part.completedAt === undefined) {
+            activeToolName = name
+          }
+        }
+      }
+    }
+
+    const isInterim = msg.metadata?.custom?.interim === true
+    let hasPostToolText = false
+    let hasAnyText = false
+
+    for (let i = 0; i < parts.length; i++) {
+      if (partText(parts[i]).trim().length > 0) {
+        hasAnyText = true
+        if (i > lastToolIdx) {
+          hasPostToolText = true
+        }
+      }
+    }
+
+    if (hasAnyText && msg.id) {
+      lastMessageWithAnyText = msg.id
+      if (hasPostToolText && !isInterim) {
+        lastMessageWithPostToolText = msg.id
+      }
+    }
+  }
+
+  const finalMessageId = lastMessageWithPostToolText ?? (!isRunning ? lastMessageWithAnyText : null)
+  const hasProcess = reasoningCount > 0 || toolCount > 0
+
+  return {
+    hasProcess,
+    isRunning,
+    reasoningCount,
+    toolCount,
+    toolNames: Array.from(toolNameSet).slice(0, 3),
+    activeToolName,
+    finalMessageId
+  }
+}
+
+function formatTurnProcessLabel(summary: TurnProcessSummary): { title: string; meta: string } {
+  const { isRunning, reasoningCount, toolCount, toolNames, activeToolName } = summary
+  const toolSuffix = toolNames.length > 0 ? toolNames.join(', ') : ''
+
+  if (isRunning) {
+    if (activeToolName) {
+      const counts: string[] = []
+      if (reasoningCount > 0) counts.push('Thought')
+      if (toolCount > 0) counts.push(`${toolCount} tool${toolCount === 1 ? '' : 's'}`)
+      return {
+        title: `Running ${activeToolName}…`,
+        meta: counts.join(' · ')
+      }
+    }
+    if (reasoningCount > 0 && toolCount > 0) {
+      return {
+        title: `Thinking & used ${toolCount} tool${toolCount === 1 ? '' : 's'}…`,
+        meta: toolSuffix
+      }
+    }
+    if (toolCount > 0) {
+      return {
+        title: `Used ${toolCount} tool${toolCount === 1 ? '' : 's'}…`,
+        meta: toolSuffix
+      }
+    }
+    return { title: 'Thinking…', meta: '' }
+  }
+
+  if (reasoningCount > 0 && toolCount > 0) {
+    return {
+      title: `Thought & used ${toolCount} tool${toolCount === 1 ? '' : 's'}`,
+      meta: toolSuffix
+    }
+  }
+
+  if (toolCount > 0) {
+    return {
+      title: `Used ${toolCount} tool${toolCount === 1 ? '' : 's'}`,
+      meta: toolSuffix
+    }
+  }
+
+  return {
+    title: 'Thought',
+    meta: ''
+  }
+}
+
+const ResponseTurnSection: FC<{
+  components: ComponentProps<typeof ThreadPrimitive.MessageByIndex>['components']
+  section: ResponseSection
+}> = ({ components, section }) => {
+  const [open, setOpen] = useState(false)
+
+  const summaryJson = useAuiState(s =>
+    JSON.stringify(summarizeSectionProcess(s.thread.messages, section.indices))
+  )
+
+  const summary = useMemo(() => JSON.parse(summaryJson) as TurnProcessSummary, [summaryJson])
+  const { title, meta } = useMemo(() => formatTurnProcessLabel(summary), [summary])
+
+  const contextValue = useMemo<TurnProcessContextValue>(
+    () => ({
+      active: summary.hasProcess,
+      open,
+      finalMessageId: summary.finalMessageId
+    }),
+    [summary.hasProcess, open, summary.finalMessageId]
+  )
+
+  return (
+    <ResponseMessageIds.Provider value={section.assistantIds}>
+      <TurnProcessContext.Provider value={contextValue}>
+        <div className="group flex min-w-0 flex-col gap-(--scaffold-block-gap)" data-slot="aui_response-group">
+          {summary.hasProcess && (
+            <div
+              className="mb-1 text-[length:var(--conversation-tool-font-size)] text-(--ui-text-tertiary)"
+              data-conversation-scaffold=""
+              data-slot="aui_turn-process-disclosure"
+            >
+              <ScaffoldRow
+                onToggle={() => setOpen(prev => !prev)}
+                open={open}
+                trailing={
+                  meta ? (
+                    <span className={cn(SCAFFOLD_META_CLASS, 'font-mono text-[0.6875rem] opacity-75')}>
+                      {meta}
+                    </span>
+                  ) : undefined
+                }
+              >
+                <span className={cn(SCAFFOLD_LABEL_CLASS, summary.isRunning && !open && 'shimmer')}>
+                  {title}
+                </span>
+              </ScaffoldRow>
+            </div>
+          )}
+          {section.indices.map(index => (
+            <ThreadPrimitive.MessageByIndex components={components} index={index} key={index} />
+          ))}
+        </div>
+      </TurnProcessContext.Provider>
+    </ResponseMessageIds.Provider>
+  )
 }
 
 /** Keep message runtimes intact; only their visual container and footer are shared. */
@@ -91,13 +322,7 @@ export function ResponseMessages({ components, indices }: ResponseMessagesProps)
 
   return sections.map(section =>
     section.response ? (
-      <ResponseMessageIds.Provider key={section.key} value={section.assistantIds}>
-        <div className="group flex min-w-0 flex-col gap-(--scaffold-block-gap)" data-slot="aui_response-group">
-          {section.indices.map(index => (
-            <ThreadPrimitive.MessageByIndex components={components} index={index} key={index} />
-          ))}
-        </div>
-      </ResponseMessageIds.Provider>
+      <ResponseTurnSection components={components} key={section.key} section={section} />
     ) : (
       <ThreadPrimitive.MessageByIndex components={components} index={section.indices[0]!} key={section.key} />
     )

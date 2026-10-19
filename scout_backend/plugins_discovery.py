@@ -287,8 +287,8 @@ def gate_manifest(
         return _placeholder(
             None, logging.DEBUG, "Skipping '%s' (model-provider, handled by providers/ discovery)", enabled=True)
     if manifest.source == "bundled":
-        # Bundled backends auto-load; selection among them is ``<category>.provider`` config.
-        if manifest.kind == "backend":
+        # Bundled backends and core safety guardrails (nemoclaw, security-guidance) auto-load by default.
+        if manifest.kind == "backend" or names & {"nemoclaw", "security-guidance"}:
             return ManifestGate("load_now")
         # Bundled platforms register LAZILY: eagerly importing ~20 heavy SDKs added seconds to every `scout`
         # invocation. A deferred loader keeps every platform available on first use.

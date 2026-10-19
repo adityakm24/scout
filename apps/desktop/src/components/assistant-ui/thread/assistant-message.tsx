@@ -24,7 +24,7 @@ import {
 } from '@/components/assistant-ui/thread/content'
 import { MESSAGE_PARTS_COMPONENTS } from '@/components/assistant-ui/thread/message-parts'
 import { ReactionPicker } from '@/components/assistant-ui/thread/message-reactions'
-import { ResponseMessageIds } from '@/components/assistant-ui/thread/response-group'
+import { ResponseMessageIds, useTurnProcess } from '@/components/assistant-ui/thread/response-group'
 import { ResponseLoadingIndicator, TurnActivityIndicator } from '@/components/assistant-ui/thread/status'
 import { threadMessageIndex } from '@/components/assistant-ui/thread/thread-message-index'
 import { MessageTimelineTimestamp } from '@/components/assistant-ui/thread/timeline-timestamp'
@@ -215,6 +215,8 @@ const AssistantMessageBody: FC<AssistantMessageProps & { collapsedNotice?: null 
   const threadRuntime = useThreadRuntime()
   const responseIds = useContext(ResponseMessageIds)
   const responseTail = responseIds.length === 0 || responseIds.at(-1) === messageId
+  const turnProcess = useTurnProcess()
+  const isProcessStep = turnProcess.active && messageId !== turnProcess.finalMessageId
   const { t } = useI18n()
 
   // PERF: this component must NOT subscribe to the streaming text, and no
@@ -300,14 +302,17 @@ const AssistantMessageBody: FC<AssistantMessageProps & { collapsedNotice?: null 
       {collapsedNotice ?? (
         <>
           <div
-            className="wrap-anywhere min-w-0 max-w-full overflow-hidden text-pretty text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-foreground"
+            className={cn(
+              'wrap-anywhere min-w-0 max-w-full overflow-hidden text-pretty text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-foreground',
+              isProcessStep && turnProcess.open && 'border-l-2 border-(--ui-stroke-tertiary) pl-3 my-0.5 text-muted-foreground/90'
+            )}
             data-slot="aui_assistant-message-content"
           >
             {/* Todos render in the composer status stack now, not inline. */}
             {MESSAGE_PARTS}
             <AssistantStatusSlot />
-            <AssistantPreviewEmbeds />
-            {!isInterim && <ReplyChoices />}
+            {(!isProcessStep || turnProcess.open) && <AssistantPreviewEmbeds />}
+            {!isInterim && !isProcessStep && <ReplyChoices />}
             <MessagePrimitive.Error>
               <ErrorPrimitive.Root
                 className="mt-1.5 flex flex-col gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--dt-destructive)_35%,transparent)] bg-[color-mix(in_srgb,var(--dt-destructive)_7%,transparent)] px-3 py-2 text-[0.78rem] leading-5 text-[color-mix(in_srgb,var(--dt-destructive)_78%,var(--ui-text-secondary))]"
@@ -332,7 +337,9 @@ const AssistantMessageBody: FC<AssistantMessageProps & { collapsedNotice?: null 
               </ErrorPrimitive.Root>
             </MessagePrimitive.Error>
           </div>
-          <MessageTimelineTimestamp className="px-(--message-text-indent) pt-0.5" suppressIfDuplicatePart />
+          {(!isProcessStep || turnProcess.open) && (
+            <MessageTimelineTimestamp className="px-(--message-text-indent) pt-0.5" suppressIfDuplicatePart />
+          )}
           {/* Sealed interims skip the footer so a tool-heavy turn doesn't grow a
               copy bar per paragraph (72dd01c553) — EXCEPT when the interim is the
               group's last text-bearing row (the turn ended on a tool-only bubble):
@@ -340,6 +347,7 @@ const AssistantMessageBody: FC<AssistantMessageProps & { collapsedNotice?: null 
               (#118864). */}
           {hasVisibleText &&
             responseTail &&
+            (!isProcessStep || turnProcess.finalMessageId === null) &&
             (!isInterim || (responseIds.length > 0 && responseIds.at(-1) === messageId)) && (
               <AssistantFooter
                 durationS={turnDurationS}

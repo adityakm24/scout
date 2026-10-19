@@ -3424,11 +3424,12 @@ async function resolveScoutBackend(backendArgs: string[]): Promise<ResolvedScout
     process.env.SCOUT_DESKTOP_SCOUT_ROOT && path.resolve(process.env.SCOUT_DESKTOP_SCOUT_ROOT)
 
   if (overrideRoot && isScoutSourceRoot(overrideRoot)) {
-    const backend: SourceBackend | null = createSourcePythonBackend(
-      overrideRoot,
-      await findPythonForRoot(overrideRoot),
-      backendArgs
-    )
+    const backend: SourceBackend | null =
+      createSourcePythonBackend(
+        overrideRoot,
+        await findPythonForRoot(overrideRoot),
+        backendArgs
+      ) ?? (await resolveSourceInstallationBackend(overrideRoot, backendArgs, { scoutHome: SCOUT_HOME }))
 
     if (backend) {
       return backend
@@ -3440,11 +3441,12 @@ async function resolveScoutBackend(backendArgs: string[]): Promise<ResolvedScout
   //    installed `scout` on PATH so local Python edits are actually exercised.
   //    (In dev with no checkout, SOURCE_REPO_ROOT won't pass isScoutSourceRoot.)
   if (!IS_PACKAGED && isScoutSourceRoot(SOURCE_REPO_ROOT)) {
-    const backend: SourceBackend | null = createSourcePythonBackend(
-      SOURCE_REPO_ROOT,
-      await findPythonForRoot(SOURCE_REPO_ROOT),
-      backendArgs
-    )
+    const backend: SourceBackend | null =
+      createSourcePythonBackend(
+        SOURCE_REPO_ROOT,
+        await findPythonForRoot(SOURCE_REPO_ROOT),
+        backendArgs
+      ) ?? (await resolveSourceInstallationBackend(SOURCE_REPO_ROOT, backendArgs, { scoutHome: SCOUT_HOME }))
 
     if (backend) {
       return backend

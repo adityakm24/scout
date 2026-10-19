@@ -1267,6 +1267,10 @@ class PluginManager(PluginLoaderMixin, PluginDispatchMixin, PluginLedgerMixin):
         # and contributed tool names (so `scout plugins list` still attributes them).
         self._predeclared_modules: Dict[str, types.ModuleType] = {}
         self._predeclared_tools: Dict[str, List[str]] = {}
+        with suppress(Exception):
+            from agent.nemoclaw_guardrails import install_builtin_nemoclaw_guardrails
+
+            install_builtin_nemoclaw_guardrails(self)
 
     @property
     def has_gateway_message_injector(self) -> bool:
