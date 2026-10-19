@@ -72,7 +72,6 @@ def hermetic_env(home: Path, extra: dict[str, str] | None = None) -> dict[str, s
     assert home != real_user_home() and not str(home).startswith(str(real_user_home() / ".scout" / "profiles")), home
     env = {k: v for k, v in os.environ.items()
            if not (k.endswith(_STRIP_SUFFIXES) or k.startswith(_STRIP_PREFIXES))}
-    env["SCOUT_AGENT"] = "true"  # the agent context: `scout` refuses a person's shell
     for var in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy",
                 "XDG_STATE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME",
                 "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR"):

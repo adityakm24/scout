@@ -285,9 +285,6 @@ def _hermetic_environment(tmp_path, monkeypatch):
     for name in _SCOUT_BEHAVIORAL_VARS:
         monkeypatch.delenv(name, raising=False)
 
-    # Tests run as the agent: the `scout` command only runs in the app backend's
-    # context (scout_backend.main._require_app_context). Tests of the gate unset it.
-    monkeypatch.setenv("SCOUT_AGENT", "true")
 
     # 3. Isolate both inputs to profile/root resolution. SCOUT_HOME alone
     #    is insufficient: get_default_scout_root() resolves the native root

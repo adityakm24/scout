@@ -45,9 +45,6 @@ Home Assistant. Secrets go in `.env` and settings in `config.yaml` under the dat
 
 The desktop app connects to the backend URL in `apps/desktop/backend.json`, which is fixed at build time.
 
-The `scout` command exists only for the agent: it runs inside the agent's own terminal and the backend's
-subprocesses, and refuses to run anywhere else.
-
 ## Developing
 
 ```bash
