@@ -1,7 +1,7 @@
 import { ThreadPrimitive, useAuiState } from '@assistant-ui/react'
 import { type ComponentProps, createContext, type FC, useContext, useMemo, useState } from 'react'
 
-import { SCAFFOLD_LABEL_CLASS, SCAFFOLD_META_CLASS, ScaffoldRow } from '@/components/chat/scaffold-row'
+import { SCAFFOLD_LABEL_CLASS, ScaffoldRow } from '@/components/chat/scaffold-row'
 import { isTodoToolName } from '@/lib/todos'
 import { cn } from '@/lib/utils'
 
@@ -166,53 +166,31 @@ function summarizeSectionProcess(messages: readonly unknown[], indices: readonly
   }
 }
 
-function formatTurnProcessLabel(summary: TurnProcessSummary): { title: string; meta: string } {
-  const { isRunning, reasoningCount, toolCount, toolNames, activeToolName } = summary
-  const toolSuffix = toolNames.length > 0 ? toolNames.join(', ') : ''
+function formatTurnProcessLabel(summary: TurnProcessSummary): string {
+  const { isRunning, reasoningCount, toolCount, activeToolName } = summary
 
   if (isRunning) {
     if (activeToolName) {
-      const counts: string[] = []
-      if (reasoningCount > 0) counts.push('Thought')
-      if (toolCount > 0) counts.push(`${toolCount} tool${toolCount === 1 ? '' : 's'}`)
-      return {
-        title: `Running ${activeToolName}…`,
-        meta: counts.join(' · ')
-      }
+      return `Running ${activeToolName}…`
     }
     if (reasoningCount > 0 && toolCount > 0) {
-      return {
-        title: `Thinking & used ${toolCount} tool${toolCount === 1 ? '' : 's'}…`,
-        meta: toolSuffix
-      }
+      return `Thinking & used ${toolCount} tool${toolCount === 1 ? '' : 's'}…`
     }
     if (toolCount > 0) {
-      return {
-        title: `Used ${toolCount} tool${toolCount === 1 ? '' : 's'}…`,
-        meta: toolSuffix
-      }
+      return `Used ${toolCount} tool${toolCount === 1 ? '' : 's'}…`
     }
-    return { title: 'Thinking…', meta: '' }
+    return 'Thinking…'
   }
 
   if (reasoningCount > 0 && toolCount > 0) {
-    return {
-      title: `Thought & used ${toolCount} tool${toolCount === 1 ? '' : 's'}`,
-      meta: toolSuffix
-    }
+    return `Thought & used ${toolCount} tool${toolCount === 1 ? '' : 's'}`
   }
 
   if (toolCount > 0) {
-    return {
-      title: `Used ${toolCount} tool${toolCount === 1 ? '' : 's'}`,
-      meta: toolSuffix
-    }
+    return `Used ${toolCount} tool${toolCount === 1 ? '' : 's'}`
   }
 
-  return {
-    title: 'Thought',
-    meta: ''
-  }
+  return 'Thought'
 }
 
 const ResponseTurnSection: FC<{
@@ -226,7 +204,7 @@ const ResponseTurnSection: FC<{
   )
 
   const summary = useMemo(() => JSON.parse(summaryJson) as TurnProcessSummary, [summaryJson])
-  const { title, meta } = useMemo(() => formatTurnProcessLabel(summary), [summary])
+  const title = useMemo(() => formatTurnProcessLabel(summary), [summary])
 
   const contextValue = useMemo<TurnProcessContextValue>(
     () => ({
@@ -250,13 +228,6 @@ const ResponseTurnSection: FC<{
               <ScaffoldRow
                 onToggle={() => setOpen(prev => !prev)}
                 open={open}
-                trailing={
-                  meta ? (
-                    <span className={cn(SCAFFOLD_META_CLASS, 'font-mono text-[0.6875rem] opacity-75')}>
-                      {meta}
-                    </span>
-                  ) : undefined
-                }
               >
                 <span className={cn(SCAFFOLD_LABEL_CLASS, summary.isRunning && !open && 'shimmer')}>
                   {title}
