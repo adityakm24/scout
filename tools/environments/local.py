@@ -19,7 +19,7 @@ from pathlib import Path
 from scout_constants import get_process_scout_home
 from tools.environments.base import BaseEnvironment
 from tools.environments.base_output import _pipe_stdin
-from scout_cli._subprocess_compat import windows_hide_flags
+from scout_backend._subprocess_compat import windows_hide_flags
 from tools.environments.local_env_policy import (  # noqa: F401 — _SCOUT_PROVIDER_ENV_BLOCKLIST stays importable from here
     _ALWAYS_STRIP_FOLDED, _ALWAYS_STRIP_KEYS, _SCOUT_PROVIDER_ENV_BLOCKLIST, _SCOUT_PROVIDER_ENV_FORCE_PREFIX,
     _is_scout_internal_secret, _is_provider_env_blocklisted,
@@ -457,7 +457,7 @@ def strip_launch_profile_env(env: dict, target_home: "str | Path | None" = None)
     if not target or not _is_routed_home(target):
         return env
     launch_home = get_routing_process_scout_home()
-    from scout_cli.config import TERMINAL_CONFIG_ENV_MAP
+    from scout_backend.config import TERMINAL_CONFIG_ENV_MAP
     # Folded strip: on Windows the env block is case-insensitive, so residue
     # stored under a variant casing is the same variable and must go too. The
     # selection folds the same way so a lowercase ``path`` in .env is still
@@ -704,7 +704,7 @@ def _read_terminal_shell_init_config() -> tuple[list[str], bool]:
     """(shell_init_files, auto_source_bashrc) from config.yaml; defaults on any
     failure so terminal execution never breaks."""
     try:
-        from scout_cli.config import load_config
+        from scout_backend.config import load_config
         terminal_cfg = (load_config() or {}).get("terminal") or {}
         files = terminal_cfg.get("shell_init_files") or []
         if not isinstance(files, list):

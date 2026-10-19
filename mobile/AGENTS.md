@@ -25,7 +25,7 @@ Background location and geofencing need a development build (not Expo Go).
 ## Notifications and the Live Activity while the app is closed
 
 iOS and Android suspend the app (and its page) seconds after it leaves the screen, so the backend
-takes over then (`scout_cli/push/`, wired from `tui_gateway/session_push.py` and the cron delivery):
+takes over then (`scout_backend/push/`, wired from `tui_gateway/session_push.py` and the cron delivery):
 
 - `src/push.ts` registers the phone at `POST /api/push/devices` (Expo push token, Apple's
   push-to-start token), reports presence every minute while on screen and on every app-state change,

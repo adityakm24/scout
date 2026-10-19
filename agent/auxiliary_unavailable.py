@@ -27,7 +27,7 @@ def pool_cooldown_message(provider_id: str) -> Optional[str]:
     usable (the caller keeps the missing-credential diagnostic).
     """
     from agent.credential_pool import STATUS_DEAD, PooledCredential, _exhausted_until
-    from scout_cli.auth import read_credential_pool
+    from scout_backend.auth import read_credential_pool
 
     entries = []
     with contextlib.suppress(Exception):
@@ -102,7 +102,7 @@ def pool_billing_message(
         if pool is not None:
             entries = list(pool.entries())
         else:
-            from scout_cli.auth import read_credential_pool
+            from scout_backend.auth import read_credential_pool
 
             entries = [PooledCredential.from_dict(provider_id, e)
                        for e in read_credential_pool(provider_id) if isinstance(e, dict)]
@@ -152,7 +152,7 @@ def missing_provider_credentials_message(provider_id: str) -> str:
         return cooldown
     pconfig = None
     with contextlib.suppress(Exception):
-        from scout_cli.auth import PROVIDER_REGISTRY
+        from scout_backend.auth import PROVIDER_REGISTRY
         pconfig = PROVIDER_REGISTRY.get(provider_id)
     env_vars = tuple(getattr(pconfig, "api_key_env_vars", None) or ())
     problem, remedy = "no API key was found", ""

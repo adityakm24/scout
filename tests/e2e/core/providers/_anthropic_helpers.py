@@ -113,7 +113,7 @@ class Rig:
 
 
 def scout_argv(*args: str) -> list[str]:
-    return [sys.executable, "-m", "scout_cli.main", *args]
+    return [sys.executable, "-m", "scout_backend.main", *args]
 
 
 _PR_SET_CHILD_SUBREAPER = 36

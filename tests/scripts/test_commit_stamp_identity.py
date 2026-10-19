@@ -14,8 +14,8 @@ def test_stamp_uses_built_commit_even_with_dispatch_sha_and_refuses_mismatch(tmp
     repo = tmp_path / 'repo'
     repo.mkdir()
     for relative in ('scripts/write_install_stamp.py',
-                     'scout_cli/__init__.py', 'scout_cli/update_channel.py', 'scout_cli/release_channels.py',
-                     'pm/paths.py', 'pm/environments.py', 'scout_cli/steward.py', 'scout_constants.py'):
+                     'scout_backend/__init__.py', 'scout_backend/update_channel.py', 'scout_backend/release_channels.py',
+                     'pm/paths.py', 'pm/environments.py', 'scout_backend/steward.py', 'scout_constants.py'):
         dest = repo / relative
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, dest)

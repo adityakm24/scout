@@ -26,7 +26,7 @@ test.beforeAll(async () => {
   }
   const bin = path.join(sandbox.root, 'bin')
   fs.mkdirSync(bin)
-  fs.writeFileSync(path.join(bin, 'scout'), `#!/bin/sh\ncd ${repo}\nprintf '%s\\n' "$$ $SCOUT_HOME $*" >> ${evidence}/children.log\nexec ${python} -m scout_cli.main "$@"\n`, { mode: 0o755 })
+  fs.writeFileSync(path.join(bin, 'scout'), `#!/bin/sh\ncd ${repo}\nprintf '%s\\n' "$$ $SCOUT_HOME $*" >> ${evidence}/children.log\nexec ${python} -m scout_backend.main "$@"\n`, { mode: 0o755 })
   env = buildAppEnv(sandbox, { HOME: sandbox.root, SCOUT_DESKTOP_PYTHON: python,
     SCOUT_DESKTOP_SCOUT: path.join(bin, 'scout'), PATH: `${bin}:${process.env.PATH}`,
     PYTHONPATH: repo, SCOUT_SINGLE_QUERY_LINGER_SECONDS: '1' })

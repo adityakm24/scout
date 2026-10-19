@@ -98,7 +98,7 @@ def test_loaded_wake_defaults_resolve_supported_provider(tmp_path, monkeypatch, 
 
 def test_load_wake_word_config_guards_non_dict(monkeypatch):
     monkeypatch.setattr(
-        "scout_cli.config.load_config", lambda: {"wake_word": "oops"}
+        "scout_backend.config.load_config", lambda: {"wake_word": "oops"}
     )
     assert ww.load_wake_word_config() == {}
 

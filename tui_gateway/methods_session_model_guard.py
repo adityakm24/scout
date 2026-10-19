@@ -17,8 +17,8 @@ def model_override_conflict(params: dict, build_scope) -> dict | None:
     model = str(params.get("model") or "").strip()
     if not model:
         return None
-    from scout_cli.models_validate import static_model_provider_conflict
-    from scout_cli.runtime_provider import resolve_requested_provider
+    from scout_backend.models_validate import static_model_provider_conflict
+    from scout_backend.runtime_provider import resolve_requested_provider
 
     provider = str(params.get("provider") or "").strip()
     if not provider:

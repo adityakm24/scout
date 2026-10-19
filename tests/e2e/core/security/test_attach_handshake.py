@@ -80,7 +80,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from scout_constants import get_scout_home
 from scout_state import SessionDB
-from scout_cli.active_sessions import try_acquire_active_session
+from scout_backend.active_sessions import try_acquire_active_session
 
 sid, advertise, token = sys.argv[1], sys.argv[2], sys.argv[3]
 db = SessionDB()
@@ -145,7 +145,7 @@ fs.writeFileSync(process.env.ATTACH_PROBE_OUT, JSON.stringify({
 SNAPSHOT_CODE = r"""
 import json, sys
 from scout_constants import get_scout_home
-from scout_cli.active_sessions import active_session_registry_snapshot
+from scout_backend.active_sessions import active_session_registry_snapshot
 rows = [e for e in active_session_registry_snapshot(get_scout_home(), strict=True)
         if e.get("session_id") == sys.argv[1]]
 print(json.dumps([{"pid": e.get("pid"), "url": (e.get("metadata") or {}).get("shared_runtime_url")}

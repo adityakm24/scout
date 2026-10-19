@@ -17,7 +17,7 @@ import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PACKAGES = ("agent", "tools", "scout_cli", "gateway", "tui_gateway", "cron", "acp_adapter", "plugins", "providers")
+PACKAGES = ("agent", "tools", "scout_backend", "gateway", "tui_gateway", "cron", "acp_adapter", "plugins", "providers")
 
 
 def _root_py_modules() -> set[str]:

@@ -11,10 +11,10 @@ import sqlite3
 import pytest
 
 from agent.insights import InsightsEngine
-from scout_cli.session_export import iter_user_prompt_records
-from scout_cli.session_export_html import generate_multi_session_html_export
-from scout_cli.session_export_md import _iso_timestamp
-from scout_cli.sessions_cmd import _cmd_list
+from scout_backend.session_export import iter_user_prompt_records
+from scout_backend.session_export_html import generate_multi_session_html_export
+from scout_backend.session_export_md import _iso_timestamp
+from scout_backend.sessions_cmd import _cmd_list
 from scout_state import SessionDB
 
 
@@ -38,7 +38,7 @@ def corrupt_db(tmp_path):
 
 
 def test_list_export_and_insights_survive_corrupt_timestamp_rows(corrupt_db, capsys, caplog):
-    with caplog.at_level(logging.WARNING, logger="scout_cli.timefmt"):
+    with caplog.at_level(logging.WARNING, logger="scout_backend.timefmt"):
         _cmd_list(corrupt_db, argparse.Namespace(limit=20, source=None, all=False, workspace=None))
         listing = capsys.readouterr().out
         exported = corrupt_db.export_all()

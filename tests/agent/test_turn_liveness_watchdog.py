@@ -181,7 +181,7 @@ def watchdog_config(monkeypatch):
     (AGENTS.md rejects new non-secret SCOUT_* env knobs); the resolver in
     agent/turn_liveness.py validates the values and the env is never read.
     """
-    import scout_cli.config as config_module
+    import scout_backend.config as config_module
 
     monkeypatch.setattr(
         config_module,

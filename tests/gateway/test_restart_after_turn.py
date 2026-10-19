@@ -30,7 +30,7 @@ def test_restart_exit_wait_budget_outlasts_deferral_plus_stop_envelope():
 
 
 def test_cli_restart_wait_covers_configured_cron_drain(tmp_path, monkeypatch):
-    import scout_cli.gateway as gateway_cli
+    import scout_backend.gateway as gateway_cli
 
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     for key in ("SCOUT_RESTART_DRAIN_TIMEOUT", "SCOUT_RESTART_AFTER_TURN_TIMEOUT", "SCOUT_CRON_DRAIN_TIMEOUT"):

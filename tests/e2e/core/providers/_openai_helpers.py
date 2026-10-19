@@ -204,7 +204,7 @@ class Run:
 
 
 def scout_argv(*args: str) -> list[str]:
-    return [sys.executable, "-m", "scout_cli.main", *args]
+    return [sys.executable, "-m", "scout_backend.main", *args]
 
 
 def oneshot(h: Home, prompt: str, *args: str, resume: str | None = None, timeout: float = TURN_TIMEOUT,

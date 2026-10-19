@@ -24,7 +24,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Directories that make up the shipped source tree.
-SCAN_DIRS = ("agent", "scout_cli", "tools", "gateway", "cron", "tui_gateway", "plugins")
+SCAN_DIRS = ("agent", "scout_backend", "tools", "gateway", "cron", "tui_gateway", "plugins")
 SCAN_ROOT_FILES = ("cli.py", "scout_constants.py")
 
 # How many lines around an `os.environ.copy()` we look for a spawn call.
@@ -49,13 +49,13 @@ ALLOWED_RAW_SPAWN_ENV_FILES = {
     # Bang-shell (`!cmd` in the CLI) goes through build_subprocess_env(); the
     # only raw copy is the except-fallback for when the tools package itself
     # cannot be imported, so the user's typed command still runs.
-    "scout_cli/bang_shell.py",
+    "scout_backend/bang_shell.py",
     # These children are Scout itself and need its full environment: the gateway respawn
     # watcher (generated script source), the launchd stderr-timestamp wrapper around the
     # gateway command, and the skills sync that seeds a new profile.
-    "scout_cli/gateway.py",
-    "scout_cli/stderr_timestamp.py",
-    "scout_cli/profiles.py",
+    "scout_backend/gateway.py",
+    "scout_backend/stderr_timestamp.py",
+    "scout_backend/profiles.py",
     # The compute host runs agent turns for the dashboard: Home Assistant tools, Modal/Daytona
     # backends and platform sends read keys that exist only in the process env (#65895).
     "tui_gateway/host_supervisor.py",

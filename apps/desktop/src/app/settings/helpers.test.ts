@@ -248,7 +248,7 @@ describe('settings helpers', () => {
 
   describe('enumOptionsFor — display.personality dropdown', () => {
     it('lists a root-level `personalities` block alongside the built-ins (#123297)', () => {
-      // The Python spec (`scout_cli.personality.available_personalities`) overlays
+      // The Python spec (`scout_backend.personality.available_personalities`) overlays
       // the built-ins with the root `personalities` block then `agent.personalities`;
       // the dropdown must surface a root-registered persona the CLI/gateway resolve.
       const config: ScoutConfigRecord = { personalities: { root_persona: { prompt: 'hi' } } }

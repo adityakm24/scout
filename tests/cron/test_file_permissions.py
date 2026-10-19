@@ -96,9 +96,9 @@ class TestConfigFilePermissions(unittest.TestCase):
 
     def test_save_config_sets_0600(self):
         config_path = Path(self.tmpdir) / "config.yaml"
-        with patch("scout_cli.config.get_config_path", return_value=config_path), \
-             patch("scout_cli.config.ensure_scout_home"):
-            from scout_cli.config import save_config
+        with patch("scout_backend.config.get_config_path", return_value=config_path), \
+             patch("scout_backend.config.ensure_scout_home"):
+            from scout_backend.config import save_config
             save_config({"model": "test/model"})
 
             file_mode = stat.S_IMODE(os.stat(config_path).st_mode)
@@ -106,9 +106,9 @@ class TestConfigFilePermissions(unittest.TestCase):
 
     def test_save_env_value_sets_0600(self):
         env_path = Path(self.tmpdir) / ".env"
-        with patch("scout_cli.config.get_env_path", return_value=env_path), \
-             patch("scout_cli.config.ensure_scout_home"):
-            from scout_cli.config import save_env_value
+        with patch("scout_backend.config.get_env_path", return_value=env_path), \
+             patch("scout_backend.config.ensure_scout_home"):
+            from scout_backend.config import save_env_value
             save_env_value("TEST_KEY", "test_value")
 
             file_mode = stat.S_IMODE(os.stat(env_path).st_mode)
@@ -116,8 +116,8 @@ class TestConfigFilePermissions(unittest.TestCase):
 
     def test_ensure_scout_home_sets_0700(self):
         home = Path(self.tmpdir) / ".scout"
-        with patch("scout_cli.config.get_scout_home", return_value=home):
-            from scout_cli.config import ensure_scout_home
+        with patch("scout_backend.config.get_scout_home", return_value=home):
+            from scout_backend.config import ensure_scout_home
             ensure_scout_home()
 
             home_mode = stat.S_IMODE(os.stat(home).st_mode)

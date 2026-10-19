@@ -42,7 +42,7 @@ def _runner_with_store(tmp_path, monkeypatch):
 
     import gateway.run as gateway_run
     from gateway.run import GatewayRunner
-    from scout_cli.model_switch import ModelSwitchResult
+    from scout_backend.model_switch import ModelSwitchResult
 
     scout_home = tmp_path / ".scout"
     scout_home.mkdir()
@@ -53,7 +53,7 @@ def _runner_with_store(tmp_path, monkeypatch):
     monkeypatch.setattr(gateway_run, "_scout_home", scout_home)
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
     monkeypatch.setattr(
-        "scout_cli.model_switch.switch_model",
+        "scout_backend.model_switch.switch_model",
         lambda **kw: ModelSwitchResult(
             success=True,
             new_model="gpt-5.5",
@@ -66,10 +66,10 @@ def _runner_with_store(tmp_path, monkeypatch):
         ),
     )
     monkeypatch.setattr("scout_constants.get_scout_home", lambda: scout_home)
-    monkeypatch.setattr("scout_cli.config.get_scout_home", lambda: scout_home)
+    monkeypatch.setattr("scout_backend.config.get_scout_home", lambda: scout_home)
     # No expensive-model confirmation detour.
     monkeypatch.setattr(
-        "scout_cli.model_cost_guard.expensive_model_warning",
+        "scout_backend.model_cost_guard.expensive_model_warning",
         lambda *a, **k: None,
     )
 
@@ -90,7 +90,7 @@ def _runner_with_store(tmp_path, monkeypatch):
 async def test_context_resolution_runs_off_the_loop_thread(tmp_path, monkeypatch):
     """The sync resolver must execute on a worker thread when the /model
     handler resolves the display context length for the switch reply."""
-    from scout_cli import model_switch
+    from scout_backend import model_switch
 
     seen = {}
     loop_thread = threading.current_thread()

@@ -47,13 +47,13 @@ def test_bootstrap_repairs_before_dependency_activation(tmp_path, monkeypatch, m
     for name in ("scout_bootstrap.py", "scout_constants.py"):
         shutil.copy2(repo / name, core / name)
     shutil.copytree(repo / "pm", core / "pm", ignore=shutil.ignore_patterns("__pycache__"))
-    cli = core / "scout_cli"
+    cli = core / "scout_backend"
     cli.mkdir()
     # Include the real preimport protocol, including its ownership check. Do
     # not stub prepare_launch: the same files are also saved in PM's workspace.
     for name in ("__init__.py", "runtime_state.py", "_early_recovery.py",
                  "_parser.py", "venv_sync.py", "steward.py"):
-        shutil.copy2(repo / "scout_cli" / name, cli / name)
+        shutil.copy2(repo / "scout_backend" / name, cli / name)
     wheels = tmp_path / "wheels"
     wheels.mkdir()
     _wheel(wheels, "startup_dep", "1.0")

@@ -77,7 +77,7 @@ def test_contained_cli_assembly_runs_after_move_and_preserves_prepared_state(tmp
     assert manifest["runtime"] == {
         "repoDir": "app", "toolsDir": "tools", "storePython": "tools/python/bin/python3",
         "sitePackages": "venv/lib/python3.14/site-packages", "commands": {"probe": "bin/probe"}}
-    assert (out / "app/scout_cli/web_dist/index.html").is_file()
+    assert (out / "app/scout_backend/web_dist/index.html").is_file()
     assert not (tmp_path / "home/.scout").exists()
     moved = tmp_path / "relocated payload"
     out.rename(moved)
@@ -138,7 +138,7 @@ def test_fixed_root_keeps_privilege_shim_and_resolves_venv_command_symlink(tmp_p
     bindir = out / "bin"
     bindir.mkdir()
     (bindir / "probe").write_text("privilege shim", encoding="utf-8")
-    stale = out / "scout_cli/web_dist/stale"
+    stale = out / "scout_backend/web_dist/stale"
     stale.parent.mkdir(parents=True)
     stale.write_bytes(b"old surface")
     result = build_cli(data, out, tmp_path)
@@ -212,10 +212,10 @@ def test_incremental_copy_drops_removed_source_without_deleting_provider_files(t
     sentinel = out / "provider-file"
     sentinel.write_text("retain", encoding="utf-8")
     (source / "obsolete.py").unlink()
-    (out / "app/scout_cli/web_dist/stale").write_text("old", encoding="utf-8")
+    (out / "app/scout_backend/web_dist/stale").write_text("old", encoding="utf-8")
     assert build_cli(data, out, tmp_path).returncode == 0
     assert not (out / "app/obsolete.py").exists()
-    assert not (out / "app/scout_cli/web_dist/stale").exists()
+    assert not (out / "app/scout_backend/web_dist/stale").exists()
     assert sentinel.read_text() == "retain"
 
 

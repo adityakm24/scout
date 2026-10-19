@@ -13,8 +13,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from scout_cli import kanban_db as kb
-from scout_cli import kanban_db_connect as kbc
+from scout_backend import kanban_db as kb
+from scout_backend import kanban_db_connect as kbc
 
 
 def _load_plugin_router():

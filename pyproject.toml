@@ -138,7 +138,7 @@ dependencies = [
   # Python 3.14 requires pywinpty 3.x. Version 3.0.5 includes the native
   # binaries missing from 3.0.4 wheels on both Windows architectures.
   "pywinpty>=3.0.5,<4; sys_platform == 'win32' and python_version >= '3.14'",
-  # Desktop SSH's Windows remote runtime (scout_cli/windows_ssh_runtime.py)
+  # Desktop SSH's Windows remote runtime (scout_backend/windows_ssh_runtime.py)
   # imports win32security/win32file/etc. directly — declare pywin32 rather than
   # relying on the concurrent-log-handler → portalocker transitive chain.
   "pywin32>=306,<312; sys_platform == 'win32' and python_version >= '3.14'",
@@ -221,7 +221,7 @@ ddgs = ["ddgs==9.16.0"]
 # Image generation backends
 fal = ["fal-client==0.13.1"]
 # Push to the phone: Apple's push service (Live Activity updates while the Scout app is closed)
-# speaks only HTTP/2. Prepared on first use (scout_cli/push/apns.py), so it stays out of [all].
+# speaks only HTTP/2. Prepared on first use (scout_backend/push/apns.py), so it stays out of [all].
 push = ["h2==4.4.1"]
 # Edge TTS — default TTS provider but still optional (users can pick
 # ElevenLabs / OpenAI / MiniMax instead).
@@ -477,8 +477,8 @@ requires = ["setuptools==83.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
-scout = "scout_cli.main:main"
-scout-server = "scout_cli.server_entry:main"
+scout = "scout_backend.main:main"
+scout-server = "scout_backend.server_entry:main"
 
 [tool.scout]
 # Extras that only an explicit selection installs (setup, sync_venv). Bundles
@@ -659,8 +659,8 @@ include = [
   "agent.*",
   "tools",
   "tools.*",
-  "scout_cli",
-  "scout_cli.*",
+  "scout_backend",
+  "scout_backend.*",
   "gateway",
   "gateway.*",
   "tui_gateway",
@@ -681,7 +681,7 @@ include = [
 ]
 
 [tool.setuptools.package-data]
-scout_cli = [
+scout_backend = [
   "observability/schemas/*.json",
   "data/*.json",
   "local_runtime/*.json",
@@ -793,7 +793,7 @@ select = ["PLW1514", "ASYNC210", "ASYNC220", "ASYNC221", "ASYNC251", "TID251"]
 "gateway/run_shutdown.py" = ["ASYNC220"]
 "gateway/slash_commands.py" = ["ASYNC220"]
 # Off-loop sweep for these routers is in flight (PR #84376).
-"scout_cli/web_routers/profiles.py" = ["ASYNC220", "ASYNC221"]
+"scout_backend/web_routers/profiles.py" = ["ASYNC220", "ASYNC221"]
 # Legacy blocking spawn sites in platform adapters, pending their own fixes.
 "plugins/platforms/whatsapp/adapter.py" = ["ASYNC220", "ASYNC221"]
 "plugins/platforms/photon/adapter.py" = ["ASYNC220"]

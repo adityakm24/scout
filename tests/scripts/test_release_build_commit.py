@@ -31,8 +31,8 @@ def fixture_repo(tmp_path):
     git(repo, 'remote', 'set-url', 'origin', 'https://github.com/fixture-owner/fixture-repo.git')
     shutil.copytree(ROOT / 'scripts/releases', repo / 'scripts/releases')
     for relative in ('scripts/release.py', 'scripts/release-content-types.json',
-                     'scout_cli/__init__.py', 'scout_cli/update_channel.py',
-                     'scout_cli/release_channels.py',
+                     'scout_backend/__init__.py', 'scout_backend/update_channel.py',
+                     'scout_backend/release_channels.py',
                      'pm/paths.py', 'pm/environments.py', 'scout_constants.py'):
         dest = repo / relative
         dest.parent.mkdir(parents=True, exist_ok=True)

@@ -137,7 +137,7 @@ def _recover(agent, message):
     classified = classify_api_error(err, provider="custom", model=agent.model)
     assert classified.reason == FailoverReason.reasoning_mandatory
     retry = TurnRetryState()
-    with patch("scout_cli.models_reasoning_caps.refresh_reasoning_caps_async", lambda provider: None):
+    with patch("scout_backend.models_reasoning_caps.refresh_reasoning_caps_async", lambda provider: None):
         retry_now = recover_after_classification(
             agent, err, classified, retry, status_code=400, error_context={}, messages=[], api_messages=[],
         )

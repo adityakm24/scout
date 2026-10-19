@@ -35,7 +35,7 @@ import pytest
 
 import scout_state_repair
 from scout_state import SessionDB
-from scout_cli.backup import (
+from scout_backend.backup import (
     _safe_copy_db,
     create_quick_snapshot,
     verify_sqlite_integrity,

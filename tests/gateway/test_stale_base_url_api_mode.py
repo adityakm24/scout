@@ -61,7 +61,7 @@ def _make_event(text):
 
 
 def _fake_switch_result(*, base_url="", api_mode=""):
-    from scout_cli.model_switch import ModelSwitchResult
+    from scout_backend.model_switch import ModelSwitchResult
 
     return ModelSwitchResult(
         success=True,
@@ -90,19 +90,19 @@ def _setup_isolated_home(tmp_path, monkeypatch, model_yaml_value, *, base_url=""
     monkeypatch.setattr(gateway_run, "_scout_home", scout_home)
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
     monkeypatch.setattr(
-        "scout_cli.model_switch_providers.list_picker_providers",
+        "scout_backend.model_switch_providers.list_picker_providers",
         lambda **kw: [{"slug": "custom", "name": "Custom", "models": ["local-llama"]}],
     )
     monkeypatch.setattr(
-        "scout_cli.model_switch.switch_model",
+        "scout_backend.model_switch.switch_model",
         lambda **kw: _fake_switch_result(base_url=base_url, api_mode=api_mode),
     )
     monkeypatch.setattr(
-        "scout_cli.model_switch.resolve_display_context_length",
+        "scout_backend.model_switch.resolve_display_context_length",
         lambda *a, **k: 8192,
     )
     monkeypatch.setattr("scout_constants.get_scout_home", lambda: scout_home)
-    monkeypatch.setattr("scout_cli.config.get_scout_home", lambda: scout_home)
+    monkeypatch.setattr("scout_backend.config.get_scout_home", lambda: scout_home)
     return cfg_path
 
 

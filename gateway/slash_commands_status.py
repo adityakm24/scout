@@ -13,7 +13,7 @@ from agent.account_usage import fetch_account_usage, render_account_usage_lines
 from agent.i18n import t
 from gateway.platforms.event import MessageEvent
 from gateway.session_transcript import TranscriptReadError
-from scout_cli.status_report import build_status_fields
+from scout_backend.status_report import build_status_fields
 
 # Log-record parity with gateway/run.py and the origin module.
 logger = logging.getLogger("gateway.run")

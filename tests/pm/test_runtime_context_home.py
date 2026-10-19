@@ -2,7 +2,7 @@
 
 from pm import environments as runtime_paths
 from pm.publication import PluginSelection
-from scout_cli.runtime_state import recover_publication, runtime_lock
+from scout_backend.runtime_state import recover_publication, runtime_lock
 from scout_constants import reset_scout_home_override, set_scout_home_override
 from pm import paths, plugins_state
 

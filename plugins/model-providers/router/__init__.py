@@ -1,6 +1,6 @@
 """Ramp Router (router.com) provider profile: Responses-only LLM gateway (verified live).
 
-``api_mode="codex_responses"`` + the ``api.router.com`` host mandate in ``scout_cli/providers.py``
+``api_mode="codex_responses"`` + the ``api.router.com`` host mandate in ``scout_backend/providers.py``
 keep every path on the native wire. The catalog is account-scoped, so no ``fallback_models``
 (picker uses ``fetch_models()``). Router 400s on ``reasoning.effort`` levels outside a model's
 published vocabulary and on any reasoning field for non-reasoning models, so the efforts map
@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from agent.reasoning_effort import EFFORT_LADDER
-from scout_cli.version_info import get_version_info
+from scout_backend.version_info import get_version_info
 from providers import register_provider
 from providers.base import ProviderProfile, _profile_user_agent
 
@@ -66,7 +66,7 @@ def _state() -> Any:
 def _base_url() -> str:
     """Router base URL: profile ``.env`` first (scope-aware), plain os.environ as the fallback."""
     try:
-        from scout_cli.config import get_env_value_prefer_dotenv as prefer_dotenv
+        from scout_backend.config import get_env_value_prefer_dotenv as prefer_dotenv
     except Exception:
         prefer_dotenv = None
     for resolve in filter(None, (prefer_dotenv, os.environ.get)):
@@ -83,7 +83,7 @@ def _resolve_api_key() -> str:
     """Router key (documented var, then alias), preferring dotenv; plain os.environ
     is the fallback when the dotenv resolver is unavailable or raises."""
     try:
-        from scout_cli.config import get_env_value_prefer_dotenv as prefer_dotenv
+        from scout_backend.config import get_env_value_prefer_dotenv as prefer_dotenv
     except Exception:
         prefer_dotenv = None
     for resolve in filter(None, (prefer_dotenv, os.environ.get)):
@@ -192,7 +192,7 @@ def _fetch_catalog_items(*, api_key: str = "", base_url: str = "", timeout: floa
     """Fetch the raw ``/v1/models`` ``data`` array. None on any failure."""
     import urllib.request
 
-    from scout_cli.urllib_security import open_credentialed_url
+    from scout_backend.urllib_security import open_credentialed_url
 
     req = urllib.request.Request((base_url or _base_url()).rstrip("/") + "/models")
     key = api_key or _resolve_api_key()

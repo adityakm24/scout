@@ -16,9 +16,9 @@ from pathlib import Path
 from typing import Awaitable, Callable
 
 from agent.model_metadata import CHARS_PER_TOKEN, estimate_tokens_rough
-from scout_cli._subprocess_compat import IS_WINDOWS, harden_git_argv, noninteractive_git_env, windows_hide_flags
-from scout_cli.sqlite_safe_read import LiveConnectionError, offline_file_access
-from scout_cli.sizefmt import format_bytes
+from scout_backend._subprocess_compat import IS_WINDOWS, harden_git_argv, noninteractive_git_env, windows_hide_flags
+from scout_backend.sqlite_safe_read import LiveConnectionError, offline_file_access
+from scout_backend.sizefmt import format_bytes
 
 # ── Plugin context-reference provider API ────────────────────────────────────
 

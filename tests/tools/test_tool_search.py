@@ -45,7 +45,7 @@ class TestConfigParsing:
         """#116404: the curated deferral set lives in DEFAULT_CONFIG (so ``scout config set``
         recognizes the key); a user list replaces it wholesale, [] keeps every tool eager, and a
         scalar is warned about (naming the expected shape) before falling back to the default."""
-        from scout_cli.config_defaults import DEFAULT_CONFIG
+        from scout_backend.config_defaults import DEFAULT_CONFIG
         from tools.tool_search import ToolSearchConfig, _DEFAULT_DEFERRED_TOOLS
 
         configured = frozenset(DEFAULT_CONFIG["tools"]["tool_search"]["defer"])
@@ -435,7 +435,7 @@ class TestHandleFunctionCallIntegration:
     def test_tool_search_emits_one_terminal_hook(self, monkeypatch):
         """Inline bridge results still complete the tool lifecycle."""
         import model_tools
-        from scout_cli import lifecycle
+        from scout_backend import lifecycle
         from tools import tool_search
 
         events = []

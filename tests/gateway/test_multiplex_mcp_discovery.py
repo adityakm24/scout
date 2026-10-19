@@ -32,7 +32,7 @@ async def test_gateway_boot_discovers_mcp_under_every_profile_home(
         return []
 
     monkeypatch.setattr(
-        "scout_cli.profiles.profiles_to_serve",
+        "scout_backend.profiles.profiles_to_serve",
         lambda multiplex: homes,
     )
     monkeypatch.setattr(_mcp_discovery, "discover_mcp_tools", fake_discover)

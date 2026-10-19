@@ -212,7 +212,7 @@ class TestCommandHandler:
     def test_bare_lists_pending(self, store):
         _add(store, key="c1", title="Daily thing")
         with patch("cron.suggestions.list_pending", store.list_pending):
-            from scout_cli.suggestions_cmd import handle_suggestions_command
+            from scout_backend.suggestions_cmd import handle_suggestions_command
             # Patch the module the handler imports.
             with patch.dict("sys.modules"):
                 out = handle_suggestions_command("")

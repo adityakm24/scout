@@ -28,7 +28,7 @@ describe('readPreUpdateBackupEnabled', () => {
 
     const runtime = {
       command: '/runtime/python',
-      args: ['-m', 'scout_cli.main', 'config', 'get', 'updates.pre_update_backup', '--json'],
+      args: ['-m', 'scout_backend.main', 'config', 'get', 'updates.pre_update_backup', '--json'],
       env: { PYTHONPATH: '/runtime/scout' }
     }
 

@@ -19,7 +19,7 @@ def _ok(payload):
 def _assert_scout_identity_headers(headers):
     """Both Perplexity endpoints carry the Scout identity headers (same set as Kimi/OpenCode)
     plus Perplexity's integration header."""
-    from scout_cli.version_info import get_version_info
+    from scout_backend.version_info import get_version_info
 
     assert headers["HTTP-Referer"] == "https://github.com/adityakm24/scout"
     assert headers["X-Title"] == "Scout Agent"

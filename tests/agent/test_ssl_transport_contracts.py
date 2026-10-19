@@ -70,12 +70,12 @@ def local_tls(tmp_path, monkeypatch):
 @pytest.mark.parametrize("probe", ["metadata", "catalog"])
 def test_provider_ca_reaches_the_real_probe_transport(local_tls, monkeypatch, probe):
     import certifi
-    from scout_cli import models
+    from scout_backend import models
 
     url, bundle = local_tls
     monkeypatch.setattr(model_metadata, "detect_local_server_type", lambda *args, **kwargs: None)
     settings = {"name": "loopback", "base_url": url, "ssl_ca_cert": certifi.where()}
-    monkeypatch.setattr("scout_cli.config.get_compatible_custom_providers", lambda config=None: [dict(settings)])
+    monkeypatch.setattr("scout_backend.config.get_compatible_custom_providers", lambda config=None: [dict(settings)])
     monkeypatch.setenv("SSL_CERT_FILE", "/missing-ambient.pem")
 
     def discover():

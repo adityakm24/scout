@@ -1,5 +1,5 @@
 /** Shared with the docs catalog: taxonomy order is independent of popularity. Keep keys in sync
- *  with CATALOG_CATEGORIES in scout_cli/plugin_catalog.py. */
+ *  with CATALOG_CATEGORIES in scout_backend/plugin_catalog.py. */
 export const PLUGIN_CATEGORIES: Record<string, { label: string; icon: string; blurb: string }> = {
   desktop: { label: 'Desktop', icon: '🖥️', blurb: 'Panes, tabs and views for Scout Desktop' },
   memory: { label: 'Memory', icon: '🧠', blurb: 'Memory providers and context engines' },

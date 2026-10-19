@@ -157,7 +157,7 @@ def project_history_commentary(messages: list[dict], *, home: Any = None) -> lis
     ):
         return messages
     with _owning_home(home):
-        from scout_cli.config import load_config
+        from scout_backend.config import load_config
 
         try:
             display = load_config().get("display") or {}

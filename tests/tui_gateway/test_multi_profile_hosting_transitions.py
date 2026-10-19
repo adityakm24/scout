@@ -73,7 +73,7 @@ def test_launch_body_survives_first_secondary_activation(two_homes):
 def test_launch_body_survives_first_secondary_activation_on_the_dashboard(two_homes, monkeypatch):
     pytest.importorskip("fastapi")
     from agent.secret_scope import get_secret
-    from scout_cli import web_server_profiles as wsp
+    from scout_backend import web_server_profiles as wsp
 
     root, b = two_homes
     monkeypatch.setattr(wsp, "_resolve_profile_dir", lambda name: b)

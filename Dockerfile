@@ -206,7 +206,7 @@ COPY pm/ pm/
 # 'scout_constants'" without it on the path. Copy the module next to pm.
 COPY scout_constants.py scout_constants.py
 # PM imports the shared stdlib locking owner before deps exist.
-COPY scout_cli/__init__.py scout_cli/runtime_state.py scout_cli/
+COPY scout_backend/__init__.py scout_backend/runtime_state.py scout_backend/
 COPY scripts/bundles/payload.py scripts/bundles/payload.py
 RUN set -eu; \
     python3 -c 'from pm import ensure; [ensure(name, explicit=True) for name in ("uv", "chromium", "npm", "ffmpeg", "ripgrep")]'; \
@@ -298,7 +298,7 @@ RUN mkdir -p /opt/scout/node_modules/.bin && \
     ln -s ../typescript/bin/tsc /opt/scout/node_modules/.bin/tsc
 
 # Shared product outputs are independent of application dependency assembly.
-COPY --from=frontend_build /opt/products/web /opt/scout/scout_cli/web_dist
+COPY --from=frontend_build /opt/products/web /opt/scout/scout_backend/web_dist
 # ---------- Bot Screen X socket directory ----------
 # Xvnc would create this itself (/tmp is 1777); pre-creating it keeps ownership
 # deterministic when SCOUT_UID is remapped between boots.
@@ -345,7 +345,7 @@ RUN mkdir -p /opt/scout/bin && \
 # Run scripts/write_install_stamp.py before `docker build`, so the bulk `COPY . .` above already placed a
 # full-provenance /opt/scout/install-stamp.json next to the code.
 # .dockerignore excludes .git, so the stamp is the only commit channel the
-# image carries: scout_cli/version_info.py reads it at runtime (stamp
+# image carries: scout_backend/version_info.py reads it at runtime (stamp
 # first, live git second, unknown third), and both `scout dump` and
 # banner.get_git_banner_state() consume it through version_info.
 #
@@ -393,7 +393,7 @@ COPY --chmod=0755 docker/cont-init.d/015-supervise-perms /etc/cont-init.d/015-su
 COPY --chmod=0755 docker/cont-init.d/02-reconcile-profiles /etc/cont-init.d/02-reconcile-profiles
 
 # ---------- Runtime ----------
-ENV SCOUT_WEB_DIST=/opt/scout/scout_cli/web_dist
+ENV SCOUT_WEB_DIST=/opt/scout/scout_backend/web_dist
 ENV SCOUT_HOME=/opt/data
 ENV SCOUT_WRITE_SAFE_ROOT=/opt/data
 # Opt-in backend SDKs install on first use into PM dependency generations under

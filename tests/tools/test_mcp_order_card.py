@@ -98,7 +98,7 @@ def test_an_unattended_run_cannot_order(shop, monkeypatch):
 def test_catalog_previews_are_never_themselves_spending_tools():
     """The card reads the basket with the preview tool; if that tool could spend, showing the card
     would place the order."""
-    from scout_cli.mcp_catalog import list_catalog
+    from scout_backend.mcp_catalog import list_catalog
 
     gated = [e for e in list_catalog() if e.spending]
     assert gated

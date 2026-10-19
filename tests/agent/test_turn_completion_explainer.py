@@ -38,7 +38,7 @@ def _make_agent(max_iterations: int = 10, config: dict | None = None) -> AIAgent
     with (
         patch("model_tools.get_tool_definitions", return_value=[]),
         patch("model_tools.check_toolset_requirements", return_value={}),
-        patch("scout_cli.config.load_config", return_value=config or {}),
+        patch("scout_backend.config.load_config", return_value=config or {}),
         patch("agent.process_bootstrap.OpenAI"),
     ):
         agent = AIAgent(
@@ -155,7 +155,7 @@ def test_explanation_persistence_corrupt_cause_never_says_free_space():
 def test_explanation_persistence_corrupt_backups_dir_follows_scout_home(monkeypatch, tmp_path):
     """Step 3 must name the backups dir under the ACTIVE home, not ~/.scout (#104250).
 
-    Pre-update backups live at ``<scout_root>/backups`` (``scout_cli/backup.py``), so a
+    Pre-update backups live at ``<scout_root>/backups`` (``scout_backend/backup.py``), so a
     custom-SCOUT_HOME deployment told to restore from ``~/.scout/backups/`` is misdirected
     mid data-loss incident: that directory may not exist at all, or may hold an unrelated
     install's backups.
@@ -457,7 +457,7 @@ def test_explainer_enabled_by_default():
     agent = _make_agent()
     with patch.dict(os.environ, {}, clear=False):
         os.environ.pop("SCOUT_TURN_COMPLETION_EXPLAINER", None)
-        with patch("scout_cli.config.load_config", return_value={}):
+        with patch("scout_backend.config.load_config", return_value={}):
             assert agent._turn_completion_explainer_enabled() is True
 
 

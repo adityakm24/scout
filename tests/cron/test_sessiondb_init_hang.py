@@ -100,11 +100,11 @@ class TestSessionDbInitTimeout:
         try:
             with patch("cron.scheduler._scout_home", None), \
                  patch("cron.scheduler_delivery._resolve_origin", return_value=None), \
-                 patch("scout_cli.env_loader.load_scout_dotenv"), \
-                 patch("scout_cli.env_loader.reset_secret_source_cache"), \
+                 patch("scout_backend.env_loader.load_scout_dotenv"), \
+                 patch("scout_backend.env_loader.reset_secret_source_cache"), \
                  patch("scout_state_registry.acquire", side_effect=make_session_db), \
                  patch(
-                     "scout_cli.runtime_provider.resolve_runtime_provider",
+                     "scout_backend.runtime_provider.resolve_runtime_provider",
                      return_value=_RUNTIME,
                  ), \
                  patch("run_agent.AIAgent") as mock_agent_cls:
@@ -129,11 +129,11 @@ class TestSessionDbInitTimeout:
 
         with patch("cron.scheduler._scout_home", tmp_path), \
              patch("cron.scheduler_delivery._resolve_origin", return_value=None), \
-             patch("scout_cli.env_loader.load_scout_dotenv"), \
-             patch("scout_cli.env_loader.reset_secret_source_cache"), \
+             patch("scout_backend.env_loader.load_scout_dotenv"), \
+             patch("scout_backend.env_loader.reset_secret_source_cache"), \
              patch("scout_state_registry.acquire"), \
              patch(
-                 "scout_cli.runtime_provider.resolve_runtime_provider",
+                 "scout_backend.runtime_provider.resolve_runtime_provider",
                  return_value=_RUNTIME,
              ), \
              patch("run_agent.AIAgent") as mock_agent_cls, \
@@ -170,11 +170,11 @@ class TestSessionDbInitTimeout:
 
         with patch("cron.scheduler._scout_home", tmp_path), \
              patch("cron.scheduler_delivery._resolve_origin", return_value=None), \
-             patch("scout_cli.env_loader.load_scout_dotenv"), \
-             patch("scout_cli.env_loader.reset_secret_source_cache"), \
+             patch("scout_backend.env_loader.load_scout_dotenv"), \
+             patch("scout_backend.env_loader.reset_secret_source_cache"), \
              patch("scout_state_registry.acquire"), \
              patch(
-                 "scout_cli.runtime_provider.resolve_runtime_provider",
+                 "scout_backend.runtime_provider.resolve_runtime_provider",
                  return_value=_RUNTIME,
              ), \
              patch("run_agent.AIAgent") as mock_agent_cls, \
@@ -220,11 +220,11 @@ class TestDispatchGuardReleasedAfterHang:
         try:
             with patch("cron.scheduler._scout_home", tmp_path), \
                  patch("cron.scheduler_delivery._resolve_origin", return_value=None), \
-                 patch("scout_cli.env_loader.load_scout_dotenv"), \
-                 patch("scout_cli.env_loader.reset_secret_source_cache"), \
+                 patch("scout_backend.env_loader.load_scout_dotenv"), \
+                 patch("scout_backend.env_loader.reset_secret_source_cache"), \
                  patch("scout_state_registry.acquire"), \
                  patch(
-                     "scout_cli.runtime_provider.resolve_runtime_provider",
+                     "scout_backend.runtime_provider.resolve_runtime_provider",
                      return_value=_RUNTIME,
                  ), \
                  patch("run_agent.AIAgent") as mock_agent_cls, \
@@ -284,11 +284,11 @@ class TestLateSessionDbClosedAfterTimeout:
         try:
             with patch("cron.scheduler._scout_home", tmp_path), \
                  patch("cron.scheduler_delivery._resolve_origin", return_value=None), \
-                 patch("scout_cli.env_loader.load_scout_dotenv"), \
-                 patch("scout_cli.env_loader.reset_secret_source_cache"), \
+                 patch("scout_backend.env_loader.load_scout_dotenv"), \
+                 patch("scout_backend.env_loader.reset_secret_source_cache"), \
                  patch("scout_state_registry.acquire", side_effect=_hanging_then_capture), \
                  patch(
-                     "scout_cli.runtime_provider.resolve_runtime_provider",
+                     "scout_backend.runtime_provider.resolve_runtime_provider",
                      return_value={
                          "api_key": "test-key",
                          "base_url": "https://example.invalid/v1",
@@ -342,8 +342,8 @@ class TestSessionDbInitAfterEarlyReturns:
 
         with patch("cron.scheduler._scout_home", tmp_path), \
              patch("cron.scheduler_delivery._resolve_origin", return_value=None), \
-             patch("scout_cli.env_loader.load_scout_dotenv"), \
-             patch("scout_cli.env_loader.reset_secret_source_cache"), \
+             patch("scout_backend.env_loader.load_scout_dotenv"), \
+             patch("scout_backend.env_loader.reset_secret_source_cache"), \
              patch("scout_state_registry.acquire") as mock_db_cls, \
              patch(
                  "cron.scheduler._run_job_script_with_claim_heartbeat",

@@ -61,7 +61,7 @@ def _profile_mention_items(prefix: str) -> list[dict]:
     is also offered as 'scout' when no real profile claims that name."""
     out: list[dict] = []
     try:
-        from scout_cli.profiles import list_profiles
+        from scout_backend.profiles import list_profiles
         seen: set[str] = set()
         # Per keystroke: only name/description are read, so never walk skill trees in-request (#114041).
         for p in list_profiles(lazy_skill_count=True):
@@ -279,7 +279,7 @@ def _(rid, params: dict) -> dict:
     text = params.get("text", "")
     if not text.startswith("/"):
         return _ok(rid, {"items": []})
-    from scout_cli.commands_completion import SlashCommandCompleter
+    from scout_backend.commands_completion import SlashCommandCompleter
     from prompt_toolkit.document import Document
     from prompt_toolkit.formatted_text import to_plain_text
     from agent.skill_commands import get_skill_commands
@@ -338,7 +338,7 @@ def _session_agent(params: dict):
 @_profile_scoped
 @_catch(5033)
 def _(rid, params: dict) -> dict:
-    from scout_cli.inventory import build_model_options_payload
+    from scout_backend.inventory import build_model_options_payload
     # A spawned agent owns the live provider/model/base_url; empty attributes must
     # NOT clobber disk config (with_overrides is truthy-only).
     return _ok(rid, build_model_options_payload(
@@ -351,8 +351,8 @@ def _(rid, params: dict) -> dict:
 @_catch(5034)
 def _(rid, params: dict) -> dict:
     """Save an API key for ``slug``; return its refreshed provider row (model.options shape + ``authenticated``)."""
-    from scout_cli.auth import PROVIDER_REGISTRY
-    from scout_cli.config import is_managed
+    from scout_backend.auth import PROVIDER_REGISTRY
+    from scout_backend.config import is_managed
     slug, api_key = (params.get("slug") or "").strip(), (params.get("api_key") or "").strip()
     if not slug or not api_key:
         return _err(rid, 4001, "slug and api_key are required")
@@ -367,12 +367,12 @@ def _(rid, params: dict) -> dict:
     # Save the key to ~/.scout/.env via the unified credential lifecycle so any stale config.yaml mirror of
     # the previous key (model.api_key, custom_providers[*].api_key) is rotated in the same action (#62269).
     env_var = pconfig.api_key_env_vars[0]
-    from scout_cli.credential_lifecycle import save_provider_env_credential  # also rotates stale config.yaml mirrors
+    from scout_backend.credential_lifecycle import save_provider_env_credential  # also rotates stale config.yaml mirrors
     # Under the profile scope the save publishes into the addressed profile's secret scope (and the
     # shared os.environ only for the launch profile), so the refreshed inventory below sees it.
     save_provider_env_credential(env_var, api_key)
     # Shared inventory builder (lock-step with model.options / dashboard); picker_hints carries `authenticated`.
-    from scout_cli.inventory import build_models_payload
+    from scout_backend.inventory import build_models_payload
     payload = build_models_payload(_model_picker_context(_session_agent(params)), picker_hints=True, max_models=50)
     provider_data = next((p for p in payload["providers"] if p["slug"] == slug), None)
     if provider_data is None:  # key saved but provider didn't appear — still success
@@ -386,10 +386,10 @@ def _(rid, params: dict) -> dict:
 @_catch(5035)
 def _(rid, params: dict) -> dict:
     """Remove all credentials (env keys AND OAuth/pool state) for provider ``slug``."""
-    from scout_cli import managed_scope
-    from scout_cli.auth import PROVIDER_REGISTRY, clear_provider_auth
-    from scout_cli.config import env_write_refusal, load_env
-    from scout_cli.credential_lifecycle import remove_provider_env_credential
+    from scout_backend import managed_scope
+    from scout_backend.auth import PROVIDER_REGISTRY, clear_provider_auth
+    from scout_backend.config import env_write_refusal, load_env
+    from scout_backend.credential_lifecycle import remove_provider_env_credential
     if not (slug := (params.get("slug") or "").strip()):
         return _err(rid, 4001, "slug is required")
     pconfig = PROVIDER_REGISTRY.get(slug)

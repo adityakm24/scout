@@ -12,7 +12,7 @@ def _write_bom_json(path: Path, payload: dict) -> Path:
 
 
 def test_qwen_cli_tokens_tolerate_bom(tmp_path, monkeypatch):
-    import scout_cli.auth as auth_mod
+    import scout_backend.auth as auth_mod
 
     creds = _write_bom_json(tmp_path / "oauth_creds.json", {"access_token": "tok", "expiry_date": 4102444800000})
     monkeypatch.setattr(auth_mod, "_qwen_cli_auth_path", lambda: creds)

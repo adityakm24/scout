@@ -160,6 +160,6 @@ def scheduler_notice() -> Dict[str, Any]:
     desktop-owned backend. Same probe as ``scout cron`` and the cronjob tool; an unknown
     result stays silent.
     """
-    from scout_cli.cron import _builtin_gateway_liveness
+    from scout_backend.cron import _builtin_gateway_liveness
 
     return {"warning": SCHEDULER_DOWN_WARNING} if _builtin_gateway_liveness() is False else {}

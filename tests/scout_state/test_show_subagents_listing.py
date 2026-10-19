@@ -2,7 +2,7 @@
 
 import pytest
 
-from scout_cli.session_listing import subagent_listing_scope
+from scout_backend.session_listing import subagent_listing_scope
 from scout_state import SessionDB
 
 

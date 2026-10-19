@@ -114,7 +114,7 @@ def test_list_venv_holders_reports_live_holders(journey: Journey) -> None:
     assert reported is not None, fail_with(m, "--list-venv-holders printed no JSON list", run)
     with known_failure(r"^`scout update --list-venv-holders` did not report the live venv holders "
                        r".*\(rc=0, reported pids \[\]\)",
-                       "gated on #123050: --list-venv-holders reads the retired scout_cli.main stub "
+                       "gated on #123050: --list-venv-holders reads the retired scout_backend.main stub "
                        "and always prints []"):
         assert run.returncode == VENV_HOLDERS_EXIT and set(pids) <= set(reported), fail_with(
             m, f"`scout update --list-venv-holders` did not report the live venv holders {pids} "

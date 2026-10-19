@@ -102,8 +102,8 @@ def build_profile_terminal_scope(
     closes. It sits where the process env sits in the standalone bridge — explicit YAML keys
     still win (``apply_terminal_config_to_env``).
     """
-    from scout_cli.config import TERMINAL_CONFIG_ENV_MAP, _terminal_env_value
-    from scout_cli.config_defaults import DEFAULT_CONFIG
+    from scout_backend.config import TERMINAL_CONFIG_ENV_MAP, _terminal_env_value
+    from scout_backend.config_defaults import DEFAULT_CONFIG
 
     home = Path(scout_home)
     scope: Dict[str, str] = {}

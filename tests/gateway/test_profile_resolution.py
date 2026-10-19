@@ -66,9 +66,9 @@ class TestResolutionOrder:
         """source.profile should be used even if routing would match."""
         discord_source.profile = "from-source"
         
-        with patch("scout_cli.profiles.get_active_profile_name", return_value="active"):
-            with patch("scout_cli.profiles.get_profile_dir") as mock_get_dir:
-                with patch("scout_cli.profiles.profile_exists", return_value=True):
+        with patch("scout_backend.profiles.get_active_profile_name", return_value="active"):
+            with patch("scout_backend.profiles.get_profile_dir") as mock_get_dir:
+                with patch("scout_backend.profiles.profile_exists", return_value=True):
                     mock_get_dir.return_value = Path("/scout/profiles/from-source")
                     result = mock_runner._resolve_profile_home_for_source(discord_source)
                     
@@ -86,10 +86,10 @@ class TestMissingProfileWarning:
         """When source.profile points to a nonexistent profile, log a WARNING."""
         discord_source.profile = "nonexistent"
         
-        with patch("scout_cli.profiles.get_active_profile_name", return_value="active"):
-            with patch("scout_cli.profiles.get_profile_dir") as mock_get_dir:
+        with patch("scout_backend.profiles.get_active_profile_name", return_value="active"):
+            with patch("scout_backend.profiles.get_profile_dir") as mock_get_dir:
                 mock_get_dir.return_value = Path("/scout/profiles/nonexistent")
-                with patch("scout_cli.profiles.profile_exists", return_value=False):
+                with patch("scout_backend.profiles.profile_exists", return_value=False):
                     with patch("scout_constants.get_scout_home", return_value=Path("/scout")):
                         with caplog.at_level(logging.WARNING):
                             result = mock_runner._resolve_profile_home_for_source(discord_source)
@@ -115,8 +115,8 @@ class TestExceptionHandling:
         """When get_profile_dir raises an exception, log a WARNING with context."""
         discord_source.profile = "bad-profile"
         
-        with patch("scout_cli.profiles.get_active_profile_name", return_value="active"):
-            with patch("scout_cli.profiles.get_profile_dir", side_effect=ValueError("Invalid profile name")):
+        with patch("scout_backend.profiles.get_active_profile_name", return_value="active"):
+            with patch("scout_backend.profiles.get_profile_dir", side_effect=ValueError("Invalid profile name")):
                 with patch("scout_constants.get_scout_home", return_value=Path("/scout")):
                     with caplog.at_level(logging.WARNING):
                         result = mock_runner._resolve_profile_home_for_source(discord_source)
@@ -154,7 +154,7 @@ class TestNonDiscordProfileRouting:
         telegram_source.profile = None
 
         with patch(
-            "scout_cli.profiles.profiles_to_serve",
+            "scout_backend.profiles.profiles_to_serve",
             return_value=[("default", Path("/profiles/default")),
                           ("tg-profile", Path("/profiles/tg-profile"))],
         ):
@@ -172,7 +172,7 @@ class TestNonDiscordProfileRouting:
         telegram_source.chat_id = "route-chat"
 
         with patch(
-            "scout_cli.profiles.profiles_to_serve",
+            "scout_backend.profiles.profiles_to_serve",
             return_value=[("default", Path("/profiles/default")),
                           ("worker", Path("/profiles/worker"))],
         ) as enumerate_profiles:
@@ -192,7 +192,7 @@ class TestNonDiscordProfileRouting:
         telegram_source.chat_id = "route-chat"
 
         with patch(
-            "scout_cli.profiles.profiles_to_serve",
+            "scout_backend.profiles.profiles_to_serve",
             return_value=[("default", Path("/profiles/default")),
                           ("worker", Path("/profiles/worker"))],
         ), caplog.at_level(logging.WARNING, logger="gateway.run"):
@@ -306,7 +306,7 @@ class TestAdapterToSessionKeyIntegration:
         source = SessionSource(platform=Platform.HOMEASSISTANT, chat_id="route-chat")
 
         with patch(
-            "scout_cli.profiles.profiles_to_serve",
+            "scout_backend.profiles.profiles_to_serve",
             return_value=[("default", Path("/profiles/default"))],
         ):
             result = await GatewayRunner._handle_message(

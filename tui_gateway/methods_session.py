@@ -162,7 +162,7 @@ def _snapshot_sessions(rid):
 def _pet_display_cfg() -> dict:
     """``display.pet`` config block, ``{}`` when config is unreadable."""
     try:
-        from scout_cli.config import load_config
+        from scout_backend.config import load_config
         cfg = load_config()
         display = cfg.get("display", {}) if isinstance(cfg.get("display"), dict) else {}
         return display.get("pet", {}) if isinstance(display.get("pet"), dict) else {}
@@ -507,7 +507,7 @@ def _(rid, params: dict, db) -> dict:
         # surfaces that OWN hidden sessions (Bots pane, pickers).
         from pathlib import Path
 
-        from scout_cli.session_listing import show_subagent_sessions
+        from scout_backend.session_listing import show_subagent_sessions
 
         # ``sessions.show_subagents`` (the store's own profile config) re-admits delegate runs (#97202).
         # A store without a path has no profile config to read, so it keeps the default shape.
@@ -1434,7 +1434,7 @@ def _(rid, params: dict, slug: str) -> dict:
     """Adopt a pet: install (if needed) + activate; writes ``display.pet.*`` to config."""
     from agent.pet import store
     from agent.pet.manifest import ManifestError
-    from scout_cli.pets import _set_active
+    from scout_backend.pets import _set_active
     try:
         pet = store.install_pet(slug)
     except (store.PetStoreError, ManifestError) as exc:
@@ -1447,14 +1447,14 @@ def _(rid, params: dict, slug: str) -> dict:
 def _(rid, params: dict, slug: str) -> dict:
     """Uninstall a pet (delete its directory); if it was active, turn the display off."""
     from agent.pet import store
-    from scout_cli.pets import _clear_active_if
+    from scout_backend.pets import _clear_active_if
     removed = store.remove_pet(slug)
     _pet_config_followup("pet.remove", _clear_active_if, slug)
     return _ok(rid, {"ok": removed, "slug": slug})
 
 
 def _pet_config_followup(what: str, fn, *args) -> None:
-    """Best-effort ``scout_cli.pets`` active-slug update after a store op that already succeeded."""
+    """Best-effort ``scout_backend.pets`` active-slug update after a store op that already succeeded."""
     try:
         fn(*args)
     except Exception as exc:  # noqa: BLE001
@@ -1483,7 +1483,7 @@ def _(rid, params: dict, slug: str) -> dict:
     if not (new_slug := store.rename_pet(slug, name)):
         return _err(rid, 5031, "pet.rename failed")
     if new_slug != slug:
-        from scout_cli.pets import _rename_active_if
+        from scout_backend.pets import _rename_active_if
         _pet_config_followup("pet.rename", _rename_active_if, slug, new_slug)
     return _ok(rid, {"ok": True, "slug": new_slug, "displayName": name})
 
@@ -1500,7 +1500,7 @@ def _(rid, params: dict, slug: str) -> dict:
 @_pet_method("pet.disable")
 def _(rid, params: dict) -> dict:
     """``display.pet.enabled=false`` from the desktop picker."""
-    from scout_cli.pets import _set_enabled
+    from scout_backend.pets import _set_enabled
     _set_enabled(False)
     return _ok(rid, {"ok": True})
 
@@ -1508,7 +1508,7 @@ def _(rid, params: dict) -> dict:
 @_pet_method("pet.scale")
 def _(rid, params: dict) -> dict:
     """Persist ``display.pet.scale`` (clamped to engine bounds) from the desktop slider."""
-    from scout_cli.pets import set_pet_scale
+    from scout_backend.pets import set_pet_scale
     scale, err = set_pet_scale(params.get("scale"))
     return _err(rid, 4004, err) if err else _ok(rid, {"ok": True, "scale": scale})
 
@@ -1665,7 +1665,7 @@ def _try_get_session(db, key: str) -> dict:
 
 @_session_method("session.status")
 def _(rid, params: dict, session: dict) -> dict:
-    from scout_cli.status_report import build_status_fields, status_lines
+    from scout_backend.status_report import build_status_fields, status_lines
     key = session.get("session_key") or params.get("session_id") or ""
     mirror = _metadata_mirror(session)
     # Under turn isolation the compute host owns the live route: a stale in-process agent object

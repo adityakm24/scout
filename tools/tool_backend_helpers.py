@@ -60,9 +60,9 @@ def _scoped_credential(name: str) -> str:
 
 
 def _dotenv_value(env_var: str) -> str:
-    """``.env`` value via ``scout_cli.config.get_env_value`` (``""`` when unavailable)."""
+    """``.env`` value via ``scout_backend.config.get_env_value`` (``""`` when unavailable)."""
     try:
-        from scout_cli.config import get_env_value
+        from scout_backend.config import get_env_value
         return str(get_env_value(env_var) or "").strip()
     except Exception:  # pragma: no cover — config is in-repo
         return ""
@@ -75,7 +75,7 @@ def _env_source_suppressed(provider_id: str, env_var: str) -> bool:
     if not provider_id:
         return False
     try:
-        from scout_cli.auth import is_source_suppressed
+        from scout_backend.auth import is_source_suppressed
         return is_source_suppressed(provider_id, f"env:{env_var}")
     except Exception:  # pragma: no cover — auth store unreadable: keep prior behavior
         return False
@@ -85,7 +85,7 @@ def resolve_provider_secret(env_var: str, provider_id: str, config_value: str = 
                             env_getter=None) -> str:
     """Resolve a voice-provider API key (single owner for STT/TTS lookup). Order: explicit
     ``config_value`` -> profile secret scope / env -> ``.env`` via ``env_getter`` (or
-    ``scout_cli.config.get_env_value``) -> credential pool for ``provider_id``. Under an
+    ``scout_backend.config.get_env_value``) -> credential pool for ``provider_id``. Under an
     active multiplex turn the profile scope is authoritative: a miss returns ``""`` rather
     than borrowing another profile's env or pool. Never raises. The env/.env tier is skipped
     entirely while ``env:<env_var>`` is suppressed for ``provider_id`` (#116155).
@@ -152,7 +152,7 @@ _DEFAULT_NAME_KEYS = ("provider", "backend", "cloud_provider")
 def _raw_section(section: str) -> Dict[str, Any] | None:
     """The RAW (unmerged) config.yaml mapping for ``section``, or None."""
     try:
-        from scout_cli.config import read_raw_config_readonly
+        from scout_backend.config import read_raw_config_readonly
         cfg = read_raw_config_readonly() or {}
         raw = cfg.get(section) if isinstance(cfg, dict) else None
         return raw if isinstance(raw, dict) else None

@@ -4,7 +4,7 @@
 the published image. CI writes ``install-stamp.json`` before ``docker build``
 (scripts/write_install_stamp.py) and it is COPY'd to the canonical
 ``/opt/scout/install-stamp.json``. ``scout dump`` reads the
-commit from that stamp through ``scout_cli.version_info``.
+commit from that stamp through ``scout_backend.version_info``.
 
 A local ``docker build`` (the ``built_image`` fixture in
 ``tests/docker/conftest.py``) has no CI stamp — only the Dockerfile's

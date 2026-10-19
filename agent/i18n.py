@@ -175,7 +175,7 @@ def _config_language_cached(scout_home: str) -> str | None:
     Keyed by home so a multiplexed gateway serving several profiles doesn't freeze the first
     profile's language for every other profile."""
     try:
-        from scout_cli.config import load_config_readonly
+        from scout_backend.config import load_config_readonly
         lang = (load_config_readonly().get("display") or {}).get("language")
         return _normalize_lang(lang, scout_home) if lang else None
     except Exception as exc:

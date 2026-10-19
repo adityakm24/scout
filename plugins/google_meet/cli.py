@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from scout_cli.browser_runtime import chromium_executable
+from scout_backend.browser_runtime import chromium_executable
 from scout_constants import get_scout_home
 
 from plugins.google_meet import process_manager as pm

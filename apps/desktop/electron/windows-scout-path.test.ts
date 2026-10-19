@@ -115,7 +115,7 @@ test('resolveVenvScoutCommand: returns the resolved python backend descriptor wh
 
   assert.ok(result, 'a passing probe must return a backend descriptor, not null')
   assert.equal(result.command, '/root/venv/Scripts/python.exe')
-  assert.deepEqual(result.args, ['-m', 'scout_cli.main', 'serve', '--port', '0'])
+  assert.deepEqual(result.args, ['-m', 'scout_backend.main', 'serve', '--port', '0'])
   assert.equal(result.bootstrap, false)
   assert.equal(result.kind, 'python')
   assert.equal(result.shell, false)

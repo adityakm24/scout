@@ -8,7 +8,7 @@ from datetime import datetime
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
 
-from scout_cli.config import get_scout_home
+from scout_backend.config import get_scout_home
 
 from .config import Platform, GatewayConfig, PlatformConfig
 from .session import SessionSource

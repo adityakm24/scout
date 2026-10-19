@@ -47,7 +47,7 @@ def test_rules_can_be_managed_from_the_terminal(tmp_path, monkeypatch, capsys):
     """The terminal path the agent always has: `scout cron rules <job> add|remove|clear`."""
     from types import SimpleNamespace
 
-    from scout_cli.cron import cron_rules
+    from scout_backend.cron import cron_rules
 
     monkeypatch.setattr(jobs, "CRON_DIR", tmp_path)
     monkeypatch.setattr(jobs, "JOBS_FILE", tmp_path / "jobs.json")

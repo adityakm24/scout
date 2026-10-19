@@ -87,7 +87,7 @@ def _catalog_marks_mandatory(provider: Optional[str], base_url: Optional[str], m
     process."""
     provider_norm = str(provider or "").strip().lower()
     host = (urlparse(base_url or "").hostname or "").lower()
-    from scout_cli import models_reasoning_caps as caps_mod
+    from scout_backend import models_reasoning_caps as caps_mod
     if not (provider_norm == "openrouter" or host == "openrouter.ai" or host.endswith(".openrouter.ai")):
         return False
     try:

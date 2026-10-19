@@ -14,9 +14,9 @@ def test_minimal_bootstrap_closure_reaches_pm_paths_and_locks(tmp_path):
     stage = tmp_path / "stage"
     shutil.copytree(repo / "pm", stage / "pm", ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copy2(repo / "scout_constants.py", stage / "scout_constants.py")
-    (stage / "scout_cli").mkdir()
+    (stage / "scout_backend").mkdir()
     for name in ("__init__.py", "runtime_state.py"):
-        shutil.copy2(repo / "scout_cli" / name, stage / "scout_cli" / name)
+        shutil.copy2(repo / "scout_backend" / name, stage / "scout_backend" / name)
     store = stage / "tools"
     env = dict(os.environ, SCOUT_HOME=str(tmp_path / "home"),
                SCOUT_RUNTIME_DIR=str(store), PYTHONPATH=str(stage))
@@ -47,7 +47,7 @@ class NoApplication:
         if fullname == 'pm' or fullname == 'utils' or fullname.startswith(('pm.', 'agent.')):
             raise AssertionError('signing imported ' + fullname)
 sys.meta_path.insert(0, NoApplication())
-from scout_cli.macos_signing import sign_managed_python
+from scout_backend.macos_signing import sign_managed_python
 assert callable(sign_managed_python)
 """
     result = subprocess.run([sys.executable, "-S", "-c", script], cwd=repo,

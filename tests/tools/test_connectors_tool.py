@@ -50,7 +50,7 @@ def _session_tool_names(monkeypatch, enabled_toolsets, *, disabled_toolsets=None
 
 def test_cli_session_gets_the_tool_outside_a_code_workspace(tmp_path, monkeypatch):
     """The path a plain `scout` run takes: _get_platform_tools, no git cwd."""
-    from scout_cli.tools_config import _get_platform_tools
+    from scout_backend.tools_config import _get_platform_tools
 
     monkeypatch.chdir(tmp_path)
     enabled = sorted(_get_platform_tools({}, "cli", include_default_mcp_servers=True))
@@ -92,7 +92,7 @@ def test_operator_can_still_turn_it_off(tmp_path, monkeypatch):
     like any other. Naming a platform composite instead must NOT strip it —
     that branch preserves core tools on purpose (#33924).
     """
-    from scout_cli.tools_config import _get_platform_tools
+    from scout_backend.tools_config import _get_platform_tools
 
     monkeypatch.chdir(tmp_path)
     enabled = sorted(_get_platform_tools({}, "cli", include_default_mcp_servers=True))

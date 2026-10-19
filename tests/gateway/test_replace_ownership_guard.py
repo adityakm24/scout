@@ -31,7 +31,7 @@ import pytest
 
 @pytest.fixture()
 def profile_env(tmp_path, monkeypatch):
-    """Isolated SCOUT_HOME mirroring tests/scout_cli/test_profiles.py."""
+    """Isolated SCOUT_HOME mirroring tests/scout_backend/test_profiles.py."""
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     default_home = tmp_path / ".scout"
     default_home.mkdir(exist_ok=True)
@@ -43,7 +43,7 @@ def _record(pid=424242, start=111222333, home=None, argv=None):
     return {
         "pid": pid,
         "kind": "scout-gateway",
-        "argv": argv or ["python", "-m", "scout_cli.main", "gateway", "run"],
+        "argv": argv or ["python", "-m", "scout_backend.main", "gateway", "run"],
         "start_time": start,
         "scout_home": home,
     }
@@ -218,16 +218,16 @@ class TestArgvConsistencyCheck:
         tim_home = Path("/home/x/.scout/profiles/tim")
         # Foreign target advertising timothy — NOT ours.
         assert (
-            conflict("python -m scout_cli.main --profile timothy gateway run", tim_home)
+            conflict("python -m scout_backend.main --profile timothy gateway run", tim_home)
             is True
         )
         # Our own exact name stays consistent.
         assert (
-            conflict("python -m scout_cli.main --profile tim gateway run", tim_home)
+            conflict("python -m scout_backend.main --profile tim gateway run", tim_home)
             is False
         )
         assert (
-            conflict("python -m scout_cli.main -p tim gateway run", tim_home)
+            conflict("python -m scout_backend.main -p tim gateway run", tim_home)
             is False
         )
 
@@ -240,14 +240,14 @@ class TestArgvConsistencyCheck:
         tim_home = Path("/home/x/.scout/profiles/tim")
         assert (
             conflict(
-                "python -m scout_cli.main SCOUT_HOME=/home/x/.scout/profiles/timothy gateway run",
+                "python -m scout_backend.main SCOUT_HOME=/home/x/.scout/profiles/timothy gateway run",
                 tim_home,
             )
             is True
         )
         assert (
             conflict(
-                "python -m scout_cli.main --scout-home /home/x/.scout/profiles/tim/ gateway run",
+                "python -m scout_backend.main --scout-home /home/x/.scout/profiles/tim/ gateway run",
                 tim_home,
             )
             is False  # trailing slash normalizes away
@@ -285,7 +285,7 @@ class TestArgvConsistencyCheck:
             ),
             patch(
                 "gateway.status._read_process_cmdline",
-                return_value="python -m scout_cli.main --profile other-profile gateway run",
+                return_value="python -m scout_backend.main --profile other-profile gateway run",
             ),
             patch(
                 "gateway.status._get_process_scout_home",

@@ -17,11 +17,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Bootstrap the repo root onto sys.path so this script can import the
-# canary-tag authority from scout_cli.update_channel (scout_cli/__init__.py
+# canary-tag authority from scout_backend.update_channel (scout_backend/__init__.py
 # is import-light: only os/sys + version constants).
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scout_cli.update_channel import (  # noqa: E402
+from scout_backend.update_channel import (  # noqa: E402
     _CANARY_TAG_RE, STABLE_TAG_RE, canary_tag_for_date, canary_timestamp,
     is_canary_tag,
 )
@@ -156,7 +156,7 @@ def remote_github_repo(remote: str) -> str | None:
 
 
 # Stable tags are matched with STABLE_TAG_RE and canary tags
-# with _CANARY_TAG_RE, both imported from scout_cli.update_channel — the
+# with _CANARY_TAG_RE, both imported from scout_backend.update_channel — the
 # single authority for both tag shapes (the stable major is capped at three
 # digits so historical CalVer tags like v2026.7.20 never match; the canary
 # identity is the exact stable core plus full UTC build metadata.

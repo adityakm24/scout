@@ -1,6 +1,6 @@
 """Gateway ``plugins.manage remove`` — the Desktop Plugins hub's Uninstall door.
 
-Drives the real ``scout_cli.plugins_cmd`` removal core against a temp SCOUT_HOME so the RPC is
+Drives the real ``scout_backend.plugins_cmd`` removal core against a temp SCOUT_HOME so the RPC is
 proven to delete the plugin tree AND its install metadata, and to refuse anything that is not a user
 install under ``<SCOUT_HOME>/plugins/``.
 """

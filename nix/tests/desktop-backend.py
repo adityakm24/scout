@@ -31,8 +31,8 @@ with tempfile.TemporaryDirectory(prefix="scout-desktop-backend-") as temporary:
     home = Path(temporary)
     scout_home = home / ".scout"
     legacy = scout_home / "scout-agent"
-    (legacy / "scout_cli").mkdir(parents=True)
-    (legacy / "scout_cli" / "main.py").touch()
+    (legacy / "scout_backend").mkdir(parents=True)
+    (legacy / "scout_backend" / "main.py").touch()
     launcher = legacy / "venv" / "bin" / "scout"
     launcher.parent.mkdir(parents=True)
     # The old runtime passes discovery but cannot initialize a session. It

@@ -399,12 +399,12 @@ class WebhookAdapter(BasePlatformAdapter):
             # Only a self-referential prefix may fall through to the bare route; anything else fails
             # closed (silently ignoring the prefix served the owner's routes under another profile's URL).
             with suppress(Exception):
-                from scout_cli.profiles import profile_matches_home
+                from scout_backend.profiles import profile_matches_home
                 if profile_matches_home(profile):
                     return None
             return _PROFILE_REJECTED
         try:
-            from scout_cli.profiles import profiles_to_serve
+            from scout_backend.profiles import profiles_to_serve
             served = {name for name, _ in profiles_to_serve(multiplex=True)}
         except Exception:
             return _PROFILE_REJECTED
@@ -424,7 +424,7 @@ class WebhookAdapter(BasePlatformAdapter):
         if not profile or not isinstance(profile, str):
             return nullcontext()
         from gateway.run import _profile_runtime_scope
-        from scout_cli.profiles import get_profile_dir
+        from scout_backend.profiles import get_profile_dir
         return _profile_runtime_scope(get_profile_dir(profile))
 
     async def _read_authenticated_body(self, request: "web.Request", route_name: str,

@@ -193,7 +193,7 @@ def test_uninspectable_watched_descriptor_blocks_repair_before_sqlite(
     ("argv", "should_block"),
     (
         (["python3", "backup.py"], False),
-        (["python3", "-m", "scout_cli.main", "gateway"], True),
+        (["python3", "-m", "scout_backend.main", "gateway"], True),
     ),
 )
 def test_uninspectable_unknown_descriptor_uses_scout_identity_at_repair_boundary(
@@ -328,7 +328,7 @@ def test_uninspectable_alias_descriptor_for_scout_blocks_before_sqlite(
     monkeypatch.setattr(
         scout_state_holders,
         "_read_proc_argv",
-        lambda _pid: ["python3", "-m", "scout_cli.main", "gateway"],
+        lambda _pid: ["python3", "-m", "scout_backend.main", "gateway"],
     )
 
     def _unexpected_probe(*_args, **_kwargs):

@@ -5,7 +5,7 @@ provider registry, model catalog, and runtime resolution pipeline.
 These tests do NOT require AWS credentials or boto3 — all AWS calls
 are mocked.
 
-Note: Tests that import ``scout_cli.auth`` or ``scout_cli.runtime_provider``
+Note: Tests that import ``scout_backend.auth`` or ``scout_backend.runtime_provider``
 require Python 3.10+ due to ``str | None`` type syntax in the import chain.
 """
 
@@ -55,7 +55,7 @@ class TestModelCatalog:
     """Verify Bedrock has a static model fallback list."""
 
     def test_bedrock_has_curated_models(self):
-        from scout_cli.models import _PROVIDER_MODELS
+        from scout_backend.models import _PROVIDER_MODELS
         models = _PROVIDER_MODELS.get("bedrock", [])
         assert len(models) > 0
 
@@ -68,12 +68,12 @@ class TestResolveProvider:
     def test_explicit_bedrock_resolves(self, monkeypatch):
         """When user explicitly requests 'bedrock', it should resolve."""
         # bedrock is in the registry, so resolve_provider should return it
-        from scout_cli.auth import resolve_provider
+        from scout_backend.auth import resolve_provider
         result = resolve_provider("bedrock")
         assert result == "bedrock"
 
     def test_aws_alias_resolves_to_bedrock(self):
-        from scout_cli.auth import resolve_provider
+        from scout_backend.auth import resolve_provider
         result = resolve_provider("aws")
         assert result == "bedrock"
 
@@ -81,7 +81,7 @@ class TestResolveProvider:
     def test_auto_detect_with_aws_credentials(self, monkeypatch):
         """When AWS credentials are present and no other provider is configured,
         auto-detect should find bedrock."""
-        from scout_cli.auth import resolve_provider
+        from scout_backend.auth import resolve_provider
 
         # Clear all other provider env vars
         for var in ["OPENAI_API_KEY", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY",
@@ -93,7 +93,7 @@ class TestResolveProvider:
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
 
         # Mock the auth store to have no active provider
-        with patch("scout_cli.auth._load_auth_store", return_value={}):
+        with patch("scout_backend.auth._load_auth_store", return_value={}):
             result = resolve_provider("auto")
         assert result == "bedrock"
 
@@ -106,8 +106,8 @@ class TestRuntimeProvider:
     def test_bedrock_runtime_no_credentials_raises_on_auto_detect(self, monkeypatch):
         """When bedrock is auto-detected (not explicitly requested) and no
         credentials are found, runtime resolution should raise AuthError."""
-        from scout_cli.runtime_provider import resolve_runtime_provider
-        from scout_cli.auth import AuthError
+        from scout_backend.runtime_provider import resolve_runtime_provider
+        from scout_backend.auth import AuthError
 
         # Clear all AWS env vars
         for var in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_PROFILE",
@@ -118,9 +118,9 @@ class TestRuntimeProvider:
         # Mock both the provider resolution and boto3's credential chain
         mock_session = MagicMock()
         mock_session.get_credentials.return_value = None
-        with patch("scout_cli.runtime_provider.resolve_provider", return_value="bedrock"), \
-             patch("scout_cli.runtime_provider._get_model_config", return_value={"provider": "bedrock"}), \
-             patch("scout_cli.runtime_provider.resolve_requested_provider", return_value="auto"), \
+        with patch("scout_backend.runtime_provider.resolve_provider", return_value="bedrock"), \
+             patch("scout_backend.runtime_provider._get_model_config", return_value={"provider": "bedrock"}), \
+             patch("scout_backend.runtime_provider.resolve_requested_provider", return_value="auto"), \
              patch.dict("sys.modules", {"botocore": MagicMock(), "botocore.session": MagicMock()}):
             import botocore.session as _bs
             _bs.get_session = MagicMock(return_value=mock_session)
@@ -130,15 +130,15 @@ class TestRuntimeProvider:
     def test_bedrock_runtime_explicit_skips_credential_check(self, monkeypatch):
         """When user explicitly requests bedrock, trust boto3's credential chain
         even if env-var detection finds nothing (covers IMDS, SSO, etc.)."""
-        from scout_cli.runtime_provider import resolve_runtime_provider
+        from scout_backend.runtime_provider import resolve_runtime_provider
 
         # No AWS env vars set — but explicit bedrock request should not raise
         for var in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_PROFILE",
                      "AWS_BEARER_TOKEN_BEDROCK"]:
             monkeypatch.delenv(var, raising=False)
 
-        with patch("scout_cli.runtime_provider.resolve_provider", return_value="bedrock"), \
-             patch("scout_cli.runtime_provider._get_model_config", return_value={"provider": "bedrock"}):
+        with patch("scout_backend.runtime_provider.resolve_provider", return_value="bedrock"), \
+             patch("scout_backend.runtime_provider._get_model_config", return_value={"provider": "bedrock"}):
             result = resolve_runtime_provider(requested="bedrock")
         assert result["provider"] == "bedrock"
         assert result["api_mode"] == "bedrock_converse"
@@ -148,7 +148,7 @@ class TestRuntimeProvider:
         models — they only answer on the Mantle /openai/v1 Responses surface.
         Every allowlisted ID must route there, with the aws-sdk IAM sentinel."""
         from agent.bedrock_adapter import BEDROCK_OPENAI_RESPONSES_MODEL_IDS
-        from scout_cli.runtime_provider import resolve_runtime_provider
+        from scout_backend.runtime_provider import resolve_runtime_provider
 
         monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIAIOSFODNN7EXAMPLE")
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
@@ -157,8 +157,8 @@ class TestRuntimeProvider:
         assert BEDROCK_OPENAI_RESPONSES_MODEL_IDS
 
         for model_id in BEDROCK_OPENAI_RESPONSES_MODEL_IDS:
-            with patch("scout_cli.runtime_provider.resolve_provider", return_value="bedrock"), \
-                 patch("scout_cli.runtime_provider._get_model_config", return_value={
+            with patch("scout_backend.runtime_provider.resolve_provider", return_value="bedrock"), \
+                 patch("scout_backend.runtime_provider._get_model_config", return_value={
                      "provider": "bedrock",
                      "default": model_id,
                  }):
@@ -187,12 +187,12 @@ class TestRuntimeProvider:
 # ---------------------------------------------------------------------------
 
 class TestProvidersModule:
-    """Verify bedrock is wired into scout_cli/providers.py."""
+    """Verify bedrock is wired into scout_backend/providers.py."""
 
 
 
     def test_determine_api_mode_from_bedrock_url(self):
-        from scout_cli.providers import determine_api_mode
+        from scout_backend.providers import determine_api_mode
         assert determine_api_mode(
             "unknown", "https://bedrock-runtime.us-east-1.amazonaws.com"
         ) == "bedrock_converse"
@@ -474,7 +474,7 @@ class TestAuxiliaryClientBedrockResolution:
             def close(self):
                 pass
 
-        with patch("scout_cli.config.load_config_readonly",
+        with patch("scout_backend.config.load_config_readonly",
                    return_value={"bedrock": {"region": "us-west-2"}}), \
              patch("agent.auxiliary_client.OpenAI", _FakeOpenAI):
             from agent.auxiliary_client import resolve_provider_client

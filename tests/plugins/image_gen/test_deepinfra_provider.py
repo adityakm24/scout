@@ -3,7 +3,7 @@
 Invariants only — no snapshots of specific model ids. Most surface-level
 contracts (network-failure → empty list, tag filtering, no-model error)
 are covered by the shared tag-filter test in
-``tests/scout_cli/test_api_key_providers.py``; these two tests pin the
+``tests/scout_backend/test_api_key_providers.py``; these two tests pin the
 plugin-specific bits that wrapper doesn't reach.
 """
 
@@ -31,7 +31,7 @@ def _b64_png() -> str:
 @pytest.fixture(autouse=True)
 def _isolation(tmp_path, monkeypatch):
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
-    import scout_cli.models as _models_mod
+    import scout_backend.models as _models_mod
     monkeypatch.setattr(_models_mod, "_deepinfra_catalog_cache", {})
     monkeypatch.setenv("DEEPINFRA_API_KEY", "test-key")
     yield
@@ -40,7 +40,7 @@ def test_list_models_filters_by_image_gen_tag(monkeypatch):
     """Plugin-side wiring: list_models() returns only ``image-gen``-tagged
     catalog entries and surfaces pricing + default dims when present."""
     import json
-    import scout_cli.models as models
+    import scout_backend.models as models
 
     class _Resp:
         def __enter__(self): return self

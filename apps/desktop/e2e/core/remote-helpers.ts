@@ -159,7 +159,7 @@ export async function startRemoteBackend(
     }
   }
 
-  const argv = [python(), '-m', 'scout_cli.main', 'serve', '--host', '127.0.0.1', '--port', String(port)]
+  const argv = [python(), '-m', 'scout_backend.main', 'serve', '--host', '127.0.0.1', '--port', String(port)]
   const hiding = hidingCommand(hide, argv)
   const [command, ...args] = hiding ?? argv
 

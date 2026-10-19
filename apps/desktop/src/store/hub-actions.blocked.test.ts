@@ -24,7 +24,7 @@ beforeEach(() => clearNotifications())
 // must turn it into a cause and a next step — `--force` does not exist on the
 // Desktop route, so it must never be the remedy shown.
 
-// Current CLI (`scout_cli/skills_hub.py::_scan_block_message`): "Not installed:"
+// Current CLI (`scout_backend/skills_hub.py::_scan_block_message`): "Not installed:"
 // label + plain sentence; the "never installs unverified" clause marks the
 // hard-block (unverified source) case.
 test('the current CLI "Not installed:" tail parses into findings + trust', () => {

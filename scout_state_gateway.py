@@ -186,7 +186,7 @@ class SessionGatewayMixin:
         if not sys.platform.startswith("linux") or psutil is None:
             return []
         try:
-            from scout_cli.dashboard_procs import _is_ephemeral_port_zero_backend
+            from scout_backend.dashboard_procs import _is_ephemeral_port_zero_backend
         except Exception:
             return []
         now = time.time()

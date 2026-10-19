@@ -50,7 +50,7 @@ async def test_gateway_rejects_non_admin_persistent_approval_change():
         }
     )
 
-    with patch("scout_cli.approval_mode.run_approval_mode_command") as run:
+    with patch("scout_backend.approval_mode.run_approval_mode_command") as run:
         output = await runner._handle_approvals_command(_event("/approvals off"))
 
     assert "admin" in output.lower()

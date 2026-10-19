@@ -16,7 +16,7 @@ from typing import Any, Optional
 
 from agent.i18n import t
 from gateway.platforms.event import MessageEvent
-from scout_cli.config import atomic_config_write
+from scout_backend.config import atomic_config_write
 from utils import base_url_host_matches
 
 logger = logging.getLogger("gateway.run")  # log-record parity with gateway/run.py
@@ -53,7 +53,7 @@ def _model_switch_skew_guard() -> Optional[str]:
 async def _persist_model_switch_to_config(result, config_path) -> None:
     """Write-through a resolved /model switch to the profile config at ``config_path``, off the
     event loop (the route comparison can do cold-start disk I/O)."""
-    from scout_cli.model_switch import persist_model_selection
+    from scout_backend.model_switch import persist_model_selection
     await asyncio.to_thread(persist_model_selection, result, config_path)
 
 
@@ -94,7 +94,7 @@ class _ModelSwitchContext:
                 self.current_base_url = model_cfg.get("base_url", "")
             self.user_provs = cfg.get("providers")
             try:
-                from scout_cli.config import get_compatible_custom_providers
+                from scout_backend.config import get_compatible_custom_providers
                 self.custom_provs = get_compatible_custom_providers(cfg)
             except Exception:
                 self.custom_provs = cfg.get("custom_providers")
@@ -142,7 +142,7 @@ class GatewayModelCommandsMixin:
     ):
         """Resolve a /model switch off-loop. Returns ``(result, None)`` or ``(None, error_text)``."""
         from gateway.run import _load_gateway_config
-        from scout_cli.model_switch import switch_model
+        from scout_backend.model_switch import switch_model
 
         skew_error = _model_switch_skew_guard()
         if skew_error:
@@ -158,7 +158,7 @@ class GatewayModelCommandsMixin:
         if not result.success:
             return None, t("gateway.model.error_prefix", error=result.error_message)
         try:
-            from scout_cli.context_switch_guard import enrich_model_switch_warnings_for_gateway
+            from scout_backend.context_switch_guard import enrich_model_switch_warnings_for_gateway
             # Off-loop: merge_preflight_compression_warning() runs the sync provider probe ladder.
             await asyncio.to_thread(
                 enrich_model_switch_warnings_for_gateway, result, self, session_key=ctx.session_key,
@@ -202,7 +202,7 @@ class GatewayModelCommandsMixin:
         Returns the warning for a ``--global`` switch whose ``config.yaml`` write or stale-override
         cleanup failed (the switch then stays a session override), else ``None``.
         """
-        from scout_cli.model_switch import format_model_for_display
+        from scout_backend.model_switch import format_model_for_display
 
         # Persist the new model to the session DB so the dashboard shows the updated model (#34850).
         _sess_db = getattr(self, "_session_db", None)
@@ -290,7 +290,7 @@ class GatewayModelCommandsMixin:
     ) -> str:
         """Confirmation text with full metadata (display form shortens opaque Palantir IDs)."""
         from gateway.run import _load_gateway_config
-        from scout_cli.model_switch import format_model_for_display, resolve_display_context_length_async
+        from scout_backend.model_switch import format_model_for_display, resolve_display_context_length_async
 
         lines = [
             t("gateway.model.switched", model=format_model_for_display(result.new_model)),
@@ -395,7 +395,7 @@ class GatewayModelCommandsMixin:
     async def _send_model_picker(self, event: MessageEvent, source, adapter, session_key: str, listing_kwargs: dict, on_model_selected) -> bool:
         """Send the interactive /model picker; False when nothing was sent (text fallback). *source*
         is session-key-normalized so the picker's thread metadata lands where the next turn reads."""
-        from scout_cli.model_switch_providers import list_picker_providers
+        from scout_backend.model_switch_providers import list_picker_providers
         try:  # off-loop: listing still reads config/disk cache synchronously (#41289)
             providers = await asyncio.to_thread(
                 list_picker_providers, max_models=50, include_moa=True, **listing_kwargs
@@ -417,8 +417,8 @@ class GatewayModelCommandsMixin:
         self, event: MessageEvent, ctx: _ModelSwitchContext, profile_home
     ) -> Optional[str]:
         """``/model`` with no args: interactive picker where supported, else the text list."""
-        from scout_cli.model_switch import list_authenticated_providers
-        from scout_cli.providers import get_label
+        from scout_backend.model_switch import list_authenticated_providers
+        from scout_backend.providers import get_label
 
         listing_kwargs = dict(
             current_provider=ctx.current_provider, current_base_url=ctx.current_base_url,
@@ -470,7 +470,7 @@ class GatewayModelCommandsMixin:
         rendered confirm buttons itself.
         """
         try:
-            from scout_cli.model_selection_guards import (
+            from scout_backend.model_selection_guards import (
                 combined_selection_warning, selection_context_for_agent)
             warning = await asyncio.to_thread(
                 combined_selection_warning, result.new_model, provider=result.target_provider,
@@ -503,7 +503,7 @@ class GatewayModelCommandsMixin:
 
     async def _handle_model_command_locked(self, event: MessageEvent) -> Optional[str]:
         from gateway.run import _scout_home
-        from scout_cli.model_switch import parse_model_switch_args, resolve_persist_behavior
+        from scout_backend.model_switch import parse_model_switch_args, resolve_persist_behavior
 
         profile_home = None
         if getattr(getattr(self, "config", None), "multiplex_profiles", False):
@@ -513,7 +513,7 @@ class GatewayModelCommandsMixin:
             return f"❌ {request.error_messages()[0]}"  # gateway decoration over canonical copy
         if request.force_refresh:  # bust the disk cache so the picker shows live data
             with contextlib.suppress(Exception):
-                from scout_cli.models import clear_provider_models_cache
+                from scout_backend.models import clear_provider_models_cache
                 clear_provider_models_cache()
         # Normalize like a message turn (Telegram DM topic recovery) before deriving the override
         # key, so the override lands under the key the next turn reads.
@@ -561,13 +561,13 @@ class GatewayModelCommandsMixin:
     async def _handle_codex_runtime_command(self, event: MessageEvent) -> str:
         """Handle /codex-runtime; a real change evicts the cached agent so the new api_mode applies
         on the next message (avoids prompt-cache invalidation mid-session)."""
-        from scout_cli import codex_runtime_switch as crs
+        from scout_backend import codex_runtime_switch as crs
 
         new_value, errors = crs.parse_args(event.get_command_args().strip() if event else "")
         if errors:
             return "❌ " + "\n❌ ".join(errors)
         try:
-            from scout_cli.config import load_config, save_config
+            from scout_backend.config import load_config, save_config
         except Exception as exc:
             return t("gateway.codex_runtime.config_load_failed", error=exc)
         result = crs.apply(
@@ -581,9 +581,9 @@ class GatewayModelCommandsMixin:
         return f"{'✓' if result.success else '✗'} {result.message}"
 
     async def _handle_personality_command(self, event: MessageEvent) -> str:
-        """Handle /personality — list or set a personality (scout_cli.personality owns the state)."""
+        """Handle /personality — list or set a personality (scout_backend.personality owns the state)."""
         from gateway.run import _load_gateway_config
-        from scout_cli.personality import (
+        from scout_backend.personality import (
             active_personality_name,
             available_personalities,
             describe_personality,
@@ -626,7 +626,7 @@ class GatewayModelCommandsMixin:
         """Save a dot-separated key to config.yaml (shared by /reasoning, /fast and their pickers)."""
         from gateway.slash_commands import _nested_dict
         from gateway.run import _gateway_config_home
-        from scout_cli.config import read_user_config_raw
+        from scout_backend.config import read_user_config_raw
         config_path = _gateway_config_home() / "config.yaml"
         try:
             user_config = read_user_config_raw(config_path)  # raw: never persist merged defaults
@@ -782,7 +782,7 @@ class GatewayModelCommandsMixin:
         """Handle /fast — the CLI Priority Processing toggle; session-scoped unless ``--global``
         (persists agent.service_tier, parity with /model)."""
         from gateway.run import _load_gateway_config, _resolve_gateway_model
-        from scout_cli.models import model_supports_fast_mode
+        from scout_backend.models import model_supports_fast_mode
 
         # The /reasoning parser strips --global (any position) and normalizes unicode dashes.
         args, persist_global = self._parse_reasoning_command_args(event.get_command_args().strip().lower())

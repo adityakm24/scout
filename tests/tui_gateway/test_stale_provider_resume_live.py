@@ -69,8 +69,8 @@ def live_home(monkeypatch):
         if var.endswith("_API_KEY") or var in ("OPENROUTER_KEY", "FIXTURECO_KEY"):
             monkeypatch.delenv(var, raising=False)
 
-    import scout_cli.config as hconfig
-    import scout_cli.runtime_provider as rp
+    import scout_backend.config as hconfig
+    import scout_backend.runtime_provider as rp
 
     for mod in (hconfig, rp):
         for attr in ("_config_cache", "_cache", "_CONFIG_CACHE"):

@@ -201,7 +201,7 @@ test.skipIf(process.platform === 'win32').each(['gui', 'lite', 'full'] as const)
       await once(child, 'close')
       assert.equal(child.exitCode, 0)
       assert.deepEqual(JSON.parse(fs.readFileSync(resultFile, 'utf8')), {
-        argv: ['-m', 'scout_cli.uninstall', '--mode', mode],
+        argv: ['-m', 'scout_backend.uninstall', '--mode', mode],
         home: root,
         pythonPath: mode === 'gui' ? 'inherited' : `${root}:inherited`,
         cwd: root
@@ -226,7 +226,7 @@ test('buildPosixCleanupScript waits for the PID, runs the uninstall module, remo
     pythonExe: '/home/x/.scout/scout-agent/venv/bin/python',
     pythonPath: null,
     agentRoot: '/home/x/.scout/scout-agent',
-    uninstallArgs: ['-m', 'scout_cli.uninstall', '--mode', 'gui'],
+    uninstallArgs: ['-m', 'scout_backend.uninstall', '--mode', 'gui'],
     appPath: '/opt/scout/linux-unpacked',
     scoutHome: '/home/x/.scout'
   })
@@ -234,7 +234,7 @@ test('buildPosixCleanupScript waits for the PID, runs the uninstall module, remo
   assert.match(script, /^#!\/usr\/bin\/env bash\n/)
   assert.match(script, /pid=4321/)
   assert.match(script, /kill -0 "\$pid"/)
-  assert.match(script, /'-m' 'scout_cli\.uninstall' '--mode' 'gui'/)
+  assert.match(script, /'-m' 'scout_backend\.uninstall' '--mode' 'gui'/)
   assert.match(script, /rm -rf '\/opt\/scout\/linux-unpacked'/)
   assert.match(script, /export SCOUT_HOME='\/home\/x\/\.scout'/)
 })
@@ -247,16 +247,16 @@ test('buildWindowsCleanupScript waits (bounded) for PID, runs uninstall, rmdir b
     pythonExe: 'C:\\Python313\\python.exe',
     pythonPath: 'C:\\scout',
     agentRoot: 'C:\\scout',
-    uninstallArgs: ['-m', 'scout_cli.uninstall', '--mode', 'full'],
+    uninstallArgs: ['-m', 'scout_backend.uninstall', '--mode', 'full'],
     appPath: 'C:\\Users\\x\\AppData\\Local\\Programs\\Scout',
     scoutHome: 'C:\\Users\\x\\AppData\\Local\\scout'
   })
 
   assert.match(script, /@echo off/)
   assert.match(script, /set "PID=9988"/)
-  // PYTHONPATH set so a system python can import scout_cli from source.
+  // PYTHONPATH set so a system python can import scout_backend from source.
   assert.match(script, /set "PYTHONPATH=C:\\scout;%PYTHONPATH%"/)
-  assert.match(script, /"C:\\Python313\\python.exe" "-m" "scout_cli\.uninstall" "--mode" "full"/)
+  assert.match(script, /"C:\\Python313\\python.exe" "-m" "scout_backend\.uninstall" "--mode" "full"/)
   // Bounded wait-loop (no infinite loop), whole-token PID match (no substring).
   assert.match(script, /if %waited% geq 60 goto waited_done/)
   assert.match(script, /findstr \/r \/c:" %PID% "/)
@@ -273,7 +273,7 @@ test('buildWindowsCleanupScript omits PYTHONPATH + rmdir when not needed (gui, n
     pythonExe: 'C:\\h\\venv\\Scripts\\python.exe',
     pythonPath: null,
     agentRoot: 'C:\\h',
-    uninstallArgs: ['-m', 'scout_cli.uninstall', '--mode', 'gui'],
+    uninstallArgs: ['-m', 'scout_backend.uninstall', '--mode', 'gui'],
     appPath: null,
     scoutHome: 'C:\\h'
   })

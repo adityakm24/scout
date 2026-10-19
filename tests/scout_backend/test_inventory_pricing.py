@@ -1,0 +1,288 @@
+"""Tests for inventory._apply_pricing — the pricing enrichment that feeds the
+
+desktop GUI model picker (and onboarding) so it can show $/Mtok columns the
+same way the `scout model` CLI picker does.
+"""
+
+from threading import Event
+from time import monotonic
+
+import scout_backend.inventory as inv
+from scout_backend import models_pricing
+
+
+def _patch_pricing(monkeypatch, *, pricing):
+    monkeypatch.setattr(models_pricing, "get_pricing_for_provider", lambda slug, **kw: pricing.get(slug, {}))
+
+
+def test_apply_pricing_formats_per_model_prices(monkeypatch):
+    """Each model gets formatted input/output/cache + a free flag."""
+    _patch_pricing(
+        monkeypatch,
+        pricing={
+            "openrouter": {
+                "a/paid": {"prompt": "0.000003", "completion": "0.000015", "input_cache_read": "0.0000003"},
+                "b/free": {"prompt": "0", "completion": "0"},
+            }
+        },
+    )
+    rows = [{"slug": "openrouter", "models": ["a/paid", "b/free"]}]
+    inv._apply_pricing(rows)
+
+    pricing = rows[0]["pricing"]
+    assert pricing["a/paid"] == {"input": "$3.00", "output": "$15.00", "cache": "$0.30", "free": False}
+    assert pricing["b/free"]["free"] is True
+    assert pricing["b/free"]["input"] == "free"
+
+
+def test_model_options_cold_pricing_fetch_runs_off_the_request_path(monkeypatch):
+    """A cold pricing endpoint must not delay the first picker payload."""
+    fetch_started = Event()
+    release_fetch = Event()
+
+    def fake_pricing(_slug, *, force_refresh=False, cached_only=False):
+        if cached_only:
+            return {}
+        fetch_started.set()
+        release_fetch.wait(timeout=5)
+        return {}
+
+    row = {
+        "slug": "openrouter",
+        "name": "OpenRouter",
+        "models": ["vendor/model"],
+        "total_models": 1,
+        "is_current": True,
+        "is_user_defined": False,
+        "source": "built-in",
+    }
+    monkeypatch.setattr(models_pricing, "get_pricing_for_provider", fake_pricing)
+    monkeypatch.setattr(
+        "scout_backend.model_switch.list_authenticated_providers",
+        lambda **_kwargs: [row],
+    )
+    monkeypatch.setattr(inv, "_moa_provider_row", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(inv, "_apply_capabilities", lambda _rows, **_kwargs: None)
+    monkeypatch.setattr(inv, "_apply_featured", lambda _rows, **_kwargs: None)
+    monkeypatch.setattr(inv, "_pricing_prewarm_threads", {})
+
+    try:
+        started_at = monotonic()
+        payload = inv.build_model_options_payload(
+            inv.ConfigContext(
+                current_provider="openrouter",
+                current_model="vendor/model",
+                current_base_url="",
+                user_providers={},
+                custom_providers=[],
+            )
+        )
+        elapsed = monotonic() - started_at
+        assert payload["providers"][0]["slug"] == "openrouter"
+        assert "pricing" not in payload["providers"][0]
+        assert elapsed < 2.0, f"cold picker blocked for {elapsed:.2f}s"
+        assert fetch_started.wait(timeout=1), "pricing should prewarm in the background"
+    finally:
+        threads = list(inv._pricing_prewarm_threads.values())
+        release_fetch.set()
+        for thread in threads:
+            thread.join(timeout=2)
+
+
+def test_prewarm_preserves_context_and_runs_once_per_profile(tmp_path, monkeypatch):
+    """Concurrent multiplex profiles retain their own home and secret scope."""
+    from agent.secret_scope import (
+        current_secret_scope,
+        reset_secret_scope,
+        set_secret_scope,
+    )
+    from scout_constants import (
+        scout_home_key,
+        reset_scout_home_override,
+        set_scout_home_override,
+    )
+
+    monkeypatch.setattr(inv, "_pricing_prewarm_threads", {})
+    release = Event()
+    started = {"a": Event(), "b": Event()}
+    observed = {}
+
+    def capture_context(_rows):
+        scope = current_secret_scope()
+        label = scope["PROFILE_MARKER"]
+        observed[label] = (scout_home_key(), dict(scope))
+        started[label].set()
+        release.wait(timeout=5)
+
+    monkeypatch.setattr(inv, "_apply_pricing", capture_context)
+
+    threads = []
+    try:
+        for label in ("a", "b"):
+            home = tmp_path / label
+            home_token = set_scout_home_override(str(home))
+            secret_token = set_secret_scope({"PROFILE_MARKER": label})
+            try:
+                threads.append(inv._prewarm_pricing_async([{"models": []}]))
+            finally:
+                reset_secret_scope(secret_token)
+                reset_scout_home_override(home_token)
+
+        assert threads[0] is not threads[1]
+        assert started["a"].wait(timeout=1)
+        assert started["b"].wait(timeout=1)
+        assert observed["a"] == (
+            scout_home_key(tmp_path / "a"),
+            {"PROFILE_MARKER": "a"},
+        )
+        assert observed["b"] == (
+            scout_home_key(tmp_path / "b"),
+            {"PROFILE_MARKER": "b"},
+        )
+    finally:
+        release.set()
+        for thread in threads:
+            if thread is not None:
+                thread.join(timeout=2)
+
+
+def test_prewarm_deduplicates_inflight_scope_and_cleans_up(monkeypatch):
+    """Rapid opens share one worker, then a completed scope can run again."""
+    monkeypatch.setattr(inv, "_pricing_prewarm_threads", {})
+    started = Event()
+    release = Event()
+    calls = []
+
+    def blocked_prewarm(_rows):
+        calls.append(None)
+        started.set()
+        release.wait(timeout=5)
+
+    monkeypatch.setattr(inv, "_apply_pricing", blocked_prewarm)
+    rows = [{"slug": "openrouter", "models": ["vendor/model"]}]
+
+    first = inv._prewarm_pricing_async(rows)
+    try:
+        assert started.wait(timeout=1)
+        second = inv._prewarm_pricing_async(rows)
+        assert second is first
+        assert len(calls) == 1
+    finally:
+        release.set()
+        first.join(timeout=2)
+
+    assert not first.is_alive()
+    assert inv._pricing_prewarm_threads == {}
+
+    retry = inv._prewarm_pricing_async(rows)
+    retry.join(timeout=2)
+    assert retry is not first
+    assert len(calls) == 2
+    assert inv._pricing_prewarm_threads == {}
+
+
+def test_prewarm_endpoint_rotation_starts_a_new_worker(tmp_path, monkeypatch):
+    """A live endpoint-A worker must not suppress endpoint B for its profile."""
+    from scout_constants import (
+        reset_scout_home_override,
+        set_scout_home_override,
+    )
+
+    endpoint_a = "https://endpoint-a.example"
+    endpoint_b = "https://endpoint-b.example"
+    started = {endpoint_a: Event(), endpoint_b: Event()}
+    release_a = Event()
+    expected = {
+        endpoint_a: {"a/model": {"prompt": "1", "completion": "2"}},
+        endpoint_b: {"b/model": {"prompt": "3", "completion": "4"}},
+    }
+    monkeypatch.setattr(inv, "_pricing_prewarm_threads", {})
+    monkeypatch.setattr(models_pricing, "_pricing_cache", {})
+    monkeypatch.setattr(models_pricing, "_pricing_cache_retry_after", {})
+    monkeypatch.setattr(models_pricing, "_pricing_provider_cache_keys", {})
+
+    def fetch_pricing(**_kwargs):
+        base_url = models_pricing._novita_pricing_scope()
+        started[base_url].set()
+        if base_url == endpoint_a:
+            release_a.wait(timeout=5)
+        return models_pricing._cache_catalog(base_url, expected[base_url])
+
+    monkeypatch.setattr(models_pricing, "_fetch_novita_pricing", fetch_pricing)
+    monkeypatch.setattr(
+        inv,
+        "_apply_pricing",
+        lambda _rows: models_pricing.get_pricing_for_provider("novita"),
+    )
+
+    token = set_scout_home_override(str(tmp_path / "profile"))
+    threads = []
+    try:
+        monkeypatch.setenv("NOVITA_BASE_URL", endpoint_a)
+        threads.append(inv._prewarm_pricing_async([{"slug": "novita", "models": ["a/model"]}]))
+        assert started[endpoint_a].wait(timeout=1)
+
+        monkeypatch.setenv("NOVITA_BASE_URL", endpoint_b)
+        threads.append(inv._prewarm_pricing_async([{"slug": "novita", "models": ["b/model"]}]))
+
+        assert threads[0] is not threads[1]
+        assert started[endpoint_b].wait(timeout=1)
+        threads[1].join(timeout=2)
+        assert not threads[1].is_alive()
+        assert models_pricing.get_pricing_for_provider("novita", cached_only=True) == expected[endpoint_b]
+    finally:
+        release_a.set()
+        for thread in threads:
+            if thread is not None:
+                thread.join(timeout=2)
+        reset_scout_home_override(token)
+
+
+def test_cached_only_pricing_returns_a_warm_value_without_fetching(monkeypatch):
+    """Cache-only picker reads preserve pricing once the prewarm completes."""
+    cache_key = "https://openrouter.ai/api"
+    expected = {"vendor/model": {"prompt": "0.000001", "completion": "0.000002"}}
+    monkeypatch.setattr(models_pricing, "_pricing_cache", {cache_key: expected})
+    monkeypatch.setattr(models_pricing, "_pricing_cache_retry_after", {})
+    monkeypatch.setattr(models_pricing, "_pricing_provider_cache_keys", {})
+    monkeypatch.setattr(models_pricing, "fetch_models_with_pricing",
+        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("network fetch started")),
+    )
+
+    assert models_pricing.get_pricing_for_provider(
+        "openrouter", cached_only=True
+    ) == expected
+
+
+def test_cached_only_dynamic_pricing_is_profile_scoped(tmp_path, monkeypatch):
+    """Alternating profiles read the endpoint each profile warmed."""
+    from scout_constants import (
+        reset_scout_home_override,
+        set_scout_home_override,
+    )
+
+    endpoint_a = "https://profile-a.example"
+    endpoint_b = "https://profile-b.example"
+    expected_a = {"a/model": {"prompt": "1", "completion": "2"}}
+    expected_b = {"b/model": {"prompt": "3", "completion": "4"}}
+    monkeypatch.setattr(models_pricing, "_pricing_cache",
+        {endpoint_a: expected_a, endpoint_b: expected_b},
+    )
+    monkeypatch.setattr(models_pricing, "_pricing_cache_retry_after", {})
+    monkeypatch.setattr(models_pricing, "_pricing_provider_cache_keys", {})
+    monkeypatch.setattr(models_pricing, "_fetch_novita_pricing",
+        lambda **_kwargs: models_pricing._pricing_cache[models_pricing._novita_pricing_scope()],
+    )
+
+    def in_profile(home, endpoint, *, cached_only):
+        token = set_scout_home_override(str(home))
+        monkeypatch.setenv("NOVITA_BASE_URL", endpoint)
+        try:
+            return models_pricing.get_pricing_for_provider("novita", cached_only=cached_only)
+        finally:
+            reset_scout_home_override(token)
+
+    assert in_profile(tmp_path / "a", endpoint_a, cached_only=False) == expected_a
+    assert in_profile(tmp_path / "b", endpoint_b, cached_only=False) == expected_b
+    assert in_profile(tmp_path / "a", endpoint_b, cached_only=True) == expected_a
+    assert in_profile(tmp_path / "b", endpoint_a, cached_only=True) == expected_b

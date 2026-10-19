@@ -133,7 +133,7 @@ def test_public_lifecycle_runs_host_aggregation(monkeypatch):
             "_child_cost_usd": 2.5,
         },
     )
-    monkeypatch.setattr("scout_cli.plugins.invoke_hook", hook)
+    monkeypatch.setattr("scout_backend.plugins.invoke_hook", hook)
 
     service = SubagentLifecycleService(lambda: parent)
     handle = service.launch(SubagentLaunchRequest(goal="aggregate me"))

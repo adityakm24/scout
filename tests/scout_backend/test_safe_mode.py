@@ -1,0 +1,50 @@
+"""Tests for `scout chat --safe-mode` isolation."""
+
+from __future__ import annotations
+
+import os
+import sys
+import types
+
+import pytest
+
+
+_VARS = ("SCOUT_SAFE_MODE", "SCOUT_IGNORE_USER_CONFIG", "SCOUT_IGNORE_RULES")
+
+
+@pytest.fixture(autouse=True)
+def _clean_env(monkeypatch):
+    for var in _VARS:
+        monkeypatch.delenv(var, raising=False)
+    yield
+    for var in _VARS:
+        os.environ.pop(var, None)
+
+
+
+
+
+
+def test_plugin_discovery_skipped(monkeypatch):
+    monkeypatch.setenv("SCOUT_SAFE_MODE", "1")
+    from scout_backend.plugins import PluginManager
+
+    mgr = PluginManager()
+    called = []
+    monkeypatch.setattr(mgr, "_discover_and_load_inner", lambda: called.append(True))
+
+    mgr.discover_and_load()
+
+    assert called == []
+    assert mgr._discovered is True
+    assert mgr._plugins == {}
+
+
+
+
+
+
+
+
+
+

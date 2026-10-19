@@ -94,9 +94,9 @@ def test_astra_900k_opt_in_preserves_live_limits_and_wire_contract(monkeypatch, 
     ("openai-codex", "gpt-6-astra"), ("openai-codex", "gpt-6-astra-900k"), ("openai-api", "gpt-6-astra"),
 ])
 def test_picker_revalidates_cached_astra_and_never_injects_saved_entitlement(monkeypatch, tmp_path, provider, model):
-    from scout_cli import models
-    from scout_cli.inventory import ConfigContext, _append_unconfigured_rows
-    from scout_cli.model_switch_providers import _finalize_picker_rows
+    from scout_backend import models
+    from scout_backend.inventory import ConfigContext, _append_unconfigured_rows
+    from scout_backend.model_switch_providers import _finalize_picker_rows
 
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
     monkeypatch.setattr(models, "_credential_fingerprint", lambda _: "synthetic-account")

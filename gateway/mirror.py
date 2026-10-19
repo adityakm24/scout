@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from scout_cli.config import get_scout_home
+from scout_backend.config import get_scout_home
 
 logger = logging.getLogger(__name__)
 

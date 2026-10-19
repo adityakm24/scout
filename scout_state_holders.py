@@ -34,8 +34,8 @@ logger = logging.getLogger(__name__)
 
 _IS_WINDOWS = sys.platform == "win32"
 _SCOUT_EXECUTABLES = frozenset({"scout", "scout-agent", "scout-acp"})
-_SCOUT_PYTHON_MODULES = frozenset({"acp_adapter", "scout_cli.main"})
-_SCOUT_PYTHON_SCRIPTS = frozenset({"scout_cli/main.py", "run_agent.py"})
+_SCOUT_PYTHON_MODULES = frozenset({"acp_adapter", "scout_backend.main"})
+_SCOUT_PYTHON_SCRIPTS = frozenset({"scout_backend/main.py", "run_agent.py"})
 _PYTHON_SHORT_OPTIONS_WITH_OPERANDS = frozenset({"Q", "W", "X"})
 _PYTHON_LONG_OPTIONS_WITH_OPERANDS = frozenset(
     {"--check-hash-based-pycs", "--jit"}

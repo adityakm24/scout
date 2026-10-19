@@ -15,10 +15,10 @@ except ModuleNotFoundError as exc:  # partial `scout update` left the bootstrap 
 
 import sys
 
-# `scout-agent` runs this module without scout_cli.main, which repairs a `scout update` killed
+# `scout-agent` runs this module without scout_backend.main, which repairs a `scout update` killed
 # while git wrote the new tree; do it here, before importing anything else from the checkout.
-if "scout_cli.main" not in sys.modules:
-    from scout_cli import _early_recovery
+if "scout_backend.main" not in sys.modules:
+    from scout_backend import _early_recovery
 
     if _early_recovery.restore_interrupted_pull():
         _early_recovery.relaunch_after_restore()
@@ -101,7 +101,7 @@ def _gateway_origin_json(agent: "AIAgent") -> Optional[str]:
     profile = getattr(agent, "_profile_name", None)
     if not profile:
         try:
-            from scout_cli.profiles import get_active_profile_name
+            from scout_backend.profiles import get_active_profile_name
             profile = get_active_profile_name()
         except Exception:
             profile = None
@@ -116,8 +116,8 @@ def _gateway_origin_json(agent: "AIAgent") -> Optional[str]:
 
 
 from agent.iteration_budget import IterationBudget
-from scout_cli.env_loader import load_scout_dotenv
-from scout_cli.timeouts import get_provider_request_timeout, get_provider_stale_timeout
+from scout_backend.env_loader import load_scout_dotenv
+from scout_backend.timeouts import get_provider_request_timeout, get_provider_stale_timeout
 
 _scout_home = get_scout_home()  # read by agent_init via _ra()._scout_home
 _loaded_env_paths = load_scout_dotenv(scout_home=_scout_home, project_env=Path(__file__).parent / '.env')
@@ -354,7 +354,7 @@ class AIAgent(
             # Persist the profile name explicitly, including "default": profile-keyed consumers treat NULL
             # as unowned.
             try:
-                from scout_cli.profiles import get_active_profile_name
+                from scout_backend.profiles import get_active_profile_name
                 profile_for_session = get_active_profile_name()
             except Exception:
                 # Persist the profile name EXPLICITLY, including "default". NULL used to stand in for the
@@ -485,7 +485,7 @@ class AIAgent(
         if (getattr(self, "lmstudio_load_mode", "explicit") or "explicit").strip().lower() == "jit":
             logger.debug("LM Studio explicit preload skipped: lmstudio_load_mode=jit")
             return None
-        from scout_cli.models_local import ensure_lmstudio_model_loaded
+        from scout_backend.models_local import ensure_lmstudio_model_loaded
 
         if config_context_length is None:
             config_context_length = getattr(self, "_config_context_length", None)
@@ -672,7 +672,7 @@ class AIAgent(
     @staticmethod
     def _provider_model_requires_responses_api(model: str, *, provider: Optional[str] = None) -> bool:
         """Return True when this provider/model pair should use Responses API."""
-        from scout_cli.providers import is_actual_route
+        from scout_backend.providers import is_actual_route
         normalized_provider = (provider or "").strip().lower()
         # Generic custom endpoints may relay GPT-5 without full Responses semantics — only direct
         # OpenAI/xAI URLs auto-upgrade.
@@ -682,12 +682,12 @@ class AIAgent(
         # family and have no ``responses`` attribute, so neither primary routing nor GPT-5
         # fallback activation may upgrade them. Keyed on the profile's auth_type: every
         # external-process provider, not one vendor's names.
-        from scout_cli.runtime_provider_backends import _is_external_process_provider
+        from scout_backend.runtime_provider_backends import _is_external_process_provider
         if _is_external_process_provider(normalized_provider):
             return False
         if normalized_provider == "copilot":
             try:
-                from scout_cli.models import _should_use_copilot_responses_api
+                from scout_backend.models import _should_use_copilot_responses_api
                 return _should_use_copilot_responses_api(model)
             except Exception:
                 pass  # fall back to the generic GPT-5 rule
@@ -1031,7 +1031,7 @@ class AIAgent(
     @staticmethod
     def _trim_process_memory() -> None:
         """Return freed heap pages to the OS on glibc; safe no-op elsewhere."""
-        from scout_cli.mem_trim import trim_memory
+        from scout_backend.mem_trim import trim_memory
         trim_memory(force=True, reason="agent close")
 
     def _finalize_owned_session_row(self) -> None:
@@ -1354,7 +1354,7 @@ class AIAgent(
             # would pin those frames via its traceback, so that path leaves the flag for the
             # next completed batch (agent/tool_executor.py, #70684).
             self._trim_after_tool_batch = False
-            from scout_cli.mem_trim import trim_memory
+            from scout_backend.mem_trim import trim_memory
             trim_memory(reason="large tool result")
 
     def _dispatch_delegate_task(self, function_args: dict) -> str:
@@ -1535,7 +1535,7 @@ def main(
 
     # One TLS authority: trust the OS store before any outbound call (bare
     # requests/urllib included) resolves a CA bundle — see agent/ssl_verify.py.
-    # The `scout` CLI does this in scout_cli.main; this console script
+    # The `scout` CLI does this in scout_backend.main; this console script
     # bypasses it. Never raises.
     from agent.ssl_verify import install_truststore
 
@@ -1573,8 +1573,3 @@ def main(
         _save_sample_trajectory(agent, result, user_query, model)
     print("\n👋 Agent execution completed!")
 
-
-if __name__ == "__main__":
-    from agent.legacy_cli import main as _legacy_cli_main
-
-    raise SystemExit(_legacy_cli_main(run=main))

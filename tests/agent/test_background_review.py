@@ -323,7 +323,7 @@ def test_background_review_disabled_skips_automatic_spawn(monkeypatch):
     agent._delegate_depth = 0
     cfg = {"auxiliary": {"background_review": {"enabled": False}}}
 
-    with patch("scout_cli.config.load_config_readonly", return_value=cfg):
+    with patch("scout_backend.config.load_config_readonly", return_value=cfg):
         AIAgent._spawn_background_review(
             agent,
             messages_snapshot=[{"role": "user", "content": "hello"}],

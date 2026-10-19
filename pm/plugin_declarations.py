@@ -33,7 +33,7 @@ def read_native_manifest(path: Path) -> dict:
 
 
 def manifest_version_error(manifest: dict, name: str) -> str | None:
-    from scout_cli.plugins_manifest import SUPPORTED_MANIFEST_VERSION, requires_scout_error
+    from scout_backend.plugins_manifest import SUPPORTED_MANIFEST_VERSION, requires_scout_error
 
     reason = requires_scout_error(manifest)
     if reason:
@@ -125,7 +125,7 @@ def read_python_declaration(plugin_dir: Path) -> PythonDeclaration:
         except FileNotFoundError:
             pass
         else:
-            from scout_cli.agent_plugins import read_agent_plugin_manifest
+            from scout_backend.agent_plugins import read_agent_plugin_manifest
 
             manifest, _diagnostics = read_agent_plugin_manifest(plugin_dir)
             files.append(portable)

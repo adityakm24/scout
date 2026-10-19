@@ -112,7 +112,7 @@ def _hand_off_primary_routed_run(job: Dict[str, Any], extra_prompt: Optional[str
     routed = _primary_routed_delivery_platforms(job)
     if not routed:
         return None
-    from scout_cli.cron import _builtin_gateway_liveness
+    from scout_backend.cron import _builtin_gateway_liveness
     alive = _builtin_gateway_liveness()
     if alive is not True:
         # None = the probe could not tell; a run queued for a ticker that may not exist is worse

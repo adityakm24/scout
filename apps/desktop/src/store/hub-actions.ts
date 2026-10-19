@@ -89,7 +89,7 @@ export async function installHubSkill(identifier: string, profile?: ProfileScope
 // and its printed tail is the only signal the Desktop gets, so parse it into a
 // structured failure the toast can explain (tools-runtime-21). `--force` has
 // no Desktop route, so the remedy offered is reading the scan, not overriding
-// it. Two CLI shapes exist (`scout_cli/skills_hub.py::_scan_block_message`):
+// it. Two CLI shapes exist (`scout_backend/skills_hub.py::_scan_block_message`):
 //   current: "Not installed: the security scan found 2 high-risk pattern(s) in
 //            'org/skill' (listed above). Scout never installs unverified
 //            skills with high-risk findings, even with --force. ..."

@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
-from scout_cli.config import (
+from scout_backend.config import (
     InvalidUserConfigError,
     _read_config_version_stamp,
     check_config_version,
@@ -15,8 +15,8 @@ from scout_cli.config import (
     get_env_path,
     migrate_config,
 )
-from scout_cli.config_backups import backup_config, list_config_backups
-from scout_cli.config_migrations import (
+from scout_backend.config_backups import backup_config, list_config_backups
+from scout_backend.config_migrations import (
     SUPPORT_FLOOR_VERSION,
     support_floor_message,
 )

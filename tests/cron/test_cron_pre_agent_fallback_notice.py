@@ -5,7 +5,7 @@ otherwise live only in the scheduler log. Drives the real ``run_job`` path with 
 from unittest.mock import MagicMock, patch
 
 from cron.scheduler import run_job
-from scout_cli.auth import AuthError
+from scout_backend.auth import AuthError
 
 _JOB = {"id": "fb-test", "name": "fb test", "prompt": "hello", "model": None, "provider": None,
         "provider_snapshot": None, "base_url": None}
@@ -27,10 +27,10 @@ def _run(tmp_path, *, response: str, primary_fails: bool):
     with patch("cron.scheduler._scout_home", tmp_path), \
          patch("cron.scheduler._get_scout_home", return_value=tmp_path), \
          patch("cron.scheduler_delivery._resolve_origin", return_value=None), \
-         patch("scout_cli.env_loader.load_scout_dotenv"), \
-         patch("scout_cli.env_loader.reset_secret_source_cache"), \
+         patch("scout_backend.env_loader.load_scout_dotenv"), \
+         patch("scout_backend.env_loader.reset_secret_source_cache"), \
          patch("scout_state_registry.acquire", return_value=MagicMock()), \
-         patch("scout_cli.runtime_provider.resolve_runtime_provider", side_effect=_resolve), \
+         patch("scout_backend.runtime_provider.resolve_runtime_provider", side_effect=_resolve), \
          patch("run_agent.AIAgent") as agent_cls:
         agent_cls.return_value.run_conversation.return_value = {"final_response": response}
         success, _output, final, error = run_job(dict(_JOB))

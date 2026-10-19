@@ -139,14 +139,14 @@ def _fast_scope_timeout(monkeypatch):
 def _default_config(monkeypatch):
     """No config on disk by default; tests override _segments_config directly."""
     monkeypatch.setattr(
-        "scout_cli.config_effective.load_user_config_effective", lambda *_a, **_k: {}
+        "scout_backend.config_effective.load_user_config_effective", lambda *_a, **_k: {}
     )
     relay_runtime._reset_segments_config_for_tests()
 
 
 def _set_segments(monkeypatch, *, on_compaction=False, max_turns=0):
     monkeypatch.setattr(
-        "scout_cli.config_effective.load_user_config_effective",
+        "scout_backend.config_effective.load_user_config_effective",
         lambda *_a, **_k: {
             "gateway": {
                 "telemetry": {

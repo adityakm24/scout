@@ -84,7 +84,7 @@ _HOME_LAYERS: dict[str, _HomeLayer] = {}
 _HOME_LAYERS_LOCK = threading.Lock()
 # The layer a ``$SCOUT_HOME`` plugin import registers into. A ContextVar, not a module global:
 # two turn threads scanning two profile homes at once must not cross-register. Never a lock held
-# across the import itself — a thread mid-``import scout_cli.auth`` (whose import calls
+# across the import itself — a thread mid-``import scout_backend.auth`` (whose import calls
 # ``list_providers()``) would block on it while the scanning thread waits on that module's import lock.
 _REGISTRATION_TARGET: ContextVar[_HomeLayer | None] = ContextVar("_provider_registration_target", default=None)
 
@@ -95,19 +95,19 @@ _BUNDLED_PLUGINS_DIR = (
 
 
 def _sync_auth_registry() -> None:
-    """Mirror profiles into the ``scout_cli`` snapshots (auth registry, picker catalog) that are loaded.
+    """Mirror profiles into the ``scout_backend`` snapshots (auth registry, picker catalog) that are loaded.
 
-    ``scout_cli.auth`` takes its own snapshot of ``list_providers()`` when it is imported. If a
+    ``scout_backend.auth`` takes its own snapshot of ``list_providers()`` when it is imported. If a
     plugin's imports pull that module in while :func:`_discover_providers` is still running, the
     snapshot is partial and later plugins never reach the auth registry ("Unknown provider",
     #102123). Calling back into auth once discovery is complete closes that window. Looked up via
-    ``sys.modules`` on purpose: this layer must never import ``scout_cli`` (that would run auth's
+    ``sys.modules`` on purpose: this layer must never import ``scout_backend`` (that would run auth's
     top-level code mid-scan and risk a circular import). Never raises: registration must not fail
     because of the auth mirror.
     """
     for module, attr in (
-        ("scout_cli.auth", "sync_plugin_provider_registry"),
-        ("scout_cli.models_catalog_static", "sync_plugin_provider_catalog"),
+        ("scout_backend.auth", "sync_plugin_provider_registry"),
+        ("scout_backend.models_catalog_static", "sync_plugin_provider_catalog"),
     ):
         sync = getattr(sys.modules.get(module), attr, None)
         if sync is None:
@@ -146,7 +146,7 @@ def provider_source(name: str) -> str | None:
     """Discovery source of the profile currently registered under *name* (see ``_SOURCES``), or None.
 
     ``"user"`` is what lets a ``$SCOUT_HOME`` plugin re-registering a bundled name win in
-    ``scout_cli.auth.PROVIDER_REGISTRY`` too — a bundled profile never rewrites a built-in row.
+    ``scout_backend.auth.PROVIDER_REGISTRY`` too — a bundled profile never rewrites a built-in row.
     """
     layer = _home_layer()
     canonical = layer.aliases.get(name) or _ALIASES.get(name, name)
@@ -201,7 +201,7 @@ def routed_model_rejects_vision_tool_messages(provider: str, model: str) -> bool
     # Routing aggregators accept a ``vendor/model`` identifier while the request is sent
     # to the aggregator; the target provider can have stricter message-shape support than
     # the aggregator's generic OpenAI-compatible transport profile.
-    from scout_cli.providers import is_routing_aggregator
+    from scout_backend.providers import is_routing_aggregator
     if not is_routing_aggregator(provider_name):
         return False
 
@@ -472,7 +472,7 @@ def _discover_entry_point_providers() -> None:
     # Same opt-in gate as the general PluginManager: only entry points named
     # in ``plugins.enabled`` load, and ``plugins.disabled`` always wins.
     try:
-        from scout_cli.plugins import _get_disabled_plugins, _get_enabled_plugins
+        from scout_backend.plugins import _get_disabled_plugins, _get_enabled_plugins
 
         enabled = _get_enabled_plugins()  # None = nothing enabled yet (opt-in default)
         disabled = _get_disabled_plugins()
@@ -573,7 +573,7 @@ def _discover_providers() -> None:
         _run_discovery_steps()
     finally:
         _discovering = False
-        # scout_cli.auth may have been imported by a plugin during discovery and snapshotted a
+        # scout_backend.auth may have been imported by a plugin during discovery and snapshotted a
         # partial profile list — hand it the complete one (no-op unless auth is already loaded).
         _sync_auth_registry()
 

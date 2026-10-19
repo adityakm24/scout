@@ -52,7 +52,7 @@ class FreshChild:
     def run(self, command, *, cwd, env):
         """Intercept ONLY the fresh-child seam, leaving the real JSON bridge intact."""
         assert command[:7] == [
-            sys.executable, "-I", "-S", "-B", "-X", "utf8", str(ROOT / "scout_cli/_update_takeover.py"),
+            sys.executable, "-I", "-S", "-B", "-X", "utf8", str(ROOT / "scout_backend/_update_takeover.py"),
         ], f"old installer/fallback ran instead of takeover: {command!r}"
         assert len(command) == 9
         assert Path(command[0]).is_absolute()
@@ -83,7 +83,7 @@ class FreshChild:
 
         def check_import(name):
             if name == "pm" or name.startswith("pm.") or name in {
-                "scout_cli._update_takeover", "scout_cli.update_finish",
+                "scout_backend._update_takeover", "scout_backend.update_finish",
             }:
                 pytest.fail(f"fresh updater imported in the old parent: {name}")
 
@@ -113,7 +113,7 @@ class FreshChild:
 
 @pytest.fixture
 def fresh_child(monkeypatch, no_external_work):
-    from scout_cli import _old_updater
+    from scout_backend import _old_updater
 
     # Production caches across finally/atexit reentry. Test probes model separate
     # historical processes, so they must not inherit the previous probe's status.

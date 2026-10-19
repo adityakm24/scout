@@ -232,7 +232,7 @@ class GatewayAuthorizationMixin:
         if profile is None:
             from scout_constants import get_process_scout_home
             return get_process_scout_home()  # the primary bot's home, never the per-turn override
-        from scout_cli.profiles import get_profile_dir
+        from scout_backend.profiles import get_profile_dir
         return get_profile_dir(profile)
 
     def _adapter_profile_for_source(self, source: SessionSource) -> Optional[str]:

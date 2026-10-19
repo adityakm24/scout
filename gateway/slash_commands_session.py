@@ -67,7 +67,7 @@ def _manual_compression_reply_lines(summary: dict, compressor, focus_topic) -> l
 def _compress_preview_reply(history, partial: bool, keep_last, focus_topic, agg_note: str) -> str:
     """``/compress --preview``: report what WOULD be compressed — no agent, no writes."""
     from agent.model_metadata import estimate_request_tokens_rough
-    from scout_cli.partial_compress import summarize_compress_preview
+    from scout_backend.partial_compress import summarize_compress_preview
 
     pv_msgs = [{"role": m.get("role"), "content": m.get("content")} for m in history
                if m.get("role") in {"user", "assistant"} and m.get("content")]
@@ -198,14 +198,14 @@ class GatewaySessionCommandsMixin:
         _new_sid = new_entry.session_id if new_entry else None
         # Plugin on_session_reset hook (new session guaranteed to exist); best-effort.
         try:
-            from scout_cli.lifecycle import invoke_hook as _invoke_hook
+            from scout_backend.lifecycle import invoke_hook as _invoke_hook
             _invoke_hook("on_session_reset", session_id=_new_sid, reason="new_session",
                          platform=source.platform.value if source.platform else "",
                          old_session_id=_old_sid, new_session_id=_new_sid)
         except Exception:
             pass
         try:
-            from scout_cli.tips import get_random_tip
+            from scout_backend.tips import get_random_tip
             _tip_line = t("gateway.reset.tip", tip=get_random_tip())
         except Exception:
             _tip_line = ""
@@ -550,7 +550,7 @@ class GatewaySessionCommandsMixin:
         """Build the throwaway AIAgent that performs a manual /compress rewrite of *session_id*."""
         from run_agent import AIAgent
         from gateway.run import _GATEWAY_HYGIENE_PLATFORM, _seed_hygiene_system_prompt
-        from scout_cli.config import load_config as _load_cfg
+        from scout_backend.config import load_config as _load_cfg
         from utils import is_truthy_value as _is_truthy
 
         # _compress_context may persist its cached system prompt, and this agent runs outside the
@@ -610,7 +610,7 @@ class GatewaySessionCommandsMixin:
     async def _handle_save_command(self, event: MessageEvent) -> str:
         """Handle /save — export the current session and send it as a document."""
         import tempfile
-        from scout_cli.session_export import (
+        from scout_backend.session_export import (
             SAVE_TRANSCRIPT_FORMATS, SAVE_USAGE, default_save_filename, normalize_save_format,
             render_session_for_save)
 
@@ -637,7 +637,7 @@ class GatewaySessionCommandsMixin:
         if not export_data:
             return t("gateway.save.no_messages", session_id=session_id)
         if redact:
-            from scout_cli.session_export_md import redact_session_data
+            from scout_backend.session_export_md import redact_session_data
             export_data = redact_session_data(export_data)
         temp_dir = tempfile.mkdtemp(prefix="scout_save_")
         temp_path = os.path.join(temp_dir, filename)
@@ -835,7 +835,7 @@ class GatewaySessionCommandsMixin:
         """Handle /sessions — list previous sessions for gateway chats."""
         if not self._session_db:
             return self._session_db_unavailable_reply()
-        from scout_cli.session_listing import (
+        from scout_backend.session_listing import (
             format_gateway_session_listing, parse_session_listing_args, query_session_listing)
         try:
             include_all, include_unnamed, target, search_query = parse_session_listing_args(

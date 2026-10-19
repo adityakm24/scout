@@ -122,7 +122,7 @@ def _declared_remote_profile_cwd(profile_home) -> str | None:
 def _is_remote_cwd_shape(raw: str) -> bool:
     """An ssh working directory the remote shell can resolve: ``~``, ``~/…`` or absolute (a relative one would be
     stored and git-probed relative to the gateway's own cwd)."""
-    from scout_cli.config import _is_ssh_remote_tilde_cwd
+    from scout_backend.config import _is_ssh_remote_tilde_cwd
 
     return _is_ssh_remote_tilde_cwd("ssh", raw) or os.path.isabs(raw)
 
@@ -367,7 +367,7 @@ def _workdir_row_model_config(session: dict) -> tuple[str, dict]:
     # ``custom:<name>`` identity (matches _runtime_model_config).
     if str(model_config.get("provider") or "").strip().lower() == "custom":
         try:
-            from scout_cli.runtime_provider import canonical_custom_identity
+            from scout_backend.runtime_provider import canonical_custom_identity
             healed = canonical_custom_identity(
                 base_url=model_config.get("base_url") or None, model=model_config.get("model") or row_model or None)
             if healed:

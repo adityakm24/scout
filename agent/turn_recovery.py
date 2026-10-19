@@ -590,7 +590,7 @@ def recover_after_classification(
         from agent.error_classifier import is_reasoning_required_rejection
         agent._reasoning_floor_required = is_reasoning_required_rejection(str(api_error))
         try:
-            from scout_cli.models_reasoning_caps import refresh_reasoning_caps_async
+            from scout_backend.models_reasoning_caps import refresh_reasoning_caps_async
             refresh_reasoning_caps_async(agent.provider)
         except Exception:
             pass
@@ -757,7 +757,7 @@ def _missing_vendor_prefix_suggestion(api_error: Exception, provider: Any, model
     if getattr(api_error, "status_code", None) != 404:
         return None
     try:
-        from scout_cli.model_normalize import suggest_prefixed_model_id
+        from scout_backend.model_normalize import suggest_prefixed_model_id
 
         return suggest_prefixed_model_id(str(provider or ""), str(model or ""))
     except Exception:

@@ -92,12 +92,12 @@ def test_acp_real_agent_gets_session_db_for_recall(monkeypatch):
         return module
 
     monkeypatch.setitem(sys.modules, "run_agent", mod("run_agent", AIAgent=CapturingAgent))
-    monkeypatch.setattr("scout_cli.config.load_config", lambda: {"model": {"default": "m", "provider": "p"}})
+    monkeypatch.setattr("scout_backend.config.load_config", lambda: {"model": {"default": "m", "provider": "p"}})
     monkeypatch.setitem(
         sys.modules,
-        "scout_cli.runtime_provider",
+        "scout_backend.runtime_provider",
         mod(
-            "scout_cli.runtime_provider",
+            "scout_backend.runtime_provider",
             resolve_runtime_provider=lambda **_kwargs: {
                 "provider": "p",
                 "api_mode": "chat_completions",

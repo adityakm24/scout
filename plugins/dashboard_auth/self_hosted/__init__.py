@@ -19,7 +19,7 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from scout_cli.dashboard_auth import LoginStart, ProviderError, Session
+from scout_backend.dashboard_auth import LoginStart, ProviderError, Session
 from plugins.dashboard_auth._shared import (
     JSON_HEADERS,
     TOKEN_ENDPOINT_TIMEOUT_SEC as _TOKEN_ENDPOINT_TIMEOUT_SEC,

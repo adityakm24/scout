@@ -36,7 +36,7 @@ def test_non_push_session_stamps_no_origin_and_gets_creation_notice():
 
 
 def test_suggestions_accept_origin_shares_the_non_push_guard():
-    from scout_cli.suggestions_cmd import _resolve_origin
+    from scout_backend.suggestions_cmd import _resolve_origin
 
     tokens = set_session_vars(platform="api_server", chat_id="desk-1", session_key="desk-1",
                               async_delivery=False)

@@ -133,9 +133,10 @@ def run_cli(repo, mode):
                 (token_dir / filename).write_text(value)
         env = {key: value for key, value in os.environ.items()
                if not key.startswith("SCOUT_") and not any(part in key for part in ("API_KEY", "TOKEN", "SECRET"))}
-        env.update(HOME=str(home), SCOUT_HOME=str(home), PYTHONPATH=str(repo), PYTHONDONTWRITEBYTECODE="1")
+        env.update(HOME=str(home), SCOUT_HOME=str(home), PYTHONPATH=str(repo), PYTHONDONTWRITEBYTECODE="1",
+                   SCOUT_AGENT="true")
         command = ["reauth", "fixture"] if mode == "preregistered" else ["login", "fixture", "--flow", "device"]
-        argv = [sys.executable, "-m", "scout_cli.main", "mcp", *command]
+        argv = [sys.executable, "-m", "scout_backend.main", "mcp", *command]
         if mode == "persistence":
             # Inject a filesystem write error after real registration/metadata writes.
             argv = [sys.executable, "-c", '''
@@ -146,7 +147,7 @@ def fail_token(path, data):
         raise OSError("fixture disk failure")
     return write(path, data)
 mcp_oauth._write_json = fail_token
-from scout_cli.main import main
+from scout_backend.main import main
 main()
 ''', "mcp", *command]
         result = subprocess.run(argv,
@@ -157,7 +158,7 @@ main()
             tokens = json.loads(token_path.read_text())
             tokens["expires_at"] = time.time() - 60
             token_path.write_text(json.dumps(tokens))
-            refreshed = subprocess.run([sys.executable, "-m", "scout_cli.main", "mcp", "test", "fixture"],
+            refreshed = subprocess.run([sys.executable, "-m", "scout_backend.main", "mcp", "test", "fixture"],
                                        cwd=repo, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=30)
             refresh_output = refreshed.stdout + refreshed.stderr
         return {"mode": mode, "returncode": result.returncode, "output": result.stdout + result.stderr,

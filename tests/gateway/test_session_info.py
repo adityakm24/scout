@@ -57,7 +57,7 @@ class TestFormatSessionInfo:
             "reference_models": [{"provider": "openai", "model": "gpt-5.5"}],
             "aggregator": {"provider": "fixtureco", "model": "claude-opus-4.8"},
         }}}}
-        with p1, p2, p3, patch("scout_cli.config.load_config", return_value=moa_cfg):
+        with p1, p2, p3, patch("scout_backend.config.load_config", return_value=moa_cfg):
             info = runner._format_session_info()
         assert "fixtureco:claude-opus-4.8" in info
 
@@ -92,7 +92,7 @@ class TestFormatSessionInfo:
             },
         )
         with p1, p2, p3, patch(
-            "scout_cli.config.get_compatible_custom_providers",
+            "scout_backend.config.get_compatible_custom_providers",
             return_value=[
                 {
                     "name": "custom-local-agentw",

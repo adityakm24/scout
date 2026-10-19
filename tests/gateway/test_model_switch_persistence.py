@@ -196,7 +196,7 @@ class TestOneTurnNeverPersisted:
 
         import gateway.run as gateway_run
         from gateway.run import GatewayRunner
-        from scout_cli.model_switch import ModelSwitchResult
+        from scout_backend.model_switch import ModelSwitchResult
 
         scout_home = tmp_path / ".scout"
         scout_home.mkdir()
@@ -209,7 +209,7 @@ class TestOneTurnNeverPersisted:
         monkeypatch.setattr(gateway_run, "_scout_home", scout_home)
         monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
         monkeypatch.setattr(
-            "scout_cli.model_switch.switch_model",
+            "scout_backend.model_switch.switch_model",
             lambda **kw: ModelSwitchResult(
                 success=True,
                 new_model="gpt-5.5",
@@ -223,7 +223,7 @@ class TestOneTurnNeverPersisted:
             ),
         )
         monkeypatch.setattr("scout_constants.get_scout_home", lambda: scout_home)
-        monkeypatch.setattr("scout_cli.config.get_scout_home", lambda: scout_home)
+        monkeypatch.setattr("scout_backend.config.get_scout_home", lambda: scout_home)
 
         runner = object.__new__(GatewayRunner)
         runner.adapters = {}

@@ -23,7 +23,7 @@ from types import SimpleNamespace
 import pytest
 import scout_yaml as yaml
 
-import scout_cli.model_selection_guards as guards
+import scout_backend.model_selection_guards as guards
 import tui_gateway.server as srv
 
 GUARDED_MODEL = "muse-spark-1.2-contributor"
@@ -37,9 +37,9 @@ def home(tmp_path, monkeypatch):
     monkeypatch.setenv("SCOUT_HOME", str(scout_home))
     # The profile write now validates through ``switch_model`` (catalog + credentials); these
     # tests pin the guard handshake, so echo the pick back as an accepted route.
-    from scout_cli.model_switch import ModelSwitchResult
+    from scout_backend.model_switch import ModelSwitchResult
     monkeypatch.setattr(
-        "scout_cli.model_switch.switch_model",
+        "scout_backend.model_switch.switch_model",
         lambda *, raw_input, explicit_provider, **_kw: ModelSwitchResult(
             success=True, new_model=raw_input, target_provider=explicit_provider))
     return scout_home

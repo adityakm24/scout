@@ -13,7 +13,7 @@ import time
 
 import pytest
 
-import scout_cli.auth as auth_mod
+import scout_backend.auth as auth_mod
 from agent.credential_pool import load_pool
 
 

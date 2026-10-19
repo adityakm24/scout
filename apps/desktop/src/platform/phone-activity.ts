@@ -3,7 +3,7 @@
 // cross; the end of a turn is sent as `done` so the surface can close itself.
 //
 // The chat on screen crosses too: once the app is closed, the backend pushes that chat's replies
-// and steps to this phone (mobile/src/push.ts, scout_cli/push/).
+// and steps to this phone (mobile/src/push.ts, scout_backend/push/).
 
 import { translateNow } from '@/i18n'
 import { $liveActivity, type AgentActivity } from '@/store/agent-activity'

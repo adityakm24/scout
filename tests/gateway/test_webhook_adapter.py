@@ -867,7 +867,7 @@ class TestMultiplexProfileWebhookAuthentication:
         runner.config.multiplex_profiles = True
         adapter.gateway_runner = runner
         monkeypatch.setattr(
-            "scout_cli.profiles.profiles_to_serve",
+            "scout_backend.profiles.profiles_to_serve",
             lambda multiplex: [
                 ("default", tmp_path),
                 ("worker", tmp_path / "profiles" / "worker"),
@@ -956,7 +956,7 @@ class TestMultiplexProfileWebhookAuthentication:
         (worker / "config.yaml").write_text("{}\n")
         (worker / ".env").write_text("")
         monkeypatch.setattr(
-            "scout_cli.profiles.get_profile_dir", lambda name: tmp_path / "profiles" / name
+            "scout_backend.profiles.get_profile_dir", lambda name: tmp_path / "profiles" / name
         )
         route_secret = "worker-route-secret-abc123"
         adapter = _make_adapter(

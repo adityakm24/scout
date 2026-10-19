@@ -58,10 +58,10 @@ def test_run_job_bounds_sessiondb_finalization(tmp_path):
     try:
         with patch("cron.scheduler._scout_home", tmp_path), \
              patch("cron.scheduler_delivery._resolve_origin", return_value=None), \
-             patch("scout_cli.env_loader.load_scout_dotenv"), \
-             patch("scout_cli.env_loader.reset_secret_source_cache"), \
+             patch("scout_backend.env_loader.load_scout_dotenv"), \
+             patch("scout_backend.env_loader.reset_secret_source_cache"), \
              patch("scout_state_registry.acquire", return_value=fake_db), \
-             patch("scout_cli.runtime_provider.resolve_runtime_provider", return_value=_RUNTIME), \
+             patch("scout_backend.runtime_provider.resolve_runtime_provider", return_value=_RUNTIME), \
              patch("run_agent.AIAgent") as mock_agent_cls, \
              patch("cron.scheduler._cron_cleanup_timeout_seconds", return_value=0.02):
             mock_agent = MagicMock()
@@ -139,10 +139,10 @@ def test_dispatch_guard_releases_after_sessiondb_finalization_hang(tmp_path):
     try:
         with patch("cron.scheduler._scout_home", tmp_path), \
              patch("cron.scheduler_delivery._resolve_origin", return_value=None), \
-             patch("scout_cli.env_loader.load_scout_dotenv"), \
-             patch("scout_cli.env_loader.reset_secret_source_cache"), \
+             patch("scout_backend.env_loader.load_scout_dotenv"), \
+             patch("scout_backend.env_loader.reset_secret_source_cache"), \
              patch("scout_state_registry.acquire", return_value=fake_db), \
-             patch("scout_cli.runtime_provider.resolve_runtime_provider", return_value=_RUNTIME), \
+             patch("scout_backend.runtime_provider.resolve_runtime_provider", return_value=_RUNTIME), \
              patch("run_agent.AIAgent") as mock_agent_cls, \
              patch("cron.scheduler._cron_cleanup_timeout_seconds", return_value=0.02), \
              patch.object(sched, "get_due_jobs", return_value=[job]), \

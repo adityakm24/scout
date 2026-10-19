@@ -64,7 +64,7 @@ def _is_successful_goal_turn(result: Any, status: str, raw: Any) -> bool:
 
 def _active_goal_manager(session: dict):
     """The session's GoalManager when a goal is active, else None."""
-    from scout_cli.goals import GoalManager
+    from scout_backend.goals import GoalManager
     try:
         max_turns = int((_load_cfg().get("goals") or {}).get("max_turns", 20) or 20)
     except Exception:
@@ -209,7 +209,7 @@ def _route_turn_images(agent, prompt: Any, images: list[str]) -> Any:
     Decision table: agent/image_routing.py."""
     try:
         from agent.image_routing import build_native_content_parts, decide_image_input_mode
-        from scout_cli.config import load_config as _tui_load_config
+        from scout_backend.config import load_config as _tui_load_config
         _provider, _model = _active_image_routing_identity(agent)
         mode = decide_image_input_mode(
             _provider, _model, _tui_load_config(),
@@ -252,7 +252,7 @@ def _start_turn_voice() -> tuple[Any, bool]:
             if is_audio_output_active():
                 return False
             try:
-                from scout_cli.voice import is_continuous_active
+                from scout_backend.voice import is_continuous_active
                 return not is_continuous_active()
             except Exception:
                 return True
@@ -355,7 +355,7 @@ def _goal_followup_after_turn(
         if session.get("session_key") and (goal_mgr := _active_goal_manager(session)) is not None:
             _active_deleg = 0
             try:
-                from scout_cli.goals import count_active_delegations, gather_background_processes as _gather_bg
+                from scout_backend.goals import count_active_delegations, gather_background_processes as _gather_bg
                 # Only THIS session's processes (TUI turns register under session_key): subagents'
                 # pollers must not park the parent's goal. Same rule as the CLI and gateway loops.
                 _bg_procs = _gather_bg(owner_task_id=session.get("session_key") or None)
@@ -377,7 +377,7 @@ def _goal_followup_after_turn(
 def _after_complete_turn(sid: str, session: dict, st: _TurnRun, raw: Any) -> None:
     """Hooks for a ``complete`` turn: /loop tick evaluation, pending title, voice fallback."""
     try:
-        from scout_cli.loops import LoopManager
+        from scout_backend.loops import LoopManager
         loop_sid_key = session.get("session_key") or ""
         if loop_sid_key:
             loop_mgr = LoopManager(session_id=loop_sid_key)
@@ -407,7 +407,7 @@ def _after_complete_turn(sid: str, session: dict, st: _TurnRun, raw: Any) -> Non
         try:
             threading.Thread(target=_speak_text_with_barge, args=(raw,), daemon=True).start()
         except ImportError:
-            logger.warning("voice TTS skipped: scout_cli.voice unavailable")
+            logger.warning("voice TTS skipped: scout_backend.voice unavailable")
         except Exception as e:
             logger.warning("voice TTS dispatch failed: %s", e)
 
@@ -575,7 +575,7 @@ def _stage_first_contact_onboarding_note(session: dict, agent, history_empty: bo
     """
     try:
         from agent.onboarding import first_contact_turn_note
-        from scout_cli.config import load_config as _load_onboarding_config
+        from scout_backend.config import load_config as _load_onboarding_config
         from scout_constants import get_scout_home
 
         note = first_contact_turn_note(
@@ -979,7 +979,7 @@ def _finish_turn(sid: str, session: dict, st: _TurnRun) -> None:
     if isinstance(run_kwargs, dict):
         run_kwargs.clear()
     try:  # while the profile SCOUT_HOME override is still active (session's own config)
-        from scout_cli.mem_trim import trim_memory
+        from scout_backend.mem_trim import trim_memory
         # The finishing session is still marked running here; every OTHER session must be idle (#58576).
         if _sessions_quiescent(exclude=sid):
             trim_memory(reason="tui turn completion")

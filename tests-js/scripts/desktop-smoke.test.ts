@@ -162,7 +162,7 @@ test('a backend bound to the tree by environment needs no root in argv', (): voi
     fs.symlinkSync(resolvedPython, interpreter)
 
     const base = { pid: process.pid, parentPid: 1, executable: interpreter, cwd: home,
-      command: `"${resolvedPython}" "-m" "scout_cli.main" serve --host 127.0.0.1 --port 0` }
+      command: `"${resolvedPython}" "-m" "scout_backend.main" serve --host 127.0.0.1 --port 0` }
 
     // Control: with no environment evidence this is still a different tree.
     expect((): void => { assertBackendOrigin(base, root, 'source') }).toThrow('source tree')
@@ -198,7 +198,7 @@ test('a platform that cannot read the backend environment proves ownership by th
       pid: process.pid,
       parentPid: 1,
       executable: path.join(home, 'python.exe'),
-      command: `"${path.join(home, 'python.exe')}" "-m" "scout_cli.main" serve --host 127.0.0.1 --port 0`,
+      command: `"${path.join(home, 'python.exe')}" "-m" "scout_backend.main" serve --host 127.0.0.1 --port 0`,
     }
 
     // Control row: with nothing readable and no report from the app, this is still a
@@ -231,7 +231,7 @@ test('OLD update-window source provenance carries its verified app identity to t
     fs.mkdirSync(other, { recursive: true })
 
     const backend = { pid: 2, parentPid: 1, executable: path.join(home, 'python.exe'),
-      command: `"${path.join(home, 'python.exe')}" -m scout_cli.main dashboard --port 0` }
+      command: `"${path.join(home, 'python.exe')}" -m scout_backend.main dashboard --port 0` }
 
     expect((): void => {
       assertUpdateWindowBackendOrigin(backend, { scoutRoot: root }, root, 'source')
@@ -273,11 +273,11 @@ test('source launch restores only an explicitly captured exact editable root', (
 
 test.runIf(process.platform === 'linux')('module-launched source listener proves its import root without an argv path', async (): Promise<void> => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'smoke-module-'))
-  fs.mkdirSync(path.join(home, 'scout_cli'))
-  fs.writeFileSync(path.join(home, 'scout_cli', '__init__.py'), '')
-  fs.writeFileSync(path.join(home, 'scout_cli', 'main.py'), 'import socket, time\ns = socket.socket()\ns.bind(("127.0.0.1", 0))\ns.listen()\nprint(s.getsockname()[1], flush=True)\ntime.sleep(60)\n')
+  fs.mkdirSync(path.join(home, 'scout_backend'))
+  fs.writeFileSync(path.join(home, 'scout_backend', '__init__.py'), '')
+  fs.writeFileSync(path.join(home, 'scout_backend', 'main.py'), 'import socket, time\ns = socket.socket()\ns.bind(("127.0.0.1", 0))\ns.listen()\nprint(s.getsockname()[1], flush=True)\ntime.sleep(60)\n')
 
-  const child = spawn('python3', ['-m', 'scout_cli.main'], {
+  const child = spawn('python3', ['-m', 'scout_backend.main'], {
     cwd: home, env: { ...process.env, SCOUT_PYTHON_SRC_ROOT: home }, stdio: ['ignore', 'pipe', 'pipe'],
   })
 
@@ -309,11 +309,11 @@ test('a module launch proves its tree without leaning on the app-owned cwd', ():
     const launched = (executable: string, command: string): Parameters<typeof assertBackendOrigin>[0] =>
       ({ pid: 1, parentPid: 1, executable, command, cwd: path.join(os.tmpdir(), 'app-owned-cwd') })
 
-    const venv = launched(python, `"${python}" "-m" "scout_cli.main" "serve" --host 127.0.0.1 --port 0`)
+    const venv = launched(python, `"${python}" "-m" "scout_backend.main" "serve" --host 127.0.0.1 --port 0`)
     // The app owns the backend's cwd; the installation's own venv interpreter is the evidence.
     expect((): void => assertBackendOrigin(venv, root, 'source')).not.toThrow()
     // A foreign interpreter whose command names no tree is still rejected.
-    expect((): void => assertBackendOrigin(launched('/usr/bin/python3', '"python3" "-m" "scout_cli.main" "serve"'), root, 'source')).toThrow('source tree')
+    expect((): void => assertBackendOrigin(launched('/usr/bin/python3', '"python3" "-m" "scout_backend.main" "serve"'), root, 'source')).toThrow('source tree')
     // A captured root disagrees: authoritative, even when the command names the expected tree.
     expect((): void => assertBackendOrigin({ ...venv, sourceRoot: os.tmpdir() }, root, 'source')).toThrow('source tree')
   } finally { fs.rmSync(root, { recursive: true, force: true }) }
@@ -415,7 +415,7 @@ test('Windows source settle bypasses the current cmd launcher beside a stale his
     const python = path.join(root, 'managed python', 'python.exe')
     fs.mkdirSync(path.dirname(python), { recursive: true })
     fs.writeFileSync(python, '')
-    const prepareLaunch = path.join(root, 'scout_cli', 'venv_sync.py')
+    const prepareLaunch = path.join(root, 'scout_backend', 'venv_sync.py')
     fs.mkdirSync(path.dirname(prepareLaunch), { recursive: true })
     fs.writeFileSync(prepareLaunch, '')
     fs.writeFileSync(current, `@"${python}" -I -c "import base64; exec(base64.b64decode('eA=='))" %*\r\n`)
@@ -424,7 +424,7 @@ test('Windows source settle bypasses the current cmd launcher beside a stale his
     expect(invocation).toEqual({
       launcher: current,
       command: python,
-      args: ['-I', '-B', '-c', `import pathlib, sys; sys.path.insert(0, ${JSON.stringify(root)}); from scout_cli.venv_sync import prepare_launch; prepare_launch(pathlib.Path(${JSON.stringify(root)}), ['status'])`],
+      args: ['-I', '-B', '-c', `import pathlib, sys; sys.path.insert(0, ${JSON.stringify(root)}); from scout_backend.venv_sync import prepare_launch; prepare_launch(pathlib.Path(${JSON.stringify(root)}), ['status'])`],
       windowsVerbatimArguments: false,
     })
   } finally { fs.rmSync(root, { recursive: true, force: true }) }
@@ -442,7 +442,7 @@ test('Windows source settle bypasses the generated cmd command line', (): void =
     expect(pythonProbe.status, pythonProbe.stderr || String(pythonProbe.error)).toBe(0)
     const python = pythonProbe.stdout.trim()
     fs.writeFileSync(path.join(bin, 'scout.cmd'), `@"${python}" -I -c "import base64; exec(base64.b64decode('eA=='))" %*\r\n`)
-    const prepareLaunch = path.join(root, 'scout_cli', 'venv_sync.py')
+    const prepareLaunch = path.join(root, 'scout_backend', 'venv_sync.py')
     fs.mkdirSync(path.dirname(prepareLaunch), { recursive: true })
     fs.writeFileSync(prepareLaunch, `from pathlib import Path\ndef prepare_launch(root, args):\n    Path(${JSON.stringify(witness)}).write_text(str(root) + '\\n' + '\\n'.join(args))\n`)
     fs.writeFileSync(path.join(bin, 'scout.exe'), 'locked historical launcher')

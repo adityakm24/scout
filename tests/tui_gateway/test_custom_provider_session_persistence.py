@@ -27,7 +27,7 @@ import json
 import types
 from unittest.mock import MagicMock, patch
 
-import scout_cli.runtime_provider as rp
+import scout_backend.runtime_provider as rp
 from scout_state import SessionDB
 
 MIMO_URL = "https://token-plan-cn.xiaomimimo.com/v1"
@@ -635,8 +635,8 @@ class TestFollowProfileConfigRuntimeOverrides:
         known = set(server._sessions)
         try:
             with (
-                patch("scout_cli.model_switch.resolve_persist_behavior", return_value=False),
-                patch("scout_cli.model_switch.switch_model", return_value=result),
+                patch("scout_backend.model_switch.resolve_persist_behavior", return_value=False),
+                patch("scout_backend.model_switch.switch_model", return_value=result),
                 server._profile_build_scope(secondary),
             ):
                 server._apply_model_switch("sid-live", live, "glm-5.1")

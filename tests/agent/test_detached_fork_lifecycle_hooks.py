@@ -39,7 +39,7 @@ def test_persist_disabled_fork_skips_session_and_turn_lifecycle_hooks():
     agent = _agent(persist_disabled=True)
 
     with (
-        patch("scout_cli.lifecycle.invoke_hook") as lifecycle_hook,
+        patch("scout_backend.lifecycle.invoke_hook") as lifecycle_hook,
     ):
         _restore_or_build_system_prompt(agent, None, [])
         context = _collect_pre_llm_call_context(
@@ -71,7 +71,7 @@ def test_persisted_agent_still_fires_session_and_turn_lifecycle_hooks():
     agent = _agent(persist_disabled=False)
 
     with (
-        patch("scout_cli.lifecycle.invoke_hook") as lifecycle_hook,
+        patch("scout_backend.lifecycle.invoke_hook") as lifecycle_hook,
     ):
         lifecycle_hook.side_effect = lambda name, **_kwargs: (
             [{"context": "plugin context"}] if name == "pre_llm_call" else []

@@ -331,7 +331,7 @@ fi
 # sweep so host-owned files in a bind-mounted $SCOUT_HOME are never
 # touched — same targeted-ownership contract as the subdir chown above
 # (issue #19788, PR #19795). The list mirrors the top-level *file*
-# entries of scout_cli.profile_distribution.USER_OWNED_EXCLUDE plus the
+# entries of scout_backend.profile_distribution.USER_OWNED_EXCLUDE plus the
 # runtime lock files; keep them in sync if that set changes.
 for f in \
     auth.json auth.lock .env \
@@ -557,7 +557,7 @@ fi
 # collect_generations keeps anything younger than a day.
 s6-setuidgid scout "$INSTALL_DIR/.venv/bin/python" -c '
 from pathlib import Path
-from scout_cli.runtime_state import collect_generations
+from scout_backend.runtime_state import collect_generations
 from pm.environments import install_state_dir
 from pm.recovery import refresh_dependencies
 from pm.runtime import collect_runtime_generations

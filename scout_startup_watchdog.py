@@ -90,7 +90,7 @@ _ARMED = "armed"
 _DISARMED = "disarmed"
 _FIRING = "firing"
 
-# Module singleton: the arm sites (scout_cli.main / scout_cli.gateway /
+# Module singleton: the arm sites (scout_backend.main / scout_backend.gateway /
 # gateway.run.main / cli.py --gateway) and the disarm site (GatewayRunner)
 # share no object, and only one gateway startup ever runs per process.
 _handle_lock = threading.Lock()

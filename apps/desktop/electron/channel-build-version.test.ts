@@ -336,9 +336,9 @@ test('actual MSIX manifest writer consumes the channel quad across rollover inst
       'scripts/release-content-types.json',
       'scripts/build/python.mjs',
       'scripts/bundles/desktop_prepare.py',
-      'scout_cli/update_channel.py',
-      'scout_cli/release_channels.py',
-      'scout_cli/__init__.py',
+      'scout_backend/update_channel.py',
+      'scout_backend/release_channels.py',
+      'scout_backend/__init__.py',
       'scout_constants.py'
     ]) {
       const destination: string = path.join(root, file)

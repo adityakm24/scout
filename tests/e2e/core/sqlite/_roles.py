@@ -355,12 +355,12 @@ def role_agent(a: dict, out: Out) -> int:
 
 
 def role_cli(a: dict, out: Out) -> int:
-    """``scout <argv>``: ``scout_cli.main`` run as ``__main__``, i.e. ``python -m scout_cli.main <argv>``."""
+    """``scout <argv>``: ``scout_backend.main`` run as ``__main__``, i.e. ``python -m scout_backend.main <argv>``."""
     import runpy
 
     sys.argv = ["scout", *a["argv"]]
     try:
-        runpy.run_module("scout_cli.main", run_name="__main__", alter_sys=True)
+        runpy.run_module("scout_backend.main", run_name="__main__", alter_sys=True)
     except SystemExit as exc:
         return exc.code if isinstance(exc.code, int) else (0 if exc.code is None else 1)
     return 0

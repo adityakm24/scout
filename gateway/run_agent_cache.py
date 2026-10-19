@@ -16,8 +16,8 @@ from agent.interrupt_compat import _accepts_keyword
 from gateway.session import SessionSource, build_session_context_prompt
 from gateway.session_prompt_pin import PROMPT_PIN_VERSION, sanitize_prompt_pin
 from gateway.run_shutdown import _log_suppressed
-from scout_cli.config import DEFAULT_CONFIG, cfg_get
-from scout_cli.local_runtime.endpoint import LLAMACPP_ALIASES
+from scout_backend.config import DEFAULT_CONFIG, cfg_get
+from scout_backend.local_runtime.endpoint import LLAMACPP_ALIASES
 
 if TYPE_CHECKING:  # string annotations only; never imported at runtime (cycle)
     from gateway.run import GatewayRunner  # noqa: F401
@@ -160,7 +160,7 @@ class GatewayAgentCacheMixin:
             return
         override: Dict[str, Any] = {k: persisted.get(k) for k in ("model", "provider", "base_url")}
         provider = persisted.get("provider")
-        from scout_cli.runtime_provider import is_foreign_provider_endpoint
+        from scout_backend.runtime_provider import is_foreign_provider_endpoint
         if is_foreign_provider_endpoint(provider, override.get("base_url")):
             override["base_url"] = None  # left over from a switch that kept the previous provider's URL
         if provider:
@@ -177,7 +177,7 @@ class GatewayAgentCacheMixin:
                     # The managed llama.cpp supervisor owns its live port; a persisted loopback URL from a
                     # boot that fell back to an ephemeral port would strand the session on a dead endpoint.
                     override["base_url"] = runtime.get("base_url")
-                from scout_cli.models import normalize_opencode_base_url, opencode_provider_family
+                from scout_backend.models import normalize_opencode_base_url, opencode_provider_family
                 if opencode_provider_family(provider) is not None and override.get("base_url"):
                     # api_mode was just re-derived from the target model; a relay URL persisted by an older
                     # build for another wire (/v1-stripped) or the other family is healed to match (#96066).
@@ -500,7 +500,7 @@ class GatewayAgentCacheMixin:
             # running-agent fast path; the pending-sentinel /stop has no in-flight work, so it stays
             # silent. Dispatch failures are swallowed so a misbehaving plugin cannot break an interrupt.
             try:
-                from scout_cli.plugins import invoke_hook as _invoke_hook
+                from scout_backend.plugins import invoke_hook as _invoke_hook
 
                 _invoke_hook(
                     "agent_loop_stopped",
@@ -961,7 +961,7 @@ class GatewayAgentCacheMixin:
                 logger.debug("Pressure release failed for %s: %s", key, _e)
             del agent
         with suppress(Exception):
-            from scout_cli.mem_trim import trim_memory
+            from scout_backend.mem_trim import trim_memory
             trim_memory(force=True, reason="agent_cache_pressure")
 
     def _enforce_agent_cache_cap(self) -> None:

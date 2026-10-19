@@ -14,7 +14,7 @@ feature silently dies and no current test catches it. This test closes that gap.
 
 It also pins the named-custom-provider case: a provider declared under
 `providers.<name>` resolves at runtime to `provider == "custom"` (see
-`scout_cli/runtime_provider.py`), and the echo flag must still take effect for
+`scout_backend/runtime_provider.py`), and the echo flag must still take effect for
 it. A future refactor keying the flag on provider *name* would reintroduce that
 miss; this test is the tripwire.
 
@@ -24,7 +24,7 @@ path-keyed, so this is hermetic) — no live server, no hand-set flag.
 
 from __future__ import annotations
 
-from scout_cli.runtime_provider import resolve_runtime_provider
+from scout_backend.runtime_provider import resolve_runtime_provider
 from agent.agent_runtime_helpers import copy_reasoning_content_for_api
 from run_agent import AIAgent
 
@@ -50,7 +50,7 @@ def _write_home(tmp_path, monkeypatch, reasoning_echo: bool):
     monkeypatch.setenv("SCOUT_HOME", str(home))
     # Drop any path-keyed config cache from a prior test.
     try:
-        from scout_cli import config as _cfg
+        from scout_backend import config as _cfg
         for name in ("_CONFIG_CACHE", "_config_cache"):
             if hasattr(_cfg, name):
                 getattr(_cfg, name).clear()
@@ -60,7 +60,7 @@ def _write_home(tmp_path, monkeypatch, reasoning_echo: bool):
 
 def _agent_with_init_flag() -> AIAgent:
     """Build an agent and materialize the echo flag the way init_agent does."""
-    from scout_cli.config import load_config_readonly
+    from scout_backend.config import load_config_readonly
     agent = object.__new__(AIAgent)
     agent._reasoning_echo_flag = bool(
         (load_config_readonly().get("model") or {}).get("reasoning_echo")

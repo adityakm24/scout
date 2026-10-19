@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-_RUNTIME = "scout_cli.runtime_provider.resolve_runtime_provider"
+_RUNTIME = "scout_backend.runtime_provider.resolve_runtime_provider"
 _PNG_DATA_URI = "data:image/png;base64,dGVzdC1pbWFnZS1kYXRh"  # "test-image-data"
 
 

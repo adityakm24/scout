@@ -23,7 +23,7 @@ def scout_home(tmp_path, monkeypatch):
     home.mkdir()
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     monkeypatch.setenv("SCOUT_HOME", str(home))
-    from scout_cli import goals
+    from scout_backend import goals
 
     goals._DB_CACHE.clear()
     yield home
@@ -32,7 +32,7 @@ def scout_home(tmp_path, monkeypatch):
 
 @pytest.fixture()
 def server(scout_home):
-    with patch.dict("sys.modules", {"scout_cli.env_loader": MagicMock(), "scout_cli.banner": MagicMock()}):
+    with patch.dict("sys.modules", {"scout_backend.env_loader": MagicMock(), "scout_backend.banner": MagicMock()}):
         mod = importlib.import_module("tui_gateway.server")
         yield mod
         mod._sessions.clear()
@@ -48,7 +48,7 @@ def session(server):
 
 
 def _arm_due(key: str):
-    from scout_cli.heartbeat import HeartbeatManager, save_heartbeat
+    from scout_backend.heartbeat import HeartbeatManager, save_heartbeat
 
     mgr = HeartbeatManager(key)
     state = mgr.set("report backend health", 60)
@@ -85,7 +85,7 @@ def test_notification_poller_fires_due_heartbeat_when_idle(server, session):
         stop.set()
         t.join(timeout=5)
 
-    from scout_cli.heartbeat import load_heartbeat
+    from scout_backend.heartbeat import load_heartbeat
 
     assert len(dispatched) == 1 and "report backend health" in dispatched[0]
     assert s["running"] is True  # claimed for the heartbeat turn
@@ -98,7 +98,7 @@ def test_desktop_poller_leaves_gateway_owned_heartbeat_for_gateway(server, sessi
     never registers a watch for it again, so the Desktop viewer must fire it (else nobody does)."""
     from gateway.config import GatewayConfig, Platform
     from gateway.session import SessionSource, SessionStore
-    from scout_cli.heartbeat import load_heartbeat
+    from scout_backend.heartbeat import load_heartbeat
 
     sid, _, s = session
     s["source"] = "desktop"
@@ -125,7 +125,7 @@ def test_heartbeat_tick_defers_when_busy_or_not_due(server, session, running, du
     mgr = _arm_due(key)
     if not due:
         mgr.state.created_at = time.time()
-        from scout_cli.heartbeat import save_heartbeat
+        from scout_backend.heartbeat import save_heartbeat
 
         save_heartbeat(key, mgr.state)
     s["running"] = running
@@ -133,7 +133,7 @@ def test_heartbeat_tick_defers_when_busy_or_not_due(server, session, running, du
     with p_submit as submit, p_emit:
         server._maybe_fire_tui_heartbeat_tick(sid, s)
     submit.assert_not_called()
-    from scout_cli.heartbeat import load_heartbeat
+    from scout_backend.heartbeat import load_heartbeat
 
     assert s["running"] is running  # a busy session is never released by the poller
     assert load_heartbeat(key).fire_count == 0  # tick not consumed — still due when the session frees up
@@ -157,14 +157,14 @@ def test_heartbeat_dispatch_that_never_starts_a_turn_stays_due(server, session, 
     with p_submit, p_emit:
         server._maybe_fire_tui_heartbeat_tick(sid, s)
 
-    from scout_cli.heartbeat import load_heartbeat
+    from scout_backend.heartbeat import load_heartbeat
 
     assert s["running"] is False
     assert load_heartbeat(key).fire_count == 0 and load_heartbeat(key).is_due()
 
 
 def test_abandon_fire_never_overwrites_a_concurrent_pause(scout_home):
-    from scout_cli.heartbeat import HeartbeatManager, load_heartbeat
+    from scout_backend.heartbeat import HeartbeatManager, load_heartbeat
 
     key = "hb-abandon-race"
     driver = _arm_due(key)

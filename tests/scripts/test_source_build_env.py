@@ -16,10 +16,10 @@ ASSETS = ROOT / "tests/install/e2e-assets"
 def _stamp_probe(tmp_path, shell):
     repo = tmp_path / "installed source"
     for relative in (
-        "scripts/write_install_stamp.py", "scout_cli/__init__.py",
-        "scout_cli/update_channel.py", "scout_cli/release_channels.py",
+        "scripts/write_install_stamp.py", "scout_backend/__init__.py",
+        "scout_backend/update_channel.py", "scout_backend/release_channels.py",
         "pm/paths.py", "pm/environments.py",
-        "scout_cli/steward.py", "scout_constants.py",
+        "scout_backend/steward.py", "scout_constants.py",
     ):
         dest = repo / relative
         dest.parent.mkdir(parents=True, exist_ok=True)

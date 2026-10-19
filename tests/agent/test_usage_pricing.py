@@ -363,7 +363,7 @@ def test_curated_google_flash_models_resolve_official_snapshot_pricing(monkeypat
     through the Google official-docs snapshot on the direct Gemini and Vertex routes — a model
     pickable via the aggregator but ``unknown`` to Google-route accounting is a catalog/pricing drift.
     """
-    from scout_cli.models_catalog_static import OPENROUTER_MODELS, _PROVIDER_MODELS
+    from scout_backend.models_catalog_static import OPENROUTER_MODELS, _PROVIDER_MODELS
 
     monkeypatch.setattr(
         "agent.usage_pricing.fetch_endpoint_model_metadata",

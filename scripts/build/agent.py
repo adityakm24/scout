@@ -32,7 +32,7 @@ def plant_surfaces(repo: Path, frontends: dict[str, Path]) -> None:
     """Only explicit built products are accepted; no hunting in the source tree."""
     validate_frontends(frontends)
     if "web" in frontends:
-        _copy(frontends["web"], repo / "scout_cli/web_dist", replace=True)
+        _copy(frontends["web"], repo / "scout_backend/web_dist", replace=True)
 
 
 def write_metadata(project_path: Path, repo: Path) -> None:

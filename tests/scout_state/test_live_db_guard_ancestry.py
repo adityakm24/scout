@@ -144,7 +144,7 @@ class TestPytestProcessRecognition:
         "cmdline",
         [
             ["scout", "gateway", "start"],
-            ["/usr/bin/python", "-m", "scout_cli.main", "sessions", "list"],
+            ["/usr/bin/python", "-m", "scout_backend.main", "sessions", "list"],
             # A path that merely *contains* "pytest" is not a pytest process:
             # tmp paths like /tmp/pytest-of-dev/... show up in real argv.
             ["scout", "run", "--file", "/tmp/pytest-of-dev/test0/input.txt"],

@@ -39,7 +39,7 @@ class TestFireworksHeaders:
         assert headers["X-Title"] == _OR_HEADERS_BASE["X-Title"]
 
     def test_user_agent_identifies_scout(self, fireworks_profile):
-        from scout_cli.version_info import get_version_info
+        from scout_backend.version_info import get_version_info
         assert fireworks_profile.default_headers["User-Agent"] == (
             f"ScoutAgent/{get_version_info().base_version}"
         )

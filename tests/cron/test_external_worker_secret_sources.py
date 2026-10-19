@@ -49,8 +49,8 @@ def homes(tmp_path, monkeypatch):
     )
     yield launch, profile
     import agent.secret_sources.registry as registry
-    from scout_cli.env_loader import reset_secret_source_cache
-    from scout_cli.plugins import _reset_plugin_managers_for_tests
+    from scout_backend.env_loader import reset_secret_source_cache
+    from scout_backend.plugins import _reset_plugin_managers_for_tests
 
     registry._reset_registry_for_tests()
     reset_secret_source_cache()

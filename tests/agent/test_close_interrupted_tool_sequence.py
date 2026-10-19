@@ -65,7 +65,7 @@ def test_interrupt_reason_is_replayed_but_never_painted():
     painted = [m.get("text") or m.get("content") for m in _history_to_messages(messages)]
     assert not any(reason in str(text) for text in painted)
     # Rows persisted before the reason was hidden are not painted either, on either history read.
-    from scout_cli.web_routers.sessions import _project_for_display
+    from scout_backend.web_routers.sessions import _project_for_display
 
     legacy = _tool_tail() + [{"role": "assistant", "content": reason}]
     assert not any(reason in str(m) for m in _history_to_messages(legacy))

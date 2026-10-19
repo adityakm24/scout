@@ -181,7 +181,7 @@ TOOLSETS = {
     # Coding posture, auto-selected in a code workspace (agent/coding_context.py).
     # `desktop_ui` is folded in separately by the GUI gateway for desktop sessions.
     # posture=True: per-session posture, never auto-recovered into platform tool
-    # config (see the non-configurable-toolset recovery loop in scout_cli/tools_config.py).
+    # config (see the non-configurable-toolset recovery loop in scout_backend/tools_config.py).
     "coding": _ts(
         "Coding-focused toolset: files, terminal, search, web docs, skills, todo, "
         "delegate, vision, browser",
@@ -415,7 +415,7 @@ def profile_role_toolsets(profile_home: Optional[Path] = None) -> Tuple[Set[str]
     """``(granted, denied)`` for the profile at *profile_home* (default: the in-scope home; a session's
     home override, when bound, IS its profile dir): toolsets reserved for the role in its backend-written
     ``profile.yaml``, and toolsets reserved for any other role. An ordinary profile is granted none."""
-    from scout_cli.profiles import read_profile_meta
+    from scout_backend.profiles import read_profile_meta
     from scout_constants import get_scout_home
     role = read_profile_meta(Path(profile_home or get_scout_home())).get("role")
     granted = {name for name, spec in TOOLSETS.items() if role is not None and spec.get("role") == role}

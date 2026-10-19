@@ -666,7 +666,7 @@ export type RuntimeSource =
   | { type: 'desktop-bootstrap'; root: string } // canonical install created by the desktop first-launch bootstrap
   | { type: 'unknown' } // no stamp, no .git — provenance cannot be told
   | { type: 'path'; command: string } // an existing `scout` CLI found on PATH
-  | { type: 'system-python'; command: string } // pip-installed scout_cli on system Python
+  | { type: 'system-python'; command: string } // pip-installed scout_backend on system Python
   | { type: 'bootstrap' } // nothing usable yet; the first-launch installer runs
 
 export type DesktopUninstallMode = 'full' | 'gui' | 'lite'

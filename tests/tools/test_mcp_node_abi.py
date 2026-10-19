@@ -39,7 +39,7 @@ def managed_node(tmp_path, monkeypatch):
 
 def test_stdio_server_dying_on_a_node_abi_mismatch_names_the_rebuild_under_scout_node(tmp_path, monkeypatch,
                                                                                          managed_node):
-    from scout_cli.mcp_config import _probe_failure_reason, _probe_single_server
+    from scout_backend.mcp_config import _probe_failure_reason, _probe_single_server
 
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "home"))
     node, npm = managed_node

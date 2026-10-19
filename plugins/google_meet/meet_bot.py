@@ -22,7 +22,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional
 
-from scout_cli.browser_runtime import chromium_executable
+from scout_backend.browser_runtime import chromium_executable
 from utils import atomic_json_write
 
 # Short three-segment code, a lookup URL, or /new. Anything else is rejected.

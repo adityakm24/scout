@@ -22,10 +22,10 @@ for m in [k for k in sys.modules if k.startswith(("scout", "tools", "plugins"))]
 
 import uvicorn  # noqa: E402
 
-from scout_cli import web_server  # noqa: E402
-from scout_cli.dashboard_auth import register_provider  # noqa: E402
-from scout_cli.dashboard_auth.base import RefreshExpiredError, Session  # noqa: E402
-from tests.scout_cli.conftest_dashboard_auth import StubAuthProvider  # noqa: E402
+from scout_backend import web_server  # noqa: E402
+from scout_backend.dashboard_auth import register_provider  # noqa: E402
+from scout_backend.dashboard_auth.base import RefreshExpiredError, Session  # noqa: E402
+from tests.scout_backend.conftest_dashboard_auth import StubAuthProvider  # noqa: E402
 
 
 class SlowRotatingIdP(StubAuthProvider):

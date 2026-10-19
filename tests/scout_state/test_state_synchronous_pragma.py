@@ -32,10 +32,10 @@ def _level(conn):
 def _config(monkeypatch, database_section):
     """Point apply_database_pragmas at an in-memory config.
 
-    It imports `scout_cli.config` lazily inside the function body, so the
+    It imports `scout_backend.config` lazily inside the function body, so the
     patch has to land on that module rather than on a name in this one.
     """
-    import scout_cli.config as config_mod
+    import scout_backend.config as config_mod
 
     cfg = {"database": database_section}
     monkeypatch.setattr(config_mod, "load_config_readonly", lambda *a, **k: cfg)

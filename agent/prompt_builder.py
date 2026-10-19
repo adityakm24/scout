@@ -941,7 +941,7 @@ def _remote_backend_hint(backend: str) -> str:
 def _config_readonly(what: str) -> dict:
     """config.yaml as a dict, or {} when unreadable (logged at debug with *what* for context)."""
     try:
-        from scout_cli.config import load_config_readonly
+        from scout_backend.config import load_config_readonly
         return load_config_readonly()
     except Exception as e:
         logger.debug("Could not read %s from config: %s", what, e)
@@ -1404,7 +1404,7 @@ def load_soul_md(context_length: Optional[int] = None, home_override: "Path | No
     the skills-index leak fixed in #86313).
     """
     try:
-        from scout_cli.config import ensure_scout_home
+        from scout_backend.config import ensure_scout_home
         ensure_scout_home()
     except Exception as e:
         logger.debug("Could not ensure SCOUT_HOME before loading SOUL.md: %s", e)
@@ -1421,10 +1421,10 @@ def load_soul_md(context_length: Optional[int] = None, home_override: "Path | No
         if not content:
             return None
         # `scout profile install <git-url>` / `profile update` plant a third-party SOUL.md into a
-        # distribution profile (scout_cli/profile_distribution.py, DEFAULT_DIST_OWNED) with no scan and no
+        # distribution profile (scout_backend/profile_distribution.py, DEFAULT_DIST_OWNED) with no scan and no
         # approval gate, so it is NOT the user's own file: when distribution.yaml owns SOUL.md (a manifest
         # with no `distribution_owned` list owns the whole payload) a scanner hit keeps BLOCKING.
-        from scout_cli.profile_distribution import read_manifest
+        from scout_backend.profile_distribution import read_manifest
         try:
             manifest = read_manifest(soul_path.parent)
             user_authored = manifest is None or (bool(manifest.distribution_owned)

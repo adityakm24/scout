@@ -1,0 +1,134 @@
+
+from __future__ import annotations
+
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import pytest
+
+from cli import ScoutCLI
+
+
+def _bound(fn, instance):
+    """Bind an unbound method to a stand-in instance."""
+    return fn.__get__(instance, type(instance))
+
+
+def _make_self(modal_response):
+    """Build a minimal stand-in 'self' for ``_handle_update_command``.
+
+    Uses the same SimpleNamespace pattern as ``test_destructive_slash_confirm``
+    so we don't need a full ``ScoutCLI`` construction.
+    ``_prompt_text_input_modal`` is stubbed to return *modal_response*
+    directly so tests can drive the entire confirmation branch without
+    touching stdin or prompt_toolkit internals.
+    """
+    self_ = SimpleNamespace(
+        _app=None,
+        _pending_relaunch=None,
+        _prompt_text_input_modal=lambda **_kw: modal_response,
+    )
+    self_._normalize_slash_confirm_choice = _bound(
+        ScoutCLI._normalize_slash_confirm_choice, self_
+    )
+    return self_
+
+
+def _call(self_):
+    """Invoke the real ``_handle_update_command`` on the stub."""
+    return ScoutCLI._handle_update_command(self_)
+
+
+# ---------------------------------------------------------------------------
+# Managed-install guard
+# ---------------------------------------------------------------------------
+
+
+def test_managed_install_refuses_and_does_not_set_pending_relaunch(capsys):
+    """Under a managed install (brew/docker), /update prints a hint and
+    returns without setting ``_pending_relaunch``."""
+    self_ = SimpleNamespace(
+        _app=None,
+        _pending_relaunch=None,
+        # Use pytest.fail so any unexpected modal invocation surfaces as a failure.
+        _prompt_text_input_modal=lambda **_kw: pytest.fail("Modal should not be called"),
+    )
+    self_._normalize_slash_confirm_choice = _bound(
+        ScoutCLI._normalize_slash_confirm_choice, self_
+    )
+    with (
+        patch("scout_backend.config.is_managed", return_value=True),
+        patch(
+            "scout_backend.config.format_managed_message",
+            return_value="Use `sudo nixos-rebuild switch` to update.",
+        ),
+    ):
+        result = _call(self_)
+
+    out = capsys.readouterr().out
+    assert "sudo nixos-rebuild switch" in out
+    assert self_._pending_relaunch is None
+    assert not result
+
+
+# ---------------------------------------------------------------------------
+# Confirmation proceeds only on recognised affirmative responses
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("answer", ["y", "Y", "yes", "YES", "1", "ok"])
+def test_affirmative_answer_sets_pending_relaunch_and_returns_true(answer, capsys):
+    """Recognised affirmative answers ("y", "yes", "1", "ok") set
+    ``_pending_relaunch = ["update"]`` and return ``True`` so the caller
+    (process_command) can trigger the main-thread app-exit path."""
+    self_ = _make_self(modal_response=answer)
+    with patch("scout_backend.config.is_managed", return_value=False):
+        result = _call(self_)
+
+    assert self_._pending_relaunch == ["update"]
+    assert result is True
+    assert "Launching update" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# Cancellation paths — _pending_relaunch must stay None
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("answer", ["n", "N", "no", "NO", " no "])
+def test_negative_answer_cancels(answer, capsys):
+    """Any "no"-shaped answer cancels without setting ``_pending_relaunch``."""
+    self_ = _make_self(modal_response=answer)
+    with patch("scout_backend.config.is_managed", return_value=False):
+        result = _call(self_)
+
+    assert self_._pending_relaunch is None
+    assert not result
+    assert "Launching update" not in capsys.readouterr().out
+
+
+def test_none_response_cancels(capsys):
+    """``None`` from the modal (timeout or dismiss) cancels cleanly."""
+    self_ = _make_self(modal_response=None)
+    with patch("scout_backend.config.is_managed", return_value=False):
+        result = _call(self_)
+
+    assert self_._pending_relaunch is None
+    assert not result
+
+
+@pytest.mark.parametrize("answer", ["nope", "cancel", "sure", "2", "3", "abort", ""])
+def test_unrecognized_or_cancel_input_cancels(answer, capsys):
+    """Unrecognised input and explicit "cancel" do not proceed.
+
+    Previously the implementation treated any non-"n/no" answer as approval,
+    which meant typos like "nope" or "cancel" would launch the update.
+    Now only confirmed affirmative aliases ("y", "yes", "1", "ok") proceed;
+    everything else (including empty string, "cancel", typos) cancels.
+    """
+    self_ = _make_self(modal_response=answer)
+    with patch("scout_backend.config.is_managed", return_value=False):
+        result = _call(self_)
+
+    assert self_._pending_relaunch is None
+    assert not result

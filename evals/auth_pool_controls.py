@@ -83,9 +83,9 @@ def main():
                 bootstrap = ("import sys, httpx; original_send=httpx.Client.send; "
                              "httpx.Client.send=lambda self, request, **kw: original_send(self, request, **kw) "
                              "if request.url.host == '127.0.0.1' else (_ for _ in ()).throw(AssertionError('NONLOCAL_NETWORK')); "
-                             "from scout_cli import auth_codex; "
+                             "from scout_backend import auth_codex; "
                              f"auth_codex.CODEX_OAUTH_TOKEN_URL='http://127.0.0.1:{server.server_port}/token'; "
-                             "from scout_cli.main import main; "
+                             "from scout_backend.main import main; "
                              f"sys.argv=['scout','auth',*{command!r}]; main()")
                 master, slave = pty.openpty()
                 child = subprocess.Popen([sys.executable, "-c", bootstrap], cwd=args.repo,

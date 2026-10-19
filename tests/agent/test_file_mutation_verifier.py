@@ -310,7 +310,7 @@ class TestVerifierEnabled:
         monkeypatch.delenv("SCOUT_FILE_MUTATION_VERIFIER", raising=False)
         agent = _bare_agent()
 
-        import scout_cli.config as _cfg_mod
+        import scout_backend.config as _cfg_mod
         monkeypatch.setattr(
             _cfg_mod, "load_config", lambda: {"display": {"file_mutation_verifier": False}}
         )

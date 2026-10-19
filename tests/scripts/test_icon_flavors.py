@@ -124,7 +124,7 @@ def test_renderer_canary_rule_is_the_canonical_one(monkeypatch):
     its own copy of the canary rule; both rules must agree on every tag shape."""
     import importlib.util
     import types
-    from scout_cli.update_channel import is_canary_tag
+    from scout_backend.update_channel import is_canary_tag
 
     monkeypatch.setitem(sys.modules, "resvg_py", types.ModuleType("resvg_py"))
     spec = importlib.util.spec_from_file_location("generate_icons", ROOT / "scripts/generate_icons.py")

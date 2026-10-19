@@ -144,7 +144,7 @@ def test_doctor_reports_web_extra_drift(drifted):
 def test_pm_repair_heals_the_drift(drifted):
     sb, rp = drifted["sb"], drifted["repair"]
     assert rp.returncode == 0, "scout pm repair failed on a drifted environment:\n" + P.diagnostics(sb, rp)
-    imports = P.managed_imports(sb, "fastapi", "scout_cli.web_server")
+    imports = P.managed_imports(sb, "fastapi", "scout_backend.web_server")
     assert set(imports.values()) == {"ok"}, (
         f"`scout pm repair` exited 0 but the dashboard still cannot import: {imports}\n" + P.diagnostics(sb, rp))
 

@@ -41,10 +41,10 @@ test('earlier PM user-bin launchers are accepted only for the reported source tr
     const root: string = path.join(base, 'checkout')
     const other: string = path.join(base, 'other')
     const home: string = path.join(base, 'home')
-    fs.mkdirSync(path.join(root, 'scout_cli'), { recursive: true })
+    fs.mkdirSync(path.join(root, 'scout_backend'), { recursive: true })
     fs.mkdirSync(path.join(root, 'pm'))
     fs.mkdirSync(other)
-    fs.writeFileSync(path.join(root, 'scout_cli', '_launchers.py'), '')
+    fs.writeFileSync(path.join(root, 'scout_backend', '_launchers.py'), '')
     fs.mkdirSync(path.join(home, 'bin'), { recursive: true })
     const launcher: string = path.join(home, 'bin', process.platform === 'win32' ? 'scout.cmd' : 'scout')
 

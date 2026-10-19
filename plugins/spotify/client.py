@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from scout_cli.auth import AuthError, resolve_spotify_runtime_credentials
+from scout_backend.auth import AuthError, resolve_spotify_runtime_credentials
 
 
 class SpotifyError(RuntimeError): """Base Spotify tool error."""

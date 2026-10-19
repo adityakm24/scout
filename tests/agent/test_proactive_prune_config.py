@@ -36,7 +36,7 @@ def _config(**prune_keys) -> dict:
 
 
 def _make_agent(monkeypatch, tmp_path: Path, **prune_keys):
-    from scout_cli import config as config_mod
+    from scout_backend import config as config_mod
 
     monkeypatch.setattr(config_mod, "load_config", lambda: _config(**prune_keys))
 

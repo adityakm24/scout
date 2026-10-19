@@ -37,7 +37,7 @@ def _prefix_names_served_profile(profile: str) -> bool:
     """True when a /p/<profile>/ prefix names the profile this gateway serves. Fail closed: a
     single-profile gateway answering /p/<x>/ served the owner's toolsets under another URL."""
     try:
-        from scout_cli.profiles import profile_matches_home
+        from scout_backend.profiles import profile_matches_home
         return profile_matches_home(profile)
     except Exception:
         return False
@@ -208,7 +208,7 @@ async def _call_verifier(verifier, *args, **kwargs):
 
 def _scout_version() -> str:
     """Canonical base version for API protocol and compatibility payloads."""
-    from scout_cli.version_info import get_version_info
+    from scout_backend.version_info import get_version_info
     return get_version_info().base_version
 
 
@@ -345,7 +345,7 @@ def _apply_runtime_agent_overrides(
 def _resolve_request_runtime_agent_kwargs(provider: str, target_model: Optional[str] = None) -> Dict[str, Any]:
     """gateway.run._resolve_runtime_agent_kwargs() for an explicit provider/model, so an API
     caller uses the same authenticated provider catalog without mutating config.yaml."""
-    from scout_cli.runtime_provider import resolve_runtime_provider, format_runtime_provider_error, _get_model_config
+    from scout_backend.runtime_provider import resolve_runtime_provider, format_runtime_provider_error, _get_model_config
     try:
         runtime = resolve_runtime_provider(requested=provider, target_model=target_model)
     except Exception as exc:
@@ -728,7 +728,7 @@ class ResponseStore:
         if db_path is None:
             db_path = ":memory:"
             with suppress(Exception):
-                from scout_cli.config import get_scout_home
+                from scout_backend.config import get_scout_home
                 db_path = str(get_scout_home() / "response_store.db")
         self._db_path: Optional[str] = db_path if db_path != ":memory:" else None
         try:
@@ -1062,7 +1062,7 @@ def _names_launch_profile(profile: str) -> bool:
     """True when a /p/<profile>/ prefix names the profile this process was LAUNCHED as: its
     un-prefixed and prefixed requests are one profile and must key one session."""
     try:
-        from scout_cli.profiles import profile_matches_home
+        from scout_backend.profiles import profile_matches_home
         from scout_constants import get_routing_process_scout_home
         return profile_matches_home(profile, home=get_routing_process_scout_home())
     except Exception:
@@ -1132,7 +1132,7 @@ class _ProviderAuthResolutionError(RuntimeError):
     def is_rate_limited(self) -> bool:
         """A quota/429 cap with valid credentials must not be labelled an authentication
         failure — the cause chain (RuntimeError -> AuthError) tells them apart (#89401)."""
-        from scout_cli.auth import is_rate_limited_auth_error
+        from scout_backend.auth import is_rate_limited_auth_error
 
         cause = self.__cause__
         cause = getattr(cause, "__cause__", None) if isinstance(cause, RuntimeError) else cause
@@ -1392,7 +1392,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
     def _resolve_api_server_int(key: str, *, default: int) -> int:
         """Integer setting under gateway.api_server (unreadable config -> default; negatives -> 0)."""
         try:
-            from scout_cli.config import cfg_get, load_config
+            from scout_backend.config import cfg_get, load_config
             value = int(cfg_get(load_config(), "gateway", "api_server", key, default=default))
         except Exception:
             return default
@@ -1484,11 +1484,11 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
     @staticmethod
     def _resolve_model_name(explicit: str) -> str:
         """Advertised /v1/models name: explicit override > active profile name > "scout-agent"
-        (precedence owned by ``scout_cli.model_switch.resolve_effective_model``)."""
-        from scout_cli.model_switch import resolve_effective_model
+        (precedence owned by ``scout_backend.model_switch.resolve_effective_model``)."""
+        from scout_backend.model_switch import resolve_effective_model
         profile_name = ""
         with suppress(Exception):
-            from scout_cli.profiles import get_active_profile_name
+            from scout_backend.profiles import get_active_profile_name
             profile = get_active_profile_name()  # launch profile, pre-identity (advertised model name)
             if profile and profile not in {"default", "custom"}:
                 profile_name = profile
@@ -1566,7 +1566,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
             return self._api_key
         try:
             from agent.secret_scope import get_secret
-            from scout_cli.auth import has_usable_secret
+            from scout_backend.auth import has_usable_secret
             key = get_secret("API_SERVER_KEY", "") or ""
             return key if has_usable_secret(key, min_length=16) else ""
         except Exception as exc:
@@ -1682,7 +1682,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         if not getattr(cfg, "multiplex_profiles", False):
             return None if _prefix_names_served_profile(profile) else _PROFILE_REJECTED
         try:
-            from scout_cli.profiles import profiles_to_serve
+            from scout_backend.profiles import profiles_to_serve
             served = {name for name, _ in profiles_to_serve(multiplex=True)}
         except Exception:
             return _PROFILE_REJECTED
@@ -1706,7 +1706,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
                     return _profile_runtime_scope(get_scout_home())
             return nullcontext()
         from gateway.run import _profile_runtime_scope
-        from scout_cli.profiles import get_profile_dir
+        from scout_backend.profiles import get_profile_dir
         return _profile_runtime_scope(get_profile_dir(profile))
 
     def _make_profile_prefix_middleware(self):
@@ -2257,7 +2257,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         # No model.default but a provider resolved (e.g. `scout auth add` without `scout model`).
         if not model and runtime_kwargs.get("provider"):
             with suppress(Exception):
-                from scout_cli.models import get_default_model_for_provider
+                from scout_backend.models import get_default_model_for_provider
                 model = get_default_model_for_provider(runtime_kwargs["provider"])
                 if model:
                     logger.info(
@@ -2300,8 +2300,8 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         current_provider = _clean_request_string(runtime_kwargs.get("provider"))
         session_override = None if confirmed_runtime_lock else self._session_model_override_for(session_key)
         # Model-string precedence (override > session-persisted > global) is owned by
-        # scout_cli.model_switch.resolve_effective_model.
-        from scout_cli.model_switch import resolve_effective_model
+        # scout_backend.model_switch.resolve_effective_model.
+        from scout_backend.model_switch import resolve_effective_model
         if session_override:
             model = resolve_effective_model(session_override, None, model)
             self._apply_provider_runtime(
@@ -2368,7 +2368,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         from gateway.run import (
             _checkpoint_agent_kwargs, _current_max_iterations, _resolve_runtime_agent_kwargs,
             _resolve_gateway_model, _load_gateway_config, GatewayRunner)
-        from scout_cli.tools_config import _get_platform_tools
+        from scout_backend.tools_config import _get_platform_tools
         # RuntimeError is caught ONLY here (sole provider-auth raiser); the typed subclass keeps
         # run_conversation() errors distinct.
         try:
@@ -2510,7 +2510,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         can sync to the configured provider catalog instead of scraping /v1/models."""
         refresh = _coerce_request_bool(request.query.get("refresh"), default=False)
         try:
-            from scout_cli.inventory import build_model_options_payload, load_picker_context
+            from scout_backend.inventory import build_model_options_payload, load_picker_context
 
             def _build_payload() -> Dict[str, Any]:
                 return build_model_options_payload(
@@ -2781,7 +2781,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         if store is not None:
             return store
         try:
-            from scout_cli.profiles import get_profile_dir
+            from scout_backend.profiles import get_profile_dir
             root = Path(get_profile_dir(profile or "default")) / "artifacts" / "browser-control"
         except Exception:
             # Unscoped fallback (tests/manual wiring): controlled root under the Scout home.
@@ -2958,8 +2958,8 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         """GET /v1/toolsets — each toolset the api_server agent exposes: enabled/configured state
         plus the concrete tool names it expands to."""
         try:
-            from scout_cli.config import load_config
-            from scout_cli.tools_config import (
+            from scout_backend.config import load_config
+            from scout_backend.tools_config import (
                 _get_effective_configurable_toolsets, _get_platform_tools, _toolset_has_keys)
             from toolsets import resolve_toolset
             config = load_config()
@@ -4340,7 +4340,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
                 self.name, self._host)
             return False
         try:
-            from scout_cli.auth import has_usable_secret
+            from scout_backend.auth import has_usable_secret
         except Exception as exc:
             # Fail CLOSED: "could not check" must not mean "start" on a terminal-capable endpoint.
             logger.error(
@@ -4409,7 +4409,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
             if is_network_accessible(self._host):
                 _backend = "local"
                 with suppress(Exception):
-                    from scout_cli.config import load_config as _load_cfg
+                    from scout_backend.config import load_config as _load_cfg
                     _backend = ((_load_cfg() or {}).get("terminal") or {}).get("backend", "local")
                 if str(_backend).lower() == "local":
                     logger.warning(

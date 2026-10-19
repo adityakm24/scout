@@ -38,7 +38,7 @@ for dp, dns, fns in os.walk(TREE):
 results["pyc_files"] = pyc_n; results["pyc_bytes"] = pyc_bytes
 
 # 1. import-time probes: fresh interpreter, measure wall + module count + RSS
-IMPORT_TARGETS = ["run_agent", "cli", "scout_cli.main", "gateway.run", "tools.registry", "scout_state", "tui_gateway.server", "scout_cli.web_server", "model_tools", "agent.prompt_builder"]
+IMPORT_TARGETS = ["run_agent", "cli", "scout_backend.main", "gateway.run", "tools.registry", "scout_state", "tui_gateway.server", "scout_backend.web_server", "model_tools", "agent.prompt_builder"]
 probe = r'''
 import sys, time, os, resource, json
 t0=time.perf_counter()
@@ -69,7 +69,7 @@ for tgt in IMPORT_TARGETS:
 results["import"] = imp
 
 # 2. CLI end-to-end startup: `scout --version`, `scout --help`, `scout doctor --help`, `scout config get model` (no network)
-CLI = {"version": ["scout_cli/main.py", "--version"], "help": ["scout_cli/main.py", "--help"], "config_get": ["scout_cli/main.py", "config", "get", "model"], "tools_list": ["scout_cli/main.py", "tools", "--help"], "skills_help": ["scout_cli/main.py", "skills", "--help"]}
+CLI = {"version": ["scout_backend/main.py", "--version"], "help": ["scout_backend/main.py", "--help"], "config_get": ["scout_backend/main.py", "config", "get", "model"], "tools_list": ["scout_backend/main.py", "tools", "--help"], "skills_help": ["scout_backend/main.py", "skills", "--help"]}
 cli = {}
 for name, argv in CLI.items():
     ts = []; rc = None; last = ""
@@ -125,7 +125,7 @@ try:
     T("approval_detect_120cmds_ms", lambda: [detect_dangerous_command(c) for c in cmds], 20)
 except Exception as e: out["approval_err"]=repr(e)[:160]
 try:
-    from scout_cli.config import load_config
+    from scout_backend.config import load_config
     T("load_config_ms", lambda: load_config(), 20)
 except Exception as e: out["load_config_err"]=repr(e)[:160]
 try:

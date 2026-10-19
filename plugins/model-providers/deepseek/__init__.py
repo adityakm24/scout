@@ -5,7 +5,7 @@ requires ``reasoning_content`` to be echoed back on later turns (HTTP 400 after
 the first tool call otherwise). This profile sets ``thinking`` explicitly and
 maps effort onto DeepSeek's ``reasoning_effort``; V3 models are left untouched.
 Retired ``deepseek-chat``/``deepseek-reasoner`` IDs are remapped in
-``scout_cli.model_normalize`` before reaching here.
+``scout_backend.model_normalize`` before reaching here.
 """
 
 from typing import Any

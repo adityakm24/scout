@@ -62,7 +62,7 @@ def test_activation_real_setup_pm_lifecycle(tmp_path, served):
     }
     for name in ("activate", "setup-scout.sh", "scout_constants.py", "scout_yaml.py", "utils.py"):
         shutil.copy2(REPO / name, core / name)
-    for name in ("pm", "scout_cli"):
+    for name in ("pm", "scout_backend"):
         shutil.copytree(REPO / name, core / name, ignore=shutil.ignore_patterns("__pycache__"))
     # Plugin selection imports the real CLI config reader even with no plugins.
     # Supply its installed YAML dependency, not a stub parser or config module.

@@ -105,10 +105,10 @@ class TestTheFrozenFileIsSane:
         for anchor in (
             "scout_constants::with_scout_node_path",
             "scout_constants::venv_python_path",
-            "scout_cli.gitlock::clear_stale_git_locks",
-            "scout_cli.managed_uv::ensure_uv",
-            "scout_cli.managed_uv::rebuild_venv",
-            "scout_cli._subprocess_compat::run",
+            "scout_backend.gitlock::clear_stale_git_locks",
+            "scout_backend.managed_uv::ensure_uv",
+            "scout_backend.managed_uv::rebuild_venv",
+            "scout_backend._subprocess_compat::run",
         ):
             assert anchor in bare, (
                 f"{anchor} missing from the frozen surface — the freeze "
@@ -129,12 +129,12 @@ class TestTheFrozenFileIsSane:
         assert history.get("complete_history") is True
         assert history["commits"] > 0
         assert history["roots"] and history["entrypoint_paths"]
-        assert "scout_cli/main.py" in history["entrypoint_paths"], (
+        assert "scout_backend/main.py" in history["entrypoint_paths"], (
             "the freeze omitted the original inline cmd_update history"
         )
         assert history["history_ref"]
         analyzed = set(history["files_analyzed"])
-        for must_see in ("scout_cli/update_cmd.py", "scout_cli/managed_uv.py"):
+        for must_see in ("scout_backend/update_cmd.py", "scout_backend/managed_uv.py"):
             assert must_see in analyzed, (
                 f"{must_see} was not analyzed for the freeze — the audit "
                 f"lost part of the update flow; a vacuously small surface "

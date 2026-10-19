@@ -13,7 +13,7 @@ def profile_display_name(home: Optional[Path]) -> str:
     """The name the user gave the agent of the profile at ``home``, or ``""`` when unset."""
     if home is None:
         return ""
-    from scout_cli.profiles import read_profile_meta
+    from scout_backend.profiles import read_profile_meta
     try:
         return read_profile_meta(Path(home)).get("display_name") or ""
     except Exception:

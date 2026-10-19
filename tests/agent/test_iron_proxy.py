@@ -468,7 +468,7 @@ def test_docker_egress_node_options_uses_sentinel(scout_home, monkeypatch):
     append-merge with the operator's existing NODE_OPTIONS."""
 
     from tools.environments.docker import _egress_proxy_args_for_docker
-    from scout_cli.config import load_config, save_config
+    from scout_backend.config import load_config, save_config
 
     state = ip._proxy_state_dir()
     ca = state / "ca.crt"

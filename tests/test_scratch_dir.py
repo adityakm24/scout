@@ -212,7 +212,7 @@ class TestScratchDirPermissionPolicy:
 def test_secure_file_skips_chmod_on_canonical_container_signal(tmp_path, monkeypatch):
     """_secure_file skips on the same canonical container signal that apply_secure_dir_policy /
     get_scratch_dir already honor (one policy implementation in scout_constants)."""
-    from scout_cli import config
+    from scout_backend import config
 
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "home"))
     for var in ("SCOUT_MANAGED", "SCOUT_CONTAINER", "SCOUT_SKIP_CHMOD"):

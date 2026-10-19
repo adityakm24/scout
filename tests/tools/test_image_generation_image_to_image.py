@@ -211,7 +211,7 @@ class _LegacyProvider(ImageGenProvider):
 class TestPluginDispatchImageToImage:
     def test_dispatch_forwards_image_url(self, cfg_home, monkeypatch):
         import tools.image_generation_tool as image_tool
-        from scout_cli import plugins as plugins_module
+        from scout_backend import plugins as plugins_module
         from agent import image_gen_registry as reg
 
         provider = _EditCapableProvider()
@@ -234,7 +234,7 @@ class TestPluginDispatchImageToImage:
 
     def test_legacy_provider_edit_request_surfaces_clear_error(self, cfg_home, monkeypatch):
         import tools.image_generation_tool as image_tool
-        from scout_cli import plugins as plugins_module
+        from scout_backend import plugins as plugins_module
         from agent import image_gen_registry as reg
 
         provider = _LegacyProvider()
@@ -258,7 +258,7 @@ class TestPluginDispatchImageToImage:
 
 class TestDynamicSchema:
     def _no_discovery(self, monkeypatch):
-        import scout_cli.plugins as plugins_module
+        import scout_backend.plugins as plugins_module
         monkeypatch.setattr(plugins_module, "_ensure_plugins_discovered", lambda *a, **k: None)
 
 

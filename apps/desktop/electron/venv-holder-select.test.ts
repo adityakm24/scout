@@ -69,11 +69,11 @@ test('matches the autostart gateway shim (scout.exe under venv Scripts)', () => 
   )
 })
 
-test('matches the dashboard scheduled task (python -m scout_cli / -m scout)', () => {
+test('matches the dashboard scheduled task (python -m scout_backend / -m scout)', () => {
   assert.equal(
     isExternalVenvHolder(
       'C:\\Scout\\venv\\Scripts\\python.exe',
-      '"C:\\Scout\\venv\\Scripts\\python.exe" -m scout_cli.main dashboard',
+      '"C:\\Scout\\venv\\Scripts\\python.exe" -m scout_backend.main dashboard',
       SCRIPTS
     ),
     true

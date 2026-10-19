@@ -3,7 +3,7 @@
 import argparse
 import json
 
-from scout_cli.verify_cmd import run_verify_command
+from scout_backend.verify_cmd import run_verify_command
 
 
 def make_args(path, **overrides):

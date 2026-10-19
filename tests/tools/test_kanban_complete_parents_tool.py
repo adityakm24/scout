@@ -23,8 +23,8 @@ def running_child_with_parent(monkeypatch, tmp_path):
     from pathlib import Path as _Path
     monkeypatch.setattr(_Path, "home", lambda: tmp_path)
 
-    from scout_cli import kanban_db as kb
-    from scout_cli import kanban_db_connect as kbc
+    from scout_backend import kanban_db as kb
+    from scout_backend import kanban_db_connect as kbc
     kb._INITIALIZED_PATHS.clear()
     kb.init_db()
     conn = kbc.connect()
@@ -50,8 +50,8 @@ def running_child_with_parent(monkeypatch, tmp_path):
 
 def test_complete_names_unsatisfied_parent(running_child_with_parent):
     """The refusal names the blocking parent instead of crying stale run."""
-    from scout_cli import kanban_db as kb
-    from scout_cli import kanban_db_connect as kbc
+    from scout_backend import kanban_db as kb
+    from scout_backend import kanban_db_connect as kbc
     from tools import kanban_tools as kt
 
     parent_id, child_id = running_child_with_parent
@@ -76,7 +76,7 @@ def test_cli_complete_names_unsatisfied_parent(running_child_with_parent, monkey
     """`scout kanban complete` (operator, --force) reports the same blockers."""
     import argparse
 
-    from scout_cli import kanban as kc
+    from scout_backend import kanban as kc
 
     parent_id, child_id = running_child_with_parent
     monkeypatch.delenv("SCOUT_KANBAN_TASK", raising=False)

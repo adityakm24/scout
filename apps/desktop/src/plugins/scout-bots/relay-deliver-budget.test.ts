@@ -20,7 +20,7 @@ import {
 // #93911 — the client giving up before a valid typed settlement arrives.
 
 const repoRoot = join(process.cwd(), '..', '..')
-const configDefaults = readFileSync(join(repoRoot, 'scout_cli/config_defaults.py'), 'utf8')
+const configDefaults = readFileSync(join(repoRoot, 'scout_backend/config_defaults.py'), 'utf8')
 const relayPlumbing = readFileSync(join(repoRoot, 'tools/bot_relay.py'), 'utf8')
 
 function pyConstant(name: string): number {

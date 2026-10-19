@@ -101,7 +101,7 @@ def test_run_job_cron_execute_code_deny_does_not_pollute_later_gateway_execute_c
         "scout_constants.resolve_reasoning_config", lambda *_args, **_kwargs: None
     )
     monkeypatch.setattr(
-        "scout_cli.runtime_provider.resolve_runtime_provider",
+        "scout_backend.runtime_provider.resolve_runtime_provider",
         lambda **_kwargs: {
             "api_key": "test-key",
             "base_url": None,

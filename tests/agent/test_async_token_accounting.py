@@ -369,7 +369,7 @@ class TestDurability:
         import time
         import weakref
 
-        from scout_cli.sqlite_safe_read import has_live_connection
+        from scout_backend.sqlite_safe_read import has_live_connection
 
         db_path = tmp_path / "abandoned.db"
         monkeypatch.setattr(SessionDB, "_TOKEN_WRITER_IDLE_SECONDS", 0.01, raising=False)

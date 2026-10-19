@@ -38,7 +38,7 @@ def test_install_tree_not_writable_by_scout(
     probe = docker_exec(container_name, "/opt/scout/.venv/bin/python", "-c", """
 import os
 from pathlib import Path
-from scout_cli.config import detect_install_method
+from scout_backend.config import detect_install_method
 assert os.geteuid() != 0
 code = Path('/opt/scout/.install_method')
 home = Path('/opt/data/.install_method')

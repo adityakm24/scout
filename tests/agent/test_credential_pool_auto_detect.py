@@ -41,12 +41,12 @@ class TestCredentialPoolPreservedOnAutoDetect:
              patch('agent.anthropic_credentials.resolve_anthropic_token', return_value=''), \
              patch('agent.anthropic_credentials._is_oauth_token', return_value=False), \
              patch('agent.azure_identity_adapter.is_token_provider', return_value=False), \
-             patch('scout_cli.model_normalize.normalize_model_for_provider', return_value='test-model'), \
+             patch('scout_backend.model_normalize.normalize_model_for_provider', return_value='test-model'), \
              patch('agent.credential_pool.load_pool', return_value=MagicMock()), \
-             patch('scout_cli.config.load_config', return_value={}), \
-             patch('scout_cli.config.get_compatible_custom_providers', return_value=[]), \
+             patch('scout_backend.config.load_config', return_value={}), \
+             patch('scout_backend.config.get_compatible_custom_providers', return_value=[]), \
              patch('agent.iteration_budget.IterationBudget'), \
-             patch('scout_cli.config.cfg_get', return_value=None):
+             patch('scout_backend.config.cfg_get', return_value=None):
 
             init_agent(
                 agent,

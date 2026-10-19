@@ -104,7 +104,7 @@ def _profile_attachments_storage(profile_home) -> str:
     import contextlib as _contextlib
     home = Path(profile_home) if profile_home else _scout_home
     with _contextlib.suppress(Exception):
-        from scout_cli.config_effective import load_user_config_effective
+        from scout_backend.config_effective import load_user_config_effective
         cfg_path = home / "config.yaml"
         if cfg_path.exists():
             attachments_cfg = load_user_config_effective(cfg_path).get("attachments")

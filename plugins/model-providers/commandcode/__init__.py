@@ -6,7 +6,7 @@ import json
 import logging
 import urllib.request
 
-from scout_cli.urllib_security import open_credentialed_url
+from scout_backend.urllib_security import open_credentialed_url
 from providers import get_provider_profile, register_provider
 from providers.base import ProviderProfile, _profile_user_agent
 

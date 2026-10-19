@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import cron.lifecycle_guard as lifecycle_guard
-from scout_cli.sqlite_safe_read import connect_tracked
+from scout_backend.sqlite_safe_read import connect_tracked
 
 
 def test_referenced_script_read_refuses_live_sqlite_connection(tmp_path, monkeypatch):

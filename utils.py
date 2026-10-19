@@ -445,7 +445,7 @@ def atomic_roundtrip_yaml_update(path: Union[str, Path], key_path: str, value: A
     # blind splitting — same navigation as ``scout config set``'s ``_set_nested``; otherwise
     # /model + TUI persistence wrote ``glm-5: {'3': ...}`` phantom siblings.
     # See #91607.
-    from scout_cli.config import _greedy_literal_match, _split_key_path
+    from scout_backend.config import _greedy_literal_match, _split_key_path
 
     path = Path(path)
     from scout_constants import mkdir_under_scout_home
@@ -505,7 +505,7 @@ def atomic_roundtrip_yaml_save(path: Union[str, Path], new_state: dict, *,
     """Persist a full config-state dict while preserving comments and ordering.
 
     THE writer for ``config.yaml`` (every production caller reaches it through
-    ``scout_cli.config.atomic_config_write``): the on-disk document is loaded through ruamel
+    ``scout_backend.config.atomic_config_write``): the on-disk document is loaded through ruamel
     round-trip mode and *new_state* is merged onto it, so comments, key order, quotes, blank
     lines and readable Unicode survive. Only nodes whose value actually changed are reassigned;
     an untouched scalar or list keeps its inline comments and formatting. Keys absent from
@@ -515,7 +515,7 @@ def atomic_roundtrip_yaml_save(path: Union[str, Path], new_state: dict, *,
     users' own comments (#92554).
     """
     from ruamel.yaml.comments import CommentedMap, CommentedSeq
-    from scout_cli.config import require_readable_config_before_write
+    from scout_backend.config import require_readable_config_before_write
 
     path = Path(path)
     from scout_constants import mkdir_under_scout_home

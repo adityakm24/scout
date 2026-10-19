@@ -87,9 +87,9 @@ def test_each_profile_home_owns_its_own_list(tmp_path, monkeypatch, home):
 
 @pytest.mark.parametrize("scheduler_up", [True, False])
 def test_the_agent_is_told_when_nothing_will_deliver_a_reminder(home, monkeypatch, scheduler_up):
-    import scout_cli.cron
+    import scout_backend.cron
 
-    monkeypatch.setattr(scout_cli.cron, "_builtin_gateway_liveness", lambda: scheduler_up)
+    monkeypatch.setattr(scout_backend.cron, "_builtin_gateway_liveness", lambda: scheduler_up)
 
     result = _agent("reminder_add", text="Stretch", when="in 30m")
 

@@ -8,7 +8,7 @@ from scout_constants import (
     reset_scout_home_override,
     set_scout_home_override,
 )
-from scout_cli.logs import _parse_line_timestamp
+from scout_backend.logs import _parse_line_timestamp
 from tools.mcp_tool_config import _StderrTee, _get_mcp_stderr_log, _write_stderr_log_header
 from tools.mcp_tool_lifecycle import shutdown_mcp_servers
 
@@ -42,7 +42,7 @@ def test_scoped_shutdown_releases_log_and_preserves_other_profile(tmp_path):
             handle.close()
 
 def test_rename_profile_releases_cached_log_handle(tmp_path, monkeypatch):
-    from scout_cli import profiles
+    from scout_backend import profiles
     from tools import mcp_tool_config
 
     monkeypatch.setattr(Path, "home", lambda: tmp_path)

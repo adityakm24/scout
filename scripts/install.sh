@@ -711,7 +711,7 @@ stage_products() {
         args+=(--desktop)
     fi
     (cd "$INSTALL_DIR" && run_logged "Building the scout command and apps" \
-        "$boot_py" -I -B -X utf8 scout_cli/source_completion.py "${args[@]}") \
+        "$boot_py" -I -B -X utf8 scout_backend/source_completion.py "${args[@]}") \
         || fail "app products or command publication failed"
     wire_shell_path
     log_success "app products and scout command ready"

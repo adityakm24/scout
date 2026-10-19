@@ -20,7 +20,7 @@ from tests.pm._range_server import RangeHandler, dl_server, url  # noqa: F401
 
 @pytest.fixture
 def upstream(dl_server, monkeypatch):
-    from scout_cli import urllib_security
+    from scout_backend import urllib_security
 
     calls = []
     failures = {}

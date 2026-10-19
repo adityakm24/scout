@@ -84,7 +84,7 @@ except ImportError:
         "  (SCOUT_PYTHON=<scout venv python> node scripts/generate-icons.mjs)"
     )
 
-# Copy of scout_cli.update_channel._CANARY_TAG_RE: builders run this renderer
+# Copy of scout_backend.update_channel._CANARY_TAG_RE: builders run this renderer
 # on the runtime dependencies without the application package installed
 # (Docker, bundles). tests/scripts/test_icon_flavors.py pins it to the canonical one.
 _CANARY_TAG_RE = re.compile(

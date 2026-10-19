@@ -11,8 +11,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from agent.auxiliary_client import call_llm
-from scout_cli import plugins as plugins_mod
-from scout_cli.plugins import PluginContext, PluginManager, PluginManifest
+from scout_backend import plugins as plugins_mod
+from scout_backend.plugins import PluginContext, PluginManager, PluginManifest
 
 
 @pytest.fixture

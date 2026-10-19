@@ -2117,7 +2117,7 @@ class TestThresholdTokensCap:
     def test_default_config_compacts_at_the_ratio_trigger(self, context_length):
         """Shipped defaults carry no token cap: every window compacts at its ratio trigger, so a 1M
         window is not cut to a fixed count that suits some models and not others."""
-        from scout_cli.config import DEFAULT_CONFIG
+        from scout_backend.config import DEFAULT_CONFIG
 
         default_pct = DEFAULT_CONFIG["compression"]["threshold"]
         default_cap = DEFAULT_CONFIG["compression"]["threshold_tokens"]

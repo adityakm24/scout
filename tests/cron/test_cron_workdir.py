@@ -212,7 +212,7 @@ class TestRunJobTerminalCwd:
         monkeypatch.setitem(sys.modules, "run_agent", fake_mod)
 
         # Bypass the real provider resolver — it reads ~/.scout and credentials.
-        from scout_cli import runtime_provider as _rtp
+        from scout_backend import runtime_provider as _rtp
         monkeypatch.setattr(
             _rtp,
             "resolve_runtime_provider",

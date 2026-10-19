@@ -196,7 +196,7 @@ class LintMixin:
         import shutil
         import subprocess
 
-        from scout_cli._subprocess_compat import windows_hide_flags
+        from scout_backend._subprocess_compat import windows_hide_flags
         from scout_constants import with_scout_node_path
         from tools.environments.local import _IS_WINDOWS, _msys_to_windows_path, scout_subprocess_env
 
@@ -259,7 +259,7 @@ class LintMixin:
             return False
         from agent.lsp.manager import parse_trusted_workspaces
         from agent.lsp.workspace import is_trusted_workspace, operator_workspace_roots
-        from scout_cli.config import load_config_readonly
+        from scout_backend.config import load_config_readonly
         lsp_cfg = load_config_readonly().get("lsp")
         trusted = parse_trusted_workspaces(lsp_cfg.get("trusted_workspaces") if isinstance(lsp_cfg, dict) else None)
         return not is_trusted_workspace(getattr(self.env, "cwd", None) or self.cwd, trusted, operator_workspace_roots())

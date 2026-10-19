@@ -16,7 +16,7 @@ import {
 import type { ThemeMode } from '@/themes/context'
 
 // Single source of truth for built-in personality names lives in
-// lib/personalities (mirrors scout_cli/personality.py BUILTIN_PERSONALITIES).
+// lib/personalities (mirrors scout_backend/personality.py BUILTIN_PERSONALITIES).
 export { BUILTIN_PERSONALITIES } from '@/lib/personalities'
 
 import { defineFieldCopy } from './field-copy'
@@ -242,7 +242,7 @@ export const ENUM_OPTIONS: Record<string, string[]> = {
   'stt.elevenlabs.model_id': ['scribe_v2', 'scribe_v1'],
   'stt.local.model': ['tiny', 'base', 'small', 'medium', 'large-v3'],
   // Speech-to-text backends — kept in sync with the stt block in
-  // scout_cli/config.py (local/groq/openai/mistral/elevenlabs).
+  // scout_backend/config.py (local/groq/openai/mistral/elevenlabs).
   'stt.provider': ['local', 'groq', 'openai', 'mistral', 'xai', 'elevenlabs'],
   // OpenAI TTS voices — the union across models (per the OpenAI TTS API
   // docs). Model-specific narrowing happens in enumOptionsFor():

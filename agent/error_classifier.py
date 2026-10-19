@@ -693,7 +693,7 @@ def _plugin_verdict(c: _Ctx) -> Optional[Verdict]:
     provider plugin can add or correct verdicts). invoke_hook isolates callback
     failures; this guard only covers import/dispatch failure."""
     try:
-        from scout_cli.plugins import get_plugin_error_classification
+        from scout_backend.plugins import get_plugin_error_classification
         verdict = get_plugin_error_classification(
             provider=c.provider, model=c.model, status_code=c.status_code, error_type=c.error_type,
             error_code=c.error_code, error_message=c.msg, error_body=c.body, error=c.error,
@@ -931,7 +931,7 @@ def classify_api_error(
 
 def _off_route_host(c: _Ctx) -> str:
     """The contacted host when ``base_url`` is set and is not the provider's own endpoint; ``""`` otherwise."""
-    from scout_cli.route_identity import provider_owns_route
+    from scout_backend.route_identity import provider_owns_route
     from utils import base_url_hostname
     host = base_url_hostname(c.base_url)
     if not host or provider_owns_route(c.provider_slug, c.base_url) is True:
@@ -1201,7 +1201,7 @@ def _model_id_missing_known_prefix(model: str, provider: str) -> bool:
     if not name or "/" in name:
         return False
     try:
-        from scout_cli.model_normalize import suggest_prefixed_model_id
+        from scout_backend.model_normalize import suggest_prefixed_model_id
         return bool(suggest_prefixed_model_id((provider or "").strip(), name))
     except Exception:
         return False

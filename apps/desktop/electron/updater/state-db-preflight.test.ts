@@ -13,7 +13,7 @@ import { preflightStateDb } from './state-db-preflight'
 test('the desktop preflight publishes committed WAL rows before its caller can stop the backend', async (): Promise<void> => {
   const home: string = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-db-'))
   const python: string = process.env.SCOUT_PYTHON || 'python3'
-  const script: string = fileURLToPath(new URL('../../../../scout_cli/backup_sqlite.py', import.meta.url))
+  const script: string = fileURLToPath(new URL('../../../../scout_backend/backup_sqlite.py', import.meta.url))
 
   const child = spawn(
     python,
@@ -91,10 +91,10 @@ test('a managed installation runs the snapshot through the installation launcher
   const home: string = fs.mkdtempSync(path.join(os.tmpdir(), 'managed-preflight-'))
   const shims: string = fs.mkdtempSync(path.join(os.tmpdir(), 'launcher-shim-'))
   const python: string = process.env.SCOUT_PYTHON || 'python3'
-  const script: string = fileURLToPath(new URL('../../../../scout_cli/backup_sqlite.py', import.meta.url))
+  const script: string = fileURLToPath(new URL('../../../../scout_backend/backup_sqlite.py', import.meta.url))
 
   // Stand-in for the installation launcher under `.scout/bin`: it must accept
-  // exactly what the runtime passes it — `--run-module scout_cli.backup_sqlite
+  // exactly what the runtime passes it — `--run-module scout_backend.backup_sqlite
   // <home>` — and publish the snapshot like the real launcher does.
   const shim: string = path.join(shims, process.platform === 'win32' ? 'scout.cmd' : 'scout')
   fs.writeFileSync(
@@ -151,7 +151,7 @@ test('an older selected checkout without the snapshot helper refuses before back
     assert.throws((): void => {
       preflightStateDb({
         python: process.env.SCOUT_PYTHON || 'python3',
-        script: path.join(oldRoot, 'scout_cli', 'backup_sqlite.py'),
+        script: path.join(oldRoot, 'scout_backend', 'backup_sqlite.py'),
         home: oldRoot,
         log: (): void => {}
       })

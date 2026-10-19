@@ -443,7 +443,7 @@ def kill_tagged(ph: ParityHome) -> None:
 
 
 def scout_argv(*args: str) -> list[str]:
-    return [sys.executable, "-m", "scout_cli.main", *args]
+    return [sys.executable, "-m", "scout_backend.main", *args]
 
 
 def terminate(proc: subprocess.Popen, timeout: float = 30.0) -> int | None:

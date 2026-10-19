@@ -7,7 +7,7 @@ import threading
 
 
 def test_side_workers_hold_admission_through_cleanup_and_preserve_profile_scope(tmp_path, monkeypatch):
-    from scout_cli import backend_retirement
+    from scout_backend import backend_retirement
     from scout_constants import get_scout_home
     from agent.secret_scope import get_secret, set_multiplex_active
     from tui_gateway import server

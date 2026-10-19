@@ -29,7 +29,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 import plugins.dashboard_auth.self_hosted as oidc_plugin
-from scout_cli.dashboard_auth import (
+from scout_backend.dashboard_auth import (
     InvalidCodeError,
     ProviderError,
     Session,
@@ -740,7 +740,7 @@ class TestPluginRegister:
             cfg = {}
             if oauth_block is not None:
                 cfg = {"dashboard": {"oauth": oauth_block}}
-            monkeypatch.setattr("scout_cli.config.load_config", lambda: cfg)
+            monkeypatch.setattr("scout_backend.config.load_config", lambda: cfg)
 
         return _set
 
@@ -790,7 +790,7 @@ class TestPluginRegister:
         def _broken():
             raise OSError("unreadable")
 
-        monkeypatch.setattr("scout_cli.config.load_config", _broken)
+        monkeypatch.setattr("scout_backend.config.load_config", _broken)
         ctx = MagicMock()
         oidc_plugin.register(ctx)  # must not raise
         ctx.register_dashboard_auth_provider.assert_not_called()

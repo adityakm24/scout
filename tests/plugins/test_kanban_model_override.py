@@ -17,9 +17,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from scout_cli import kanban_db as kb
-from scout_cli import kanban_db_connect as kbc
-from scout_cli import kanban_db_dispatch as kbd
+from scout_backend import kanban_db as kb
+from scout_backend import kanban_db_connect as kbc
+from scout_backend import kanban_db_dispatch as kbd
 
 
 # ---------------------------------------------------------------------------
@@ -262,7 +262,7 @@ def test_spawn_omits_reasoning_when_unset(monkeypatch, tmp_path, conn):
 def test_worker_cli_accepts_the_reasoning_flag():
     """The dispatcher's --reasoning must be a real flag on the worker's CLI —
     a spawn arg no parser accepts fails every dispatch."""
-    from scout_cli._parser import build_top_level_parser
+    from scout_backend._parser import build_top_level_parser
 
     parser = build_top_level_parser()[0]
     args = parser.parse_args(["chat", "-q", "hi", "--reasoning", "high"])

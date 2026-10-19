@@ -85,7 +85,7 @@ class Board:
         self.scout_bin = self.root / "scout-bin"
         self.scout_bin.write_text(
             "#!/bin/sh\n"
-            f"PYTHONPATH={REPO} exec {PY} -m scout_cli.main \"$@\"\n", encoding="utf-8")
+            f"PYTHONPATH={REPO} exec {PY} -m scout_backend.main \"$@\"\n", encoding="utf-8")
         self.scout_bin.chmod(0o755)
 
     # env / processes -------------------------------------------------------
@@ -109,7 +109,7 @@ class Board:
 
     def cli(self, *args: str, timeout: float = 90.0, check: bool = True) -> subprocess.CompletedProcess:
         proc = subprocess.run(
-            [PY, "-m", "scout_cli.main", "kanban", *args], cwd=str(self.root), env=self.env(),
+            [PY, "-m", "scout_backend.main", "kanban", *args], cwd=str(self.root), env=self.env(),
             capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL,
         )
         if check and proc.returncode != 0:

@@ -90,7 +90,7 @@ def load_wake_word_config() -> Dict[str, Any]:
     """Return the ``wake_word`` config section, shape-guarded to a dict."""
     cfg = None
     with suppress(Exception):
-        from scout_cli.config import load_config
+        from scout_backend.config import load_config
         cfg = load_config().get("wake_word")
     return cfg if isinstance(cfg, dict) else {}
 
@@ -186,7 +186,7 @@ def wake_surface_enabled(surface: str, cfg: Optional[Dict[str, Any]] = None) -> 
 
 def _active_profile_name() -> str:
     with suppress(Exception):
-        from scout_cli.profiles import get_active_profile_name
+        from scout_backend.profiles import get_active_profile_name
         return get_active_profile_name() or "default"
     return "default"
 
@@ -197,8 +197,8 @@ def enrolled_profile_phrases() -> Dict[str, str]:
     ``"hey <profile>"``; the sherpa engine listens for all and routes to the match. Unreadable → skipped."""
     phrases: Dict[str, str] = {}
     with suppress(Exception):
-        from scout_cli.config import read_user_config_raw
-        from scout_cli.profiles import get_profile_dir, list_profiles
+        from scout_backend.config import read_user_config_raw
+        from scout_backend.profiles import get_profile_dir, list_profiles
         for info in list_profiles():
             name = getattr(info, "name", None) or str(info)
             with suppress(Exception):
@@ -687,7 +687,7 @@ class WakeWordDetector:
                 self.on_failure(self)
 
 
-# ── Process-wide singleton (mirrors scout_cli.voice's continuous API) ──
+# ── Process-wide singleton (mirrors scout_backend.voice's continuous API) ──
 
 _detector: Optional[WakeWordDetector] = None
 _detector_owner: object | None = None

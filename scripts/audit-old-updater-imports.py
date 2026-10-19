@@ -42,11 +42,11 @@ are recorded. Unresolved expressions remain visible for manual review:
   This is the most dangerous load in the whole flow and it looks like
   nothing to an import walker. ``_UPDATE_RUNTIME_RELOAD_MODULES`` and
   ``_reload_config_modules`` reload ``scout_constants``,
-  ``scout_cli.config`` and friends by name. Treated as a whole-module
+  ``scout_backend.config`` and friends by name. Treated as a whole-module
   requirement.
 * ``getattr(module, "name")`` — a symbol requirement with no import
   statement. ``managed_uv._windows_runtime_holders`` looks up
-  ``_detect_venv_python_processes`` on ``scout_cli.main`` this way, and
+  ``_detect_venv_python_processes`` on ``scout_backend.main`` this way, and
   silently refuses the update when it is absent.
 * ``importlib.import_module(x)`` with a non-literal argument — cannot be
   resolved statically. Reported as UNRESOLVED rather than ignored.
@@ -103,9 +103,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # Known entrypoint seeds, not a history path filter. Discovery also scans
 # every reachable Python blob for entrypoint definitions at other addresses.
 UPDATE_MODULE_CANDIDATES = (
-    "scout_cli/main.py",
-    "scout_cli/subcommands/update.py",
-    "scout_cli/update_cmd.py",
+    "scout_backend/main.py",
+    "scout_backend/subcommands/update.py",
+    "scout_backend/update_cmd.py",
 )
 
 # Known post-swap helpers: every function counts. Historical filenames are
@@ -113,13 +113,13 @@ UPDATE_MODULE_CANDIDATES = (
 # and statically referenced imported functions (including extractions).
 # This list is a conservative seed, not the universe of audited paths.
 POST_SWAP_HELPER_MODULES = (
-    "scout_cli/post_update.py",
-    "scout_cli/update_lock.py",
+    "scout_backend/post_update.py",
+    "scout_backend/update_lock.py",
     # Read every historical home of these helpers.
-    "scout_cli/backup.py",
-    "scout_cli/backup_restore.py",
-    "scout_cli/managed_uv.py",
-    "scout_cli/psutil_android.py",
+    "scout_backend/backup.py",
+    "scout_backend/backup_restore.py",
+    "scout_backend/managed_uv.py",
+    "scout_backend/psutil_android.py",
     # Diagnostic tree audits also inspect the PM updater. These seeds do
     # not extend the historical cutoff: files absent there are skipped.
     "pm/__init__.py",
@@ -139,8 +139,8 @@ POST_SWAP_HELPER_MODULES = (
 # Historical module-object calls that need explicit review, not a guessed
 # receiver type. Keep the witness so regeneration cannot discard the contract.
 REVIEWED_DYNAMIC_LOADS = (
-    ("scout_cli._subprocess_compat", "run", "2ecca1e7d3e7",
-     "scout_cli/managed_uv.py:_install_uv_windows"),
+    ("scout_backend._subprocess_compat", "run", "2ecca1e7d3e7",
+     "scout_backend/managed_uv.py:_install_uv_windows"),
 )
 
 # Only OUR packages matter: a third-party import is pinned by the
@@ -149,7 +149,7 @@ FIRST_PARTY_ROOTS = frozenset(
     {
         "agent",
         "gateway",
-        "scout_cli",
+        "scout_backend",
         "scout_constants",
         "scout_state",
         "installation",
@@ -216,7 +216,7 @@ def _called_names(node: ast.AST) -> set[str]:
 
     Covers the three shapes this codebase uses: ``foo()``,
     ``module.foo()``, and ``_m().foo()`` — update_cmd's lazy
-    ``scout_cli.main`` handle, which re-exports these same helpers.
+    ``scout_backend.main`` handle, which re-exports these same helpers.
     Attribute calls that are not ours simply find no match in the
     module's own function table.
     """
@@ -394,7 +394,7 @@ def _requirements_in(
 def _module_of(node: ast.AST) -> str | None:
     """Best-effort: which module a getattr target refers to.
 
-    Handles the one real shape — ``sys.modules.get("scout_cli.main")``
+    Handles the one real shape — ``sys.modules.get("scout_backend.main")``
     stashed in a local and then getattr'd (managed_uv does exactly this).
     """
     if isinstance(node, ast.Call):
@@ -910,7 +910,7 @@ def _audit_versions(index: HistoryIndex, entrypaths: set[str], read_sources, *, 
         enqueue(path, set(UPDATE_ENTRYPOINTS))
     for path in sorted(set(POST_SWAP_HELPER_MODULES) | {
         p for p in index.versions
-        if p.startswith("scout_cli/update_cmd_") and p.endswith(".py")
+        if p.startswith("scout_backend/update_cmd_") and p.endswith(".py")
     }):
         enqueue(path, None)
 
@@ -1064,7 +1064,7 @@ def resolve_in_tree(module: str, symbol: str | None, root: Path) -> tuple[bool, 
     if symbol is None:
         return True, ""
 
-    # `from scout_cli import gateway_windows` names a SUBMODULE, not an
+    # `from scout_backend import gateway_windows` names a SUBMODULE, not an
     # attribute of the package body.
     submodule = root / rel / symbol
     if submodule.with_suffix(".py").is_file() or (submodule / "__init__.py").is_file():

@@ -55,7 +55,7 @@ def _turn(db, agent, cli, surface, n, prompt_tokens):
         history = _build_gateway_agent_history(db.get_messages_as_conversation("sid", repair_alternation=True))
         agent.run_conversation(user_message=text, conversation_history=history, task_id="sid", persist_user_message=text)
         return
-    from scout_cli.cli_chat_turn_mixin import CLIChatTurnMixin
+    from scout_backend.cli_chat_turn_mixin import CLIChatTurnMixin
 
     CLIChatTurnMixin._chat_stage_user_message(cli, agent, text)
     result = agent.run_conversation(

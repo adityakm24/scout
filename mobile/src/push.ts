@@ -7,14 +7,14 @@ import { AppState, type AppStateStatus, Platform } from 'react-native'
 import type { Pairing } from './pairing'
 
 // Tells the paired Scout how to reach this phone once iOS or Android suspends the app
-// (scout_cli/push/): the Expo push token for notifications, Apple's tokens for the Live Activity,
+// (scout_backend/push/): the Expo push token for notifications, Apple's tokens for the Live Activity,
 // whether the app is on screen, and which chat is. While the app is on screen the page does all
 // of it itself, so the backend stays quiet.
 
 const DEVICE_KEY = 'scout.device-id'
 // The backend counts a phone as away 150 s after its last "on screen" (FOREGROUND_TTL_SECONDS).
 const PRESENCE_REFRESH_MS = 60_000
-// The name a Live Activity started by push carries (scout_cli/push/apns.py ACTIVITY_NAME_PREFIX).
+// The name a Live Activity started by push carries (scout_backend/push/apns.py ACTIVITY_NAME_PREFIX).
 const PUSHED_ACTIVITY_PREFIX = 'scout:'
 
 let pairing: null | Pairing = null

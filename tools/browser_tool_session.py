@@ -14,7 +14,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from scout_cli._subprocess_compat import windows_hide_flags
+from scout_backend._subprocess_compat import windows_hide_flags
 from tools.browser_tool_origin import origin as _bt
 from tools import browser_tool_cdp as _cdp
 from tools import browser_tool_cloud as _cloud
@@ -162,7 +162,7 @@ def _agent_browser_command_env(socket_dir: str) -> Dict[str, str]:
     env = _bt._build_browser_env()
     env["PATH"] = _install._merge_browser_path(env.get("PATH", ""))
     env = env_for("agent-browser", base_env=env)
-    from scout_cli.browser_runtime import chromium_executable
+    from scout_backend.browser_runtime import chromium_executable
 
     executable = chromium_executable()
     if executable:

@@ -259,7 +259,7 @@ _ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
 def enable_windows_vt(streams=None) -> bool:
     """Opt the console behind stdout/stderr in to ANSI escape processing.
 
-    ``scout_cli.colors`` and the skins emit raw SGR codes whenever stdout is a TTY. A
+    ``scout_backend.colors`` and the skins emit raw SGR codes whenever stdout is a TTY. A
     conhost console (PowerShell 5.1, cmd.exe, the installer's ``scout setup``) prints
     them as ``←[35m`` until the output handle has ENABLE_VIRTUAL_TERMINAL_PROCESSING, and
     shells hand native children a console with it off. The mode belongs to the console
@@ -303,8 +303,8 @@ def suppress_platform_ver_console() -> None:
     and Python 3.11.0/3.11.1 (no ``encoding="locale"`` fix) strict-utf-8-decodes the OEM
     code page output under PEP 540 mode and raises (#69413). Returning the inputs makes
     ``win32_ver()`` fall back to ``sys.getwindowsversion()`` — same data, no subprocess.
-    Mirrors ``scout_cli._subprocess_compat.suppress_platform_ver_console`` for callers
-    that never import ``scout_cli.main``; double application is harmless.
+    Mirrors ``scout_backend._subprocess_compat.suppress_platform_ver_console`` for callers
+    that never import ``scout_backend.main``; double application is harmless.
     """
     if not _IS_WINDOWS:
         return
@@ -458,7 +458,7 @@ def export_scratch_tmp_env() -> None:
 
     System temp is tmpfs on most Linux hosts and containers; Scout's browser profiles, PTY
     probes and every ``tempfile`` default a child script makes would eat RAM there. Runs at
-    import so every entry point and every child they spawn inherits it; ``scout_cli.main``
+    import so every entry point and every child they spawn inherits it; ``scout_backend.main``
     re-runs it after ``--profile`` re-homes the process. Never raises.
     """
     try:
@@ -512,7 +512,7 @@ if _legacy_post_swap is not None:
     # This continuation exists precisely because the replacement tree may not
     # run under the old release's dependency graph. Take it over before PM
     # activation, launch preparation, or argparse imports any of that graph.
-    from scout_cli.update_handoff import _continue_legacy_post_swap
+    from scout_backend.update_handoff import _continue_legacy_post_swap
 
     _handoff_path, _argv_tail = _legacy_post_swap
     raise SystemExit(_continue_legacy_post_swap(_handoff_path, argv_tail=_argv_tail))
@@ -525,14 +525,14 @@ class RelaunchExit(SystemExit):
 
 
 from pm.environments import activate_dependencies, install_state_permission_message
-from scout_cli._early_recovery import recover_if_needed
+from scout_backend._early_recovery import recover_if_needed
 
-from scout_cli._parser import command_argv
+from scout_backend._parser import command_argv
 
 # Repair needs only stdlib. Do not activate the damaged tree to reach it.
 _pm_repair = command_argv(sys.argv[1:])[:2] == ["pm", "repair"]
 if not _pm_repair:
-    from scout_cli.venv_sync import prepare_launch, relaunch_command
+    from scout_backend.venv_sync import prepare_launch, relaunch_command
 
     try:
         _launch_python = prepare_launch(_root, sys.argv[1:])

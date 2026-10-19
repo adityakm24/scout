@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
-from scout_cli.config_defaults import DEFAULT_VERCEL_IMAGE
+from scout_backend.config_defaults import DEFAULT_VERCEL_IMAGE
 from scout_constants import get_scout_home
 from tools.environments.base import BaseEnvironment, _load_json_store, _save_json_store
 from tools.environments.base_output import _ThreadedProcessHandle

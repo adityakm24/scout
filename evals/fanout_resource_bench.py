@@ -30,7 +30,7 @@ import time
 
 # --------------------------------------------------------------------------
 # Fake OpenAI chat-completions server: each child does
-#   turn 1: call write_file on <its worktree>/scout_cli/bench_<i>.py
+#   turn 1: call write_file on <its worktree>/scout_backend/bench_<i>.py
 #   turn 2: call execute_code print(1)
 #   turn 3: final text
 # --------------------------------------------------------------------------
@@ -156,10 +156,10 @@ def main() -> None:
     base = tempfile.mkdtemp(prefix="scout_bench_wt_")
     for w in range(a.worktrees):
         d = os.path.join(base, f"wt{w}")
-        os.makedirs(os.path.join(d, "scout_cli"))
+        os.makedirs(os.path.join(d, "scout_backend"))
         subprocess.run(["git", "init", "-q", d], check=True)
         open(os.path.join(d, "pyproject.toml"), "w", encoding="utf-8").write("[project]\nname='b'\n")
-        open(os.path.join(d, "scout_cli", "__init__.py"), "w", encoding="utf-8").write("")
+        open(os.path.join(d, "scout_backend", "__init__.py"), "w", encoding="utf-8").write("")
         wts.append(d)
 
     srv = _serve()
@@ -190,7 +190,7 @@ def main() -> None:
                 peak[k] = max(peak[k], v)
     threading.Thread(target=sampler, daemon=True).start()
 
-    tasks = [{"goal": json.dumps({"file": os.path.join(wts[i % len(wts)], "scout_cli", f"bench_{i}.py")}),
+    tasks = [{"goal": json.dumps({"file": os.path.join(wts[i % len(wts)], "scout_backend", f"bench_{i}.py")}),
               "context": "bench"} for i in range(a.children)]
     t0 = time.monotonic()
     res = delegate_tool.delegate_task(tasks=tasks, parent_agent=parent, background=False)

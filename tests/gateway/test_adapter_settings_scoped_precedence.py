@@ -14,7 +14,7 @@ import contextlib
 import pytest
 
 from agent.secret_scope import set_multiplex_active
-from scout_cli.plugins import discover_plugins
+from scout_backend.plugins import discover_plugins
 
 
 @pytest.fixture(autouse=True)

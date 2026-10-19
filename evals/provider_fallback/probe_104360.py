@@ -99,7 +99,7 @@ config = {
 Path(os.environ["SCOUT_HOME"] + "/config.yaml").write_text(
     yaml.safe_dump(config), encoding="utf-8"
 )
-from scout_cli.runtime_provider import resolve_runtime_provider
+from scout_backend.runtime_provider import resolve_runtime_provider
 from agent.auxiliary_client import resolve_provider_client
 
 try:
@@ -149,8 +149,8 @@ config["providers"]["fixture-provider"]["request_timeout_seconds"] = 15
 Path(os.environ["SCOUT_HOME"] + "/config.yaml").write_text(
     yaml.safe_dump(config), encoding="utf-8"
 )
-from scout_cli.config import load_config_readonly
-from scout_cli.timeouts import get_provider_request_timeout
+from scout_backend.config import load_config_readonly
+from scout_backend.timeouts import get_provider_request_timeout
 
 out["timeout_resolved"] = get_provider_request_timeout("fixture-provider", "model-b")
 fb2, _ = resolve_provider_client("fixture-provider", model="model-b", raw_codex=True)
@@ -208,7 +208,7 @@ out["blocked"] = blocked
 out["production_imports"] = {
     n: sys.modules[n].__file__
     for n in [
-        "scout_cli.runtime_provider",
+        "scout_backend.runtime_provider",
         "agent.auxiliary_client",
         "agent.client_lifecycle",
     ]

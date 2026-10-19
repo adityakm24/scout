@@ -90,7 +90,7 @@ BOT_CHAT_TURN_ARGS = ("chat", "--in", "~", "-c", "Bot Chat", "--create-if-missin
 # ``tui_gateway.methods_bot_relay``). The failed attempt's turn-start persist already left the DM as the
 # Bot Chat's unanswered tail row, and a fresh process cannot tell that from a new message on its own — so
 # the re-run is told to adopt that row instead of appending a second copy
-# (``scout_cli.quiet_single_query.adopt_unanswered_turn``, which consumes the variable before the turn).
+# (``scout_backend.quiet_single_query.adopt_unanswered_turn``, which consumes the variable before the turn).
 RESUME_UNANSWERED_TURN_ENV = "SCOUT_RESUME_UNANSWERED_TURN"
 
 
@@ -119,7 +119,7 @@ def _bot_mode_cfg(key: str, *, loader: str) -> Any:
     """``bot_mode.<key>`` from config, read lazily (tools/ must not import CLI
     config at import time); None when absent or the config is unreadable."""
     try:
-        import scout_cli.config as cfgmod
+        import scout_backend.config as cfgmod
 
         cfg = getattr(cfgmod, loader)() or {}
         return (cfg.get("bot_mode") or {}).get(key)
@@ -499,7 +499,7 @@ def waiter_command(root: Path | str, envelope: dict) -> str:
     return shlex.join(argv)
 
 
-def _scout_cli() -> str:
+def _scout_backend() -> str:
     """Prefer this install's published launcher, then interpreter/PATH fallbacks.
 
     A long-lived caller can still run in an older dependency generation. Its
@@ -519,7 +519,7 @@ def _scout_cli() -> str:
 
 def local_delivery_command(profile: str, query_file: str) -> list[str]:
     """argv that delivers a DM into ``profile``'s Bot Chat on THIS gateway."""
-    return [_scout_cli(), "-p", profile, *BOT_CHAT_TURN_ARGS, "--query-file", query_file]
+    return [_scout_backend(), "-p", profile, *BOT_CHAT_TURN_ARGS, "--query-file", query_file]
 
 
 class DeliveryAuthor:

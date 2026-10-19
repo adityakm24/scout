@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from agent.secret_scope import set_multiplex_active
-from scout_cli import plugins as plugins_mod
+from scout_backend import plugins as plugins_mod
 from scout_constants import get_scout_home, get_scout_home_override
 from tools.daemon_pool import DaemonThreadPoolExecutor
 from tools.thread_context import propagate_context_to_thread
@@ -47,7 +47,7 @@ def two_homes(tmp_path, monkeypatch):
     seen: list[dict] = []
 
     def stub_pre_tool_call(**_kw):
-        from scout_cli.config import load_config_readonly
+        from scout_backend.config import load_config_readonly
         entry = ((load_config_readonly().get("plugins") or {}).get("entries") or {}).get("stub") or {}
         seen.append({"home": get_scout_home().name, "x": (entry.get("settings") or {}).get("x"),
                      "bound": get_scout_home_override() is not None})

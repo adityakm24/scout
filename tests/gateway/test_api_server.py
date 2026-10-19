@@ -244,7 +244,7 @@ class TestAdapterInit:
             staticmethod(lambda model="": {"enabled": True, "effort": "xhigh"}),
         )
         monkeypatch.setattr("gateway.run.GatewayRunner._load_fallback_model", staticmethod(lambda: None))
-        monkeypatch.setattr("scout_cli.tools_config._get_platform_tools", lambda *_: set())
+        monkeypatch.setattr("scout_backend.tools_config._get_platform_tools", lambda *_: set())
 
         adapter = APIServerAdapter(PlatformConfig(enabled=True))
         monkeypatch.setattr(adapter, "_ensure_session_db", lambda: None)
@@ -814,7 +814,7 @@ class TestHealthEndpoint:
             data = await resp.json()
             assert "version" in data
             assert isinstance(data["version"], str)
-            from scout_cli.version_info import get_version_info
+            from scout_backend.version_info import get_version_info
             assert data["version"] == get_version_info().base_version
 
 
@@ -1008,13 +1008,13 @@ class TestToolsetsEndpoint:
             ("web", "Web Tools", "Search and extract"),
         ]
         with patch(
-            "scout_cli.tools_config._get_effective_configurable_toolsets",
+            "scout_backend.tools_config._get_effective_configurable_toolsets",
             return_value=fake_toolsets,
         ), patch(
-            "scout_cli.tools_config._get_platform_tools",
+            "scout_backend.tools_config._get_platform_tools",
             return_value={"default"},
         ), patch(
-            "scout_cli.tools_config._toolset_has_keys",
+            "scout_backend.tools_config._toolset_has_keys",
             return_value=True,
         ) as has_keys, patch(
             "toolsets.resolve_toolset",
@@ -1410,7 +1410,7 @@ class TestDeriveChatSessionId:
         """A gateway launched as ``work`` serves ``/p/work/`` and the bare route as ONE profile:
         both must derive one id, or the same conversation forks by URL."""
         import scout_constants
-        from scout_cli import profiles
+        from scout_backend import profiles
 
         work = tmp_path / "profiles" / "work"
         work.mkdir(parents=True)
@@ -2578,7 +2578,7 @@ def _patch_create_agent_runtime(monkeypatch, captured: dict, fake_agent_cls):
         "gateway.run.GatewayRunner._load_fallback_model", staticmethod(lambda: None)
     )
     monkeypatch.setattr("gateway.run._current_max_iterations", lambda: 90)
-    monkeypatch.setattr("scout_cli.tools_config._get_platform_tools", lambda *_: set())
+    monkeypatch.setattr("scout_backend.tools_config._get_platform_tools", lambda *_: set())
 
 
 class TestModelRoutesParsing:
@@ -2865,8 +2865,8 @@ class TestApiKeyStartupGuardFailsClosed:
         real_import = __import__
 
         def _blocked(name, *args, **kwargs):
-            if name == "scout_cli.auth":
-                raise ImportError("simulated: scout_cli.auth unavailable")
+            if name == "scout_backend.auth":
+                raise ImportError("simulated: scout_backend.auth unavailable")
             return real_import(name, *args, **kwargs)
 
         return patch("builtins.__import__", _blocked)
@@ -3018,7 +3018,7 @@ class TestCreateAgentModelRecovery:
         )
         monkeypatch.setattr("gateway.run._resolve_gateway_model", lambda: "")
         monkeypatch.setattr(
-            "scout_cli.models.get_default_model_for_provider",
+            "scout_backend.models.get_default_model_for_provider",
             lambda provider: "gpt-5.5-codex" if provider == "openai-codex" else None,
         )
 

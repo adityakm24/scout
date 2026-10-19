@@ -284,7 +284,7 @@ class TestCheckVoiceRequirements:
             lambda p: plugin_provider if p == "my-plugin-stt" else None,
         )
         monkeypatch.setattr(
-            "scout_cli.plugins._ensure_plugins_discovered",
+            "scout_backend.plugins._ensure_plugins_discovered",
             lambda force=False: None,
         )
 
@@ -1320,11 +1320,11 @@ class TestGetBeepVolume:
         ({"voice": {"beep_volume": True}}, 0.3),           # bool is not a volume
     ])
     def test_config_value_resolution(self, config, expected):
-        with patch("scout_cli.config.load_config", return_value=config):
+        with patch("scout_backend.config.load_config", return_value=config):
             assert self._get() == expected
 
     def test_load_config_exception_falls_back(self):
-        with patch("scout_cli.config.load_config",
+        with patch("scout_backend.config.load_config",
                    side_effect=RuntimeError("broken config")):
             assert self._get() == 0.3
 

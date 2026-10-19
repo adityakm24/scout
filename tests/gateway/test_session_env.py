@@ -221,7 +221,7 @@ async def test_plugin_slash_command_sees_session_env(monkeypatch):
         seen["chat_id"] = get_session_env("SCOUT_SESSION_CHAT_ID")
         return f"Bound: {raw_args}"
 
-    from scout_cli import plugins as _plugins_mod
+    from scout_backend import plugins as _plugins_mod
     monkeypatch.setattr(_plugins_mod, "get_plugin_command_handler",
                          lambda name: _handler if name == "gsd-bind" else None)
 

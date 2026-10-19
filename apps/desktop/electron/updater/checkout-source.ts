@@ -58,12 +58,12 @@ export async function readSourceUpdate(probe: SourceUpdateProbe): Promise<Source
 
   const args: string[] = [
     ...(managed
-      ? ['--run-module', 'scout_cli.source_check']
+      ? ['--run-module', 'scout_backend.source_check']
       : [
           '-c',
           // Inspect the target checkout's callable, not stderr strings or an editable
           // install elsewhere on sys.path. Exceptions inside a present probe propagate.
-          'from pathlib import Path; import runpy; p = Path("scout_cli/source_check.py"); entry = runpy.run_path(str(p)).get("main") if p.is_file() else None; entry() if callable(entry) else print("null")'
+          'from pathlib import Path; import runpy; p = Path("scout_backend/source_check.py"); entry = runpy.run_path(str(p)).get("main") if p.is_file() else None; entry() if callable(entry) else print("null")'
         ]),
     '--install-root',
     probe.updateRoot,

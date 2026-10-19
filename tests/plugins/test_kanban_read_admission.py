@@ -12,7 +12,7 @@ import pytest
 from fastapi import FastAPI
 from starlette.concurrency import run_in_threadpool
 
-from scout_cli import kanban_db as kb
+from scout_backend import kanban_db as kb
 
 OK = 200
 BOARD_PATH = "/api/plugins/kanban/board"

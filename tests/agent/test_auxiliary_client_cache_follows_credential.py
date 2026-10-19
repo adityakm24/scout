@@ -11,7 +11,7 @@ import pytest
 
 import agent.anthropic_credentials as anth_cred
 import agent.auxiliary_client as aux
-from scout_cli.auth import write_credential_pool
+from scout_backend.auth import write_credential_pool
 
 MODEL = "claude-sonnet-4-5"
 

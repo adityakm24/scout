@@ -42,7 +42,7 @@ class GatewayStartupMixin:
         ``SCOUT_MAX_ITERATIONS`` before this runs, so the env slot already carries the config value;
         resolve it the same way the turn loop does (``none``/``unlimited`` spellings included) instead of
         ``int()`` on the raw string with an invented ``500`` default (#116888)."""
-        from scout_cli.config import TURN_LIMIT_UNLIMITED, resolve_turn_limit
+        from scout_backend.config import TURN_LIMIT_UNLIMITED, resolve_turn_limit
         limit = resolve_turn_limit(os.getenv("SCOUT_MAX_ITERATIONS"))
         logger.info("Agent budget: max_iterations=%s (agent.max_turns from config.yaml, else the SCOUT_MAX_ITERATIONS bridge)",
                     "unlimited" if limit == TURN_LIMIT_UNLIMITED else limit)
@@ -757,7 +757,7 @@ class GatewayStartupMixin:
         from gateway.run import _sanitize_gateway_final_response
         from gateway.run_turn import _unexpected_silence_reply
         from gateway.warning_notifications import diagnostic_turn_muted
-        from scout_cli.timefmt import coerce_epoch
+        from scout_backend.timefmt import coerce_epoch
         visible = [m for m in history if m.get("role") not in ("session_meta", "system")]
         last = visible[-1] if visible else {}
         if (last.get("role") != "assistant" or last.get("tool_calls") or not isinstance(last.get("content"), str)
@@ -890,7 +890,7 @@ class GatewayStartupMixin:
                     "in config.yaml to re-enable.", _redact_raw,
                 )
         with suppress(Exception):
-            from scout_cli.profiles import get_active_profile_name
+            from scout_backend.profiles import get_active_profile_name
             _profile = get_active_profile_name()  # launch profile, pre-identity (boot log)
             if _profile and _profile != "default":
                 logger.info("Active profile: %s", _profile)
@@ -909,14 +909,14 @@ class GatewayStartupMixin:
         except Exception:
             logger.debug("Initial gateway runtime-status write failed", exc_info=True)
         with _log_suppressed(logging.DEBUG, "gateway health OTLP export startup failed", exc_info=True):
-            from scout_cli.config import load_config
+            from scout_backend.config import load_config
             from agent.monitoring.gateway_health_export import start_gateway_health_export
             self._gateway_health_export_runtime = start_gateway_health_export(load_config())
             if getattr(self._gateway_health_export_runtime, "enabled", False):
                 logger.info("Gateway health OTLP export: enabled")
         # Supply-chain advisories: log only (never block startup or surface to users; only the operator can act).
         with _log_suppressed(logging.DEBUG, "security advisory check failed at gateway startup", exc_info=True):
-            from scout_cli.security_advisories import detect_compromised, gateway_log_message
+            from scout_backend.security_advisories import detect_compromised, gateway_log_message
             _adv_msg = gateway_log_message(detect_compromised())
             if _adv_msg:
                 logger.warning("%s", _adv_msg)
@@ -927,8 +927,8 @@ class GatewayStartupMixin:
         unless the plugin that honours it is enabled. Never raises."""
         with _log_suppressed(logging.DEBUG, "retired session_reset check failed", exc_info=True):
             from gateway.config_loader import read_yaml_layers
-            from scout_cli.profiles import profiles_to_serve
-            from scout_cli.session_reset_retirement import format_notice, reset_plugin_enabled, retired_reset_policy
+            from scout_backend.profiles import profiles_to_serve
+            from scout_backend.session_reset_retirement import format_notice, reset_plugin_enabled, retired_reset_policy
             hits = [(name, found) for name, home in profiles_to_serve(bool(self.config.multiplex_profiles))
                     if (found := retired_reset_policy(read_yaml_layers(home)))]
             if hits and not reset_plugin_enabled():
@@ -982,7 +982,7 @@ class GatewayStartupMixin:
         # Discover plugins before shell hooks (plugin block decisions win ties). Explicit: the gateway
         # lazily imports run_agent, so model_tools' discover_plugins() side-effect may not have run.
         with _log_suppressed(logging.WARNING, "plugin discovery failed at gateway startup", exc_info=True):
-            from scout_cli.plugins import discover_plugins
+            from scout_backend.plugins import discover_plugins
             discover_plugins()
         GatewayStartupMixin._register_launch_profile_config_hooks()
 
@@ -1014,7 +1014,7 @@ class GatewayStartupMixin:
         Never raises (logged at ``level``).
         """
         try:
-            from scout_cli.config import load_config
+            from scout_backend.config import load_config
             from agent.shell_hooks import register_from_config
             from agent.outbound_webhooks import register_from_config as register_outbound_webhooks
             _hooks_cfg = load_config()
@@ -1048,7 +1048,7 @@ class GatewayStartupMixin:
         self._start_register_plugins_hooks()
         # Plugins that load later (force re-discovery, install/enable nudge) re-wire live adapters (#87770).
         with _log_suppressed(logging.WARNING, "plugin re-wire subscription failed", exc_info=True):
-            from scout_cli.plugins import get_plugin_manager
+            from scout_backend.plugins import get_plugin_manager
             self._subscribe_plugin_rewire(get_plugin_manager())
         self.hooks.discover_and_load()
         # Recover background processes from checkpoint (crash recovery). ``_checkpoint_path`` is

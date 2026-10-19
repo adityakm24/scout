@@ -157,9 +157,9 @@ def _isolated_checkout(tmp_path: Path) -> Path:
     root = tmp_path / "checkout with spaces"
     root.mkdir()
     shutil.copytree(REPO_ROOT / "pm", root / "pm", ignore=shutil.ignore_patterns("__pycache__"))
-    (root / "scout_cli").mkdir()
-    for relative in ("activate", "activate.ps1", "scout_constants.py", "scout_cli/__init__.py",
-                     "pm/environments.py", "scout_cli/runtime_state.py"):
+    (root / "scout_backend").mkdir()
+    for relative in ("activate", "activate.ps1", "scout_constants.py", "scout_backend/__init__.py",
+                     "pm/environments.py", "scout_backend/runtime_state.py"):
         shutil.copy2(REPO_ROOT / relative, root / relative)
     # Environment-only tests do not exercise provisioning; the runtime tests
     # replace these stubs with a publisher that records and applies each sync.

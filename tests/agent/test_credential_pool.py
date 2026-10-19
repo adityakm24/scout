@@ -27,7 +27,7 @@ def test_explicit_reset_timestamp_overrides_default_429_ttl(tmp_path, monkeypatc
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "scout"))
     # Prevent auto-seeding from Codex CLI tokens on the host
     monkeypatch.setattr(
-        "scout_cli.auth._import_codex_cli_tokens",
+        "scout_backend.auth._import_codex_cli_tokens",
         lambda: None,
     )
     _write_auth_store(
@@ -654,7 +654,7 @@ def test_load_pool_persists_bitwarden_origin_metadata_without_secret(tmp_path, m
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "scout"))
     monkeypatch.setenv("OPENROUTER_API_KEY", sentinel)
     monkeypatch.setattr(
-        "scout_cli.env_loader.get_secret_source",
+        "scout_backend.env_loader.get_secret_source",
         lambda env_var: "bitwarden" if env_var == "OPENROUTER_API_KEY" else None,
     )
     _write_auth_store(tmp_path, {"version": 1, "providers": {}})
@@ -805,7 +805,7 @@ def test_write_credential_pool_sanitizes_borrowed_payload_at_disk_boundary(tmp_p
     manual_secret = "MANUAL_SECRET_STAYS_PERSISTABLE"
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "scout"))
 
-    from scout_cli.auth import write_credential_pool
+    from scout_backend.auth import write_credential_pool
 
     write_credential_pool("openrouter", [
         {
@@ -847,7 +847,7 @@ def test_write_credential_pool_treats_unowned_oauth_source_as_borrowed(tmp_path,
     sentinel = "S3NTINEL_DO_NOT_PERSIST_UNOWNED_OAUTH"
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "scout"))
 
-    from scout_cli.auth import write_credential_pool
+    from scout_backend.auth import write_credential_pool
 
     write_credential_pool("openrouter", [
         {
@@ -874,7 +874,7 @@ def test_write_credential_pool_preserves_known_provider_owned_oauth_state(tmp_pa
     sentinel = "PROVIDER_OWNED_DEVICE_CODE_STAYS_PERSISTABLE"
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "scout"))
 
-    from scout_cli.auth import write_credential_pool
+    from scout_backend.auth import write_credential_pool
 
     write_credential_pool("openai-codex", [
         {
@@ -968,7 +968,7 @@ def test_load_pool_api_key_path_skips_oauth_autodiscovery(tmp_path, monkeypatch)
     monkeypatch.delenv("ANTHROPIC_TOKEN", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
     _write_auth_store(tmp_path, {"version": 1, "providers": {}})
-    monkeypatch.setattr("scout_cli.auth.is_provider_explicitly_configured", lambda pid: True)
+    monkeypatch.setattr("scout_backend.auth.is_provider_explicitly_configured", lambda pid: True)
 
     pkce_called = {"n": 0}
     cc_called = {"n": 0}
@@ -1042,7 +1042,7 @@ def test_load_pool_api_key_path_prunes_stale_oauth_entries(tmp_path, monkeypatch
             },
         },
     )
-    monkeypatch.setattr("scout_cli.auth.is_provider_explicitly_configured", lambda pid: True)
+    monkeypatch.setattr("scout_backend.auth.is_provider_explicitly_configured", lambda pid: True)
     monkeypatch.setattr("agent.anthropic_credentials.read_scout_oauth_credentials", lambda: None)
     monkeypatch.setattr("agent.anthropic_credentials.read_claude_code_credentials", lambda: None)
 
@@ -1069,7 +1069,7 @@ def test_load_pool_oauth_path_still_autodiscovers(tmp_path, monkeypatch):
     monkeypatch.setenv("ANTHROPIC_TOKEN", "sk-ant-oat01-explicit-oauth-token")
     monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
     _write_auth_store(tmp_path, {"version": 1, "providers": {}})
-    monkeypatch.setattr("scout_cli.auth.is_provider_explicitly_configured", lambda pid: True)
+    monkeypatch.setattr("scout_backend.auth.is_provider_explicitly_configured", lambda pid: True)
 
     monkeypatch.setattr(
         "agent.anthropic_credentials.read_scout_oauth_credentials",
@@ -1235,7 +1235,7 @@ def test_load_pool_does_not_seed_claude_code_when_anthropic_not_configured(tmp_p
     )
     # User configured kimi-coding, NOT anthropic
     monkeypatch.setattr(
-        "scout_cli.auth.is_provider_explicitly_configured",
+        "scout_backend.auth.is_provider_explicitly_configured",
         lambda pid: pid == "kimi-coding",
     )
 
@@ -1252,7 +1252,7 @@ def test_load_pool_seeds_copilot_via_gh_auth_token(tmp_path, monkeypatch):
     _write_auth_store(tmp_path, {"version": 1, "credential_pool": {}})
 
     monkeypatch.setattr(
-        "scout_cli.copilot_auth.resolve_copilot_token",
+        "scout_backend.copilot_auth.resolve_copilot_token",
         lambda: ("gho_fake_token_abc123", "gh auth token"),
     )
 
@@ -1288,7 +1288,7 @@ def test_load_pool_skips_exchange_for_suppressed_copilot(tmp_path, monkeypatch):
     )
 
     monkeypatch.setattr(
-        "scout_cli.copilot_auth.resolve_copilot_token",
+        "scout_backend.copilot_auth.resolve_copilot_token",
         lambda: ("gho_fake_token_abc123", "gh auth token"),
     )
 
@@ -1300,7 +1300,7 @@ def test_load_pool_skips_exchange_for_suppressed_copilot(tmp_path, monkeypatch):
         raise AssertionError("exchange must not run for a suppressed source")
 
     monkeypatch.setattr(
-        "scout_cli.copilot_auth.get_copilot_api_token",
+        "scout_backend.copilot_auth.get_copilot_api_token",
         _boom,
     )
 
@@ -1331,7 +1331,7 @@ def test_load_pool_respects_env_var_copilot_suppression(tmp_path, monkeypatch):
     )
 
     monkeypatch.setattr(
-        "scout_cli.copilot_auth.resolve_copilot_token",
+        "scout_backend.copilot_auth.resolve_copilot_token",
         lambda: ("gho_fake_token_env", "GH_TOKEN"),
     )
 
@@ -1343,7 +1343,7 @@ def test_load_pool_respects_env_var_copilot_suppression(tmp_path, monkeypatch):
         raise AssertionError("exchange must not run for a suppressed env source")
 
     monkeypatch.setattr(
-        "scout_cli.copilot_auth.get_copilot_api_token",
+        "scout_backend.copilot_auth.get_copilot_api_token",
         _boom,
     )
 
@@ -1371,11 +1371,11 @@ def test_load_pool_gh_cli_suppression_does_not_block_env_tokens(tmp_path, monkey
     )
 
     monkeypatch.setattr(
-        "scout_cli.copilot_auth.resolve_copilot_token",
+        "scout_backend.copilot_auth.resolve_copilot_token",
         lambda: ("gho_fake_token_env", "GH_TOKEN"),
     )
     monkeypatch.setattr(
-        "scout_cli.copilot_auth.get_copilot_api_token",
+        "scout_backend.copilot_auth.get_copilot_api_token",
         lambda token: ("capi_exchanged_token", None),
     )
 
@@ -1389,7 +1389,7 @@ def test_load_pool_skips_resolve_when_all_copilot_sources_suppressed(tmp_path, m
     """With every copilot source suppressed, resolve_copilot_token (which
     shells out to ``gh auth token``) must not run at all."""
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "scout"))
-    from scout_cli.copilot_auth import COPILOT_ENV_VARS
+    from scout_backend.copilot_auth import COPILOT_ENV_VARS
     _write_auth_store(
         tmp_path,
         {
@@ -1404,7 +1404,7 @@ def test_load_pool_skips_resolve_when_all_copilot_sources_suppressed(tmp_path, m
     def _boom():
         raise AssertionError("resolve_copilot_token must not run when all sources are suppressed")
 
-    monkeypatch.setattr("scout_cli.copilot_auth.resolve_copilot_token", _boom)
+    monkeypatch.setattr("scout_backend.copilot_auth.resolve_copilot_token", _boom)
 
     from agent.credential_pool import load_pool
     pool = load_pool("copilot")
@@ -1422,14 +1422,14 @@ def test_load_pool_copilot_exchange_only_when_selected_and_warns_once(tmp_path, 
 
     from agent.credential_pool import _reset_copilot_raw_degradation_warned, load_pool
     _reset_copilot_raw_degradation_warned()
-    monkeypatch.setattr("scout_cli.copilot_auth.resolve_copilot_token", lambda: ("gho_raw_initial", "gh auth token"))
+    monkeypatch.setattr("scout_backend.copilot_auth.resolve_copilot_token", lambda: ("gho_raw_initial", "gh auth token"))
     exchanges = []
 
     def degraded_exchange(token):
         exchanges.append(token)
         return token, None  # exchange unavailable -> RAW token, no enterprise URL
 
-    monkeypatch.setattr("scout_cli.copilot_auth.get_copilot_api_token", degraded_exchange)
+    monkeypatch.setattr("scout_backend.copilot_auth.get_copilot_api_token", degraded_exchange)
 
     def degradation_warnings():
         return [r for r in caplog.records if "Copilot token exchange degraded to RAW token" in r.message]
@@ -1446,7 +1446,7 @@ def test_load_pool_copilot_exchange_only_when_selected_and_warns_once(tmp_path, 
         # reported exactly once across repeated loads.
         (tmp_path / "scout" / "config.yaml").write_text(
             "model:\n  provider: deepseek\n  default: deepseek-chat\nauxiliary:\n  approval:\n    provider: copilot\n", encoding="utf-8")
-        from scout_cli import config as _cfg
+        from scout_backend import config as _cfg
         _cfg._LOAD_CONFIG_CACHE.clear()
         _cfg._RAW_CONFIG_CACHE.clear()  # same-second rewrite: the mtime signature may not change
         load_pool("copilot")
@@ -1454,7 +1454,7 @@ def test_load_pool_copilot_exchange_only_when_selected_and_warns_once(tmp_path, 
         assert len(exchanges) == 2 and len(degradation_warnings()) == 1
 
         # A different token is a different degradation: warned again, once.
-        monkeypatch.setattr("scout_cli.copilot_auth.resolve_copilot_token", lambda: ("gho_raw_rotated", "gh auth token"))
+        monkeypatch.setattr("scout_backend.copilot_auth.resolve_copilot_token", lambda: ("gho_raw_rotated", "gh auth token"))
         load_pool("copilot")
         assert len(degradation_warnings()) == 2
 
@@ -1465,7 +1465,7 @@ def test_load_pool_seeds_qwen_oauth_via_cli_tokens(tmp_path, monkeypatch):
     _write_auth_store(tmp_path, {"version": 1, "credential_pool": {}})
 
     monkeypatch.setattr(
-        "scout_cli.auth.resolve_qwen_runtime_credentials",
+        "scout_backend.auth.resolve_qwen_runtime_credentials",
         lambda **kw: {
             "provider": "qwen-oauth",
             "base_url": "https://portal.qwen.ai/v1",
@@ -1491,10 +1491,10 @@ def test_load_pool_does_not_seed_qwen_oauth_when_no_token(tmp_path, monkeypatch)
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "scout"))
     _write_auth_store(tmp_path, {"version": 1, "credential_pool": {}})
 
-    from scout_cli.auth import AuthError
+    from scout_backend.auth import AuthError
 
     monkeypatch.setattr(
-        "scout_cli.auth.resolve_qwen_runtime_credentials",
+        "scout_backend.auth.resolve_qwen_runtime_credentials",
         lambda **kw: (_ for _ in ()).throw(
             AuthError("Qwen CLI credentials not found.", provider="qwen-oauth", code="qwen_auth_missing")
         ),
@@ -1559,7 +1559,7 @@ def test_persist_preserves_concurrent_disk_only_entry(tmp_path, monkeypatch):
     )
 
     from agent.credential_pool import load_pool
-    from scout_cli.auth import read_credential_pool, write_credential_pool
+    from scout_backend.auth import read_credential_pool, write_credential_pool
 
     pool = load_pool("anthropic")
     assert {entry.id for entry in pool.entries()} == {"cred-A", "cred-B"}
@@ -1601,7 +1601,7 @@ def _make_anthropic_claude_code_pool(tmp_path, monkeypatch, *, access_token, ref
     monkeypatch.delenv("ANTHROPIC_TOKEN", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
     _write_auth_store(tmp_path, {"version": 1, "credential_pool": {}})
-    monkeypatch.setattr("scout_cli.auth.is_provider_explicitly_configured", lambda pid: pid == "anthropic")
+    monkeypatch.setattr("scout_backend.auth.is_provider_explicitly_configured", lambda pid: pid == "anthropic")
     monkeypatch.setattr(
         "agent.anthropic_credentials.read_scout_oauth_credentials",
         lambda: None,
@@ -1830,7 +1830,7 @@ def test_a_persist_without_declared_intent_still_cannot_erase_a_cooldown(
     monkeypatch.setenv("SCOUT_HOME", str(tmp_path / "scout"))
     _exhausted_billing_store(tmp_path, age_seconds=5)
 
-    from scout_cli.auth import write_credential_pool
+    from scout_backend.auth import write_credential_pool
 
     # A stale snapshot: same id, status cleared, intent NOT declared.
     write_credential_pool(

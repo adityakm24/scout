@@ -25,7 +25,7 @@ _BASE = {
 
 
 def _build_agent(config):
-    with patch("scout_cli.config.load_config_readonly", return_value=config):
+    with patch("scout_backend.config.load_config_readonly", return_value=config):
         return AIAgent(
             api_key="x",
             base_url="http://127.0.0.1:9999/v1",

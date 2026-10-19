@@ -536,7 +536,7 @@ class ForeignSource(WireEnum):
 
 
 class ForeignSessionRow(Result):
-    """``scout_cli/foreign_sessions_browser.py::list_foreign_sessions`` — ``id`` is an opaque
+    """``scout_backend/foreign_sessions_browser.py::list_foreign_sessions`` — ``id`` is an opaque
     handle, never a path."""
 
     id: str

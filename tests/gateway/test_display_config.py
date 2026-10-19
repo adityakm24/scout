@@ -193,7 +193,7 @@ class TestConfigMigration:
         monkeypatch.setenv("SCOUT_HOME", str(tmp_path))
         # Re-import to pick up the new SCOUT_HOME
         import importlib
-        import scout_cli.config as cfg_mod
+        import scout_backend.config as cfg_mod
         importlib.reload(cfg_mod)
 
         result = cfg_mod.migrate_config(interactive=False, quiet=True)

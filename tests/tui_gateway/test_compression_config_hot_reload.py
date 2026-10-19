@@ -115,7 +115,7 @@ def test_unchanged_compression_config_is_noop(monkeypatch):
 
 
 def _default_cap():
-    from scout_cli.config_defaults import DEFAULT_CONFIG
+    from scout_backend.config_defaults import DEFAULT_CONFIG
 
     return DEFAULT_CONFIG["compression"]["threshold_tokens"]
 

@@ -47,8 +47,8 @@ def _described() -> dict:
 def test_describe_matches_the_runtime_once_legacy_disabled_is_migrated(profile_dir):
     """Describe reads ``enabled``; a legacy ``disabled: true`` reads as off, and the config
     migration turns it into the ``enabled: false`` the runtime resolver honours."""
-    from scout_cli.config_migrations import run_migrations
-    from scout_cli.tools_config import enabled_mcp_server_names
+    from scout_backend.config_migrations import run_migrations
+    from scout_backend.tools_config import enabled_mcp_server_names
     from scout_constants import reset_scout_home_override, set_scout_home_override
 
     _write_mcp(profile_dir, {
@@ -72,7 +72,7 @@ def test_describe_matches_the_runtime_once_legacy_disabled_is_migrated(profile_d
 
 
 def test_configure_toggle_is_what_the_runtime_resolver_and_describe_see(profile_dir):
-    from scout_cli.tools_config import enabled_mcp_server_names
+    from scout_backend.tools_config import enabled_mcp_server_names
 
     _write_mcp(profile_dir, {
         "keep": {"command": "keep", "enabled": False},

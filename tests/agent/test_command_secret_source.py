@@ -3,7 +3,7 @@
 These exercise the REAL resolution path: real helper shell scripts written
 to a temp dir (chmod +x), real ``/bin/sh -c`` subprocesses, and a real temp
 SCOUT_HOME with a config.yaml routing ``secrets.provider: command`` through
-``scout_cli.env_loader._apply_external_secret_sources``.
+``scout_backend.env_loader._apply_external_secret_sources``.
 
 Security invariants under test (ported from the desktop TS provider):
 
@@ -40,7 +40,7 @@ from agent.secret_sources.base import (  # noqa: E402
     reset_source_environment,
     set_source_environment,
 )
-from scout_cli import env_loader  # noqa: E402
+from scout_backend import env_loader  # noqa: E402
 
 
 pytestmark = pytest.mark.platforms("posix")  # the command secret provider is POSIX-only

@@ -17,8 +17,8 @@ from pathlib import Path
 import pytest
 
 from gateway.status import looks_like_gateway_command_line
-from scout_cli import _launchers, venv_sync
-from scout_cli.update_cmd_windows import _scout_holder_subcommand
+from scout_backend import _launchers, venv_sync
+from scout_backend.update_cmd_windows import _scout_holder_subcommand
 
 ROOT = Path("/opt/Scout Agent/scout-agent")
 PY = "/opt/venv/bin/python3"
@@ -32,8 +32,8 @@ def _forms(argv: list[str]) -> dict[str, list[str]]:
         "launcher-script": [PY, "-I", "-c", _SCRIPT, *argv],
         "cmd-launcher": [PY, "-I", "-c", f"import base64; exec(base64.b64decode('{base64.b64encode(_SCRIPT.encode()).decode()}'))", *argv],
         "venv-reentry": venv_sync.relaunch_command(
-            Path(PY), ROOT, [str(ROOT / "scout_cli" / "main.py"), *argv], ["/old/python", "-m", "scout_cli.main", *argv],
-            "scout_cli.main"),
+            Path(PY), ROOT, [str(ROOT / "scout_backend" / "main.py"), *argv], ["/old/python", "-m", "scout_backend.main", *argv],
+            "scout_backend.main"),
     }
 
 

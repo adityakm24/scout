@@ -20,7 +20,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 # environment and finds the developer's live ``scout-gateway`` process
 # via ``psutil`` — sending it SIGTERM mid-test. The shutdown forensics in
 # PR #23285 caught this happening 5+ times in 3 days, every time
-# correlated with a ``tests/scout_cli/`` pytest run starting up.
+# correlated with a ``tests/scout_backend/`` pytest run starting up.
 #
 # This fixture makes the leak impossible by intercepting the two
 # primitives that actually do damage:
@@ -171,8 +171,8 @@ def _live_system_guard(request, monkeypatch):
     _SCOUT_TOKENS = (
         "scout-gateway",
         "scout.service",
-        "scout_cli.main gateway",
-        "scout_cli/main.py gateway",
+        "scout_backend.main gateway",
+        "scout_backend/main.py gateway",
         "gateway/run.py",
         "scout gateway",
     )
@@ -254,7 +254,7 @@ def _live_system_guard(request, monkeypatch):
                 low = cmd_str.lower()
                 # pkill -f pattern: catch scout-themed patterns + a
                 # plain "python" -f which would catch the live gateway
-                # whose cmdline contains "python -m scout_cli.main".
+                # whose cmdline contains "python -m scout_backend.main".
                 if (
                     "scout" in low
                     or "gateway" in low
@@ -291,7 +291,7 @@ def _live_system_guard(request, monkeypatch):
                 "intentional."
             )
         # Block any subprocess that would run `scout update` (or the
-        # equivalent `python -m scout_cli.main update`).  These commands
+        # equivalent `python -m scout_backend.main update`).  These commands
         # run `git fetch origin + git pull` against the REAL checkout,
         # overwriting files like pyproject.toml mid-test-run and corrupting
         # every subsequent subprocess that reads them.  The corruption is
@@ -306,8 +306,8 @@ def _live_system_guard(request, monkeypatch):
             # scout update / scout update --gateway / setsid bash -c ... scout update
             ("scout" in low and "update" in low.split())
             or
-            # python -m scout_cli.main update --gateway
-            ("scout_cli" in low and "update" in low.split())
+            # python -m scout_backend.main update --gateway
+            ("scout_backend" in low and "update" in low.split())
             or
             # venv/bin/scout update  (absolute path variant used in tests)
             (".venv/bin/scout" in low and "update" in low)
@@ -325,7 +325,7 @@ def _live_system_guard(request, monkeypatch):
                 "needed (e.g. an integration test testing the update "
                 "flow against a dedicated throwaway repo)."
             )
-        # Block spawning a REAL gateway runtime (``python -m scout_cli.main
+        # Block spawning a REAL gateway runtime (``python -m scout_backend.main
         # gateway run|start|restart``). ``_spawn_scout_action`` launches it
         # with start_new_session=True, so it outlives the pytest worker; the
         # child inherits the pytest-tmp SCOUT_HOME, resolves the DEVELOPER's
@@ -349,7 +349,7 @@ def _live_system_guard(request, monkeypatch):
                 "scout gateway runtime that outlives the test (it is "
                 "detached), restarts the developer's live gateway, and "
                 "holds the webhook port. Patch the spawn seam where "
-                "production reads it (scout_cli.web_server_gateway."
+                "production reads it (scout_backend.web_server_gateway."
                 "_spawn_scout_action), or mark with "
                 "@pytest.mark.spawns_gateway_lookalike a test that spawns "
                 "and reaps its own stub child."

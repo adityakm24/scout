@@ -302,7 +302,7 @@ test('release removes only the exact identity rather than every record for its P
 
 test('backend identity check matches only serve and dashboard invocation shapes', () => {
   assert.equal(backendCommandMatches('/venv/bin/scout serve --port 0'), true)
-  assert.equal(backendCommandMatches('python -m scout_cli.main dashboard --no-open'), true)
+  assert.equal(backendCommandMatches('python -m scout_backend.main dashboard --no-open'), true)
   assert.equal(backendCommandMatches('/venv/bin/scout --profile work serve --port 0'), true)
   assert.equal(backendCommandMatches('"C:\\Scout Runtime\\scout.exe" dashboard --no-open'), true)
   assert.equal(backendCommandMatches('scout chat --query serve'), false)

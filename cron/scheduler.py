@@ -38,10 +38,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from cron.worker_bootstrap import WORKER_MARKER
 from scout_constants import get_scout_home, scout_home_key
 from cron.env_settings import cron_env_setting
-from scout_cli._subprocess_compat import windows_hide_flags
-from scout_cli.config import (
+from scout_backend._subprocess_compat import windows_hide_flags
+from scout_backend.config import (
     load_config, load_config_readonly)
-from scout_cli.fallback_config import get_fallback_chain, scoped_fallback_chain
+from scout_backend.fallback_config import get_fallback_chain, scoped_fallback_chain
 from scout_time import now as _scout_now, safe_strftime
 from agent.interrupt_compat import request_hard_interrupt
 from agent.delegation_context import (
@@ -474,8 +474,8 @@ def _merge_mcp_into_per_job_toolsets(per_job: list[str], cfg: dict) -> list[str]
     result = [t for t in per_job if t != "no_mcp"]
     if "no_mcp" in per_job:
         return result
-    # lazy: avoid heavy scout_cli import at module load; shares MCP-membership with gateway/CLI
-    from scout_cli.tools_config import enabled_mcp_server_names
+    # lazy: avoid heavy scout_backend import at module load; shares MCP-membership with gateway/CLI
+    from scout_backend.tools_config import enabled_mcp_server_names
     enabled_mcp = enabled_mcp_server_names(cfg)
     if set(result) & enabled_mcp:
         return result
@@ -503,7 +503,7 @@ def _resolve_cron_enabled_toolsets(job: dict, cfg: dict) -> list[str]:
     if per_job:
         return _merge_mcp_into_per_job_toolsets(list(per_job), cfg or {})
     try:
-        from scout_cli.tools_config import _get_platform_tools  # lazy: avoid heavy import at cron module load
+        from scout_backend.tools_config import _get_platform_tools  # lazy: avoid heavy import at cron module load
         return sorted(_get_platform_tools(cfg or {}, "cron"))
     except Exception as exc:
         raise RuntimeError(
@@ -775,7 +775,7 @@ def try_register_running_job(job_id: str) -> bool:
     and ``mark_running_jobs_interrupted``. Dedupe is per PROFILE: the key carries the active cron
     scope's home, so one multiplexing process never treats two profiles' same-named jobs as one.
     """
-    from scout_cli.backend_retirement import retirement
+    from scout_backend.backend_retirement import retirement
 
     key = _inflight_key(job_id, _remember_inflight_home(_get_scout_home()))
     with retirement.work() as admitted, _running_lock:
@@ -1325,7 +1325,7 @@ def _reclaim_fds_best_effort() -> None:
 
         gc.collect()
     with contextlib.suppress(Exception):
-        from scout_cli.resource_limits import apply_nofile_soft_limit
+        from scout_backend.resource_limits import apply_nofile_soft_limit
 
         apply_nofile_soft_limit(None)
 
@@ -1363,7 +1363,7 @@ def _cron_cleanup_timeout_seconds() -> float:
     """Return the wall-clock bound for cron post-run cleanup."""
     default = 10.0
     try:
-        from scout_cli.config import load_config
+        from scout_backend.config import load_config
 
         cfg = load_config() or {}
         cron_cfg = cfg.get("cron", {}) if isinstance(cfg, dict) else {}
@@ -1490,7 +1490,7 @@ def _run_no_agent_job(
     # Load .env first so auto-delivery can resolve *_HOME_CHANNEL: the agent path's per-run dotenv
     # reload never runs for no_agent jobs. Does not override existing values.
     try:
-        from scout_cli.env_loader import load_scout_dotenv
+        from scout_backend.env_loader import load_scout_dotenv
 
         load_scout_dotenv(scout_home=_get_scout_home())
     except Exception:
@@ -1598,7 +1598,7 @@ def _load_cron_job_config(job: dict, job_id: str, job_name: str) -> _CronJobConf
     _cfg: dict = {}
     _model_cfg: Any = {}
     try:
-        from scout_cli.config_effective import load_user_config_effective
+        from scout_backend.config_effective import load_user_config_effective
         _cfg_path = str(_get_scout_home() / "config.yaml")
         if os.path.exists(_cfg_path):
             _cfg = load_user_config_effective(Path(_cfg_path))
@@ -1730,9 +1730,9 @@ def _resolve_job_runtime(job: dict, job_id: str, jc: _CronJobConfig) -> tuple[di
     a paid primary model). Provider precedence: per-job pin > cron.model_provider > persisted
     global config (None lets resolve_runtime_provider read it). A pinned job has no chain here
     (``_job_fallback_chain``): its resolve failure is the job's failure."""
-    from scout_cli.runtime_provider import (
+    from scout_backend.runtime_provider import (
         resolve_runtime_provider, format_runtime_provider_error)
-    from scout_cli.auth import AuthError
+    from scout_backend.auth import AuthError
 
     model = jc.model
     requested = job.get("provider") or jc.cron_default_provider or None
@@ -1769,7 +1769,7 @@ def _resolve_job_runtime(job: dict, job_id: str, jc: _CronJobConfig) -> tuple[di
             if not fb_provider or not fb_model:
                 continue
             try:
-                from scout_cli.fallback_config import effective_runtime_provider, resolve_entry_api_key
+                from scout_backend.fallback_config import effective_runtime_provider, resolve_entry_api_key
 
                 fb_kwargs = {"requested": fb_provider, "target_model": fb_model}
                 if entry.get("base_url"):
@@ -1786,7 +1786,7 @@ def _resolve_job_runtime(job: dict, job_id: str, jc: _CronJobConfig) -> tuple[di
                     job_id, runtime.get("provider"), fb_model)
                 # Delivered with the job output (#74349): a cron agent has no status rail, so the
                 # switch would otherwise stay in the scheduler log only. run_job pops it.
-                from scout_cli.fallback_config import pre_agent_fallback_notice
+                from scout_backend.fallback_config import pre_agent_fallback_notice
                 runtime["_fallback_notice"] = pre_agent_fallback_notice(
                     requested or (jc.model_cfg.get("provider") if isinstance(jc.model_cfg, dict) else ""),
                     model, runtime.get("provider"), fb_model)
@@ -2181,7 +2181,7 @@ def _prepare_job_prompt(
     # Fail closed on a corrupt config.yaml: defaults would let auto-detection bill a provider the
     # user never chose. no_agent jobs are exempt. Escape hatch: SCOUT_IGNORE_USER_CONFIG=1.
     if not job.get("no_agent"):
-        from scout_cli.config import InvalidUserConfigError, require_parseable_user_config
+        from scout_backend.config import InvalidUserConfigError, require_parseable_user_config
 
         try:
             require_parseable_user_config()
@@ -2340,7 +2340,7 @@ def _reload_dotenv_and_publish_delivery_target(job: dict) -> None:
     """Re-read .env for this run and publish the auto-deliver target into the session ContextVars."""
     # Reset the secret-source cache FIRST or a Bitwarden/BSM-backed secret is never re-resolved
     # (only the placeholder reloads -> 401s).
-    from scout_cli.env_loader import load_scout_dotenv, reset_secret_source_cache
+    from scout_backend.env_loader import load_scout_dotenv, reset_secret_source_cache
     from gateway.session_context import _VAR_MAP
 
     reset_secret_source_cache(_get_scout_home())
@@ -2377,7 +2377,7 @@ def _resolve_cron_agent_setup(job: dict, job_id: str, job_name: str, jc) -> _Cro
     setup.prefill_messages = _load_prefill_messages(_cfg, job_id)
 
     # resolve_turn_limit() honors none/unlimited (sys.maxsize) and explicit 0 / null.
-    from scout_cli.config import resolve_turn_limit as _resolve_turn_limit
+    from scout_backend.config import resolve_turn_limit as _resolve_turn_limit
     _mt = _cfg.get("agent", {}).get("max_turns")
     if _mt is None:
         _mt = _cfg.get("max_turns")
@@ -2412,7 +2412,7 @@ def _resolve_cron_agent_setup(job: dict, job_id: str, job_name: str, jc) -> _Cro
 
 
 def _construct_cron_agent(AIAgent, job: dict, _cfg: dict, setup: _CronAgentSetup, *, workdir, session_id, session_db):
-    from scout_cli.push.notifier import task_steps_callback
+    from scout_backend.push.notifier import task_steps_callback
 
     runtime = setup.runtime
     pr = _cfg.get("provider_routing") or {}
@@ -3499,7 +3499,7 @@ def _launch_external_cron_worker(job: dict) -> bool:
         reset_secret_scope,
         set_secret_scope,
     )
-    from scout_cli.env_loader import hydrate_profile_secret_sources
+    from scout_backend.env_loader import hydrate_profile_secret_sources
     from tools.environments.local import build_subprocess_env, strip_launch_profile_env
     from tools.process_registry import (
         restart_safe_gateway_child_argv,
@@ -3571,7 +3571,7 @@ def _launch_external_cron_worker(job: dict) -> bool:
         "SCOUT_EXEC_ASK",
     ):
         worker_env.pop(_presence_var, None)
-    # `-m cron.scheduler` has no scout_cli.main bootstrap; pin this checkout explicitly
+    # `-m cron.scheduler` has no scout_backend.main bootstrap; pin this checkout explicitly
     # (PYTHONSAFEPATH / stale editable mapping, #112729), hand the child the committed
     # dependency generation (#122222), and mark it so its own entry runs the PM dependency
     # boot. See cron/scheduler_worker_env.py and cron/worker_bootstrap.py.
@@ -3725,7 +3725,7 @@ def _run_external_worker_payload(payload_path: Path, ack_path: Path) -> bool:
         set_secret_scope,
     )
     from cron.executions import adopt_claimed_execution
-    from scout_cli.env_loader import hydrate_profile_secret_sources
+    from scout_backend.env_loader import hydrate_profile_secret_sources
     from scout_constants import (
         reset_scout_home_override,
         set_scout_home_override,
@@ -3741,7 +3741,7 @@ def _run_external_worker_payload(payload_path: Path, ack_path: Path) -> bool:
         # discovery; this process starts with the builtin registry alone, so hydrating without it
         # silently dropped every plugin-sourced credential (#121929). Runs under the home override
         # so a multiplexed worker loads the OWNING profile's plugins, not the launch profile's.
-        from scout_cli.plugins import discover_plugins
+        from scout_backend.plugins import discover_plugins
 
         discover_plugins()
         hydrate_profile_secret_sources(profile_home)
@@ -3925,7 +3925,7 @@ def _maybe_run_worktree_maintenance() -> None:
             repos = _worktree_maintenance_repos()
             if not repos:
                 return
-            from scout_cli.worktree_ops import _prune_stale_worktrees
+            from scout_backend.worktree_ops import _prune_stale_worktrees
 
             for repo in repos:
                 try:

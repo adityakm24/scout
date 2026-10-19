@@ -21,9 +21,9 @@ def _exercise_relocated_pm_runtime(tmp_path, monkeypatch):
     repo = root / "scout-agent"
     source = Path(__file__).resolve().parents[2]
     shutil.copytree(source / "pm", repo / "pm", ignore=shutil.ignore_patterns("__pycache__", ".scout-tmp.*"))
-    (repo / "scout_cli").mkdir()
+    (repo / "scout_backend").mkdir()
     for name in ("__init__.py", "runtime_state.py"):
-        shutil.copy2(source / "scout_cli" / name, repo / "scout_cli" / name)
+        shutil.copy2(source / "scout_backend" / name, repo / "scout_backend" / name)
     shutil.copy2(source / "scout_constants.py", repo / "scout_constants.py")
     # Copy the base executable, not a venv's launcher. The test host provides
     # its stdlib; production's package stage provides the complete distribution.

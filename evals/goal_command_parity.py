@@ -16,8 +16,8 @@ home.mkdir(parents=True, exist_ok=False)
 os.environ['SCOUT_HOME'] = str(home)
 os.environ['SCOUT_NIX_BUILD'] = '1'
 sys.path.insert(0, str(root))
-commands = importlib.import_module("scout_cli.cli_commands_mixin")
-GoalManager = importlib.import_module("scout_cli.goals").GoalManager
+commands = importlib.import_module("scout_backend.cli_commands_mixin")
+GoalManager = importlib.import_module("scout_backend.goals").GoalManager
 
 manager = GoalManager(session_id='cli-oracle', default_max_turns=17)
 cli = commands.CLICommandsMixin()

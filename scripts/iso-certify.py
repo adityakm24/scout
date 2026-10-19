@@ -174,7 +174,7 @@ class ScratchDashboard:
         env["PYTHONPATH"] = str(REPO_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
         env["SCOUT_ISO_CERTIFY_SYNTH_TURN"] = "1"
         cmd = [
-            python, "-m", "scout_cli.main", "dashboard",
+            python, "-m", "scout_backend.main", "dashboard",
             "--no-open", "--host", "127.0.0.1", "--port", str(self.port),
         ]
         self.proc = subprocess.Popen(

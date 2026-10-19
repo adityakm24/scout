@@ -139,10 +139,10 @@ class TestStrictIdentityWithLiveLock:
         assert identity == with_pid_file
 
     def test_updater_discovery_maps_the_profile_without_a_pid_file(self, home, gateway_holder, monkeypatch):
-        from scout_cli.gateway import find_profile_gateway_processes
+        from scout_backend.gateway import find_profile_gateway_processes
 
-        monkeypatch.setattr("scout_cli.profiles._get_default_scout_home", lambda: home)
-        monkeypatch.setattr("scout_cli.profiles._get_profiles_root", lambda: home / "no-profiles")
+        monkeypatch.setattr("scout_backend.profiles._get_default_scout_home", lambda: home)
+        monkeypatch.setattr("scout_backend.profiles._get_profiles_root", lambda: home / "no-profiles")
         (home / "gateway.pid").unlink()
 
         procs = find_profile_gateway_processes(strict=True)

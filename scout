@@ -7,5 +7,5 @@ subcommands such as `gateway`, `cron`, and `doctor`.
 """
 
 if __name__ == "__main__":
-    from scout_cli.main import main
+    from scout_backend.main import main
     main()

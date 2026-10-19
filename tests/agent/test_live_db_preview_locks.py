@@ -11,7 +11,7 @@ from fastapi import HTTPException
 
 from agent.context_references import _expand_path_reference, parse_context_references
 from scout_state import SessionDB
-from scout_cli.web_routers.files import fs_download, fs_read_text
+from scout_backend.web_routers.files import fs_download, fs_read_text
 from tests.posix_lock_probe import own_posix_locks
 
 

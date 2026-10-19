@@ -208,7 +208,7 @@ def _config_cache_key(config_path: Path) -> Optional[Tuple[str, int, int, int, i
 
 
 def _load_raw_config() -> Dict[str, Any]:
-    """Read config.yaml with an mtime+size keyed cache (no scout_cli.config import)."""
+    """Read config.yaml with an mtime+size keyed cache (no scout_backend.config import)."""
     config_path = get_config_path()
     if not config_path.exists():
         return {}

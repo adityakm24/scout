@@ -32,7 +32,7 @@ def voice_home(tmp_path, monkeypatch):
         # sees ITS config, not the previous test's.
         for name in list(sys.modules):
             if name in {
-                "scout_cli.config",
+                "scout_backend.config",
                 "tools.transcription_tools",
                 "tools.tts_tool",
                 "tools.voice_client_config",

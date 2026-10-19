@@ -35,8 +35,8 @@ def _restore_tool_modules():
         for name, module in sys.modules.items()
         if name == "tools"
         or name.startswith("tools.")
-        or name == "scout_cli"
-        or name.startswith("scout_cli.")
+        or name == "scout_backend"
+        or name.startswith("scout_backend.")
         or name == "modal"
         or name.startswith("modal.")
     }
@@ -47,7 +47,7 @@ def _restore_tool_modules():
             os.environ.pop("SCOUT_HOME", None)
         else:
             os.environ["SCOUT_HOME"] = original_scout_home
-        _reset_modules(("tools", "scout_cli", "modal"))
+        _reset_modules(("tools", "scout_backend", "modal"))
         sys.modules.update(original_modules)
 
 
@@ -57,11 +57,11 @@ def _install_modal_test_modules(
     fail_on_snapshot_ids: set[str] | None = None,
     snapshot_id: str = "im-fresh",
 ):
-    _reset_modules(("tools", "scout_cli", "modal"))
+    _reset_modules(("tools", "scout_backend", "modal"))
 
-    scout_cli = types.ModuleType("scout_cli")
-    scout_cli.__path__ = [str(REPO_ROOT / "scout_cli")]  # type: ignore[attr-defined]
-    sys.modules["scout_cli"] = scout_cli
+    scout_backend = types.ModuleType("scout_backend")
+    scout_backend.__path__ = [str(REPO_ROOT / "scout_backend")]  # type: ignore[attr-defined]
+    sys.modules["scout_backend"] = scout_backend
     scout_home = tmp_path / "scout-home"
     os.environ["SCOUT_HOME"] = str(scout_home)
 

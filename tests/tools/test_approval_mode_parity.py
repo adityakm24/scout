@@ -42,8 +42,8 @@ def tui_server():
     with patch.dict(
         "sys.modules",
         {
-            "scout_cli.env_loader": MagicMock(),
-            "scout_cli.banner": MagicMock(),
+            "scout_backend.env_loader": MagicMock(),
+            "scout_backend.banner": MagicMock(),
         },
     ):
         yield importlib.import_module("tui_gateway.server")

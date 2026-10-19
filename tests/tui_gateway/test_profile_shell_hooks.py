@@ -10,7 +10,7 @@ import scout_yaml as yaml
 
 def test_agent_build_arms_only_consented_profile_policy(tmp_path, monkeypatch):
     from agent import shell_hooks
-    from scout_cli import plugins
+    from scout_backend import plugins
     from scout_constants import reset_scout_home_override, set_scout_home_override
     from tui_gateway import server
 

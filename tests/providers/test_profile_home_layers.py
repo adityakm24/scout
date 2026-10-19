@@ -61,7 +61,7 @@ def _bound(home: Path, fn):
 
 def test_secondary_profile_plugin_resolves_for_its_home_only(homes):
     import providers
-    from scout_cli.auth import resolve_provider
+    from scout_backend.auth import resolve_provider
 
     launch, secondary = homes
     _install(secondary, "scaleup-only")

@@ -1,6 +1,6 @@
 """Regression tests for credential-pool OAuth refresh write-through to root.
 
-Companion to ``tests/scout_cli/test_xai_oauth_writethrough.py``. That file
+Companion to ``tests/scout_backend/test_xai_oauth_writethrough.py``. That file
 covers the *non-pool* xAI refresh path (``_save_xai_oauth_tokens``). These
 cover the **credential-pool** refresh path
 (``CredentialPool._sync_device_code_entry_to_auth_store``): when a profile
@@ -29,8 +29,8 @@ from agent.credential_pool import (
     PooledCredential,
     load_pool,
 )
-from scout_cli import auth as A
-import scout_cli.auth_codex as auth_codex
+from scout_backend import auth as A
+import scout_backend.auth_codex as auth_codex
 
 
 def _write_store(path, store):
@@ -331,7 +331,7 @@ def test_scout_pkce_refresh_writes_back_to_singleton(tmp_path, monkeypatch):
     scout_home = tmp_path / "scout"
     scout_home.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-    monkeypatch.setattr("scout_cli.auth.is_provider_explicitly_configured", lambda pid: True)
+    monkeypatch.setattr("scout_backend.auth.is_provider_explicitly_configured", lambda pid: True)
 
     oauth_file = scout_home / ".anthropic_oauth.json"
     oauth_file.write_text(
@@ -389,7 +389,7 @@ def test_manual_scout_pkce_refresh_does_not_create_duplicate_singleton(
     scout_home = tmp_path / "scout"
     scout_home.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("SCOUT_HOME", str(scout_home))
-    monkeypatch.setattr("scout_cli.auth.is_provider_explicitly_configured", lambda pid: True)
+    monkeypatch.setattr("scout_backend.auth.is_provider_explicitly_configured", lambda pid: True)
     monkeypatch.setattr("agent.anthropic_credentials.read_claude_code_credentials", lambda: None)
     monkeypatch.setattr(
         "agent.anthropic_credentials.refresh_anthropic_oauth_pure",

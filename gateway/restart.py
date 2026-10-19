@@ -7,7 +7,7 @@ import subprocess
 import sys
 from collections.abc import Callable, Mapping
 
-from scout_cli.config import DEFAULT_CONFIG
+from scout_backend.config import DEFAULT_CONFIG
 
 # EX_TEMPFAIL (sysexits.h): ask the service manager to restart after a graceful drain/reload.
 GATEWAY_SERVICE_RESTART_EXIT_CODE = 75
@@ -22,7 +22,7 @@ GATEWAY_FATAL_CONFIG_EXIT_CODE = 78
 # environment (e.g. ``sudo env -i``).
 EXTERNAL_GATEWAY_SUPERVISOR_ENV = "SCOUT_GATEWAY_EXTERNAL_SUPERVISOR"
 
-# Forwarded by the stderr-timestamp launchd wrapper (scout_cli/stderr_timestamp.py) to the gateway
+# Forwarded by the stderr-timestamp launchd wrapper (scout_backend/stderr_timestamp.py) to the gateway
 # grandchild, which sees ``XPC_SERVICE_NAME=0``. Read only via :func:`launchd_job_label`.
 LAUNCHD_LABEL_ENV = "SCOUT_LAUNCHD_LABEL"
 
@@ -246,7 +246,7 @@ def is_supervised_gateway_launch(environ: Mapping[str, str] | None = None) -> bo
 
     Superset of :func:`is_gateway_supervisor_process` that also honours ``SCOUT_SUPERVISED_CHILD``,
     the marker every generated launcher exports (systemd unit, launchd plist, s6 run script, Windows
-    Scheduled Task — see ``scout_cli.main._apply_profile_override``). This is the identity the
+    Scheduled Task — see ``scout_backend.main._apply_profile_override``). This is the identity the
     self-targeting guards key on: a kill or lifecycle command issued from inside such a gateway takes
     down the process hosting the caller with nobody at a terminal to bring it back (#113667).
     """

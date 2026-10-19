@@ -195,13 +195,13 @@ scout-agent/
 ├── run_agent.py          # AIAgent facade; the turn loop lives in agent/turn_*.py
 ├── model_tools.py        # Tool orchestration, discover_builtin_tools(), handle_function_call()
 ├── toolsets.py           # TOOLSETS dict, _SCOUT_CORE_TOOLS
-├── cli.py                # ScoutCLI (REPL, slash dispatch) + scout_cli/cli_*_mixin.py
+├── cli.py                # ScoutCLI (REPL, slash dispatch) + scout_backend/cli_*_mixin.py
 ├── scout_state.py       # SessionDB facade; scout_state_*.py siblings
 ├── scout_constants.py   # get_scout_home(), display_scout_home() — profile-aware paths
 ├── scout_logging.py     # agent.log / errors.log / gateway.log (profile-aware)
 ├── batch_runner.py       # Parallel batch processing
 ├── agent/                # turn_*.py loop phases, providers, memory, compression, prompt builder
-├── scout_cli/           # CLI subcommands, setup, config, plugins loader, skins, updater
+├── scout_backend/           # CLI subcommands, setup, config, plugins loader, skins, updater
 │   └── web_routers/      # Dashboard FastAPI routers (one per surface); web_server.py mounts them
 ├── tools/                # Tool implementations, auto-discovered via tools/registry.py
 │   └── environments/     # Terminal backends (local, docker, ssh, modal, daytona, singularity)
@@ -231,8 +231,8 @@ profile-aware via `get_scout_home()`. Browse logs with `scout logs [--follow] [-
 Every former god file is a **facade** (public entry points + the names other packages import)
 plus **siblings** `<stem>_<topic>.py` in the same directory, each owning one topic. Largest
 families: `scout_state.py` (21), `gateway/run.py` (15), `tools/mcp_tool.py` (15),
-`scout_cli/kanban.py` (14), `scout_cli/web_server.py` (13 + 24 routers), `scout_cli/auth.py`
-(12), `tools/browser_tool.py` (11), `cli.py` (12 `scout_cli/cli_*_mixin.py`), `run_agent.py`
+`scout_backend/kanban.py` (14), `scout_backend/web_server.py` (13 + 24 routers), `scout_backend/auth.py`
+(12), `tools/browser_tool.py` (11), `cli.py` (12 `scout_backend/cli_*_mixin.py`), `run_agent.py`
 (`agent/turn_*.py`, `agent_init.py`, `conversation_loop.py`).
 
 - **Find code by topic, not by facade:** `grep -rn "def name" <dir>/<stem>_*.py`. Reading the
@@ -263,9 +263,9 @@ families: `scout_state.py` (21), `gateway/run.py` (15), `tools/mcp_tool.py` (15)
 - **Never infer process identity from argv substrings** (`"serve" in cmdline`) — the bug class
   behind ~10 fleet-update issues (#90778, #87594, #78089, #76129, #91964). Use the canonical
   matchers `gateway.status.looks_like_gateway_command_line` and
-  `scout_cli.update_cmd._scout_holder_subcommand`; flag sets are DERIVED from the parser
+  `scout_backend.update_cmd._scout_holder_subcommand`; flag sets are DERIVED from the parser
   (`_holder_value_flags()`), never hand-written; match FULL cmdlines and truncate only for
-  display. Details: `scout_cli/AGENTS.md`.
+  display. Details: `scout_backend/AGENTS.md`.
 - **Never hardcode `~/.scout`.** `get_scout_home()` for code paths, `display_scout_home()`
   for user-facing text (both from `scout_constants`). Hardcoding breaks profiles (5 bugs in
   PR #3575). Profile operations themselves are HOME-anchored
@@ -380,7 +380,7 @@ scripts/run_tests.sh -v --tb=long                       # pytest flags pass thro
   retried (relaunching a runaway doubles the damage). Pass-on-retry is green but printed under `⚠ FLAKY`
   with both outputs — a bug to fix, not noise. Timing tests must not assume a quiet runner:
   wall-clock bounds ≥ 2s, event-based sync, no `assert not _wait_until(...)` races.
-- **Placement mirrors the source tree.** A test lives in `tests/<top-level source dir>/` (`tests/scout_cli/`,
+- **Placement mirrors the source tree.** A test lives in `tests/<top-level source dir>/` (`tests/scout_backend/`,
   `tests/agent/`, `tests/scout_state/`, `tests/gateway/relay/`, ...); installer/updater script tests
   under `tests/scripts/{install,desktop_update}/`. Only tests of root-level modules (`batch_runner`,
   `utils`, `scout_constants`, packaging) sit directly in `tests/`. No issue numbers in filenames —
@@ -391,7 +391,7 @@ scripts/run_tests.sh -v --tb=long                       # pytest flags pass thro
 - **Tests must not write to `~/.scout/`.** The autouse `_isolate_scout_home` fixture in
   `tests/conftest.py` redirects `SCOUT_HOME`; never hardcode `~/.scout/` in tests. Profile
   tests also mock `Path.home()` so `_get_profiles_root()` / `_get_default_scout_home()` stay
-  in the temp dir (pattern: `tests/scout_cli/test_profiles.py`):
+  in the temp dir (pattern: `tests/scout_backend/test_profiles.py`):
   ```python
   @pytest.fixture
   def profile_env(tmp_path, monkeypatch):
@@ -435,7 +435,7 @@ fully replaced — `platforms` is the only host-gating marker in the tree.
 
 **Live Windows process-topology tests.** Claims about real Windows process behavior that mocks
 cannot reproduce (venv-holder scans, process-tree parentage, launcher/worker chains, detach
-semantics) are proven by `tests/scout_cli/test_venv_holder_windows_live.py` on a real Windows host:
+semantics) are proven by `tests/scout_backend/test_venv_holder_windows_live.py` on a real Windows host:
 it spawns actual processes and drives the real detection code, no mocked psutil. Assert against the
 gateway ANCESTOR found by argv, not the direct parent (the venv shim makes every spawn a
 launcher/worker chain).
@@ -493,15 +493,15 @@ extract, not to regex around it.
 | Area | Read | Covers |
 |---|---|---|
 | `run_agent.py`, `agent/` | `agent/AGENTS.md` | AIAgent + mixins, turn phases, caching integrity, message-flow invariants, compression, model/aux resolution |
-| `cli.py`, `scout_cli/`, `main.py` | `scout_cli/AGENTS.md` | CLI mixins, `_SLASH_DISPATCH`, slash registry, config system + loaders, skins, `scout update` pipeline, profiles / multiplex |
+| `cli.py`, `scout_backend/`, `main.py` | `scout_backend/AGENTS.md` | CLI mixins, `_SLASH_DISPATCH`, slash registry, config system + loaders, skins, `scout update` pipeline, profiles / multiplex |
 | `gateway/` | `gateway/AGENTS.md` | Adapters, two message guards, streaming contract, background notifications, gateway vs desktop lifecycle, token locks, scoped secrets |
 | `tools/`, `toolsets.py`, `model_tools.py` | `tools/AGENTS.md` | Adding tools, registry, toolsets, delegation, cross-tool references, backends |
-| `plugins/`, `scout_cli/plugins*.py` | `plugins/AGENTS.md` | Plugin kinds, native compat contract, in-tree policy |
+| `plugins/`, `scout_backend/plugins*.py` | `plugins/AGENTS.md` | Plugin kinds, native compat contract, in-tree policy |
 | `tui_gateway/` | `tui_gateway/AGENTS.md` | Process model, JSON-RPC transport, key surfaces, slash flow, dev commands |
-| `web/`, `scout_cli/web_routers/` | `web/AGENTS.md` | Dashboard pages and the web routers behind them |
+| `web/`, `scout_backend/web_routers/` | `web/AGENTS.md` | Dashboard pages and the web routers behind them |
 | `apps/desktop/` | `apps/desktop/AGENTS.md`, `apps/desktop/src/AGENTS.md` | Desktop judgment guide; `serve` backend, slash palette curation, Bot Mode canonical chat |
 | `skills/`, `optional-skills/`, `agent/curator*.py` | `skills/AGENTS.md` | Frontmatter, HARDLINE authoring standards, curator |
-| `cron/`, kanban (`scout_cli/kanban*.py`, `tools/kanban_tools.py`, `plugins/kanban/`) | `cron/AGENTS.md` | Scheduler invariants, job fields, kanban board/dispatcher |
+| `cron/`, kanban (`scout_backend/kanban*.py`, `tools/kanban_tools.py`, `plugins/kanban/`) | `cron/AGENTS.md` | Scheduler invariants, job fields, kanban board/dispatcher |
 | `gateway/platforms/` new adapter | `gateway/platforms/ADDING_A_PLATFORM.md` | Step-by-step adapter guide |
 | profiles / multiplex / secret scope (any area) | `gateway/AGENTS.md` § Profile scope | which execution points bind scope, what is isolated per profile |
 

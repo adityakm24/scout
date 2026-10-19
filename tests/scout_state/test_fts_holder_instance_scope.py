@@ -49,7 +49,7 @@ DEMO_HOME_ARGV = [
 # Same, spelled through the venv interpreter + scout launcher script.
 DEMO_VENV_ARGV = [
     "/home/demo/.scout/scout-agent/venv/bin/python",
-    "/home/demo/.scout/scout-agent/scout_cli/main.py",
+    "/home/demo/.scout/scout-agent/scout_backend/main.py",
     "gateway",
 ]
 

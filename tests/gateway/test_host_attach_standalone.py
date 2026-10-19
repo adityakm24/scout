@@ -11,7 +11,7 @@ from gateway import host_attach, host_rendezvous as hr
 
 def test_boot_notice_only_labels_configured_standalone_profiles(standalone_home, monkeypatch, caplog):
     from gateway.run import _log_standalone_profiles_at_boot
-    from scout_cli import profiles
+    from scout_backend import profiles
 
     root, solo = standalone_home
     member = root / "profiles" / "member"
@@ -40,7 +40,7 @@ def standalone_home(tmp_path, monkeypatch):
     (home / "config.yaml").write_text("gateway:\n  standalone: true\n")
     monkeypatch.setenv("SCOUT_HOME", str(home))
     monkeypatch.setenv("SCOUT_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
-    from scout_cli import profiles
+    from scout_backend import profiles
     monkeypatch.setattr(profiles, "_get_default_scout_home", lambda: root)
     monkeypatch.setattr(profiles, "_get_profiles_root", lambda: root / "profiles")
     return root, home

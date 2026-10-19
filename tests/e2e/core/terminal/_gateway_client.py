@@ -1,6 +1,6 @@
 """Real ``scout serve`` backend + WebSocket JSON-RPC clients for the terminal lane E2E suites.
 
-One backend per test module: a real ``python -m scout_cli.main serve --port 0`` subprocess (the
+One backend per test module: a real ``python -m scout_backend.main serve --port 0`` subprocess (the
 exact argv Desktop spawns, see ``apps/desktop/electron/backend-command.ts``) with an isolated
 HOME/SCOUT_HOME, no inherited provider credentials, and only the recording fake LLM provider
 configured. Clients speak the Desktop wire protocol over ``/api/ws`` (newline JSON-RPC,
@@ -114,7 +114,7 @@ class Backend:
         self._stderr = open(self.root / "serve.stderr.log", "wb")
         # Own process group: stop() signals exactly the tree this fixture spawned, never a pattern match.
         self.proc = subprocess.Popen(
-            [sys.executable, "-m", "scout_cli.main", "serve", "--host", "127.0.0.1", "--port", "0"],
+            [sys.executable, "-m", "scout_backend.main", "serve", "--host", "127.0.0.1", "--port", "0"],
             cwd=str(self.root), env=_minimal_env(self.home, self.scout_home, self.token, self.extra_env),
             stdin=subprocess.DEVNULL, stdout=self._stdout, stderr=self._stderr, start_new_session=True)
 

@@ -25,7 +25,7 @@ from gateway.config import GatewayConfig, Platform, PlatformConfig
 from gateway.platforms.event import MessageEvent, MessageType
 from gateway.run import GatewayRunner
 from gateway.session import SessionSource
-from scout_cli import goals
+from scout_backend import goals
 
 
 @pytest.fixture
@@ -63,7 +63,7 @@ def _exhaust_budget(session_id: str, goal_text: str = "ship the benchmark"):
     mgr = goals.GoalManager(session_id)
     mgr.set(goal_text, max_turns=1)
     with patch(
-        "scout_cli.goals.judge_goal",
+        "scout_backend.goals.judge_goal",
         return_value=("continue", "needs more steps", False, None, False),
     ):
         decision = mgr.evaluate_after_turn("worked a bit")

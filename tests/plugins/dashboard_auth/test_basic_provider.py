@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 import pytest
 
 import plugins.dashboard_auth.basic as basic_plugin
-from scout_cli.dashboard_auth import (
+from scout_backend.dashboard_auth import (
     InvalidCredentialsError,
     RefreshExpiredError,
     assert_protocol_compliance,

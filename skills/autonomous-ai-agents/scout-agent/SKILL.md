@@ -34,8 +34,8 @@ This skill is a concise operating guide, not the complete source of truth for ev
 
 Good verification targets, cheapest first:
 
-- **The source checkout's `AGENTS.md` files** (root plus one per area: `agent/`, `gateway/`, `tools/`, `scout_cli/`, `cron/`, `skills/`, `plugins/`, `apps/desktop/`) describe every subsystem; start there for any "can Scout do X?" or "how does X work?".
-- CLI commands: `scout --help`, `scout <command> --help`, and `scout_cli/main.py`
+- **The source checkout's `AGENTS.md` files** (root plus one per area: `agent/`, `gateway/`, `tools/`, `scout_backend/`, `cron/`, `skills/`, `plugins/`, `apps/desktop/`) describe every subsystem; start there for any "can Scout do X?" or "how does X work?".
+- CLI commands: `scout --help`, `scout <command> --help`, and `scout_backend/main.py`
 - Source tree: https://github.com/adityakm24/scout
 
 Never answer "Scout can't do that" from memory. Scout ships far more than this skill body describes, and the help text and source make a negative answer checkable.

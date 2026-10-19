@@ -372,7 +372,7 @@ def capability_fingerprint(home: str | os.PathLike | None = None) -> str:
         # Canonical loader (managed overlay + env expansion + normalization),
         # scoped to the bot's home via the override the loaders already honor.
         from agent.skill_utils import parse_config_string_list
-        from scout_cli.config import load_config_readonly
+        from scout_backend.config import load_config_readonly
         from scout_constants import reset_scout_home_override, set_scout_home_override
 
         token = set_scout_home_override(str(resolved))

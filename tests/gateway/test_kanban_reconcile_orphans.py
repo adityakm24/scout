@@ -26,9 +26,9 @@ from pathlib import Path
 
 import pytest
 
-from scout_cli import kanban_db as kb
-from scout_cli import kanban_db_connect as kbc
-from scout_cli import kanban_db_dispatch as kbd
+from scout_backend import kanban_db as kb
+from scout_backend import kanban_db_connect as kbc
+from scout_backend import kanban_db_dispatch as kbd
 
 
 @pytest.fixture

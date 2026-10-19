@@ -6,13 +6,13 @@ import pytest
 
 @pytest.mark.parametrize("module,name,locals_", [
     ("community_plugin", "cmd_update", ""),
-    ("scout_cli.main", "serve", ""),
+    ("scout_backend.main", "serve", ""),
     # current updater entrypoints carry the sentinel local
-    ("scout_cli.update_cmd", "_cmd_update_impl",
+    ("scout_backend.update_cmd", "_cmd_update_impl",
      "    _scout_current_updater_frame = True\n"),
 ])
 def test_runtime_lookalikes_do_not_start_updates(module, name, locals_, monkeypatch):
-    from scout_cli import _old_updater
+    from scout_backend import _old_updater
     from tools.lazy_deps import install_specs
 
     child = Mock(return_value=(0, {}))

@@ -51,7 +51,7 @@ class TestHandleUpdateCommand:
 
     @pytest.mark.asyncio
     async def test_resolve_scout_bin_module_argv(self):
-        """_resolve_scout_bin uses the running interpreter's module argv when scout_cli is
+        """_resolve_scout_bin uses the running interpreter's module argv when scout_backend is
         importable, even when PATH also offers a ``scout`` binary (#111569: a PATH-first
         lookup would re-exec an attacker-planted executable on /update and /restart)."""
         import sys
@@ -62,11 +62,11 @@ class TestHandleUpdateCommand:
              patch("importlib.util.find_spec", return_value=fake_spec):
             result = _resolve_scout_bin()
 
-        assert result == [sys.executable, "-m", "scout_cli.main"]
+        assert result == [sys.executable, "-m", "scout_backend.main"]
 
     @pytest.mark.asyncio
     async def test_resolve_scout_bin_falls_back_to_path_then_none(self):
-        """Without an importable scout_cli the argv degrades to PATH, then to None — never a
+        """Without an importable scout_backend the argv degrades to PATH, then to None — never a
         bare ``scout`` string that a hostile PATH entry could shadow."""
         from gateway.run import _resolve_scout_bin
 
@@ -108,7 +108,7 @@ class TestHandleUpdateCommand:
 
         with patch("gateway.run._scout_home", scout_home), \
              patch("gateway.run.__file__", fake_file), \
-             patch("scout_cli.config.detect_install_method", return_value="git"), \
+             patch("scout_backend.config.detect_install_method", return_value="git"), \
              patch("shutil.which", side_effect=which_no_setsid), \
              patch("subprocess.Popen", mock_popen):
             await runner._handle_update_command(event)
@@ -150,7 +150,7 @@ class TestUpdateCommandPlatformGate:
         """
 
         # Make sure the plugin registry is populated so the fallback fires.
-        from scout_cli.plugins import PluginManager
+        from scout_backend.plugins import PluginManager
         PluginManager().discover_and_load(force=True)
         from gateway.platform_registry import platform_registry
         discord_entry = platform_registry.get("homeassistant")

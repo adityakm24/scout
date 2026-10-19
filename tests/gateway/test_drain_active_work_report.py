@@ -10,7 +10,7 @@ import time
 import cron.scheduler as sched
 from gateway.run import GatewayRunner
 from gateway.session_state import SessionState
-from scout_cli.update_cmd_drain_report import drain_progress_reporter
+from scout_backend.update_cmd_drain_report import drain_progress_reporter
 from gateway.status import flush_runtime_status
 
 

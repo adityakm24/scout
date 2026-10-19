@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-from scout_cli.route_identity import normalize_route_base_url
+from scout_backend.route_identity import normalize_route_base_url
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ def _both_first_class(a: BackendIdentity, b: BackendIdentity) -> bool:
     if not a.provider or not b.provider or a.provider == b.provider:
         return False
     try:
-        from scout_cli.auth import PROVIDER_REGISTRY
+        from scout_backend.auth import PROVIDER_REGISTRY
 
         return a.provider in PROVIDER_REGISTRY and b.provider in PROVIDER_REGISTRY
     except Exception:

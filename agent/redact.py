@@ -91,14 +91,14 @@ _SENSITIVE_QUERY_PARAMS = frozenset({
 # ON by default; `security.redact_secrets: false` bridges to this env var.
 # ON by default — secure default per issue #17691. Users who need raw credential values in tool output (e.g.
 # working on the redactor itself) can opt out via `security.redact_secrets: false` in config.yaml (bridged
-# to this env var in scout_cli/main.py, gateway/run.py, and cli.py) or `SCOUT_REDACT_SECRETS=false` in
+# to this env var in scout_backend/main.py, gateway/run.py, and cli.py) or `SCOUT_REDACT_SECRETS=false` in
 # ~/.scout/.env. An opt-out warning is logged at gateway and CLI startup so operators see the downgrade —
 # see `_log_redaction_status()` in gateway/run.py and cli.py.
 _REDACT_ENABLED = os.getenv("SCOUT_REDACT_SECRETS", "true").lower() in {"1", "true", "yes", "on"}
 
 # Routed multiplex profiles: the import-time snapshot above is the LAUNCH profile's policy. A profile
 # served under a SCOUT_HOME override resolves its own ``security.redact_secrets`` (its ``.env``
-# value first, like the standalone bridge in scout_cli/main.py), cached per home so the hot path
+# value first, like the standalone bridge in scout_backend/main.py), cached per home so the hot path
 # stays a dict lookup. Still not a live ``os.environ`` read, so a shell ``export`` cannot flip it.
 _REDACT_ENABLED_BY_HOME: dict = {}
 _REDACT_ENABLED_LOCK = threading.Lock()
@@ -121,10 +121,10 @@ def _redact_enabled() -> bool:
         if raw is None and scope is None:
             # No live scope (the log listener thread formats routed records): read the profile's own .env, as
             # its scope would, or a first call there would cache a config-only answer for the whole process.
-            from scout_cli.config import load_env
+            from scout_backend.config import load_env
             raw = load_env().get("SCOUT_REDACT_SECRETS")
         if raw is None:
-            from scout_cli.config import load_config_readonly
+            from scout_backend.config import load_config_readonly
             cfg_val = (load_config_readonly().get("security") or {}).get("redact_secrets")
             raw = None if cfg_val is None else str(cfg_val)
         if raw is not None:

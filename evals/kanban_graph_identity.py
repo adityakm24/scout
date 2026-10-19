@@ -25,11 +25,11 @@ def main():
                 cwd=args.repo, env=env, check=False,
             ).returncode
     sys.path.insert(0, str(args.repo))
-    from scout_cli import kanban_db as kb, kanban_db_connect as kbc
-    from scout_cli.kanban_db_dispatch import dispatch_once
+    from scout_backend import kanban_db as kb, kanban_db_connect as kbc
+    from scout_backend.kanban_db_dispatch import dispatch_once
     from tools.kanban_tools import _handle_create
-    from scout_cli.kanban_decompose import _apply_fanout, _Routing
-    graph = importlib.import_module("scout_cli.kanban_db_graph") if (args.repo / "scout_cli/kanban_db_graph.py").exists() else kb
+    from scout_backend.kanban_decompose import _apply_fanout, _Routing
+    graph = importlib.import_module("scout_backend.kanban_db_graph") if (args.repo / "scout_backend/kanban_db_graph.py").exists() else kb
     decompose = graph.decompose_triage_task
     specs = [{"title": "work", "assignee": "default"}]
     with kbc.connect_closing() as conn:

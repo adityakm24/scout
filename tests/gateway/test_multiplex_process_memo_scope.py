@@ -98,7 +98,7 @@ def test_media_policy_reads_routed_profile_config_not_env(two_homes, monkeypatch
     # Gateway startup bridges the LAUNCH profile's policy into the process env.
     for var in ("SCOUT_MEDIA_DELIVERY_STRICT", "SCOUT_MEDIA_ALLOW_DIRS"):
         monkeypatch.delenv(var, raising=False)
-    from scout_cli.config import load_config
+    from scout_backend.config import load_config
     media_policy.apply_media_policy_env(load_config())
     assert media_policy.media_delivery_strict() is True
     assert media_policy.media_delivery_allow_dirs() == "/srv/a"

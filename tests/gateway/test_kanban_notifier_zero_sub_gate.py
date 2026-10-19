@@ -22,9 +22,9 @@ from unittest.mock import patch
 
 from gateway.config import Platform
 from gateway.run import GatewayRunner
-from scout_cli import kanban_db as kb
-from scout_cli import kanban_db_connect as kbc
-from scout_cli import kanban_db_notify as kbn
+from scout_backend import kanban_db as kb
+from scout_backend import kanban_db_connect as kbc
+from scout_backend import kanban_db_notify as kbn
 
 
 class RecordingAdapter:

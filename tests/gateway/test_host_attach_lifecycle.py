@@ -257,9 +257,9 @@ def test_served_profiles_ignores_the_retired_opt_out_but_honours_an_explicit_arg
         return ([("default", Path("/x")), ("other", Path("/y"))] if multiplex
                 else [("default", Path("/x"))])
 
-    monkeypatch.setattr("scout_cli.profiles.profiles_to_serve", _roster)
+    monkeypatch.setattr("scout_backend.profiles.profiles_to_serve", _roster)
     monkeypatch.setattr(
-        "scout_cli.gateway_multiplex_mode.explicit_multiplex_flag", lambda home: False)
+        "scout_backend.gateway_multiplex_mode.explicit_multiplex_flag", lambda home: False)
 
     assert hr.served_profiles() == ("default", "other")
     assert hr.served_profiles(multiplex=False) == ("default",)

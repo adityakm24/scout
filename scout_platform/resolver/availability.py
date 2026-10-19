@@ -27,7 +27,7 @@ OFFERABLE: frozenset[str] = frozenset({"available", "no_requirements"})
 
 
 class _HasRequirements(Protocol):
-    """The slice of a catalog entry `availability` reads; keeps this module free of `scout_cli` imports."""
+    """The slice of a catalog entry `availability` reads; keeps this module free of `scout_backend` imports."""
 
     @property
     def requires_app(self) -> bool: ...

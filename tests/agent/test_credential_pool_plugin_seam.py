@@ -19,9 +19,9 @@ from agent.credential_pool import (
     CredentialPool,
     PooledCredential,
 )
-from scout_cli.auth import read_credential_pool
-from scout_cli.auth_constants import AuthError
-from scout_cli.auth_plugin_providers import is_refreshable_oauth_provider
+from scout_backend.auth import read_credential_pool
+from scout_backend.auth_constants import AuthError
+from scout_backend.auth_plugin_providers import is_refreshable_oauth_provider
 
 
 def _entry(**over):

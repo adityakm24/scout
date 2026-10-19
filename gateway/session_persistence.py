@@ -125,7 +125,7 @@ class SessionPersistenceMixin:
             return cache[profile]
         home: Optional[Path] = None
         try:
-            from scout_cli.profiles import get_profile_dir, profile_exists
+            from scout_backend.profiles import get_profile_dir, profile_exists
             if profile_exists(profile):
                 home = Path(get_profile_dir(profile))
         except Exception as exc:

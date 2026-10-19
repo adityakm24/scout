@@ -39,7 +39,7 @@ from urllib.parse import urlparse
 import httpx
 
 from agent.web_search_provider import WebSearchProvider
-from scout_cli.version_info import get_version_info
+from scout_backend.version_info import get_version_info
 
 logger = logging.getLogger(__name__)
 

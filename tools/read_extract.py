@@ -159,7 +159,7 @@ def _hosted_ocr_config() -> tuple:
     api_key = get_secret("FIRECRAWL_API_KEY") or None
     enabled = api_key is not None
     with contextlib.suppress(Exception):
-        from scout_cli.config import load_config_readonly
+        from scout_backend.config import load_config_readonly
         section = load_config_readonly().get("file_tools")
         if isinstance(section, dict) and section.get("hosted_ocr") is False:
             enabled = False

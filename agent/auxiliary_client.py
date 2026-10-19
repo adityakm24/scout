@@ -118,8 +118,8 @@ def aux_probe_mode():
 
 from agent.credential_pool import load_pool
 from agent.model_metadata import MINIMUM_CONTEXT_LENGTH, get_model_context_length
-from scout_cli.config import get_scout_home
-from scout_cli.config_providers import _canonical_api_mode
+from scout_backend.config import get_scout_home
+from scout_backend.config_providers import _canonical_api_mode
 from agent.auxiliary_health import (
     _custom_health_base_url, _unhealthy_cache_key, fallback_candidate_quarantine_ttl,
     fallback_candidate_unavailable_reason,
@@ -144,7 +144,7 @@ def _resolve_aux_verify(base_url: Optional[str]) -> Any:
     ``ssl_verify``; otherwise the OS trust store); any failure → httpx default (``True``)."""
     try:
         from agent.ssl_verify import resolve_httpx_verify
-        from scout_cli.config import get_custom_provider_tls_settings, load_config_readonly
+        from scout_backend.config import get_custom_provider_tls_settings, load_config_readonly
         tls = get_custom_provider_tls_settings(str(base_url or ""), config=load_config_readonly())
         return resolve_httpx_verify(
             ca_bundle=tls.get("ssl_ca_cert"), ssl_verify=tls.get("ssl_verify"), base_url=str(base_url or ""))
@@ -526,7 +526,7 @@ def _extract_url_query_params(url: str):
 _stale_base_url_warned = False
 
 # Local OpenAI-compatible servers (Ollama, vLLM, llama.cpp) route through the generic custom
-# provider — mirrors scout_cli.auth._PROVIDER_ALIASES. Without this group an explicit
+# provider — mirrors scout_backend.auth._PROVIDER_ALIASES. Without this group an explicit
 # ``provider: ollama`` aux lane matches no registry entry and raises a misleading
 # ``OLLAMA_API_KEY`` error instead of using the lane's base_url (#106010).
 _LOCAL_SERVER_ALIASES = {
@@ -538,7 +538,7 @@ _ALIAS_TABLE: Optional[Dict[str, str]] = None
 
 
 def _provider_alias_table() -> Dict[str, str]:
-    """The same alias table the main provider path resolves against (scout_cli.auth).
+    """The same alias table the main provider path resolves against (scout_backend.auth).
 
     A hand-copied mirror here rots silently every time auth grows a family — the local
     servers (#106010) and the OpenCode entries were both missed that way. Local-server
@@ -549,7 +549,7 @@ def _provider_alias_table() -> Dict[str, str]:
     if _ALIAS_TABLE is None:
         merged: Dict[str, str] = dict(_LOCAL_SERVER_ALIASES)
         with contextlib.suppress(Exception):
-            from scout_cli.auth import _PROVIDER_ALIASES as _auth_table
+            from scout_backend.auth import _PROVIDER_ALIASES as _auth_table
             merged.update(_auth_table)
         _ALIAS_TABLE = merged
     return _ALIAS_TABLE
@@ -720,8 +720,8 @@ def _fast_model_from_catalog(provider_id: str) -> str:
     curated default). Never raises; the fetch is memory+disk cached.
     """
     try:
-        from scout_cli.auth import resolve_api_key_provider_credentials
-        from scout_cli.models_pricing import fetch_models_with_pricing
+        from scout_backend.auth import resolve_api_key_provider_credentials
+        from scout_backend.models_pricing import fetch_models_with_pricing
         from providers import get_provider_profile
         # Most /v1/models endpoints are authenticated; an anonymous 401 would read as "no small
         # model" and pin the curated default forever.
@@ -844,7 +844,7 @@ def _apply_user_default_headers(headers: dict | None) -> dict | None:
     alias wins over both). Mirrors ``AIAgent._apply_user_default_headers`` so a custom endpoint behind a
     WAF rejecting ``User-Agent`` / ``X-Stainless-*`` works for aux calls. SECURITY: never log values."""
     try:
-        from scout_cli.config import cfg_get, load_config
+        from scout_backend.config import cfg_get, load_config
         _cfg = load_config()
         user_headers = cfg_get(_cfg, "model", "default_headers")
         alias_headers = cfg_get(_cfg, "model", "extra_headers")
@@ -869,7 +869,7 @@ def build_or_headers(or_config: dict | None = None) -> dict:
     headers = dict(_OR_HEADERS_BASE)
     if or_config is None:
         try:
-            from scout_cli.config import load_config_readonly
+            from scout_backend.config import load_config_readonly
             or_config = load_config_readonly().get("openrouter", {})
         except Exception:
             or_config = {}
@@ -898,7 +898,7 @@ def build_nvidia_nim_headers(base_url: str | None) -> dict:
 
 
 # Vercel AI Gateway attribution (HTTP-Referer → referrerUrl, X-Title → appName).
-from scout_cli.version_info import get_version_info
+from scout_backend.version_info import get_version_info
 
 _AI_GATEWAY_HEADERS = {
     "HTTP-Referer": "https://github.com/adityakm24/scout",
@@ -921,7 +921,7 @@ def _auth_json_path():
     """Active profile's ``auth.json`` at call time (a patched ``_AUTH_JSON_PATH`` still wins). The
     import-time constant is the LAUNCH profile's; under multiplexing a secondary's auxiliary calls
     would otherwise authenticate with the default profile's token."""
-    from scout_cli.auth import _auth_file_path
+    from scout_backend.auth import _auth_file_path
     return _AUTH_JSON_PATH if _AUTH_JSON_PATH != _AUTH_JSON_PATH_AT_IMPORT else _auth_file_path()
 
 # Hosts exposing BOTH ``…/anthropic`` and a sibling OpenAI ``…/v1``. Matched on the URL *host*
@@ -950,7 +950,7 @@ def _to_openai_base_url(base_url: str) -> str:
     """
     url = str(base_url or "").strip().rstrip("/")
     if base_url_hostname(url) == "api.actual.inc":
-        from scout_cli.auth import normalize_actual_base_url
+        from scout_backend.auth import normalize_actual_base_url
         return normalize_actual_base_url(url)
     if url.endswith("/anthropic"):
         if base_url_host_matches(url, "open.bigmodel.cn") or base_url_host_matches(url, "api.z.ai"):
@@ -1496,7 +1496,7 @@ class _CodexCompletionsAdapter:
         return resp_kwargs, model, timeout
 
     def create(self, **kwargs) -> Any:
-        from scout_cli.providers import is_actual_route
+        from scout_backend.providers import is_actual_route
 
         if is_actual_route(
             getattr(self._client, "_scout_aux_effective_provider", ""),
@@ -1827,7 +1827,7 @@ class AsyncBedrockAuxiliaryClient(_AsyncAuxiliaryClientBase):
 def _endpoint_speaks_anthropic_messages(base_url: str) -> bool:
     """True if ``base_url`` speaks Anthropic Messages, not OpenAI chat.completions.
 
-    Mirrors ``scout_cli.runtime_provider._detect_api_mode_for_url`` so aux and main agree: any
+    Mirrors ``scout_backend.runtime_provider._detect_api_mode_for_url`` so aux and main agree: any
     ``/anthropic`` URL (MiniMax, Zhipu, LiteLLM), ``api.kimi.com/coding`` (chat 404s), ``api.anthropic.com``.
     """
     normalized = (base_url or "").strip().lower().rstrip("/")
@@ -1900,7 +1900,7 @@ def _resolve_xai_oauth_for_aux() -> Optional[Tuple[str, str]]:
     Pool first (some xAI OAuth logins exist only as pool entries), then the singleton auth-store resolver.
     """
     try:
-        from scout_cli.auth import DEFAULT_XAI_OAUTH_BASE_URL, _xai_validate_inference_base_url
+        from scout_backend.auth import DEFAULT_XAI_OAUTH_BASE_URL, _xai_validate_inference_base_url
         pool = load_pool("xai-oauth")
         if pool and pool.has_credentials():
             entry = pool.select()
@@ -1921,7 +1921,7 @@ def _resolve_xai_oauth_for_aux() -> Optional[Tuple[str, str]]:
     except Exception as exc:
         logger.debug("Auxiliary xAI OAuth pool credential resolution failed: %s", exc)
     try:
-        from scout_cli.auth import resolve_xai_oauth_runtime_credentials
+        from scout_backend.auth import resolve_xai_oauth_runtime_credentials
         creds = resolve_xai_oauth_runtime_credentials()
     except Exception as exc:
         logger.debug("Auxiliary xAI OAuth runtime credential resolution failed: %s", exc)
@@ -1942,7 +1942,7 @@ def _resolve_codex_credential_and_base() -> Tuple[Optional[str], str]:
             if override:
                 return token, override
             # Same route rule as the chat path (row URL, else ``model.base_url``); never empty.
-            from scout_cli.auth_codex import _codex_pool_route_base_url
+            from scout_backend.auth_codex import _codex_pool_route_base_url
             return token, _codex_pool_route_base_url(_pool_runtime_base_url(entry))
     # No usable pool token: auth.json only (re-selecting could pair another row's key with the default).
     return _read_codex_singleton_token(), override or _CODEX_AUX_BASE_URL
@@ -1951,7 +1951,7 @@ def _resolve_codex_credential_and_base() -> Tuple[Optional[str], str]:
 def _read_codex_singleton_token() -> Optional[str]:
     """The profile's auth.json Codex access token (expired JWTs skipped), else None."""
     try:
-        from scout_cli.auth import _read_codex_tokens
+        from scout_backend.auth import _read_codex_tokens
         access_token = _read_codex_tokens().get("tokens", {}).get("access_token")
         if not isinstance(access_token, str) or not access_token.strip():
             return None
@@ -1975,7 +1975,7 @@ def _read_codex_singleton_token() -> Optional[str]:
 def _resolve_api_key_provider() -> Tuple[Optional[OpenAI], Optional[str]]:
     """Try each API-key provider in PROVIDER_REGISTRY order; (client, model) or (None, None)."""
     try:
-        from scout_cli.auth import PROVIDER_REGISTRY, resolve_api_key_provider_credentials
+        from scout_backend.auth import PROVIDER_REGISTRY, resolve_api_key_provider_credentials
     except ImportError:
         logger.debug("Could not import PROVIDER_REGISTRY for API-key fallback")
         return None, None
@@ -1988,14 +1988,14 @@ def _resolve_api_key_provider() -> Tuple[Optional[OpenAI], Optional[str]]:
         if provider_id == "anthropic":
             # Explicit-config gate: Claude Code credentials must not silently become aux fallback.
             with contextlib.suppress(ImportError):
-                from scout_cli.auth import is_provider_explicitly_configured
+                from scout_backend.auth import is_provider_explicitly_configured
                 if not is_provider_explicitly_configured("anthropic"):
                     continue
             return _try_anthropic()
         if provider_id == "copilot":
             # Explicit-config gate: ambient gh-CLI credentials must not silently become aux fallback (#114740).
             with contextlib.suppress(ImportError):
-                from scout_cli.auth import is_provider_explicitly_configured
+                from scout_backend.auth import is_provider_explicitly_configured
                 if not is_provider_explicitly_configured("copilot"):
                     continue
         model = _get_aux_model_for_provider(provider_id) or None
@@ -2033,7 +2033,7 @@ def _resolve_api_key_provider() -> Tuple[Optional[OpenAI], Optional[str]]:
         if base_url_host_matches(base_url, "api.kimi.com"):
             headers = {"User-Agent": "claude-code/0.1.0"}
         elif base_url_host_matches(base_url, "githubcopilot.com"):
-            from scout_cli.models import copilot_default_headers
+            from scout_backend.models import copilot_default_headers
             headers = copilot_default_headers()
         elif base_url_host_matches(base_url, "integrate.api.nvidia.com"):
             headers = build_nvidia_nim_headers(base_url)
@@ -2060,7 +2060,7 @@ def _endpoint_default_headers(
     if base_url_host_matches(base_url, "api.kimi.com"):
         headers: dict = {"User-Agent": "claude-code/0.1.0"}
     elif base_url_host_matches(base_url, "githubcopilot.com"):
-        from scout_cli.copilot_auth import copilot_request_headers
+        from scout_backend.copilot_auth import copilot_request_headers
         headers = dict(copilot_request_headers(is_agent_turn=True, is_vision=is_vision))
     elif base_url_host_matches(base_url, "integrate.api.nvidia.com"):
         headers = dict(build_nvidia_nim_headers(base_url))
@@ -2100,7 +2100,7 @@ def _is_free_model(model: Optional[str]) -> bool:
 def _aux_openrouter_settings() -> Tuple[bool, str]:
     """Read (free_only, openrouter_model) from config; (False, _OPENROUTER_MODEL) on failure."""
     try:
-        from scout_cli.config import cfg_get, load_config_readonly
+        from scout_backend.config import cfg_get, load_config_readonly
         cfg = load_config_readonly()
         free_only = bool(cfg_get(cfg, "auxiliary", "free_only", default=False))
         val = cfg_get(cfg, "auxiliary", "openrouter_model")
@@ -2192,7 +2192,7 @@ def _read_main_field(field: str, *, readonly: bool, lower: bool = False) -> str:
         value = override.strip()
         return value.lower() if lower else value
     with contextlib.suppress(Exception):
-        from scout_cli import config as _cfg_mod
+        from scout_backend import config as _cfg_mod
         cfg = (_cfg_mod.load_config_readonly if readonly else _cfg_mod.load_config)()
         model_cfg = cfg.get("model", {})
         if field == "model" and isinstance(model_cfg, str) and model_cfg.strip():
@@ -2219,8 +2219,8 @@ def _resolve_moa_aggregator(preset_name: Optional[str]) -> Tuple[Optional[str], 
     "moa" is virtual — aux tasks skip the fan-out and use the aggregator slot; shared so lookup can't drift.
     """
     try:
-        from scout_cli.config import load_config
-        from scout_cli.moa_config import resolve_moa_preset
+        from scout_backend.config import load_config
+        from scout_backend.moa_config import resolve_moa_preset
         preset = resolve_moa_preset(load_config().get("moa") or {}, preset_name or None)
         agg = preset.get("aggregator") or {}
         agg_provider = str(agg.get("provider") or "").strip()
@@ -2528,8 +2528,8 @@ def clear_runtime_main() -> None:
 def _resolve_custom_runtime() -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """Resolve the active custom/main endpoint like the main CLI (env OPENAI_BASE_URL or config-saved)."""
     try:
-        from scout_cli.auth import AuthError
-        from scout_cli.runtime_provider import resolve_runtime_provider
+        from scout_backend.auth import AuthError
+        from scout_backend.runtime_provider import resolve_runtime_provider
         runtime = resolve_runtime_provider(requested="custom")
     except AuthError as exc:
         # Bare 'custom' with nothing configured fails fast in the main resolver: there is no
@@ -2701,9 +2701,9 @@ def _try_azure_foundry(
     """Azure Foundry aux client via the main agent's ``_resolve_azure_foundry_runtime`` (api_key vs Entra
     callable bearer, per-model api_mode, base_url overrides). Returns ``(client, model)`` or ``(None, None)``."""
     try:
-        from scout_cli.runtime_provider import _resolve_azure_foundry_runtime
-        from scout_cli.auth import AuthError
-        from scout_cli.config import load_config_readonly
+        from scout_backend.runtime_provider import _resolve_azure_foundry_runtime
+        from scout_backend.auth import AuthError
+        from scout_backend.config import load_config_readonly
     except ImportError:
         return None, None
     try:
@@ -2771,7 +2771,7 @@ def _try_anthropic(explicit_api_key: Optional[Union[str, Callable[[], str]]] = N
     # Anthropic-compatible; a foreign host (Codex, OpenRouter) would 401 every aux call.
     base_url = _pool_runtime_base_url(entry, _ANTHROPIC_DEFAULT_BASE_URL) if pool_present else _ANTHROPIC_DEFAULT_BASE_URL
     with contextlib.suppress(Exception):
-        from scout_cli.config import load_config_readonly
+        from scout_backend.config import load_config_readonly
         cfg = load_config_readonly()
         model_cfg = cfg.get("model")
         if isinstance(model_cfg, dict):
@@ -3054,7 +3054,7 @@ def _transient_retry_count() -> int:
     """Same-provider retries for a transient blip: ``auxiliary.transient_retries``
     (default 2), clamped to [0, 6]; config-read failures fall back to default."""
     try:
-        from scout_cli.config import cfg_get, load_config
+        from scout_backend.config import cfg_get, load_config
         val = cfg_get(load_config(), "auxiliary", "transient_retries")
         return _DEFAULT_TRANSIENT_RETRIES if val is None else max(0, min(int(val), 6))
     except Exception:
@@ -3409,7 +3409,7 @@ def _recoverable_pool_provider(
         rt_provider = runtime.get("provider", "")
         if rt_provider and rt_provider not in {"", "auto", "custom"}:
             with contextlib.suppress(Exception):
-                from scout_cli.auth import PROVIDER_REGISTRY
+                from scout_backend.auth import PROVIDER_REGISTRY
                 pconfig = PROVIDER_REGISTRY.get(rt_provider)
                 if pconfig and getattr(pconfig, "auth_type", None) == "api_key":
                     # The pool's key was issued for the endpoint the main runtime actually uses; a
@@ -3530,7 +3530,7 @@ def _creds_have_api_key(creds: Dict[str, Any]) -> bool:
 
 
 def _refresh_copilot_credentials() -> bool:
-    from scout_cli.copilot_auth import _jwt_cache, _token_fingerprint, exchange_copilot_token, resolve_copilot_token
+    from scout_backend.copilot_auth import _jwt_cache, _token_fingerprint, exchange_copilot_token, resolve_copilot_token
     raw_token, _source = resolve_copilot_token()
     if not str(raw_token or "").strip():
         return False
@@ -3540,7 +3540,7 @@ def _refresh_copilot_credentials() -> bool:
 
 
 def _refresh_codex_credentials() -> bool:
-    from scout_cli.auth import resolve_codex_runtime_credentials
+    from scout_backend.auth import resolve_codex_runtime_credentials
     return _creds_have_api_key(resolve_codex_runtime_credentials(force_refresh=True))
 
 
@@ -3567,7 +3567,7 @@ def _refresh_xai_oauth_credentials() -> bool:
         refreshed = pool.try_refresh_current()
         if refreshed is not None and str(getattr(refreshed, "runtime_api_key", "") or "").strip():
             return True
-    from scout_cli.auth import resolve_xai_oauth_runtime_credentials
+    from scout_backend.auth import resolve_xai_oauth_runtime_credentials
     return _creds_have_api_key(resolve_xai_oauth_runtime_credentials(force_refresh=True))
 
 
@@ -3676,7 +3676,7 @@ def _complete_fallback_destination(
             api_mode = "anthropic_messages"
         else:
             with contextlib.suppress(Exception):
-                from scout_cli.runtime_provider import resolve_runtime_provider
+                from scout_backend.runtime_provider import resolve_runtime_provider
                 runtime = resolve_runtime_provider(
                     requested=provider, explicit_base_url=base_url or None, target_model=model or ""
                 )
@@ -4153,7 +4153,7 @@ def _try_configured_fallback_for_unavailable_client(
 
 def _fallback_entry_api_key(entry: Dict[str, Any]) -> Optional[str]:
     """Resolve inline or env-backed API key via the secret-scope-aware resolver (no raw os.getenv under multiplexing)."""
-    from scout_cli.fallback_config import resolve_entry_api_key
+    from scout_backend.fallback_config import resolve_entry_api_key
     return resolve_entry_api_key(entry)
 
 
@@ -4182,8 +4182,8 @@ def _try_main_fallback_chain(
     user's main fallback policy before the built-in discovery chain; read via ``get_fallback_chain`` so
     ``fallback_providers`` and legacy ``fallback_model`` keep the main agent's order."""
     try:
-        from scout_cli.config import load_config_readonly
-        from scout_cli.fallback_config import get_fallback_chain
+        from scout_backend.config import load_config_readonly
+        from scout_backend.fallback_config import get_fallback_chain
         chain = get_fallback_chain(load_config_readonly())
     except Exception as exc:
         logger.debug("Auxiliary %s: could not load main fallback chain: %s", task or "call", exc)
@@ -4294,7 +4294,7 @@ def _try_main_provider_route(
         # Named custom provider (custom_providers / providers dict entry).
         _has_named_entry = False
         with contextlib.suppress(ImportError):
-            from scout_cli.runtime_provider import _get_named_custom_provider
+            from scout_backend.runtime_provider import _get_named_custom_provider
             _has_named_entry = _get_named_custom_provider(main_provider) is not None
         if _has_named_entry:
             # KEEP the full ``custom:<name>`` so the named arm honours the entry's api_mode
@@ -4457,7 +4457,7 @@ def _normalize_resolved_model(model_name: Optional[str], provider: str) -> Optio
     if not model_name:
         return model_name
     try:
-        from scout_cli.model_normalize import normalize_model_for_provider
+        from scout_backend.model_normalize import normalize_model_for_provider
         return normalize_model_for_provider(model_name, provider)
     except Exception:
         return model_name
@@ -4602,9 +4602,9 @@ def _log_once_debug(seen: set, key: Any, msg: str, *args: Any) -> None:
 
 
 def _is_actual_auxiliary_route(req: _ResolveRequest, base_url: str) -> bool:
-    from scout_cli.auth import normalize_actual_base_url
-    from scout_cli.providers import is_actual_route
-    from scout_cli.route_identity import normalize_route_base_url
+    from scout_backend.auth import normalize_actual_base_url
+    from scout_backend.providers import is_actual_route
+    from scout_backend.route_identity import normalize_route_base_url
 
     if is_actual_route(req.provider, base_url):
         return True
@@ -4787,7 +4787,7 @@ def _resolve_custom_branch(req: _ResolveRequest) -> _ResolveResult:
             custom_base, custom_key = _main_base, _main_key
     if custom_base and custom_key:
         if _is_actual_auxiliary_route(req, custom_base):
-            from scout_cli.auth import normalize_actual_base_url
+            from scout_backend.auth import normalize_actual_base_url
             custom_base = normalize_actual_base_url(custom_base)
         final_model = _normalize_resolved_model(
             model or (main_runtime.get("model") if main_runtime else None) or "gpt-4o-mini", provider,
@@ -4835,7 +4835,7 @@ def _named_custom_openai_wire_client(custom_base: str, custom_key: Any, extra_he
 
 def _resolve_named_custom_branch(req: _ResolveRequest) -> Optional[_ResolveResult]:
     """Named custom provider (config.yaml providers dict / custom_providers list); None if no entry matches."""
-    from scout_cli.runtime_provider import _get_named_custom_provider
+    from scout_backend.runtime_provider import _get_named_custom_provider
     provider = req.provider
     # If the raw name is an alias (``kimi`` → ``kimi-coding``) and a custom_providers entry exists
     # under it, the custom entry wins over alias rewriting. Only for aliases, so entries matching a
@@ -4859,13 +4859,13 @@ def _resolve_named_custom_branch(req: _ResolveRequest) -> Optional[_ResolveResul
     # Actual's wire protocol takes precedence over persisted task/provider modes.
     entry_api_mode = (req.api_mode or custom_entry.get("api_mode") or "").strip()
     if _is_actual_auxiliary_route(req, custom_base):
-        from scout_cli.auth import normalize_actual_base_url
+        from scout_backend.auth import normalize_actual_base_url
         custom_base = normalize_actual_base_url(custom_base)
         entry_api_mode = "chat_completions"
     if not custom_base:
         logger.warning("resolve_provider_client: named custom provider %r has no base_url", provider)
         return None, None
-    from scout_cli.config import normalize_extra_headers
+    from scout_backend.config import normalize_extra_headers
     entry_headers = normalize_extra_headers(custom_entry.get("extra_headers"))
     final_model = _normalize_resolved_model(
         req.model
@@ -4963,7 +4963,7 @@ def _resolve_api_key_branch(req: _ResolveRequest, pconfig: Any, resolve_creds: C
         raw_base_url = req.explicit_base_url.strip().rstrip("/")
     if provider == "actual":
         with contextlib.suppress(Exception):
-            from scout_cli.auth import (
+            from scout_backend.auth import (
                 ACTUAL_LOCAL_NOAUTH_PLACEHOLDER, is_actual_local_base_url, normalize_actual_base_url
             )
             raw_base_url = normalize_actual_base_url(raw_base_url)
@@ -4996,7 +4996,7 @@ def _resolve_api_key_branch(req: _ResolveRequest, pconfig: Any, resolve_creds: C
     # wrap so call_llm() transparently routes through responses.stream().
     if provider == "copilot" and final_model and not req.raw_codex:
         with contextlib.suppress(ImportError):
-            from scout_cli.models import _should_use_copilot_responses_api
+            from scout_backend.models import _should_use_copilot_responses_api
             if _should_use_copilot_responses_api(final_model):
                 logger.debug("resolve_provider_client: copilot model %s needs "
                              "Responses API — wrapping with CodexAuxiliaryClient", final_model)
@@ -5052,12 +5052,12 @@ def _resolve_registry_branch(req: _ResolveRequest) -> _ResolveResult:
     """PROVIDER_REGISTRY providers, dispatched on ``auth_type``; unknown providers log once."""
     provider = req.provider
     try:
-        from scout_cli.auth import (
+        from scout_backend.auth import (
             PROVIDER_REGISTRY, resolve_api_key_provider_credentials,
             resolve_external_process_provider_credentials,
         )
     except ImportError:
-        logger.debug("scout_cli.auth not available for provider %s", provider)
+        logger.debug("scout_backend.auth not available for provider %s", provider)
         return None, None
     pconfig = PROVIDER_REGISTRY.get(provider)
     if pconfig is None:
@@ -5193,7 +5193,7 @@ def _main_model_supports_vision(provider: str, model: Optional[str]) -> bool:
     """True when ``provider``/``model`` is known to accept image input; unknown capability → True (attempt the call)."""
     try:
         from agent.image_routing import _lookup_supports_vision
-        from scout_cli.config import load_config_readonly
+        from scout_backend.config import load_config_readonly
     except ImportError:
         return True
     try:
@@ -5698,7 +5698,7 @@ def _preserve_provider_with_base_url(prov: Optional[str]) -> bool:
     if normalized in _LOCAL_SERVER_ALIASES:
         return True  # the custom branch applies the /v1 tail only when it still sees the alias
     try:
-        from scout_cli.providers import get_provider
+        from scout_backend.providers import get_provider
         return get_provider(normalized) is not None
     except Exception:  # keep provider-backed routes safe when the catalog can't load
         return normalized in {
@@ -5753,7 +5753,7 @@ def _resolve_task_provider_model(
             cfg_api_key = None
     # One shared alias table with resolve_runtime_provider(): ``provider: openai`` routes the same
     # way here (compression/vision/title) and on the runtime path (background review, curator, MoA).
-    from scout_cli.runtime_provider_custom import expand_direct_api_alias
+    from scout_backend.runtime_provider_custom import expand_direct_api_alias
     if provider:
         provider, base_url = expand_direct_api_alias(provider, base_url)
     if cfg_provider:
@@ -5802,7 +5802,7 @@ def _get_auxiliary_task_config(task: str) -> Dict[str, Any]:
     if not task:
         return {}
     try:
-        from scout_cli.config import load_config_readonly
+        from scout_backend.config import load_config_readonly
         config = load_config_readonly()
     except ImportError:
         return {}
@@ -5811,7 +5811,7 @@ def _get_auxiliary_task_config(task: str) -> Dict[str, Any]:
     if not isinstance(task_config, dict):
         task_config = {}
     try:
-        from scout_cli.plugins import get_plugin_auxiliary_tasks
+        from scout_backend.plugins import get_plugin_auxiliary_tasks
         for _entry in get_plugin_auxiliary_tasks():
             if _entry.get("key") == task:
                 _defaults = _entry.get("defaults") or {}
@@ -5943,7 +5943,7 @@ def _with_custom_endpoint_extra_body(
         return extra_body
     try:
         from agent.agent_init import _custom_provider_extra_body_for_agent
-        from scout_cli.config import get_compatible_custom_providers, load_config_readonly
+        from scout_backend.config import get_compatible_custom_providers, load_config_readonly
         inherited = _custom_provider_extra_body_for_agent(
             provider=provider or "", model=model or "", base_url=str(base_url),
             custom_providers=get_compatible_custom_providers(load_config_readonly()),
@@ -6184,7 +6184,7 @@ def _routes_to_custom_endpoint(provider_norm: str) -> bool:
     name = _normalize_aux_provider(provider_norm)
     if name == "custom":
         return True
-    from scout_cli.runtime_provider import _get_named_custom_provider
+    from scout_backend.runtime_provider import _get_named_custom_provider
     return _get_named_custom_provider(name) is not None
 
 
@@ -6483,7 +6483,7 @@ def _managed_local_netloc() -> str:
     if now - ts < _MANAGED_LOCAL_STATE_TTL_S:
         return cached
     try:
-        from scout_cli.local_runtime.supervisor import state_path
+        from scout_backend.local_runtime.supervisor import state_path
 
         raw = state_path().read_text(encoding="utf-8-sig")
         base = str((json.loads(raw) or {}).get("base_url", ""))
@@ -6517,7 +6517,7 @@ def _provider_requires_stream(provider: str, base_url: Optional[str]) -> bool:
     if base_url_host_matches(_url, "copilot.tencent.com") or _is_managed_local_endpoint(_url):
         return True
     try:
-        from scout_cli.config import load_config
+        from scout_backend.config import load_config
         markers = (load_config() or {}).get("auxiliary", {}).get("stream_only_base_urls") or []
         if isinstance(markers, (list, tuple)):
             return any(

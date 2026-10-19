@@ -116,7 +116,7 @@ async function canImportScoutCli(
     // Bootstrap selects the committed generation before any dependency import.
     await execProbe(
       pythonPath,
-      ['-c', 'import scout_bootstrap; import scout_yaml; import dotenv; import scout_cli.config'],
+      ['-c', 'import scout_bootstrap; import scout_yaml; import dotenv; import scout_backend.config'],
       {
         cwd: opts.cwd,
         env: { ...env, ...buildDesktopBackendEnv({ currentEnv: env }) },
@@ -142,7 +142,7 @@ async function canImportScoutCli(
  *
  * We intentionally avoid invoking the command with the dashboard args
  * here -- `--version` is the cheapest "is this binary alive" smoke
- * test that every scout_cli entry-point has supported since 0.1.
+ * test that every scout_backend entry-point has supported since 0.1.
  *
  * @param {string} scoutCommand - Resolved absolute path to a scout
  *   executable (or an interpreter+script wrapper).

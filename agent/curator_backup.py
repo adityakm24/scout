@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from scout_constants import get_scout_home
 from agent.skill_utils import is_excluded_skill_path
 from agent.curator import _read_config_section
-from scout_cli.sizefmt import format_bytes
+from scout_backend.sizefmt import format_bytes
 
 logger = logging.getLogger(__name__)
 

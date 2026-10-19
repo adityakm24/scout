@@ -4,7 +4,7 @@ import textwrap
 
 import pytest
 
-from scout_cli.plugins import get_plugin_manager
+from scout_backend.plugins import get_plugin_manager
 from plugins.memory import load_memory_provider
 
 

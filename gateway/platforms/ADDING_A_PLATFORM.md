@@ -46,7 +46,7 @@ status display, gateway setup, and more.
   `No live adapter for platform '<name>'`.  Pair with `cron_deliver_env_var`
   for end-to-end cron support.  See the docsite for the signature.
 - `plugin.yaml` `requires_env` / `optional_env` rich-dict entries —
-  auto-populate `OPTIONAL_ENV_VARS` in `scout_cli/config.py` so the setup
+  auto-populate `OPTIONAL_ENV_VARS` in `scout_backend/config.py` so the setup
   wizard surfaces proper descriptions, prompts, password flags, and URLs.
 
 **Subclassing for platform-specific UX.** When a platform has a hard
@@ -342,7 +342,7 @@ for plat_name in ("telegram", "whatsapp", "signal", "your_platform"):
 
 ---
 
-## 12. Status Display (`scout_cli/status.py`)
+## 12. Status Display (`scout_backend/status.py`)
 
 Add to the `platforms` dict in the Messaging Platforms section:
 
@@ -355,7 +355,7 @@ platforms = {
 
 ---
 
-## 13. Gateway Setup Wizard (`scout_cli/gateway.py`)
+## 13. Gateway Setup Wizard (`scout_backend/gateway.py`)
 
 Add to the `_PLATFORMS` list:
 
@@ -426,7 +426,7 @@ After implementing everything, verify with:
 python -m pytest tests/ -q
 
 # Grep for your platform name to find any missed integration points
-grep -r "telegram\|discord\|whatsapp\|slack" gateway/ tools/ agent/ cron/ scout_cli/ toolsets.py \
+grep -r "telegram\|discord\|whatsapp\|slack" gateway/ tools/ agent/ cron/ scout_backend/ toolsets.py \
   --include="*.py" -l | sort -u
 # Check each file in the output — if it mentions other platforms but not yours, you missed it
 ```

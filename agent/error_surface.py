@@ -99,7 +99,7 @@ def _surface(layer: str, code: str, retryable: bool, provider: str = "", model: 
 
 def _provider_label(provider: str) -> str:
     try:
-        from scout_cli.models import provider_label
+        from scout_backend.models import provider_label
 
         return provider_label(provider)
     except Exception:  # pragma: no cover — advisory only
@@ -110,7 +110,7 @@ def auth_kind(provider: Optional[str]) -> str:
     """``"oauth"`` for providers whose credential is an OAuth/subscription grant
     (desktop Accounts tab), ``"api_key"`` for everything else."""
     try:
-        from scout_cli.provider_catalog import provider_catalog_by_slug
+        from scout_backend.provider_catalog import provider_catalog_by_slug
 
         descriptor = provider_catalog_by_slug().get((provider or "").strip().lower())
         return "oauth" if descriptor is not None and descriptor.tab == "accounts" else "api_key"

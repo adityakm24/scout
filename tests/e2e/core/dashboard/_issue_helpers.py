@@ -70,7 +70,7 @@ class PtyDashboard(Dashboard):
                       **(extra_env or {})})
         try:
             self.proc = subprocess.Popen(
-                [sys.executable, "-m", "scout_cli.main", "dashboard", "--no-open", "--skip-build",
+                [sys.executable, "-m", "scout_backend.main", "dashboard", "--no-open", "--skip-build",
                  "--host", "127.0.0.1", "--port", "0"],
                 cwd=str(sb.home), env=env, stdin=slave, stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT, text=True, bufsize=1, start_new_session=True,

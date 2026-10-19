@@ -13,7 +13,7 @@ import tempfile
 import threading
 from typing import Optional
 
-from scout_cli._subprocess_compat import windows_hide_flags
+from scout_backend._subprocess_compat import windows_hide_flags
 
 logger = logging.getLogger(__name__)
 

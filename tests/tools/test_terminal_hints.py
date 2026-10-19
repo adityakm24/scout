@@ -57,9 +57,9 @@ class TestModuleNotFound:
         assert "requests" in hint
 
     def test_dotted_module(self):
-        out = "ImportError: No module named 'scout_cli.main'"
-        hint = annotate_failure("python3 -m scout_cli.main", 1, out)
-        assert "scout_cli" in hint
+        out = "ImportError: No module named 'scout_backend.main'"
+        hint = annotate_failure("python3 -m scout_backend.main", 1, out)
+        assert "scout_backend" in hint
 
 
 class TestGitShapes:

@@ -27,7 +27,7 @@ from tools import tool_backend_helpers as tbh
 class TestReadSelection:
     def _with_raw(self, raw):
         return patch(
-            "scout_cli.config.read_raw_config_readonly",
+            "scout_backend.config.read_raw_config_readonly",
             return_value=raw,
         )
 
@@ -183,7 +183,7 @@ class TestCamofoxSelection:
 class TestWriteProviderConfig:
 
     def test_byok_row_writes_vendor_and_clears_legacy_flag(self):
-        from scout_cli.tools_config import _write_provider_config
+        from scout_backend.tools_config import _write_provider_config
 
         config = {"web": {"backend": "spaceshipresearch", "use_gateway": True}}
         provider = {"name": "Keenable", "web_backend": "keenable"}
@@ -195,7 +195,7 @@ class TestWriteProviderConfig:
     def test_plugin_injected_byok_row_clears_stale_use_gateway(self):
         """Plugin-injected rows are not in TOOL_CATEGORIES' hardcoded
         provider lists; the legacy clear-loop skipped them."""
-        from scout_cli.tools_config import _write_provider_config
+        from scout_backend.tools_config import _write_provider_config
 
         config = {"stt": {"provider": "spaceshipresearch", "use_gateway": True}}
         provider = {"name": "Groq Whisper", "stt_provider": "groq"}

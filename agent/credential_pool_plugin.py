@@ -24,8 +24,8 @@ import logging
 from dataclasses import fields, replace
 from typing import TYPE_CHECKING, Any, Mapping, Optional, Tuple
 
-from scout_cli.auth import _OAUTH_GRANT_DEAD_CODES
-from scout_cli.auth_constants import AuthError
+from scout_backend.auth import _OAUTH_GRANT_DEAD_CODES
+from scout_backend.auth_constants import AuthError
 
 if TYPE_CHECKING:  # pragma: no cover
     from agent.credential_pool import CredentialPool, PooledCredential

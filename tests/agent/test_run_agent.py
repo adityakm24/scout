@@ -56,7 +56,7 @@ def test_is_destructive_command_treats_cp_as_mutating():
 def _mock_plugin_discovery(monkeypatch):
     # Tool definitions are supplied by these unit fixtures. Scanning every
     # bundled plugin again for each isolated test home adds no coverage.
-    monkeypatch.setattr("scout_cli.plugins.discover_plugins", lambda: None)
+    monkeypatch.setattr("scout_backend.plugins.discover_plugins", lambda: None)
 
 
 @pytest.fixture()
@@ -187,7 +187,7 @@ def test_malformed_memory_config_still_builds_default_store():
     malformed = {"memory": "not-a-mapping"}
     with (
         patch(
-            "scout_cli.config.load_config_readonly",
+            "scout_backend.config.load_config_readonly",
             return_value=malformed,
         ),
         patch(
@@ -612,7 +612,7 @@ class TestInit:
             patch("model_tools.get_tool_definitions", return_value=[]),
             patch("model_tools.check_toolset_requirements", return_value={}),
             patch("agent.process_bootstrap.OpenAI"),
-            patch("scout_cli.config.load_config", return_value={}), patch("scout_cli.config.load_config_readonly", return_value={}),
+            patch("scout_backend.config.load_config", return_value={}), patch("scout_backend.config.load_config_readonly", return_value={}),
         ):
             a = AIAgent(
                 api_key="test-k...7890",
@@ -635,11 +635,11 @@ class TestInit:
             patch("model_tools.check_toolset_requirements", return_value={}),
             patch("agent.process_bootstrap.OpenAI"),
             patch(
-                "scout_cli.config.load_config",
+                "scout_backend.config.load_config",
                 return_value={"prompt_caching": {"cache_ttl": falsy_value}},
             ),
             patch(
-                "scout_cli.config.load_config_readonly",
+                "scout_backend.config.load_config_readonly",
                 return_value={"prompt_caching": {"cache_ttl": falsy_value}},
             ),
         ):
@@ -663,11 +663,11 @@ class TestInit:
             patch("model_tools.check_toolset_requirements", return_value={}),
             patch("agent.process_bootstrap.OpenAI"),
             patch(
-                "scout_cli.config.load_config",
+                "scout_backend.config.load_config",
                 return_value={"prompt_caching": {"cache_ttl": False}},
             ),
             patch(
-                "scout_cli.config.load_config_readonly",
+                "scout_backend.config.load_config_readonly",
                 return_value={"prompt_caching": {"cache_ttl": False}},
             ),
         ):
@@ -694,10 +694,10 @@ class TestInit:
             patch("model_tools.check_toolset_requirements", return_value={}),
             patch("agent.process_bootstrap.OpenAI"),
             patch(
-                "scout_cli.config.load_config",
+                "scout_backend.config.load_config",
                 return_value={"model": {"max_tokens": 4096}},
             ), patch(
-                "scout_cli.config.load_config_readonly",
+                "scout_backend.config.load_config_readonly",
                 return_value={"model": {"max_tokens": 4096}},
             ),
         ):
@@ -1018,10 +1018,10 @@ class TestToolUseEnforcementConfig:
             patch("model_tools.check_toolset_requirements", return_value={}),
             patch("agent.process_bootstrap.OpenAI"),
             patch(
-                "scout_cli.config.load_config",
+                "scout_backend.config.load_config",
                 return_value={"agent": {"tool_use_enforcement": True}},
             ), patch(
-                "scout_cli.config.load_config_readonly",
+                "scout_backend.config.load_config_readonly",
                 return_value={"agent": {"tool_use_enforcement": True}},
             ),
         ):
@@ -1054,10 +1054,10 @@ class TestExecutionGuidanceConfig:
             patch("model_tools.check_toolset_requirements", return_value={}),
             patch("agent.process_bootstrap.OpenAI"),
             patch(
-                "scout_cli.config.load_config",
+                "scout_backend.config.load_config",
                 return_value={"agent": agent_cfg},
             ), patch(
-                "scout_cli.config.load_config_readonly",
+                "scout_backend.config.load_config_readonly",
                 return_value={"agent": agent_cfg},
             ),
         ):
@@ -1115,10 +1115,10 @@ class TestTaskCompletionGuidance:
             patch("model_tools.check_toolset_requirements", return_value={}),
             patch("agent.process_bootstrap.OpenAI"),
             patch(
-                "scout_cli.config.load_config",
+                "scout_backend.config.load_config",
                 return_value={"agent": agent_cfg},
             ), patch(
-                "scout_cli.config.load_config_readonly",
+                "scout_backend.config.load_config_readonly",
                 return_value={"agent": agent_cfg},
             ),
         ):
@@ -1152,10 +1152,10 @@ class TestTaskCompletionGuidance:
             patch("model_tools.check_toolset_requirements", return_value={}),
             patch("agent.process_bootstrap.OpenAI"),
             patch(
-                "scout_cli.config.load_config",
+                "scout_backend.config.load_config",
                 return_value={"agent": {"task_completion_guidance": True}},
             ), patch(
-                "scout_cli.config.load_config_readonly",
+                "scout_backend.config.load_config_readonly",
                 return_value={"agent": {"task_completion_guidance": True}},
             ),
         ):
@@ -1187,10 +1187,10 @@ class TestEnvironmentProbeIntegration:
             patch("model_tools.check_toolset_requirements", return_value={}),
             patch("agent.process_bootstrap.OpenAI"),
             patch(
-                "scout_cli.config.load_config",
+                "scout_backend.config.load_config",
                 return_value={"agent": {"environment_probe": environment_probe}},
             ), patch(
-                "scout_cli.config.load_config_readonly",
+                "scout_backend.config.load_config_readonly",
                 return_value={"agent": {"environment_probe": environment_probe}},
             ),
         ):
@@ -1380,7 +1380,7 @@ class TestBuildApiKwargs:
     def test_core_responses_preserves_supported_xhigh(self, agent, monkeypatch):
         """The core GitHub Responses path must preserve a supported xhigh."""
         monkeypatch.setattr(
-            "scout_cli.models.github_model_reasoning_efforts",
+            "scout_backend.models.github_model_reasoning_efforts",
             lambda _model: ["none", "low", "medium", "high", "xhigh"],
         )
         agent.model = "gpt-5.5"
@@ -1634,8 +1634,8 @@ class TestExecuteToolCalls:
             hook_calls.append((hook_name, kwargs))
             return []
 
-        monkeypatch.setattr("scout_cli.lifecycle.invoke_hook", _capture_hook)
-        monkeypatch.setattr("scout_cli.lifecycle.has_hook", lambda name: True)
+        monkeypatch.setattr("scout_backend.lifecycle.invoke_hook", _capture_hook)
+        monkeypatch.setattr("scout_backend.lifecycle.has_hook", lambda name: True)
 
         with (
             patch("model_tools.handle_function_call", side_effect=KeyboardInterrupt),
@@ -1663,9 +1663,9 @@ class TestExecuteToolCalls:
         messages = []
         hook_calls = []
 
-        monkeypatch.setattr("scout_cli.lifecycle.has_hook", lambda name: True)
+        monkeypatch.setattr("scout_backend.lifecycle.has_hook", lambda name: True)
         monkeypatch.setattr(
-            "scout_cli.lifecycle.invoke_hook",
+            "scout_backend.lifecycle.invoke_hook",
             lambda hook_name, **kwargs: hook_calls.append((hook_name, kwargs)) or [],
         )
 
@@ -1690,9 +1690,9 @@ class TestExecuteToolCalls:
         mock_msg = _mock_assistant_msg(content="", tool_calls=[tc])
         messages = []
         hook_calls = []
-        monkeypatch.setattr("scout_cli.lifecycle.has_hook", lambda name: True)
+        monkeypatch.setattr("scout_backend.lifecycle.has_hook", lambda name: True)
         monkeypatch.setattr(
-            "scout_cli.lifecycle.invoke_hook",
+            "scout_backend.lifecycle.invoke_hook",
             lambda hook_name, **kwargs: hook_calls.append((hook_name, kwargs)) or [],
         )
         with patch("model_tools.handle_function_call", return_value="ok") as mock_hfc:
@@ -1716,9 +1716,9 @@ class TestExecuteToolCalls:
         mock_msg = _mock_assistant_msg(content="", tool_calls=[tc])
         messages = []
         hook_calls = []
-        monkeypatch.setattr("scout_cli.lifecycle.has_hook", lambda name: True)
+        monkeypatch.setattr("scout_backend.lifecycle.has_hook", lambda name: True)
         monkeypatch.setattr(
-            "scout_cli.lifecycle.invoke_hook",
+            "scout_backend.lifecycle.invoke_hook",
             lambda hook_name, **kwargs: hook_calls.append((hook_name, kwargs)) or [],
         )
 
@@ -2073,7 +2073,7 @@ class TestConcurrentToolExecution:
         messages = []
 
         monkeypatch.setattr(
-            "scout_cli.plugins._dispatch_pre_tool_call_hooks",
+            "scout_backend.plugins._dispatch_pre_tool_call_hooks",
             lambda *args, **kwargs: ("Blocked by policy", None),
         )
         agent._checkpoint_mgr.enabled = True
@@ -2118,12 +2118,12 @@ class TestConcurrentToolExecution:
             "tool_request": [],
             "tool_execution": [execution_middleware],
         })
-        monkeypatch.setattr("scout_cli.plugins.get_plugin_manager", lambda: manager)
+        monkeypatch.setattr("scout_backend.plugins.get_plugin_manager", lambda: manager)
         monkeypatch.setattr(
-            "scout_cli.lifecycle.invoke_hook",
+            "scout_backend.lifecycle.invoke_hook",
             lambda hook_name, **kwargs: hook_calls.append((hook_name, kwargs)) or [],
         )
-        monkeypatch.setattr("scout_cli.lifecycle.has_hook", lambda name: True)
+        monkeypatch.setattr("scout_backend.lifecycle.has_hook", lambda name: True)
 
         with patch(
             "model_tools.handle_function_call",
@@ -2147,7 +2147,7 @@ class TestConcurrentToolExecution:
         """Blocked memory tool should not reset the nudge counter."""
         agent._turns_since_memory = 5
         monkeypatch.setattr(
-            "scout_cli.plugins._dispatch_pre_tool_call_hooks",
+            "scout_backend.plugins._dispatch_pre_tool_call_hooks",
             lambda *args, **kwargs: ("Blocked", None),
         )
         with patch("tools.memory_tool.memory_tool", side_effect=AssertionError("should not run")):
@@ -2165,18 +2165,18 @@ class TestConcurrentToolExecution:
         dispatched = []
         duplicate_errors = []
         monkeypatch.setattr(
-            "scout_cli.middleware.apply_tool_request_middleware",
+            "scout_backend.middleware.apply_tool_request_middleware",
             lambda _name, args, **_kwargs: SimpleNamespace(
                 payload=args,
                 trace=[],
             ),
         )
         monkeypatch.setattr(
-            "scout_cli.middleware.run_tool_execution_middleware",
+            "scout_backend.middleware.run_tool_execution_middleware",
             lambda _name, args, callback, **_kwargs: callback(args),
         )
         monkeypatch.setattr(
-            "scout_cli.plugins._dispatch_pre_tool_call_hooks",
+            "scout_backend.plugins._dispatch_pre_tool_call_hooks",
             lambda *_args, **_kwargs: (None, None),
         )
         monkeypatch.setattr(tool_executor, "_begin_tool_execution", lambda *_a, **_k: None)
@@ -2218,18 +2218,18 @@ class TestConcurrentToolExecution:
         errors = []
         barrier = threading.Barrier(2)
         monkeypatch.setattr(
-            "scout_cli.middleware.apply_tool_request_middleware",
+            "scout_backend.middleware.apply_tool_request_middleware",
             lambda _name, args, **_kwargs: SimpleNamespace(
                 payload=args,
                 trace=[],
             ),
         )
         monkeypatch.setattr(
-            "scout_cli.middleware.run_tool_execution_middleware",
+            "scout_backend.middleware.run_tool_execution_middleware",
             lambda _name, args, callback, **_kwargs: callback(args),
         )
         monkeypatch.setattr(
-            "scout_cli.plugins._dispatch_pre_tool_call_hooks",
+            "scout_backend.plugins._dispatch_pre_tool_call_hooks",
             lambda *_args, **_kwargs: (None, None),
         )
         monkeypatch.setattr(tool_executor, "_begin_tool_execution", lambda *_a, **_k: None)
@@ -2300,14 +2300,14 @@ class TestAgentRuntimePostHookOwnershipSync:
 
         hook_calls = []
         monkeypatch.setattr(
-            "scout_cli.plugins._dispatch_pre_tool_call_hooks",
+            "scout_backend.plugins._dispatch_pre_tool_call_hooks",
             lambda *args, **kwargs: (None, None),
         )
         monkeypatch.setattr(
-            "scout_cli.lifecycle.invoke_hook",
+            "scout_backend.lifecycle.invoke_hook",
             lambda hook_name, **kwargs: hook_calls.append((hook_name, kwargs)) or [],
         )
-        monkeypatch.setattr("scout_cli.lifecycle.has_hook", lambda name: True)
+        monkeypatch.setattr("scout_backend.lifecycle.has_hook", lambda name: True)
         monkeypatch.setattr(
             "tools.todo_tool.todo_tool",
             lambda **kwargs: '{"ok":true}',
@@ -2399,12 +2399,12 @@ class TestRuntimeToolTransformToolResult:
     @staticmethod
     def _install_rewriting_transform(agent, monkeypatch):
         monkeypatch.setattr(
-            "scout_cli.plugins._dispatch_pre_tool_call_hooks",
+            "scout_backend.plugins._dispatch_pre_tool_call_hooks",
             lambda *args, **kwargs: (None, None),
         )
-        monkeypatch.setattr("scout_cli.lifecycle.has_hook", lambda name: True)
+        monkeypatch.setattr("scout_backend.lifecycle.has_hook", lambda name: True)
         monkeypatch.setattr(
-            "scout_cli.lifecycle.invoke_hook",
+            "scout_backend.lifecycle.invoke_hook",
             lambda hook_name, **kwargs: (
                 [f'REWRITTEN[{kwargs["tool_name"]}]{kwargs["result"]}']
                 if hook_name == "transform_tool_result"
@@ -3315,10 +3315,10 @@ class TestRunConversation:
         with (
             patch("model_tools.handle_function_call", return_value="search result"),
             patch(
-                "scout_cli.lifecycle.has_hook",
+                "scout_backend.lifecycle.has_hook",
                 side_effect=lambda name: name in {"pre_api_request", "post_api_request"},
             ),
-            patch("scout_cli.lifecycle.invoke_hook", side_effect=_record_hook),
+            patch("scout_backend.lifecycle.invoke_hook", side_effect=_record_hook),
             patch.object(agent, "_persist_session"),
             patch.object(agent, "_save_trajectory"),
             patch.object(agent, "_cleanup_task_resources"),
@@ -3366,12 +3366,12 @@ class TestRunConversation:
             payload_counts["response"] += 1
             return {}
 
-        monkeypatch.setattr("scout_cli.lifecycle.has_hook", _has_hook)
+        monkeypatch.setattr("scout_backend.lifecycle.has_hook", _has_hook)
         monkeypatch.setattr(agent, "_api_request_payload_for_hook", _request_payload)
         monkeypatch.setattr(agent, "_api_response_payload_for_hook", _response_payload)
 
         with (
-            patch("scout_cli.lifecycle.invoke_hook", return_value=[]),
+            patch("scout_backend.lifecycle.invoke_hook", return_value=[]),
             patch.object(agent, "_persist_session"),
             patch.object(agent, "_save_trajectory"),
             patch.object(agent, "_cleanup_task_resources"),
@@ -4634,9 +4634,9 @@ class TestRunConversation:
 
         with (
             patch("model_tools.handle_function_call", return_value="ok"),
-            patch("scout_cli.kanban_db_dispatch._record_task_failure",
+            patch("scout_backend.kanban_db_dispatch._record_task_failure",
                   mock_record_failure),
-            patch("scout_cli.kanban_db_connect.connect", mock_connect),
+            patch("scout_backend.kanban_db_connect.connect", mock_connect),
             patch.object(agent, "_persist_session"),
             patch.object(agent, "_save_trajectory"),
             patch.object(agent, "_cleanup_task_resources"),
@@ -4683,7 +4683,7 @@ class TestRunConversation:
 
         with (
             patch("model_tools.handle_function_call", return_value="ok"),
-            patch("scout_cli.kanban_db_dispatch._record_task_failure",
+            patch("scout_backend.kanban_db_dispatch._record_task_failure",
                   mock_record_failure),
             patch.object(agent, "_persist_session"),
             patch.object(agent, "_save_trajectory"),

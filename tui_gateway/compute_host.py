@@ -336,7 +336,7 @@ class ComputeHost:
             if profile_home:
                 from scout_constants import set_scout_home_override
                 from agent.secret_scope import build_profile_secret_scope, set_secret_scope
-                from scout_cli.env_loader import hydrate_profile_secret_sources
+                from scout_backend.env_loader import hydrate_profile_secret_sources
                 from scout_state_registry import acquire
                 home_token = set_scout_home_override(profile_home)
                 # External sources first (1Password / Bitwarden / secrets.command): this isolated

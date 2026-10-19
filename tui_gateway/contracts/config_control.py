@@ -29,7 +29,7 @@ class ConfigGetParams(ProfileParams):
 
 
 class ConfigProviderRef(OpenModel):
-    """``scout_cli/models.py::list_available_providers`` row."""
+    """``scout_backend/models.py::list_available_providers`` row."""
 
     id: str
     label: str
@@ -150,7 +150,7 @@ class ModelOptionsParams(ProfileParams):
 # TODO(common): ModelPricing / ModelCapabilities / ModelOptionProvider are also the row shape of
 # ``model.save_key``'s ``provider`` — the parent consolidates into contracts/common.py.
 class ModelPricing(Result):
-    """``scout_cli/inventory.py::_apply_pricing`` — formatted $/Mtok strings (``""`` unknown,
+    """``scout_backend/inventory.py::_apply_pricing`` — formatted $/Mtok strings (``""`` unknown,
     ``"free"``)."""
 
     input: str
@@ -160,7 +160,7 @@ class ModelPricing(Result):
 
 
 class ModelCapabilities(Result):
-    """``scout_cli/inventory.py::_apply_capabilities``."""
+    """``scout_backend/inventory.py::_apply_capabilities``."""
 
     fast: bool
     reasoning: bool
@@ -168,7 +168,7 @@ class ModelCapabilities(Result):
 
 
 class ModelOptionProvider(OpenModel):
-    """One ``scout_cli/inventory.py::build_models_payload`` provider row (the union of every field
+    """One ``scout_backend/inventory.py::build_models_payload`` provider row (the union of every field
     the builder sets)."""
 
     slug: str
@@ -228,7 +228,7 @@ method("image.generate", params=ImageGenerateParams, result=ImageGenerateResult,
 
 
 class GoalContractSnapshot(Result):
-    """``scout_cli/goals.py::GoalContract.to_dict``."""
+    """``scout_backend/goals.py::GoalContract.to_dict``."""
 
     outcome: str = ""
     verification: str = ""

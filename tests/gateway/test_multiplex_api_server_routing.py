@@ -40,7 +40,7 @@ class TestApiServerProfileResolution:
     def test_unserved_prefix_is_rejected(self, monkeypatch):
         adapter = _make_adapter(multiplex=True)
         monkeypatch.setattr(
-            "scout_cli.profiles.profiles_to_serve",
+            "scout_backend.profiles.profiles_to_serve",
             lambda multiplex: [
                 ("default", "/profiles/default"),
                 ("worker", "/profiles/worker"),
@@ -65,7 +65,7 @@ class TestApiServerModelsUnderProfile:
         adapter = _make_adapter(multiplex=True)
         adapter._model_name = "scout-agent"
         monkeypatch.setattr(
-            "scout_cli.profiles.get_active_profile_name",
+            "scout_backend.profiles.get_active_profile_name",
             lambda: "coder",
         )
         token_prof = _api_request_profile.set("coder")

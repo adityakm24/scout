@@ -1,7 +1,7 @@
 """Shared harness for the native-Windows end-to-end suite.
 
 Every test drives REAL Scout processes (the source launcher / ``python -m
-scout_cli.main``) on a real Windows host against the recording loopback
+scout_backend.main``) on a real Windows host against the recording loopback
 provider (``tests/fakes/fake_llm_provider.py``). Nothing in Scout is mocked;
 verdicts come from what reached the provider wire, what landed in ``state.db``
 / on disk, and the live process table (psutil).
@@ -110,7 +110,7 @@ def make_home(tmp_path: Path, base_url: str, *, extra_config: str = "") -> WinHo
 
 
 def scout_argv(*args: str) -> list[str]:
-    return [sys.executable, "-m", "scout_cli.main", *args]
+    return [sys.executable, "-m", "scout_backend.main", *args]
 
 
 def scout_exe(home: WinHome) -> Path:
@@ -121,7 +121,7 @@ def scout_exe(home: WinHome) -> Path:
     a scratch home keeps its dependencies in that interpreter, not PM install
     facts for the runner's real home.
     """
-    from scout_cli._launchers import mint_launcher
+    from scout_backend._launchers import mint_launcher
 
     bin_dir = home.profile / "AppData" / "Local" / "scout" / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)

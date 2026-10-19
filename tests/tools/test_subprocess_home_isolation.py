@@ -274,7 +274,7 @@ class TestProfileBootstrap:
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
         monkeypatch.setenv("SCOUT_HOME", str(home))
 
-        from scout_cli.profiles import create_profile
+        from scout_backend.profiles import create_profile
         profile_dir = create_profile("testbot", no_alias=True)
         assert (profile_dir / "home").is_dir()
 

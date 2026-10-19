@@ -39,7 +39,7 @@ def test_pm_handoff_reports_update_and_gateway_results(
 ) -> None:
     install = tmp_path / 'checkout with spaces'
     publish_fixture_launcher(install, CLI)
-    (install / 'scout_cli/desktop_update_verify.py').write_text('pass\n')
+    (install / 'scout_backend/desktop_update_verify.py').write_text('pass\n')
     home = tmp_path / 'profile'; home.mkdir()
     calls = tmp_path / 'calls.jsonl'
     command = ['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
@@ -76,8 +76,8 @@ def test_earlier_pm_userbin_launcher_is_identity_checked(tmp_path: Path) -> None
     launcher.rename(external)
     wrong = tmp_path / 'other'
     (wrong / 'pm').mkdir(parents=True)
-    (wrong / 'scout_cli').mkdir()
-    (wrong / 'scout_cli/_launchers.py').touch()
+    (wrong / 'scout_backend').mkdir()
+    (wrong / 'scout_backend/_launchers.py').touch()
     helper = str(ROOT / 'scripts/desktop-update/runtime.ps1').replace("'", "''")
     for target, expected_code in [(root, 0), (wrong, 1)]:
         script = f". '{helper}'; try {{ @(Get-ScoutRuntimeCommand -InstallRoot '{target}') | ConvertTo-Json -Compress }} catch {{ exit 1 }}"

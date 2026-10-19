@@ -660,7 +660,7 @@ class CompressionCommitFence:
             release()
 
 
-# Defaults for the in-agent progress-aware wrap; mirror scout_cli.config.DEFAULT_CONFIG["compression"] keys.
+# Defaults for the in-agent progress-aware wrap; mirror scout_backend.config.DEFAULT_CONFIG["compression"] keys.
 DEFAULT_CONTEXT_TIMEOUT_SECONDS = 120.0
 DEFAULT_CONTEXT_TOTAL_CEILING_SECONDS = 600.0
 
@@ -768,7 +768,7 @@ def resolve_context_compression_timeouts(compression_cfg: Optional[dict] = None)
     if cfg is None:
         cfg = {}
         with contextlib.suppress(Exception):
-            from scout_cli.config import load_config
+            from scout_backend.config import load_config
             raw = load_config()
             maybe = raw.get("compression", {}) if isinstance(raw, dict) else {}
             cfg = maybe if isinstance(maybe, dict) else {}
@@ -2071,7 +2071,7 @@ def _lower_threshold_to_aux_context(
 
 def _aux_inherits_main_route(agent: Any, aux_model: str, aux_base_url: str) -> bool:
     """True when the auxiliary compression client is the main model on the main endpoint."""
-    from scout_cli.route_identity import normalize_route_base_url
+    from scout_backend.route_identity import normalize_route_base_url
     if str(aux_model or "").strip().lower() != str(getattr(agent, "model", "") or "").strip().lower():
         return False
     main_base = normalize_route_base_url(str(getattr(agent, "base_url", "") or ""))
@@ -3289,13 +3289,13 @@ def _carry_session_state_to_child(agent: Any, old_session_id: str, old_title: An
         # Carry a persistent /goal onto the continuation session. Compression mints a fresh child id;
         # load_goal does a flat per-session lookup with no parent walk, so without this an active goal
         # silently dies at the boundary (#33618).
-        from scout_cli.goals import migrate_goal_to_session
+        from scout_backend.goals import migrate_goal_to_session
         migrate_goal_to_session(old_session_id, agent.session_id, reason="compression")
     with _swallow('Could not migrate heartbeat on compression: %s'):
-        from scout_cli.heartbeat import migrate_heartbeat_to_session
+        from scout_backend.heartbeat import migrate_heartbeat_to_session
         migrate_heartbeat_to_session(old_session_id, agent.session_id)
     with _swallow('Could not migrate loop on compression: %s'):
-        from scout_cli.loops import migrate_loop_to_session
+        from scout_backend.loops import migrate_loop_to_session
         migrate_loop_to_session(old_session_id, agent.session_id, reason="compression")
     if not old_title:
         return
@@ -3354,7 +3354,7 @@ def _publish_rotated_compaction(
     # publish also COALESCEs from the parent row for threads lacking SCOUT_HOME.
     _profile_for_child = None
     with contextlib.suppress(Exception):
-        from scout_cli.profiles import get_active_profile_name
+        from scout_backend.profiles import get_active_profile_name
         _profile_for_child = get_active_profile_name()
     if _profile_for_child == "default":
         _profile_for_child = None
@@ -3750,7 +3750,7 @@ def _commit_compaction(
                     # The kept exchanges are durable rows under the watermark, so the archive below covers
                     # them too. Store them after the head in the same transaction, with the seam the caller
                     # would build, and count their originals as carried duplicates like compress()'s tail.
-                    from scout_cli.partial_compress import rejoin_compressed_head_and_tail
+                    from scout_backend.partial_compress import rejoin_compressed_head_and_tail
                     persisted = rejoin_compressed_head_and_tail(compressed, verbatim_tail)
                     tail_count += len(verbatim_tail)
                 from agent.conversation_compression_archive import coverage_for_commit

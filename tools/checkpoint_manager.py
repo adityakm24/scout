@@ -58,8 +58,8 @@ import subprocess
 import time
 from pathlib import Path
 from scout_constants import get_scout_home
-from scout_cli._subprocess_compat import selected_git_env, windows_hide_flags
-from scout_cli.gitlock import clear_stale_tmp_packs
+from scout_backend._subprocess_compat import selected_git_env, windows_hide_flags
+from scout_backend.gitlock import clear_stale_tmp_packs
 from typing import Dict, List, Optional, Set, Tuple
 
 from utils import env_int, rmtree_readonly

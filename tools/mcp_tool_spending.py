@@ -37,7 +37,7 @@ _BRACKET_NOTE = re.compile(r"^\s*\[[^\]]*\]\s*$")
 def _catalog_spending() -> tuple:
     """``(by_name, by_url)`` catalog entries that declare spending tools. The catalog ships with the
     code, so one read per process."""
-    from scout_cli.mcp_catalog import list_catalog
+    from scout_backend.mcp_catalog import list_catalog
 
     by_name, by_url = {}, {}
     for entry in list_catalog():
@@ -62,7 +62,7 @@ def spending_entry(server_name: str):
     installed under another name is still that merchant)."""
     config = _server_config(server_name)
     if config.get("spending") is not None:
-        from scout_cli.mcp_catalog import CatalogError, parse_spending
+        from scout_backend.mcp_catalog import CatalogError, parse_spending
 
         try:
             spec = parse_spending(f"mcp_servers.{server_name}", config["spending"])

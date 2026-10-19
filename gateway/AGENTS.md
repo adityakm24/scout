@@ -11,11 +11,11 @@ goals, notifications, shutdown, ...), sessions in `session*.py`, slash handlers 
 over `platforms/base.py`. `builtin_hooks/` is the extension point for always-registered gateway
 hooks (none shipped). The gateway reads user YAML **raw** (`run.py` + `config.py`), not through
 `DEFAULT_CONFIG` — a key the CLI sees but the gateway doesn't means you're on the wrong loader
-(`scout_cli/AGENTS.md`). Each adapter picks a base toolset (Telegram → `"messaging"`).
+(`scout_backend/AGENTS.md`). Each adapter picks a base toolset (Telegram → `"messaging"`).
 
 Slash commands: handlers are looked up by name through `_command_handler_table`; a command is
 listed in `_IDLE_COMMANDS` or `_PLAIN_COMMANDS` (works mid-run) in `run_busy.py`. No
-`if canonical == ...` chains. Registry + adding a command: `scout_cli/AGENTS.md`.
+`if canonical == ...` chains. Registry + adding a command: `scout_backend/AGENTS.md`.
 
 ## The gateway has TWO message guards — both must bypass approval/control commands
 
@@ -209,7 +209,7 @@ gateway under the backend, and do NOT "fix" update locks by widening the tree-ki
 - **One launch-home identity.** "Does this task serve a routed profile?" compares the override
   with `scout_constants.get_routing_process_scout_home()` (`agent/secret_scope.py::
   serves_routed_profile` and `_is_process_home`, `tools/environments/local.py::_is_routed_home`,
-  `scout_cli/env_loader.py::_process_scout_home`), never with `os.environ["SCOUT_HOME"]` read
+  `scout_backend/env_loader.py::_process_scout_home`), never with `os.environ["SCOUT_HOME"]` read
   live: an embedding host that mirrors the served profile into the env var per turn (Scout
   WebUI) pins its own home with `pin_process_scout_home()`, and without a pin the resolver is
   `get_process_scout_home()` unchanged. Do not add another routing decision that compares

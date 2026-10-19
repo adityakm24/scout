@@ -49,7 +49,7 @@ def _should_stream(agent: Any) -> bool:
     if getattr(agent, "_disable_streaming", False):
         return False
     _base = str(agent.base_url or "").lower()
-    from scout_cli.runtime_provider_backends import _is_external_process_provider
+    from scout_backend.runtime_provider_backends import _is_external_process_provider
 
     if _base.startswith(("acp://", "acp+tcp://")) or _is_external_process_provider(agent.provider):
         return False
@@ -116,7 +116,7 @@ def perform_api_call(
             defer_logical_completion=True,
         )
 
-    from scout_cli.middleware import run_llm_execution_middleware
+    from scout_backend.middleware import run_llm_execution_middleware
 
     # The ``_model_request_active`` bracket is taken under the redirect lock when one exists,
     # so redirect() can't observe a half-toggled flag.

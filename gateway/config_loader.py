@@ -351,7 +351,7 @@ def read_yaml_layers(home: Path) -> dict:
         with open(config_yaml_path, encoding="utf-8-sig") as f:
             yaml_cfg = fast_safe_load(f) or {}
 
-    from scout_cli.config import _expand_env_vars
+    from scout_backend.config import _expand_env_vars
 
     # ${VAR} / ${env:VAR} expansion — the same primitive the CLI loader applies, so platform
     # adapter settings (webhook secret, api_server key, teams credentials) arrive resolved
@@ -360,8 +360,8 @@ def read_yaml_layers(home: Path) -> dict:
     yaml_cfg = _expand_env_vars(yaml_cfg)
 
     # Managed scope: overlay administrator-pinned values (this loader bypasses
-    # scout_cli.config.load_config, so managed quick_commands / stt would otherwise be ignored).
-    from scout_cli import managed_scope
+    # scout_backend.config.load_config, so managed quick_commands / stt would otherwise be ignored).
+    from scout_backend import managed_scope
     return managed_scope.apply_managed_overlay(yaml_cfg)
 
 
@@ -377,7 +377,7 @@ def load_yaml_layer(home: Path, gw_data: dict) -> None:
     platforms_data = merge_platform_sections(yaml_cfg, gateway_section, gw_data)
 
     try:
-        from scout_cli.plugins import discover_plugins
+        from scout_backend.plugins import discover_plugins
         discover_plugins()  # idempotent
         from gateway.platform_registry import platform_registry as registry
     except Exception as e:

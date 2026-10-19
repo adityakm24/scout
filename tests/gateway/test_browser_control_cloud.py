@@ -8,9 +8,9 @@ from gateway.browser_control_broker import (
     ControllerRejected,
     get_browser_control_broker,
 )
-from scout_cli import web_server
-import scout_cli.web_server_chat as _web_server_chat
-from scout_cli.dashboard_auth.ws_tickets import _reset_for_tests, mint_ticket
+from scout_backend import web_server
+import scout_backend.web_server_chat as _web_server_chat
+from scout_backend.dashboard_auth.ws_tickets import _reset_for_tests, mint_ticket
 from tui_gateway import server
 from tui_gateway.ws import WSTransport
 from tui_gateway.methods_browser_control import _broker_event_writer, _principal_digest

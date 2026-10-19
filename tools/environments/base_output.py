@@ -17,7 +17,7 @@ from typing import IO, Callable, Protocol
 
 from scout_constants import get_scout_home
 from tools.tool_output_truncate import head_tail_split, truncation_notice
-from scout_cli._subprocess_compat import windows_hide_flags
+from scout_backend._subprocess_compat import windows_hide_flags
 
 # Sentinel capacity for full-fidelity capture: large enough that the collector
 # never evicts, so bounded and unbounded modes share one code path.

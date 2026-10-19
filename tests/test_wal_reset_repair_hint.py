@@ -11,8 +11,8 @@ import scout_state_wal as scout_state
 
 
 def _hint_for(method):
-    with patch("scout_cli.config.detect_install_method", return_value=method), \
-         patch("scout_cli.config.recommended_update_command_for_method",
+    with patch("scout_backend.config.detect_install_method", return_value=method), \
+         patch("scout_backend.config.recommended_update_command_for_method",
                return_value=f"CMD-{method}"):
         return scout_state._wal_reset_repair_hint()
 
@@ -36,7 +36,7 @@ def test_nix_passes_through_recommended_command():
 
 
 def test_hint_falls_back_when_detection_fails():
-    with patch("scout_cli.config.detect_install_method",
+    with patch("scout_backend.config.detect_install_method",
                side_effect=RuntimeError("boom")):
         hint = scout_state._wal_reset_repair_hint()
     assert "SQLite 3.51.3+" in hint

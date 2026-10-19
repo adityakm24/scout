@@ -283,9 +283,9 @@ COMPONENT_PREFIXES = {
     "gateway": ("gateway", "scout_plugins", "plugins.platforms"),
     "agent": ("agent", "run_agent", "model_tools", "batch_runner"),
     "tools": ("tools",),
-    "cli": ("scout_cli", "cli"),
+    "cli": ("scout_backend", "cli"),
     "cron": ("cron",),
-    "gui": ("scout_cli.web_server", "scout_cli.desktop", "tui_gateway", "uvicorn"),
+    "gui": ("scout_backend.web_server", "scout_backend.desktop", "tui_gateway", "uvicorn"),
 }
 
 
@@ -441,7 +441,7 @@ class _ManagedRotatingFileHandler(RotatingFileHandler):
     """
 
     def __init__(self, *args, **kwargs):
-        from scout_cli.config import is_managed
+        from scout_backend.config import is_managed
         self._managed = is_managed()
         self._unavailable_reported = False
         super().__init__(*args, **kwargs)
@@ -898,10 +898,10 @@ def _read_logging_config():
     """Best-effort read of ``logging.*`` from config.yaml."""
     try:
         # Prefer the shared effective-config cache (managed overlay included, so an administrator
-        # can pin logging.*) so this reuses scout_cli.main's early parse (one config.yaml parse
+        # can pin logging.*) so this reuses scout_backend.main's early parse (one config.yaml parse
         # per process); fall back to a direct parse for bare scout_logging consumers.
         try:
-            from scout_cli.config_effective import load_user_config_effective
+            from scout_backend.config_effective import load_user_config_effective
             cfg = load_user_config_effective(get_config_path())
         except Exception:
             from utils import fast_safe_load

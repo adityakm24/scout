@@ -19,7 +19,7 @@ import urllib.request
 from agent import anthropic_credentials as ac
 from agent import credential_sources
 from agent.credential_pool import load_pool
-from scout_cli.auth_commands import auth_list_command
+from scout_backend.auth_commands import auth_list_command
 
 
 def _write_config(scout_home, adopt):

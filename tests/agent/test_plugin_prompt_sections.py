@@ -8,8 +8,8 @@ import sys
 import textwrap
 
 from agent.system_prompt import build_system_prompt, invalidate_system_prompt
-from scout_cli import plugins
-from scout_cli.plugins import PluginContext, PluginManager, PluginManifest
+from scout_backend import plugins
+from scout_backend.plugins import PluginContext, PluginManager, PluginManifest
 from run_agent import AIAgent
 
 
@@ -100,8 +100,8 @@ def test_fresh_process_resume_restores_identical_full_prompt_without_callback(tm
 
         from agent.conversation_loop import _restore_or_build_system_prompt
         from agent.system_prompt import build_system_prompt, invalidate_system_prompt
-        from scout_cli import plugins
-        from scout_cli.plugins import PluginContext, PluginManager, PluginManifest
+        from scout_backend import plugins
+        from scout_backend.plugins import PluginContext, PluginManager, PluginManifest
         from scout_state import SessionDB
         from run_agent import AIAgent
 

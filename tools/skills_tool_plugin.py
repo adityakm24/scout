@@ -124,7 +124,7 @@ def _serve_plugin_skill(
     skill_md: Path, namespace: str, bare: str, file_path: str | None = None, *,
     preprocess: bool = True, session_id: str | None = None) -> str:
     """Read a plugin-provided skill, apply guards, return JSON."""
-    from scout_cli.plugins import _get_disabled_plugins, get_plugin_manager
+    from scout_backend.plugins import _get_disabled_plugins, get_plugin_manager
     from tools import skills_tool as _st
     if namespace in _get_disabled_plugins():
         return _fail(f"Plugin '{namespace}' is disabled. Re-enable with: scout plugins enable {namespace}")

@@ -151,8 +151,8 @@ def reprobe_tool_availability() -> None:
 def tool_pin_version() -> str:
     """The code identity a tools[] pin was built by (checkout/build sha, else the release version).
     Cached per process: an updated checkout only reaches a process through a restart."""
-    from scout_cli import __version__
-    from scout_cli.build_info import get_code_identity
+    from scout_backend import __version__
+    from scout_backend.build_info import get_code_identity
     identity = get_code_identity()
     return identity.get("sha") or identity.get("version") or __version__
 

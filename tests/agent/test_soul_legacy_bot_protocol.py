@@ -27,7 +27,7 @@ def test_load_soul_md_drops_legacy_protocol_section(tmp_path, monkeypatch):
 
 
 def test_migration_41_strips_every_profile_soul_once(tmp_path, monkeypatch):
-    from scout_cli.config_migrations import _migrate_to_41
+    from scout_backend.config_migrations import _migrate_to_41
 
     home = tmp_path / ".scout"
     (home / "profiles" / "worker").mkdir(parents=True)

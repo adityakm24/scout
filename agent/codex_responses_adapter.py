@@ -14,7 +14,7 @@ from typing import Any, Callable, Dict, Iterator, List, NamedTuple, Optional, Ty
 
 from agent.message_sanitization import coerce_tool_name, deterministic_call_id
 from agent.prompt_builder import DEFAULT_AGENT_IDENTITY
-from scout_cli.route_identity import normalize_route_base_url
+from scout_backend.route_identity import normalize_route_base_url
 
 logger = logging.getLogger(__name__)
 

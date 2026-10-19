@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from scout_cli.cli_model_switch_mixin import stored_session_route
+from scout_backend.cli_model_switch_mixin import stored_session_route
 from scout_state import SessionDB
 from tui_gateway.server import _stored_session_runtime_overrides
 

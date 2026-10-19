@@ -501,7 +501,7 @@ let
 
       # ── The backend: `scout serve` or `scout dashboard` ──────────────
       # `scout serve` and `scout dashboard` are the same entry point,
-      # scout_cli.main:cmd_dashboard, with one flag of difference. serve runs
+      # scout_backend.main:cmd_dashboard, with one flag of difference. serve runs
       # without a user interface. dashboard also serves the web application.
       # Both give the /api/ws and /api/pty sockets that Scout Desktop
       # connects to. They are one process, and you can run only one of them.
@@ -709,7 +709,7 @@ let
           ''
             HOME=$TMPDIR ${(effectivePackage cfg).scoutVenv}/bin/python3 - "$settingsPath" > $out <<'PY'
             import json, sys
-            from scout_cli.config_defaults import DEFAULT_CONFIG
+            from scout_backend.config_defaults import DEFAULT_CONFIG
             with open(sys.argv[1]) as f:
                 settings = json.load(f)
             settings.setdefault("_config_version", DEFAULT_CONFIG["_config_version"])
@@ -1073,7 +1073,7 @@ let
       SCOUT_HOME = scoutHome;
       SCOUT_MANAGED = managedSystem;
       # These units are the hosted backend: `scout` runs only in its context
-      # (scout_cli.main._require_app_context), never in a person's shell.
+      # (scout_backend.main._require_app_context), never in a person's shell.
       SCOUT_AGENT = "true";
     };
 

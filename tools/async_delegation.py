@@ -99,7 +99,7 @@ def _db_path():
 
 
 def _connect() -> sqlite3.Connection:
-    from scout_cli.sqlite_util import open_db
+    from scout_backend.sqlite_util import open_db
     # Same state.db as scout_state.SessionDB -- reuse its owner-only (0600)
     # hardening so this writer doesn't create/leave the file (and its WAL
     # sidecars) at the process umask. See scout_state._secure_state_db_files.
@@ -134,7 +134,7 @@ def _initialize_schema(conn: sqlite3.Connection) -> None:
 
 
 def _transaction():
-    from scout_cli.sqlite_util import transaction
+    from scout_backend.sqlite_util import transaction
 
     return transaction(_connect())
 
@@ -714,7 +714,7 @@ def _batch_status(combined: Dict[str, Any]) -> str:
 
 
 def _dispatch(**kwargs) -> Dict[str, Any]:
-    from scout_cli.backend_retirement import retirement
+    from scout_backend.backend_retirement import retirement
 
     with retirement.work() as admitted:
         if not admitted:
@@ -787,7 +787,7 @@ def _dispatch_admitted(
         finally:
             _finalize(delegation_id, result, status)
 
-    from scout_cli.backend_retirement import retirement
+    from scout_backend.backend_retirement import retirement
 
     # The outer dispatch reservation prevents a freeze during this handoff. Retain a worker
     # reservation too: the stall monitor may finalize its registry record before it really exits.

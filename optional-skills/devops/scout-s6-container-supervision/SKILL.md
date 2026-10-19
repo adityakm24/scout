@@ -36,7 +36,7 @@ If you're just running Scout and want to use Docker, see `Dockerfile` and `docke
 │   │   ├── chown /opt/data/profiles (every boot)
 │   │   ├── seed .env / config.yaml / SOUL.md
 │   │   └── skills_sync.py
-│   └── 02-reconcile-profiles          ← scout_cli.container_boot
+│   └── 02-reconcile-profiles          ← scout_backend.container_boot
 │       ├── chown /run/service (scout-writable for runtime register)
 │       └── walk $SCOUT_HOME/profiles/<name>/gateway_state.json
 │           → recreate /run/service/gateway-<name>/
@@ -66,14 +66,14 @@ If you're just running Scout and want to use Docker, see `Dockerfile` and `docke
 | `Dockerfile` | s6-overlay install + cont-init.d wiring + `ENTRYPOINT ["/opt/scout/docker/entrypoint-dispatch.sh"]` |
 | `docker/entrypoint-dispatch.sh` | PID-1 dispatcher: exec's `/init` + main-wrapper when the image owns PID 1; on wrapped runtimes (Fly Machines, `docker run --init`) falls back to stage2-hook + main-wrapper directly, restoring the s6 helper PATH first (#38349). |
 | `docker/stage2-hook.sh` | The "old entrypoint logic" — UID remap, chown, seed, skills sync. Runs as cont-init.d/01-scout-setup. |
-| `docker/cont-init.d/02-reconcile-profiles` | Calls `scout_cli.container_boot` on every boot to restore profile gateway slots from the persistent volume. |
+| `docker/cont-init.d/02-reconcile-profiles` | Calls `scout_backend.container_boot` on every boot to restore profile gateway slots from the persistent volume. |
 | `docker/main-wrapper.sh` | The container's CMD. Routes user args, drops to scout via `s6-setuidgid`, exec's the chosen program. |
 | `docker/s6-rc.d/main-scout/run` | No-op `sleep infinity` — slot exists so the s6-rc user bundle is valid; main scout runs as the CMD, not as a supervised service. |
 | `docker/s6-rc.d/dashboard/run` | Conditional service — `exec sleep infinity` unless `SCOUT_DASHBOARD` is truthy. |
 | `docker/entrypoint.sh` | Back-compat shim that `exec`s the stage2 hook. External scripts that hard-coded the old entrypoint path still work. |
-| `scout_cli/service_manager.py` | `S6ServiceManager`: `register_profile_gateway`, `unregister_profile_gateway`, `start/stop/restart/is_running`, `list_profile_gateways`. |
-| `scout_cli/container_boot.py` | `reconcile_profile_gateways()` — walks persistent profiles, regenerates s6 slots, emits `container-boot.log`. |
-| `scout_cli/gateway.py::_dispatch_via_service_manager_if_s6` | Intercepts `scout gateway start/stop/restart` and routes to s6 when running in a container. |
+| `scout_backend/service_manager.py` | `S6ServiceManager`: `register_profile_gateway`, `unregister_profile_gateway`, `start/stop/restart/is_running`, `list_profile_gateways`. |
+| `scout_backend/container_boot.py` | `reconcile_profile_gateways()` — walks persistent profiles, regenerates s6 slots, emits `container-boot.log`. |
+| `scout_backend/gateway.py::_dispatch_via_service_manager_if_s6` | Intercepts `scout gateway start/stop/restart` and routes to s6 when running in a container. |
 
 ## Why Architecture B (CMD as main program, not s6-supervised)
 
@@ -131,7 +131,7 @@ docker exec <c> tail -n 50 /opt/data/logs/container-boot.log
 
 ### Change the per-profile gateway run command
 
-Edit `S6ServiceManager._render_run_script` in `scout_cli/service_manager.py`. The function is also called by `scout_cli/container_boot.py::_register_service` during boot reconciliation, so it's the single source of truth. Update the corresponding assertion in `tests/scout_cli/test_service_manager.py::test_s6_register_creates_service_dir_and_triggers_scan`.
+Edit `S6ServiceManager._render_run_script` in `scout_backend/service_manager.py`. The function is also called by `scout_backend/container_boot.py::_register_service` during boot reconciliation, so it's the single source of truth. Update the corresponding assertion in `tests/scout_backend/test_service_manager.py::test_s6_register_creates_service_dir_and_triggers_scan`.
 
 ### Run the docker test harness
 

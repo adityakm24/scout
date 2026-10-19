@@ -17,7 +17,7 @@ logger = logging.getLogger("gateway.run")
 
 def _profile_session_db_probe(profile_home: Path) -> Optional[Any]:
     """The goals-cached SessionDB for *profile_home*; None when unavailable."""
-    from scout_cli.goals import _get_session_db
+    from scout_backend.goals import _get_session_db
     from scout_constants import reset_scout_home_override, set_scout_home_override
 
     token = set_scout_home_override(str(profile_home))
@@ -42,13 +42,13 @@ def _gate(profile_home: Path, store_has_work: Callable[[Any], bool]) -> bool:
 
 
 def profile_has_active_heartbeat(profile_home: Path) -> bool:
-    from scout_cli.heartbeat import store_has_active_heartbeat
+    from scout_backend.heartbeat import store_has_active_heartbeat
 
     return _gate(profile_home, store_has_active_heartbeat)
 
 
 def profile_has_active_loop(profile_home: Path) -> bool:
-    from scout_cli.loops import store_has_active_loop
+    from scout_backend.loops import store_has_active_loop
 
     return _gate(profile_home, store_has_active_loop)
 

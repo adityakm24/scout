@@ -84,7 +84,7 @@ def make_home(root: Path) -> FakeHome:
 
 
 def scout_argv(*args: str) -> list[str]:
-    return [sys.executable, "-m", "scout_cli.main", *args]
+    return [sys.executable, "-m", "scout_backend.main", *args]
 
 
 def run_scout(fh: FakeHome, args: list[str], *, extra_env: dict[str, str] | None = None,

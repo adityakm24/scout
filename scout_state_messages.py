@@ -18,7 +18,7 @@ from agent.message_metadata import (
     CANONICAL_ROW, DB_ROW_SNAPSHOT, MESSAGE_UID, TOOL_CALL_UID, TOOL_CALL_UIDS,
     index_tool_call_uids, message_uid_or_none, resolve_tool_call_uid, mint_uid, stamp_message_uid)
 from agent.message_sanitization import _sanitize_surrogates, coalesce_tool_call_id
-from scout_cli.timefmt import coerce_epoch
+from scout_backend.timefmt import coerce_epoch
 from scout_state_common import (
     _COMPRESSION_LOCK_ROW_SQL, _ENDED_ROW_SQL, _RESET_END_REASONS, _RESET_END_REASONS_SQL, _ended_by_compression,
     _json_or, _legacy_reset_child_sql, _placeholders, _sql_json_extract)

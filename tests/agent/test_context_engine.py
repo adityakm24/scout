@@ -124,7 +124,7 @@ class TestPluginContextEngineSlot:
     """Test register_context_engine on PluginContext."""
 
     def test_register_engine(self):
-        from scout_cli.plugins import PluginManager, PluginContext, PluginManifest
+        from scout_backend.plugins import PluginManager, PluginContext, PluginManifest
         mgr = PluginManager()
         manifest = PluginManifest(name="test-lcm")
         ctx = PluginContext(manifest, mgr)

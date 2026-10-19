@@ -209,7 +209,7 @@ class VaultStore:
         # bespoke chmod — same requirement as the browser-profile snapshot
         # dir (f1d05c review).
         try:
-            from scout_cli.config import _secure_dir
+            from scout_backend.config import _secure_dir
 
             _secure_dir(self._base)
         except Exception:

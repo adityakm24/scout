@@ -285,7 +285,7 @@ def _parse_env_value(raw_value: str) -> str:
 # revalidation on NFS, a vanished/unreadable file fails the open and is never cached (a transient
 # EACCES must not become "this profile has no secrets"), and the descriptor pins one inode so a
 # symlink repointed mid-read can't file one file's contents under another's identity.
-# ``invalidate_env_file_cache()`` is the explicit knob; ``scout_cli.config.invalidate_env_cache()``
+# ``invalidate_env_file_cache()`` is the explicit knob; ``scout_backend.config.invalidate_env_cache()``
 # calls it for Scout's own .env writers.
 _ENV_FILE_CACHE: "OrderedDict[str, Tuple[tuple, Dict[str, str]]]" = OrderedDict()
 _ENV_FILE_CACHE_LOCK = threading.Lock()
@@ -329,7 +329,7 @@ def _parse_env_text(text: str) -> Dict[str, str]:
 
 
 def load_env_file(env_path: Path) -> Dict[str, str]:
-    """THE ``.env`` tokenizer: every reader (profile scope, ``scout_cli.config.load_env``, the dashboard
+    """THE ``.env`` tokenizer: every reader (profile scope, ``scout_backend.config.load_env``, the dashboard
     scrub, skill secret capture, managed .env, setup prompts) parses through here so no two boundaries
     disagree on which keys/values a file defines. Dict only — never touches ``os.environ``. ``export``
     prefix, ``#`` comments, quote escapes reversed; a BOM is stripped so it doesn't prefix the first key.
@@ -374,7 +374,7 @@ def build_profile_secret_scope(scout_home: Path) -> Dict[str, str]:
     from ``os.environ`` — so the scope holds only profile secrets."""
     secrets = load_env_file(Path(scout_home) / ".env")
     try:
-        from scout_cli.env_loader import get_secret_source_values
+        from scout_backend.env_loader import get_secret_source_values
         external_secrets = get_secret_source_values(Path(scout_home))
     except Exception:
         external_secrets = {}

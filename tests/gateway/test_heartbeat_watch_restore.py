@@ -9,8 +9,8 @@ import pytest
 from gateway.config import GatewayConfig, Platform
 from gateway.run import GatewayRunner, _profile_runtime_scope
 from gateway.session import SessionStore, SessionSource
-from scout_cli import goals
-from scout_cli.heartbeat import HeartbeatManager, HeartbeatState
+from scout_backend import goals
+from scout_backend.heartbeat import HeartbeatManager, HeartbeatState
 from scout_state import SessionDB
 
 
@@ -65,7 +65,7 @@ async def test_restore_retries_persisted_routes_in_their_own_profiles(tmp_path, 
         expected = {e.session_key: (e.origin, e.session_id) for e in entries[:2]}
         assert runner._heartbeat_watch == expected
         with monkeypatch.context() as patch:
-            patch.setattr('scout_cli.heartbeat.load_heartbeat', lambda sid: None)
+            patch.setattr('scout_backend.heartbeat.load_heartbeat', lambda sid: None)
             await restore_heartbeat_watches(runner)
         assert runner._heartbeat_watch == expected
         runner._heartbeat_watch.clear()

@@ -193,8 +193,8 @@ class TestSessionOps:
         }
 
         with (
-            patch("scout_cli.inventory.load_picker_context", return_value=picker_context),
-            patch("scout_cli.inventory.build_models_payload", return_value=payload),
+            patch("scout_backend.inventory.load_picker_context", return_value=picker_context),
+            patch("scout_backend.inventory.build_models_payload", return_value=payload),
         ):
             resp = await acp_agent.new_session(cwd="/tmp")
 

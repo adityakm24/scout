@@ -355,7 +355,7 @@ class TestCustomProviderOpenAIWireCapability:
             pytest.fail("unrelated built-in route performed custom capability lookup")
 
         monkeypatch.setattr(
-            "scout_cli.config.get_custom_provider_model_capability",
+            "scout_backend.config.get_custom_provider_model_capability",
             unexpected_lookup,
         )
 
@@ -408,7 +408,7 @@ class TestCustomProviderOpenAIWireCapability:
         must stay off the network: get_provider must be called with
         allow_network=False so a cold models.dev cache cannot trigger a
         foreground registry download from the send path."""
-        import scout_cli.providers as _providers
+        import scout_backend.providers as _providers
 
         seen: list = []
         real_get_provider = _providers.get_provider

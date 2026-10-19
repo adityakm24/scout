@@ -10,7 +10,7 @@ import pytest
 from scout_platform.host.facts import native_arch
 from pm.environments import install_state_dir, site_packages
 from pm.lock import Lockfile
-from tests.scout_cli.test_source_launcher_publication import fixture_tree
+from tests.scout_backend.test_source_launcher_publication import fixture_tree
 
 ROOT = Path(__file__).resolve().parents[2]
 

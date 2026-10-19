@@ -54,14 +54,14 @@ class TestEssentialSkillsUndisableable:
         assert "some-other-skill" in disabled
 
     def test_cli_side_reader_strips_essential(self):
-        from scout_cli.skills_config import get_disabled_skills
+        from scout_backend.skills_config import get_disabled_skills
         cfg = {"skills": {"disabled": ["scout-agent", "other"]}}
         disabled = get_disabled_skills(cfg)
         assert "scout-agent" not in disabled
         assert "other" in disabled
 
     def test_cli_side_writer_strips_essential(self, monkeypatch):
-        import scout_cli.skills_config as sc
+        import scout_backend.skills_config as sc
         saved = {}
         monkeypatch.setattr(sc, "save_config", lambda cfg: saved.update(cfg))
         cfg = {}

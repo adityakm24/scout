@@ -41,7 +41,7 @@ TUI_CONTEXT_DIRS = [
 # User plugin roots — scanned at runtime if they exist.  Plugins load from
 # ``get_scout_home() / "plugins"`` (user) and ``./.scout/plugins/`` (project,
 # gated behind ``SCOUT_ENABLE_PROJECT_PLUGINS``) — see
-# ``scout_cli/plugins.py:10-12``.  The guard only checked the bundled
+# ``scout_backend/plugins.py:10-12``.  The guard only checked the bundled
 # ``plugins/`` dir, missing user-installed code that spawns subprocesses
 # (gap reported in #67639).
 #
@@ -79,7 +79,7 @@ SKIP_DIRS = {
     "scripts/",
     "skills/",
     "optional-skills/",
-    "scout_cli/",
+    "scout_backend/",
     "gateway/",
     "cron/",
 }

@@ -255,7 +255,7 @@ def test_subprocess_pkill_scout_blocked():
 
 
 def test_subprocess_pkill_python_dash_f_blocked():
-    """``pkill -f python`` matches the gateway's "python -m scout_cli.main"."""
+    """``pkill -f python`` matches the gateway's "python -m scout_backend.main"."""
     with pytest.raises(RuntimeError, match="live-system guard"):
         subprocess.run(["pkill", "-f", "python"])
 
@@ -286,13 +286,13 @@ def test_subprocess_killall_scout_blocked():
 
 
 def test_subprocess_popen_real_gateway_restart_blocked():
-    """``python -m scout_cli.main gateway restart`` is a detached child that
+    """``python -m scout_backend.main gateway restart`` is a detached child that
     inherits the pytest-tmp SCOUT_HOME, resolves the developer's real
     ``scout-gateway`` unit, and outlives the test (39 six-day orphans squatted
     the webhook port, 2026-09-03). Blocked at the spawn primitive."""
     with pytest.raises(RuntimeError, match="live-system guard"):
         subprocess.Popen(
-            [sys.executable, "-m", "scout_cli.main", "gateway", "restart"],
+            [sys.executable, "-m", "scout_backend.main", "gateway", "restart"],
             start_new_session=True,
         )
 
@@ -305,7 +305,7 @@ def test_subprocess_popen_inline_source_restart_watcher_blocked():
     with pytest.raises(RuntimeError, match="live-system guard"):
         subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(1)", "4242",
-             sys.executable, "-m", "scout_cli.main", "gateway", "run"],
+             sys.executable, "-m", "scout_backend.main", "gateway", "run"],
             start_new_session=True,
         )
 
@@ -315,7 +315,7 @@ def test_subprocess_run_gateway_status_passes_through():
     read-only subcommand) must still spawn — via the canonical matcher, not an
     argv substring."""
     result = subprocess.run(
-        [sys.executable, "-c", "import sys; print(sys.argv[1:])", "-m", "scout_cli.main", "gateway", "status"],
+        [sys.executable, "-c", "import sys; print(sys.argv[1:])", "-m", "scout_backend.main", "gateway", "status"],
         capture_output=True, text=True,
     )
     assert result.returncode == 0

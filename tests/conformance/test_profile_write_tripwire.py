@@ -182,7 +182,7 @@ def _exercise_session_db(tripwire: ProfileTripwire) -> None:
 
 def _exercise_config_save(tripwire: ProfileTripwire) -> None:
     """save_config()/load_config() while a profile is active (#92662, #89190)."""
-    from scout_cli.config import load_config, save_config
+    from scout_backend.config import load_config, save_config
 
     cfg = load_config()
     cfg["model"] = "testprof-model"  # bare-string alias form is canonical

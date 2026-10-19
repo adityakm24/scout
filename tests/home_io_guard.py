@@ -132,7 +132,7 @@ class HomeIOGuard:
                 # pytest.fail, not AssertionError: removal helpers catch Exception and would log
                 # the refusal as a warning while the test passed.
                 pytest.fail(f"TEST BUG: changing the REAL installed Scout desktop app: {value}\n"
-                            "Stub scout_cli.gui_uninstall.packaged_gui_app_paths to a temporary path.")
+                            "Stub scout_backend.gui_uninstall.packaged_gui_app_paths to a temporary path.")
         return resolved
 
     @staticmethod

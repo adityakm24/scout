@@ -39,8 +39,8 @@ def test_build_keepalive_http_client_forwards_verify_context(clean_tls_env):
 
 
 def test_resolve_aux_verify_ssl_verify_false(clean_tls_env, monkeypatch):
-    import scout_cli.config as cfg
-    import scout_cli.config_providers as config_providers
+    import scout_backend.config as cfg
+    import scout_backend.config_providers as config_providers
     from agent import auxiliary_client
 
     monkeypatch.setattr(

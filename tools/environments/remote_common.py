@@ -14,7 +14,7 @@ from tools.environments.local_env_policy import _is_scout_internal_secret, _is_p
 def load_scout_env_vars() -> dict[str, str]:
     """``~/.scout/.env`` values, or ``{}`` — a broken .env must not fail command execution."""
     try:
-        from scout_cli.config import load_env
+        from scout_backend.config import load_env
         return load_env() or {}
     except Exception:
         return {}

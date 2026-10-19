@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 
 import scout_yaml as yaml
 
-from scout_cli.plugins import PluginContext, PluginManager, PluginManifest
+from scout_backend.plugins import PluginContext, PluginManager, PluginManifest
 from tui_gateway import server
 
 

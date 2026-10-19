@@ -93,9 +93,9 @@ def acp(tmp_path, monkeypatch):
     provider = _LoopbackProvider()
 
     import acp_adapter.session as acp_session
-    import scout_cli.config as cli_config
-    import scout_cli.mcp_startup as mcp_startup
-    import scout_cli.runtime_provider as runtime_provider
+    import scout_backend.config as cli_config
+    import scout_backend.mcp_startup as mcp_startup
+    import scout_backend.runtime_provider as runtime_provider
 
     monkeypatch.setattr(cli_config, "load_config", lambda *a, **k: {
         "model": {"provider": "openai-compat", "default": _MODEL, "context_length": 131072},

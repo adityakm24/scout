@@ -59,7 +59,7 @@ def test_bounded_fast_window_policy(monkeypatch):
     assert fast_mode.effective_request_overrides(anth)["speed"] == "fast"
 
     # unsupported routes never get fast params, in auto or static mode
-    from scout_cli.models import resolve_fast_mode_overrides
+    from scout_backend.models import resolve_fast_mode_overrides
 
     for provider, base_url in (
         ("openrouter", "https://openrouter.ai/api/v1"),
@@ -91,14 +91,14 @@ def test_bounded_fast_window_policy(monkeypatch):
 
 
 def test_fast_auto_and_cold_parse_and_slash_command(monkeypatch):
-    import scout_cli.config as config_mod
+    import scout_backend.config as config_mod
 
     if not hasattr(config_mod, "save_env_value_secure"):
         config_mod.save_env_value_secure = lambda key, value: {"success": True}
     import cli as cli_mod
     from gateway.run import GatewayRunner
-    from scout_cli.commands import COMMAND_REGISTRY
-    from scout_cli.config import DEFAULT_CONFIG
+    from scout_backend.commands import COMMAND_REGISTRY
+    from scout_backend.config import DEFAULT_CONFIG
 
     # config parsing: CLI, gateway, TUI all accept auto/cold; default stays off
     for raw, expected in (("auto", "auto"), ("COLD", "cold"), ("fast", "priority"), ("", None), ("bogus", None)):

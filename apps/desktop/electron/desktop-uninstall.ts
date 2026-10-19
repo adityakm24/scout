@@ -199,9 +199,9 @@ function nativeRemovalInstructions(kind, platform, appPath = null) {
 }
 
 /**
- * Map an uninstall mode to the `python -m scout_cli.uninstall` argv (after the
+ * Map an uninstall mode to the `python -m scout_backend.uninstall` argv (after the
  * python executable). Uses the dedicated lightweight module entrypoint (not
- * `scout_cli.main`) so it can run under a system Python OUTSIDE the venv that
+ * `scout_backend.main`) so it can run under a system Python OUTSIDE the venv that
  * lite/full delete — see the Finding-3 note in buildWindowsCleanupScript.
  * Throws on an unknown mode so a typo can't silently become a full wipe.
  */
@@ -210,7 +210,7 @@ function uninstallArgsForMode(mode: string) {
     throw new Error(`Unknown uninstall mode: ${mode}`)
   }
 
-  return ['-m', 'scout_cli.uninstall', '--mode', mode]
+  return ['-m', 'scout_backend.uninstall', '--mode', mode]
 }
 
 /** True when `mode` removes the agent code (lite/full), false otherwise. */
@@ -302,7 +302,7 @@ function shouldRemoveAppBundle(isPackaged, appPath) {
  *   3. removes the app bundle if one was resolved.
  *
  * `pythonExe` should be a Python OUTSIDE the venv for lite/full (the venv is
- * being deleted); `pythonPath` is prepended to PYTHONPATH so `import scout_cli`
+ * being deleted); `pythonPath` is prepended to PYTHONPATH so `import scout_backend`
  * resolves from the agent source. `q()` single-quote-escapes for the shell
  * (closes-escapes-reopens any embedded apostrophe), defending against spaces.
  */
@@ -348,7 +348,7 @@ function buildPosixCleanupScript({ desktopPid, pythonExe, pythonPath, agentRoot,
  * the venv that contains `python.exe`. A running .exe is mandatory-locked on
  * Windows, so running the uninstall from the venv's OWN python half-fails. The
  * desktop passes a system Python (findSystemPython) as `pythonExe` for those
- * modes + `pythonPath`=agentRoot so `import scout_cli` resolves from source
+ * modes + `pythonPath`=agentRoot so `import scout_backend` resolves from source
  * while the venv is torn down. gui-only doesn't touch the venv, so it can use
  * either interpreter.
  *

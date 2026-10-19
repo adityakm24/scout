@@ -16,7 +16,7 @@
  * rejects any id not defined here.
  *
  * Keep `FONT_CHOICES` in sync with `_FONT_CHOICES` in
- * `scout_cli/web_server.py` — the ids must match exactly.
+ * `scout_backend/web_server.py` — the ids must match exactly.
  */
 
 /** System stacks reused from presets so "System" choices need no webfont. */

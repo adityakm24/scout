@@ -312,7 +312,7 @@ export function createBackendOwnership(deps: BackendOwnershipDeps) {
 }
 
 export function backendCommandMatches(command: unknown): boolean {
-  return /(?:^|[\s/\\"])(?:scout(?:\.exe)?|scout_cli\.main|scout_cli[/\\]main\.py)"?(?:\s+(?:--profile|-p)\s+\S+)?\s+(?:serve|dashboard)(?:\s|$)/i.test(
+  return /(?:^|[\s/\\"])(?:scout(?:\.exe)?|scout_backend\.main|scout_backend[/\\]main\.py)"?(?:\s+(?:--profile|-p)\s+\S+)?\s+(?:serve|dashboard)(?:\s|$)/i.test(
     String(command ?? '')
   )
 }

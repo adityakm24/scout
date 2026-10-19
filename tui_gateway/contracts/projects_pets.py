@@ -19,7 +19,7 @@ from .registry import method
 
 
 class ProjectFolder(Result):
-    """``scout_cli/projects_db.py::ProjectFolder.to_dict``."""
+    """``scout_backend/projects_db.py::ProjectFolder.to_dict``."""
 
     path: str
     label: str | None = None
@@ -28,7 +28,7 @@ class ProjectFolder(Result):
 
 
 class ProjectInfo(Result):
-    """``scout_cli/projects_db.py::Project.to_dict`` — one stored project with its folders."""
+    """``scout_backend/projects_db.py::Project.to_dict`` — one stored project with its folders."""
 
     id: str
     slug: str

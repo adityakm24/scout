@@ -762,7 +762,7 @@ class GatewayAdapterLifecycleMixin:
                 publish_runtime_status(served_profiles=[])
             return 0
         try:
-            from scout_cli.profiles import get_active_profile_name, profiles_to_serve, profile_is_parked
+            from scout_backend.profiles import get_active_profile_name, profiles_to_serve, profile_is_parked
         except Exception:
             return 0
         if self._multiplex_on():
@@ -844,12 +844,12 @@ class GatewayAdapterLifecycleMixin:
         shared-listener mode (``/p/<profile>/...``) by ``_start_one_profile_adapters``."""
         from gateway.run import _load_gateway_config, _profile_runtime_scope
         from gateway.config import load_gateway_config
-        from scout_cli.env_loader import hydrate_profile_secret_sources
+        from scout_backend.env_loader import hydrate_profile_secret_sources
         # Hydrate external secret sources off-loop ONCE: sync hydration would stall every heartbeat.
         await asyncio.to_thread(hydrate_profile_secret_sources, profile_home)
         with _profile_runtime_scope(profile_home, hydrate_secrets=False):
             profile_runtime_cfg = _load_gateway_config()
-            from scout_cli.plugins import discover_plugins, get_plugin_manager
+            from scout_backend.plugins import discover_plugins, get_plugin_manager
             discover_plugins()
             self._subscribe_plugin_rewire(get_plugin_manager(), profile_name, profile_home)
             # This profile's `hooks:` block: start() registered before any profile scope existed.
@@ -1016,8 +1016,8 @@ class GatewayAdapterLifecycleMixin:
         tears down a RETURNED adapter; one whose configure/connect raised is torn down here."""
         from gateway.run import _profile_runtime_scope
         # Lazy + per-attempt: keeps test monkeypatches on these modules live.
-        from scout_cli.profiles import get_profile_dir
-        from scout_cli.env_loader import hydrate_profile_secret_sources
+        from scout_backend.profiles import get_profile_dir
+        from scout_backend.env_loader import hydrate_profile_secret_sources
         from gateway.config import load_gateway_config
         profile_home = get_profile_dir(profile_name)
         # Hydrate external secret sources off-loop so they cannot starve heartbeats.
@@ -1218,7 +1218,7 @@ class GatewayAdapterLifecycleMixin:
         answering it for an unresolvable NAMED profile is what made a secondary's inbound message
         run on the launch profile's credentials.
         """
-        from scout_cli.profiles import get_profile_dir
+        from scout_backend.profiles import get_profile_dir
         try:
             return get_profile_dir(profile_name)
         except Exception:
@@ -1379,7 +1379,7 @@ class GatewayAdapterLifecycleMixin:
         """Authorize and publish one normalized adapter event to plugin hooks."""
         # Observer failures must never break the adapter's update loop.
         with _log_suppressed(logging.DEBUG, "gateway_platform_event hook dispatch failed", exc_info=True):
-            from scout_cli.lifecycle import has_hook, invoke_hook
+            from scout_backend.lifecycle import has_hook, invoke_hook
             if has_hook("gateway_platform_event") and self._is_user_authorized_for_source(source):
                 invoke_hook("gateway_platform_event", **event)
 

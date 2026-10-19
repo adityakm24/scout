@@ -92,7 +92,7 @@ export interface ResolveVenvScoutCommandDeps {
 /**
  * If `command` is a Windows venv `scout`/`scout.exe` console-script shim
  * (i.e. `<venvRoot>/Scripts/scout(.exe)`), resolve it to the underlying
- * venv python invoked as `python -m scout_cli.main <backendArgs>` — but
+ * venv python invoked as `python -m scout_backend.main <backendArgs>` — but
  * ONLY after smoke-testing that interpreter with canImportScoutCli(). A
  * venv whose update died mid-`pip install` still has python.exe + scout.exe
  * on disk, but the backend dies on its first import (e.g.
@@ -174,7 +174,7 @@ export async function resolveVenvScoutCommand(
   return {
     label: `existing Scout Python at ${python}`,
     command: python,
-    args: ['-m', 'scout_cli.main', ...backendArgs],
+    args: ['-m', 'scout_backend.main', ...backendArgs],
     bootstrap: false,
     env: buildDesktopBackendEnv(),
     kind: 'python',

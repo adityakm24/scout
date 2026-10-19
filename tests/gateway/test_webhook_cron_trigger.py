@@ -150,8 +150,8 @@ class TestCronJobTrigger:
         home = tmp_path / ".scout"
         (home / "profiles" / "sec").mkdir(parents=True)
         monkeypatch.setenv("SCOUT_HOME", str(home))
-        monkeypatch.setattr("scout_cli.profiles._get_default_scout_home", lambda: home)
-        monkeypatch.setattr("scout_cli.profiles._get_profiles_root", lambda: home / "profiles")
+        monkeypatch.setattr("scout_backend.profiles._get_default_scout_home", lambda: home)
+        monkeypatch.setattr("scout_backend.profiles._get_profiles_root", lambda: home / "profiles")
         adapter = _make_adapter({"ev": {"secret": _INSECURE_NO_AUTH, "cron_job": "sweeper", "profile": "sec",
                                         "skills": ["some-skill"], "prompt": "hello {n}"}})
         monkeypatch.setattr(adapter, "_resolve_request_profile", lambda request: "sec")

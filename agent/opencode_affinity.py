@@ -36,13 +36,13 @@ def opencode_transport(provider: Optional[str], model: Optional[str], base_url: 
     OpenCode Zen/Go serve Responses-only (``gpt-*``, ``grok-*``, ``muse-spark``), Anthropic-wire
     (``minimax-*``, ``qwen*``, ``claude-*``) and chat/completions models behind one provider, so a
     provider-level or persisted ``api_mode`` is wrong for every model but the one it was saved for.
-    The main runtime (``scout_cli/runtime_provider.py``) always re-derives from the effective model;
+    The main runtime (``scout_backend/runtime_provider.py``) always re-derives from the effective model;
     auxiliary resolution must agree or ``gpt-5.6-luna`` compression 500s on /chat/completions (#98799).
     Built-in families, custom entries named after one (``opencode-go-bridge``, #85589) and opencode.ai
     hosts all count.
     """
-    from scout_cli.models import normalize_opencode_base_url, normalize_opencode_model_id, opencode_model_api_mode
-    from scout_cli.runtime_provider_custom import _get_named_custom_provider, _opencode_family_for_custom
+    from scout_backend.models import normalize_opencode_base_url, normalize_opencode_model_id, opencode_model_api_mode
+    from scout_backend.runtime_provider_custom import _get_named_custom_provider, _opencode_family_for_custom
 
     url = str(base_url or "")
     family = _opencode_family_for_custom(str(provider or ""), url)
@@ -64,7 +64,7 @@ def is_opencode_target(provider: Optional[str], base_url: Optional[str]) -> bool
     ``opencode-<family>-*`` providers, and any base_url hosted on opencode.ai.
     """
     try:
-        from scout_cli.models import opencode_provider_family
+        from scout_backend.models import opencode_provider_family
 
         if opencode_provider_family(provider) is not None:
             return True
@@ -117,7 +117,7 @@ def custom_provider_session_affinity_headers(
 ) -> dict[str, str]:
     """Return ``{<session_affinity_header>: <key>}`` when the route's provider entry declares one, else ``{}``."""
     try:
-        from scout_cli.config import get_custom_provider_session_affinity_header
+        from scout_backend.config import get_custom_provider_session_affinity_header
 
         header = get_custom_provider_session_affinity_header(str(base_url or ""))
     except Exception:

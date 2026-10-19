@@ -65,7 +65,7 @@ class ActualProfile(ProviderProfile):
         timeout: float = 8.0,
     ) -> list[str] | None:
         """Use the selected route, then config.yaml, then the legacy environment override."""
-        from scout_cli.auth import (
+        from scout_backend.auth import (
             normalize_actual_base_url,
             resolve_api_key_provider_credentials,
         )

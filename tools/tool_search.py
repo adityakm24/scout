@@ -16,7 +16,7 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from scout_cli.config_defaults import DEFAULT_CONFIG
+from scout_backend.config_defaults import DEFAULT_CONFIG
 from tools.registry import tool_error
 from tools.tool_search_catalog import (
     BRIDGE_TOOL_NAMES, CHARS_PER_TOKEN, TOOL_CALL_NAME, TOOL_DESCRIBE_NAME, TOOL_SEARCH_NAME,
@@ -103,9 +103,9 @@ def _safe_float(value: Any, fallback: float) -> float:
 
 
 def _config_from_loader(loader_name: str) -> ToolSearchConfig:
-    """Tool-search config via ``scout_cli.config.<loader_name>`` (defaults on any failure)."""
+    """Tool-search config via ``scout_backend.config.<loader_name>`` (defaults on any failure)."""
     try:
-        import scout_cli.config as _cfg_mod
+        import scout_backend.config as _cfg_mod
         tools_cfg = (getattr(_cfg_mod, loader_name)() or {}).get("tools")
         tools_cfg = tools_cfg if isinstance(tools_cfg, dict) else {}
         return ToolSearchConfig.from_raw(tools_cfg.get("tool_search"))

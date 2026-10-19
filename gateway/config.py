@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass, field, fields, is_dataclass
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
 
-from scout_cli.config import get_scout_home
+from scout_backend.config import get_scout_home
 from agent.secret_scope import current_secret_scope, get_secret as _get_secret
 from gateway.shutdown_watchdog import (
     DEFAULT_LOOP_WATCHDOG_INTERVAL_S,
@@ -285,7 +285,7 @@ class HomeChannel:
 
 def persist_home_channel(home: HomeChannel, *, enabled_if_new: bool = False) -> None:
     """Persist a logical home without falsely enabling a Relay-fronted adapter."""
-    from scout_cli.config import load_config, save_config
+    from scout_backend.config import load_config, save_config
     config = load_config()
     platform_config = _dict_slot(_dict_slot(config, "platforms"), home.platform.value)
     if enabled_if_new:
@@ -444,7 +444,7 @@ def _has_usable_api_server_key(key: object) -> bool:
     if not key:
         return False
     try:
-        from scout_cli.auth import has_usable_secret
+        from scout_backend.auth import has_usable_secret
         return has_usable_secret(key, min_length=16)
     except ImportError:
         return len(str(key).strip()) >= 16
@@ -488,7 +488,7 @@ class GatewayConfig:
     max_concurrent_sessions: Optional[int] = None  # Positive int caps simultaneous active sessions
     # The default profile's gateway serves every profile on the host (profiles stamped into session
     # keys, per-profile adapters/credentials). On by default (DEFAULT_CONFIG), but UNSET here is
-    # ``None``: a request the gateway settles at boot, not a verdict. ``scout_cli.gateway_multiplex_mode
+    # ``None``: a request the gateway settles at boot, not a verdict. ``scout_backend.gateway_multiplex_mode
     # .resolve_multiplex_mode`` runs the migration preflight (default profile, >= 2 profiles, no
     # secondary running its own gateway, no blocker, migratable host) and only then writes True/False.
     # An explicit value (config.yaml, GATEWAY_MULTIPLEX_PROFILES, a constructor argument) is honoured
@@ -562,7 +562,7 @@ class GatewayConfig:
                 # into, and the gateway then tries to connect to Discord / Teams / Google Chat with no token
                 # and emits noisy retry-forever errors. ``_platform_status`` was already fixed for the same
                 # bug class in commit 7849a3d73; this is the runtime counterpart.
-                from scout_cli.plugins import discover_plugins
+                from scout_backend.plugins import discover_plugins
                 discover_plugins()
             entry = platform_registry.get(platform.value)
             if entry:

@@ -38,7 +38,7 @@ export function isScoutOwnedVenvDaemon(
 /**
  * True when a process is an external Scout process holding this install's venv
  * (#62311): its exe lives under `<venv>\Scripts\` AND it is unambiguously a
- * Scout program — the `scout.exe` shim, `python -m scout_cli...`, or
+ * Scout program — the `scout.exe` shim, `python -m scout_backend...`, or
  * `python -m scout ...`. These are the autostart holders (the gateway Startup
  * item, the dashboard Scheduled Task) that neither the desktop's backend
  * teardown nor the hindsight-daemon sweep reach, and that keep the venv shim
@@ -69,5 +69,5 @@ export function isExternalVenvHolder(
     return true
   }
 
-  return /scout_cli/i.test(cmdline) || /(^|\s|")-m\s+scout([.\s"']|$)/i.test(cmdline)
+  return /scout_backend/i.test(cmdline) || /(^|\s|")-m\s+scout([.\s"']|$)/i.test(cmdline)
 }

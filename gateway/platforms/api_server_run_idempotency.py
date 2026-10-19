@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict
 
-from scout_cli.sqlite_util import add_column_if_missing
+from scout_backend.sqlite_util import add_column_if_missing
 
 
 # Keep the extracted store's log records on the API server logger.
@@ -65,7 +65,7 @@ class RunIdempotencyStore:
     def __init__(self, db_path: str = None):
         if db_path is None:
             try:
-                from scout_cli.config import get_scout_home
+                from scout_backend.config import get_scout_home
                 db_path = str(get_scout_home() / "runs_idempotency.db")
             except Exception:
                 db_path = ":memory:"

@@ -33,7 +33,7 @@ def test_latest_answer_skips_quiet_checks(tmp_path):
 
 def test_latest_endpoint_shows_what_a_reminder_delivered(tmp_path, monkeypatch):
     """A reminder run is stored as a run header + the delivered text; the Heartbeat shows the text."""
-    from scout_cli.web_routers import cron as cron_routes
+    from scout_backend.web_routers import cron as cron_routes
 
     out = tmp_path / "out"
     out.mkdir()

@@ -20,9 +20,9 @@ else:
     # Stop a ``utils/``/``proxy/``/``ui/`` package in the launch cwd from shadowing Scout modules.
     scout_bootstrap.harden_import_path()
 
-# `scout-acp` runs without scout_cli.main: repair a `scout update` killed mid-pull here, before
+# `scout-acp` runs without scout_backend.main: repair a `scout update` killed mid-pull here, before
 # importing anything else from the checkout (a no-op under `scout acp`, which already did).
-from scout_cli import _early_recovery
+from scout_backend import _early_recovery
 
 if _early_recovery.restore_interrupted_pull():
     _early_recovery.relaunch_after_restore()
@@ -80,7 +80,7 @@ def _setup_logging() -> None:
 
 def _load_env() -> None:
     """Load .env from SCOUT_HOME (default ``~/.scout``)."""
-    from scout_cli.env_loader import load_scout_dotenv
+    from scout_backend.env_loader import load_scout_dotenv
 
     scout_home = get_scout_home()
     loaded = load_scout_dotenv(scout_home=scout_home)
@@ -105,7 +105,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _print_version() -> None:
-    from scout_cli.version_info import get_version_info
+    from scout_backend.version_info import get_version_info
 
     print(get_version_info().derived_version)
 
@@ -118,7 +118,7 @@ def _run_check() -> None:
 
 
 def _run_setup() -> None:
-    from scout_cli.main import main as scout_main
+    from scout_backend.main import main as scout_main
 
     old_argv = sys.argv[:]
     try:
@@ -184,7 +184,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # One TLS authority: trust the OS store before any outbound call (bare
     # requests/urllib included) resolves a CA bundle — see agent/ssl_verify.py.
-    # This console script bypasses scout_cli.main, which does the same.
+    # This console script bypasses scout_backend.main, which does the same.
     from agent.ssl_verify import install_truststore
 
     install_truststore()
@@ -193,7 +193,7 @@ def main(argv: list[str] | None = None) -> None:
     from .server import ScoutACPAgent
 
     # Windows: import the configured memory provider (and numpy) on the main thread before
-    # the MCP-discovery and ACP stdin-reader threads start (scout_cli's ~150 ms
+    # the MCP-discovery and ACP stdin-reader threads start (scout_backend's ~150 ms
     # plugin-discovery thread is the only one already running). A first-time
     # native-extension import (numpy via holographic / mnemosyne / hindsight) racing another
     # thread's import chain deadlocked in create_module and session/new never answered
@@ -209,7 +209,7 @@ def main(argv: list[str] | None = None) -> None:
     # model_tools.py module scope to avoid freezing the gateway's loop on lazy import (#16856).
     if os.environ.get("SCOUT_ACP_SKIP_CONFIGURED_MCP", "").strip() != "1":
         try:
-            from scout_cli.mcp_startup import start_background_mcp_discovery
+            from scout_backend.mcp_startup import start_background_mcp_discovery
 
             start_background_mcp_discovery(logger=logger, thread_name="acp-mcp-discovery")
         except Exception:

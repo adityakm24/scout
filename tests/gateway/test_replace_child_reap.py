@@ -109,7 +109,7 @@ class TestScopedLockTakeoverReapsChildren:
         record = {
             "pid": pid,
             "kind": "scout-gateway",
-            "argv": ["python", "-m", "scout_cli.main", "gateway", "run"],
+            "argv": ["python", "-m", "scout_backend.main", "gateway", "run"],
             "start_time": start_time,
             "scout_home": str(target_home),
         }
@@ -128,7 +128,7 @@ class TestScopedLockTakeoverReapsChildren:
         monkeypatch.setattr(
             status,
             "_read_process_cmdline",
-            lambda _pid: "python -m scout_cli.main gateway run",
+            lambda _pid: "python -m scout_backend.main gateway run",
         )
         return record
 
@@ -208,7 +208,7 @@ async def test_start_gateway_replace_reaps_old_gateway_children_posix(
         lambda path=None: {
             "pid": 42,
             "kind": "scout-gateway",
-            "argv": ["python", "-m", "scout_cli.main", "gateway", "run"],
+            "argv": ["python", "-m", "scout_backend.main", "gateway", "run"],
             "start_time": 0,
             "scout_home": str(tmp_path),
         },

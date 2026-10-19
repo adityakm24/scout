@@ -154,7 +154,7 @@ class TestBuiltinMemoryToolAvailability:
             raise RuntimeError("config unreadable")
 
         monkeypatch.setattr(
-            "scout_cli.config.load_config_readonly", _boom, raising=False
+            "scout_backend.config.load_config_readonly", _boom, raising=False
         )
         assert memory_tool_module.check_memory_requirements() is True
 

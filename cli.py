@@ -29,23 +29,23 @@ logger = logging.getLogger(__name__)
 os.environ["SCOUT_QUIET"] = "1"  # suppress our modules' startup chatter
 
 
-from scout_cli.cli_agent_setup_mixin import CLIAgentSetupMixin
-from scout_cli.cli_commands_mixin import CLICommandsMixin
-from scout_cli.cli_loops_mixin import CLILoopsMixin
-from scout_cli.cli_info_mixin import CLIInfoMixin
-from scout_cli.cli_terminal_mixin import CLITerminalMixin
-from scout_cli.cli_modal_mixin import CLIModalMixin
-from scout_cli.cli_stream_mixin import CLIStreamMixin
-from scout_cli.cli_session_mixin import CLISessionMixin
-from scout_cli.cli_model_switch_mixin import CLIModelSwitchMixin
-from scout_cli.cli_voice_mixin import CLIVoiceMixin
-from scout_cli.cli_status_bar_mixin import CLIStatusBarMixin
-from scout_cli.cli_tui_mixin import CLITuiMixin
-from scout_cli.cli_process_notifications import CLIProcessNotificationsMixin
-from scout_cli.cli_init_mixin import CLIInitMixin
-from scout_cli.cli_tui_runtime_mixin import CLITuiRuntimeMixin
+from scout_backend.cli_agent_setup_mixin import CLIAgentSetupMixin
+from scout_backend.cli_commands_mixin import CLICommandsMixin
+from scout_backend.cli_loops_mixin import CLILoopsMixin
+from scout_backend.cli_info_mixin import CLIInfoMixin
+from scout_backend.cli_terminal_mixin import CLITerminalMixin
+from scout_backend.cli_modal_mixin import CLIModalMixin
+from scout_backend.cli_stream_mixin import CLIStreamMixin
+from scout_backend.cli_session_mixin import CLISessionMixin
+from scout_backend.cli_model_switch_mixin import CLIModelSwitchMixin
+from scout_backend.cli_voice_mixin import CLIVoiceMixin
+from scout_backend.cli_status_bar_mixin import CLIStatusBarMixin
+from scout_backend.cli_tui_mixin import CLITuiMixin
+from scout_backend.cli_process_notifications import CLIProcessNotificationsMixin
+from scout_backend.cli_init_mixin import CLIInitMixin
+from scout_backend.cli_tui_runtime_mixin import CLITuiRuntimeMixin
 # Extracted clusters (mechanical split, #116911); re-exported here so `cli.<name>` stays the seam.
-from scout_cli.cli_shutdown import (  # noqa: F401,E402
+from scout_backend.cli_shutdown import (  # noqa: F401,E402
     _CLEANUP_STEPS,
     _arm_exit_watchdog,
     _emit_interrupted_session_end,
@@ -67,11 +67,11 @@ from scout_cli.cli_shutdown import (  # noqa: F401,E402
     _sync_process_session_id,
     _wait_for_oneshot_background_completions,
 )
-from scout_cli.cli_auto_maintenance import (  # noqa: F401,E402
+from scout_backend.cli_auto_maintenance import (  # noqa: F401,E402
     _run_checkpoint_auto_maintenance,
     _run_state_db_auto_maintenance,
 )
-from scout_cli.cli_render import (  # noqa: F401,E402
+from scout_backend.cli_render import (  # noqa: F401,E402
     ChatConsole,
     _ACCENT,
     _ACCENT_ANSI_DEFAULT,
@@ -138,7 +138,7 @@ from scout_cli.cli_render import (  # noqa: F401,E402
     _wrap_panel_text,
     _wrap_panel_text_keep_ws,
 )
-from scout_cli.cli_config_load import (  # noqa: F401,E402
+from scout_backend.cli_config_load import (  # noqa: F401,E402
     _AUXILIARY_TASK_ENV,
     _CWD_PLACEHOLDERS,
     _TERMINAL_ENV_MAPPINGS,
@@ -152,7 +152,7 @@ from scout_cli.cli_config_load import (  # noqa: F401,E402
     _resolve_prefill_messages_file,
     load_cli_config,
 )
-from scout_cli.cli_terminal_input import (  # noqa: F401,E402
+from scout_backend.cli_terminal_input import (  # noqa: F401,E402
     _BACKSLASH_LINE_CONTINUATION_RE,
     _DSR_CPR_ESC_RE,
     _DSR_CPR_VISIBLE_RE,
@@ -190,7 +190,7 @@ from scout_cli.cli_terminal_input import (  # noqa: F401,E402
     _terminal_supports_extended_enter_keys,
     _termux_example_image_path,
 )
-from scout_cli.cli_single_query import (  # noqa: F401,E402
+from scout_backend.cli_single_query import (  # noqa: F401,E402
     _TERMINAL_PROVIDER_REASONS,
     _TRANSIENT_PROVIDER_REASONS,
     _collect_kanban_task_images,
@@ -221,7 +221,7 @@ except (ImportError, AttributeError):
     _STEADY_CURSOR = None
 
 try:
-    from scout_cli import pt_input_extras as _pt_extras
+    from scout_backend import pt_input_extras as _pt_extras
 
     _pt_extras.install_shift_enter_alias()
     _pt_extras.install_ctrl_enter_alias()
@@ -279,7 +279,7 @@ def _reverse_alias_for_display(model_name: str) -> str:
                 rmap[m] = alias
 
         try:
-            from scout_cli.config import load_config
+            from scout_backend.config import load_config
             cfg = load_config() or {}
             ma = cfg.get("model_aliases")
             if isinstance(ma, dict):
@@ -326,7 +326,7 @@ _COMMAND_SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧
 
 # ~/.scout/.env first, project .env as dev fallback; user env files override stale shell exports.
 from scout_constants import get_scout_home
-from scout_cli.env_loader import load_scout_dotenv
+from scout_backend.env_loader import load_scout_dotenv
 from agent.i18n import t as _t  # noqa: E402
 
 _scout_home = get_scout_home()
@@ -387,7 +387,7 @@ except Exception:
 
 # Agent/tool systems load lazily: bare startup only needs the prompt.
 def get_tool_definitions(*args, **kwargs):
-    from scout_cli.mcp_startup import wait_for_mcp_discovery
+    from scout_backend.mcp_startup import wait_for_mcp_discovery
     from model_tools import get_tool_definitions as _get_tool_definitions
 
     wait_for_mcp_discovery()
@@ -443,13 +443,13 @@ def _prepare_deferred_agent_startup() -> None:
     _deferred_agent_startup_done = True
     _accept_hooks = os.environ.get("SCOUT_ACCEPT_HOOKS", "").lower() in {"1", "true", "yes", "on"}
     try:
-        from scout_cli.plugins import discover_plugins
+        from scout_backend.plugins import discover_plugins
 
         discover_plugins()
     except Exception:
         logger.warning("plugin discovery failed at deferred CLI startup", exc_info=True)
     try:
-        from scout_cli.mcp_startup import start_background_mcp_discovery
+        from scout_backend.mcp_startup import start_background_mcp_discovery
 
         start_background_mcp_discovery(logger=logger, thread_name="termux-cli-mcp-discovery")
     except Exception:
@@ -457,7 +457,7 @@ def _prepare_deferred_agent_startup() -> None:
     try:
         from agent.shell_hooks import register_from_config
         from agent.outbound_webhooks import register_from_config as register_outbound_webhooks
-        from scout_cli.config import load_config
+        from scout_backend.config import load_config
 
         _hooks_cfg = load_config()
         register_from_config(_hooks_cfg, accept_hooks=_accept_hooks)
@@ -555,7 +555,7 @@ def _reset_terminal_input_modes_on_exit() -> None:
         tty.flush()
 
 
-from scout_cli.worktree_ops import (
+from scout_backend.worktree_ops import (
     _git_quiet,
     _git_repo_root,
     _maintain_pack_health,
@@ -702,7 +702,7 @@ def _replay_output_history(fit=None, output=None) -> None:
 
 
 _strip_leaked_bracketed_paste_wrappers = _lazy_shim(
-    "scout_cli.input_sanitize", "strip_leaked_bracketed_paste_wrappers", "_strip_leaked_bracketed_paste_wrappers"
+    "scout_backend.input_sanitize", "strip_leaked_bracketed_paste_wrappers", "_strip_leaked_bracketed_paste_wrappers"
 )
 
 
@@ -759,7 +759,7 @@ build_bundle_invocation_message = _lazy_shim("agent.skill_bundles", "build_bundl
 def _get_plugin_cmd_handler_names() -> set:
     """Return plugin command names (without slash prefix) for dispatch matching."""
     try:
-        from scout_cli.plugins import get_plugin_commands
+        from scout_backend.plugins import get_plugin_commands
         return set(get_plugin_commands().keys())
     except Exception:
         return set()
@@ -812,7 +812,7 @@ def _normalize_moa_model(model: Optional[str]) -> tuple[Optional[str], Optional[
             return "moa", preset
     return None, model
 
-_split_model_config_default = _lazy_shim("scout_cli.config", "split_model_config_default", "_split_model_config_default")
+_split_model_config_default = _lazy_shim("scout_backend.config", "split_model_config_default", "_split_model_config_default")
 
 
 class _VoiceInputMessage:
@@ -874,7 +874,7 @@ class _ChatTurn:
     stop_event: Optional[threading.Event] = None
     tts_normal_exit: bool = False
     voice_prefix: str = ""
-from scout_cli.cli_chat_turn_mixin import CLIChatTurnMixin
+from scout_backend.cli_chat_turn_mixin import CLIChatTurnMixin
 
 
 _PASTE_REF_RE = re.compile(r'\[Pasted text #\d+: \d+ lines \u2192 (.+?)\]')
@@ -918,7 +918,7 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
         if self._active_session_lease is not None:
             return True
         try:
-            from scout_cli.active_sessions import format_refusal_stderr, try_acquire_active_session
+            from scout_backend.active_sessions import format_refusal_stderr, try_acquire_active_session
 
             lease, message = try_acquire_active_session(
                 session_id=self.session_id,
@@ -990,7 +990,7 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
     def _show_security_advisories(self):
         """Startup banner for unacked security advisories, on stderr (piped stdout stays clean); 24h rate-limited."""
         try:
-            from scout_cli.security_advisories import detect_compromised, startup_banner
+            from scout_backend.security_advisories import detect_compromised, startup_banner
 
             banner = startup_banner(detect_compromised())
             if banner:
@@ -1059,7 +1059,7 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
             # registry walk already loaded plus the pure notices module (a heavy import here races
             # importlib's module locks against the main thread).
             from model_tools import check_tool_availability
-            from scout_cli.tool_availability_notices import (
+            from scout_backend.tool_availability_notices import (
                 current_terminal_backend, filter_to_enabled_toolsets, tool_availability_warning_lines,
             )
             from tools.terminal_tool import terminal_backend_unavailable_reason
@@ -1188,15 +1188,15 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
         cmd_lower = command.lower().strip()  # lowercase only for matching; args keep their case
         cmd_original = command.strip()
 
-        # Aliases resolve via the central registry (scout_cli/commands.py).
-        from scout_cli.commands import resolve_command as _resolve_cmd
+        # Aliases resolve via the central registry (scout_backend/commands.py).
+        from scout_backend.commands import resolve_command as _resolve_cmd
         _base_word = cmd_lower.split()[0].lstrip("/")
         _cmd_def = _resolve_cmd(_base_word)
         canonical = _cmd_def.name if _cmd_def else _base_word
 
         # Observer-only pre_command plugin hook (return values ignored; never raises).
         if _cmd_def is not None:
-            from scout_cli.plugins import fire_pre_command_hook
+            from scout_backend.plugins import fire_pre_command_hook
             fire_pre_command_hook(
                 surface="cli", command=canonical, alias_used=_base_word, args_raw=_slash_args(cmd_original),
                 session_key=getattr(self, "session_id", None), platform="cli",
@@ -1262,7 +1262,7 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
             # shell=True is intentional (user-authored config snippets, never LLM controlled);
             # the env is sanitized because this process holds every API key.
             from tools.environments.local import build_subprocess_env
-            from scout_cli._subprocess_compat import windows_hide_flags
+            from scout_backend._subprocess_compat import windows_hide_flags
             result = subprocess.run(
                 exec_cmd, shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace",
                 timeout=30, env=build_subprocess_env(),
@@ -1282,7 +1282,7 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
         return True
 
     def _run_plugin_slash_command(self, base_cmd: str, user_args: str) -> None:
-        from scout_cli.plugins import get_plugin_command_handler, resolve_plugin_command_result
+        from scout_backend.plugins import get_plugin_command_handler, resolve_plugin_command_result
 
         plugin_handler = get_plugin_command_handler(base_cmd.lstrip("/"))
         if not plugin_handler:
@@ -1340,7 +1340,7 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
 
     def _expand_slash_prefix(self, cmd_original: str, cmd_lower: str, skill_commands, skill_bundles) -> bool:
         """Unique-prefix expansion against built-in COMMANDS + skill commands/bundles (agrees with tab-completion)."""
-        from scout_cli.commands import COMMANDS
+        from scout_backend.commands import COMMANDS
         typed_base = cmd_lower.split()[0]
         all_known = set(COMMANDS) | set(skill_commands) | set(skill_bundles)
         matches = [c for c in all_known if c.startswith(typed_base)]
@@ -1361,7 +1361,7 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
             _cprint(f"{_DIM}{_t('cli.command.did_you_mean_many', candidates=', '.join(sorted(matches)))}{_RST}")
         else:
             # Exact token with no handler (never re-dispatch the same token: recursion), or no match.
-            from scout_cli.cli_unknown_command import unknown_command_lines
+            from scout_backend.cli_unknown_command import unknown_command_lines
             lead, pointer = unknown_command_lines(cmd_lower, all_known)
             _cprint(f"\033[1;31m{lead}{_RST}")
             _cprint(f"{_DIM}{_ACCENT}{pointer}{_RST}")
@@ -1505,7 +1505,7 @@ class ScoutCLI(CLIInitMixin, CLITuiRuntimeMixin, CLIProcessNotificationsMixin, C
         # /update relaunch happens here, after prompt_toolkit restored terminal modes, on the
         # main thread (the process_loop thread would skip cleanup / only exit itself on Windows).
         if self._pending_relaunch:
-            from scout_cli.relaunch import relaunch
+            from scout_backend.relaunch import relaunch
             relaunch(self._pending_relaunch, preserve_inherited=False)
 
 
@@ -1527,7 +1527,7 @@ def _build_cli_from_args(model, toolsets, provider, reasoning, api_key, base_url
         except Exception:
             toolsets_list = None
         if toolsets_list is None:
-            from scout_cli.tools_config import _get_platform_tools
+            from scout_backend.tools_config import _get_platform_tools
             toolsets_list = sorted(_get_platform_tools(CLI_CONFIG, "cli"))
 
     parsed_skills = _parse_skills_argument(skills)
@@ -1720,7 +1720,7 @@ def main(
     """
     # UTF-8 stdio on Windows before any print (Rich box-drawing would UnicodeEncodeError on cp1252).
     with suppress(Exception):
-        from scout_cli.stdio import configure_windows_stdio
+        from scout_backend.stdio import configure_windows_stdio
         configure_windows_stdio()
 
     os.environ["SCOUT_INTERACTIVE"] = "1"  # terminal_tool: interactive sudo prompts with timeout
@@ -1730,8 +1730,8 @@ def main(
         return
 
     if not (list_tools or list_toolsets):
-        from scout_cli.process_identity import register_self
-        from scout_cli.shared_profile_warning import shared_profile_warning
+        from scout_backend.process_identity import register_self
+        from scout_backend.shared_profile_warning import shared_profile_warning
 
         register_self("cli")
         warning = shared_profile_warning()

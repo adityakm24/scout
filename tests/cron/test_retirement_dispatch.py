@@ -7,7 +7,7 @@ import threading
 
 def test_passed_gate_tick_and_queued_job_remain_busy_until_real_worker_exit(tmp_path, monkeypatch):
     from cron import jobs, scheduler
-    from scout_cli import backend_retirement
+    from scout_backend import backend_retirement
 
     fence = backend_retirement.RetirementFence()
     monkeypatch.setattr(backend_retirement, "retirement", fence)
@@ -59,7 +59,7 @@ def test_passed_gate_tick_and_queued_job_remain_busy_until_real_worker_exit(tmp_
 
 def test_detached_cron_delivery_keeps_admission_after_its_tick_returns(tmp_path, monkeypatch):
     from cron import bot_chat_delivery
-    from scout_cli import backend_retirement
+    from scout_backend import backend_retirement
     from scout_constants import get_scout_home
 
     fence = backend_retirement.RetirementFence()

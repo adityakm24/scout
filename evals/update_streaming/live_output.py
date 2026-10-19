@@ -29,8 +29,8 @@ def run_child(mode):
 
 
 def step(mode):
-    from scout_cli.main_dashboard import _install_hangup_protection, _finalize_update_output
-    from scout_cli.main import _run_logged_subprocess
+    from scout_backend.main_dashboard import _install_hangup_protection, _finalize_update_output
+    from scout_backend.main import _run_logged_subprocess
     state = _install_hangup_protection(gateway_mode=True)
     try:
         return _run_logged_subprocess([sys.executable, __file__, "--child", mode]).returncode
@@ -39,8 +39,8 @@ def step(mode):
 
 
 def probe():
-    from scout_cli.main_dashboard import _install_hangup_protection, _finalize_update_output
-    from scout_cli.main import _run_logged_subprocess
+    from scout_backend.main_dashboard import _install_hangup_protection, _finalize_update_output
+    from scout_backend.main import _run_logged_subprocess
     receipts = []
     for gateway in (False, True):
         with tempfile.TemporaryDirectory(prefix="update-output-") as temp:

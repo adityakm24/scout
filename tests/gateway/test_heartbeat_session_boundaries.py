@@ -2,7 +2,7 @@
 
 from gateway.config import GatewayConfig, Platform
 from gateway.session import SessionSource, SessionStore
-from scout_cli.heartbeat import (
+from scout_backend.heartbeat import (
     HeartbeatManager,
     HeartbeatState,
     load_heartbeat,

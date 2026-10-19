@@ -34,7 +34,7 @@ import time
 import zlib
 from pathlib import Path
 
-from scout_cli.sqlite_runtime import is_sqlite_wal_reset_vulnerable
+from scout_backend.sqlite_runtime import is_sqlite_wal_reset_vulnerable
 from tests.conformance.persistence._harness import REPO_ROOT, kill9_and_reap, wait_for
 
 ROLES = Path(__file__).with_name("_roles.py")
@@ -138,7 +138,7 @@ class Chamber:
         return proc
 
     def spawn_cli(self, name: str, *argv: str) -> subprocess.Popen:
-        """A real `scout …` CLI subprocess against this SCOUT_HOME (``scout_cli.main`` run as ``__main__``
+        """A real `scout …` CLI subprocess against this SCOUT_HOME (``scout_backend.main`` run as ``__main__``
         by ``_roles.py cli`` so the journal-mode seam applies to it too)."""
         stderr = open(self.work / f"{name}.stderr", "wb")  # noqa: SIM115 - closed in reap()
         payload = {"workdir": str(self.work), "name": name, "argv": list(argv)}

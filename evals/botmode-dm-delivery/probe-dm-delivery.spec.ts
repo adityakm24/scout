@@ -26,7 +26,7 @@ test.beforeAll(async () => {
   }
   const bin = path.join(sandbox.root, 'bin')
   fs.mkdirSync(bin)
-  fs.writeFileSync(path.join(bin, 'scout'), `#!/bin/sh\ncd ${repo}\nexec ${python} -m scout_cli.main "$@"\n`, { mode: 0o755 })
+  fs.writeFileSync(path.join(bin, 'scout'), `#!/bin/sh\ncd ${repo}\nexec ${python} -m scout_backend.main "$@"\n`, { mode: 0o755 })
   env = buildAppEnv(sandbox, { HOME: sandbox.root, SCOUT_DESKTOP_PYTHON: python,
     SCOUT_DESKTOP_SCOUT: path.join(bin, 'scout'), PATH: `${bin}:${process.env.PATH}`,
     PYTHONPATH: repo, SCOUT_SINGLE_QUERY_LINGER_SECONDS: '30' })
@@ -45,7 +45,7 @@ test.afterAll(async () => { await fixture?.cleanup() })
 test('cron output waits for a CLI-only owner and arrives after owner release', async () => {
   test.setTimeout(240_000)
   const output = fs.openSync(path.join(evidence, 'cli-owner.log'), 'w')
-  const child = spawn(python, ['-m', 'scout_cli.main', '-p', 'beta', 'chat', '--in', '~', '-c', 'Bot Chat', '--create-if-missing', '-Q', '-q', 'CLI_OWNER_HOLD'], { cwd: repo, env, stdio: ['ignore', output, output] })
+  const child = spawn(python, ['-m', 'scout_backend.main', '-p', 'beta', 'chat', '--in', '~', '-c', 'Bot Chat', '--create-if-missing', '-Q', '-q', 'CLI_OWNER_HOLD'], { cwd: repo, env, stdio: ['ignore', output, output] })
   const cronEnv = { ...env, SCOUT_HOME: fixture.sandbox.scoutHome }
   try {
     await fixture.mock.waitForHeldCompletion()
@@ -102,7 +102,7 @@ test('named Bot Chat receives a nested one-shot message_agent delivery once', as
   await page.keyboard.press('Enter')
   await expect(page.getByText(MOCK_REPLY).filter({ visible: true }).first()).toBeVisible({ timeout: 60_000 })
   const output = fs.openSync(path.join(evidence, 'oneshot.log'), 'w')
-  const child = spawn(python, ['-m', 'scout_cli.main', '-p', 'beta', 'chat', '--in', '~', '-c', 'Bot Chat', '--create-if-missing', '-Q', '-q', 'E2E_DM(alpha)[nested-one-shot-sentinel]'], { cwd: repo, env, stdio: ['ignore', output, output] })
+  const child = spawn(python, ['-m', 'scout_backend.main', '-p', 'beta', 'chat', '--in', '~', '-c', 'Bot Chat', '--create-if-missing', '-Q', '-q', 'E2E_DM(alpha)[nested-one-shot-sentinel]'], { cwd: repo, env, stdio: ['ignore', output, output] })
   try {
     await expect.poll(() => dbMessages('alpha').filter(([role, text]) => role === 'user' && text.includes('nested-one-shot-sentinel')).length, { timeout: 120_000 }).toBe(1)
     console.log('ALPHA_ROWS', JSON.stringify(dbMessages('alpha')))

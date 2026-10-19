@@ -171,7 +171,7 @@ const peerTest = test.extend<{ gateways: { app: ElectronApplication; source: Pag
 
       const port = await freePort()
       const remoteUrl = `http://127.0.0.1:${port}`
-      child = spawn(pythonBinary(), ['-m', 'scout_cli.main', 'serve', '--host', '127.0.0.1', '--port', String(port), '--skip-build'], {
+      child = spawn(pythonBinary(), ['-m', 'scout_backend.main', 'serve', '--host', '127.0.0.1', '--port', String(port), '--skip-build'], {
         cwd: REPO_ROOT,
         detached: process.platform !== 'win32',
         env: { ...isolatedEnv(remote), SCOUT_DASHBOARD_SESSION_TOKEN: REMOTE_TOKEN },

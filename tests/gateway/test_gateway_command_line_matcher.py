@@ -19,11 +19,11 @@ from gateway.status import (
 
 
 ACCEPT = [
-    "pythonw.exe -m scout_cli.main gateway run",
-    r"C:\Users\me\scout\venv\Scripts\pythonw.exe -m scout_cli.main gateway run",
-    "python -m scout_cli.main --profile work gateway run",
-    "python -m scout_cli.main gateway run --replace",
-    "python -m scout_cli/main.py gateway run",
+    "pythonw.exe -m scout_backend.main gateway run",
+    r"C:\Users\me\scout\venv\Scripts\pythonw.exe -m scout_backend.main gateway run",
+    "python -m scout_backend.main --profile work gateway run",
+    "python -m scout_backend.main gateway run --replace",
+    "python -m scout_backend/main.py gateway run",
     "python gateway/run.py",
     "scout-gateway.exe",
     "scout gateway",          # bare `scout gateway` defaults to run
@@ -31,23 +31,23 @@ ACCEPT = [
     # profile selector AFTER the `gateway` token (argv is profile-position
     # agnostic — _apply_profile_override strips --profile/-p anywhere)
     "scout gateway --profile work run",
-    "python -m scout_cli.main gateway -p work run",
+    "python -m scout_backend.main gateway -p work run",
     "scout gateway --profile=work run",
     # a profile literally NAMED "gateway"
     "scout -p gateway gateway run",
-    "python -m scout_cli.main --profile gateway gateway run",
+    "python -m scout_backend.main --profile gateway gateway run",
     # quoted Windows paths with spaces (shlex-aware tokenization)
     r'"C:\Program Files\Scout\scout-gateway.exe"',
     r'"C:\Program Files\Scout\gateway\run.py" run',
-    r'"C:\Program Files\Py\pythonw.exe" -m scout_cli.main gateway run',
+    r'"C:\Program Files\Py\pythonw.exe" -m scout_backend.main gateway run',
 ]
 
 REJECT = [
     "python -m tui_gateway",                              # unrelated module
-    "python -m scout_cli.main gateway status",           # other subcommand
-    "python -m scout_cli.main gateway restart",
-    "python -m scout_cli.main gateway stop",
-    "python -m scout_cli.main --profile x dashboard",    # non-gateway subcommand
+    "python -m scout_backend.main gateway status",           # other subcommand
+    "python -m scout_backend.main gateway restart",
+    "python -m scout_backend.main gateway stop",
+    "python -m scout_backend.main --profile x dashboard",    # non-gateway subcommand
     "some random python -m mygateway thing",
     "",
     None,
@@ -65,35 +65,35 @@ def test_rejects_non_gateway_run(cmd):
 
 
 # ``python -c <src> <old_pid> <gateway argv…>`` — the detached restart watcher
-# (scout_cli.gateway._spawn_gateway_restart_watcher). Its trailing argv is the command it will
+# (scout_backend.gateway._spawn_gateway_restart_watcher). Its trailing argv is the command it will
 # spawn LATER, so reading identity off it made the updater's post-relaunch liveness poll vouch for
 # the watcher instead of a gateway (#107002).
 INLINE_SOURCE_REJECT = [
-    'python -c "import time; time.sleep(1)" 14980 python -m scout_cli.main gateway run',
+    'python -c "import time; time.sleep(1)" 14980 python -m scout_backend.main gateway run',
     r'"C:\Users\me\scout\venv\Scripts\python.exe" -c "import os" 14980 '
-    r'"C:\Users\me\scout\venv\Scripts\python.exe" -m scout_cli.main gateway run',
-    'python -u -c "import os" 14980 python -m scout_cli.main --profile work gateway run',
+    r'"C:\Users\me\scout\venv\Scripts\python.exe" -m scout_backend.main gateway run',
+    'python -u -c "import os" 14980 python -m scout_backend.main --profile work gateway run',
     'python -uc "import os" 14980 scout gateway run',
     # Options that take a SEPARATE operand must not end the option walk before ``-c`` (the operand
     # is not the start of the program's own argv). The repo itself spawns ``-I -S -B -X utf8 …``
-    # (scout_cli/_old_updater.py, _update_takeover.py), so this shape is not hypothetical.
-    'python -X utf8 -c "import os" 14980 python -m scout_cli.main gateway run',
-    'python -W ignore -c "import os" 14980 python -m scout_cli.main gateway run',
+    # (scout_backend/_old_updater.py, _update_takeover.py), so this shape is not hypothetical.
+    'python -X utf8 -c "import os" 14980 python -m scout_backend.main gateway run',
+    'python -W ignore -c "import os" 14980 python -m scout_backend.main gateway run',
     'python --check-hash-based-pycs always -c "import os" 14980 scout gateway run',
-    'python -I -S -B -X utf8 -c "import os" 14980 python -m scout_cli.main gateway run',
+    'python -I -S -B -X utf8 -c "import os" 14980 python -m scout_backend.main gateway run',
     # ``-q`` (quiet) takes NO operand, unlike ``-Q``; a case-folded walk would skip past the ``-c``.
-    'python -q -c "import os" 14980 python -m scout_cli.main gateway run',
+    'python -q -c "import os" 14980 python -m scout_backend.main gateway run',
 ]
 
 
 # Real gateways whose interpreter carries operand-taking options must STILL be recognised — the
 # value-aware walk must not over-reject. Mirror image of INLINE_SOURCE_REJECT.
 INTERPRETER_OPTION_ACCEPT = [
-    "python -X utf8 -m scout_cli.main gateway run",
-    "python -W ignore -m scout_cli.main gateway run",
-    "python -q -m scout_cli.main gateway run",
-    "python -I -S -B -X utf8 -m scout_cli.main gateway run",
-    "python --check-hash-based-pycs always -m scout_cli.main gateway run",
+    "python -X utf8 -m scout_backend.main gateway run",
+    "python -W ignore -m scout_backend.main gateway run",
+    "python -q -m scout_backend.main gateway run",
+    "python -I -S -B -X utf8 -m scout_backend.main gateway run",
+    "python --check-hash-based-pycs always -m scout_backend.main gateway run",
 ]
 
 
@@ -142,7 +142,7 @@ def test_spawn_intent_rejects_non_gateway_commands(cmd):
 def test_spawn_intent_keeps_read_only_subcommands_spawnable():
     """The guard only blocks run/start/restart; a ``-c``-wrapped ``gateway status`` must stay
     launchable (tests/test_live_system_guard_self_test.py asserts it passes through)."""
-    cmd = 'python -c "import sys; print(sys.argv[1:])" -m scout_cli.main gateway status'
+    cmd = 'python -c "import sys; print(sys.argv[1:])" -m scout_backend.main gateway status'
     assert spawn_intent(cmd) == "status"
 
 

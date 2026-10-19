@@ -12,10 +12,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import scout_cli.models as models_mod
+import scout_backend.models as models_mod
 from agent import auxiliary_reasoning_floor
 from agent.auxiliary_client import call_llm
-from scout_cli import models_reasoning_caps
+from scout_backend import models_reasoning_caps
 
 _CATALOG = [
     {"id": "openai/gpt-oss-20b", "supported_parameters": ["reasoning", "tools"],

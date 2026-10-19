@@ -63,7 +63,7 @@ in the `scout-agent-dev` skill.
 Background maintenance that tracks usage on agent-created skills and auto-archives stale ones;
 archives go to `~/.scout/skills/.archive/` and are restorable. Core `agent/curator.py` (review
 loop, auto-transitions, LLM review prompt) + `agent/curator_backup.py` (pre-run tar.gz snapshots);
-CLI `scout_cli/curator.py` → `scout curator status|run|pause|resume|pin|unpin|archive|restore|
+CLI `scout_backend/curator.py` → `scout curator status|run|pause|resume|pin|unpin|archive|restore|
 prune|backup|rollback`; telemetry `tools/skill_usage.py` owns `~/.scout/skills/.usage.json`
 (`use_count`, `view_count`, `patch_count`, `last_activity_at`, `state` active/stale/archived,
 `pinned`). Config `curator:` — `enabled, interval_hours, min_idle_hours, stale_after_days,

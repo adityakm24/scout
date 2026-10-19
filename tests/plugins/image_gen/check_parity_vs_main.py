@@ -87,7 +87,7 @@ for name in list(sys.modules):
     if (name.startswith("tools.")
             or name.startswith("agent.")
             or name.startswith("plugins.")
-            or name.startswith("scout_cli.")):
+            or name.startswith("scout_backend.")):
         sys.modules.pop(name, None)
 
 import tools.image_generation_tool as image_tool

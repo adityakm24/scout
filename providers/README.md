@@ -31,16 +31,16 @@ consumer calls `get_provider_profile()` or `list_providers()`. See
 The registry is populated on first access. After that, every downstream
 layer reads from it:
 
-- `scout_cli/auth.py` extends `PROVIDER_REGISTRY` with every api-key
+- `scout_backend/auth.py` extends `PROVIDER_REGISTRY` with every api-key
   profile it sees (skipping `copilot`, `kimi-coding`, `kimi-coding-cn`,
   `zai`, `openrouter`, `custom` — those need bespoke token resolution).
-- `scout_cli/models.py` extends `CANONICAL_PROVIDERS` and calls
+- `scout_backend/models.py` extends `CANONICAL_PROVIDERS` and calls
   `profile.fetch_models()` inside `provider_model_ids()`.
-- `scout_cli/doctor.py` adds a `/models` health check for each
+- `scout_backend/doctor.py` adds a `/models` health check for each
   `auth_type="api_key"` profile.
-- `scout_cli/config.py` injects every `env_var` into
+- `scout_backend/config.py` injects every `env_var` into
   `OPTIONAL_ENV_VARS` so the setup wizard knows about it.
-- `scout_cli/runtime_provider.py` reads `profile.api_mode` as a fallback
+- `scout_backend/runtime_provider.py` reads `profile.api_mode` as a fallback
   when URL detection finds nothing.
 - `agent/model_metadata.py` maps hostname → provider via
   `profile.get_hostname()`.

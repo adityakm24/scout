@@ -201,7 +201,7 @@ def _github_headers() -> dict:
 
 
 def _index_headers(url: str) -> dict:
-    from scout_cli.urllib_security import url_origin
+    from scout_backend.urllib_security import url_origin
 
     origin = url_origin(url)
     if origin == ("https", "api.github.com", 443):
@@ -212,7 +212,7 @@ def _index_headers(url: str) -> dict:
 
 
 def _get_json(url: str) -> dict | list:
-    from scout_cli.urllib_security import open_credentialed_url
+    from scout_backend.urllib_security import open_credentialed_url
 
     def request():
         headers = _index_headers(url)
@@ -232,7 +232,7 @@ def _get_json(url: str) -> dict | list:
 
 
 def _get_text(url: str, headers: Optional[dict] = None) -> str:
-    from scout_cli.urllib_security import open_credentialed_url
+    from scout_backend.urllib_security import open_credentialed_url
 
     hdrs = _index_headers(url)
     if headers:

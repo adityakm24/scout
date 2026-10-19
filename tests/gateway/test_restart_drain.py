@@ -117,7 +117,7 @@ async def test_windows_detached_restart_scrubs_gateway_marker(monkeypatch, tmp_p
     monkeypatch.setattr(gateway_run.os, "getpid", lambda: 321)
     monkeypatch.setenv("_SCOUT_GATEWAY", "1")
 
-    import scout_cli._subprocess_compat as subprocess_compat
+    import scout_backend._subprocess_compat as subprocess_compat
 
     monkeypatch.setattr(
         subprocess_compat,
@@ -139,7 +139,7 @@ async def test_windows_detached_restart_scrubs_gateway_marker(monkeypatch, tmp_p
     assert kwargs["env"].get("_SCOUT_GATEWAY") is None
     # The watcher is an installation-bound command: PM's bootstrap selects the
     # dependency generation at child start, no venv is captured in its env.
-    from scout_cli._launchers import runtime_command
+    from scout_backend._launchers import runtime_command
     from pathlib import Path
     assert cmd[:3] == runtime_command(Path(gateway_run.__file__).resolve().parent.parent)[:3]
     assert kwargs["stdout"] is subprocess.DEVNULL
@@ -168,7 +168,7 @@ async def test_windows_detached_restart_watcher_keeps_console_python(monkeypatch
     monkeypatch.setattr(gateway_run.os, "getpid", lambda: 321)
     monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
 
-    import scout_cli._subprocess_compat as subprocess_compat
+    import scout_backend._subprocess_compat as subprocess_compat
 
     monkeypatch.setattr(
         subprocess_compat,

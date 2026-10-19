@@ -86,7 +86,7 @@ def _make_source() -> SessionSource:
 
 def test_resolve_runtime_agent_kwargs_preserves_request_overrides(monkeypatch):
     monkeypatch.setattr(
-        "scout_cli.runtime_provider.resolve_runtime_provider",
+        "scout_backend.runtime_provider.resolve_runtime_provider",
         lambda **_kw: {
             "api_key": "***",
             "base_url": "https://example.test/v1",
@@ -153,7 +153,7 @@ def test_turn_route_merges_fast_mode_with_provider_request_overrides():
     }
 
     with patch(
-        "scout_cli.models.resolve_fast_mode_overrides",
+        "scout_backend.models.resolve_fast_mode_overrides",
         return_value={"service_tier": "priority"},
     ):
         route = gateway_run.GatewayRunner._resolve_turn_agent_config(

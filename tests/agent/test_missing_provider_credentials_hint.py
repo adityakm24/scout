@@ -8,7 +8,7 @@ import pytest
 import scout_yaml as yaml
 
 from agent.auxiliary_unavailable import missing_provider_credentials_message
-from scout_cli.auth import PROVIDER_REGISTRY
+from scout_backend.auth import PROVIDER_REGISTRY
 
 
 @pytest.mark.parametrize("provider, expected, forbidden", [

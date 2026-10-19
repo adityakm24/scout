@@ -14,7 +14,7 @@ from cron.scheduler_preflight import (
     _delivery_platform_routed_from_primary_gateway,
     _primary_profile_routes_for_current_home,
 )
-from scout_cli import managed_scope
+from scout_backend import managed_scope
 from scout_constants import reset_scout_home_override, set_scout_home_override
 
 

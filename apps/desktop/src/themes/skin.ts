@@ -2,7 +2,7 @@
  * Scout skin → DesktopTheme converter.
  *
  * A "skin" is the CLI/TUI theme unit: a YAML file in `$SCOUT_HOME/skins/` (or a
- * built-in) resolved by `scout_cli/skin_engine.py` and pushed to every surface
+ * built-in) resolved by `scout_backend/skin_engine.py` and pushed to every surface
  * over JSON-RPC (`gateway.ready`, `skin.changed`, `config.get skin`). This is the
  * one place the desktop turns that CLI-shaped palette into a `DesktopTheme`, so a
  * skin Scout authors from a prompt lights up all three surfaces from one file.

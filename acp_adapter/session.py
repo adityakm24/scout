@@ -501,9 +501,9 @@ class SessionManager:
 
         from run_agent import AIAgent
         from agent.skill_utils import parse_config_string_list
-        from scout_cli.config import load_config
-        from scout_cli.runtime_provider import resolve_runtime_provider
-        from scout_cli.tools_config import _get_platform_tools, enabled_mcp_server_names
+        from scout_backend.config import load_config
+        from scout_backend.runtime_provider import resolve_runtime_provider
+        from scout_backend.tools_config import _get_platform_tools, enabled_mcp_server_names
         from scout_constants import resolve_reasoning_config
 
         config = load_config()
@@ -561,7 +561,7 @@ class SessionManager:
         # Bounded by ``mcp_discovery_timeout`` (config.yaml, ~1.5s); late servers are
         # picked up by ScoutACPAgent._schedule_mcp_late_refresh.
         try:
-            from scout_cli.mcp_startup import ensure_mcp_discovery_before_agent_build
+            from scout_backend.mcp_startup import ensure_mcp_discovery_before_agent_build
 
             ensure_mcp_discovery_before_agent_build(logger=logger, thread_name="acp-mcp-discovery")
         except Exception:

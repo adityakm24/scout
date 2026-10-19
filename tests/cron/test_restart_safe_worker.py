@@ -586,7 +586,7 @@ def test_launch_external_worker_degrades_by_default_with_real_helper(
 def test_launch_external_worker_pins_the_gateways_tree_on_pythonpath(
     tmp_path, monkeypatch,
 ):
-    """#112729: the worker starts in ``cron.scheduler`` (no ``scout_cli.main`` bootstrap),
+    """#112729: the worker starts in ``cron.scheduler`` (no ``scout_backend.main`` bootstrap),
     so its import path must be explicit — a rotted editable mapping or PYTHONSAFEPATH
     otherwise kills it with "No module named 'cron'" before the ack. The spawn env carries
     the gateway's own checkout first and keeps the gateway's other PYTHONPATH entries."""
@@ -766,7 +766,7 @@ def test_marked_worker_keeps_its_generation_through_a_rotation(tmp_path):
     from; it becomes collectable once the worker exits."""
     import cron.worker_bootstrap as worker_bootstrap
     import pm.environments
-    from scout_cli.runtime_state import collect_generations
+    from scout_backend.runtime_state import collect_generations
 
     repo_root = Path(worker_bootstrap.__file__).resolve().parent.parent
     generation = _commit_generation(repo_root, "g1", with_site_packages=True).parent

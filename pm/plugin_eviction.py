@@ -47,7 +47,7 @@ def _interpreter_version() -> str:
 
 def static_verdicts(entries: list[Entry], python_version: str) -> tuple[dict[Path, str], dict[Path, str]]:
     """``(disable, sit out)`` reasons found without a resolver, keyed by resolved dir."""
-    from scout_cli.plugins_manifest import requires_scout_error
+    from scout_backend.plugins_manifest import requires_scout_error
     from pm.plugin_declarations import manifest_version_error, read_python_declaration
 
     reasons: dict[Path, str] = {}

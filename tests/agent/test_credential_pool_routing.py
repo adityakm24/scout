@@ -324,7 +324,7 @@ class TestFailureAttribution:
         ):
             monkeypatch.delenv(env_var, raising=False)
         monkeypatch.setattr(
-            "scout_cli.auth.is_provider_explicitly_configured",
+            "scout_backend.auth.is_provider_explicitly_configured",
             lambda provider: False,
         )
         (scout_home / "auth.json").write_text(

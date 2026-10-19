@@ -1,7 +1,7 @@
 import time
 from contextlib import closing
 import pytest
-from scout_cli.sessions_cmd import _note_pinned_skipped
+from scout_backend.sessions_cmd import _note_pinned_skipped
 from scout_state import SessionDB
 
 

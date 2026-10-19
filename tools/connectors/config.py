@@ -51,7 +51,7 @@ def _coerce_bool(value: Any, fallback: bool) -> bool:
 
 def load_config() -> ConnectorConfig:
     try:
-        from scout_cli.config import load_config_readonly as _load
+        from scout_backend.config import load_config_readonly as _load
 
         cfg = _load() or {}
         tools_cfg = cfg.get("tools") if isinstance(cfg.get("tools"), dict) else {}

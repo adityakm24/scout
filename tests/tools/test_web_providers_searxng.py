@@ -150,7 +150,7 @@ class TestGetBackendSearXNG:
     def test_auto_detect_picks_searxng_when_url_only_in_scout_config(self, monkeypatch):
         """#34290 follow-up: a config-only SEARXNG_URL (absent from process env)
         must still drive auto-detect via the now config-aware ``_has_env``."""
-        from scout_cli import config as scout_config
+        from scout_backend import config as scout_config
         from tools import web_tools
         monkeypatch.setattr(web_tools, "_load_web_config", lambda: {})
         monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
@@ -181,7 +181,7 @@ class TestCheckWebApiKey:
 
     def test_searxng_config_only_satisfies_check_web_api_key(self, monkeypatch):
         """#34290 follow-up: config-only SEARXNG_URL satisfies the credential check."""
-        from scout_cli import config as scout_config
+        from scout_backend import config as scout_config
         from tools import web_tools
         monkeypatch.setattr(web_tools, "_load_web_config", lambda: {"backend": "searxng"})
         monkeypatch.delenv("SEARXNG_URL", raising=False)

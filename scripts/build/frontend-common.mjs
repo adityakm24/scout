@@ -30,7 +30,7 @@ function contains(parent, child) {
 
 const productMarker = '.scout-product'
 const productOwner = 'scout-frontend-product-v1\n'
-const developerOutputs = ['scout_cli/web_dist', 'apps/desktop/dist', 'apps/desktop/build/native-deps']
+const developerOutputs = ['scout_backend/web_dist', 'apps/desktop/dist', 'apps/desktop/build/native-deps']
 
 function developerOutput(source, out) {
   return source && developerOutputs.some(name => path.resolve(out) === path.join(path.resolve(source), name))

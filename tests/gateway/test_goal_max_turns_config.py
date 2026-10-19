@@ -6,7 +6,7 @@ from gateway.config import GatewayConfig, Platform, PlatformConfig
 from gateway.platforms.event import MessageEvent, MessageType
 from gateway.run import GatewayRunner
 from gateway.session import SessionSource
-from scout_cli import goals
+from scout_backend import goals
 
 
 class _FakeSessionEntry:
@@ -88,7 +88,7 @@ async def test_goal_command_slow_db_init_still_persists(tmp_path, monkeypatch):
     window, so the window-only path would drop the write — this test
     discriminates the off-loop warm-up from mere window-widening without
     multi-second sleeps. Loop-freeze bounds are covered separately in
-    tests/scout_cli/test_goals_db_bootstrap_off_loop.py; no wall-clock
+    tests/scout_backend/test_goals_db_bootstrap_off_loop.py; no wall-clock
     gap assertions here (those are their own flake class).
     """
     import scout_state

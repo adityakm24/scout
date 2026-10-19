@@ -28,7 +28,7 @@ def main():
         os.environ.update(HOME=home, SCOUT_HOME=home)
         sys.path.insert(0, str(checkout))
         from cron import jobs, scheduler
-        from scout_cli.cli_commands_mixin import CLICommandsMixin
+        from scout_backend.cli_commands_mixin import CLICommandsMixin
         from openai import OpenAI
         from tools.cronjob_job_args import _format_job
 

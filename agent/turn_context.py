@@ -795,7 +795,7 @@ def _collect_pre_llm_call_context(
     if getattr(agent, "_persist_disabled", False):
         return ""
     try:
-        from scout_cli.lifecycle import invoke_hook as _invoke_hook
+        from scout_backend.lifecycle import invoke_hook as _invoke_hook
         _pre_results = _invoke_hook(
             "pre_llm_call",
             session_id=agent.session_id,

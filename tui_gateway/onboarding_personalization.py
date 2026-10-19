@@ -1,7 +1,7 @@
 import json
 
 from scout_constants import reset_scout_home_override, set_scout_home_override
-from scout_cli.profiles import get_profile_dir
+from scout_backend.profiles import get_profile_dir
 from tools.memory_tool import load_on_disk_store, memory_tool
 
 

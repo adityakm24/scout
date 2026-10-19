@@ -113,7 +113,7 @@
         export HOME=$TMPDIR
         ${scoutVenv}/bin/python3 -c '
 import json, sys
-from scout_cli.config import DEFAULT_CONFIG
+from scout_backend.config import DEFAULT_CONFIG
 
 def leaf_paths(d, prefix=""):
     paths = []
@@ -1364,7 +1364,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             export HOME=$(mktemp -d) SCOUT_HOME=$(mktemp -d)
             ${configMergeScript} ${configFiles.generated} "$SCOUT_HOME/config.yaml"
             ${scoutVenv}/bin/python3 -c '
-            from scout_cli.config import check_config_version
+            from scout_backend.config import check_config_version
             current, latest = check_config_version(raise_on_parse_error=True)
             assert current == latest, f"generated config.yaml reads as v{current}, package is v{latest}"
             print(f"PASS: generated config.yaml is at v{current}")
@@ -1449,7 +1449,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             ${configMergeScript} ${nixSettings} "$scout_home/config.yaml"
             ${scoutVenv}/bin/python3 -c '
 import json, sys
-from scout_cli.config import load_config
+from scout_backend.config import load_config
 json.dump(load_config(), sys.stdout, default=str)
 '
           }

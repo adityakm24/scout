@@ -94,7 +94,7 @@ def test_background_review_installs_thread_local_whitelist():
     whitelist is set with exactly the memory+skills tool names.
     """
     import run_agent
-    from scout_cli import plugins as _plugins
+    from scout_backend import plugins as _plugins
 
     captured = {}
 
@@ -224,8 +224,8 @@ def test_background_review_whitelist_includes_configured_extra_tools(
     monkeypatch.setenv("SCOUT_HOME", str(scout_home))
 
     import run_agent
-    from scout_cli import config as config_module
-    from scout_cli import plugins as _plugins
+    from scout_backend import config as config_module
+    from scout_backend import plugins as _plugins
 
     config_module._LOAD_CONFIG_CACHE.clear()
     config_module._RAW_CONFIG_CACHE.clear()

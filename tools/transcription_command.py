@@ -144,7 +144,7 @@ def _dispatch_to_plugin_provider(
         return None
     try:
         from agent.transcription_registry import get_provider
-        from scout_cli.plugins import _ensure_plugins_discovered
+        from scout_backend.plugins import _ensure_plugins_discovered
         _ensure_plugins_discovered()
         plugin_provider = get_provider(key)
         if plugin_provider is None:
@@ -223,7 +223,7 @@ def _apply_pre_transcription_hook(
     wins). ``language_override`` is None unless a hook explicitly set ``language``, so backends keep
     their own config/env resolution."""
     try:
-        from scout_cli.plugins import has_hook, invoke_hook
+        from scout_backend.plugins import has_hook, invoke_hook
         if not has_hook("pre_transcription"):
             return model, None, prompt
         hook_results = invoke_hook(

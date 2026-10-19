@@ -22,7 +22,7 @@ The fix adds:
 def test_gateway_corruption_banner_backups_dir_follows_scout_home(monkeypatch, tmp_path):
     """The gateway broadcast's step 3 must name the live backups dir, not ~/.scout (#104250).
 
-    Pre-update backups live at ``<scout_root>/backups`` (``scout_cli/backup.py``); a
+    Pre-update backups live at ``<scout_root>/backups`` (``scout_backend/backup.py``); a
     custom-SCOUT_HOME gateway must not be told to restore from a directory that never
     held its backups.
     """

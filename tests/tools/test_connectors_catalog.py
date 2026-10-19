@@ -103,7 +103,7 @@ def _approve(env=None):
 
 def test_only_a_setup_profile_session_selects_the_tool(tmp_path, monkeypatch):
     import model_tools
-    from scout_cli.profiles import write_profile_meta
+    from scout_backend.profiles import write_profile_meta
     from scout_constants import reset_scout_home_override, set_scout_home_override
 
     homes = {}
@@ -163,7 +163,7 @@ def test_unknown_and_unsupported_ids_are_drawn_failed_and_never_installed():
 
 
 def test_an_approved_row_installs_into_default_and_lists_the_live_tools(tmp_path):
-    from scout_cli.profiles import get_profile_dir, write_profile_meta
+    from scout_backend.profiles import get_profile_dir, write_profile_meta
     from scout_constants import reset_scout_home_override, set_scout_home_override
 
     setup_home = tmp_path / "scout-setup"
@@ -186,7 +186,7 @@ def test_an_approved_row_installs_into_default_and_lists_the_live_tools(tmp_path
 
 
 def test_advanced_values_pick_the_profile_force_and_pin(tmp_path):
-    from scout_cli.profiles import create_profile
+    from scout_backend.profiles import create_profile
 
     work = create_profile("work", no_alias=True)
     installer = FakeInstaller([_entry("blender")])

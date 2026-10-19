@@ -242,7 +242,7 @@ def provider_fire_due_accepts(provider: Any, name: str) -> bool:
 def _misfire_grace_minutes() -> float:
     """``cron.misfire_grace_minutes`` from config; non-positive disables the catch-up sweep."""
     try:
-        from scout_cli.config import cfg_get, load_config
+        from scout_backend.config import cfg_get, load_config
 
         config = load_config()
         return float(
@@ -351,7 +351,7 @@ def resolve_cron_scheduler() -> "CronScheduler":
     with a warning — cron must never be left without a trigger."""
     name = ""
     try:
-        from scout_cli.config import cfg_get, load_config
+        from scout_backend.config import cfg_get, load_config
         name = (cfg_get(load_config(), "cron", "provider", default="") or "").strip()
     except Exception:
         pass

@@ -72,7 +72,7 @@ def live_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _resolve(provider: str, model: str | None) -> dict:
-    from scout_cli.runtime_provider import resolve_runtime_provider
+    from scout_backend.runtime_provider import resolve_runtime_provider
 
     return resolve_runtime_provider(requested=provider, target_model=model)
 
@@ -82,7 +82,7 @@ def _live_listing(provider: str, runtime: dict) -> list[str]:
     (a silent fallback is exactly what hides a broken listing)."""
     api_key, base_url = runtime.get("api_key") or "", runtime.get("base_url") or ""
     if provider == "openai":
-        from scout_cli.models import fetch_api_models
+        from scout_backend.models import fetch_api_models
 
         return list(fetch_api_models(api_key, base_url, timeout=20.0) or [])
     from providers import get_provider_profile

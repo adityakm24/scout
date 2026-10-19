@@ -14,7 +14,7 @@ from contextvars import ContextVar
 from pathlib import Path
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
-from scout_cli.config import cfg_get
+from scout_backend.config import cfg_get
 from scout_constants import get_scout_dir, get_scout_home
 
 from agent.skill_utils import EXCLUDED_SKILL_DIRS
@@ -129,7 +129,7 @@ def _load_config_files() -> List[Dict[str, str]]:
 
     result: List[Dict[str, str]] = []
     try:
-        from scout_cli.config import read_raw_config
+        from scout_backend.config import read_raw_config
         scout_home = get_scout_home()
         cred_files = cfg_get(read_raw_config(), "terminal", "credential_files")
         for item in cred_files if isinstance(cred_files, list) else []:

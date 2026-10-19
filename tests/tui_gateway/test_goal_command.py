@@ -27,7 +27,7 @@ def scout_home(tmp_path, monkeypatch):
     monkeypatch.setenv("SCOUT_HOME", str(home))
 
     # Bust the goal-module DB cache so it re-resolves SCOUT_HOME.
-    from scout_cli import goals
+    from scout_backend import goals
 
     goals._DB_CACHE.clear()
     yield home
@@ -41,8 +41,8 @@ def server(scout_home, monkeypatch):
     with patch.dict(
         "sys.modules",
         {
-            "scout_cli.env_loader": MagicMock(),
-            "scout_cli.banner": MagicMock(),
+            "scout_backend.env_loader": MagicMock(),
+            "scout_backend.banner": MagicMock(),
         },
     ):
         mod = importlib.import_module("tui_gateway.server")
@@ -222,12 +222,12 @@ def test_successful_goal_turn_accepts_only_valid_completion_outcomes(
 
 def _exhaust_budget(session_key: str, goal_text: str = "finish the benchmark"):
     """Set a 1-turn goal and drive it to budget-exhaustion auto-pause."""
-    from scout_cli.goals import GoalManager
+    from scout_backend.goals import GoalManager
 
     mgr = GoalManager(session_key)
     mgr.set(goal_text, max_turns=1)
     with patch(
-        "scout_cli.goals.judge_goal",
+        "scout_backend.goals.judge_goal",
         return_value=("continue", "needs more steps", False, None, False),
     ):
         decision = mgr.evaluate_after_turn("worked a bit")
@@ -246,7 +246,7 @@ def test_goal_resume_after_budget_exhaustion_dispatches_continuation(
     must return a sendable dispatch carrying the canonical continuation
     prompt, with a concise `/goal resume` transcript projection.
     """
-    from scout_cli.goals import GoalManager
+    from scout_backend.goals import GoalManager
 
     sid, session_key, _ = session
     _exhaust_budget(session_key)
@@ -289,7 +289,7 @@ def test_slash_exec_routes_goal_to_command_dispatch(server, session):
 def test_iteration_limit_fallback_is_judged_and_can_continue(
     server, turn_env, monkeypatch
 ):
-    from scout_cli.goals import GoalManager
+    from scout_backend.goals import GoalManager
 
     session_key = "goal-iteration-limit-fallback"
     mgr = GoalManager(session_key)
@@ -343,7 +343,7 @@ def test_iteration_limit_fallback_is_judged_and_can_continue(
 def test_active_goal_retries_once_without_judging_failed_turn(
     server, turn_env, monkeypatch
 ):
-    from scout_cli.goals import GoalManager
+    from scout_backend.goals import GoalManager
 
     session_key = "goal-compression-retry"
     mgr = GoalManager(session_key)
@@ -383,7 +383,7 @@ def test_active_goal_retries_once_without_judging_failed_turn(
 def test_second_consecutive_exhaustion_pauses_goal_instead_of_looping(
     server, turn_env, monkeypatch
 ):
-    from scout_cli.goals import GoalManager
+    from scout_backend.goals import GoalManager
 
     session_key = "goal-compression-pause"
     GoalManager(session_key).set("finish the current task")
@@ -426,7 +426,7 @@ def test_second_consecutive_exhaustion_pauses_goal_instead_of_looping(
 def test_real_queued_prompt_preempts_goal_compression_retry(
     server, turn_env, monkeypatch
 ):
-    from scout_cli.goals import GoalManager
+    from scout_backend.goals import GoalManager
 
     session_key = "goal-compression-user-preempts"
     mgr = GoalManager(session_key)
@@ -463,7 +463,7 @@ def test_real_queued_prompt_preempts_goal_compression_retry(
 
 
 def test_compression_deferred_is_not_treated_as_exhaustion(server):
-    from scout_cli.goals import GoalManager
+    from scout_backend.goals import GoalManager
 
     session_key = "goal-compression-deferred"
     GoalManager(session_key).set("finish the current task")
@@ -497,7 +497,7 @@ def test_exhaustion_without_active_goal_keeps_error_only_behavior(server):
 
 
 def test_new_goal_does_not_inherit_previous_goal_recovery_attempt(server):
-    from scout_cli.goals import GoalManager
+    from scout_backend.goals import GoalManager
 
     session_key = "goal-compression-replaced"
     mgr = GoalManager(session_key)
@@ -538,7 +538,7 @@ def _write_moa_config(home, text):
 def test_goal_draft_uses_session_profile_without_blocking_rpc_reader(
     server, session, monkeypatch, tmp_path, method,
 ):
-    from scout_cli import goals
+    from scout_backend import goals
     from scout_constants import get_scout_home
     import scout_state
 

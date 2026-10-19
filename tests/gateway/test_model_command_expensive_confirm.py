@@ -42,7 +42,7 @@ def _make_event(text):
 
 
 def _fake_switch_result():
-    from scout_cli.model_switch import ModelSwitchResult
+    from scout_backend.model_switch import ModelSwitchResult
 
     return ModelSwitchResult(
         success=True,
@@ -80,13 +80,13 @@ def _setup_isolated_home(tmp_path, monkeypatch, *, warn):
     monkeypatch.setattr(gateway_run, "_scout_home", scout_home)
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
     monkeypatch.setattr(
-        "scout_cli.model_switch.switch_model",
+        "scout_backend.model_switch.switch_model",
         lambda **kw: _fake_switch_result(),
     )
     monkeypatch.setattr("scout_constants.get_scout_home", lambda: scout_home)
-    monkeypatch.setattr("scout_cli.config.get_scout_home", lambda: scout_home)
+    monkeypatch.setattr("scout_backend.config.get_scout_home", lambda: scout_home)
     monkeypatch.setattr(
-        "scout_cli.model_cost_guard.expensive_model_warning",
+        "scout_backend.model_cost_guard.expensive_model_warning",
         (lambda *a, **kw: _fake_warning()) if warn else (lambda *a, **kw: None),
     )
     return cfg_path

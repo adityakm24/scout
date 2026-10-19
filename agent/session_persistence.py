@@ -152,7 +152,7 @@ def adopt_unanswered_turn(history: List[Dict[str, Any]], query: Any, agent: Any)
     reuse it as this turn's user dict and the flush writes no second row. What differs per lane is only HOW
     the dispatcher knows the DM is unanswered:
 
-    * ``scout_cli.quiet_single_query.adopt_unanswered_turn`` — the delivery lanes' re-run is a fresh CLI
+    * ``scout_backend.quiet_single_query.adopt_unanswered_turn`` — the delivery lanes' re-run is a fresh CLI
       process, told so through ``tools.bot_relay.RESUME_UNANSWERED_TURN_ENV``.
     * ``gateway.platforms.api_server`` — the peer-DM lane re-runs the turn in-process and calls this
       directly on the agent it just built for the re-run (#115325).

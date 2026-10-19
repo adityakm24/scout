@@ -44,8 +44,8 @@ def profile_homes(tmp_path, monkeypatch):
     sec = home / "profiles" / "sec"
     sec.mkdir(parents=True)
     monkeypatch.setenv("SCOUT_HOME", str(home))
-    monkeypatch.setattr("scout_cli.profiles._get_default_scout_home", lambda: home)
-    monkeypatch.setattr("scout_cli.profiles._get_profiles_root", lambda: home / "profiles")
+    monkeypatch.setattr("scout_backend.profiles._get_default_scout_home", lambda: home)
+    monkeypatch.setattr("scout_backend.profiles._get_profiles_root", lambda: home / "profiles")
     (sec / "config.yaml").write_text(
         "gateway:\n  multiplex_profiles: true\nplatforms:\n  slack:\n    enabled: true\n"
         "    home_channel:\n      platform: slack\n      chat_id: SEC-HOME\n")

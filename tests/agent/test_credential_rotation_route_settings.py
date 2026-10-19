@@ -42,7 +42,7 @@ def test_credential_rotation_replaces_route_scoped_tls_settings():
         ]
     }
 
-    with patch("scout_cli.config.load_config_readonly", return_value=config):
+    with patch("scout_backend.config.load_config_readonly", return_value=config):
         AIAgent._swap_credential(agent, entry)
 
     assert agent._client_kwargs["ssl_verify"] is True
@@ -98,9 +98,9 @@ def test_credential_rotation_does_not_carry_global_headers_across_routes():
     }
 
     with (
-        patch("scout_cli.config.load_config_readonly", return_value=config),
+        patch("scout_backend.config.load_config_readonly", return_value=config),
         patch(
-            "scout_cli.config.get_compatible_custom_providers",
+            "scout_backend.config.get_compatible_custom_providers",
             return_value=config["custom_providers"],
         ),
     ):

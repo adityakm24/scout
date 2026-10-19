@@ -6,8 +6,8 @@ from prompt_toolkit.document import Document
 
 def test_full_descriptions_survive_catalog_and_completion(monkeypatch):
     from agent import skill_commands
-    from scout_cli import plugins
-    from scout_cli.commands_completion import SlashCommandCompleter
+    from scout_backend import plugins
+    from scout_backend.commands_completion import SlashCommandCompleter
     from tui_gateway import server
 
     description = "Read the entire description before selecting a command. " * 8

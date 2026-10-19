@@ -59,7 +59,7 @@ def _activate(agent, resolved_base_url, resolved_model, build_anthropic=None):
             ),
         ),
         patch(
-            "scout_cli.model_normalize.normalize_model_for_provider",
+            "scout_backend.model_normalize.normalize_model_for_provider",
             side_effect=lambda m, p: m,
         ),
         patch(
@@ -182,7 +182,7 @@ class TestNamedProviderDeclaredWire:
         fbs = [{"provider": "custom:ai-proxy", "model": "claude-4.7-opus"}]
         agent = _make_agent(fallback_model=fbs)
         with patch(
-            "scout_cli.runtime_provider._get_named_custom_provider",
+            "scout_backend.runtime_provider._get_named_custom_provider",
             return_value={"name": "ai-proxy", "base_url": "https://ai-proxy.example.com",
                           "api_key": "k", "api_mode": "anthropic_messages"},
         ):

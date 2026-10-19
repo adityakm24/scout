@@ -31,7 +31,7 @@ def _providers(with_header: bool):
     entry = {"name": "litellm-lan", "provider_key": "litellm-lan", "base_url": _BASE}
     if with_header:
         entry["session_affinity_header"] = _HEADER
-    return patch("scout_cli.config.get_compatible_custom_providers", return_value=[entry])
+    return patch("scout_backend.config.get_compatible_custom_providers", return_value=[entry])
 
 
 def _aux_headers(session_id):

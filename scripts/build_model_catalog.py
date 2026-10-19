@@ -13,7 +13,7 @@ Usage::
 
     python scripts/build_model_catalog.py
 
-Output: ``scout_cli/data/model-catalog.json`` (ships with Scout; scout_cli/model_catalog.py reads it)
+Output: ``scout_backend/data/model-catalog.json`` (ships with Scout; scout_backend/model_catalog.py reads it)
 """
 
 from __future__ import annotations
@@ -29,12 +29,12 @@ sys.path.insert(0, REPO_ROOT)
 # Ensure SCOUT_HOME is set for imports that touch it at module level.
 os.environ.setdefault("SCOUT_HOME", os.path.join(os.path.expanduser("~"), ".scout"))
 
-from scout_cli.models import (  # noqa: E402
+from scout_backend.models import (  # noqa: E402
     OPENROUTER_MODELS,
     PREFERRED_SILENT_DEFAULT_MODEL,
 )
 
-OUTPUT_PATH = os.path.join(REPO_ROOT, "scout_cli", "data", "model-catalog.json")
+OUTPUT_PATH = os.path.join(REPO_ROOT, "scout_backend", "data", "model-catalog.json")
 CATALOG_VERSION = 1
 
 

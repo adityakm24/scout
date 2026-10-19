@@ -200,7 +200,7 @@ bin_dir="$HOME/.local/bin"
 if [ "$os" = win32 ]; then
     bin_dir="$(cygpath -am "${SCOUT_HOME:-${LOCALAPPDATA:-$HOME/AppData/Local}/scout}/bin")"
 fi
-if ! "$boot_py" -I -X utf8 scout_cli/_launchers.py "$bin_dir"; then
+if ! "$boot_py" -I -X utf8 scout_backend/_launchers.py "$bin_dir"; then
     echo -e "${RED}✗${NC} launcher publication failed" >&2
     exit 1
 fi

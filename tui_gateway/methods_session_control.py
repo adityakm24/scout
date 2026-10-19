@@ -186,25 +186,25 @@ def _snapshot_updated_at(goal_state, loop_state, heartbeat_state):
 
 
 def _load_goal_state(session_key):
-    from scout_cli.goals import load_goal
+    from scout_backend.goals import load_goal
 
     return load_goal(session_key)
 
 
 def _load_loop_state(session_key):
-    from scout_cli.loops import load_loop
+    from scout_backend.loops import load_loop
 
     return load_loop(session_key)
 
 
 def _load_heartbeat_state(session_key):
-    from scout_cli.heartbeat import load_heartbeat
+    from scout_backend.heartbeat import load_heartbeat
 
     return load_heartbeat(session_key)
 
 
 def _goal_blocks_loop_tick(session_key: str) -> bool:
-    from scout_cli.loops import goal_blocks_loop_tick
+    from scout_backend.loops import goal_blocks_loop_tick
 
     return goal_blocks_loop_tick(session_key)
 
@@ -341,7 +341,7 @@ def _execute_manager_action(session_key: str, action: str, args: dict) -> dict:
 
 
 def _execute_subgoal_action(session_key: str, action: str, args: dict) -> dict:
-    from scout_cli.goals import GoalManager
+    from scout_backend.goals import GoalManager
 
     manager = GoalManager(session_id=session_key)
     if action == "subgoal.add":
@@ -357,7 +357,7 @@ def _execute_subgoal_action(session_key: str, action: str, args: dict) -> dict:
 
 
 def _execute_heartbeat_action(session_key: str, action: str) -> dict:
-    from scout_cli.heartbeat import HeartbeatManager, format_interval
+    from scout_backend.heartbeat import HeartbeatManager, format_interval
 
     manager = HeartbeatManager(session_id=session_key)
     if action == "heartbeat.pause":

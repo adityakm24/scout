@@ -77,14 +77,14 @@ _ALLOWED: dict[tuple[str, str], str] = {
         "can only run what is on that subshell's PATH, which local.py populates "
         "with the managed dirs — so PATH is the correct question to ask here."
     ),
-    ("scout_cli/source_build.py", "node"): (
+    ("scout_backend/source_build.py", "node"): (
         "PM-composed build context: `which(node)` runs against the PATH pm's "
         "ensure('npm')/env_for('node') just composed, not the ambient one."
     ),
-    ("scout_cli/source_build.py", "npm"): (
+    ("scout_backend/source_build.py", "npm"): (
         "Same PM-composed build context as the node lookup above."
     ),
-    ("scout_cli/main_desktop.py", "npm"): (
+    ("scout_backend/main_desktop.py", "npm"): (
         "Desktop build resolves npm inside the PM-prepared build_env PATH."
     ),
     ("pm/workspace.py", "npm"): (
@@ -315,7 +315,7 @@ def test_managed_uv_helpers_exist():
     exists only so the frozen historical updater fixture can import it, and
     its entry points route to relaunch instead of doing venv work. PM owns
     real uv resolution now; the module itself must keep the names live."""
-    from scout_cli import managed_uv
+    from scout_backend import managed_uv
 
     assert callable(managed_uv.resolve_uv)
     assert callable(managed_uv.ensure_uv)

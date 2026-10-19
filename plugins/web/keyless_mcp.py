@@ -99,7 +99,7 @@ def _web_config_selects(name: str) -> bool:
 def provider_tier(name: str) -> str:
     """``web.provider_tier.<name>`` (``scout tools`` Free/Paid rows): ``free``, ``paid``, or ``auto`` (anything else/unset)."""
     try:
-        from scout_cli.config import load_config
+        from scout_backend.config import load_config
         tiers = (load_config().get("web") or {}).get("provider_tier") or {}
         value = str(tiers.get(name, "") or "").lower().strip()
         return value if value in ("free", "paid") else "auto"

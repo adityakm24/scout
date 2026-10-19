@@ -25,7 +25,7 @@ from agent.gemini_schema import prepare_gemini_tool_parameters, sanitize_gemini_
 
 logger = logging.getLogger(__name__)
 
-from scout_cli.version_info import get_version_info
+from scout_backend.version_info import get_version_info
 
 _API_CLIENT = f"scout-agent/{get_version_info().base_version}"  # client context per Gemini's partner-integration guidance
 

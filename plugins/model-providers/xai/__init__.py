@@ -1,6 +1,6 @@
 """xAI (Grok) provider profile."""
 
-from scout_cli.version_info import get_version_info
+from scout_backend.version_info import get_version_info
 from providers import register_provider
 from providers.base import ProviderProfile
 

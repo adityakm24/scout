@@ -188,7 +188,7 @@ stdenv.mkDerivation {
     install -m 0644 ${generatedIcons}/apps/desktop/assets/icon.png \
       $out/share/icons/hicolor/1024x1024/apps/scout.png
     export PYTHONPATH=$(mktemp -d)
-    cp ${../scout_cli/linux_desktop_entry.py} "$PYTHONPATH/linux_desktop_entry.py"
+    cp ${../scout_backend/linux_desktop_entry.py} "$PYTHONPATH/linux_desktop_entry.py"
     export DESKTOP_EXEC="$out/bin/scout-desktop"
     export DESKTOP_ICON="$out/share/icons/hicolor/1024x1024/apps/scout.png"
     entry_name=$(python3 -c 'from linux_desktop_entry import DESKTOP_ENTRY_NAME; print(DESKTOP_ENTRY_NAME)')

@@ -1,12 +1,12 @@
-# web/ + scout_cli/web_routers/ — the dashboard (`scout dashboard` → `/chat`)
+# web/ + scout_backend/web_routers/ — the dashboard (`scout dashboard` → `/chat`)
 
-Applies on top of the root `AGENTS.md`. Backend routers: `scout_cli/web_routers/*.py`, one file per
-dashboard surface, mounted by `scout_cli/web_server.py` (+ `web_server_*.py` siblings). Frontend:
+Applies on top of the root `AGENTS.md`. Backend routers: `scout_backend/web_routers/*.py`, one file per
+dashboard surface, mounted by `scout_backend/web_server.py` (+ `web_server_*.py` siblings). Frontend:
 `web/src/`. Shared JSON-RPC/WS client: `apps/shared` (`@scout/shared`), also used by the desktop.
 
 ## The dashboard embeds the REAL `scout --tui` — not a rewrite
 
-`scout_cli/pty_bridge.py` + the `@app.websocket("/api/pty")` endpoint in `web_server.py`:
+`scout_backend/pty_bridge.py` + the `@app.websocket("/api/pty")` endpoint in `web_server.py`:
 
 - `web/src/pages/ChatPage.tsx` mounts xterm.js `Terminal` with the WebGL renderer, `@xterm/addon-fit`
   (container-driven resize) and `@xterm/addon-unicode11` (wide-character widths).
@@ -40,6 +40,6 @@ desktop has no build/runtime dependency on this frontend. Details: `apps/desktop
 - Auth: every new REST route and WS endpoint uses the same session token; never a second scheme.
 - Routers are one-file-per-surface; a new surface is a new `web_routers/<surface>.py`, not a growing
   `web_server.py`.
-- Tests: Python in `tests/scout_cli/` (routers, pty bridge); JS in the `web/` vitest suite. Python
+- Tests: Python in `tests/scout_backend/` (routers, pty bridge); JS in the `web/` vitest suite. Python
   tests must not assert about `package.json` / `.tsx` sources (root testing rules). Root TypeScript
   style rules apply.

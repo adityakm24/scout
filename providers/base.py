@@ -32,7 +32,7 @@ def _profile_user_agent() -> str:
     (OpenCode Zen, etc.) sit behind a WAF that returns 403 for that.
     """
     try:
-        from scout_cli.version_info import get_version_info  # lazy: avoid layer cycle at import time
+        from scout_backend.version_info import get_version_info  # lazy: avoid layer cycle at import time
         return f"scout-cli/{get_version_info().base_version}"
     except Exception:
         return "scout-cli"
@@ -104,7 +104,7 @@ class ProviderProfile:
 
     # ── External-process providers (auth_type="external_process") ──
     # An agent CLI driven over stdio (ACP) rather than an HTTP endpoint. These
-    # describe how to launch it; scout_cli/auth.py's
+    # describe how to launch it; scout_backend/auth.py's
     # resolve_external_process_provider_credentials() reads them instead of
     # hardcoding one vendor's binary. Env vars are checked in order and win
     # over the static defaults, so an operator can point at a custom build.
@@ -392,7 +392,7 @@ class ProviderProfile:
         import json
         import urllib.request
 
-        from scout_cli.urllib_security import open_credentialed_url
+        from scout_backend.urllib_security import open_credentialed_url
 
         req = urllib.request.Request(url)
         if api_key:
@@ -409,7 +409,7 @@ class ProviderProfile:
             with open_credentialed_url(req, timeout=timeout) as resp:
                 data = json.loads(resp.read().decode())
             items = data if isinstance(data, list) else data.get("data", [])
-            from scout_cli.chat_catalog import chat_catalog_ids
+            from scout_backend.chat_catalog import chat_catalog_ids
 
             return chat_catalog_ids(items)
         except Exception as exc:

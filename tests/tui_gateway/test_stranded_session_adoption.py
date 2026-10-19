@@ -159,8 +159,8 @@ def gateway(tmp_path, monkeypatch):
     with patch.dict(
         "sys.modules",
         {
-            "scout_cli.env_loader": MagicMock(),
-            "scout_cli.banner": MagicMock(),
+            "scout_backend.env_loader": MagicMock(),
+            "scout_backend.banner": MagicMock(),
         },
     ):
         mod = importlib.import_module("tui_gateway.server")
@@ -173,9 +173,9 @@ def gateway(tmp_path, monkeypatch):
     profile_home = home / "profiles" / "developer"
     profile_home.mkdir(parents=True)
 
-    # session.resume resolves the profile via scout_cli.profiles
+    # session.resume resolves the profile via scout_backend.profiles
     monkeypatch.setattr(
-        "scout_cli.profiles.get_profile_dir", lambda name: str(profile_home)
+        "scout_backend.profiles.get_profile_dir", lambda name: str(profile_home)
     )
 
     yield mod, default_db, profile_home

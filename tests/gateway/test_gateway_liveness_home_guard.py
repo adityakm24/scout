@@ -29,12 +29,12 @@ def fake_root(tmp_path, monkeypatch):
 def _live_record(scout_home):
     return {
         "pid": _LIVE_PID, "kind": "scout-gateway", "gateway_state": "running", "start_time": 1000,
-        "argv": ["python", "-m", "scout_cli.main", "-p", "eagle", "gateway", "run"],
+        "argv": ["python", "-m", "scout_backend.main", "-p", "eagle", "gateway", "run"],
         "scout_home": str(scout_home),
     }
 
 
-def _alive(monkeypatch, cmdline="python -m scout_cli.main -p eagle gateway run"):
+def _alive(monkeypatch, cmdline="python -m scout_backend.main -p eagle gateway run"):
     monkeypatch.setattr(status, "_pid_exists", lambda pid: pid == _LIVE_PID)
     monkeypatch.setattr(status, "_get_process_start_time", lambda pid: 1000)
     monkeypatch.setattr(status, "_read_process_cmdline", lambda pid: cmdline)

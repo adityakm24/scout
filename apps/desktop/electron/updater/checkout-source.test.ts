@@ -104,7 +104,7 @@ function canonicalJson(value: FixtureManifest): string {
   return JSON.stringify(value)
 }
 
-/** R2 channel record per scout_cli.release_channels.validate_record. */
+/** R2 channel record per scout_backend.release_channels.validate_record. */
 function channelRecord(channel: 'stable' | 'canary', sequence: number): FixtureRecord {
   return {
     schema: 1,
@@ -133,7 +133,7 @@ function channelRecord(channel: 'stable' | 'canary', sequence: number): FixtureR
   }
 }
 
-/** Build manifest per scout_cli.release_channels.validate_manifest. */
+/** Build manifest per scout_backend.release_channels.validate_manifest. */
 function buildManifest(
   channel: 'stable' | 'canary',
   sha: string,
@@ -292,7 +292,7 @@ it('carries each install channel from Python publication checks into the source 
     })
     const address: AddressInfo = server.address() as AddressInfo
     // Redirect only network transport. Selection, config, tag validation and Git are real.
-    fs.cpSync(path.join(repository, 'scout_cli'), path.join(root, 'scout_cli'), { recursive: true })
+    fs.cpSync(path.join(repository, 'scout_backend'), path.join(root, 'scout_backend'), { recursive: true })
     fs.writeFileSync(
       path.join(root, 'transport.py'),
       `import sys, os
@@ -320,8 +320,8 @@ def local_build(*args, **kwargs):
     return opener
 urllib.request.build_opener = local_build
 # Model a published release host: the real channel reader against the placeholder origin above.
-from scout_cli import source_releases
-from scout_cli.release_channels import ChannelReader
+from scout_backend import source_releases
+from scout_backend.release_channels import ChannelReader
 source_releases._resolve_channel = (
     lambda name, repository: ChannelReader('https://cdn.example.com', repository=repository).resolve(name))
 `
@@ -346,7 +346,7 @@ source_releases._resolve_channel = (
         python,
         [
           '-c',
-          'import sys; from pathlib import Path; from scout_cli.update_channel import set_install_channel; set_install_channel(sys.argv[1], Path(sys.argv[2]))',
+          'import sys; from pathlib import Path; from scout_backend.update_channel import set_install_channel; set_install_channel(sys.argv[1], Path(sys.argv[2]))',
           channel,
           install
         ],
@@ -354,7 +354,7 @@ source_releases._resolve_channel = (
       )
     }
 
-    const checkerPath: string = path.join(root, 'scout_cli', 'source_check.py')
+    const checkerPath: string = path.join(root, 'scout_backend', 'source_check.py')
     fs.writeFileSync(
       checkerPath,
       fs

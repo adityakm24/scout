@@ -8,7 +8,7 @@ from gateway.config import Platform
 from gateway.platforms.event import MessageEvent, MessageType
 from gateway.run import GatewayRunner
 from gateway.session import SessionSource
-from scout_cli.goals import CONTINUATION_PROMPT_TEMPLATE
+from scout_backend.goals import CONTINUATION_PROMPT_TEMPLATE
 
 
 class FakeAdapter:

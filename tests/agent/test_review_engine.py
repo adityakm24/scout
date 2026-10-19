@@ -106,7 +106,7 @@ def test_build_review_task_includes_excerpt_and_prompt():
 
 def test_load_review_credentials_cfg_reads_config(monkeypatch):
     monkeypatch.setattr(
-        "scout_cli.config.load_config_readonly",
+        "scout_backend.config.load_config_readonly",
         lambda: {"auxiliary": {"review": {
             "provider": "openrouter",
             "model": "anthropic/claude-opus-4.6",
@@ -123,14 +123,14 @@ def test_load_review_credentials_cfg_reads_config(monkeypatch):
 
 def test_load_review_credentials_cfg_auto_means_inherit(monkeypatch):
     monkeypatch.setattr(
-        "scout_cli.config.load_config_readonly",
+        "scout_backend.config.load_config_readonly",
         lambda: {"auxiliary": {"review": {"provider": "auto", "model": ""}}},
     )
     assert re_mod._load_review_credentials_cfg() is None
 
 def test_load_review_credentials_cfg_missing_section(monkeypatch):
     monkeypatch.setattr(
-        "scout_cli.config.load_config_readonly", lambda: {"auxiliary": {}}
+        "scout_backend.config.load_config_readonly", lambda: {"auxiliary": {}}
     )
     assert re_mod._load_review_credentials_cfg() is None
 
@@ -388,9 +388,9 @@ def test_review_registered_in_every_aux_surface():
     allowlist (_AUX_TASK_SLOTS). The desktop and web AUX_TASKS tsx arrays
     mirror _AUX_TASK_SLOTS by convention (shared "Must match" comments).
     """
-    from scout_cli.config import DEFAULT_CONFIG
-    from scout_cli.main_provider_setup import _AUX_TASKS
-    from scout_cli.web_server_config import _AUX_TASK_SLOTS
+    from scout_backend.config import DEFAULT_CONFIG
+    from scout_backend.main_provider_setup import _AUX_TASKS
+    from scout_backend.web_server_config import _AUX_TASK_SLOTS
 
     assert "review" in DEFAULT_CONFIG["auxiliary"], \
         "review missing from DEFAULT_CONFIG['auxiliary']"

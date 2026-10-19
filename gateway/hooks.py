@@ -18,7 +18,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import scout_yaml as yaml
 
-from scout_cli.config import get_scout_home
+from scout_backend.config import get_scout_home
 from scout_constants import scout_home_key
 
 

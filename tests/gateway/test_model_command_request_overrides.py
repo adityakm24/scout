@@ -41,7 +41,7 @@ async def test_handle_model_command_stores_request_overrides_for_named_custom_pr
     monkeypatch,
 ):
     import gateway.run as gateway_run
-    from scout_cli.model_switch import ModelSwitchResult
+    from scout_backend.model_switch import ModelSwitchResult
 
     scout_home = tmp_path / ".scout"
     scout_home.mkdir()
@@ -65,10 +65,10 @@ custom_providers:
     monkeypatch.setattr(gateway_run, "_scout_home", scout_home)
     # resolve_persist_behavior() reads the profile config through get_scout_home(); without this
     # the sandbox home looks like a fresh install and the --provider switch persists globally.
-    monkeypatch.setattr("scout_cli.config.get_scout_home", lambda: scout_home)
+    monkeypatch.setattr("scout_backend.config.get_scout_home", lambda: scout_home)
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
     monkeypatch.setattr(
-        "scout_cli.model_switch.switch_model",
+        "scout_backend.model_switch.switch_model",
         lambda **kw: ModelSwitchResult(
             success=True,
             new_model="rotator-openrouter-coding",

@@ -145,7 +145,7 @@ class TestGoalMigratesOnRotation:
         # Set a persistent goal on the parent via the real persistence path.
         with patch.dict(os.environ, {"SCOUT_HOME": str(tmp_path / ".scout")}):
             (tmp_path / ".scout").mkdir(exist_ok=True)
-            import scout_cli.goals as goals
+            import scout_backend.goals as goals
             goals._DB_CACHE.clear()
             # Point the goal DB at the same state.db the agent uses.
             with patch.object(goals, "_get_session_db", return_value=db):

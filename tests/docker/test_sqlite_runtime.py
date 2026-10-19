@@ -10,7 +10,7 @@ _SQLITE_PROBE = r"""
 import json
 import sqlite3
 
-from scout_cli.sqlite_runtime import is_sqlite_wal_reset_vulnerable
+from scout_backend.sqlite_runtime import is_sqlite_wal_reset_vulnerable
 
 db = sqlite3.connect(":memory:")
 try:

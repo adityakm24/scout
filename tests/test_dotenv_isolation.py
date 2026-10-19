@@ -9,7 +9,7 @@ CHECKOUT_ENV = Path(__file__).resolve().parents[1] / ".env"
 
 
 def test_the_checkout_env_is_not_loaded_even_when_present(monkeypatch, tmp_path):
-    from scout_cli import env_loader
+    from scout_backend import env_loader
 
     loaded = []
     monkeypatch.setattr(env_loader, "_load_dotenv_with_fallback", lambda path, **_: loaded.append(Path(path)))

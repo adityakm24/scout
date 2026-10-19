@@ -131,7 +131,7 @@ def _homes_and_resolved(path: str) -> tuple[set[str], str]:
 #   * ``\\\\?\\GLOBALROOT...`` — re-entry into the NT namespace.
 #
 # Plain drive-letter extended-length paths (``\\\\?\\C:\\...``) stay ALLOWED:
-# they are a routine local form (see scout_cli/windows_ssh_runtime.py) and
+# they are a routine local form (see scout_backend/windows_ssh_runtime.py) and
 # carry no remote-auth trigger. Plain UNC shares (``\\\\server\\share``) are
 # also unchanged here — blocking ordinary UNC reads is a policy question,
 # not part of this namespace-bypass guard.
@@ -344,7 +344,7 @@ _CREDENTIAL_FILE_NAMES = (
     "auth.json", "auth.lock", ".anthropic_oauth.json", ".env", "webhook_subscriptions.json",
     os.path.join("auth", "google_oauth.json"), os.path.join("cache", "bws_cache.json"),
 ) + (_SKILL_SERVICE_TOKEN_NAMES := (
-    # Google Workspace sign-in (scout_cli/google_workspace_auth.py): refresh token and OAuth client.
+    # Google Workspace sign-in (scout_backend/google_workspace_auth.py): refresh token and OAuth client.
     # Read-denied like the rest, but a skill's own service token, so its declared
     # required_credential_files may still mount it (tools/credential_files.py).
     "google_token.json", "google_client_secret.json",

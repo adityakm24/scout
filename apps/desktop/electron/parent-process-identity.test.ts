@@ -62,7 +62,7 @@ test('parentWatchdogEnv emits an exact identity when the marker is available', (
     SCOUT_PARENT_NONCE: 'nonce-1',
     SCOUT_PARENT_PID: '42',
     SCOUT_PARENT_START_MARKER: 'winms:1723456789123',
-    // Spawn tag mirrored by scout_cli/process_identity.py — spawner create
+    // Spawn tag mirrored by scout_backend/process_identity.py — spawner create
     // time in seconds derived from the same winms marker.
     SCOUT_SPAWN: 'v1:-:serve:42:1723456789.123'
   })

@@ -7,9 +7,9 @@ only stdlib + ruamel.yaml so the admission CI (and third-party repos) can run it
 WITHOUT installing scout-agent.
 
 NOTE: this script intentionally duplicates the schema rules instead of
-importing ``scout_cli`` — the whole point is the no-install requirement for
+importing ``scout_backend`` — the whole point is the no-install requirement for
 cheap cross-repo CI use. The runtime twin of this schema lives in
-``scout_cli/plugin_catalog.py``; if the contract changes there, update the
+``scout_backend/plugin_catalog.py``; if the contract changes there, update the
 rules here in lockstep.
 
 Usage:

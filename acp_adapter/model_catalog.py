@@ -25,12 +25,12 @@ def _named_custom_provider_catalogs() -> list[tuple[str, str, list[tuple[str, st
     discovery (some endpoints have no ``/models`` route). Slugs use the ``custom:<name>`` shape
     ``parse_model_input``/``resolve_runtime_provider`` resolve, so choice ids round-trip."""
     try:
-        from scout_cli.config import (get_compatible_custom_providers, is_provider_enabled, load_config)
-        from scout_cli.model_switch import _declared_model_ids, _entry_models_discovered, _models_config_is_allowlist
-        from scout_cli.model_switch_providers import _NativePickerModelList, _fetch_picker_live_models
-        from scout_cli.model_switch_providers import _discover_flag
-        from scout_cli.models_local import should_use_ollama_native_catalog
-        from scout_cli.providers import custom_provider_slug
+        from scout_backend.config import (get_compatible_custom_providers, is_provider_enabled, load_config)
+        from scout_backend.model_switch import _declared_model_ids, _entry_models_discovered, _models_config_is_allowlist
+        from scout_backend.model_switch_providers import _NativePickerModelList, _fetch_picker_live_models
+        from scout_backend.model_switch_providers import _discover_flag
+        from scout_backend.models_local import should_use_ollama_native_catalog
+        from scout_backend.providers import custom_provider_slug
     except ImportError:
         return []
 
@@ -131,7 +131,7 @@ def _choice_provider(model_id: str) -> str:
     """Provider prefix of an encoded choice id; longest configured ``custom:`` slug wins."""
     parts = model_id.split(":")
     if parts[:1] == ["custom"] and len(parts) > 1:
-        from scout_cli.models import _configured_custom_provider_ids
+        from scout_backend.models import _configured_custom_provider_ids
 
         lowered = model_id.lower()
         for candidate in sorted(
@@ -238,8 +238,8 @@ class _ModelCatalog:
 def build_model_state(model: str, provider: str, base_url: str) -> SessionModelState | None:
     """Picker state from the shared inventory + named endpoints; ``None`` when nothing is listable
     (caller falls back to a single current-model row). Raises on inventory failure."""
-    from scout_cli.inventory import build_models_payload, load_picker_context
-    from scout_cli.models import normalize_provider, provider_label
+    from scout_backend.inventory import build_models_payload, load_picker_context
+    from scout_backend.models import normalize_provider, provider_label
 
     normalized_provider = normalize_provider(provider)
     context = load_picker_context().with_overrides(

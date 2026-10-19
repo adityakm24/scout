@@ -1,6 +1,6 @@
 """Credential-pool disk-boundary sanitization: strip raw secrets from *borrowed*
 pool entries before they reach ``auth.json``. Deliberately free of
-``scout_cli.auth`` imports so the pool model and the auth-store write boundary
+``scout_backend.auth`` imports so the pool model and the auth-store write boundary
 share one policy without import cycles."""
 
 from __future__ import annotations

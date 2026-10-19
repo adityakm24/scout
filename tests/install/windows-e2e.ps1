@@ -1684,7 +1684,7 @@ function Invoke-PhaseVerifyStamp {
     # (epoch seconds) instead of "completedAt", and a null pinnedCommit when git
     # is not on PATH. #125053 fixed the writer, but the installer .exe is not
     # rebuilt, so every Desktop-installer machine carries this receipt until the
-    # next `scout update` rewrites it (scout_cli/source_stamp.py). No reader
+    # next `scout update` rewrites it (scout_backend/source_stamp.py). No reader
     # depends on those two fields: Desktop's launch gate is runtime usability,
     # and the receipt's other readers check only that it exists. So the contract
     # for that shape is: exactly those two FAIL lines, an integer

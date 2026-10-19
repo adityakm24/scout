@@ -63,7 +63,7 @@ def scout_home(tmp_path, monkeypatch):
         json.dumps({"version": 1, "providers": {}}), encoding="utf-8"
     )
     monkeypatch.setattr(
-        "scout_cli.auth.is_provider_explicitly_configured", lambda pid: True
+        "scout_backend.auth.is_provider_explicitly_configured", lambda pid: True
     )
     return home
 

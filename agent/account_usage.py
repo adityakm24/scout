@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any, Callable, Optional
 import httpx
 
 from agent.anthropic_credentials import _is_oauth_token, resolve_anthropic_token
-from scout_cli.auth import AuthError, _read_codex_tokens, resolve_codex_runtime_credentials
-from scout_cli.auth_codex import _codex_pool_route_base_url
-from scout_cli.runtime_provider import resolve_runtime_provider
+from scout_backend.auth import AuthError, _read_codex_tokens, resolve_codex_runtime_credentials
+from scout_backend.auth_codex import _codex_pool_route_base_url
+from scout_backend.runtime_provider import resolve_runtime_provider
 from scout_time import safe_strftime
 
 if TYPE_CHECKING:
@@ -332,7 +332,7 @@ def _codex_reset_outcome(body: dict, available: int) -> CodexResetRedeemResult:
         # Quota is restored upstream — lift persisted pool cooldowns so the credential isn't frozen behind a
         # stale ``last_error_reset_at``.
         try:
-            from scout_cli.auth import clear_codex_pool_quota_cooldowns
+            from scout_backend.auth import clear_codex_pool_quota_cooldowns
             clear_codex_pool_quota_cooldowns()
         except Exception:
             logger.debug("Failed to clear Codex pool cooldowns after reset redemption", exc_info=True)

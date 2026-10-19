@@ -18,9 +18,9 @@ _boot_fingerprint: str | None = None
 
 def _fingerprint() -> str | None:
     """Current checkout fingerprint via the CLI's worktree-aware git-rev reader
-    (``scout_cli.main`` is always already imported in a gateway process)."""
+    (``scout_backend.main`` is always already imported in a gateway process)."""
     try:
-        from scout_cli.main import _read_git_revision_fingerprint
+        from scout_backend.main import _read_git_revision_fingerprint
 
         return _read_git_revision_fingerprint(_PROJECT_ROOT)
     except Exception:

@@ -17,7 +17,7 @@ import pytest
 
 import scout_constants
 from agent.secret_scope import _is_process_home, serves_routed_profile
-from scout_cli.env_loader import _process_scout_home
+from scout_backend.env_loader import _process_scout_home
 from tools.environments.local import _is_routed_home
 from tools.mcp_tool_scope import _server_key
 

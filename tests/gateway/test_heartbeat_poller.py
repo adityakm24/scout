@@ -11,7 +11,7 @@ from gateway.platforms.event import MessageEvent
 from gateway.response_filters import INTERNAL_NOTIFICATION_DISPLAY_KIND, display_kind_for_event
 from gateway.run import GatewayRunner
 from gateway.session import SessionSource, build_session_key
-from scout_cli.heartbeat import HeartbeatManager
+from scout_backend.heartbeat import HeartbeatManager
 
 
 class _HeartbeatAdapter(BasePlatformAdapter):
@@ -32,7 +32,7 @@ class _HeartbeatAdapter(BasePlatformAdapter):
 
 @pytest.fixture
 def poller(monkeypatch):
-    from scout_cli import goals, heartbeat
+    from scout_backend import goals, heartbeat
 
     goals._DB_CACHE.clear()
     goals._get_session_db()

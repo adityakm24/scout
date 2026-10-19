@@ -11,8 +11,8 @@ def test_review_unknown_argument_rejects_before_handoff(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, 'home', lambda: tmp_path)
     for key in ('SCOUT_KANBAN_TASK', 'SCOUT_KANBAN_DB', 'SCOUT_KANBAN_BOARD', 'SCOUT_KANBAN_RUN_ID'):
         monkeypatch.delenv(key, raising=False)
-    from scout_cli import kanban_db as kb
-    from scout_cli import kanban_db_connect as kbc
+    from scout_backend import kanban_db as kb
+    from scout_backend import kanban_db_connect as kbc
     from tools import kanban_tools  # register actual handlers
     from tools.registry import registry
     kb._INITIALIZED_PATHS.clear()

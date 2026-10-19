@@ -7,14 +7,14 @@ a real config.yaml) and the guard path loaded config 2-3x per command.
 Every swapped call site was audited read-only (all callers take scalar
 reads or iterate; none mutate the returned dict or any nested structure),
 so they now use load_config_readonly() — the API built for exactly this
-(scout_cli/config.py docstring; precedent: #74211, #74322).
+(scout_backend/config.py docstring; precedent: #74211, #74322).
 
 These tests drive the REAL functions against a temp SCOUT_HOME config
 (AGENTS.md: E2E with real imports), not mocks of the seam under test.
 """
 import pytest
 
-import scout_cli.config as hc
+import scout_backend.config as hc
 from tools.approval import check_all_command_guards, load_permanent_allowlist
 from tools.approval_context import _get_approval_config
 from tools.approval_context import _get_cron_approval_mode

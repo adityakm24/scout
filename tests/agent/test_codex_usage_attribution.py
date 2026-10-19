@@ -12,7 +12,7 @@ import httpx
 import pytest
 import scout_yaml as yaml
 
-from scout_cli.version_info import get_version_info
+from scout_backend.version_info import get_version_info
 from scout_constants import reset_scout_home_override, set_scout_home_override
 
 

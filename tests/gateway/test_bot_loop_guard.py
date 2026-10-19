@@ -244,7 +244,7 @@ def test_concurrent_admits_respect_the_budget(clock):
 
 
 def test_load_settings_reads_config_yaml(monkeypatch):
-    import scout_cli.config as scout_config
+    import scout_backend.config as scout_config
 
     monkeypatch.setattr(scout_config, "load_config_readonly", lambda: {"gateway": {"bot_loop_guard": {"max_events": 3}}})
     assert load_settings().max_events == 3

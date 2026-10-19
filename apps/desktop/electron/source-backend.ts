@@ -28,7 +28,7 @@ export async function resolveSourceInstallationBackend(
   args: string[],
   options: SourceOptions & { scoutHome?: string } = {}
 ): Promise<SourceBackend | null> {
-  if (!existsSync(path.join(root, 'scout_cli', 'main.py'))) {
+  if (!existsSync(path.join(root, 'scout_backend', 'main.py'))) {
     return null
   }
 
@@ -95,7 +95,7 @@ export function createSourcePythonBackend(
     kind: 'python',
     label: `Scout source at ${root}`,
     command,
-    args: ['-m', 'scout_cli.main', ...args],
+    args: ['-m', 'scout_backend.main', ...args],
     // The backend runs in the user's workspace cwd, and the selected
     // interpreter need not have this checkout installed: name it explicitly.
     // (The scrubbed inherited value could point at another checkout.)

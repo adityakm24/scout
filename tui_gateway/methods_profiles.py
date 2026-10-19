@@ -1,5 +1,5 @@
 """Profile JSON-RPC handlers — the ws twin of the dashboard's /api/profiles (desktop plugins
-only have the ws door), on the same `scout_cli.profiles` primitives. Bodies are rebound onto
+only have the ws door), on the same `scout_backend.profiles` primitives. Bodies are rebound onto
 server.py's globals (method_ctx.bind_module) and use them bare; module-level names are published
 onto server.py, so they must not collide with its globals.
 """
@@ -37,7 +37,7 @@ def _lazy(module, name):
 
 
 def _pin_profile_model(profile_dir, provider, model) -> None:
-    _lazy("scout_cli.web_routers.profiles", "_write_profile_model")(profile_dir, provider, model)
+    _lazy("scout_backend.web_routers.profiles", "_write_profile_model")(profile_dir, provider, model)
 
 
 def _model_provider_params(params) -> tuple:
@@ -72,7 +72,7 @@ def _resolve_profile(rid, params):
     name = str(params.get("name") or "").strip()
     if not name:
         return name, None, _err(rid, 4063, "name required")
-    from scout_cli.profiles import get_profile_dir
+    from scout_backend.profiles import get_profile_dir
     try:
         profile_dir = Path(get_profile_dir(name))
     except ValueError:
@@ -268,7 +268,7 @@ def _profile_ui_meta_fields(row: dict, profile_dir) -> None:
 def _(rid, params: dict) -> dict:
     """List Scout profiles. ``include_sessions`` (default true) adds ``last_session`` /
     ``worker_session`` / ``canonical_session`` so a roster paints previews without N calls."""
-    from scout_cli.profiles import list_profiles
+    from scout_backend.profiles import list_profiles
     include_sessions = is_truthy_value(params.get("include_sessions", True))
     out = []
     # Roster polls this every 5s: ``skill_count`` is the last known value, refreshed off-request.
@@ -297,7 +297,7 @@ def _(rid, params: dict) -> dict:
     if not name:
         return _err(rid, 4061, "name required")
     try:
-        from scout_cli import profiles as profiles_mod
+        from scout_backend import profiles as profiles_mod
         clone_from = str(params.get("clone_from") or "").strip() or None
         clone_all = is_truthy_value(params.get("clone_all", False))
         path = profiles_mod.create_profile(
@@ -338,8 +338,8 @@ def _(rid, params: dict) -> dict:
         return err
     with _scout_home_scope(profile_dir):
         from agent.skill_utils import iter_skill_index_files
-        from scout_cli.config import load_config
-        from scout_cli.skills_config import get_disabled_skills
+        from scout_backend.config import load_config
+        from scout_backend.skills_config import get_disabled_skills
         cfg = load_config() or {}
         disabled = {s.lower() for s in get_disabled_skills(cfg)}
         skills_root = profile_dir / "skills"
@@ -357,7 +357,7 @@ def _(rid, params: dict) -> dict:
             if isinstance(entry, dict)
         ], []) if isinstance(mcp_cfg, dict) else []
         model_cfg = cfg.get("model") if isinstance(cfg.get("model"), dict) else {}
-        meta = _try(lambda: _lazy("scout_cli.profiles", "read_profile_meta")(profile_dir), {})
+        meta = _try(lambda: _lazy("scout_backend.profiles", "read_profile_meta")(profile_dir), {})
         return _ok(rid, {
             "name": name, "description": str(meta.get("description") or ""),
             "display_name": str(meta.get("display_name") or ""), "soul": soul,
@@ -382,11 +382,11 @@ def _(rid, params: dict) -> dict:
     if isinstance(params.get("soul"), str):
         applied["soul"] = _best_effort(lambda: (profile_dir / "SOUL.md").write_text(params["soul"], encoding="utf-8"))
     if isinstance(params.get("description"), str):
-        write_meta = _lazy("scout_cli.profiles", "write_profile_meta")
+        write_meta = _lazy("scout_backend.profiles", "write_profile_meta")
         applied["description"] = _best_effort(lambda: write_meta(
             profile_dir, description=params["description"].strip(), description_auto=False))
     if isinstance(params.get("display_name"), str):
-        write_meta = _lazy("scout_cli.profiles", "write_profile_meta")
+        write_meta = _lazy("scout_backend.profiles", "write_profile_meta")
         applied["display_name"] = _best_effort(lambda: write_meta(
             profile_dir, display_name=params["display_name"][:64]))
     confirm_message = _configure_model(profile_dir, params, applied)
@@ -480,7 +480,7 @@ def _mirror_voice_sections(path) -> bool:
     """Copy stt/tts/voice sections from the launch profile (a fresh profile has only ``model``,
     so voice fell back to defaults); True if written."""
     try:
-        from scout_cli.config import load_config_readonly, read_user_config_raw, save_config
+        from scout_backend.config import load_config_readonly, read_user_config_raw, save_config
         src_cfg = load_config_readonly() or {}
         sections = {k: src_cfg[k] for k in ("stt", "tts", "voice") if src_cfg.get(k)}
         if not sections:
@@ -503,7 +503,7 @@ def _inherit_launch_model(path) -> bool:
     # sections, #85755) legitimately create the file first, and a file-existence gate silently skipped
     # inheritance for every non-clone bot ("No inference provider configured" on first message, tester
     # report). Clones bring their own model section and stay untouched.
-    from scout_cli.config import load_config_readonly, read_user_config_raw
+    from scout_backend.config import load_config_readonly, read_user_config_raw
     with _scout_home_scope(path):
         dst_model = (read_user_config_raw() or {}).get("model") or {}
     if dst_model.get("provider") and dst_model.get("default"):
@@ -515,9 +515,9 @@ def _inherit_launch_model(path) -> bool:
     # A custom `providers:` gateway travels with the model it backs (same seed as the CLI path). It is
     # written BEFORE the pin: the pin validates the pick inside the new profile, and an empty profile
     # rejects a provider it has not been told about ("Unknown provider").
-    custom = _lazy("scout_cli.profiles", "launch_model_seed")(launch_cfg).get("providers")
+    custom = _lazy("scout_backend.profiles", "launch_model_seed")(launch_cfg).get("providers")
     if custom:
-        from scout_cli.config import load_config, save_config
+        from scout_backend.config import load_config, save_config
         with _scout_home_scope(path):
             cfg = load_config()
             cfg["providers"] = {**(cfg.get("providers") if isinstance(cfg.get("providers"), dict) else {}), **custom}
@@ -542,14 +542,14 @@ def _mirror_launch_credentials(path, params: dict) -> dict:
     if mirrored["env"] and not is_truthy_value(params.get("clone_channels", False)):
         # Provider/tool keys are what "mirror credentials" means; the launch profile's bot tokens
         # and allowlists would make the new bot collide with it over one Telegram/Discord bot.
-        _best_effort(lambda: _lazy("scout_cli.profile_channels", "strip_channel_env_file")(path / ".env"))
+        _best_effort(lambda: _lazy("scout_backend.profile_channels", "strip_channel_env_file")(path / ".env"))
     if not share_auth:  # a copy forks token state: the first refresh in either store strands the other
         mirrored["auth"] = _try(lambda: _mirror_secret(path, launch_home, "auth.json",
                                                        lambda src, dst: not dst.exists()), False)
         if mirrored["auth"]:
             # Drop single-use OAuth grants (first refresh strands every sibling); they read from the
             # root grant via the pool fallback. API keys stay.
-            _best_effort(lambda: _lazy("scout_cli.auth", "strip_cloned_single_use_oauth_grants")(path))
+            _best_effort(lambda: _lazy("scout_backend.auth", "strip_cloned_single_use_oauth_grants")(path))
     mirrored["voice"] = _mirror_voice_sections(path)
     return mirrored
 
@@ -557,14 +557,14 @@ def _mirror_launch_credentials(path, params: dict) -> dict:
 def _describe_toolsets(cfg):
     """``(toolsets, pinned_set)`` as the `scout tools` checklist presents them (the raw registry
     leaks platform composites and reports everything enabled without a pin)."""
-    from scout_cli.tools_config import (
+    from scout_backend.tools_config import (
         _coerce_platform_toolsets_value, _get_effective_configurable_toolsets, _get_platform_tools,
         _toolset_allowed_for_platform)
     from toolsets import resolve_toolset
     pinned = _coerce_platform_toolsets_value((cfg.get("platform_toolsets") or {}).get("cli"), "cli")
     pinned_set = _clean_names(pinned) if isinstance(pinned, list) else None
     platform_enabled = _try(lambda: set(_get_platform_tools(cfg, "cli", include_default_mcp_servers=False)), set())
-    default_off = _try(lambda: _lazy("scout_cli.tools_config", "_DEFAULT_OFF_TOOLSETS"), set())
+    default_off = _try(lambda: _lazy("scout_backend.tools_config", "_DEFAULT_OFF_TOOLSETS"), set())
     toolsets_out = []
     for ts_name, ts_label, ts_desc in _get_effective_configurable_toolsets():
         enabled = ts_name in (pinned_set if pinned_set is not None else platform_enabled)
@@ -638,7 +638,7 @@ def _configure_model(profile_dir, params, applied):
     # misbehaving guard must never break the save (treated as "no warning"), matching
     # ``_apply_model_switch``.
     if not is_truthy_value(params.get("confirm_expensive_model", False)):
-        warn = _lazy("scout_cli.model_selection_guards", "combined_selection_warning")
+        warn = _lazy("scout_backend.model_selection_guards", "combined_selection_warning")
         confirm_message = _try(lambda: getattr(warn(model, provider=provider or None), "message", None), None)
     if confirm_message is None:
         applied["model"] = _best_effort(lambda: _pin_profile_model(profile_dir, provider, model))
@@ -652,7 +652,7 @@ def _clean_names(values) -> set:
 def _save_toolset_pin(cfg, enabled, save_config) -> None:
     """Pin ``platform_toolsets.cli``: the key ``_load_enabled_toolsets`` reads and ``scout tools`` writes.
     An empty selection clears the pin so the platform default applies again."""
-    from scout_cli.tools_config import _save_platform_tools
+    from scout_backend.tools_config import _save_platform_tools
 
     wanted = _clean_names(enabled)
     if wanted:
@@ -665,7 +665,7 @@ def _save_toolset_pin(cfg, enabled, save_config) -> None:
 def _mcp_entry_enabled(entry: dict) -> bool:
     """The runtime's ``enabled`` reader; a legacy ``disabled: true`` (what older editors wrote,
     migrated by config v46) still reads as off."""
-    from scout_cli.tools_config import _parse_enabled_flag
+    from scout_backend.tools_config import _parse_enabled_flag
     from tools.mcp_tool_common import mcp_server_enabled
     return mcp_server_enabled(entry) and not _parse_enabled_flag(entry.get("disabled", False), default=False)
 
@@ -694,15 +694,15 @@ def _configure_cfg_sections(profile_dir, params, applied) -> None:
     want_mcp = isinstance(params.get("enabled_mcp_servers"), list)
     launch_mcp = {}
     if want_mcp:  # launch catalog read BEFORE the home override flips config resolution
-        load_launch = _lazy("scout_cli.config", "load_config_readonly")
+        load_launch = _lazy("scout_backend.config", "load_config_readonly")
         launch_mcp = _try(lambda: (load_launch() or {}).get("mcp_servers"), {})
         launch_mcp = launch_mcp if isinstance(launch_mcp, dict) else {}
     with _scout_home_scope(profile_dir):
-        from scout_cli.config import load_config, save_config
+        from scout_backend.config import load_config, save_config
         cfg = load_config() or {}
         if isinstance(params.get("disabled_skills"), list):
             try:
-                from scout_cli.skills_config import save_disabled_skills
+                from scout_backend.skills_config import save_disabled_skills
                 save_disabled_skills(cfg, _clean_names(params["disabled_skills"]))
                 applied["skills"] = True
                 cfg = load_config() or {}

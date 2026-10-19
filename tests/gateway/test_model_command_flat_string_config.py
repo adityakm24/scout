@@ -39,7 +39,7 @@ def _make_event(text):
 
 def _fake_switch_result():
     """Build a successful ModelSwitchResult that bypasses real provider resolution."""
-    from scout_cli.model_switch import ModelSwitchResult
+    from scout_backend.model_switch import ModelSwitchResult
 
     return ModelSwitchResult(
         success=True,
@@ -69,12 +69,12 @@ def _setup_isolated_home(tmp_path, monkeypatch, model_yaml_value):
     monkeypatch.setattr(gateway_run, "_scout_home", scout_home)
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
     monkeypatch.setattr(
-        "scout_cli.model_switch.switch_model",
+        "scout_backend.model_switch.switch_model",
         lambda **kw: _fake_switch_result(),
     )
     # save_config writes to ``get_scout_home() / config.yaml`` — point it here.
     monkeypatch.setattr("scout_constants.get_scout_home", lambda: scout_home)
-    monkeypatch.setattr("scout_cli.config.get_scout_home", lambda: scout_home)
+    monkeypatch.setattr("scout_backend.config.get_scout_home", lambda: scout_home)
     return cfg_path
 
 
@@ -121,11 +121,11 @@ async def test_model_global_persists_when_config_has_missing_model(tmp_path, mon
     monkeypatch.setattr(gateway_run, "_scout_home", scout_home)
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
     monkeypatch.setattr(
-        "scout_cli.model_switch.switch_model",
+        "scout_backend.model_switch.switch_model",
         lambda **kw: _fake_switch_result(),
     )
     monkeypatch.setattr("scout_constants.get_scout_home", lambda: scout_home)
-    monkeypatch.setattr("scout_cli.config.get_scout_home", lambda: scout_home)
+    monkeypatch.setattr("scout_backend.config.get_scout_home", lambda: scout_home)
 
     result = await _make_runner()._handle_model_command(
         _make_event("/model gpt-5.5 --global")

@@ -571,7 +571,7 @@ def one_shot_turn(machine: Machine, srv: Any, label: str) -> Turn:
 
 
 # Printed only when a launch detours through source-update completion instead of running
-# the requested command (scout_cli/venv_sync.py, scout_cli/source_build.py, update_cmd).
+# the requested command (scout_backend/venv_sync.py, scout_backend/source_build.py, update_cmd).
 SOURCE_COMPLETION_MARKERS = ("completing source-update", "Preparing Node dependencies", "Update complete")
 
 

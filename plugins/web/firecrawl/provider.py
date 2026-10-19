@@ -67,7 +67,7 @@ def _wt():
 
 
 def _env(name: str) -> str:
-    from scout_cli.config import get_env_value
+    from scout_backend.config import get_env_value
     return (get_env_value(name) or "").strip()
 
 

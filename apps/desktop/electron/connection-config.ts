@@ -21,7 +21,7 @@
 // Bare + prefixed variants of the session cookies the gateway may set,
 // depending on its deploy shape (HTTPS direct → __Host-, behind a path prefix
 // → __Secure-, loopback HTTP → bare). Mirrors
-// scout_cli/dashboard_auth/cookies.py.
+// scout_backend/dashboard_auth/cookies.py.
 //
 // Two cookies are in play (see that module):
 //   - scout_session_at: the OAuth access token. Short-lived (~15 min); its
@@ -40,7 +40,7 @@ import { sharesHostBackend } from './host-backend-singleton'
 const AT_COOKIE_VARIANTS = ['__Host-scout_session_at', '__Secure-scout_session_at', 'scout_session_at']
 const RT_COOKIE_VARIANTS = ['__Host-scout_session_rt', '__Secure-scout_session_rt', 'scout_session_rt']
 
-// Keep this aligned with scout_cli.profiles.validate_profile_name(). `default`
+// Keep this aligned with scout_backend.profiles.validate_profile_name(). `default`
 // is the built-in root alias; these names cannot be created as profiles.
 const RESERVED_REMOTE_PROFILES = new Set(['scout', 'test', 'tmp', 'root', 'sudo'])
 

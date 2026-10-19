@@ -12,9 +12,9 @@ sys.path.insert(0,os.getcwd())
 home=tempfile.TemporaryDirectory(prefix='goals-probe-')
 os.environ['SCOUT_HOME']=home.name
 os.environ['SCOUT_TEST_MODE']='1'
-from scout_cli import goals
+from scout_backend import goals
 from tools import process_registry as pr,async_delegation as ad
-from scout_cli.cli_loops_mixin import CLILoopsMixin
+from scout_backend.cli_loops_mixin import CLILoopsMixin
 from gateway.run_goals import GatewayGoalsMixin
 from tui_gateway import server as pt
 out={'module':goals.__file__,'sha':subprocess.check_output(['git','rev-parse','HEAD'],text=True, encoding='utf-8', errors='replace').strip()}

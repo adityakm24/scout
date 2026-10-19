@@ -2,7 +2,7 @@
 
 Every pm venv sync — startup, plugin install, update rebuild — writes a
 receipt with the SAME schema the updater's receipts use
-(scout_cli.update_receipt), into the same
+(scout_backend.update_receipt), into the same
 ``<SCOUT_HOME>/logs/update_receipts/`` dir with a ``kind`` field
 separating kinds. One reader (``scout pm status``, desktop IPC) serves
 every surface: a failed venv rebuild is as reportable as a failed
@@ -104,13 +104,13 @@ def accept_worker_receipt(data: Optional[dict[str, Any]], update_id: Optional[st
 def _ambient_update_id() -> Optional[str]:
     """The update correlation id in force in this context, or None.
 
-    Lazy import: scout_cli.update_receipt imports pm.receipt at embed
+    Lazy import: scout_backend.update_receipt imports pm.receipt at embed
     time, so this direction must stay function-scoped. Never raises."""
     worker = _worker_update.get()
     if worker is not None:
         return worker[0]
     try:
-        from scout_cli.update_receipt import current_correlation_id
+        from scout_backend.update_receipt import current_correlation_id
 
         return current_correlation_id()
     except Exception:

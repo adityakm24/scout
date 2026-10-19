@@ -200,7 +200,7 @@ async def test_gateway_internal_events_bypass_estop(scout_home):
 
 
 def test_cli_pause_engages_with_reason(scout_home, capsys):
-    from scout_cli.subcommands.pause import cmd_pause
+    from scout_backend.subcommands.pause import cmd_pause
 
     rc = cmd_pause(argparse.Namespace(reason="ops incident"))
     assert rc == 0
@@ -210,7 +210,7 @@ def test_cli_pause_engages_with_reason(scout_home, capsys):
 
 
 def test_cli_pause_idempotent(scout_home, capsys):
-    from scout_cli.subcommands.pause import cmd_pause
+    from scout_backend.subcommands.pause import cmd_pause
 
     assert cmd_pause(argparse.Namespace(reason=None)) == 0
     assert cmd_pause(argparse.Namespace(reason=None)) == 0
@@ -218,7 +218,7 @@ def test_cli_pause_idempotent(scout_home, capsys):
 
 
 def test_cli_resume_disengages(scout_home, capsys):
-    from scout_cli.subcommands.pause import cmd_pause, cmd_resume
+    from scout_backend.subcommands.pause import cmd_pause, cmd_resume
 
     cmd_pause(argparse.Namespace(reason=None))
     rc = cmd_resume(argparse.Namespace())
@@ -235,7 +235,7 @@ def test_cli_resume_disengages(scout_home, capsys):
 
 
 def test_status_line_when_paused(scout_home):
-    from scout_cli.status import _estop_status_line
+    from scout_backend.status import _estop_status_line
 
     assert _estop_status_line() is None
     estop.engage(reason="ops")
@@ -329,7 +329,7 @@ async def test_gateway_pause_command_engages_and_resumes(scout_home):
 
 
 def test_pause_command_registered_for_gateway():
-    from scout_cli.commands import GATEWAY_KNOWN_COMMANDS, resolve_command
+    from scout_backend.commands import GATEWAY_KNOWN_COMMANDS, resolve_command
 
     cmd = resolve_command("pause")
     assert cmd is not None and cmd.name == "pause"

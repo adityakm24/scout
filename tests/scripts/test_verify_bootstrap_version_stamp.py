@@ -60,8 +60,8 @@ def _install_repo(tmp_path: Path) -> Path:
     _git(repo, "init", "-b", "main")
     _git(repo, "config", "user.email", "ci@example.com")
     _git(repo, "config", "user.name", "ci")
-    (repo / "scout_cli").mkdir()
-    (repo / "scout_cli" / "__init__.py").write_text(
+    (repo / "scout_backend").mkdir()
+    (repo / "scout_backend" / "__init__.py").write_text(
         '"""Scout CLI."""\n', encoding="utf-8")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-m", "seed")

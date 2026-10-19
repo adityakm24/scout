@@ -25,8 +25,8 @@ def server():
             "scout_constants": MagicMock(
                 get_scout_home=MagicMock(return_value="/tmp/scout_test_child_mirror")
             ),
-            "scout_cli.env_loader": MagicMock(),
-            "scout_cli.banner": MagicMock(),
+            "scout_backend.env_loader": MagicMock(),
+            "scout_backend.banner": MagicMock(),
             "scout_state": MagicMock(),
         },
     ):

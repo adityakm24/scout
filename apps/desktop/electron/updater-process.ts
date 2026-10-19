@@ -41,7 +41,7 @@ export function resolveInstallationLauncher(
 
   // Earlier PM installers published only to user-bin. Trust that historical
   // launcher only after its existing version surface proves exact source identity.
-  if (stagedFileExists(path.join(updateRoot, 'scout_cli', '_launchers.py'))) {
+  if (stagedFileExists(path.join(updateRoot, 'scout_backend', '_launchers.py'))) {
     const defaultHome: string = platformDefaultScoutHome(os.homedir(), process.env, isWindows ? 'win32' : 'linux')
 
     const dirs: string[] = isWindows

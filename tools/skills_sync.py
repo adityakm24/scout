@@ -68,7 +68,7 @@ def _manifest_file() -> Path:
 
 
 # Written by `scout profile create --no-skills` / installer `--no-skills`: sync seeds only
-# essential skills. Mirrors scout_cli.profiles.NO_BUNDLED_SKILLS_MARKER (no CLI import here).
+# essential skills. Mirrors scout_backend.profiles.NO_BUNDLED_SKILLS_MARKER (no CLI import here).
 NO_BUNDLED_SKILLS_MARKER = ".no-bundled-skills"
 
 

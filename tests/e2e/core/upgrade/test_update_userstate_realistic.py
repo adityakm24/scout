@@ -45,8 +45,8 @@ pytestmark = [
 
 UPDATE_TIMEOUT = 1500
 PROFILES = ("default", "work", "research")
-_VERSIONS_PY = ("from scout_cli.config_defaults import DEFAULT_CONFIG as D; "
-                "from scout_cli.config_migrations import SUPPORT_FLOOR_VERSION as F; "
+_VERSIONS_PY = ("from scout_backend.config_defaults import DEFAULT_CONFIG as D; "
+                "from scout_backend.config_migrations import SUPPORT_FLOOR_VERSION as F; "
                 "print(D['_config_version'], F)")
 
 

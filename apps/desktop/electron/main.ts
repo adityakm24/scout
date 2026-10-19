@@ -765,11 +765,11 @@ const DESKTOP_WINDOW_STATE_PATH = path.join(app.getPath('userData'), 'window-sta
 // active-profile.json records which Scout profile the desktop launches its
 // local backend as. When set, startScout() passes `scout --profile <name>
 // dashboard …`, which deterministically pins SCOUT_HOME (see
-// _apply_profile_override in scout_cli/main.py) and bypasses the sticky
+// _apply_profile_override in scout_backend/main.py) and bypasses the sticky
 // ~/.scout/active_profile file. Unset (null) preserves the legacy behavior:
 // no --profile flag, so the backend honors active_profile / default.
 
-// Mirrors scout_cli.profiles._PROFILE_ID_RE so we never hand the backend a
+// Mirrors scout_backend.profiles._PROFILE_ID_RE so we never hand the backend a
 // value its profile resolver would reject and exit on.
 const PROFILE_NAME_RE = DESKTOP_PROFILE_NAME_RE
 // Branch we track for self-update. The GUI work has merged to main, so this
@@ -1965,7 +1965,7 @@ function looksLikeDesktopAppBinary(commandPath) {
 }
 
 function isScoutSourceRoot(root) {
-  return directoryExists(root) && fileExists(path.join(root, 'scout_cli', 'main.py'))
+  return directoryExists(root) && fileExists(path.join(root, 'scout_backend', 'main.py'))
 }
 
 async function findPythonForRoot(root: string): Promise<string | null> {
@@ -2667,7 +2667,7 @@ function resolveCheckoutUpdateStrategy(): UpdaterStrategy {
       preflightStateDb({
         python: managed ? null : await findPythonForRoot(root),
         launcher,
-        script: path.join(root, 'scout_cli', 'backup_sqlite.py'),
+        script: path.join(root, 'scout_backend', 'backup_sqlite.py'),
         home,
         log
       })
@@ -2964,7 +2964,7 @@ async function releaseBackendLock(updateRoot: string, tag: string): Promise<{ un
   // supervised primary backend and all pool backends. The gate waits for
   // these to actually LEAVE the process table, not just for the shim to
   // unlock — the shim probe only covers venv\Scripts\scout.exe, but the
-  // backend is `python.exe -m scout_cli.main serve`, which need not hold
+  // backend is `python.exe -m scout_backend.main serve`, which need not hold
   // the shim at all (#74805 first-attempt race).
   const initialPids = []
 
@@ -6000,7 +6000,7 @@ function fetchJsonViaOauthSession(url, options: any = {}) {
 // involved. Tokens are persisted encrypted at rest via Electron ``safeStorage``
 // (OS keychain) keyed by gateway base URL, and refreshed via
 // ``/auth/native/refresh`` before expiry. This is the desktop half of the
-// feature; the server half lives in scout_cli/dashboard_auth/native_flow.py.
+// feature; the server half lives in scout_backend/dashboard_auth/native_flow.py.
 // ---------------------------------------------------------------------------
 
 // In-memory cache of decrypted native tokens, keyed by normalized base URL.
@@ -10675,7 +10675,7 @@ function resolveScoutRuntime() {
 // CLI exactly: GUI only, Lite (keep user data), Full. We ask the agent to do
 // the actual removal via `scout uninstall …` so the cross-platform PATH /
 // registry / service / node-symlink cleanup all lives in one place
-// (scout_cli/uninstall.py + scout_cli/gui_uninstall.py).
+// (scout_backend/uninstall.py + scout_backend/gui_uninstall.py).
 //
 // The IPC boundary applies the baked install policy before either callback.
 // Only self-managed installs use the Python summary or the cleanup script.
@@ -10722,7 +10722,7 @@ async function probeUninstallSummary(): Promise<UninstallSummaryDetails> {
     try {
       const child: ChildProcess = spawn(
         py,
-        ['-m', 'scout_cli.main', 'uninstall', '--gui-summary'],
+        ['-m', 'scout_backend.main', 'uninstall', '--gui-summary'],
         hiddenWindowsChildOptions({
           cwd: agentRoot,
           env: { ...process.env, SCOUT_HOME, NO_COLOR: '1' },
@@ -10780,7 +10780,7 @@ async function runDesktopUninstall(mode: string): Promise<DesktopUninstallResult
   // Interpreter choice (Finding 3): lite/full rmtree the venv that holds the
   // running python.exe. On Windows a running .exe is mandatory-locked, so the
   // rmtree must NOT be driven by the venv's own interpreter — use a system
-  // Python with PYTHONPATH=<agentRoot> so `import scout_cli` resolves from
+  // Python with PYTHONPATH=<agentRoot> so `import scout_backend` resolves from
   // source while the venv is torn down. gui-only doesn't touch the venv, so the
   // venv python is fine there. If no system Python exists (the Windows edge
   // case), fall back to the venv python — gui-only is unaffected; lite/full may

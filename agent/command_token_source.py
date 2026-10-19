@@ -90,8 +90,8 @@ def _mint(command: str, label: str) -> tuple[str, Optional[float]]:
             if isinstance(ttl, (int, float)) and ttl > 0:
                 return token, float(ttl)
             # CLI helpers often print an absolute ISO 8601 deadline instead of OAuth's relative
-            # lifetime; honour it or the token 401s once past. Lazy import: scout_cli.auth imports agent.*.
-            from scout_cli.auth import _parse_iso_timestamp
+            # lifetime; honour it or the token 401s once past. Lazy import: scout_backend.auth imports agent.*.
+            from scout_backend.auth import _parse_iso_timestamp
 
             for field in ("expiry", "expiresOn"):
                 deadline = _parse_iso_timestamp(payload.get(field))

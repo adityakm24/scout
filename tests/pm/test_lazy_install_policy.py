@@ -3,7 +3,7 @@
 import pytest
 
 import pm
-from scout_cli.config import get_config_path
+from scout_backend.config import get_config_path
 
 
 @pytest.mark.parametrize("content,expected", [

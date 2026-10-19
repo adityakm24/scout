@@ -2,7 +2,7 @@
 
 All packagers (Docker, Nix, desktop) call this script to produce the same
 ``install-stamp.json`` file. Runtime surfaces (CLI, TUI, desktop) read the
-stamp through ``scout_cli.version_info`` — no env vars, no separate
+stamp through ``scout_backend.version_info`` — no env vars, no separate
 docker/nix code paths.
 
 Usage::
@@ -35,12 +35,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # Bootstrap the repo root onto sys.path so the canary tag shape can come
-# from scout_cli.update_channel — the single authority — instead of a
-# re-typed regex (scout_cli/__init__.py is import-light).
+# from scout_backend.update_channel — the single authority — instead of a
+# re-typed regex (scout_backend/__init__.py is import-light).
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scout_cli import update_channel  # noqa: E402
-from scout_cli.steward import UPDATE_MECHANISMS  # noqa: E402
+from scout_backend import update_channel  # noqa: E402
+from scout_backend.steward import UPDATE_MECHANISMS  # noqa: E402
 
 STAMP_SCHEMA_VERSION = 2
 _REPO_ROOT = Path(__file__).parent.parent.resolve()

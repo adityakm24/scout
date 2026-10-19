@@ -29,7 +29,7 @@ class TestDetectProviderEntra:
             }
 
         with patch(
-            "scout_cli.runtime_provider.resolve_runtime_provider",
+            "scout_backend.runtime_provider.resolve_runtime_provider",
             side_effect=_fake_runtime,
         ):
             assert _acp_auth.detect_provider() == "azure-foundry"

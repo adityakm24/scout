@@ -305,6 +305,6 @@ class SlashCommandsMixin:
         return f"Queued for the next turn. ({_queue_prompt(state, queued_text)} queued)"
 
     def _cmd_version(self, args: str, state: SessionState) -> str:
-        from scout_cli.version_info import get_version_info
+        from scout_backend.version_info import get_version_info
 
         return f"Scout Agent v{get_version_info().derived_version}"

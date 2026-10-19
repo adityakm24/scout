@@ -230,7 +230,7 @@ def _install_secondary_reconnect_context(
 
     monkeypatch.setattr(gateway_run, "_profile_runtime_scope", fake_scope)
     monkeypatch.setattr(
-        "scout_cli.profiles.get_profile_dir", lambda name: Path("/profiles") / name
+        "scout_backend.profiles.get_profile_dir", lambda name: Path("/profiles") / name
     )
     monkeypatch.setattr(
         "gateway.config.load_gateway_config",
@@ -469,11 +469,11 @@ class TestSecondaryProfileConfigHandling:
             ]
 
         monkeypatch.setattr(
-            "scout_cli.profiles.profiles_to_serve",
+            "scout_backend.profiles.profiles_to_serve",
             fake_profiles_to_serve,
         )
         monkeypatch.setattr(
-            "scout_cli.profiles.get_active_profile_name",
+            "scout_backend.profiles.get_active_profile_name",
             lambda: "default",
         )
         monkeypatch.setattr(runner, "_start_one_profile_adapters", fake_start_one)
@@ -527,14 +527,14 @@ class TestSecondaryProfileConfigHandling:
             )
 
         monkeypatch.setattr(
-            "scout_cli.profiles.profiles_to_serve",
+            "scout_backend.profiles.profiles_to_serve",
             lambda multiplex, **kw: [
                 ("default", Path("/tmp/default")),
                 ("unsafe", Path("/tmp/unsafe")),
             ],
         )
         monkeypatch.setattr(
-            "scout_cli.profiles.get_active_profile_name",
+            "scout_backend.profiles.get_active_profile_name",
             lambda: "default",
         )
         monkeypatch.setattr(runner, "_start_one_profile_adapters", fake_start_one)
@@ -612,7 +612,7 @@ class TestSecondaryProfileHookRegistration:
                 ],
             }
         }
-        monkeypatch.setattr("scout_cli.config.load_config", lambda: profile_cfg)
+        monkeypatch.setattr("scout_backend.config.load_config", lambda: profile_cfg)
 
         seen = []
         monkeypatch.setattr(

@@ -2,7 +2,7 @@
 
 from typing import NoReturn
 
-from scout_cli._old_updater import in_historical_update, stop_for_relaunch
+from scout_backend._old_updater import in_historical_update, stop_for_relaunch
 
 
 def ensure(feature: str, *, prompt: bool = True) -> NoReturn:

@@ -1,5 +1,5 @@
 """A paired phone hears about this server's chats while its Scout app is closed: the turn's steps
-on the lock screen, approvals and questions, and replies (scout_cli/push/notifier.py decides which
+on the lock screen, approvals and questions, and replies (scout_backend/push/notifier.py decides which
 phone gets what). Bodies are rebound onto server.py's globals (method_ctx.bind_module) and
 reference them bare.
 
@@ -14,7 +14,7 @@ from .method_ctx import bind_module
 
 def _push_target(sid: str):
     """``(stored session id, chat title, profile home)`` when a phone could want this chat."""
-    from scout_cli.push import notifier
+    from scout_backend.push import notifier
 
     session = _sessions.get(sid)
     if session is None:
@@ -28,7 +28,7 @@ def _push_target(sid: str):
 
 def _push_turn_finished(sid: str, payload: dict | None) -> None:
     try:
-        from scout_cli.push import notifier
+        from scout_backend.push import notifier
 
         if (target := _push_target(sid)) is None:
             return
@@ -42,7 +42,7 @@ def _push_turn_finished(sid: str, payload: dict | None) -> None:
 
 def _push_tool_activity(sid: str, line: str) -> None:
     try:
-        from scout_cli.push import notifier
+        from scout_backend.push import notifier
 
         if line and (target := _push_target(sid)) is not None:
             notifier.activity(target[0], line, target[1], home=target[2])
@@ -55,7 +55,7 @@ def _push_server_request(method: str, sid: str, params: dict) -> None:
     if method not in ("approval", "clarify"):
         return
     try:
-        from scout_cli.push import notifier
+        from scout_backend.push import notifier
 
         if (target := _push_target(sid)) is None:
             return

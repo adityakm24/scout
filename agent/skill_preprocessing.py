@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 
 from agent.compression_marker import elide
-from scout_cli._subprocess_compat import IS_WINDOWS, windows_hide_flags
+from scout_backend._subprocess_compat import IS_WINDOWS, windows_hide_flags
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ _INLINE_SHELL_MAX_OUTPUT = 4000
 def load_skills_config() -> dict:
     """Load the ``skills`` section of config.yaml (best-effort)."""
     try:
-        from scout_cli.config import load_config_readonly
+        from scout_backend.config import load_config_readonly
         skills_cfg = (load_config_readonly() or {}).get("skills")
         if isinstance(skills_cfg, dict):
             return skills_cfg

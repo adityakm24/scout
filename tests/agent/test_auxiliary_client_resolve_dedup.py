@@ -45,8 +45,8 @@ class TestUnhandledAuthTypeDedup:
         ac._LOGGED_UNHANDLED_AUTHTYPE_KEYS.clear()
 
     def test_unhandled_auth_type_logs_debug_once_not_warning(self, caplog, monkeypatch):
-        import scout_cli.auth as auth
-        from scout_cli.auth import ProviderConfig
+        import scout_backend.auth as auth
+        from scout_backend.auth import ProviderConfig
 
         # A registered provider whose auth_type matches no handled branch →
         # the terminal "unhandled auth_type" fall-through.

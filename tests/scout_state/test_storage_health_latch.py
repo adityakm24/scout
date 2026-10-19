@@ -176,8 +176,8 @@ def client(monkeypatch, _isolate_scout_home):
         pytest.skip("fastapi/starlette not installed")
 
     import scout_state
-    from scout_cli.web_routers import profiles as profiles_routes
-    from scout_cli.web_server import _SESSION_HEADER_NAME, _SESSION_TOKEN, app
+    from scout_backend.web_routers import profiles as profiles_routes
+    from scout_backend.web_server import _SESSION_HEADER_NAME, _SESSION_TOKEN, app
     from scout_constants import get_scout_home
 
     monkeypatch.setattr(profiles_routes, "_SIDEBAR_CACHE_TTL_SECONDS", 0.0)

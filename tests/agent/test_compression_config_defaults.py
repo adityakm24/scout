@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from agent.agent_init import _parse_compression_config
-from scout_cli.config import DEFAULT_CONFIG
+from scout_backend.config import DEFAULT_CONFIG
 
 
 def _agent():

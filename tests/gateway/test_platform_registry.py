@@ -281,7 +281,7 @@ class TestPlatformsMerge:
 
 
     def test_get_all_platforms_includes_plugin(self):
-        from scout_cli.platforms import get_all_platforms
+        from scout_backend.platforms import get_all_platforms
         from gateway.platform_registry import platform_registry as _reg
 
         _reg.register(PlatformEntry(

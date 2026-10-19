@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 import subprocess
 
-from scout_cli.release_channels import (
+from scout_backend.release_channels import (
     ChannelError,
     validate_name,
     validate_repository,

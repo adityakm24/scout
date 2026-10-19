@@ -84,7 +84,7 @@ class TestBuildAnthropicClient:
             headers = kwargs["default_headers"]
             assert headers["HTTP-Referer"] == "https://github.com/adityakm24/scout"
             assert headers["X-Title"] == "Scout Agent"
-            from scout_cli.version_info import get_version_info
+            from scout_backend.version_info import get_version_info
             assert headers["User-Agent"] == f"ScoutAgent/{get_version_info().base_version}"
             # Auth branch is unchanged: x-api-key via api_key, betas kept.
             assert kwargs["api_key"] == "sk-opencode-secret"

@@ -20,8 +20,8 @@ _WORKTREE = Path(__file__).resolve().parents[2]
 if str(_WORKTREE) not in sys.path:
     sys.path.insert(0, str(_WORKTREE))
 
-from scout_cli import kanban_db as kb
-from scout_cli import kanban_db_connect as kbc
+from scout_backend import kanban_db as kb
+from scout_backend import kanban_db_connect as kbc
 import tools.kanban_tools as kt
 
 

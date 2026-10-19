@@ -236,7 +236,7 @@ def _maybe_fire_tui_heartbeat_tick(sid: str, session: dict) -> None:
     due instead of being silently consumed.
     """
     try:
-        from scout_cli.heartbeat import HeartbeatManager
+        from scout_backend.heartbeat import HeartbeatManager
     except Exception:
         return
     if not (sid_key := session.get("session_key") or ""):
@@ -274,7 +274,7 @@ def _maybe_fire_tui_loop_tick(sid: str, session: dict) -> None:
     """Fire a due /loop wakeup for an idle TUI/Desktop/dashboard session (per-session poller, coarse cadence). Claims
     the session (running=True) before dispatching so a racing user prompt wins; the post-turn hook completes the tick."""
     try:
-        from scout_cli.loops import LoopManager, goal_blocks_loop_tick
+        from scout_backend.loops import LoopManager, goal_blocks_loop_tick
     except Exception:
         return
     if not (sid_key := session.get("session_key") or ""):
@@ -358,8 +358,8 @@ def _kb_poll_board(_kb, slug: str, session_key: str) -> list:
     """Claim + format this session's unseen events on one board. One poller per live session: the board is not opened
     writable unless it has a subscription owned by this exact session (a failed read-only probe — locked/corrupt DB —
     falls through so delivery is preserved)."""
-    from scout_cli import kanban_db_connect as _kbc
-    from scout_cli import kanban_db_notify as _kbn
+    from scout_backend import kanban_db_connect as _kbc
+    from scout_backend import kanban_db_notify as _kbn
     with contextlib.suppress(Exception):
         if _kbn.count_notify_subs(board=slug, platform="tui", chat_id=session_key) == 0:
             return []
@@ -407,7 +407,7 @@ def _collect_kanban_notifications(session: dict) -> list:
     if not session_key or session.get("_finalized"):
         return []
     try:
-        from scout_cli import kanban_db as _kb
+        from scout_backend import kanban_db as _kb
     except Exception:
         return []
     try:

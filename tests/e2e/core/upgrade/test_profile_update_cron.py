@@ -47,7 +47,7 @@ class World:
         self.after_update: list[dict] = []
 
     def cli(self, *args: str):
-        cp = H.run([PY, "-m", "scout_cli.main", *args], env=self.env, cwd=self.root, writable=[self.root], timeout=300)
+        cp = H.run([PY, "-m", "scout_backend.main", *args], env=self.env, cwd=self.root, writable=[self.root], timeout=300)
         self.log.append(H.describe(cp, 1500))
         assert cp.returncode == 0 and I.TRACEBACK not in cp.stdout + cp.stderr, H.describe(cp)
         return cp

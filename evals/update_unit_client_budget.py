@@ -16,7 +16,7 @@ allowed = {key: os.environ[key] for key in ("PATH", "XDG_RUNTIME_DIR", "DBUS_SES
 os.environ.clear()
 os.environ.update(allowed, HOME=str(home), SCOUT_HOME=str(home / "scout"))
 sys.path.insert(0, repo)
-from scout_cli import update_cmd_fleet as fleet
+from scout_backend import update_cmd_fleet as fleet
 _systemctl_reset_and_restart = fleet._systemctl_reset_and_restart
 actual_systemctl = fleet._systemctl
 def scoped_systemctl(argv, *, timeout):

@@ -277,7 +277,7 @@ def setup_isolated_home(enabled: bool, listing: str = "off",
         # hand — it never materializes the secret in a local variable in
         # this module, which both avoids a hand-rolled parser bug and keeps
         # static analysis from tainting the transcript records with the key.
-        from scout_cli.env_loader import load_scout_dotenv
+        from scout_backend.env_loader import load_scout_dotenv
         load_scout_dotenv(scout_home=str(Path.home() / ".scout"))
 
     cfg = {
@@ -351,7 +351,7 @@ def reset_module_state():
     """Drop cached modules so the new SCOUT_HOME takes effect."""
     keys = [k for k in sys.modules.keys()
             if k.startswith(("tools.", "model_tools", "toolsets",
-                             "scout_cli", "agent.", "run_agent"))]
+                             "scout_backend", "agent.", "run_agent"))]
     for k in keys:
         del sys.modules[k]
 

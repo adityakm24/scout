@@ -64,8 +64,8 @@ def rig(tmp_path: Path):
 
 # The CLI's own startup sequence (load ~/.scout/.env), then the picker entry point.
 _DISCOVERY_PROBE = (
-    "import json; from scout_cli.env_loader import load_scout_dotenv; load_scout_dotenv(); "
-    "from scout_cli.models import provider_model_ids; "
+    "import json; from scout_backend.env_loader import load_scout_dotenv; load_scout_dotenv(); "
+    "from scout_backend.models import provider_model_ids; "
     "print('IDS=' + json.dumps(list(provider_model_ids('anthropic', force_refresh=True))))"
 )
 

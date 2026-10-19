@@ -27,7 +27,7 @@ class DeepInfraVideoGenProvider(OpenAICompatibleVideoGenProvider):
     def list_models(self) -> List[Dict[str, Any]]:
         """``video-gen``-tagged models from the live catalog; empty when unreachable (nothing beats a retired model)."""
         try:
-            from scout_cli.models import _fetch_deepinfra_models_by_tag
+            from scout_backend.models import _fetch_deepinfra_models_by_tag
         except Exception as exc:  # noqa: BLE001 — never break the picker
             logger.debug("Cannot import _fetch_deepinfra_models_by_tag: %s", exc)
             return []

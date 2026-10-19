@@ -94,7 +94,7 @@ class TestRuntimeFtsRebuild:
         assert _concrete_state_db_holder_pids(
             db_path,
             [
-                (222, "uninspectable holder: python -m scout_cli.main serve --port 0"),
+                (222, "uninspectable holder: python -m scout_backend.main serve --port 0"),
                 (-1, "open-file scan failed"),
             ],
         ) == []
@@ -143,16 +143,16 @@ class TestRuntimeFtsRebuild:
                 "/usr/sbin/tailscaled",
                 "be-child",
                 "ssh",
-                "--cmd=python -m scout_cli.main gateway",
+                "--cmd=python -m scout_backend.main gateway",
             ),
             ("tmux", "new-session", "/opt/scout-agent/.venv/bin/scout gateway"),
             ("python3", "/opt/scout-agent/tools/check_state.py"),
             ("scout-monitor", "gateway"),
             ("scoutctl", "serve"),
-            ("python3", "worker.py", "scout_cli.main"),
-            ("python3", "-m", "other.module", "scout_cli.main"),
-            ("python3", "-c", "scout_cli.main"),
-            ("python3", "-Icprint('scout_cli.main')", "scout_cli/main.py"),
+            ("python3", "worker.py", "scout_backend.main"),
+            ("python3", "-m", "other.module", "scout_backend.main"),
+            ("python3", "-c", "scout_backend.main"),
+            ("python3", "-Icprint('scout_backend.main')", "scout_backend/main.py"),
         ),
     )
     def test_uninspectable_non_scout_process_is_not_a_holder(self, argv):
@@ -164,18 +164,18 @@ class TestRuntimeFtsRebuild:
             ("/usr/local/bin/scout", "gateway"),
             ("/usr/local/bin/scout-agent", "serve"),
             ("/usr/local/bin/scout-acp", "--stdio"),
-            ("/usr/bin/python3", "-m", "scout_cli.main", "gateway"),
+            ("/usr/bin/python3", "-m", "scout_backend.main", "gateway"),
             ("/usr/bin/python3", "-m", "acp_adapter"),
-            ("/usr/bin/python3", "-Im", "scout_cli.main", "gateway"),
-            ("/usr/bin/python3", "-mscout_cli.main", "gateway"),
-            ("/usr/bin/python3", "-W", "ignore", "-m", "scout_cli.main"),
-            ("/usr/bin/python3", "-Xdev", "-m", "scout_cli.main"),
+            ("/usr/bin/python3", "-Im", "scout_backend.main", "gateway"),
+            ("/usr/bin/python3", "-mscout_backend.main", "gateway"),
+            ("/usr/bin/python3", "-W", "ignore", "-m", "scout_backend.main"),
+            ("/usr/bin/python3", "-Xdev", "-m", "scout_backend.main"),
             (
                 "/opt/scout-agent/.venv/bin/python",
-                "/opt/scout-agent/scout_cli/main.py",
+                "/opt/scout-agent/scout_backend/main.py",
                 "gateway",
             ),
-            ("python.exe", "--", "scout_cli/main.py", "gateway"),
+            ("python.exe", "--", "scout_backend/main.py", "gateway"),
             ("python3", "/opt/scout-agent/run_agent.py", "--query", "hello"),
         ),
     )
@@ -253,7 +253,7 @@ class TestRuntimeFtsRebuild:
         # PID 222's cmdline is world-readable and looks like Scout
         cmdline_path = proc_root / "222" / "cmdline"
         cmdline_path.write_bytes(
-            b"python3\x00-m\x00scout_cli.main\x00chat\x00"
+            b"python3\x00-m\x00scout_backend.main\x00chat\x00"
         )
 
         monkeypatch.setattr(scout_state_holders.os, "getpid", lambda: 111)
@@ -283,7 +283,7 @@ class TestRuntimeFtsRebuild:
         # Should include PID 222 with the cmdline info
         assert len(holders) == 1
         assert holders[0][0] == 222
-        assert "scout_cli.main" in holders[0][1]
+        assert "scout_backend.main" in holders[0][1]
 
         # Cleanup
         os.chmod(proc_root / "222" / "fd", 0o755)
@@ -758,12 +758,12 @@ class TestRuntimeFtsRebuild:
             SessionDB, "_reap_inactive_orphan_desktop_holders", lambda self, holders, *, min_age_seconds: [],
         )
         monkeypatch.setattr(
-            scout_state_schema, "_read_proc_argv", lambda pid: ["python", "-m", "scout_cli.main", "serve"], raising=False,
+            scout_state_schema, "_read_proc_argv", lambda pid: ["python", "-m", "scout_backend.main", "serve"], raising=False,
         )
         clock = [1000.0]
         monkeypatch.setattr(scout_state_schema.time, "time", lambda: clock[0])
 
-        from scout_cli.doctor_state import _render_state_db_stats
+        from scout_backend.doctor_state import _render_state_db_stats
         from scout_state_dbfile import collect_state_db_stats
 
         def doctor_blob():
@@ -794,7 +794,7 @@ class TestRuntimeFtsRebuild:
             futile_lines = [r for r in caplog.records if "waiting is futile" in r.getMessage()]
             assert len(futile_lines) == 1 and futile_lines[0].levelno == logging.ERROR
             msg = futile_lines[0].getMessage()
-            assert "pid 4242: python -m scout_cli.main serve" in msg
+            assert "pid 4242: python -m scout_backend.main serve" in msg
             assert "Stop ONLY the other holder" in msg and "with the gateway stopped" not in msg
             blob = doctor_blob()
             assert "4242" in blob and "waiting is futile" in blob and "stop only" in blob

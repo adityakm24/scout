@@ -85,7 +85,7 @@ def scout_home(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     monkeypatch.setenv("SCOUT_HOME", str(home))
 
-    from scout_cli import goals
+    from scout_backend import goals
 
     goals._DB_CACHE.clear()
     # Pre-warm the SessionDB cache from this sync (non-loop) context so the
@@ -158,7 +158,7 @@ async def test_runner_goal_hook_enqueues_into_the_key_the_adapter_drains(scout_h
 
     from gateway.run import GatewayRunner
     from gateway.session import SessionEntry
-    from scout_cli.goals import GoalManager
+    from scout_backend.goals import GoalManager
 
     src = _slack_thread_source()
     adapter_key = build_session_key(src)
@@ -187,7 +187,7 @@ async def test_runner_goal_hook_enqueues_into_the_key_the_adapter_drains(scout_h
 
     GoalManager(session_entry.session_id).set("ship it")
     with patch(
-        "scout_cli.goals.judge_goal",
+        "scout_backend.goals.judge_goal",
         return_value=("continue", "still needs work", False, None, False),
     ):
         await runner._post_turn_goal_continuation(

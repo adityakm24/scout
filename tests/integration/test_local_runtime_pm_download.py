@@ -13,8 +13,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import pm
-from scout_cli.local_runtime import binaries
-from scout_cli.web_routers import local_models as lm
+from scout_backend.local_runtime import binaries
+from scout_backend.web_routers import local_models as lm
 from pm import paths
 from pm.lock import Facts, Lockfile
 

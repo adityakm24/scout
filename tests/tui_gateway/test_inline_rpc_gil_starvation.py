@@ -37,8 +37,8 @@ def server():
     # (see tests/tui_gateway/test_protocol.py for the full rationale).
     with patch.dict("sys.modules", {
         "scout_constants": MagicMock(get_scout_home=MagicMock(return_value="/tmp/scout_test")),
-        "scout_cli.env_loader": MagicMock(),
-        "scout_cli.banner": MagicMock(),
+        "scout_backend.env_loader": MagicMock(),
+        "scout_backend.banner": MagicMock(),
         "scout_state": MagicMock(),
     }):
         import importlib

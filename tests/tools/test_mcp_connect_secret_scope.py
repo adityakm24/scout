@@ -10,7 +10,7 @@ from contextlib import contextmanager
 import pytest
 
 from agent.secret_scope import current_secret_scope, set_multiplex_active
-from scout_cli import env_loader
+from scout_backend import env_loader
 from scout_constants import reset_scout_home_override, set_scout_home_override
 from tools import mcp_tool_discovery as discovery
 from tools.mcp_tool_config import _build_safe_env

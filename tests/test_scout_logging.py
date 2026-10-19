@@ -75,7 +75,7 @@ def test_repeated_setup_routes_records_once(scout_home, mode, component, configu
         assert scout_logging.setup_logging(scout_home=scout_home, mode=mode, log_level=explicit) == scout_home / "logs"
     scout_logging.set_session_context("routing-session")
     sources = ["tools.terminal_tool", "agent.context_compressor", "gateway.run",
-               "plugins.platforms.telegram.adapter", "scout_cli.web_server", "tui_gateway.ws"]
+               "plugins.platforms.telegram.adapter", "scout_backend.web_server", "tui_gateway.ws"]
     for index, source in enumerate(sources):
         for level in (logging.DEBUG, logging.INFO, logging.WARNING):
             logging.getLogger(source).log(level, "routing-witness-%s-%s", index, level)
@@ -354,7 +354,7 @@ class TestAddRotatingHandler:
 
         old_umask = os.umask(0o022)
         try:
-            with patch("scout_cli.config.is_managed", return_value=True):
+            with patch("scout_backend.config.is_managed", return_value=True):
                 scout_logging._add_rotating_handler(
                     log_path,
                     level=logging.INFO, max_bytes=1024, backup_count=1,

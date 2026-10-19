@@ -119,7 +119,7 @@ class TestMinimaxApiMode:
     """
 
     def test_minimax_returns_anthropic_messages(self):
-        from scout_cli.providers import determine_api_mode
+        from scout_backend.providers import determine_api_mode
         assert determine_api_mode("minimax") == "anthropic_messages"
 
 

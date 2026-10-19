@@ -8,7 +8,7 @@ import scout_yaml as yaml
 import pytest
 
 from agent import i18n, i18n_layers
-from scout_cli.plugins import PluginManager
+from scout_backend.plugins import PluginManager
 
 # A bundled key every test can lean on (approval prompts ship in every locale).
 _KEY = "approval.denied"
@@ -30,7 +30,7 @@ def clean_layers():
 @pytest.fixture
 def home(tmp_path, monkeypatch, clean_layers):
     """A temp SCOUT_HOME with no plugins and an empty bundled plugin dir."""
-    from scout_cli import plugins as plugins_mod
+    from scout_backend import plugins as plugins_mod
 
     home = tmp_path / "home"
     (home / "locales").mkdir(parents=True)
@@ -189,8 +189,8 @@ def test_later_pack_wins_over_earlier_pack(home):
 
 
 def test_register_locale_accepts_dicts_and_rejects_bad_ids(home):
-    from scout_cli.plugins import PluginContext
-    from scout_cli.plugins_manifest import PluginManifest
+    from scout_backend.plugins import PluginContext
+    from scout_backend.plugins_manifest import PluginManifest
 
     manager = PluginManager()
     ctx = PluginContext(PluginManifest(name="inline-pack", source="user", path=str(home)), manager)
