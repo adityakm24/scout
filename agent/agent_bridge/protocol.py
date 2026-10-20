@@ -164,6 +164,12 @@ def _parse_json_object(text: str) -> Dict[str, Any]:
     return obj
 
 
+def answer_json(text: str) -> str:
+    """The answer's JSON object, re-serialized (a ```json fence and whitespace dropped): exactly what
+    the NeMo Guardrails rail re-checks, independently of ``parse_browse_outcome``."""
+    return json.dumps(_parse_json_object(text), ensure_ascii=False)
+
+
 def _check_value(name: str, spec: ResultField, value: Any, task: BrowseTask) -> Any:
     bad = BridgeError(f"result field {name!r} is not a valid {spec.type}")
     if value is None:

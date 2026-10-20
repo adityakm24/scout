@@ -16,7 +16,9 @@ from tools.registry import registry
 BROWSE_TASK_SCHEMA = {
     "name": "browse_task",
     "description": (
-        "Use the web through Scout's separate Browser Agent, which holds none of the person's data. You get back "
+        "Your ONLY way to reach the internet: the terminal, code and files have no web access. Use it for any page, "
+        "search, price, booking or lookup on the web. It runs Scout's separate Browser Agent, which holds none of "
+        "the person's data. You get back "
         "only a status, the typed result fields you ask for (numbers, yes/no, dates, fixed choices, short labels, "
         "links on the allowed domains) and a log of which sites it visited. You never get page text or summaries, "
         "so ask for the specific facts you need as fields. Write the goal without any personal details: if the "

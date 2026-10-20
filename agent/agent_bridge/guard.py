@@ -31,7 +31,7 @@ def allows(message: str, task: BrowseTask) -> bool:
     try:
         sandboxes.ensure_guard_sandbox()
         proc = sandboxes.exec_in(
-            sandboxes.GUARD_SANDBOX, ["python3", f"{sandboxes.GUARD_DIR}/runner.py"],
+            sandboxes.GUARD_SANDBOX, ["python3", sandboxes.GUARD_RUNNER],
             stdin=json.dumps({"message": message, "contract": contract(task)}), timeout=60,
         )
     except sandboxes.SandboxUnavailable as exc:

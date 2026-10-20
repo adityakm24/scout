@@ -681,10 +681,15 @@ def _browser_command_preflight() -> Dict[str, Any]:
     """Fail fast before spawning (missing CLI, Termux gap, interrupt, no Chromium in local
     mode — else every call hangs for command_timeout). Error result, or ``{"browser_cmd": path}``."""
     from tools.bot_desktop import placement, runtime as _bd_runtime
-    try:
-        where = _bd_runtime.tool_placement()  # starts the sandbox screen on demand; raises for refused / down
-    except RuntimeError as e:
-        return {"success": False, "error": f"The browser cannot run here: {e}"}
+    # A CDP override is a browser that already runs elsewhere (the Browser Agent's lives in its own
+    # OpenShell sandbox, agent/agent_bridge/sandboxes.py): this host only drives it, so where a screen
+    # would be placed does not apply.
+    where = placement.GATEWAY
+    if not _cdp._get_cdp_override_raw():
+        try:
+            where = _bd_runtime.tool_placement()  # starts the sandbox screen on demand; raises for refused / down
+        except RuntimeError as e:
+            return {"success": False, "error": f"The browser cannot run here: {e}"}
     if where == placement.TERMINAL:
         from tools.interrupt import is_interrupted
         if is_interrupted():

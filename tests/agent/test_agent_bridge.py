@@ -1,5 +1,6 @@
 """The User Agent / Browser Agent split and the bridge between them (agent/agent_bridge/)."""
 
+import contextlib
 import json
 
 import pytest
@@ -80,6 +81,7 @@ def test_the_user_agent_gets_only_validated_fields_and_metadata(monkeypatch):
     fake = _FakeAgent(answer)
     monkeypatch.setattr(browser_agent, "_build_agent", lambda parent, t: fake)
     monkeypatch.setattr(browser_agent, "_close_browser", lambda task_id: None)
+    monkeypatch.setattr(browser_agent, "_sandboxed_browser", lambda t: contextlib.nullcontext())
     monkeypatch.setattr(guard, "allows", lambda message, t: True)
 
     out = browser_agent.run_browse_task(object(), task)
@@ -98,6 +100,7 @@ def test_anything_the_bridge_cannot_vouch_for_becomes_a_code_written_block(monke
     task = parse_browse_task(TASK_ARGS)
     monkeypatch.setattr(browser_agent, "_build_agent", lambda parent, t: _FakeAgent(final))
     monkeypatch.setattr(browser_agent, "_close_browser", lambda task_id: None)
+    monkeypatch.setattr(browser_agent, "_sandboxed_browser", lambda t: contextlib.nullcontext())
 
     def _allows(message, t):
         if isinstance(guard_verdict, Exception):
@@ -110,6 +113,20 @@ def test_anything_the_bridge_cannot_vouch_for_becomes_a_code_written_block(monke
 
     assert {k: out[k] for k in ("status", "reason")} == {"status": "blocked", "reason": "policy_blocked"}
     assert "result" not in out
+
+
+def test_without_the_browser_sandbox_nothing_is_browsed(monkeypatch):
+    from agent.agent_bridge import sandboxes
+
+    def _unavailable():
+        raise sandboxes.SandboxUnavailable("OpenShell is not installed")
+
+    monkeypatch.setattr(sandboxes, "ensure_browser_sandbox", _unavailable)
+    monkeypatch.setattr(browser_agent, "_build_agent", lambda *a: pytest.fail("no agent may run on the host"))
+
+    out = browser_agent.run_browse_task(object(), parse_browse_task(TASK_ARGS))
+
+    assert (out["status"], out["reason"], out["action_log"]) == ("blocked", "policy_blocked", [])
 
 
 def test_a_goal_carrying_a_personal_detail_is_refused_before_any_browsing(monkeypatch):

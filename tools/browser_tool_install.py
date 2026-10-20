@@ -146,14 +146,16 @@ def check_browser_requirements() -> bool:
     cloud mode needs the CLI plus provider credentials (the provider hosts its own Chromium).
     """
     _bt = _origin()
+    # CDP override needs no local binary, and the built-in tools drive that browser whatever browser.backend
+    # says: it is how the Browser Agent reaches Chromium in its OpenShell sandbox (agent/agent_bridge/).
+    # Raw (no-I/O) check: this runs during schema build, where a stale endpoint must not cost a blocking probe.
+    if _cdp._get_cdp_override_raw():
+        return True
     # Browser Use CLI backend: browser_exec replaces the whole browser_* surface (incl. browser_cdp/browser_dialog check_fns).
     if _bt._is_browser_use_cli_mode():
         return False
     # Camofox only needs the server URL, no agent-browser CLI.
     if _bt._is_camofox_mode():
-        return True
-    # CDP override needs no local binary. Raw (no-I/O) check: this runs during schema build, where a stale endpoint must not cost a blocking probe.
-    if _cdp._get_cdp_override_raw():
         return True
     # Do not exec ``agent-browser --version`` here: Windows .cmd shims flash a console during Desktop startup. Execution paths still validate.
     try:

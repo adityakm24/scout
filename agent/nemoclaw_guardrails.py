@@ -561,12 +561,16 @@ class OpenShellEnvironment:
         effective_timeout = timeout or self.timeout
         try:
             sandboxes.ensure_user_sandbox()
-            proc = sandboxes.exec_in(sandboxes.USER_SANDBOX, ["/bin/sh", "-c", command],
+            proc = sandboxes.exec_in(sandboxes.USER_SANDBOX, ["/bin/sh", "-c", sandboxes.USER_SHELL_ENV + command],
                                      workdir=self._sandbox_workdir(cwd or self.cwd), timeout=effective_timeout)
         except sandboxes.SandboxUnavailable as exc:
             return {"output": f"{exc}. The command was not run on this machine.", "returncode": 127, "exit_code": 127}
         output = (proc.stdout or "") + (proc.stderr or "")
         return {"output": output, "returncode": proc.returncode, "exit_code": proc.returncode}
+
+    def get_temp_dir(self) -> str:
+        """Session artifacts (execute_code's scripts) live in the sandbox, never at a host temp path."""
+        return "/tmp"
 
     def cleanup(self) -> None:
         return None

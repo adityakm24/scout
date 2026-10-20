@@ -11,13 +11,17 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
+import threading
 import uuid
+from contextlib import contextmanager
 from typing import Any, Dict, List
 
 from agent.agent_bridge import guard
 from agent.agent_bridge.protocol import (
-    PLACEHOLDERS, BridgeError, BrowseOutcome, BrowseTask, blocked, outcome_schema_text, parse_browse_outcome,
+    PLACEHOLDERS, BridgeError, BrowseOutcome, BrowseTask, answer_json, blocked, outcome_schema_text,
+    parse_browse_outcome,
     url_host,
 )
 from agent.agent_bridge.scope import BrowseScope, browse_scope
@@ -93,8 +97,50 @@ def _audit(scope: BrowseScope, messages: List[Dict[str, Any]]) -> None:
             scope.record(name, domain=url_host(url) if isinstance(url, str) else "", target=target)
 
 
+# One sandboxed browser: tasks run one at a time, each with only its own domains reachable.
+_browser_lock = threading.Lock()
+
+
+@contextmanager
+def _sandboxed_browser(task: BrowseTask):
+    """Point the browser tools at Chromium in the browser sandbox with the network opened to the
+    task's domains only, and close it again afterwards. Raises SandboxUnavailable (fail closed)."""
+    from agent.agent_bridge import sandboxes
+
+    with _browser_lock:
+        sandboxes.ensure_browser_sandbox()
+        sandboxes.set_browser_domains(task.allowed_domains)
+        # Restart after the domains are set: the new Chromium has no cookies, history or DNS answers
+        # from an earlier task, and resolves every host under this task's rules.
+        cdp_url = sandboxes.restart_browser()
+        if os.environ.get("BROWSER_CDP_URL") != cdp_url:
+            os.environ["BROWSER_CDP_URL"] = cdp_url
+            # Browser availability was judged (and cached) before the sandboxed browser existed: the
+            # host has no Chromium of its own, so the Browser Agent would be built without its tools.
+            from tools.registry import invalidate_check_fn_cache
+            invalidate_check_fn_cache()
+        try:
+            yield
+        finally:
+            try:
+                sandboxes.set_browser_domains(())
+            except sandboxes.SandboxUnavailable:
+                logger.warning("could not close the browser sandbox's network after a task", exc_info=True)
+
+
 def run_browse_task(parent_agent: Any, task: BrowseTask) -> Dict[str, Any]:
     """Run *task* and return what the User Agent may see: outcome + metadata log."""
+    from agent.agent_bridge.sandboxes import SandboxUnavailable
+
+    try:
+        with _sandboxed_browser(task):
+            return _run_in_scope(parent_agent, task)
+    except SandboxUnavailable as exc:
+        logger.warning("browse task refused: the browser sandbox is unavailable (%s)", exc)
+        return {**blocked("policy_blocked").as_dict(), "visited_domains": [], "action_log": []}
+
+
+def _run_in_scope(parent_agent: Any, task: BrowseTask) -> Dict[str, Any]:
     task_id = f"browse-{uuid.uuid4().hex[:12]}"
     outcome: BrowseOutcome
     with browse_scope(task, task_id) as scope:
@@ -107,7 +153,8 @@ def run_browse_task(parent_agent: Any, task: BrowseTask) -> Dict[str, Any]:
             _audit(scope, result.get("messages") or [])
             final = result.get("final_response") or ""
             outcome = parse_browse_outcome(final, task)
-            if not guard.allows(final, task):
+            if not guard.allows(answer_json(final), task):
+                logger.warning("browse task %s: answer refused by the NeMo Guardrails rail", task_id)
                 outcome = blocked("policy_blocked")
         except BridgeError as exc:
             logger.warning("browse task %s: answer refused by the protocol (%s)", task_id, exc)
