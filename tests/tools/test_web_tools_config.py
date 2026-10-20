@@ -588,9 +588,9 @@ class TestCheckWebApiKey:
 
     def test_xai_only_env_end_to_end_toolset_gate(self, monkeypatch, tmp_path):
         """E2e through the registry: a real XAI_API_KEY env var -> the real
-        has_xai_credentials probe -> check_fn -> get_tool_definitions. The web
-        toolset must serve zero tools (xai can never be dispatched to), and it
-        must light up once a real web key joins."""
+        has_xai_credentials probe -> check_fn -> get_tool_definitions. The Browser
+        Agent (the only selection holding web tools) gets no web tools (xai can never
+        be dispatched to), and they light up once a real web key joins."""
         monkeypatch.setenv("SCOUT_HOME", str(tmp_path))  # isolate auth.json / credential pool
         monkeypatch.setenv("XAI_API_KEY", "xai-test-key")
         for k in ("PERPLEXITY_API_KEY", "SEARXNG_URL", "BRAVE_SEARCH_API_KEY"):
@@ -601,14 +601,14 @@ class TestCheckWebApiKey:
         with patch("tools.web_tools._load_web_config", return_value={}):
             invalidate_check_fn_cache()
             names = {d["function"]["name"]
-                     for d in model_tools.get_tool_definitions(enabled_toolsets=["web"])}
-            assert names == set()
+                     for d in model_tools.get_tool_definitions(enabled_toolsets=["browser_agent", "web"])}
+            assert not names & {"web_search", "web_extract"}
 
             monkeypatch.setenv("TAVILY_API_KEY", "tavily-test-key")
             invalidate_check_fn_cache()
             names = {d["function"]["name"]
-                     for d in model_tools.get_tool_definitions(enabled_toolsets=["web"])}
-            assert names == {"web_search", "web_extract"}
+                     for d in model_tools.get_tool_definitions(enabled_toolsets=["browser_agent", "web"])}
+            assert {"web_search", "web_extract"} <= names
 
 
     def test_explicit_unavailable_active_provider_is_not_ready(self):

@@ -32,7 +32,7 @@ from urllib.parse import urlsplit
 from scout_constants import get_scout_home
 from utils import atomic_write_bytes
 
-VAULT_KINDS = ("login", "payment", "address")
+VAULT_KINDS = ("login", "payment", "address", "profile")
 
 LOGIN_IDENTIFIER_TYPES = ("email", "phone", "username")
 
@@ -47,8 +47,16 @@ ADDRESS_FIELDS = {
     "address_line1": "address-line1", "address_line2": "address-line2", "city": "address-level2",
     "state": "address-level1", "postal_code": "postal-code", "country": "country-name",
 }
+# The person's own contact details, typed into pages only through a browse task's placeholders
+# (agent/agent_bridge/placeholders.py): the Browser Agent never sees them.
+PROFILE_FIELDS = {
+    "full_name": "name", "first_name": "given-name", "last_name": "family-name",
+    "email": "email", "phone": "tel",
+}
 REQUIRED_FIELDS = {"payment": ("card_number", "exp_month", "exp_year", "cvc"),
-                   "address": ("address_line1", "city", "postal_code", "country")}
+                   "address": ("address_line1", "city", "postal_code", "country"),
+                   "profile": ()}
+_KIND_FIELDS = {"payment": PAYMENT_FIELDS, "address": ADDRESS_FIELDS, "profile": PROFILE_FIELDS}
 
 _DEFAULT_PORTS = {"http": 80, "https": 443}
 
@@ -344,11 +352,13 @@ class VaultStore:
             otp_secret = normalize_otp_secret(str(secret.get("otp_secret") or ""))
             secret = {"password": secret["password"], **({"otp_secret": otp_secret} if otp_secret else {})}
         else:
-            allowed = PAYMENT_FIELDS if kind == "payment" else ADDRESS_FIELDS
+            allowed = _KIND_FIELDS[kind]
             secret = {k: str(v) for k, v in secret.items() if k in allowed and str(v or "").strip()}
             missing = [f for f in REQUIRED_FIELDS[kind] if f not in secret]
             if missing:
                 raise VaultError(f"{kind} items require {', '.join(missing)}")
+            if not secret:
+                raise VaultError(f"{kind} items need at least one of {', '.join(allowed)}")
             if origin:
                 norm_origin = normalize_origin(origin)
 

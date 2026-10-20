@@ -8,18 +8,37 @@ from typing import Dict, List, Any, Set, Optional, Tuple
 # in `desktop_ui`/`project`, enabled per desktop-sourced session by the GUI gateway
 # (tui_gateway/server.py::_load_enabled_toolsets). HA, kanban and computer_use
 # entries are further gated by their tools' check_fns.
-_SCOUT_CORE_TOOLS = [
-    "web_search", "web_extract",
-    "terminal", "process_manage",
-    "read_file", "write_file", "patch", "search_files",
-    "vision_analyze", "image_generate",
-    "skills_list", "skill_view", "skill_manage",
+# The Browser Agent's tools. Only that agent, a separate zero-data agent in its own sandbox, ever
+# holds a tool that reads the open web (agent/agent_bridge/); the User Agent reaches the web solely
+# through ``browse_task``. ``browser_exec`` replaces the other browser tools when browser.backend is
+# "browser-use"; the vault tools fill secrets without the model seeing them.
+_BROWSER_TOOLS = [
     "browser_navigate", "browser_snapshot", "browser_click",
     "browser_type", "browser_scroll", "browser_back",
     "browser_press", "browser_get_images",
     "browser_vision", "browser_console", "browser_cdp", "browser_dialog",
-    "browser_vault_list", "browser_vault_unlock", "browser_vault_fill", "browser_vault_save_login", "browser_vault_enter_code",  # ride with the browser
-    "browser_exec",  # replaces the other browser tools when browser.backend is "browser-use"
+    "browser_vault_list", "browser_vault_unlock", "browser_vault_fill", "browser_vault_save_login", "browser_vault_enter_code",
+    "browser_exec",
+]
+# Withheld from the Browser Agent too (and no other agent may hold any browser tool): raw CDP and
+# the browser-use CLI reach the page without the browse-task domain checks, and the vault lists
+# saved logins' usernames, which are the person's own details.
+_UNSCOPED_BROWSER_TOOLS = ("browser_cdp", "browser_exec", "browser_vault_list", "browser_vault_unlock",
+                           "browser_vault_fill", "browser_vault_save_login", "browser_vault_enter_code")
+BROWSER_AGENT_TOOLS = frozenset(
+    ["web_search", "web_extract", "x_search", "browser_fill_placeholder",
+     *(t for t in _BROWSER_TOOLS if t not in _UNSCOPED_BROWSER_TOOLS)]
+)
+# Never on the User Agent, whatever config enables: the Browser Agent's web tools, and desktop
+# control (it can open a browser and also sees the user's screen, so it belongs to neither agent).
+USER_AGENT_DENIED_TOOLS = BROWSER_AGENT_TOOLS | set(_UNSCOPED_BROWSER_TOOLS) | {"computer_use"}
+
+_SCOUT_CORE_TOOLS = [
+    "browse_task", "external_action",
+    "terminal", "process_manage",
+    "read_file", "write_file", "patch", "search_files",
+    "vision_analyze", "image_generate",
+    "skills_list", "skill_view", "skill_manage",
     "text_to_speech",
     "todo_list", "memory",
     "planner",
@@ -37,13 +56,12 @@ _SCOUT_CORE_TOOLS = [
     "kanban_comment", "kanban_create", "kanban_link",
     "kanban_unblock",
     "kanban_attach", "kanban_attach_url", "kanban_attachments",
-    "computer_use",
     # Service-gated connector account status and authorization links.
     "manage_connections",
 ]
 
 # Webhook payloads are untrusted third-party content: no file/system execution.
-_SCOUT_WEBHOOK_SAFE_TOOLS = ["web_search", "web_extract", "vision_analyze", "clarify"]
+_SCOUT_WEBHOOK_SAFE_TOOLS = ["vision_analyze", "clarify"]
 _HA_TOOLS = ["ha_list_entities", "ha_get_state", "ha_list_services", "ha_call_service"]
 
 
@@ -64,7 +82,7 @@ def _core_without(*excluded, kanban=True):
 
 # Coding posture: everything you reach for while pairing on code; drops messaging,
 # tts, image_gen, home-assistant, cron, kanban and computer-use.
-_CODING_TOOLS = _core_without("image_generate", "text_to_speech", "cronjob_manage", "schedule_order", "computer_use", *_HA_TOOLS, kanban=False)
+_CODING_TOOLS = _core_without("image_generate", "text_to_speech", "cronjob_manage", "schedule_order", *_HA_TOOLS, kanban=False)
 
 # Toolsets a CLIENT adds to its own sessions (tui_gateway/server.py::_gui_surface_toolsets), never
 # config: another surface lacking them made no configuration choice.
@@ -74,6 +92,8 @@ CLIENT_SURFACE_TOOLSETS = frozenset({"project", "desktop_ui"})
 TOOLSETS = {
     # Basic toolsets - individual tool categories
     "web": _ts("Web research and content extraction tools", ["web_search", "web_extract"]),
+    "browse": _ts("Reach the web through the zero-data Browser Agent (typed results only)", ["browse_task"]),
+    "external_action": _ts("Send email or change the calendar, each after the person approves", ["external_action"]),
     "search": _ts("Web search only (no content extraction/scraping)", ["web_search"]),
     "x_search": _ts(
         "Search X (Twitter) posts and threads via xAI's built-in x_search Responses "
@@ -112,7 +132,11 @@ TOOLSETS = {
     "browser": _ts(
         "Browser automation for web interaction (navigate, click, type, scroll, "
         "iframes, hold-click)",
-        [t for t in _SCOUT_CORE_TOOLS if t.startswith("browser_")],
+        list(_BROWSER_TOOLS),
+    ),
+    "browser_agent": _ts(
+        "The Browser Agent's whole surface: the open web, with no user data (agent/agent_bridge/)",
+        sorted(BROWSER_AGENT_TOOLS),
     ),
     "cronjob": _ts(
         "Cronjob management tool - create, list, update, pause, resume, remove, and "

@@ -1,0 +1,7 @@
+# NeMo Guardrails configuration for the agent bridge (agent/agent_bridge/guard.py).
+# Deterministic only: no model is configured, so no rail can be talked out of its verdict.
+# Every Browser Agent answer runs the input rail below before the User Agent sees it.
+rails:
+  input:
+    flows:
+      - check bridge message

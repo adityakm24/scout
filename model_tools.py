@@ -332,6 +332,13 @@ def _select_tool_names(enabled_toolsets: Optional[List[str]], disabled_toolsets:
     from toolsets import profile_role_toolsets
     for ts_name in profile_role_toolsets()[1]:
         tools.difference_update(resolve_toolset(ts_name))
+    # The two-agent split passes the same point: only the Browser Agent's own selection reaches the
+    # web, and it reaches nothing else. Every other selection, "all" included, is the User Agent's.
+    from toolsets import BROWSER_AGENT_TOOLS, USER_AGENT_DENIED_TOOLS
+    if enabled_toolsets is not None and "browser_agent" in enabled_toolsets:
+        tools.intersection_update(BROWSER_AGENT_TOOLS)
+    else:
+        tools.difference_update(USER_AGENT_DENIED_TOOLS)
     # Disabled toolsets are always subtracted LAST, so a tool in a disabled
     # toolset is stripped even when a composite (scout-cli) re-enables it.
     # This ensures that even if a composite toolset (like scout-cli) is enabled, any tools belonging to a
@@ -531,7 +538,9 @@ def _compute_tool_definitions(enabled_toolsets: Optional[List[str]] = None, disa
     try:
         from tools.tool_search import assemble_tool_defs, load_config as _load_ts_config
         ts_cfg = _load_ts_config()
-        if not skip_tool_search_assembly and ts_cfg.enabled != "off":
+        # The Browser Agent's surface is exactly its toolset: tool_call would reach past it.
+        browser_agent = enabled_toolsets is not None and "browser_agent" in enabled_toolsets
+        if not skip_tool_search_assembly and not browser_agent and ts_cfg.enabled != "off":
             assembly = assemble_tool_defs(filtered_tools, context_length=_resolve_active_context_length(), config=ts_cfg)
             if assembly.activated and not quiet_mode:
                 print(f"🔎 Tool Search (tier {assembly.tier}): {assembly.deferred_count} "

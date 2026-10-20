@@ -219,7 +219,9 @@ class TestToolSurfaceSwap:
         names = {t["function"]["name"] for t in defs}
         assert "browser_exec" not in names
 
-    def test_browser_exec_present_with_terminal(self, monkeypatch):
+    def test_browser_exec_is_never_served(self, monkeypatch):
+        """browser_exec drives the page without the browse-task domain checks, so neither the
+        User Agent nor the Browser Agent receives it, even in browser-use mode."""
         monkeypatch.setattr(bu_cli, "is_browser_use_cli_mode", lambda: True)
         from tools.registry import registry
 
@@ -227,11 +229,9 @@ class TestToolSurfaceSwap:
         monkeypatch.setattr(entry, "check_fn", lambda: True)
         import model_tools
 
-        defs = model_tools.get_tool_definitions(
-            enabled_toolsets=["browser", "terminal"], quiet_mode=False
-        )
-        names = {t["function"]["name"] for t in defs}
-        assert "browser_exec" in names
+        for enabled in (["browser", "terminal"], ["browser_agent"]):
+            defs = model_tools.get_tool_definitions(enabled_toolsets=enabled, quiet_mode=False)
+            assert "browser_exec" not in {t["function"]["name"] for t in defs}
 
 
 class TestVaultSupervisorAttach:

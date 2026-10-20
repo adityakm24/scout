@@ -1,0 +1,8 @@
+define bot refuse bridge message
+  "BRIDGE_REFUSED"
+
+define flow check bridge message
+  $ok = execute check_bridge_message(text=$user_message)
+  if not $ok
+    bot refuse bridge message
+    stop

@@ -72,6 +72,23 @@ tts, video, vision, web, yuanbao` (don't assert the list in tests). Per-platform
 `scout tools` (curses) or `tools.<platform>.enabled/disabled` in config.yaml. `browser_exec`
 replaces the other browser tools when `browser.backend` is `browser-use`.
 
+### Two agents: who may touch the web
+
+Scout runs a privileged **User Agent** (the person's mail, files, memory; no web) and a zero-data
+**Browser Agent** (the web; no personal data), bridged by `agent/agent_bridge/` (read its
+`__init__.py` first). `model_tools._select_tool_names` enforces the split for every surface:
+a selection containing `browser_agent` is cut down to `toolsets.BROWSER_AGENT_TOOLS`; every other
+selection, `None` included, loses `USER_AGENT_DENIED_TOOLS`. Consequences when adding tools:
+
+- A tool that reads the open web belongs in `BROWSER_AGENT_TOOLS`, and must honour the browse-task
+  domain allowlist (`agent_bridge.scope.navigation_error`, as `browser_navigate` and `web_extract` do).
+  One that reaches a page without that check (`browser_cdp`, `browser_exec`) goes in
+  `_UNSCOPED_BROWSER_TOOLS`: no agent gets it.
+- The User Agent reaches the web only through `browse_task` and writes outside its sandbox only
+  through `external_action` (approval card written by code from the exact arguments).
+- Nothing crosses back from the Browser Agent except `agent_bridge.protocol`'s enums and typed
+  fields, re-checked by the NeMo Guardrails rail (`agent_bridge/nemo_guard/`) in the guard sandbox.
+
 ## Backends and providers inside tools/
 
 Several tools front pluggable backends: terminal environments in `tools/environments/` (local,

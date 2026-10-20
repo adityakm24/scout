@@ -522,12 +522,20 @@ registry.register(
     check_fn=check_web_api_key, requires_env=_web_requires_env(), emoji="🔍",
     max_result_size_chars=100_000,
 )
+async def _web_extract_in_scope(args: dict, task_id: Optional[str]) -> str:
+    """``web_extract`` for a browse task reads only its allowed domains, like its browser."""
+    urls = args.get("urls", [])[:5] if isinstance(args.get("urls"), list) else []
+    from agent.agent_bridge.scope import navigation_error
+    for url in urls:
+        error = navigation_error(task_id, str(url))
+        if error is not None:
+            return json.dumps({"error": error})
+    return await web_extract_tool(urls, "markdown", char_limit=args.get("char_limit"))
+
+
 registry.register(
     name="web_extract", toolset="web", schema=WEB_EXTRACT_SCHEMA,
-    handler=lambda args, **kw: web_extract_tool(
-        args.get("urls", [])[:5] if isinstance(args.get("urls"), list) else [], "markdown",
-        char_limit=args.get("char_limit"),
-    ),
+    handler=lambda args, **kw: _web_extract_in_scope(args, kw.get("task_id")),
     check_fn=check_web_api_key, requires_env=_web_requires_env(), is_async=True, emoji="📄",
     max_result_size_chars=100_000,
 )

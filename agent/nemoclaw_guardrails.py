@@ -41,8 +41,6 @@ from __future__ import annotations
 import logging
 import os
 import re
-import shutil
-import subprocess
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -525,10 +523,11 @@ def _on_transform_llm_output(output: Any = None, **_: Any) -> Optional[str]:
 # ── 4. NVIDIA OpenShell Sandbox Environment (Core Built-In) ─────────────────
 
 class OpenShellEnvironment:
-    """Run commands inside NVIDIA OpenShell, in the project directory.
+    """The User Agent's terminal: every command runs in the ``scout-user`` OpenShell sandbox.
 
-    There is no host fallback. If the ``openshell`` program is missing, the command
-    is refused instead of running on the machine.
+    That sandbox reaches only Google's APIs, read-only (agent/agent_bridge/sandboxes.py). There is
+    no host fallback: without OpenShell the command is refused instead of running on the machine.
+    Host paths do not exist in the sandbox, so a host cwd becomes the sandbox's own workdir.
     """
 
     def __init__(
@@ -544,74 +543,30 @@ class OpenShellEnvironment:
         self.cwd = cwd
         self.timeout = timeout
         self.task_id = task_id
-        self.image = image or "ubuntu:24.04"
+        self.image = image
         self.container_config = container_config or {}
         self.env_type = "openshell"
-        self._openshell_bin = shutil.which("openshell")
 
-    def _project_workdir(self, cwd: Optional[str]) -> str:
-        """The project directory the session was given. Never a substitute sandbox folder."""
-        return cwd or self.cwd or os.getcwd()
-
-    def _sanitized_env(self, work_dir: str) -> Dict[str, str]:
-        """Raw API keys never enter the sandbox."""
-        env = dict(os.environ)
-        for key in list(env.keys()):
-            if any(
-                token in key.upper()
-                for token in ("API_KEY", "SECRET", "TOKEN", "PASSWORD", "CREDENTIAL", "PRIVATE_KEY")
-            ):
-                env.pop(key, None)
-        env["SCOUT_ENVIRONMENT_HINT"] = "Running inside an NVIDIA OpenShell policy-governed sandbox."
-        env["OPENSHELL_SANDBOX"] = "1"
-        env["OPENSHELL_WORKSPACE"] = work_dir
-        return env
+    @staticmethod
+    def _sandbox_workdir(cwd: Optional[str]) -> str:
+        return cwd if cwd and (cwd == "/sandbox" or cwd.startswith(("/sandbox/", "/tmp"))) else "/sandbox"
 
     def execute(self, command: str, cwd: Optional[str] = None, *, timeout: Optional[int] = None, **kwargs: Any) -> Dict[str, Any]:
+        from agent.agent_bridge import sandboxes
+
         verdict = evaluate_tool_call_policy("terminal", {"command": command})
         if verdict is not None:
             _, message = verdict
             return {"output": message, "returncode": 126, "exit_code": 126}
-
         effective_timeout = timeout or self.timeout
-        work_dir = self._project_workdir(cwd)
-
-        if not self._openshell_bin:
-            return {
-                "output": (
-                    "OpenShell is required and the `openshell` program is not installed. "
-                    "The command was not run on this machine."
-                ),
-                "returncode": 127,
-                "exit_code": 127,
-            }
-
-        cmd = [
-            self._openshell_bin,
-            "exec",
-            "--session",
-            self.task_id,
-            "--workdir",
-            work_dir,
-            "--",
-            "/bin/sh",
-            "-c",
-            command,
-        ]
         try:
-            proc = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=effective_timeout,
-                env=self._sanitized_env(work_dir),
-            )
-            output = (proc.stdout or "") + (proc.stderr or "")
-            return {"output": output, "returncode": proc.returncode, "exit_code": proc.returncode}
-        except subprocess.TimeoutExpired:
-            return {"output": f"OpenShell command timed out after {effective_timeout}s", "returncode": 124, "exit_code": 124}
-        except Exception as exc:
-            return {"output": f"OpenShell execution error: {exc}", "returncode": 1, "exit_code": 1}
+            sandboxes.ensure_user_sandbox()
+            proc = sandboxes.exec_in(sandboxes.USER_SANDBOX, ["/bin/sh", "-c", command],
+                                     workdir=self._sandbox_workdir(cwd or self.cwd), timeout=effective_timeout)
+        except sandboxes.SandboxUnavailable as exc:
+            return {"output": f"{exc}. The command was not run on this machine.", "returncode": 127, "exit_code": 127}
+        output = (proc.stdout or "") + (proc.stderr or "")
+        return {"output": output, "returncode": proc.returncode, "exit_code": proc.returncode}
 
     def cleanup(self) -> None:
         return None
@@ -641,7 +596,11 @@ class OpenShellEnvironmentProvider(TerminalEnvironmentProvider):
         })
 
     def is_available(self) -> bool:
-        return shutil.which("openshell") is not None
+        from agent.agent_bridge.sandboxes import SandboxUnavailable, openshell
+        try:
+            return bool(openshell())
+        except SandboxUnavailable:
+            return False
 
     def probe(self) -> Tuple[str, str]:
         if self.is_available():

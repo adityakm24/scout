@@ -750,6 +750,10 @@ def browser_navigate(url: str, task_id: Optional[str] = None) -> str:
     safety_error = _url_policy_error(url, auto_local=auto_local_this_nav)
     if safety_error is not None:
         return json.dumps(safety_error)
+    from agent.agent_bridge.scope import navigation_error
+    scope_error = navigation_error(effective_task_id, url)
+    if scope_error is not None:
+        return _dumps(_err(scope_error))
 
     if _is_camofox_mode():
         return _camofox("camofox_navigate", url, task_id)
@@ -776,6 +780,10 @@ def browser_navigate(url: str, task_id: Optional[str] = None) -> str:
     blocked = _post_redirect_block(nav_session_key, url, final_url, auto_local_this_nav)
     if blocked is not None:
         return blocked
+    scope_error = navigation_error(effective_task_id, final_url)
+    if scope_error is not None:
+        _session._run_browser_command(nav_session_key, "open", ["about:blank"], timeout=10)
+        return _dumps(_err(scope_error))
 
     response = {"success": True, "url": final_url, "title": title}
     features = session_info.get("features") or {}
@@ -950,12 +958,33 @@ def _blocked_private_page_json(blocked_url: str, why: str) -> str:
 
 
 def _blocked_private_page(effective_task_id: str, why: str) -> Optional[str]:
-    """Blocked payload when the SSRF guard is active and the current page is private, else
-    None. Fail-open on probe failure (see ``_current_page_private_url``)."""
+    """Blocked payload when the SSRF guard is active and the current page is private, or when a
+    browse task's page left its allowed domains, else None. The SSRF probe fails open (see
+    ``_current_page_private_url``); the browse-task check fails closed."""
+    off_scope = _browse_scope_page_error(effective_task_id)
+    if off_scope is not None:
+        return off_scope
     if not _eval_policy._eval_ssrf_guard_active(effective_task_id):
         return None
     blocked_url = _eval_policy._current_page_private_url(effective_task_id)
     return _blocked_private_page_json(blocked_url, why) if blocked_url else None
+
+
+def _browse_scope_page_error(effective_task_id: str) -> Optional[str]:
+    """A browse task's current page must stay on its allowed domains: a click, a script or a
+    redirect that left them is refused and the page cleared, and an unreadable URL is refused."""
+    from agent.agent_bridge.scope import navigation_error, scope_for
+    if scope_for(effective_task_id) is None:
+        return None
+    result = _session._run_browser_command(effective_task_id, "eval", ["window.location.href"], timeout=5, _engine_override="auto")
+    current = str(result.get("data", {}).get("result", "")).strip().strip('"').strip("'") if result.get("success") else ""
+    if current in ("", "about:blank"):
+        return None if current else _dumps(_err("Blocked: could not confirm the page's address for this browse task."))
+    error = navigation_error(effective_task_id, current)
+    if error is None:
+        return None
+    _session._run_browser_command(effective_task_id, "open", ["about:blank"], timeout=10)
+    return _dumps(_err(error))
 
 
 def _blocked_private_page_action(effective_task_id: str, action: str) -> Optional[str]:

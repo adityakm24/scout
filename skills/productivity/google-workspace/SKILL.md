@@ -175,17 +175,11 @@ scout google gmail search "has:attachment filename:pdf newer_than:7d"
 # Read full message (returns JSON with body text)
 scout google gmail get MESSAGE_ID
 
-# Save to Gmail Drafts without sending (the user reviews and sends it from Gmail)
-scout google gmail draft --to user@example.com --subject "Hello" --body "Message text"
-
-# Send
-scout google gmail send --to user@example.com --subject "Hello" --body "Message text"
-scout google gmail send --to user@example.com --subject "Report" --body "<h1>Q4</h1><p>Details...</p>" --html
-scout google gmail send --to user@example.com --subject "Hello" --from '"Research Agent" <user@example.com>' --body "Message text"
-
-# Reply (automatically threads and sets In-Reply-To)
-scout google gmail reply MESSAGE_ID --body "Thanks, that works for me."
-scout google gmail reply MESSAGE_ID --from '"Support Bot" <user@example.com>' --body "Thanks"
+# Draft, send and reply: use the external_action tool, never the terminal. The terminal reaches
+# Google read-only; external_action shows the person the exact email and runs it once they approve.
+#   external_action(action="draft_email", to=..., subject=..., body=...)
+#   external_action(action="send_email", to=..., subject=..., body=..., cc=...)
+#   external_action(action="reply_email", message_id=..., body=...)
 
 # Labels
 scout google gmail labels
@@ -208,8 +202,9 @@ A one-line note is not an email. Before any `draft`, `send` or `reply`:
    any thread being answered, and keep it as short as the purpose allows.
 3. **Show the whole draft** (to, cc, subject, body) and ask: send it, save it to Gmail Drafts, or
    change something. Revise until the user is happy.
-4. **Then act.** `send` / `reply` only on an explicit "send". Scout also asks the user to approve
-   the command. Otherwise `draft`, and tell the user it is waiting in Gmail Drafts.
+4. **Then act** with `external_action`: `send_email` / `reply_email` only on an explicit "send"; the
+   person approves the exact email before it goes. Otherwise `draft_email`, and tell the user it is
+   waiting in Gmail Drafts.
 
 ### Calendar
 
@@ -218,13 +213,10 @@ A one-line note is not an email. Before any `draft`, `send` or `reply`:
 scout google calendar list
 scout google calendar list --start 2026-03-01T00:00:00Z --end 2026-03-07T23:59:59Z
 
-# Create event (ISO 8601 with timezone required)
-scout google calendar create --summary "Team Standup" --start 2026-03-01T10:00:00-06:00 --end 2026-03-01T10:30:00-06:00
-scout google calendar create --summary "Lunch" --start 2026-03-01T12:00:00Z --end 2026-03-01T13:00:00Z --location "Cafe"
-scout google calendar create --summary "Review" --start 2026-03-01T14:00:00Z --end 2026-03-01T15:00:00Z --attendees "alice@co.com,bob@co.com"
-
-# Delete event
-scout google calendar delete EVENT_ID
+# Create or delete events with the external_action tool (the person approves each one):
+#   external_action(action="create_calendar_event", summary=..., start=..., end=..., location=..., attendees=...)
+#   external_action(action="delete_calendar_event", event_id=...)
+# start/end are ISO 8601 with a timezone, e.g. 2026-03-01T10:00:00-06:00
 ```
 
 ### Drive
