@@ -1,5 +1,6 @@
 import { useStore } from '@nanostores/react'
 import { type KeyboardEvent, type MouseEvent, useEffect, useRef, useState, type WheelEvent } from 'react'
+import { createPortal } from 'react-dom'
 
 import {
   type BrowserScreenLease,
@@ -52,6 +53,7 @@ export function ComputerTab() {
   const [viewer, setViewer] = useState<{ hash: string; id: string } | null>(null)
   const [socket, setSocket] = useState<WebSocket | null>(null)
   const lastMove = useRef(0)
+  const [full, setFull] = useState(false)
 
   const inControl = Boolean(viewer && lease?.holder === 'human' && lease.viewer_hash === viewer.hash)
 
@@ -208,6 +210,35 @@ export function ComputerTab() {
     )
   }
 
+  // One live screen, drawn in the panel and (larger) in the full-screen viewer; input only while in control.
+  const screen = (size: 'full' | 'panel') =>
+    frame ? (
+      <img
+        alt={copy.caption}
+        className={cn(
+          'block select-none',
+          size === 'full' ? 'max-h-full max-w-full object-contain' : 'aspect-[16/10] w-full',
+          inControl ? 'cursor-default' : size === 'panel' ? 'cursor-zoom-in' : 'cursor-not-allowed'
+        )}
+        draggable={false}
+        onClick={() => size === 'panel' && !inControl && setFull(true)}
+        onContextMenu={e => inControl && e.preventDefault()}
+        onMouseDown={mouse('mousePressed')}
+        onMouseMove={mouse('mouseMoved')}
+        onMouseUp={mouse('mouseReleased')}
+        onWheel={e => inControl && send({ type: 'wheel', ...point(e), deltaX: e.deltaX, deltaY: e.deltaY })}
+        src={`data:image/jpeg;base64,${frame.data}`}
+      />
+    ) : (
+      <div className="flex aspect-[16/10] w-full items-center justify-center text-xs text-white/60">{copy.connecting}</div>
+    )
+
+  const controlButton = (
+    <Button disabled={!viewer} onClick={() => void toggleControl()} size="sm" variant={inControl ? 'default' : 'ghost'}>
+      {inControl ? copy.handBack : copy.takeOver}
+    </Button>
+  )
+
   return (
     <div className="flex flex-col gap-3 px-4 pb-4">
       <div
@@ -217,31 +248,64 @@ export function ComputerTab() {
         )}
         onKeyDown={key('keyDown')}
         onKeyUp={key('keyUp')}
-        tabIndex={inControl ? 0 : -1}
+        tabIndex={inControl && !full ? 0 : -1}
       >
-        {frame ? (
-          <img
-            alt={copy.caption}
-            className={cn('block aspect-[16/10] w-full select-none', inControl ? 'cursor-default' : 'cursor-not-allowed')}
-            draggable={false}
-            onContextMenu={e => inControl && e.preventDefault()}
-            onMouseDown={mouse('mousePressed')}
-            onMouseMove={mouse('mouseMoved')}
-            onMouseUp={mouse('mouseReleased')}
-            onWheel={e => inControl && send({ type: 'wheel', ...point(e), deltaX: e.deltaX, deltaY: e.deltaY })}
-            src={`data:image/jpeg;base64,${frame.data}`}
-          />
-        ) : (
-          <div className="flex aspect-[16/10] items-center justify-center text-xs text-white/60">{copy.connecting}</div>
-        )}
+        {screen('panel')}
       </div>
       {inControl ? <p className="m-0 text-xs text-(--ui-text-secondary)">{copy.youHaveControl}</p> : null}
       <div className="flex items-center justify-between gap-2">
-        <p className="m-0 text-xs text-(--ui-text-tertiary)">{copy.caption}</p>
-        <Button disabled={!viewer} onClick={() => void toggleControl()} size="sm" variant={inControl ? 'default' : 'ghost'}>
-          {inControl ? copy.handBack : copy.takeOver}
+        <Button onClick={() => setFull(true)} size="sm" variant="ghost">
+          {copy.fullScreen}
         </Button>
+        {controlButton}
       </div>
+      {full
+        ? createPortal(
+            <div
+              aria-label={copy.caption}
+              aria-modal="true"
+              className="fixed inset-0 z-[1300] flex flex-col bg-black outline-none"
+              onKeyDown={e => {
+                if (e.key === 'Escape' && !inControl) {
+                  setFull(false)
+
+                  return
+                }
+
+                key('keyDown')(e)
+              }}
+              onKeyUp={key('keyUp')}
+              ref={el => el?.focus()}
+              role="dialog"
+              tabIndex={0}
+            >
+              <div className="flex items-center justify-between gap-3 px-5 py-3 text-white">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium">{copy.caption}</span>
+                  <span
+                    className={cn(
+                      'rounded-full px-2.5 py-0.5 text-xs',
+                      inControl ? 'bg-(--ui-accent) text-white' : 'bg-white/15 text-white/80'
+                    )}
+                  >
+                    {inControl ? copy.controlling : copy.viewOnly}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {controlButton}
+                  <Button onClick={() => setFull(false)} size="sm" variant="ghost">
+                    {copy.close}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex min-h-0 flex-1 items-center justify-center p-4">{screen('full')}</div>
+              {inControl ? (
+                <p className="m-0 pb-3 text-center text-xs text-white/70">{copy.youHaveControl}</p>
+              ) : null}
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   )
 }

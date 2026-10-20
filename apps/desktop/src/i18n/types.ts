@@ -128,6 +128,10 @@ export interface Translations {
       takeOver: string
       youHaveControl: string
       takeOverFailed: string
+      fullScreen: string
+      viewOnly: string
+      controlling: string
+      close: string
     }
     persona: {
       soul: string

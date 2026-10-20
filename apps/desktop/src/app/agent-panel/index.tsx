@@ -71,10 +71,10 @@ export function AgentPanel() {
         </button>
       )}
       <IdentityCard />
-      {/* At the panel's narrowest the four labels only fit one size down. */}
-      <div className="px-4 @max-[22rem]/agent:[&_[role=tab]]:px-1.5 @max-[22rem]/agent:[&_[role=tab]]:text-[0.75rem]">
+      {/* Natural-width labels spread over the row (never truncated); one size down when the panel is narrow. */}
+      <div className="px-4 [&_[role=tab]]:px-2 @max-[27rem]/agent:[&_[role=tab]]:px-1.5 @max-[27rem]/agent:[&_[role=tab]]:text-[0.75rem]">
         <SegmentedTabs
-          fill
+          className="flex w-full justify-between"
           onChange={id => setTab(id as AgentPanelTab)}
           tabs={[
             { id: 'persona', label: copy.tabs.persona },

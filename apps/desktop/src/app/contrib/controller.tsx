@@ -296,9 +296,10 @@ registry.registerMany([
       collapsible: true,
       defaultCollapsed: true,
       dock: { pane: 'workspace', pos: 'right' },
-      width: '352px',
-      minWidth: '300px',
-      maxWidth: '480px',
+      // Wide enough for every tab label (Persona … Requests) and a readable live Computer screen.
+      width: '460px',
+      minWidth: '420px',
+      maxWidth: '640px',
       tabTitle: () => <LocalizedTabTitle select={t => t.agentPanel.title} />,
       tabTitleText: () => translateNow('agentPanel.title')
     },

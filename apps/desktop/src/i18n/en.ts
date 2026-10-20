@@ -63,9 +63,13 @@ export const en: Translations = {
       caption: "Scout's screen",
       connecting: 'Connecting…',
       handBack: 'Hand back to Scout',
-      takeOver: 'Take over',
+      takeOver: 'Take control',
       youHaveControl: 'You have control. Scout waits until you hand it back.',
-      takeOverFailed: 'Could not take control'
+      takeOverFailed: 'Could not take control',
+      fullScreen: 'Full screen',
+      viewOnly: 'View only',
+      controlling: 'You are in control',
+      close: 'Close'
     },
     persona: {
       soul: 'Soul',
