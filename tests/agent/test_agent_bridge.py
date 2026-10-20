@@ -28,7 +28,7 @@ def test_only_the_browser_agent_selection_reaches_the_web(enabled):
     browser = model_tools._select_tool_names(["browser_agent", *(enabled or [])], None, True)
 
     assert not user & USER_AGENT_DENIED_TOOLS
-    assert browser <= BROWSER_AGENT_TOOLS and "browser_navigate" in browser
+    assert browser <= BROWSER_AGENT_TOOLS and "browser_computer" in browser
     assert not browser & {"browse_task", "external_action", "memory", "terminal", "read_file", "session_search"}
 
 
@@ -80,7 +80,6 @@ def test_the_user_agent_gets_only_validated_fields_and_metadata(monkeypatch):
     answer = json.dumps({"status": "done", "reason": "ok", "result": {"price": 9}})
     fake = _FakeAgent(answer)
     monkeypatch.setattr(browser_agent, "_build_agent", lambda parent, t: fake)
-    monkeypatch.setattr(browser_agent, "_close_browser", lambda task_id: None)
     monkeypatch.setattr(browser_agent, "_sandboxed_browser", lambda t: contextlib.nullcontext())
     monkeypatch.setattr(guard, "allows", lambda message, t: True)
 
@@ -99,7 +98,6 @@ def test_the_user_agent_gets_only_validated_fields_and_metadata(monkeypatch):
 def test_anything_the_bridge_cannot_vouch_for_becomes_a_code_written_block(monkeypatch, final, guard_verdict):
     task = parse_browse_task(TASK_ARGS)
     monkeypatch.setattr(browser_agent, "_build_agent", lambda parent, t: _FakeAgent(final))
-    monkeypatch.setattr(browser_agent, "_close_browser", lambda task_id: None)
     monkeypatch.setattr(browser_agent, "_sandboxed_browser", lambda t: contextlib.nullcontext())
 
     def _allows(message, t):
@@ -138,3 +136,17 @@ def test_a_goal_carrying_a_personal_detail_is_refused_before_any_browsing(monkey
         {**TASK_ARGS, "goal": "Ship the mug to jane.doe@example.org"}, parent_agent=object()))
 
     assert out["status"] == "failed" and "placeholder" in out["error"]
+
+
+def test_the_agent_cannot_touch_the_browser_while_the_person_holds_it(monkeypatch):
+    from tools import browser_computer_tool
+    from tools.bot_desktop import lease
+
+    monkeypatch.setattr(lease, "human_holds", lambda *a, **k: True)
+    monkeypatch.setattr("agent.agent_bridge.browser_screen.BrowserScreen.__enter__",
+                        lambda self: pytest.fail("no action may reach the page"))
+    with browse_scope(parse_browse_task(TASK_ARGS), "browse-held"):
+        out = json.loads(browser_computer_tool.browser_computer({"action": "click", "x": 10, "y": 10},
+                                                                task_id="browse-held"))
+
+    assert out["success"] is False and "taken control" in out["error"]

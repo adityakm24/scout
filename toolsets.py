@@ -25,13 +25,13 @@ _BROWSER_TOOLS = [
 # saved logins' usernames, which are the person's own details.
 _UNSCOPED_BROWSER_TOOLS = ("browser_cdp", "browser_exec", "browser_vault_list", "browser_vault_unlock",
                            "browser_vault_fill", "browser_vault_save_login", "browser_vault_enter_code")
-BROWSER_AGENT_TOOLS = frozenset(
-    ["web_search", "web_extract", "x_search", "browser_fill_placeholder",
-     *(t for t in _BROWSER_TOOLS if t not in _UNSCOPED_BROWSER_TOOLS)]
-)
+# The Browser Agent works its sandboxed browser like a person (screenshot + mouse and keyboard,
+# tools/browser_computer_tool.py) on the screen the person watches and can take over; the
+# ref-based browser_* tools drive a separate session and are not part of its surface.
+BROWSER_AGENT_TOOLS = frozenset(["web_search", "web_extract", "x_search", "browser_computer", "browser_fill_placeholder"])
 # Never on the User Agent, whatever config enables: the Browser Agent's web tools, and desktop
 # control (it can open a browser and also sees the user's screen, so it belongs to neither agent).
-USER_AGENT_DENIED_TOOLS = BROWSER_AGENT_TOOLS | set(_UNSCOPED_BROWSER_TOOLS) | {"computer_use"}
+USER_AGENT_DENIED_TOOLS = BROWSER_AGENT_TOOLS | set(_BROWSER_TOOLS) | {"computer_use"}
 
 _SCOUT_CORE_TOOLS = [
     "browse_task", "external_action",

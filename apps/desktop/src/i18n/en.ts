@@ -56,7 +56,17 @@ export const en: Translations = {
     removePhoto: 'Remove photo',
     photoTooLarge: 'That image is too large. Pick one under 2 MB.',
     saveFailed: 'Could not save. Try again.',
-    tabs: { heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Permissions', requests: 'Requests' },
+    tabs: { computer: 'Computer', heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Permissions', requests: 'Requests' },
+    computer: {
+      asleep: 'Computer is asleep',
+      asleepDetail: 'It wakes up when Scout needs the web.',
+      caption: "Scout's screen",
+      connecting: 'Connecting…',
+      handBack: 'Hand back to Scout',
+      takeOver: 'Take over',
+      youHaveControl: 'You have control. Scout waits until you hand it back.',
+      takeOverFailed: 'Could not take control'
+    },
     persona: {
       soul: 'Soul',
       soulCaption: 'Personality and voice',

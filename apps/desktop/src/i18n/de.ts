@@ -55,7 +55,7 @@ export const deOverrides = {
     removePhoto: 'Foto entfernen',
     photoTooLarge: 'Das Bild ist zu groß. Wähle eines unter 2 MB.',
     saveFailed: 'Speichern fehlgeschlagen. Versuch es noch einmal.',
-    tabs: { heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Berechtigungen', requests: 'Anfragen' },
+    tabs: { computer: 'Computer', heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Berechtigungen', requests: 'Anfragen' },
     persona: {
       soul: 'Seele',
       soulCaption: 'Persönlichkeit und Ton',

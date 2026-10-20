@@ -55,16 +55,12 @@ def _consented(scope, placeholder: str, host: str) -> bool:
 
 
 def browser_fill_placeholder(placeholder: str, task_id: Optional[str] = None) -> str:
-    from agent.agent_bridge import placeholders as ph
-    from agent.agent_bridge.protocol import PLACEHOLDERS, url_host
+    from agent.agent_bridge.browser_screen import BrowserScreen, ScreenUnavailable
+    from agent.agent_bridge.protocol import PLACEHOLDERS
     from agent.agent_bridge.scope import scope_for
-    from agent.redact import register_vault_redaction_value
-    from agent.vault_login_classifier import LoginControl, build_fill_js, build_inspection_js
-    from tools.browser_tool import _last_session_key
-    from tools.browser_vault_tool import _eval_js, _eval_js_secret, _parse_json_result
+    from tools.bot_desktop import lease
 
-    effective_task_id = _last_session_key(task_id or "default")
-    scope = scope_for(effective_task_id) or scope_for(task_id)
+    scope = scope_for(task_id)
     if scope is None:
         return _fail("Placeholders are filled only inside a browse task.")
     placeholder = str(placeholder or "").strip().strip("{}").upper()
@@ -75,8 +71,25 @@ def browser_fill_placeholder(placeholder: str, task_id: Optional[str] = None) ->
         return _fail("This task did not grant that placeholder. Finish with status blocked, reason needs_data, "
                      f"needs [\"{placeholder}\"].", "not_granted")
 
-    href = _eval_js(effective_task_id, "window.location.href")
-    page_url = str(href.get("result") or "").strip().strip('"').strip("'") if href.get("success") else ""
+    if lease.human_holds():
+        return _fail("The person has taken control of the browser. Wait, then try again.", "human_has_control")
+    try:
+        with BrowserScreen() as screen:
+            return _fill(screen, scope, placeholder)
+    except ScreenUnavailable as exc:
+        return _fail(str(exc), "browser_unavailable")
+
+
+def _fill(screen, scope, placeholder: str) -> str:
+    """Inspect the page, resolve the value and write it, all over one DevTools session (the value
+    travels in that socket, never in a process's argv)."""
+    from agent.agent_bridge import placeholders as ph
+    from agent.agent_bridge.protocol import url_host
+    from agent.redact import register_vault_redaction_value
+    from agent.vault_login_classifier import LoginControl, build_fill_js, build_inspection_js
+    from tools.browser_vault_tool import _parse_json_result
+
+    page_url = screen.url()
     host = url_host(page_url)
     if not host or not scope.allows_url(page_url):
         scope.record("browser_fill_placeholder", domain=host, target=placeholder, outcome="domain_not_allowed")
@@ -93,8 +106,7 @@ def browser_fill_placeholder(placeholder: str, task_id: Optional[str] = None) ->
                      "reason denied_by_user.", "denied_by_user")
 
     nonce = secrets.token_hex(8)
-    inspect = _eval_js(effective_task_id, build_inspection_js(nonce))
-    raw_controls = _parse_json_result(inspect.get("result")) if inspect.get("success") else None
+    raw_controls = _parse_json_result(screen.evaluate(build_inspection_js(nonce)))
     if isinstance(raw_controls, str):
         raw_controls = _parse_json_result(raw_controls)
     if not isinstance(raw_controls, list):
@@ -117,8 +129,7 @@ def browser_fill_placeholder(placeholder: str, task_id: Optional[str] = None) ->
     for fill in fills:
         register_vault_redaction_value(fill["value"])
     origin = f"{page_url.split('://', 1)[0]}://{page_url.split('://', 1)[1].split('/', 1)[0]}"
-    result = _eval_js_secret(effective_task_id, build_fill_js(fills, expected_origin=origin, nonce=nonce))
-    parsed = _parse_json_result(result.get("result")) if result.get("success") else None
+    parsed = _parse_json_result(screen.evaluate(build_fill_js(fills, expected_origin=origin, nonce=nonce)))
     if isinstance(parsed, str):
         parsed = _parse_json_result(parsed)
     if isinstance(parsed, dict) and parsed.get("refused") == "origin_changed":
@@ -135,8 +146,11 @@ def _handle(args: Dict[str, Any], **kwargs) -> str:
 
 
 def _check() -> bool:
-    from tools.browser_tool_install import check_browser_requirements
-    return bool(check_browser_requirements())
+    from agent.agent_bridge.sandboxes import SandboxUnavailable, openshell
+    try:
+        return bool(openshell())
+    except SandboxUnavailable:
+        return False
 
 
 registry.register(

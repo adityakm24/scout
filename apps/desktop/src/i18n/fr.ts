@@ -56,7 +56,7 @@ export const frOverrides = {
     removePhoto: 'Retirer la photo',
     photoTooLarge: 'Image trop lourde. Choisis-en une de moins de 2 Mo.',
     saveFailed: "Impossible d'enregistrer. Réessaie.",
-    tabs: { heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Autorisations', requests: 'Demandes' },
+    tabs: { computer: 'Ordinateur', heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Autorisations', requests: 'Demandes' },
     persona: {
       soul: 'Âme',
       soulCaption: 'Personnalité et ton',

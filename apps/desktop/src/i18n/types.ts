@@ -118,7 +118,17 @@ export interface Translations {
     removePhoto: string
     photoTooLarge: string
     saveFailed: string
-    tabs: Record<'heartbeat' | 'permissions' | 'persona' | 'requests', string>
+    tabs: Record<'computer' | 'heartbeat' | 'permissions' | 'persona' | 'requests', string>
+    computer: {
+      asleep: string
+      asleepDetail: string
+      caption: string
+      connecting: string
+      handBack: string
+      takeOver: string
+      youHaveControl: string
+      takeOverFailed: string
+    }
     persona: {
       soul: string
       soulCaption: string

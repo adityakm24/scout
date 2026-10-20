@@ -55,7 +55,7 @@ export const esOverrides = {
     removePhoto: 'Quitar foto',
     photoTooLarge: 'La imagen es demasiado grande. Elige una de menos de 2 MB.',
     saveFailed: 'No se pudo guardar. Inténtalo de nuevo.',
-    tabs: { heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Permisos', requests: 'Solicitudes' },
+    tabs: { computer: 'Ordenador', heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Permisos', requests: 'Solicitudes' },
     persona: {
       soul: 'Alma',
       soulCaption: 'Personalidad y voz',
