@@ -32,8 +32,8 @@ tool call, terminal stream, tool output, memory/skill write, and assistant outpu
    - Redacts secrets/private keys and neutralizes markdown image beacon exfiltration
      (`![...](https://...)`) in assistant responses.
 7. **NVIDIA OpenShell Terminal Environment (`openshell`)**:
-   - Built-in default terminal execution environment running inside an NVIDIA OpenShell
-     policy-governed sandbox with sensitive environment variables stripped.
+   - Commands run inside the NVIDIA OpenShell program, in the session's project directory.
+     If ``openshell`` is not installed, the command is refused. It is never run on the host.
 """
 
 from __future__ import annotations
@@ -47,8 +47,6 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from agent.terminal_env_provider import TerminalEnvironmentProvider
-from scout_constants import get_scout_home
-from scout_backend.config import load_config_readonly
 
 logger = logging.getLogger(__name__)
 
@@ -241,19 +239,9 @@ _CORE_REDACTION_REGEXES: Tuple[str, ...] = (
 )
 
 
-def _nemoclaw_config() -> Dict[str, Any]:
-    """Read ``nemoclaw`` config section from ``config.yaml`` (profile-aware)."""
-    try:
-        cfg = load_config_readonly()
-        section = cfg.get("nemoclaw")
-        return section if isinstance(section, dict) else {}
-    except Exception:
-        return {}
-
-
 def _is_enabled() -> bool:
-    cfg = _nemoclaw_config()
-    return bool(cfg.get("enabled", True))
+    """Guardrails are compulsory. Config cannot turn them off."""
+    return True
 
 
 def _iter_strings(value: Any) -> Iterable[str]:
@@ -445,14 +433,36 @@ def _on_pre_llm_call(
     }
 
 
+# Writes and posts are allowed only after the person accepts. Hard blocks above still win.
+_CONSENT_TOOLS: Dict[str, str] = {
+    "write_file": "write a file",
+    "patch": "edit a file",
+    "browser_type": "type into the browser",
+    "browser_press": "press keys in the browser",
+    "browser_click": "click in the browser",
+    "browser_dialog": "answer a browser dialog",
+    "browser_exec": "run a browser command",
+    "browser_vault_fill": "fill saved credentials into the browser",
+    "browser_vault_save_login": "save a login from the browser",
+    "browser_vault_enter_code": "enter a verification code in the browser",
+}
+
+
 def _on_pre_tool_call(tool_name: str = "", args: Any = None, **_: Any) -> Optional[Dict[str, str]]:
-    """NemoClaw & NeMo Guardrails pre-execution guardrail hook across all tools."""
+    """Block prohibited calls. Ask the user before a write or a post."""
     verdict = evaluate_tool_call_policy(tool_name, args)
-    if verdict is None:
+    if verdict is not None:
+        rule_id, message = verdict
+        logger.warning("NemoClaw blocked tool=%s rule=%s", tool_name, rule_id)
+        return {"action": "block", "message": message}
+    reason = _CONSENT_TOOLS.get(tool_name or "")
+    if reason is None:
         return None
-    rule_id, message = verdict
-    logger.warning("NemoClaw blocked tool=%s rule=%s", tool_name, rule_id)
-    return {"action": "block", "message": message}
+    return {
+        "action": "approve",
+        "message": f"Scout needs your OK to {reason}.",
+        "rule_key": f"nemoclaw.{tool_name}",
+    }
 
 
 def _on_transform_terminal_output(command: str = "", output: Any = None, **_: Any) -> Optional[str]:
@@ -515,12 +525,10 @@ def _on_transform_llm_output(output: Any = None, **_: Any) -> Optional[str]:
 # ── 4. NVIDIA OpenShell Sandbox Environment (Core Built-In) ─────────────────
 
 class OpenShellEnvironment:
-    """Sandboxed execution environment powered by NVIDIA OpenShell (with hardened local/Docker fallback).
+    """Run commands inside NVIDIA OpenShell, in the project directory.
 
-    When the ``openshell`` CLI is present, commands execute inside an ephemeral OpenShell session
-    with declarative filesystem and L7 network egress policies. When ``openshell`` is not installed
-    on the host, falls back to an isolated sandbox workspace under ``<SCOUT_HOME>/openshell-sandbox/``
-    with sensitive host environment variables stripped.
+    There is no host fallback. If the ``openshell`` program is missing, the command
+    is refused instead of running on the machine.
     """
 
     def __init__(
@@ -540,28 +548,13 @@ class OpenShellEnvironment:
         self.container_config = container_config or {}
         self.env_type = "openshell"
         self._openshell_bin = shutil.which("openshell")
-        self._sandbox_dir = get_scout_home() / "openshell-sandbox" / (task_id or "default")
-        self._sandbox_dir.mkdir(parents=True, exist_ok=True)
-        self._delegate = None
 
-        if not self._openshell_bin:
-            from tools.environments.local import LocalEnvironment
+    def _project_workdir(self, cwd: Optional[str]) -> str:
+        """The project directory the session was given. Never a substitute sandbox folder."""
+        return cwd or self.cwd or os.getcwd()
 
-            effective_cwd = (
-                cwd
-                if (cwd and not cwd.startswith(("/root", "/workspace")) and Path(cwd).is_dir())
-                else str(self._sandbox_dir)
-            )
-            self._delegate = LocalEnvironment(cwd=effective_cwd, timeout=timeout)
-
-    def _resolve_workdir(self, cwd: Optional[str]) -> str:
-        candidate = cwd or self.cwd or str(self._sandbox_dir)
-        if not self._openshell_bin and (candidate.startswith(("/root", "/workspace")) or not Path(candidate).is_dir()):
-            return str(self._sandbox_dir)
-        return candidate
-
-    def _sanitized_env(self) -> Dict[str, str]:
-        """Build an OpenShell-compliant environment where raw API keys never enter the sandbox."""
+    def _sanitized_env(self, work_dir: str) -> Dict[str, str]:
+        """Raw API keys never enter the sandbox."""
         env = dict(os.environ)
         for key in list(env.keys()):
             if any(
@@ -571,7 +564,7 @@ class OpenShellEnvironment:
                 env.pop(key, None)
         env["SCOUT_ENVIRONMENT_HINT"] = "Running inside an NVIDIA OpenShell policy-governed sandbox."
         env["OPENSHELL_SANDBOX"] = "1"
-        env["OPENSHELL_WORKSPACE"] = str(self._sandbox_dir)
+        env["OPENSHELL_WORKSPACE"] = work_dir
         return env
 
     def execute(self, command: str, cwd: Optional[str] = None, *, timeout: Optional[int] = None, **kwargs: Any) -> Dict[str, Any]:
@@ -581,46 +574,47 @@ class OpenShellEnvironment:
             return {"output": message, "returncode": 126, "exit_code": 126}
 
         effective_timeout = timeout or self.timeout
-        work_dir = self._resolve_workdir(cwd)
+        work_dir = self._project_workdir(cwd)
 
-        if self._openshell_bin:
-            cmd = [
-                self._openshell_bin,
-                "exec",
-                "--session",
-                self.task_id,
-                "--workdir",
-                work_dir,
-                "--",
-                "/bin/sh",
-                "-c",
-                command,
-            ]
-            try:
-                proc = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=effective_timeout,
-                    env=self._sanitized_env(),
-                )
-                output = (proc.stdout or "") + (proc.stderr or "")
-                return {"output": output, "returncode": proc.returncode, "exit_code": proc.returncode}
-            except subprocess.TimeoutExpired:
-                return {"output": f"OpenShell command timed out after {effective_timeout}s", "returncode": 124, "exit_code": 124}
-            except Exception as exc:
-                return {"output": f"OpenShell execution error: {exc}", "returncode": 1, "exit_code": 1}
+        if not self._openshell_bin:
+            return {
+                "output": (
+                    "OpenShell is required and the `openshell` program is not installed. "
+                    "The command was not run on this machine."
+                ),
+                "returncode": 127,
+                "exit_code": 127,
+            }
 
-        assert self._delegate is not None
-        res = dict(self._delegate.execute(command, cwd=work_dir, timeout=effective_timeout, **kwargs))
-        rc = res.get("returncode", res.get("exit_code", 0))
-        res.setdefault("returncode", rc)
-        res.setdefault("exit_code", rc)
-        return res
+        cmd = [
+            self._openshell_bin,
+            "exec",
+            "--session",
+            self.task_id,
+            "--workdir",
+            work_dir,
+            "--",
+            "/bin/sh",
+            "-c",
+            command,
+        ]
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=effective_timeout,
+                env=self._sanitized_env(work_dir),
+            )
+            output = (proc.stdout or "") + (proc.stderr or "")
+            return {"output": output, "returncode": proc.returncode, "exit_code": proc.returncode}
+        except subprocess.TimeoutExpired:
+            return {"output": f"OpenShell command timed out after {effective_timeout}s", "returncode": 124, "exit_code": 124}
+        except Exception as exc:
+            return {"output": f"OpenShell execution error: {exc}", "returncode": 1, "exit_code": 1}
 
     def cleanup(self) -> None:
-        if self._delegate is not None and hasattr(self._delegate, "cleanup"):
-            self._delegate.cleanup()
+        return None
 
 
 class OpenShellEnvironmentProvider(TerminalEnvironmentProvider):
@@ -647,17 +641,20 @@ class OpenShellEnvironmentProvider(TerminalEnvironmentProvider):
         })
 
     def is_available(self) -> bool:
-        return True
+        return shutil.which("openshell") is not None
 
     def probe(self) -> Tuple[str, str]:
-        if shutil.which("openshell"):
-            return ("ready", "NVIDIA OpenShell CLI binary detected")
-        return ("ready", "OpenShell policy sandbox active (local isolation mode)")
+        if self.is_available():
+            return ("ready", "NVIDIA OpenShell CLI is on PATH")
+        return ("needs_setup", "Install NVIDIA OpenShell and put the `openshell` command on PATH.")
+
+    def setup_instructions(self) -> List[str]:
+        return ["Install NVIDIA OpenShell and ensure the `openshell` command is on PATH."]
 
     def doctor_checks(self) -> List[Tuple[bool, str, str]]:
-        has_cli = bool(shutil.which("openshell"))
-        detail = "(native openshell CLI)" if has_cli else "(active via OpenShell policy sandbox wrapper)"
-        return [(True, "NVIDIA OpenShell sandbox", detail)]
+        ok = self.is_available()
+        detail = "(openshell CLI on PATH)" if ok else "(openshell CLI is not installed)"
+        return [(ok, "NVIDIA OpenShell sandbox", detail)]
 
     def create_environment(
         self,

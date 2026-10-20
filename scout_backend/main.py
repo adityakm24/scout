@@ -648,9 +648,7 @@ from scout_backend.main_desktop import (  # frozen updater surface: update_cmd*.
     _desktop_packaged_executable,
     _install_rebuilt_desktop_app,
     _installed_desktop_apps,
-    cmd_gui,
 )
-from scout_backend.subcommands.gui import build_gui_parser
 from scout_backend.main_web_build import (
     _sweep_stale_bytecode_if_checkout_changed,
 )
@@ -2219,7 +2217,7 @@ def _coalesce_session_name_args(argv: list) -> list:
         "chat", "model", "gateway", "setup", "login", "logout",
         "auth", "status", "cron", "doctor", "config", "skills", "tools", "mcp",
         "sessions", "insights", "update", "uninstall", "profile", "dashboard", "serve",
-        "desktop", "gui", "honcho", "claw", "plugins", "security", "acp", "webhook", "peer",
+        "honcho", "claw", "plugins", "security", "acp", "webhook", "peer",
         "memory", "dump", "debug", "backup", "import", "completion", "logs", "usage",
     }
     _SESSION_FLAGS = {"-c", "--continue", "-r", "--resume"}
@@ -2894,9 +2892,6 @@ def _build_cli_parser():
         subparsers,
         cmd_dashboard=cmd_dashboard,
     )
-    # "desktop" is canonical (Scout-Setup.exe tells users to run it, so it
-    # must be the name --help shows); "gui" is a deprecated alias.
-    build_gui_parser(subparsers, cmd_gui=cmd_gui)
     return parser, subparsers
 
 

@@ -296,12 +296,6 @@ DEFAULT_CONFIG = {
         "turn_liveness": {"timeout_s": 600.0, "poll_s": 15.0},
     },
 
-    "nemoclaw": {
-        "enabled": True,
-        "guardrails": "nemo_guardrails",
-        "sandbox": "openshell",
-    },
-
     "terminal": {
         "backend": "openshell",
         "modal_mode": "auto",
