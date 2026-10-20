@@ -212,7 +212,7 @@ export function ComputerTab() {
 
   if (!running) {
     return (
-      <figure className="m-0 flex flex-col items-center gap-3 px-4 pb-6">
+      <figure className="m-0 flex flex-col items-center gap-3 px-4 pt-4 pb-6">
         <Asleep detail={copy.asleepDetail} title={copy.asleep} />
         <figcaption className="text-xs text-(--ui-text-tertiary)">{copy.caption}</figcaption>
       </figure>
@@ -251,7 +251,7 @@ export function ComputerTab() {
     )
 
   return (
-    <figure className="m-0 flex flex-col items-center gap-3 px-4 pb-6">
+    <figure className="m-0 flex flex-col items-center gap-3 px-4 pt-4 pb-6">
       <button
         aria-label={copy.open}
         className="group relative w-full overflow-hidden rounded-2xl bg-black shadow-sm ring-1 ring-(--ui-stroke-tertiary) transition-shadow hover:shadow-md"
