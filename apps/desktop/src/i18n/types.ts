@@ -123,15 +123,14 @@ export interface Translations {
       asleep: string
       asleepDetail: string
       caption: string
-      connecting: string
-      handBack: string
-      takeOver: string
-      youHaveControl: string
-      takeOverFailed: string
-      fullScreen: string
-      viewOnly: string
-      controlling: string
       close: string
+      connecting: string
+      open: string
+      stop: string
+      takeOver: string
+      takeOverFailed: string
+      watching: string
+      youreInControl: string
     }
     persona: {
       soul: string

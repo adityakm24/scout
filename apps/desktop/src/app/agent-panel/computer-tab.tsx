@@ -9,8 +9,8 @@ import {
   setBrowserScreenControl,
   viewerHash
 } from '@/api/browser-screen'
-import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n'
+import { ArrowsMaximize, ArrowsMinimize, Eye, Pointer } from '@/lib/icons'
 import { resolveSiblingWsUrl } from '@/lib/sibling-ws-url'
 import { cn } from '@/lib/utils'
 import { notifyError } from '@/store/notifications'
@@ -201,73 +201,81 @@ export function ComputerTab() {
     }
   }
 
+  const closeFull = () => {
+    // Leaving the big screen hands control back: the person is no longer looking at what they drive.
+    if (inControl) {
+      void toggleControl()
+    }
+
+    setFull(false)
+  }
+
   if (!running) {
     return (
-      <div className="flex flex-col gap-3 px-4 pb-4">
+      <figure className="m-0 flex flex-col items-center gap-3 px-4 pb-6">
         <Asleep detail={copy.asleepDetail} title={copy.asleep} />
-        <p className="m-0 text-center text-xs text-(--ui-text-tertiary)">{copy.caption}</p>
-      </div>
+        <figcaption className="text-xs text-(--ui-text-tertiary)">{copy.caption}</figcaption>
+      </figure>
     )
   }
 
-  // One live screen, drawn in the panel and (larger) in the full-screen viewer; input only while in control.
-  const screen = (size: 'full' | 'panel') =>
+  // One live stream, shown as a thumbnail in the panel and full size in the viewer.
+  const stream = (size: 'full' | 'panel') =>
     frame ? (
       <img
         alt={copy.caption}
         className={cn(
           'block select-none',
-          size === 'full' ? 'max-h-full max-w-full object-contain' : 'aspect-[16/10] w-full',
-          inControl ? 'cursor-default' : size === 'panel' ? 'cursor-zoom-in' : 'cursor-not-allowed'
+          size === 'full' ? 'max-h-full max-w-full rounded-xl object-contain shadow-2xl' : 'aspect-[16/10] w-full object-cover',
+          size === 'full' && !inControl && 'cursor-default'
         )}
         draggable={false}
-        onClick={() => size === 'panel' && !inControl && setFull(true)}
         onContextMenu={e => inControl && e.preventDefault()}
-        onMouseDown={mouse('mousePressed')}
-        onMouseMove={mouse('mouseMoved')}
-        onMouseUp={mouse('mouseReleased')}
-        onWheel={e => inControl && send({ type: 'wheel', ...point(e), deltaX: e.deltaX, deltaY: e.deltaY })}
+        onMouseDown={size === 'full' ? mouse('mousePressed') : undefined}
+        onMouseMove={size === 'full' ? mouse('mouseMoved') : undefined}
+        onMouseUp={size === 'full' ? mouse('mouseReleased') : undefined}
+        onWheel={e =>
+          size === 'full' && inControl && send({ type: 'wheel', ...point(e), deltaX: e.deltaX, deltaY: e.deltaY })
+        }
         src={`data:image/jpeg;base64,${frame.data}`}
       />
     ) : (
-      <div className="flex aspect-[16/10] w-full items-center justify-center text-xs text-white/60">{copy.connecting}</div>
-    )
-
-  const controlButton = (
-    <Button disabled={!viewer} onClick={() => void toggleControl()} size="sm" variant={inControl ? 'default' : 'ghost'}>
-      {inControl ? copy.handBack : copy.takeOver}
-    </Button>
-  )
-
-  return (
-    <div className="flex flex-col gap-3 px-4 pb-4">
       <div
         className={cn(
-          'overflow-hidden rounded-2xl bg-black ring-1 outline-none',
-          inControl ? 'ring-2 ring-(--ui-accent)' : 'ring-(--ui-stroke-tertiary)'
+          'flex aspect-[16/10] items-center justify-center text-xs text-white/50',
+          size === 'full' ? 'w-[min(100%,80rem)] rounded-xl bg-white/5' : 'w-full'
         )}
-        onKeyDown={key('keyDown')}
-        onKeyUp={key('keyUp')}
-        tabIndex={inControl && !full ? 0 : -1}
       >
-        {screen('panel')}
+        {copy.connecting}
       </div>
-      {inControl ? <p className="m-0 text-xs text-(--ui-text-secondary)">{copy.youHaveControl}</p> : null}
-      <div className="flex items-center justify-between gap-2">
-        <Button onClick={() => setFull(true)} size="sm" variant="ghost">
-          {copy.fullScreen}
-        </Button>
-        {controlButton}
-      </div>
+    )
+
+  return (
+    <figure className="m-0 flex flex-col items-center gap-3 px-4 pb-6">
+      <button
+        aria-label={copy.open}
+        className="group relative w-full overflow-hidden rounded-2xl bg-black shadow-sm ring-1 ring-(--ui-stroke-tertiary) transition-shadow hover:shadow-md"
+        onClick={() => setFull(true)}
+        type="button"
+      >
+        {stream('panel')}
+        <span className="pointer-events-none absolute inset-0 grid place-items-center bg-black/0 transition-colors group-hover:bg-black/20">
+          <span className="flex items-center gap-1.5 rounded-full bg-black/85 px-3.5 py-1.5 text-sm font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            <ArrowsMaximize size={16} />
+            {copy.open}
+          </span>
+        </span>
+      </button>
+      <figcaption className="text-xs text-(--ui-text-tertiary)">{copy.caption}</figcaption>
       {full
         ? createPortal(
             <div
               aria-label={copy.caption}
               aria-modal="true"
-              className="fixed inset-0 z-[1300] flex flex-col bg-black outline-none"
+              className="fixed inset-0 z-[1300] flex flex-col bg-[#141414] outline-none"
               onKeyDown={e => {
                 if (e.key === 'Escape' && !inControl) {
-                  setFull(false)
+                  closeFull()
 
                   return
                 }
@@ -279,33 +287,40 @@ export function ComputerTab() {
               role="dialog"
               tabIndex={0}
             >
-              <div className="flex items-center justify-between gap-3 px-5 py-3 text-white">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium">{copy.caption}</span>
-                  <span
-                    className={cn(
-                      'rounded-full px-2.5 py-0.5 text-xs',
-                      inControl ? 'bg-(--ui-accent) text-white' : 'bg-white/15 text-white/80'
-                    )}
-                  >
-                    {inControl ? copy.controlling : copy.viewOnly}
+              {/* Clear of the window's own controls (traffic lights) at the top. */}
+              <div className="flex h-12 shrink-0 items-center justify-end px-4">
+                <button
+                  aria-label={copy.close}
+                  className="grid size-8 place-items-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                  onClick={closeFull}
+                  type="button"
+                >
+                  <ArrowsMinimize size={18} />
+                </button>
+              </div>
+              <div className="flex min-h-0 flex-1 items-center justify-center px-10">{stream('full')}</div>
+              <div className="flex shrink-0 justify-center py-5">
+                <div className="flex items-center gap-1 rounded-full bg-white p-1 pl-4 text-sm text-[#3a3a3a] shadow-xl">
+                  <span className="flex items-center gap-2 pr-2">
+                    {inControl ? <Pointer size={16} /> : <Eye size={16} />}
+                    {inControl ? copy.youreInControl : copy.watching}
                   </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {controlButton}
-                  <Button onClick={() => setFull(false)} size="sm" variant="ghost">
-                    {copy.close}
-                  </Button>
+                  <button
+                    className="rounded-full px-3.5 py-1.5 font-medium transition-opacity hover:opacity-85 disabled:opacity-50"
+                    disabled={!viewer}
+                    onClick={() => void toggleControl()}
+                    // Fixed light/dark pair: the pill sits on the dark viewer whatever the app theme is.
+                    style={inControl ? { background: '#ececec', color: '#1f1f1f' } : { background: '#161616', color: '#fff' }}
+                    type="button"
+                  >
+                    {inControl ? copy.stop : copy.takeOver}
+                  </button>
                 </div>
               </div>
-              <div className="flex min-h-0 flex-1 items-center justify-center p-4">{screen('full')}</div>
-              {inControl ? (
-                <p className="m-0 pb-3 text-center text-xs text-white/70">{copy.youHaveControl}</p>
-              ) : null}
             </div>,
             document.body
           )
         : null}
-    </div>
+    </figure>
   )
 }
