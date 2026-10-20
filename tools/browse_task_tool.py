@@ -24,16 +24,18 @@ BROWSE_TASK_SCHEMA = {
         "so ask for the specific facts you need as fields. Write the goal without any personal details: if the "
         "site needs the person's name, email, phone or address, grant the placeholder (for example USER_ADDRESS) "
         "and the details are typed into the page without the Browser Agent seeing them, after the person "
-        "approves. A result with reason needs_data lists placeholders to grant on a retry."
+        "approves. A result with reason needs_data lists placeholders to grant on a retry. If the result is "
+        "blocked or failed, tell the person that plainly; never fill in prices, ratings or products from memory."
     ),
     "parameters": {
         "type": "object",
         "properties": {
             "goal": {"type": "string", "description": "What to do or find, in at most 600 characters. No personal details."},
-            "start_url": {"type": "string", "description": "https URL to start from, on one of allowed_domains."},
+            "start_url": {"type": "string", "description": "https URL to start from (e.g. https://www.amazon.com)."},
             "allowed_domains": {
                 "type": "array", "items": {"type": "string"}, "maxItems": 10,
-                "description": "Domains the Browser Agent may visit (subdomains included), e.g. [\"amazon.com\"].",
+                "description": ("Optional: keep the Browser Agent on these domains (subdomains included). Leave it "
+                                "out to let it browse any public site, as a person would."),
             },
             "placeholders": {
                 "type": "array", "items": {"type": "string", "enum": [
@@ -47,13 +49,17 @@ BROWSE_TASK_SCHEMA = {
                 "type": "object",
                 "description": (
                     "The facts to bring back, as {name: {\"type\": T}} with T one of number, integer, boolean, "
-                    "date, datetime, currency, url, short_text (80 characters), or enum with \"options\": [...]. "
-                    "At most 12 fields, names in lower_snake_case."
+                    "date, datetime, currency, url, short_text (one line, 160 characters), enum with "
+                    "\"options\": [...], or list with \"items\": {sub-field: {\"type\": T}} for several rows "
+                    "(up to 10, e.g. products). Links (url) may point anywhere unless allowed_domains is set. Example for comparing products: {\"products\": {\"type\": \"list\", "
+                    "\"items\": {\"name\": {\"type\": \"short_text\"}, \"price\": {\"type\": \"number\"}, "
+                    "\"currency\": {\"type\": \"currency\"}, \"rating\": {\"type\": \"number\"}, \"link\": "
+                    "{\"type\": \"url\"}}}}. At most 12 fields, names in lower_snake_case."
                 ),
                 "additionalProperties": {"type": "object"},
             },
         },
-        "required": ["goal", "start_url", "allowed_domains"],
+        "required": ["goal", "start_url"],
     },
 }
 
@@ -89,7 +95,12 @@ def browse_task(args: Dict[str, Any], *, parent_agent: Any) -> str:
         return json.dumps({"status": "failed", "reason": "other", "error": (
             "The goal contains a personal detail. Remove it and grant the matching placeholder instead "
             "(for example USER_EMAIL); the value is typed into the page without the Browser Agent seeing it.")})
-    return json.dumps(run_browse_task(parent_agent, task))
+    result = run_browse_task(parent_agent, task)
+    if result.get("status") != "done":
+        # Written by code: the User Agent must not fill the gap from its own knowledge.
+        result["note"] = ("The browse task did not return results. Tell the person it did not work; do not "
+                          "list products, prices or facts from memory as if they came from the web.")
+    return json.dumps(result)
 
 
 def _registry_handler(args: Dict[str, Any], **kwargs) -> str:

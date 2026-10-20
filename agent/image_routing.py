@@ -327,6 +327,20 @@ _VISION_PROBES: Tuple[Tuple[str, Callable[..., Optional[bool]]], ...] = (
 )
 
 
+def _known_provider_for_custom(provider: str, cfg: Optional[Dict[str, Any]]) -> str:
+    """A ``custom`` endpoint that is really a known provider's API (``base_url`` under that
+    provider's own, e.g. https://api.mistral.ai/v1) is looked up under that provider: the catalog
+    has no "custom" entries, so the model would otherwise read as having no vision."""
+    if _clean_str(provider).lower() != "custom":
+        return provider
+    base_url = _clean_str(_dict_or_empty(_dict_or_empty(cfg).get("model")).get("base_url")) or _runtime_main("base_url")
+    if not base_url:
+        return provider
+    from agent.agent_runtime_helpers import _profile_for_base_url
+    profile = _profile_for_base_url(base_url)
+    return str(getattr(profile, "name", "") or provider) if profile is not None else provider
+
+
 def _lookup_supports_vision(
     provider: str,
     model: str,
@@ -356,6 +370,7 @@ def _lookup_supports_vision(
         return override
     if not provider or not model:
         return None
+    provider = _known_provider_for_custom(provider, cfg)
 
     for label, probe in _VISION_PROBES:
         try:

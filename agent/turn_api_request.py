@@ -12,10 +12,14 @@ from dataclasses import dataclass
 import logging
 from typing import Any
 
-from agent.message_sanitization import sanitize_outbound_kwargs, strip_images_for_rejecting_model
+from agent.message_sanitization import keep_recent_images, sanitize_outbound_kwargs, strip_images_for_rejecting_model
 from utils import env_var_enabled
 
 logger = logging.getLogger("agent.conversation_loop")
+
+# The Browser Agent sees only its latest screens; older ones are stale and count against
+# per-request image caps.
+BROWSER_AGENT_IMAGES = 3
 
 
 @dataclass
@@ -116,6 +120,8 @@ def build_api_request(
     )
     # A model that rejected image content gets text only; history keeps the images.
     strip_images_for_rejecting_model(agent, api_messages)
+    if getattr(agent, "platform", None) == "browser_agent":
+        keep_recent_images(api_messages, BROWSER_AGENT_IMAGES)
     if tools_for_api == agent.tools:
         api_kwargs = agent._build_api_kwargs(api_messages)
     else:

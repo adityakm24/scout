@@ -24,7 +24,8 @@ _INJECTION = re.compile(
     r"\b(system\s+prompt|api[_ ]key|password|exfiltrate|send\s+(it|this|the)\s+to)\b|https?://|\{\{|\}\}",
     re.IGNORECASE,
 )
-_SHORT_TEXT = re.compile(r"^[\w .,:;!?'()&+/#%$€£-]{1,80}$", re.UNICODE)
+_SHORT_TEXT_FORBIDDEN = re.compile(r"[<>{}`\\\x00-\x1f\x7f]|https?://|www\.", re.IGNORECASE)
+_MAX_LIST_ITEMS = 10
 
 _contract = {}
 
@@ -35,8 +36,8 @@ def _host_ok(url, domains):
     except ValueError:
         return False
     host = (parts.hostname or "").lower()
-    return parts.scheme in ("http", "https") and bool(host) and any(
-        host == d or host.endswith("." + d) for d in domains)
+    return parts.scheme in ("http", "https") and bool(host) and (not domains or any(
+        host == d or host.endswith("." + d) for d in domains))
 
 
 def _value_ok(value, spec, domains):
@@ -54,7 +55,13 @@ def _value_ok(value, spec, domains):
     if isinstance(value, str) and kind in ("currency", "date", "datetime"):
         return len(value) <= 32 and not _INJECTION.search(value)
     if kind == "short_text":
-        return isinstance(value, str) and bool(_SHORT_TEXT.match(value)) and not _INJECTION.search(value)
+        return (isinstance(value, str) and 0 < len(value.strip()) and len(value) <= 160
+                and not _SHORT_TEXT_FORBIDDEN.search(value) and not _INJECTION.search(value))
+    if kind == "list":
+        items = spec.get("items") or {}
+        return isinstance(value, list) and len(value) <= _MAX_LIST_ITEMS and all(
+            isinstance(row, dict) and not set(row) - set(items)
+            and all(_value_ok(v, items[k], domains) for k, v in row.items()) for row in value)
     return False
 
 

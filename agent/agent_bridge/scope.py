@@ -77,5 +77,7 @@ def navigation_error(task_id: Optional[str], url: str) -> Optional[str]:
     if scope is None or scope.allows_url(url):
         return None
     scope.record("browser_navigate", domain=url_host(url), outcome="domain_not_allowed")
+    if not scope.task.allowed_domains:
+        return "Blocked: only http(s) addresses on the public web can be opened."
     return ("Blocked: that address is outside this task's allowed domains "
             f"({', '.join(scope.task.allowed_domains)}). Finish with status blocked, reason domain_not_allowed.")

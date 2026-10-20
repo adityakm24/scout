@@ -2,8 +2,10 @@
 
 The Browser Agent works the page like a person at a computer: it looks at a screenshot and
 clicks, scrolls and types at coordinates (``tools/browser_computer_tool.py``). The person watches
-the same page live and can take control (``scout_backend/web_routers/browser_screen.py``); both
-drive the most recently opened tab, so they always see and act on the same thing.
+the same page live, inside a browser frame the app draws (tabs, address bar) from these DevTools
+calls, and can take control (``scout_backend/web_routers/browser_screen.py``). Both work on one shared
+active tab, so they always see and act on the same thing; the agent's pointer is published for the
+viewer to draw.
 """
 
 from __future__ import annotations
@@ -11,8 +13,11 @@ from __future__ import annotations
 import base64
 import itertools
 import json
+import threading
+import time
 import urllib.request
-from typing import Any, Dict, Optional, Tuple
+from collections import deque
+from typing import Any, Dict, List, Optional, Tuple
 
 from agent.agent_bridge import sandboxes
 
@@ -43,17 +48,73 @@ def cdp_base() -> str:
     return f"http://127.0.0.1:{sandboxes.BROWSER_CDP_PORT}"
 
 
-def active_page() -> Dict[str, Any]:
-    """The tab both the agent and the viewer work on: the most recently opened page."""
+_active_id: Optional[str] = None
+# The agent's pointer as the viewer draws it: (sequence, x, y, kind) with kind "move" or "click".
+pointer_feed: "deque[Tuple[int, int, int, str]]" = deque(maxlen=256)
+_pointer = {"x": VIEWPORT[0] // 2, "y": VIEWPORT[1] // 2, "seq": 0}
+_lock = threading.Lock()
+
+
+def _json(path: str, method: str = "GET") -> Any:
     try:
-        with urllib.request.urlopen(f"{cdp_base()}/json/list", timeout=3) as resp:
-            targets = json.loads(resp.read())
+        req = urllib.request.Request(f"{cdp_base()}{path}", method=method)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            body = resp.read()
     except (OSError, ValueError) as exc:
         raise ScreenUnavailable("the sandboxed browser is not running") from exc
-    pages = [t for t in targets if t.get("type") == "page" and t.get("webSocketDebuggerUrl")]
+    try:
+        return json.loads(body) if body.strip().startswith((b"{", b"[")) else body.decode()
+    except ValueError:
+        return body.decode()
+
+
+def tabs() -> List[Dict[str, Any]]:
+    """Open tabs, oldest first, each with id, title and url."""
+    pages = [t for t in _json("/json/list") if t.get("type") == "page" and t.get("webSocketDebuggerUrl")]
+    return list(reversed(pages))
+
+
+def active_page() -> Dict[str, Any]:
+    """The tab the agent and the viewer share: the one last activated, else the newest."""
+    global _active_id
+    pages = tabs()
     if not pages:
-        raise ScreenUnavailable("the sandboxed browser has no open page")
-    return pages[0]
+        raise ScreenUnavailable("the sandboxed browser has no open tab")
+    with _lock:
+        page = next((t for t in pages if t["id"] == _active_id), pages[-1])
+        _active_id = page["id"]
+    return page
+
+
+def activate_tab(tab_id: str) -> None:
+    global _active_id
+    _json(f"/json/activate/{tab_id}")
+    with _lock:
+        _active_id = tab_id
+
+
+def new_tab(url: str = "about:blank") -> str:
+    from urllib.parse import quote
+
+    tab = _json(f"/json/new?{quote(url, safe=':/?&=#%')}", method="PUT")
+    activate_tab(tab["id"])
+    return tab["id"]
+
+
+def close_tab(tab_id: str) -> None:
+    global _active_id
+    _json(f"/json/close/{tab_id}")
+    with _lock:
+        if _active_id == tab_id:
+            _active_id = None
+    if not tabs():
+        new_tab()
+
+
+def _publish_pointer(x: int, y: int, kind: str) -> None:
+    with _lock:
+        _pointer.update(x=x, y=y, seq=_pointer["seq"] + 1)
+        pointer_feed.append((_pointer["seq"], x, y, kind))
 
 
 def key_event(combo: str) -> Tuple[Dict[str, Any], str]:
@@ -118,7 +179,7 @@ class BrowserScreen:
     # -- reading -------------------------------------------------------------
 
     def screenshot(self) -> bytes:
-        data = self.call("Page.captureScreenshot", {"format": "png"})["data"]
+        data = self.call("Page.captureScreenshot", {"format": "jpeg", "quality": 70})["data"]
         return base64.b64decode(data)
 
     def evaluate(self, expression: str) -> Any:
@@ -145,21 +206,33 @@ class BrowserScreen:
             params.update(deltaX=dx, deltaY=dy)
         self.call("Input.dispatchMouseEvent", params)
 
+    def glide(self, x: int, y: int, *, button: str = "none") -> None:
+        """Move like a hand would: a short eased path the person can follow on the viewer."""
+        x0, y0 = _pointer["x"], _pointer["y"]
+        steps = max(1, min(20, int(((x - x0) ** 2 + (y - y0) ** 2) ** 0.5 / 30)))
+        for i in range(1, steps + 1):
+            t = i / steps
+            t = t * t * (3 - 2 * t)
+            px, py = round(x0 + (x - x0) * t), round(y0 + (y - y0) * t)
+            self.mouse("mouseMoved", px, py, button=button)
+            _publish_pointer(px, py, "move")
+            time.sleep(0.016)
+
     def click(self, x: int, y: int, *, button: str = "left", clicks: int = 1) -> None:
-        self.mouse("mouseMoved", x, y)
+        self.glide(x, y)
+        _publish_pointer(x, y, "click")
         for n in range(1, clicks + 1):
             self.mouse("mousePressed", x, y, button=button, clicks=n)
             self.mouse("mouseReleased", x, y, button=button, clicks=n)
 
     def drag(self, x: int, y: int, to_x: int, to_y: int) -> None:
-        self.mouse("mouseMoved", x, y)
+        self.glide(x, y)
         self.mouse("mousePressed", x, y, button="left", clicks=1)
-        steps = 8
-        for i in range(1, steps + 1):
-            self.mouse("mouseMoved", x + (to_x - x) * i // steps, y + (to_y - y) * i // steps, button="left")
+        self.glide(to_x, to_y, button="left")
         self.mouse("mouseReleased", to_x, to_y, button="left", clicks=1)
 
     def scroll(self, x: int, y: int, dx: float, dy: float) -> None:
+        self.glide(x, y)
         self.mouse("mouseWheel", x, y, dx=dx, dy=dy)
 
     def type_text(self, text: str) -> None:

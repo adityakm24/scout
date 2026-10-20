@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils'
 import { notifyError } from '@/store/notifications'
 import { $activeGatewayProfile } from '@/store/profile'
 
+import { type AgentCursor, BrowserFrame, type BrowserTab } from './browser-frame'
+
 const POLL_MS = 3000
 const MOVE_THROTTLE_MS = 40
 const BUTTONS: Record<number, string> = { 0: 'left', 1: 'middle', 2: 'right' }
@@ -54,6 +56,8 @@ export function ComputerTab() {
   const [socket, setSocket] = useState<WebSocket | null>(null)
   const lastMove = useRef(0)
   const [full, setFull] = useState(false)
+  const [tabs, setTabs] = useState<BrowserTab[]>([])
+  const [cursor, setCursor] = useState<AgentCursor | null>(null)
 
   const inControl = Boolean(viewer && lease?.holder === 'human' && lease.viewer_hash === viewer.hash)
 
@@ -104,10 +108,20 @@ export function ComputerTab() {
         setSocket(ws)
 
         ws.onmessage = event => {
-          const msg = JSON.parse(String(event.data)) as Partial<Frame> & { type?: string }
+          const msg = JSON.parse(String(event.data)) as Partial<Frame> & {
+            kind?: AgentCursor['kind']
+            tabs?: BrowserTab[]
+            type?: string
+            x?: number
+            y?: number
+          }
 
           if (msg.type === 'frame' && msg.data) {
             setFrame({ data: msg.data, height: msg.height || 800, width: msg.width || 1280 })
+          } else if (msg.type === 'tabs' && msg.tabs) {
+            setTabs(msg.tabs)
+          } else if (msg.type === 'cursor') {
+            setCursor(prev => ({ kind: msg.kind ?? 'move', seq: (prev?.seq ?? 0) + 1, x: msg.x ?? 0, y: msg.y ?? 0 }))
           }
         }
 
@@ -226,7 +240,7 @@ export function ComputerTab() {
         alt={copy.caption}
         className={cn(
           'block select-none',
-          size === 'full' ? 'max-h-full max-w-full rounded-xl object-contain shadow-2xl' : 'aspect-[16/10] w-full object-cover',
+          'h-auto w-full',
           size === 'full' && !inControl && 'cursor-default'
         )}
         draggable={false}
@@ -243,7 +257,7 @@ export function ComputerTab() {
       <div
         className={cn(
           'flex aspect-[16/10] items-center justify-center text-xs text-white/50',
-          size === 'full' ? 'w-[min(100%,80rem)] rounded-xl bg-white/5' : 'w-full'
+          'w-full bg-[#202124]'
         )}
       >
         {copy.connecting}
@@ -258,7 +272,9 @@ export function ComputerTab() {
         onClick={() => setFull(true)}
         type="button"
       >
-        {stream('panel')}
+        <BrowserFrame compact cursor={cursor} interactive={false} onCommand={send} tabs={tabs}>
+          {stream('panel')}
+        </BrowserFrame>
         <span className="pointer-events-none absolute inset-0 grid place-items-center bg-black/0 transition-colors group-hover:bg-black/20">
           <span className="flex items-center gap-1.5 rounded-full bg-black/85 px-3.5 py-1.5 text-sm font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
             <ArrowsMaximize size={16} />
@@ -298,7 +314,13 @@ export function ComputerTab() {
                   <ArrowsMinimize size={18} />
                 </button>
               </div>
-              <div className="flex min-h-0 flex-1 items-center justify-center px-10">{stream('full')}</div>
+              <div className="flex min-h-0 flex-1 items-center justify-center px-10">
+                <div className="w-full max-w-[min(100%,calc((100vh-12rem)*1.6))] overflow-hidden rounded-xl shadow-2xl">
+                  <BrowserFrame cursor={cursor} interactive={inControl} onCommand={send} tabs={tabs}>
+                    {stream('full')}
+                  </BrowserFrame>
+                </div>
+              </div>
               <div className="flex shrink-0 justify-center py-5">
                 <div className="flex items-center gap-1 rounded-full bg-white p-1 pl-4 text-sm text-[#3a3a3a] shadow-xl">
                   <span className="flex items-center gap-2 pr-2">

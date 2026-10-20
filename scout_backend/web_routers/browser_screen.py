@@ -2,8 +2,10 @@
 
 ``GET /api/browser-screen`` reports whether the sandboxed browser is up and who holds control.
 ``POST /api/browser-screen/observe`` mints a viewer id and a single-use 30 s ticket for
-``/api/browser-screen/ws``, which streams the active tab as JPEG frames (DevTools screencast) and
-accepts the viewer's mouse and keyboard ONLY while that viewer holds the lease
+``/api/browser-screen/ws``, which streams the active tab as JPEG frames (DevTools screencast) plus
+the tabs, address and the agent's pointer for the browser frame the app draws, and accepts the
+viewer's mouse, keyboard and frame controls (address bar, back/forward, tabs) ONLY while that
+viewer holds the lease
 (``tools/bot_desktop/lease.py``, the same lease the agent's tools refuse to act under).
 ``POST /api/browser-screen/lease`` takes or hands back control.
 """
@@ -12,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import urllib.parse
 import logging
 import secrets
 import threading
@@ -39,12 +42,20 @@ class LeaseRequest(BaseModel):
 
 
 def _running() -> bool:
+    from agent.agent_bridge import egress_proxy
     from agent.agent_bridge.browser_screen import ScreenUnavailable, active_page
+    from agent.agent_bridge.sandboxes import SandboxUnavailable
     try:
         active_page()
-        return True
     except ScreenUnavailable:
         return False
+    try:
+        # The sandboxed browser is online only through this backend's proxy; a browser that outlived
+        # an earlier backend would otherwise show "no internet" to the person who takes control.
+        egress_proxy.ensure_running()
+    except SandboxUnavailable:
+        return False
+    return True
 
 
 def _status() -> Dict[str, Any]:
@@ -81,6 +92,37 @@ async def browser_screen_lease(body: LeaseRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=403, detail="unknown viewer; call /api/browser-screen/observe first")
     held = await asyncio.to_thread(lease.acquire if body.take else lease.release, body.viewer_id)
     return {"lease": lease.public_view(held)}
+
+
+def _browser_command(msg: Dict[str, Any]) -> bool:
+    """The frame's own controls (address bar, back/forward, tabs) for the viewer in control.
+    Returns True when *msg* was one. Off-limits addresses are refused by the egress proxy."""
+    from agent.agent_bridge import browser_screen as bs
+    from agent.agent_bridge.protocol import url_host
+
+    kind = msg.get("type")
+    if kind == "new_tab":
+        bs.new_tab()
+    elif kind == "activate_tab":
+        bs.activate_tab(str(msg.get("id") or ""))
+    elif kind == "close_tab":
+        bs.close_tab(str(msg.get("id") or ""))
+    elif kind in ("navigate", "back", "forward", "reload"):
+        with bs.BrowserScreen() as page:
+            if kind == "navigate":
+                url = str(msg.get("url") or "").strip()
+                if url and "://" not in url:
+                    url = (f"https://{url}" if "." in url and " " not in url
+                           else "https://duckduckgo.com/?q=" + urllib.parse.quote(url))
+                if url_host(url):
+                    page.call("Page.navigate", {"url": url})
+            elif kind == "reload":
+                page.call("Page.reload")
+            else:
+                page.evaluate(f"history.{kind}()")
+    else:
+        return False
+    return True
 
 
 def _input_commands(msg: Dict[str, Any]) -> list:
@@ -148,8 +190,33 @@ async def _stream(ws: WebSocket, viewer_id: str) -> None:
                     msg = json.loads(await ws.receive_text())
                     if not lease.viewer_may_send_input(viewer_id):
                         continue  # watchers only watch; the lease is the gate, not the UI
+                    if msg.get("type") == "insertText":
+                        await send("Input.insertText", {"text": str(msg.get("text") or "")[:2000]})
+                    elif await asyncio.to_thread(_browser_command, msg):
+                        continue
                     for method, params in _input_commands(msg):
                         await send(method, params)
+
+            async def frame_state() -> None:
+                """Tabs, the address bar and the agent's pointer, for the frame the app draws."""
+                from agent.agent_bridge import browser_screen as bs
+                last_tabs, last_seq = None, 0
+                while True:
+                    try:
+                        open_tabs = await asyncio.to_thread(bs.tabs)
+                    except ScreenUnavailable:
+                        return
+                    state = [{"id": t["id"], "title": t.get("title", ""), "url": t.get("url", ""),
+                              "active": t["id"] == page["id"]} for t in open_tabs]
+                    if state != last_tabs:
+                        await ws.send_text(json.dumps({"type": "tabs", "tabs": state}))
+                        last_tabs = state
+                    moves = [m for m in list(bs.pointer_feed) if m[0] > last_seq]
+                    for seq, x, y, kind in moves[-12:]:
+                        await ws.send_text(json.dumps({"type": "cursor", "x": x, "y": y, "kind": kind}))
+                    if moves:
+                        last_seq = moves[-1][0]
+                    await asyncio.sleep(0.05)
 
             async def tab_changed() -> None:
                 while True:
@@ -161,7 +228,7 @@ async def _stream(ws: WebSocket, viewer_id: str) -> None:
                     if current["id"] != page["id"]:
                         return
 
-            tasks = [asyncio.create_task(c()) for c in (frames, inputs, tab_changed)]
+            tasks = [asyncio.create_task(c()) for c in (frames, inputs, tab_changed, frame_state)]
             done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
             for task in pending:
                 task.cancel()

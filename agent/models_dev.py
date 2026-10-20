@@ -577,8 +577,17 @@ def _iter_model_entries(
 def _find_model_entry(
     models: Dict[str, Any], model: str, provider: str = ""
 ) -> Optional[Dict[str, Any]]:
-    """First catalog entry for *model* (exact, case-insensitive, suffix), or None."""
-    return next((entry for _mid, entry in _iter_model_entries(models, model, provider=provider)), None)
+    """First catalog entry for *model* (exact, case-insensitive, suffix), or None. A ``<name>-latest``
+    alias the catalog does not list resolves to the newest dated ``<name>-<date>`` entry, which is what
+    the provider serves under it (Mistral's ``ministral-14b-latest`` -> ``ministral-14b-2512``)."""
+    entry = next((entry for _mid, entry in _iter_model_entries(models, model, provider=provider)), None)
+    if entry is None and model.lower().endswith("-latest"):
+        stem = model.lower()[: -len("latest")]
+        dated = sorted(mid for mid in models if isinstance(mid, str) and mid.lower().startswith(stem)
+                       and mid.lower()[len(stem):].isdigit())
+        if dated:
+            entry = models[dated[-1]]
+    return entry
 
 
 def _extract_limit(entry: Any, key: str) -> Optional[int]:

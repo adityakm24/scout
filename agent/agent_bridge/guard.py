@@ -17,11 +17,15 @@ class GuardUnavailable(RuntimeError):
     """The guard sandbox could not run the rail; the bridge refuses the message."""
 
 
+def _field_contract(f) -> dict:
+    return {"type": f.type, "options": list(f.options), "items": {k: _field_contract(v) for k, v in f.items.items()}}
+
+
 def contract(task: BrowseTask) -> dict:
     return {
         "statuses": list(STATUSES), "reasons": list(REASONS), "placeholders": list(PLACEHOLDERS),
         "allowed_domains": list(task.allowed_domains),
-        "fields": {name: {"type": f.type, "options": list(f.options)} for name, f in task.result_fields.items()},
+        "fields": {name: _field_contract(f) for name, f in task.result_fields.items()},
     }
 
 

@@ -393,6 +393,22 @@ def _strip_images_from_messages(messages: list) -> bool:
     return found
 
 
+def keep_recent_images(messages: list, limit: int) -> None:
+    """Strip image parts from all but the newest ``limit`` images, in the per-call copy.
+
+    For agents that work from fresh screenshots (the Browser Agent): older screens are stale,
+    and providers cap images per request (Mistral: 8). History keeps every image."""
+    seen = 0
+    for msg in reversed(messages):
+        content = msg.get("content") if isinstance(msg, dict) else None
+        if not isinstance(content, list):
+            continue
+        images = sum(1 for p in content if isinstance(p, dict) and p.get("type") in _IMAGE_PART_TYPES)
+        if images and seen + images > limit:
+            _strip_images_from_messages([msg])
+        seen += images
+
+
 # Provider error bodies (lowercased substring match) meaning "image/multimodal input
 # unsupported" — the loop then strips images and retries text-only instead of cascading
 # into compression / context-too-large recovery or wedging on retries.
