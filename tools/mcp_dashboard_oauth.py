@@ -46,6 +46,9 @@ class DashboardOAuthFlow:
     scout_home: str
     redirect_uri: str
     reconnect_live: bool = False
+    # True when this process owns the loopback listener (pinned vendor port, or no
+    # client_redirect_uri): the sign-in browser must run on this machine.
+    open_on_host: bool = False
     created_at: float = field(default_factory=time.time)
     status: str = "starting"
     authorization_url: str | None = None

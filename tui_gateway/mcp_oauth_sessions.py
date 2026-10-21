@@ -13,6 +13,7 @@ from contextlib import suppress
 from typing import Any, Dict, Optional
 
 from tools.connectors.mcp_oauth import (
+    _pinned_loopback,
     _validate_client_redirect_uri,
     choose_callback_receiver,
     run_worker,
@@ -82,7 +83,8 @@ def start_flow(
     session_id = secrets.token_urlsafe(24)
     flow = DashboardOAuthFlow(
         flow_id=session_id, server_name=server_name, profile=None, scout_home=scout_home,
-        redirect_uri="", reconnect_live=reconnect_live)
+        redirect_uri="", reconnect_live=reconnect_live,
+        open_on_host=_pinned_loopback(cfg) or client_redirect_uri is None)
     httpd = choose_callback_receiver(flow, cfg, client_redirect_uri)
     rec = register_flow(flow, httpd=httpd)
     threading.Thread(

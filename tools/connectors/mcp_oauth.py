@@ -318,7 +318,8 @@ def start(
     scout_home = str(get_scout_home().expanduser().resolve(strict=False))
     flow = DashboardOAuthFlow(
         flow_id=secrets.token_urlsafe(24), server_name=server_name, profile=None,
-        scout_home=scout_home, redirect_uri="", reconnect_live=False)
+        scout_home=scout_home, redirect_uri="", reconnect_live=False,
+        open_on_host=_pinned_loopback(cfg) or client_redirect_uri is None)
     with _COMMIT_GUARD:
         older = _ACTIVE.get((scout_home, server_name))
         _ACTIVE[(scout_home, server_name)] = flow

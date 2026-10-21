@@ -68,7 +68,7 @@ export function localWay(server: LocalServerInput): ConnectorWayLocal {
     state: phase.state,
     target: server.target,
     unused: server.unused,
-    verb: phase.verb === 'authenticate' && server.canAuthenticate === false ? 'openLogs' : phase.verb
+    verb: server.canAuthenticate ? 'authenticate' : phase.verb === 'authenticate' ? 'openLogs' : phase.verb
   }
 }
 

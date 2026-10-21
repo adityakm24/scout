@@ -119,6 +119,7 @@ def test_start_flow_client_redirect_skips_gateway_listener(monkeypatch):
     rec = mcp_oauth_sessions._sessions[result["session_id"]]
     assert rec["httpd"] is None
     assert rec["flow"].redirect_uri == "http://127.0.0.1:8412/callback"
+    assert rec["flow"].open_on_host is False
 
     # Cleanup: deliver the callback so the stub worker thread exits.
     deliver_callback_flow(
@@ -177,6 +178,24 @@ def test_dcr_vendor_pin_wins_over_a_client_hosted_redirect(monkeypatch):
     ) is None
     assert flow.redirect_uri == "http://localhost:27894/callback"
     assert bound == []
+
+
+def test_pinned_loopback_start_opens_the_browser_on_the_scout_machine(monkeypatch):
+    """Zepto/Swiggy pin localhost:<port>/callback; the backend owns that listener, so the
+    sign-in page has to open on this machine even when Desktop offered its own redirect."""
+    _fake_worker_publishes_url(monkeypatch)
+    result = mcp_oauth_sessions.start_flow(
+        str(get_scout_home()),
+        "zepto",
+        {"url": "https://mcp.zepto.co.in/mcp", "auth": "oauth",
+         "oauth": {"redirect_host": "localhost", "redirect_port": 27894}},
+        client_redirect_uri="http://127.0.0.1:51234/callback",
+    )
+    rec = mcp_oauth_sessions._sessions[result["session_id"]]
+    assert rec["flow"].open_on_host is True
+    assert rec["flow"].redirect_uri == "http://localhost:27894/callback"
+    rec["flow"].mark_error("test done")
+    rec["flow"]._worker_done.wait(5)
 
 
 def test_start_flow_rejects_bad_client_redirect(monkeypatch):

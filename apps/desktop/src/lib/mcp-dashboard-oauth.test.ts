@@ -43,7 +43,12 @@ function harness() {
     callback.resolve({ code: 'code-1', state: 'expected', error: null })
   })
 
-  Object.defineProperty(window, 'scoutDesktop', { configurable: true, value: { mcpOauth: bridge, api, openExternal } })
+  const getConnection = vi.fn(async () => ({ mode: 'remote', baseUrl: 'https://vps.example:9119' }))
+
+  Object.defineProperty(window, 'scoutDesktop', {
+    configurable: true,
+    value: { mcpOauth: bridge, api, openExternal, getConnection }
+  })
   let relayed = false
   const rpc = vi.mocked(requestGatewayForAgent)
   rpc.mockImplementation(async (_connection, _profile, method) => {
@@ -177,15 +182,46 @@ describe('Desktop MCP client callback lifecycle', () => {
       expect(rpc.mock.calls.some(call => call[2] === 'mcp.servers.oauth.callback')).toBe(false)
     })
 
-    it('refuses on a remote backend, where the redirect cannot reach it, without opening a browser', async () => {
+    it('polls a remote backend that hosts the pinned loopback instead of refusing', async () => {
+      const { bridge, openExternal, rpc } = harness()
+      setApiRequestConnection('remote-gateway')
+      let polls = 0
+      rpc.mockImplementation(async (_connection, _profile, method) => {
+        if (method.endsWith('.start')) {
+          return pinnedStart
+        }
+
+        return { ok: true, status: ++polls > 1 ? 'approved' : 'pending', tools }
+      })
+
+      const result = await completeMcpDesktopOAuth({ serverName: 'zepto', sleep: async () => {} })
+
+      expect(result).toMatchObject({ status: 'approved', tools })
+      expect(openExternal).not.toHaveBeenCalled()
+      expect(bridge.cancel).toHaveBeenCalledWith('listener-1')
+      expect(rpc.mock.calls.some(call => call[2] === 'mcp.servers.oauth.callback')).toBe(false)
+    })
+
+    it('opens the sign-in page when the remote backend is this same loopback host', async () => {
       const { openExternal, rpc } = harness()
       setApiRequestConnection('remote-gateway')
-      rpc.mockImplementation(async (_connection, _profile, method) =>
-        method.endsWith('.start') ? pinnedStart : { ok: true }
-      )
+      window.scoutDesktop.getConnection = vi.fn(async () => ({
+        mode: 'remote',
+        baseUrl: 'http://127.0.0.1:9119'
+      })) as Window['scoutDesktop']['getConnection']
+      let polls = 0
+      rpc.mockImplementation(async (_connection, _profile, method) => {
+        if (method.endsWith('.start')) {
+          return pinnedStart
+        }
 
-      await expect(completeMcpDesktopOAuth({ serverName: 'zepto' })).rejects.toThrow('scout mcp login zepto')
-      expect(openExternal).not.toHaveBeenCalled()
+        return { ok: true, status: ++polls > 1 ? 'approved' : 'pending', tools }
+      })
+
+      const result = await completeMcpDesktopOAuth({ serverName: 'zepto', sleep: async () => {} })
+
+      expect(result).toMatchObject({ status: 'approved', tools })
+      expect(openExternal).toHaveBeenCalledWith(pinnedStart.auth_url)
     })
   })
 })

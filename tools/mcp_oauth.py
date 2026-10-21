@@ -763,6 +763,14 @@ _SSH_HINT_LOOPBACK = (
     "  See: https://github.com/adityakm24/scout\n")
 
 
+def _open_authorization_url_on_host(authorization_url: str) -> None:
+    """Open the provider's sign-in page on this machine (the loopback callback is bound here)."""
+    if not authorization_url or not _can_open_browser():
+        return
+    with contextlib.suppress(Exception):
+        webbrowser.open(authorization_url)
+
+
 def _announce_authorization_url(
     authorization_url: str, port: int, redirect_uri: str | None, redirect_host: str | None = None,
 ) -> None:
@@ -796,6 +804,8 @@ def _make_redirect_handler(port: int, redirect_uri: str | None = None, redirect_
         dashboard_flow = get_dashboard_oauth_flow()
         if dashboard_flow is not None:
             await dashboard_flow.publish_authorization_url(authorization_url)
+            if dashboard_flow.open_on_host:
+                _open_authorization_url_on_host(authorization_url)
             return
         # Fail fast when non-interactive: a cached-but-unusable token makes the SDK fall through to the
         # authorization-code flow past the token-file guard, and the waiter would block for the full timeout.

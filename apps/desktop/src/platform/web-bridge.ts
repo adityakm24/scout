@@ -197,6 +197,9 @@ function webBridge(config: RemoteConfig) {
 
       return () => window.removeEventListener(FOCUS_SESSION_EVENT, open)
     },
+    openExternal: async (url: string) => {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    },
     notify: async ({ body, focusSessionId, sessionId, title }: ScoutNotification) => {
       // In the phone app the OS posts it (mobile/src/ScoutScreen.tsx); web views have no Notification.
       if (window.scoutNative) {

@@ -32,9 +32,11 @@ export class McpOAuthCancelled extends Error {
 const defaultSleep = (milliseconds: number) => new Promise<void>(resolve => window.setTimeout(resolve, milliseconds))
 const UPDATE_BACKEND = 'Update the Scout backend to support Desktop MCP OAuth callbacks.'
 
-const pinnedOnRemote = (serverName: string, redirectUri: string) =>
-  `${serverName} only accepts a sign-in redirect to ${redirectUri} on the machine running Scout. ` +
-  `Run \`scout mcp login ${serverName}\` there (or update that backend if it is older than Desktop).`
+function isLoopbackHost(host: string): boolean {
+  const normalized = host.replace(/^\[|\]$/g, '').toLowerCase()
+
+  return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1' || normalized === '0:0:0:0:0:0:0:1'
+}
 
 function isLoopbackCallback(uri: null | string): boolean {
   let url: URL
@@ -47,7 +49,7 @@ function isLoopbackCallback(uri: null | string): boolean {
 
   return (
     url.protocol === 'http:' &&
-    (url.hostname === '127.0.0.1' || url.hostname === 'localhost') &&
+    isLoopbackHost(url.hostname) &&
     Boolean(url.port) &&
     Number(url.port) !== 0 &&
     url.pathname === '/callback' &&
@@ -56,6 +58,46 @@ function isLoopbackCallback(uri: null | string): boolean {
     !url.search &&
     !url.hash
   )
+}
+
+async function backendOnThisMachine(): Promise<boolean> {
+  const connectionId = capabilityScoped().connectionId
+
+  if (!connectionId || connectionId === 'local') {
+    return true
+  }
+
+  try {
+    const connection = await window.scoutDesktop.getConnection()
+
+    if (connection?.mode === 'local') {
+      return true
+    }
+
+    if (connection?.baseUrl) {
+      return isLoopbackHost(new URL(connection.baseUrl).hostname)
+    }
+  } catch {
+    // The web/phone shell has no registry connection: the page origin is the backend.
+  }
+
+  try {
+    return isLoopbackHost(window.location.hostname)
+  } catch {
+    return false
+  }
+}
+
+async function openAuthUrl(url: string): Promise<void> {
+  const open = window.scoutDesktop?.openExternal
+
+  if (typeof open === 'function') {
+    await open(url)
+
+    return
+  }
+
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 /** Remote gateways require the Desktop callback bridge. An explicitly local
@@ -72,11 +114,7 @@ export async function completeMcpDesktopOAuth({
   const scope = capabilityScoped(profile)
   const rpc = mcpOAuthRpc(scope)
   const bridge = window.scoutDesktop.mcpOauth
-
-  // A legacy null connection can resolve to a remote registry primary.
-  if (!bridge && scope.connectionId !== 'local') {
-    throw new Error('Update Scout Desktop to support MCP OAuth callbacks.')
-  }
+  const sameMachine = await backendOnThisMachine()
 
   let listener: { id: string; redirectUri: string } | undefined
   let sessionId: string | undefined
@@ -123,19 +161,15 @@ export async function completeMcpDesktopOAuth({
     const redirectUri = new URL(authUrl).searchParams.get('redirect_uri')
 
     // The backend hosts the callback when it did not take ours: a vendor that pins its loopback
-    // redirect (Swiggy, Zepto — the SDK binds that exact port), or a pre-relay backend that
-    // silently ignored `client_redirect_uri`. Only a loopback `/callback` on THIS machine can
-    // receive the browser's redirect, so that is usable against a local backend alone.
+    // redirect (Swiggy, Zepto — the SDK binds that exact port), or a flow started without a
+    // client listener (web/phone). That loopback only receives the browser on the Scout machine,
+    // which the backend opens; this client just polls. A matching listener means we hosted it.
     if (!listener || redirectUri !== listener.redirectUri) {
       if (!isLoopbackCallback(redirectUri)) {
         throw new Error(listener ? UPDATE_BACKEND : 'OAuth server did not provide a local loopback callback URL')
       }
 
       if (bridge && listener) {
-        if (scope.connectionId !== 'local') {
-          throw new Error(pinnedOnRemote(serverName, redirectUri ?? ''))
-        }
-
         await bridge.cancel(listener.id).catch(() => {})
         listener = undefined
       }
@@ -164,7 +198,11 @@ export async function completeMcpDesktopOAuth({
         })
     }
 
-    await window.scoutDesktop.openExternal(authUrl)
+    // Client-hosted callback, or the backend is this same machine: open here. Otherwise the
+    // backend already opened the sign-in page on the Scout host (pinned Zepto/Swiggy, phone).
+    if (listener || sameMachine) {
+      await openAuthUrl(authUrl)
+    }
     let pollFailures = 0
 
     for (;;) {

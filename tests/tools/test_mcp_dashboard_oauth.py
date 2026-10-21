@@ -324,3 +324,21 @@ def test_server_task_does_not_park_on_an_ended_dashboard_flow(
     assert flow.expected_state == "fresh"
     flow.deliver_callback(code="late-code", state="fresh", error=None)
     assert asyncio.run(flow.wait_for_callback())[0] == "late-code"
+
+
+def test_pinned_dashboard_flow_opens_the_sign_in_page_on_this_machine(monkeypatch):
+    """The loopback callback is bound here, so the provider redirect has to land in a browser
+    on this machine — including when Authenticate was tapped from Desktop, web, or the phone."""
+    from tools.mcp_dashboard_oauth import dashboard_oauth_flow
+    from tools.mcp_oauth import _make_redirect_handler
+
+    opened = []
+    monkeypatch.setattr("tools.mcp_oauth._can_open_browser", lambda: True)
+    monkeypatch.setattr("tools.mcp_oauth.webbrowser.open", lambda url: opened.append(url) or True)
+    flow = _flow("flow-host", "zepto")
+    flow.open_on_host = True
+    url = "https://auth.zepto.co.in/authorize?state=otp"
+    with dashboard_oauth_flow(flow):
+        asyncio.run(_make_redirect_handler(27894)(url))
+    assert opened == [url]
+    assert flow.authorization_url == url

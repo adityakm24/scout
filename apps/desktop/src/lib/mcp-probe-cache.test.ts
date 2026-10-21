@@ -15,7 +15,9 @@ describe('classifyProbe', () => {
     'HTTP 401 Unauthorized',
     'invalid_token: The access token expired',
     'OAuth authorization required',
-    'authentication failed'
+    'authentication failed',
+    'MCP OAuth for zepto: non-interactive environment and no cached tokens found',
+    'zepto only accepts a sign-in redirect to http://localhost:27894/callback'
   ])('classifies "%s" as needs-auth', error => {
     expect(classifyProbe(result({ ok: false, error }))).toBe('needs-auth')
   })
