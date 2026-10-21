@@ -221,7 +221,7 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
         onMessage={onMessage}
         originWhitelist={[pairing.baseUrl]}
         ref={webview}
-        source={{ uri: pairing.baseUrl }}
+        source={{ uri: pairing.appUrl ?? pairing.baseUrl }}
         style={styles.web}
       />
     </View>

@@ -57,7 +57,7 @@ export default function App() {
       <View style={{ backgroundColor: colors.background, flex: 1 }}>
         {pairing === undefined ? null : pairing ? (
           // A new pairing (another computer, or a new token for the same one) is a fresh page.
-          <ScoutScreen key={`${pairing.baseUrl} ${pairing.token}`} onUnpair={unpair} pairing={pairing} />
+          <ScoutScreen key={`${pairing.appUrl ?? pairing.baseUrl} ${pairing.token}`} onUnpair={unpair} pairing={pairing} />
         ) : (
           <PairScreen onPaired={pair} />
         )}

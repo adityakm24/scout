@@ -22,6 +22,15 @@ import pytest
 import scout_yaml as yaml
 
 
+
+@pytest.fixture(autouse=True)
+def _checkout_without_local_commits(monkeypatch):
+    """These tests drive the updater on this repository; whether the developer's own checkout has
+    unpushed commits is not their subject (test_update_local_commits.py covers that)."""
+    from scout_backend.web_routers import actions
+
+    monkeypatch.setattr(actions, "_local_commits_ahead", lambda root: 0)
+
 @pytest.fixture(autouse=True)
 def _multiplex_state_is_per_test():
     """Multi-profile activation is a one-way PROCESS-global flip; contain it to one test.

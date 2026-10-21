@@ -217,6 +217,24 @@ def _update_refused(error: str, message: str, update_command: str) -> Dict[str, 
     }
 
 
+def _local_commits_ahead(root: Path) -> int:
+    """Commits on this checkout's branch that its upstream lacks (0 when none or unknown).
+
+    The updater resets a branch that has diverged from origin to match it, so a checkout carrying
+    its own commits must never be updated from a button: those commits would leave the branch."""
+    try:
+        out = subprocess.run(["git", "rev-list", "--count", "@{upstream}..HEAD"], cwd=root,
+                             capture_output=True, text=True, timeout=10)
+        return int(out.stdout.strip()) if out.returncode == 0 else 0
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return 0
+
+
+def _local_commits_message(ahead: int) -> str:
+    return (f"This copy of Scout has {ahead} commit(s) that aren't on its update source; updating would "
+            "remove them from the branch. Update it with git instead.")
+
+
 @router.post("/api/scout/update")
 async def update_scout():
     """Kick off ``scout update`` in the background."""
@@ -239,6 +257,9 @@ async def update_scout():
         )
         record_refusal_receipt(refusal)
         return response
+
+    if ahead := _local_commits_ahead(_server_path("PROJECT_ROOT")):
+        return _update_refused("local_commits", _local_commits_message(ahead), "")
 
     existing = _ACTION_PROCS.get("scout-update")
     if existing is not None and existing.poll() is None:
@@ -299,6 +320,10 @@ async def check_scout_update(force: bool = False, profile: Optional[str] = None)
     non_applyable = _NON_APPLYABLE_MESSAGES.get(install_method)
     if non_applyable is not None:
         payload["message"] = non_applyable()
+        return payload
+
+    if install_method == "git" and (ahead := _local_commits_ahead(_server_path("PROJECT_ROOT"))):
+        payload.update(can_apply=False, message=_local_commits_message(ahead))
         return payload
 
     # source_check.check_for_updates() handles git / nix-revision paths through the GitHub API and

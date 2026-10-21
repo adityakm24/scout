@@ -45,6 +45,15 @@ _EXAMPLE_PLUGIN_FIXTURE = (
 )
 
 
+
+@pytest.fixture(autouse=True)
+def _checkout_without_local_commits(monkeypatch):
+    """These tests drive the updater on this repository; whether the developer's own checkout has
+    unpushed commits is not their subject (test_update_local_commits.py covers that)."""
+    from scout_backend.web_routers import actions
+
+    monkeypatch.setattr(actions, "_local_commits_ahead", lambda root: 0)
+
 @pytest.fixture
 def _install_example_plugin(_isolate_scout_home):
     """Drop the example-dashboard fixture into the per-test SCOUT_HOME

@@ -84,6 +84,10 @@ def _render_active_theme_bootstrap_css() -> str:
 # is served ``no-store`` and always references the current hashes).
 _IMMUTABLE_ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable"
 _NO_STORE = {"Cache-Control": "no-store, no-cache, must-revalidate"}
+
+# The Scout app's own screens (the desktop renderer, `npm run build` in apps/desktop), served at /app/
+# so the phone app can load them from this backend: one address for screens and API, no dev server.
+APP_DIST = Path(__file__).resolve().parent.parent / "apps" / "desktop" / "dist"
 _HEADLESS_MSG = (
     "Headless backend (scout serve): web UI disabled — use "
     "`scout dashboard` for the browser UI."
@@ -210,6 +214,17 @@ def mount_spa(application: FastAPI):
     application.mount(
         "/assets", _ImmutableAssetFiles(directory=WEB_DIST / "assets", check_dir=False), name="assets"
     )
+
+    @application.get("/app/{full_path:path}")
+    async def serve_app(full_path: str):
+        index = APP_DIST / "index.html"
+        file_path = APP_DIST / full_path
+        if full_path and file_path.resolve().is_relative_to(APP_DIST.resolve()) and file_path.is_file():
+            return FileResponse(file_path)
+        if not index.is_file():
+            return JSONResponse({"detail": "The Scout app is not built; run npm run build in apps/desktop."},
+                                status_code=404)
+        return FileResponse(index, headers=_NO_STORE)
 
     @application.get("/{full_path:path}")
     async def serve_spa(full_path: str, request: Request):

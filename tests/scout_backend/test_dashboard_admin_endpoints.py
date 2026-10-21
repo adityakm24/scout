@@ -13,6 +13,15 @@ import scout_backend.web_server_files as _web_server_files
 import scout_backend.web_server_gateway as _web_server_gateway
 
 
+
+@pytest.fixture(autouse=True)
+def _checkout_without_local_commits(monkeypatch):
+    """These tests drive the updater on this repository; whether the developer's own checkout has
+    unpushed commits is not their subject (test_update_local_commits.py covers that)."""
+    from scout_backend.web_routers import actions
+
+    monkeypatch.setattr(actions, "_local_commits_ahead", lambda root: 0)
+
 def _client():
     try:
         from starlette.testclient import TestClient

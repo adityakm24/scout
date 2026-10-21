@@ -1,7 +1,9 @@
 import * as SecureStore from 'expo-secure-store'
 
-/** Where the phone's Scout lives: the renderer's address and the backend session token. */
+/** Where the phone's Scout lives: the backend's origin (its API), the page with Scout's screens
+ *  (`/app/` when the backend serves them, the origin itself from a dev server) and the session token. */
 export interface Pairing {
+  appUrl?: string
   baseUrl: string
   token: string
 }
@@ -19,7 +21,7 @@ export function parsePairingLink(text: string): Pairing | null {
       return null
     }
 
-    return { baseUrl: url.origin, token }
+    return { appUrl: url.origin + url.pathname, baseUrl: url.origin, token }
   } catch {
     return null
   }
