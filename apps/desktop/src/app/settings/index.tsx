@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { useI18n } from '@/i18n'
-import { Bell, Keyboard, KeyRound, Settings2, ShieldLock, Wrench } from '@/lib/icons'
+import { Bell, Keyboard, KeyRound, Settings2, ShieldLock, Smartphone, Wrench } from '@/lib/icons'
 import { isEditableTarget } from '@/lib/keybinds/combo'
 import { typeToFocusChar } from '@/lib/keybinds/composer-focus-keys'
 import { $commandPaletteOpen } from '@/store/command-palette'
@@ -20,6 +20,7 @@ import { KeybindSettings } from './keybind-settings'
 import { KeysSettings, type KeysView } from './keys-settings'
 import { movedSettingsTabRedirect } from './moved-tabs'
 import { NotificationsSettings } from './notifications-settings'
+import { PhoneSettings } from './phone-settings'
 import { SettingsBreadcrumbContext } from './primitives'
 import {
   filterSettingsSearchEntries,
@@ -38,7 +39,8 @@ const SETTINGS_VIEWS: readonly SettingsViewId[] = [
   'keybinds',
   'keys',
   'vault',
-  'notifications'
+  'notifications',
+  'phone'
 ]
 
 export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: SettingsPageProps) {
@@ -165,6 +167,7 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
   const shellItems = [
     ...SECTIONS.flatMap(section => {
       const view = `config:${section.id}` as SettingsViewId
+
       const entry = {
         active: activeView === view,
         icon: section.icon,
@@ -194,6 +197,13 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
       id: 'notifications' as SettingsViewId,
       label: t.settings.nav.notifications,
       onSelect: () => setActiveView('notifications')
+    },
+    {
+      active: activeView === 'phone',
+      icon: Smartphone,
+      id: 'phone' as SettingsViewId,
+      label: t.settings.nav.phone,
+      onSelect: () => setActiveView('phone')
     },
     {
       active: activeView === 'keybinds',
@@ -248,6 +258,7 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
 
   const activeItem = shellItems.find(item => item.active) ?? shellItems[0]
   const showDetail = activeView === 'keys' ? keysDetail !== null : Boolean(pinnedPage)
+
   const rows =
     activeView === 'keys'
       ? [
@@ -287,6 +298,7 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
       <SettingsBreadcrumbContext.Provider value>
         <SettingsAppleShell
           active={activeItem}
+          body={activeView === 'phone' ? <PhoneSettings /> : undefined}
           detail={showDetail ? detail : null}
           detailTitle={activeRow?.label}
           items={shellItems}

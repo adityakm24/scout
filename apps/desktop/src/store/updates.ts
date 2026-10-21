@@ -531,14 +531,15 @@ export interface UpdateCheckOptions {
 // running for a different target, so that target isn't silently dropped.
 let backendCheckPendingKey: string | undefined
 
-// A development renderer (vite) runs against a developer's git checkout: git owns it. Never offer an
-// update there; applying one resets a diverged branch to origin (electron/main.ts does the same).
-const DEV_RUN = import.meta.env.DEV && import.meta.env.MODE !== 'test'
+// Scout never updates itself: a new version ships as a new build of the app. The updater pulls the
+// checkout to its upstream (resetting a diverged branch), so no check is made and nothing is offered
+// (electron/main.ts refuses too). The store's behaviour stays under test.
+const SELF_UPDATE_OFF = import.meta.env.MODE !== 'test'
 
 export async function checkBackendUpdates({
   force = false
 }: UpdateCheckOptions = {}): Promise<DesktopUpdateStatus | null> {
-  if (!isRemoteMode() || DEV_RUN) {
+  if (!isRemoteMode() || SELF_UPDATE_OFF) {
     return $backendUpdateStatus.get()
   }
 
@@ -596,7 +597,7 @@ export async function checkBackendUpdates({
 export async function checkUpdates({ force = false }: UpdateCheckOptions = {}): Promise<DesktopUpdateStatus | null> {
   const bridge = window.scoutDesktop?.updates
 
-  if (!bridge || DEV_RUN || $updateChecking.get()) {
+  if (!bridge || SELF_UPDATE_OFF || $updateChecking.get()) {
     return $updateStatus.get()
   }
 

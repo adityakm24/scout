@@ -56,7 +56,13 @@ export const en: Translations = {
     removePhoto: 'Remove photo',
     photoTooLarge: 'That image is too large. Pick one under 2 MB.',
     saveFailed: 'Could not save. Try again.',
-    tabs: { computer: 'Computer', heartbeat: 'Heartbeat', persona: 'Persona', permissions: 'Permissions', requests: 'Requests' },
+    tabs: {
+      computer: 'Computer',
+      heartbeat: 'Heartbeat',
+      persona: 'Persona',
+      permissions: 'Permissions',
+      requests: 'Requests'
+    },
     computer: {
       asleep: 'Computer is asleep',
       asleepDetail: 'It wakes up when Scout needs the web.',
@@ -100,7 +106,8 @@ export const en: Translations = {
       approvals: 'Waiting for you',
       noApprovals: 'Nothing is waiting for your approval.',
       allow: 'Allow once',
-      deny: 'Deny',    }
+      deny: 'Deny'
+    }
   },
   dashboard: {
     title: 'Dashboard',
@@ -608,7 +615,7 @@ export const en: Translations = {
       showRecentLogs: 'Show recent logs',
       signedInTitle: 'Signed in',
       signedInMessage: 'Reconnecting to the remote gateway…',
-      signInFailed: 'Sign-in failed',
+      signInFailed: 'Sign-in failed'
     }
   },
 
@@ -924,6 +931,7 @@ export const en: Translations = {
       sessions: 'Sessions',
       about: 'About',
       notifications: 'Notifications',
+      phone: 'Phone',
       vault: 'Passwords & Logins'
     },
     plugins: {
@@ -1139,6 +1147,20 @@ export const en: Translations = {
       advanced: 'Advanced'
     },
     accountTitle: 'Scout User',
+    phone: {
+      copied: 'Link copied',
+      copyLink: 'Copy link',
+      getTailscale: 'Get Tailscale',
+      missing:
+        'Your phone reaches this Mac through Tailscale, a private network only your devices can use. Install it on this Mac and on your iPhone, and sign in to the same account on both.',
+      notServed: 'Tailscale is on. Give Scout a private address on it so your phone can reach it from anywhere.',
+      reachable: 'Make Scout reachable',
+      ready: 'Scan with your iPhone',
+      scanHint: 'Point the iPhone Camera at the code, or tap Scan in the Scout app.',
+      serveFailed: "Couldn't set up the address",
+      signedOut: 'Open Tailscale on this Mac and sign in. Use the same account on your iPhone.',
+      steps: ['Open Tailscale on your iPhone and sign in.', 'Scan this code.', 'Scout opens, connected.']
+    },
     paneIntro: {
       'config:chat': 'How Scout talks, reasons, and handles attachments.',
       'config:appearance': 'Light or dark, type, the window, and how chats look.',
@@ -1150,6 +1172,7 @@ export const en: Translations = {
       'config:voice': 'Spoken replies.',
       'config:advanced': 'Limits, tools, the terminal, and startup.',
       notifications: 'Desktop alerts and sounds.',
+      phone: 'Use Scout on your iPhone, at home or away.',
       keybinds: 'Shortcuts, the HUD gesture, and screen capture.',
       keys: 'Credentials for tools and for Scout itself.'
     },

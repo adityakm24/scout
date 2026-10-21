@@ -2,7 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera'
 import { useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 
-import { type Pairing, parsePairingLink } from './pairing'
+import { type Pairing, pairingFromDeepLink, parsePairingLink } from './pairing'
 import { colors } from './theme'
 
 /** First run: connect this phone to a Scout by scanning its pairing QR (or pasting the link). */
@@ -13,7 +13,7 @@ export function PairScreen({ onPaired }: { onPaired: (pairing: Pairing) => void 
   const done = useRef(false)
 
   const accept = (text: string) => {
-    const pairing = parsePairingLink(text)
+    const pairing = parsePairingLink(text) ?? pairingFromDeepLink(text)
 
     if (!pairing) {
       setError('That isn’t a Scout pairing link.')

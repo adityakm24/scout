@@ -8,6 +8,7 @@ export type SettingsView =
   | 'keybinds'
   | 'keys'
   | 'notifications'
+  | 'phone'
   | 'vault'
   | `config:${string}`
 

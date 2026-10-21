@@ -810,6 +810,7 @@ export interface Translations {
       sessions: string
       about: string
       notifications: string
+      phone: string
       vault: string
     }
     plugins: {
@@ -977,6 +978,19 @@ export interface Translations {
     }
     sections: Record<string, string>
     paneIntro: Record<string, string>
+    phone: {
+      copied: string
+      copyLink: string
+      getTailscale: string
+      missing: string
+      notServed: string
+      reachable: string
+      ready: string
+      scanHint: string
+      serveFailed: string
+      signedOut: string
+      steps: string[]
+    }
     accountTitle: string
     searchPlaceholder: Record<'about' | 'config' | 'keys' | 'mcp' | 'sessions', string>
     modeOptions: Record<'light' | 'dark' | 'system', ModeOptionCopy>

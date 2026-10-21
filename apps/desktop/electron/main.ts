@@ -86,8 +86,33 @@ import { installCommandScreenshot } from './command-screenshot'
 import { composerImageTimestamp } from './composer-image-name'
 import { writeComposerPaste } from './composer-paste'
 import { connectionInstallIds, rosterSourceErrors, sshRosterCache } from './connection-caches'
-import { apiRequestRegistryConnectionId, buildGatewayWsUrl, buildGatewayWsUrlWithTicket, cookiesHaveSession, gatewayWsUrlIpcResult, hostLabelFromBaseUrl, isGatewayAuthRejection, modeIsRemoteLike, normalizeRemoteBaseUrl, normalizeRemoteHeaders, pathForRegistryBackendRequest, pathWithGlobalRemoteProfile, type ProfileRouteOptions, type RegistryBackendRequestScope, resolveProfileApiRequest, resolveProfileBackendRoute, sanitizeRemoteHeaderValue, withTransientRetries } from './connection-config'
-import { backendScopeKey, buildAgentRoster, registryDialConnectionId, rememberSshEnumeration, resolvedConnectionId } from './connection-registry'
+import {
+  apiRequestRegistryConnectionId,
+  buildGatewayWsUrl,
+  buildGatewayWsUrlWithTicket,
+  cookiesHaveSession,
+  gatewayWsUrlIpcResult,
+  hostLabelFromBaseUrl,
+  isGatewayAuthRejection,
+  modeIsRemoteLike,
+  normalizeRemoteBaseUrl,
+  normalizeRemoteHeaders,
+  pathForRegistryBackendRequest,
+  pathWithGlobalRemoteProfile,
+  type ProfileRouteOptions,
+  type RegistryBackendRequestScope,
+  resolveProfileApiRequest,
+  resolveProfileBackendRoute,
+  sanitizeRemoteHeaderValue,
+  withTransientRetries
+} from './connection-config'
+import {
+  backendScopeKey,
+  buildAgentRoster,
+  registryDialConnectionId,
+  rememberSshEnumeration,
+  resolvedConnectionId
+} from './connection-registry'
 import type { RosterProfileMetadata } from './connection-registry'
 import { liveWindowState, overlayWindowState } from './connection-window-state'
 import { describeCrashReason, installCrashForensics } from './crash-forensics'
@@ -147,7 +172,24 @@ import { resolveGatewayVersion } from './gateway-version'
 import { windowsGitCandidates } from './git-binary-candidates'
 import { registerGitIpc } from './git-ipc'
 import { guestOnboardingEnabled } from './guest-onboarding'
-import { assertExistingPathForOpen, ATTACHMENT_UPLOAD_DEFAULT_MAX_BYTES, clampDataUrlReadMaxMb, DATA_URL_READ_DEFAULT_MAX_MB, dataUrlReadMaxBytesFromMb, DEFAULT_FETCH_TIMEOUT_MS, enableBasicPasswordStoreEncryption, encryptDesktopSecret as encryptDesktopSecretStrict, homeRelativeAttachmentCandidates, readFileDataUrlForIpc, resolveReadableFileForIpc, resolveRequestedPathForIpc, resolveTimeoutMs, SAFE_STORAGE_ENCODING, TEXT_PREVIEW_SOURCE_MAX_BYTES, writeSecretFileAtomic } from './hardening'
+import {
+  assertExistingPathForOpen,
+  ATTACHMENT_UPLOAD_DEFAULT_MAX_BYTES,
+  clampDataUrlReadMaxMb,
+  DATA_URL_READ_DEFAULT_MAX_MB,
+  dataUrlReadMaxBytesFromMb,
+  DEFAULT_FETCH_TIMEOUT_MS,
+  enableBasicPasswordStoreEncryption,
+  encryptDesktopSecret as encryptDesktopSecretStrict,
+  homeRelativeAttachmentCandidates,
+  readFileDataUrlForIpc,
+  resolveReadableFileForIpc,
+  resolveRequestedPathForIpc,
+  resolveTimeoutMs,
+  SAFE_STORAGE_ENCODING,
+  TEXT_PREVIEW_SOURCE_MAX_BYTES,
+  writeSecretFileAtomic
+} from './hardening'
 import { createPrimaryRemoteConnection, HOSTED_BACKEND_URL, hostedConnectionsRegistry } from './hosted-backend'
 import { requestHudClose } from './hud-close'
 import { cursorPointInWindow } from './hud-cursor'
@@ -219,7 +261,13 @@ import { onPreviewWatchOwnerDestroyed, sendPreviewFileChangedToOwner } from './p
 import type { PreviewReachRegistry } from './preview-reach'
 import { PrimaryProfilePin, resolveLaunchProfile } from './primary-profile-pin'
 import { applyDesktopIdentity, PRODUCT_IDENTITY } from './product-identity'
-import { decideProfileDeleteAction, dispatchConnectionScopedProfileDelete, ProfileDeletionGate, profileNameFromDeleteRequest, resolveRouteProfile } from './profile-delete-routing'
+import {
+  decideProfileDeleteAction,
+  dispatchConnectionScopedProfileDelete,
+  ProfileDeletionGate,
+  profileNameFromDeleteRequest,
+  resolveRouteProfile
+} from './profile-delete-routing'
 import { migrateActiveProfileIfMissing as migrateActiveProfileIfMissingPure } from './profile-migration'
 import { prepareProfileRenameLifecycle, profileRenameFromRequest } from './profile-rename-routing'
 import { tagRegistrySessionResponse } from './profile-session-routing'
@@ -1321,7 +1369,6 @@ function registerMediaProtocol(): void {
 let mainWindow = null
 const backendConnectionState = createBackendConnectionState<ReturnType<typeof spawn>, any>()
 
-
 const remoteLiveness = new RemoteLivenessTracker()
 const remoteRevalidation = new RemoteRevalidationCoordinator()
 // Single-owner reconnect/dial claim (#90812): reconnectGateway()'s in-flight
@@ -2404,13 +2451,7 @@ function emitUpdateProgress(payload) {
   }
 }
 
-// A dev run (`npm run dev`) works on a developer's git checkout: git owns it, never the updater,
-// which would reset a diverged branch to origin and park the work behind a rescue ref.
 async function checkUpdates(opts: { force?: boolean } = {}): Promise<UpdaterStatusWire> {
-  if (DEV_SERVER) {
-    return { supported: false, reason: 'dev-run', fetchedAt: Date.now() }
-  }
-
   // A packaged install delegates to the update owner named by its stamp.
   let strategy: UpdaterStrategy | null = null
 
@@ -3062,10 +3103,6 @@ async function releaseBackendLock(updateRoot: string, tag: string): Promise<{ un
 // Detection (checkUpdates / commit changelog / "N behind") stays in the UI;
 // only this apply action changed.
 async function applyUpdates(): Promise<UpdaterApplyResultWire> {
-  if (DEV_SERVER) {
-    return { ok: false, error: 'dev-run', message: 'Updates are off in a development run; use git.' }
-  }
-
   return updateOperation.apply(async (): Promise<UpdaterApplyResultWire> => {
     const packaged: UpdaterStrategy | null = await resolvePackagedUpdateStrategy()
 
@@ -10466,25 +10503,19 @@ registerGitIpc({ resolveGitBinary, resolveGhBinary })
 // mcp-oauth-callback-ipc.ts.
 registerMcpOauthCallbackIpc()
 
-ipcMain.handle(
-  'scout:updates:check',
-  async (_event: Electron.IpcMainInvokeEvent, opts?: { force?: boolean }): Promise<UpdaterStatusWire> =>
-    checkUpdates({ force: Boolean(opts?.force) }).catch((error: Error & { kind?: string }): UpdaterStatusWire => ({
-      supported: true,
-      branch: readDesktopUpdateConfig().branch,
-      error: error?.kind === GIT_UNUSABLE ? GIT_UNUSABLE : 'check-failed',
-      message: error?.message || String(error),
-      fetchedAt: Date.now()
-    }))
-)
+// Scout never updates itself: a new version ships as a new build. The updater pulls the checkout to
+// its upstream, resetting a diverged branch, so neither the check nor the apply ever runs.
+ipcMain.handle('scout:updates:check', async (): Promise<UpdaterStatusWire> => ({
+  supported: false,
+  reason: 'ships-as-builds',
+  fetchedAt: Date.now()
+}))
 
-ipcMain.handle('scout:updates:apply', async (_event, payload) =>
-  applyUpdates().catch(error => ({
-    ok: false,
-    error: 'apply-failed',
-    message: error?.message || String(error)
-  }))
-)
+ipcMain.handle('scout:updates:apply', async (): Promise<UpdaterApplyResultWire> => ({
+  ok: false,
+  error: 'ships-as-builds',
+  message: 'Scout updates by installing a new build.'
+}))
 
 ipcMain.handle('scout:updates:branch:get', async () => readDesktopUpdateConfig())
 

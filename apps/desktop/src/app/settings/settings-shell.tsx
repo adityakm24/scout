@@ -126,6 +126,7 @@ function UserAvatarCircle({
 
 export function SettingsAppleShell({
   active,
+  body,
   detail,
   detailTitle,
   items,
@@ -139,6 +140,8 @@ export function SettingsAppleShell({
   searchResults
 }: {
   active: SettingsShellItem
+  /** A pane whose content is the page itself (Phone), shown under the header card instead of rows. */
+  body?: ReactNode
   detail: ReactNode | null
   detailTitle?: string
   items: SettingsShellItem[]
@@ -527,6 +530,7 @@ export function SettingsAppleShell({
                   <p className="mt-1 max-w-md text-[0.8125rem] leading-relaxed text-(--ui-text-tertiary)">{intro}</p>
                 )}
               </div>
+              {body}
               {rows.length > 0 && (
                 <div className="divide-y divide-(--ui-stroke-tertiary) overflow-hidden rounded-2xl border border-(--ui-stroke-tertiary) bg-(--ui-bg-secondary)/35">
                   {rows.map(row => (
