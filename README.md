@@ -22,7 +22,10 @@ The Scout backend runs on a server. The apps connect to it; Scout is used only t
 - **Remembers you.** Preferences, people and facts carry across conversations.
 - **Learns skills.** Reusable procedures it can write, refine and share; a library ships in `skills/`.
 - **Works with your accounts.** Gmail, Calendar and Drive through the Google Workspace skill, plus MCP
-  connectors.
+  connectors. Sign in from Capabilities in the app; for some services the browser opens on the
+  computer running Scout.
+- **Knows where you are.** Phone GPS or the computer's location, so it can give driving times and
+  fill a map's starting point without the browsing model seeing the coordinates.
 - **Acts on a schedule.** Reminders, recurring checks ("Heartbeat") and one-off tasks run through the
   built-in scheduler, and deliver their results to your Bot Chat.
 
@@ -52,8 +55,9 @@ The bridge between the agents follows four rules:
 2. **Audit by metadata.** The User Agent watches progress through an action log of tool name,
    domain and outcome, plus the domain allowlist. It does not read raw page HTML.
 3. **Blind token injection.** The Browser Agent asks for `{{USER_ADDRESS}}` (or email, name,
-   phone). An external step writes the real value into the matching form fields. The browsing
-   model never sees it, and the tool result reports only that the fields were filled.
+   phone, or current location). An external step writes the real value into the matching form
+   fields, and enables the browser's geolocation when the page needs a starting point. The
+   browsing model never sees it, and the tool result reports only that the fields were filled.
 4. **Out-of-band approval.** The User Agent is read-only by default. Sending mail, changing the
    calendar, or any other write outside the sandbox runs only after a confirmation the model
    cannot answer. The card is written by code from the exact arguments, and a missing answer is
