@@ -5,6 +5,7 @@ import { atom } from 'nanostores'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
+import { closeAgentPanel } from '@/app/agent-panel/open'
 import { DASHBOARD_ROUTE } from '@/app/dashboard/nav'
 import { openSession } from '@/app/open-session'
 import {
@@ -24,8 +25,6 @@ import {
   Compose,
   MessageCircle,
   MessageCircleFilled,
-  Messages,
-  MessagesFilled,
   Search,
   Settings,
   SettingsFilled,
@@ -110,9 +109,10 @@ function useSettingsNavigation(inSettings: boolean) {
       }
     }
 
-    document.addEventListener('click', onClick)
+    // Capture phase: the settings window stops clicks from bubbling out of its card.
+    document.addEventListener('click', onClick, true)
 
-    return () => document.removeEventListener('click', onClick)
+    return () => document.removeEventListener('click', onClick, true)
   }, [])
 }
 
@@ -175,6 +175,9 @@ function PhoneTabBar({ active }: { active: null | TabId }) {
   const navigate = useNavigate()
 
   const select = (id: TabId) => {
+    // The agent sheet belongs to the conversation; another tab never opens under it.
+    closeAgentPanel()
+
     if (id === 'chats') {
       $phoneChatsOpen.set(true)
 

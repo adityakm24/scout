@@ -26,8 +26,15 @@
 }
 
 /* The desktop's window chrome has no place on a phone: the titlebar clusters, the pane tab
-   strip, a minimized pane's side rail and the sidebar (the Chats list replaces it). */
-:root[data-phone] :is([data-titlebar-cluster], [data-panel-header], [data-slot='pane-rail'], [data-slot='sidebar']) {
+   strip, a minimized pane's whole side slot (not just its rail: the slot keeps
+   its width) and the sidebar (the Chats list replaces it). */
+:root[data-phone]
+  :is(
+    [data-titlebar-cluster],
+    [data-panel-header],
+    [data-slot='sidebar'],
+    [data-tree-split] > :has(> [data-tree-group] [data-slot='pane-rail'])
+  ) {
   display: none !important;
 }
 
@@ -45,7 +52,29 @@
 
 /* …and the thread starts (and fades) below the header plus that inset (motion.css). */
 :root[data-phone] [data-chat-surface]:has(> [data-slot='agent-identity-header']) {
-  --thread-identity-clearance: calc(5.5rem + env(safe-area-inset-top));
+  --thread-identity-clearance: calc(6.75rem + env(safe-area-inset-top));
+}
+
+/* A contact header sized for a thumb and a glance: photo, name and live status a step up from the
+   desktop's compact header. Children in order: avatar, name pill, status line. */
+:root[data-phone] [data-slot='agent-identity-header'] > button {
+  gap: 0.375rem;
+}
+
+:root[data-phone] [data-slot='agent-identity-header'] > button > :nth-child(1) {
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 1.5rem;
+}
+
+:root[data-phone] [data-slot='agent-identity-header'] > button > :nth-child(2) {
+  padding: 0.25rem 0.5rem 0.25rem 0.875rem;
+  font-size: 0.875rem;
+}
+
+:root[data-phone] [data-slot='agent-identity-header'] > button > :nth-child(3) {
+  height: 1rem;
+  font-size: 0.75rem;
 }
 
 :root[data-phone] [data-slot='composer-dock'] {
@@ -94,7 +123,9 @@
   inset: auto 0 0;
   z-index: 70;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* One column per tab, however many there are. */
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
   height: var(--phone-tab-bar-height);
   padding-bottom: env(safe-area-inset-bottom);
   background: var(--phone-bar);
@@ -402,7 +433,8 @@
 :root[data-phone][data-phone-settings='list'] [data-overlay-rail] {
   display: flex !important;
   gap: 0;
-  padding: 3.25rem 1rem 2rem;
+  /* Clear the fixed Settings header (the screen already clears the notch). */
+  padding: 4rem 1rem 2rem !important;
   background: transparent;
 }
 
@@ -410,31 +442,76 @@
   padding-top: 3.75rem;
 }
 
-:root[data-phone] [data-overlay-rail] [data-overlay-nav-item] {
-  height: auto;
-  min-height: 2.875rem;
-  padding: 0 0.875rem;
+:root[data-phone] [data-overlay-rail] {
   border: 0;
-  border-radius: 0.75rem;
-  background: transparent;
-  color: var(--ui-text-primary);
-  font-size: 1.0625rem;
 }
 
-:root[data-phone] [data-overlay-rail] [data-overlay-nav-item][data-nested] {
-  min-height: 2.75rem;
-  padding-left: 2.75rem;
-  color: var(--ui-text-secondary);
-}
-
-:root[data-phone] [data-overlay-rail] [data-overlay-nav-item]:active {
+/* The sections are one grouped card, as in iOS Settings: icon, label and a chevron per row,
+   hairlines between rows. (A narrow window lays them out as a sideways strip; never here.) */
+:root[data-phone] [data-overlay-rail] nav {
+  flex: none;
+  flex-direction: column !important;
+  gap: 0;
+  overflow: hidden !important;
+  border-radius: 0.875rem;
   background: var(--phone-fill);
 }
 
-/* A group starts a new card-like block, as in iOS Settings. */
-:root[data-phone] [data-overlay-rail] [data-overlay-nav-item]:not([data-nested]) {
-  margin-top: 0.75rem;
+:root[data-phone] [data-overlay-rail] [data-overlay-nav-item] {
+  position: relative;
+  width: 100% !important;
+  height: auto;
+  min-height: 2.875rem;
+  margin: 0;
+  padding: 0 2.25rem 0 0.875rem;
+  gap: 0.875rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--ui-text-primary) !important;
+  font-size: 1.0625rem;
+  font-weight: 400;
+}
+
+:root[data-phone] [data-overlay-rail] [data-overlay-nav-item]:active {
+  background: var(--phone-fill) !important;
+}
+
+:root[data-phone] [data-overlay-rail] nav > [data-overlay-nav-item] + [data-overlay-nav-item]::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 3.75rem;
+  height: 0.5px;
+  background: var(--phone-hairline);
+}
+
+/* Disclosure chevron. */
+:root[data-phone] [data-overlay-rail] [data-overlay-nav-item]::after {
+  content: '';
+  position: absolute;
+  right: 1.125rem;
+  top: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border: solid var(--ui-text-tertiary);
+  border-width: 2px 2px 0 0;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+/* The account row is its own card above the sections. */
+:root[data-phone] [data-overlay-rail] [data-overlay-profile] {
+  min-height: 4.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: 0.875rem;
+  background: var(--phone-fill) !important;
   font-weight: 600;
+}
+
+:root[data-phone] [data-overlay-rail] nav [data-overlay-nav-item] > :first-child {
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 0.5rem;
 }
 
 .phone-settings-header {
@@ -483,4 +560,14 @@
   align-self: flex-start;
   margin: 0;
   padding: 0 0.5rem;
+}
+
+/* No hardware keyboard: the shortcuts page has nothing to offer on a phone. */
+:root[data-phone] [data-overlay-rail] [data-tour='nav-keybinds'] {
+  display: none !important;
+}
+
+/* 16px or more, or iOS zooms the page when the field is tapped. */
+:root[data-phone] [data-overlay-rail] input {
+  font-size: 1rem;
 }

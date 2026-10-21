@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { useI18n } from '@/i18n'
 import { AVATAR_MAX_BYTES, avatarDataUrl } from '@/lib/avatar-file'
 import { triggerHaptic } from '@/lib/haptics'
-import { ChevronLeft, ChevronRight, Search, Trash2, type IconComponent, Upload, Users, X } from '@/lib/icons'
+import { ChevronLeft, ChevronRight, type IconComponent, Search, Trash2, Upload, Users, X } from '@/lib/icons'
 import { readJson, storedString, writeJson } from '@/lib/storage'
 import { cn } from '@/lib/utils'
 import { notify } from '@/store/notifications'
@@ -87,20 +87,13 @@ const SECTION_TINT: Record<string, string> = {
   vault: '#10b981'
 }
 
-function IconTile({
-  icon: Icon,
-  id,
-  tile,
-  glyph
-}: {
-  icon: IconComponent
-  id: string
-  tile: string
-  glyph: string
-}) {
+function IconTile({ icon: Icon, id, tile, glyph }: { icon: IconComponent; id: string; tile: string; glyph: string }) {
   return (
     <span
-      className={cn('grid shrink-0 place-items-center text-white shadow-[inset_0_0.5px_0_rgba(255,255,255,0.28)]', tile)}
+      className={cn(
+        'grid shrink-0 place-items-center text-white shadow-[inset_0_0.5px_0_rgba(255,255,255,0.28)]',
+        tile
+      )}
       style={{ backgroundColor: SECTION_TINT[id] ?? '#8e8e93' }}
     >
       <Icon className={glyph} />
@@ -126,11 +119,7 @@ function UserAvatarCircle({
         sizeClass
       )}
     >
-      {avatar ? (
-        <img alt={name} className="size-full object-cover" src={avatar} />
-      ) : (
-        <Users className={iconClass} />
-      )}
+      {avatar ? <img alt={name} className="size-full object-cover" src={avatar} /> : <Users className={iconClass} />}
     </span>
   )
 }
@@ -199,6 +188,7 @@ export function SettingsAppleShell({
       firstName: draftFirstName.trim() || 'Scout',
       lastName: draftLastName.trim()
     }
+
     setProfile(next)
     writeJson(USER_PROFILE_STORAGE_KEY, next)
     triggerHaptic('success')
@@ -230,7 +220,10 @@ export function SettingsAppleShell({
   }
 
   return (
-    <div className="grid h-full min-h-0 flex-1 grid-cols-[15.75rem_minmax(0,1fr)] overflow-hidden max-[47.5rem]:grid-cols-1 max-[47.5rem]:grid-rows-[auto_minmax(0,1fr)]">
+    <div
+      className="grid h-full min-h-0 flex-1 grid-cols-[15.75rem_minmax(0,1fr)] overflow-hidden max-[47.5rem]:grid-cols-1 max-[47.5rem]:grid-rows-[auto_minmax(0,1fr)]"
+      data-overlay-split=""
+    >
       <aside
         className={cn(
           'relative z-20 flex min-h-0 flex-col border-r border-(--ui-stroke-tertiary) bg-(--ui-sidebar-surface-background) px-3 pb-3 [-webkit-app-region:no-drag]',
@@ -285,13 +278,13 @@ export function SettingsAppleShell({
               ? 'bg-[#007aff] text-white shadow-xs dark:bg-[#0a84ff]'
               : 'text-foreground hover:bg-(--chrome-action-hover)'
           )}
+          data-overlay-nav-item=""
+          data-overlay-profile=""
           onClick={openProfilePage}
           type="button"
         >
           <UserAvatarCircle avatar={profile.avatar} iconClass="size-4" name={displayName} sizeClass="size-9" />
-          <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold leading-tight">
-            {displayName}
-          </span>
+          <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold leading-tight">{displayName}</span>
         </button>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto max-[47.5rem]:flex-row max-[47.5rem]:overflow-x-auto">
@@ -320,7 +313,7 @@ export function SettingsAppleShell({
         </nav>
       </aside>
 
-      <main className="flex min-h-0 flex-col overflow-hidden bg-(--ui-chat-surface-background)">
+      <main className="flex min-h-0 flex-col overflow-hidden bg-(--ui-chat-surface-background)" data-overlay-main="">
         {searching ? (
           <div className={cn('min-h-0 flex-1 overflow-y-auto px-8 pb-16', OVERLAY_TOP_CLEARANCE)}>
             <div className="mx-auto w-full max-w-[38rem] pt-2">
