@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 PLACEHOLDERS = (
     "USER_FULL_NAME", "USER_FIRST_NAME", "USER_LAST_NAME", "USER_EMAIL", "USER_PHONE",
     "USER_ADDRESS", "USER_ADDRESS_LINE1", "USER_ADDRESS_LINE2", "USER_CITY", "USER_REGION",
-    "USER_POSTAL_CODE", "USER_COUNTRY",
+    "USER_POSTAL_CODE", "USER_COUNTRY", "USER_LOCATION",
 )
 STATUSES = ("done", "blocked", "failed")
 REASONS = (
@@ -90,13 +90,29 @@ class BrowseOutcome:
         return out
 
 
+_MULTI_LABEL_TLDS = frozenset({"co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "co.in", "co.jp", "co.nz", "com.br"})
+
+
 def host_allowed(host: str, allowed_domains: Tuple[str, ...]) -> bool:
-    """*host* is an allowed domain or a subdomain of one. No list means the whole public web (the
-    egress proxy keeps the browser off private networks either way)."""
+    """*host* is an allowed domain or a subdomain of one (plus root/www of a named subdomain such as
+    ``maps.google.com`` -> ``www.google.com``). No list means the whole public web (the egress proxy
+    keeps the browser off private networks either way)."""
     host = (host or "").lower().rstrip(".")
     if not host:
         return False
-    return not allowed_domains or any(host == d or host.endswith("." + d) for d in allowed_domains)
+    if not allowed_domains:
+        return True
+    for d in allowed_domains:
+        base = (d or "").lower().strip().lstrip(".").rstrip(".")
+        if not base:
+            continue
+        if host == base or host.endswith("." + base):
+            return True
+        if "." in base:
+            parent = base.split(".", 1)[1]
+            if "." in parent and parent not in _MULTI_LABEL_TLDS and host in (parent, f"www.{parent}"):
+                return True
+    return False
 
 
 def url_host(url: str) -> str:

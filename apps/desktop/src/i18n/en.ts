@@ -1150,6 +1150,7 @@ export const en: Translations = {
     phone: {
       copied: 'Link copied',
       copyLink: 'Copy link',
+      enableServe: 'Turn on Tailscale Serve',
       getTailscale: 'Get Tailscale',
       missing:
         'Your phone reaches this Mac through Tailscale, a private network only your devices can use. Install it on this Mac and on your iPhone, and sign in to the same account on both.',

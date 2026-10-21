@@ -51,24 +51,27 @@ export function ToolsFilterBar({
   const chips = facets.length + hints.length + categories.length + quickActions.length
 
   return (
-    <div className="grid shrink-0 gap-2 border-b border-(--ui-stroke-tertiary) bg-(--ui-bg-chrome) px-3.5 py-2">
-      <div className="flex items-center gap-3">
-        <span className="shrink-0 text-xs font-medium text-(--ui-text-primary)">{copy.title}</span>
-        <span className="shrink-0 tabular-nums text-[0.7rem] text-(--ui-text-tertiary)">{total}</span>
+    <div className="grid shrink-0 gap-2.5 border-b border-(--ui-stroke-tertiary) bg-(--ui-bg-chrome) px-3.5 py-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-xs font-medium text-(--ui-text-primary)">{copy.title}</span>
+          <span className="shrink-0 tabular-nums text-[0.7rem] text-(--ui-text-tertiary)">{total}</span>
+        </div>
 
         <Button className="shrink-0" onClick={onShowSummary} size="xs" variant="text">
           {copy.showSummary}
         </Button>
-
-        {tiny ? null : (
-          <SearchField
-            containerClassName="min-w-0 flex-1"
-            onChange={query => set({ query })}
-            placeholder={copy.searchCountPlaceholder(total)}
-            value={filter.query}
-          />
-        )}
       </div>
+
+      {tiny ? null : (
+        <SearchField
+          containerClassName="w-full min-w-0"
+          onChange={query => set({ query })}
+          placeholder={copy.searchCountPlaceholder(total)}
+          value={filter.query}
+          variant="box"
+        />
+      )}
 
       {tiny || chips === 0 ? null : (
         <div className="flex flex-wrap items-center gap-1.5">

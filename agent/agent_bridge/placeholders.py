@@ -26,6 +26,7 @@ _FIELDS: Dict[str, Tuple[str, str, str]] = {
     "USER_REGION": ("address", "state", "address-level1"),
     "USER_POSTAL_CODE": ("address", "postal_code", "postal-code"),
     "USER_COUNTRY": ("address", "country", "country-name"),
+    "USER_LOCATION": ("location", "coordinates", "location"),
 }
 _GROUPS = {"USER_ADDRESS": ("USER_ADDRESS_LINE1", "USER_ADDRESS_LINE2", "USER_CITY", "USER_REGION",
                             "USER_POSTAL_CODE", "USER_COUNTRY")}
@@ -37,6 +38,7 @@ _PLAIN = {
     "USER_EMAIL": "email address", "USER_PHONE": "phone number", "USER_ADDRESS": "address",
     "USER_ADDRESS_LINE1": "street address", "USER_ADDRESS_LINE2": "address line 2", "USER_CITY": "city",
     "USER_REGION": "state or region", "USER_POSTAL_CODE": "postal code", "USER_COUNTRY": "country",
+    "USER_LOCATION": "current location",
 }
 
 _IDENTITY_HEURISTICS = (
@@ -45,8 +47,10 @@ _IDENTITY_HEURISTICS = (
     (re.compile(r"\bfull\s*name\b|^name$|\byour name\b"), "name"),
     (re.compile(r"\be-?mail\b"), "email"),
     (re.compile(r"\b(phone|mobile|telephone|cell)\b"), "tel"),
+    (re.compile(r"\b(start(?:ing)?\s*point|origin|your\s*location|current\s*location|where\s*from|depart(?:ure)?)\b"),
+     "location"),
 )
-_IDENTITY_TOKENS = ("name", "given-name", "family-name", "email", "tel")
+_IDENTITY_TOKENS = ("name", "given-name", "family-name", "email", "tel", "location")
 
 
 def expand(placeholder: str) -> Tuple[str, ...]:
@@ -86,11 +90,20 @@ def classify(control) -> Optional[str]:
     return None
 
 
-def resolve_values(placeholder: str) -> Dict[str, str]:
-    """placeholder field -> value from the local vault (first ``profile`` / ``address`` item).
+def resolve_values(placeholder: str, *, scope: Any = None) -> Dict[str, str]:
+    """placeholder field -> value from the local vault (first ``profile`` / ``address`` item)
+    or live device location when ``placeholder == "USER_LOCATION"``.
 
     Server-side only: callers must never put these values in a result, a log or an exception.
     """
+    if placeholder == "USER_LOCATION":
+        if scope is None:
+            return {}
+        try:
+            coords = scope.read_location()
+        except Exception:
+            return {}
+        return {"USER_LOCATION": f"{coords['latitude']:.6f}, {coords['longitude']:.6f}"}
     from agent.vault_store import get_vault_store
 
     store = get_vault_store()

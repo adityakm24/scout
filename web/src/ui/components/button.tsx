@@ -52,7 +52,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md font-semibold text-display tracking-[0.12em] transition-colors",
+        "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold text-display tracking-[0.12em] transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-midground/40",
         "disabled:pointer-events-none disabled:opacity-50",
         SIZE[size ?? "default"],

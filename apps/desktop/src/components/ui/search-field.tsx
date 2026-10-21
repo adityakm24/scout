@@ -71,18 +71,20 @@ export function SearchField({
         // min-w-0 is load-bearing: without it the content-sized input sets the
         // container's flex min-width and the field bulldozes its siblings
         // instead of shrinking to fit its context.
-        'inline-flex min-w-0 max-w-full items-center gap-1.5 transition-[color,border-color,opacity]',
+        'inline-flex min-w-0 max-w-full items-center gap-2 transition-[color,border-color,box-shadow,opacity]',
         boxed
-          ? 'w-full gap-2 rounded-full border border-(--ui-stroke-tertiary) bg-(--ui-bg-quinary) px-3.5 py-2 hover:border-(--ui-stroke-secondary) focus-within:border-(--ui-stroke-secondary)'
+          ? 'min-h-11 w-full gap-2.5 rounded-full border border-(--ui-stroke-tertiary) bg-(--ui-bg-tertiary)/80 px-4 py-2 hover:border-(--ui-stroke-secondary) focus-within:border-[#007aff]/60 focus-within:ring-3 focus-within:ring-[#007aff]/15 dark:focus-within:border-[#0a84ff]/60 dark:focus-within:ring-[#0a84ff]/20'
           : cn(
-              'border-b border-transparent px-0.5',
+              'border-b border-transparent px-1',
               // Recede until the user reaches for it.
-              !value && 'opacity-30 focus-within:opacity-100'
+              !value && 'opacity-65 focus-within:opacity-100'
             ),
         containerClassName
       )}
+      data-slot="search-field"
+      data-variant={variant}
     >
-      <Search className={cn('pointer-events-none shrink-0 text-muted-foreground/70', boxed ? 'size-4' : 'size-3.5')} />
+      <Search className={cn('pointer-events-none shrink-0 text-muted-foreground/75', boxed ? 'size-4' : 'size-4')} />
       <input
         aria-label={ariaLabel ?? placeholder}
         className={cn(
@@ -92,11 +94,10 @@ export function SearchField({
           // does stretch the row (w-full/flex-1 callers), pinning the clear
           // button to the row's right edge instead of trailing the typed
           // text (#119204). Long queries scroll inside the field.
-          // text-xs matches the form controls (Input/Select via controlVariants).
-          'h-7 min-w-0 max-w-full flex-1 bg-transparent text-xs text-foreground [field-sizing:content] placeholder:text-muted-foreground focus:outline-none',
+          'h-8 min-w-0 max-w-full flex-1 appearance-none bg-transparent text-[0.8125rem] text-foreground [field-sizing:content] placeholder:text-muted-foreground focus:outline-none',
           // Boxed: the wrapper owns the chrome, the input fills it (same as an
           // adorned Input).
-          boxed && 'h-auto w-full flex-1 text-sm leading-5 [field-sizing:initial]',
+          boxed && 'h-auto w-full flex-1 text-[0.875rem] leading-5 [field-sizing:initial]',
           inputClassName
         )}
         onChange={event => onChange(event.target.value)}

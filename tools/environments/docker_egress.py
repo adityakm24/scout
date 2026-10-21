@@ -22,7 +22,7 @@ _CA_MODE_FLAGS = {"--use-openssl-ca", "--use-bundled-ca"}
 _PROXY_CONTROL_ENV = frozenset({
     "HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy",
     "NO_PROXY", "no_proxy",
-    "REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "CURL_CA_BUNDLE",
+    "REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "CURL_CA_BUNDLE", "HTTPLIB2_CA_CERTS",
     "NODE_EXTRA_CA_CERTS"})
 
 
@@ -96,6 +96,7 @@ def _egress_proxy_args_for_docker() -> tuple[list[str], dict[str, str], list[str
         "REQUESTS_CA_BUNDLE": _CONTAINER_CA,
         "SSL_CERT_FILE": _CONTAINER_CA,
         "CURL_CA_BUNDLE": _CONTAINER_CA,
+        "HTTPLIB2_CA_CERTS": _CONTAINER_CA,
         "NODE_EXTRA_CA_CERTS": _CONTAINER_CA,
         "SCOUT_EGRESS_PROXY": "1",  # lets the in-sandbox agent know it is proxy-aware
         _NODE_OPTIONS_SENTINEL: "--use-openssl-ca"}

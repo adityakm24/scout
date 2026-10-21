@@ -128,6 +128,12 @@ def check_auth_live():
     if not check_auth(quiet=True):
         return False
     try:
+        if not os.environ.get("HTTPLIB2_CA_CERTS"):
+            for env_var in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE"):
+                ca = os.environ.get(env_var)
+                if ca and os.path.isfile(ca):
+                    os.environ["HTTPLIB2_CA_CERTS"] = ca
+                    break
         from googleapiclient.discovery import build
         from google.oauth2.credentials import Credentials
         creds = Credentials.from_authorized_user_file(str(TOKEN_PATH))

@@ -22,6 +22,7 @@ import { formatCombo } from '@/lib/keybinds/combo'
 import { isRemoteGateway } from '@/lib/media'
 import { reachablePreviewUrl } from '@/lib/preview-reach'
 import { openCommandPalette } from '@/store/command-palette'
+import { IS_PHONE } from '@/platform/phone'
 import { openPreview } from '@/store/preview'
 import { toggleProfileRailVisible } from '@/store/profile-rail-prefs'
 import { toggleStatusbarVisible } from '@/store/statusbar-prefs'
@@ -617,6 +618,10 @@ export function AppContextMenu() {
   const open = useStore($contextMenu)
 
   useEffect(() => {
+    if (IS_PHONE) {
+      return
+    }
+
     // stopPropagation beats other renderer handlers; preventDefault is never
     // called because Chromium emits the main-process context-menu event (the
     // spellcheck + image-coordinate source) only for unprevented gestures —

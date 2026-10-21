@@ -97,6 +97,26 @@ def test_a_reply_for_another_attempt_is_refused(google):
     assert not (home / "google_token.json").exists()
 
 
+def test_env_client_configures_sign_in_without_a_saved_file(tmp_path, monkeypatch):
+    """A client in .env is enough: the card must not ask the user to paste one."""
+    monkeypatch.setenv("GOOGLE_WORKSPACE_CLIENT_ID", "123-abc.apps.googleusercontent.com")
+    monkeypatch.setenv("GOOGLE_WORKSPACE_CLIENT_SECRET", "shh")
+
+    client = gws.read_client(tmp_path)
+
+    assert client["client_id"] == "123-abc.apps.googleusercontent.com"
+    assert gws.status(tmp_path)["client_configured"] is True
+    assert not (tmp_path / "google_client_secret.json").exists()
+
+
+def test_a_saved_client_file_wins_over_env(tmp_path, monkeypatch):
+    gws.save_client(tmp_path, "file.apps.googleusercontent.com", "file-secret")
+    monkeypatch.setenv("GOOGLE_WORKSPACE_CLIENT_ID", "env.apps.googleusercontent.com")
+    monkeypatch.setenv("GOOGLE_WORKSPACE_CLIENT_SECRET", "env-secret")
+
+    assert gws.read_client(tmp_path)["client_id"] == "file.apps.googleusercontent.com"
+
+
 def test_card_requests_what_the_skill_needs():
     """The skill checks its token against its own SCOPES; a sign-in from the card must satisfy it."""
     import importlib.util

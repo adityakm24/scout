@@ -114,3 +114,68 @@ it('ends the response at a real user prompt or unrelated system event', () => {
   expect(container.querySelectorAll('[data-slot="aui_turn-pair"]')).toHaveLength(2)
   expect(container.querySelectorAll('[data-slot="aui_msg-actions"]')).toHaveLength(3)
 })
+
+it('renders external_action email drafts visibly in the response instead of collapsing them into the tool summary', () => {
+  const messages = toChatMessages([
+    { role: 'user', content: 'okay can you unsubscribe from air india email pls', timestamp: 1 },
+    {
+      role: 'assistant',
+      content: '',
+      timestamp: 2,
+      tool_calls: [
+        {
+          id: 'tc-read',
+          type: 'function',
+          function: {
+            name: 'terminal',
+            arguments: JSON.stringify({ command: 'scout google gmail get msg1' })
+          }
+        },
+        {
+          id: 'tc-draft',
+          type: 'function',
+          function: {
+            name: 'external_action',
+            arguments: JSON.stringify({
+              action: 'draft_email',
+              to: 'maharajaclub@flyai.airindia.com',
+              subject: 'Unsubscribe from marketing emails',
+              body: 'Please remove me from your marketing email list.\n\nThank you.'
+            })
+          }
+        }
+      ]
+    },
+    {
+      role: 'tool',
+      tool_call_id: 'tc-read',
+      content: JSON.stringify({ output: 'from: maharajaclub@flyai.airindia.com', exit_code: 0 }),
+      timestamp: 3
+    },
+    {
+      role: 'tool',
+      tool_call_id: 'tc-draft',
+      content: JSON.stringify({ success: true, result: { status: 'draft_created', draft_id: 'd1' } }),
+      timestamp: 4
+    },
+    {
+      role: 'assistant',
+      content: "I've drafted an unsubscribe email to Air India. Would you like me to send it now?",
+      timestamp: 5
+    }
+  ] as SessionMessage[]).map(toRuntimeMessage)
+
+  const { container } = render(
+    <ThreadRuntime messages={messages}>
+      <Thread />
+    </ThreadRuntime>
+  )
+
+  const card = container.querySelector('[data-slot="external-action-card"]')
+  expect(card).not.toBeNull()
+  expect(card?.textContent).toContain('Email draft')
+  expect(card?.textContent).toContain('Saved to Drafts')
+  expect(card?.textContent).toContain('maharajaclub@flyai.airindia.com')
+  expect(card?.textContent).toContain('Unsubscribe from marketing emails')
+  expect(card?.textContent).toContain('Please remove me from your marketing email list.')
+})

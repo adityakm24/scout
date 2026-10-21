@@ -12,6 +12,7 @@ import { type ComponentProps, type FC, type ReactNode, useEffect, useRef, useSta
 import { CatalogInstallTool } from '@/components/assistant-ui/catalog-install-tool'
 import { ClarifyTool } from '@/components/assistant-ui/clarify-tool'
 import { ConnectorExecution, ConnectorTool } from '@/components/assistant-ui/connector-tool'
+import { ExternalActionTool } from '@/components/assistant-ui/external-action-tool'
 import { MarkdownText, MarkdownTextContent } from '@/components/assistant-ui/markdown-text'
 import { McpSetupTool } from '@/components/assistant-ui/mcp-setup-tool'
 import { AgentDeliveryNotice, deliveryTargetFromCommand } from '@/components/assistant-ui/thread/agent-delivery'
@@ -107,6 +108,15 @@ const ChainToolFallback: FC<TimelineToolCallProps> = props => {
       <>
         <TimelineTimestamp className="mb-0.5 block" completedAt={props.completedAt} timestamp={props.timestamp} />
         <ClarifyTool {...props} />
+      </>
+    )
+  }
+
+  if (props.toolName === 'external_action' && !settledWithoutResult(props)) {
+    return (
+      <>
+        <TimelineTimestamp className="mb-0.5 block" completedAt={props.completedAt} timestamp={props.timestamp} />
+        <ExternalActionTool {...props} />
       </>
     )
   }

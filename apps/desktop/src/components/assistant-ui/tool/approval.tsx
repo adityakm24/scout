@@ -38,6 +38,7 @@ import {
 import { $showToolActivity } from '@/store/tool-activity'
 import { setToolDisclosureOpen } from '@/store/tool-view'
 
+import { EmailDraftFields, parseEmailPreviewFromDescription } from '../external-action-tool'
 import { isApprovalActivity } from './approval-activity'
 import { toolEntryDisclosureId } from './fallback-model/targets'
 import { OrderApproval } from './order-approval'
@@ -284,17 +285,28 @@ const ApprovalCard: FC<ApprovalCardProps> = ({ request, total, position, stack }
   const allowSession = choices ? choices.includes('session') : true
   const allowAlways = choices ? choices.includes('always') : allowPermanent
   const hasMoreOptions = allowSession || allowAlways
-  const hasCommand = request.command.trim().length > 0
+  const commandText = request.command.trim()
+  const descriptionText = request.description.trim()
+  const hasCommand = commandText.length > 0
   // A plugin `approve` rule escalates through the same gate with a synthetic
   // display target (`<tool> (plugin approval rule)`) while the real command /
   // change lives in `description` — the user approves a label they cannot act
   // on otherwise. Show the description whenever the command is missing or one
   // of these synthetic labels; a real command keeps rendering as the command.
   const SYNTHETIC_COMMAND_RE = /^<[^>]+> \(/
+  const isSyntheticCommand = SYNTHETIC_COMMAND_RE.test(commandText)
+  const emailPreview = !isSyntheticCommand ? parseEmailPreviewFromDescription(descriptionText) : null
+  const hasRichDescription =
+    !isSyntheticCommand &&
+    hasCommand &&
+    descriptionText.length > 0 &&
+    descriptionText !== 'dangerous command' &&
+    descriptionText !== commandText &&
+    (Boolean(emailPreview) || descriptionText.includes('\n') || /^Event ID:/i.test(descriptionText))
 
-  const showsDescription = !hasCommand || SYNTHETIC_COMMAND_RE.test(request.command.trim())
+  const showsDescription = !hasCommand || isSyntheticCommand
 
-  const details = showsDescription ? request.description.trim() : request.command.trim()
+  const details = hasRichDescription || showsDescription ? descriptionText : commandText
 
   const respond = useCallback(
     async (choice: ApprovalChoice) => {
@@ -349,18 +361,24 @@ const ApprovalCard: FC<ApprovalCardProps> = ({ request, total, position, stack }
       ) : (
         <>
           <div className="flex items-center gap-2 px-2.5 pt-2 text-xs text-(--ui-text-secondary)">
-            <Codicon name="terminal" size="0.875rem" />
-            <span>{showsDescription ? copy.commandDetails : copy.command}</span>
+            <Codicon name={emailPreview ? 'mail' : 'terminal'} size="0.875rem" />
+            <span>{hasRichDescription ? commandText : showsDescription ? copy.commandDetails : copy.command}</span>
             {total > 1 && (
               <span className="ml-auto text-[0.6875rem] tabular-nums text-(--ui-text-tertiary)">
                 {position} / {total}
               </span>
             )}
           </div>
-          {details.length > 0 && (
-            <pre className="m-0 max-h-40 overflow-auto whitespace-pre-wrap break-words px-2.5 py-2 font-mono text-xs leading-relaxed text-(--ui-text-primary)">
-              {details}
-            </pre>
+          {emailPreview ? (
+            <div className="px-2.5 py-2" data-slot="approval-email-draft">
+              <EmailDraftFields email={emailPreview} />
+            </div>
+          ) : (
+            details.length > 0 && (
+              <pre className="m-0 max-h-40 overflow-auto whitespace-pre-wrap break-words px-2.5 py-2 font-mono text-xs leading-relaxed text-(--ui-text-primary)">
+                {details}
+              </pre>
+            )
           )}
           <div className="flex items-center justify-end gap-1.5 px-2 pb-2 pt-1" data-slot="tool-approval-actions">
             <Button data-approval-deny="" disabled={busy} onClick={() => void respond('deny')} size="sm" variant="text">

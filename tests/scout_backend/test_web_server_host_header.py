@@ -61,6 +61,20 @@ class TestHostHeaderValidator:
         )
         assert not _is_accepted_host("evil.test", "127.0.0.1", trusted)
 
+    def test_this_machines_tailnet_name_is_accepted_and_no_other(self, monkeypatch):
+        """Tailscale serve presents the tailnet name; a lookalike name is still a rebinding host."""
+        from scout_backend.web_server import _host_is_accepted
+
+        monkeypatch.setattr("scout_backend.web_server._tailnet_hostname", lambda: "mac.tail1.ts.net")
+
+        assert _host_is_accepted("mac.tail1.ts.net", "127.0.0.1")
+        assert _host_is_accepted("mac.tail1.ts.net:443", "127.0.0.1")
+        assert not _host_is_accepted("evil.ts.net", "127.0.0.1")
+        assert not _host_is_accepted("mac.tail1.ts.net.evil.test", "127.0.0.1")
+
+        monkeypatch.setattr("scout_backend.web_server._tailnet_hostname", lambda: "")
+        assert not _host_is_accepted("mac.tail1.ts.net", "127.0.0.1")
+
     def test_malformed_host_authorities_fail_closed(self):
         """Ports, IPv6 brackets, and authority syntax must be unambiguous."""
         from scout_backend.web_server import _is_accepted_host

@@ -10,9 +10,6 @@ import { $activeGatewayProfile } from '@/store/profile'
 
 const POLL_MS = 4000
 
-/** The link the iPhone Camera opens straight into Scout (mobile/src/pairing.ts `pairingFromDeepLink`). */
-const deepLink = (link: string) => `scout://pair?link=${encodeURIComponent(link)}`
-
 /** Settings → Phone: a QR code that pairs the iPhone app with this backend over Tailscale, and the
  *  one step that is missing until it can. */
 export function PhoneSettings() {
@@ -48,7 +45,7 @@ export function PhoneSettings() {
       return
     }
 
-    void QRCode.toDataURL(deepLink(pairing.link), { margin: 1, width: 640, errorCorrectionLevel: 'M' }).then(setQr)
+    void QRCode.toDataURL(pairing.link, { margin: 1, width: 640, errorCorrectionLevel: 'M' }).then(setQr)
   }, [pairing?.link])
 
   const makeReachable = async () => {
@@ -58,7 +55,7 @@ export function PhoneSettings() {
       const next = await servePhone(profile)
       setPairing(next)
 
-      if (!next.link && next.error) {
+      if (!next.link && next.error && !next.enable_url) {
         notifyError(new Error(next.error), copy.serveFailed)
       }
     } catch (error) {
@@ -70,7 +67,7 @@ export function PhoneSettings() {
 
   const copyLink = async () => {
     if (pairing?.link) {
-      await navigator.clipboard.writeText(deepLink(pairing.link))
+      await navigator.clipboard.writeText(pairing.link)
       notify({ kind: 'success', message: copy.copied })
     }
   }
@@ -108,11 +105,17 @@ export function PhoneSettings() {
   }
 
   const message = pairing ? messages[pairing.tailscale] : null
+  const enableUrl = pairing?.enable_url?.startsWith('https://login.tailscale.com/') ? pairing.enable_url : null
 
   return (
     <div className={`${card} flex flex-col items-center gap-4 px-6 py-6 text-center`}>
-      {message ? (
-        <p className="m-0 max-w-md text-[0.875rem] leading-relaxed text-(--ui-text-secondary)">{message}</p>
+      {pairing?.error || message ? (
+        <p className="m-0 max-w-md text-[0.875rem] leading-relaxed text-(--ui-text-secondary)">
+          {pairing?.error || message}
+        </p>
+      ) : null}
+      {enableUrl ? (
+        <Button onClick={() => window.open(enableUrl, '_blank', 'noopener')}>{copy.enableServe}</Button>
       ) : null}
       {pairing?.tailscale === 'not_served' ? (
         <Button disabled={busy} onClick={() => void makeReachable()}>

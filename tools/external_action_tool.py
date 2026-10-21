@@ -51,8 +51,11 @@ def _reply_email(a):
 
 def _draft_email(a):
     to, subject, body = _req(a, "to", "subject", "body")
-    return (["gmail", "draft", "--to", to, "--subject", subject, "--body", body],
-            f"Save a draft to {to}", f"To: {to}\nSubject: {subject}\n\n{_clip(body)}")
+    argv = ["gmail", "draft", "--to", to, "--subject", subject, "--body", body]
+    if a.get("cc"):
+        argv += ["--cc", str(a["cc"])]
+    card = f"To: {to}\n" + (f"Cc: {a['cc']}\n" if a.get("cc") else "") + f"Subject: {subject}\n\n{_clip(body)}"
+    return argv, f"Save a draft to {to}", card
 
 
 def _create_event(a):

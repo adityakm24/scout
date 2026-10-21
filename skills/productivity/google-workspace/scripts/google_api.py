@@ -263,7 +263,32 @@ def get_credentials():
     return creds
 
 
+def _configure_ca_bundle() -> str | None:
+    """Bridge standard CA-bundle env vars (SSL_CERT_FILE, REQUESTS_CA_BUNDLE,
+    CURL_CA_BUNDLE) to HTTPLIB2_CA_CERTS so google-api-python-client / httplib2
+    trusts sandbox L7 proxy and custom CA bundles (e.g. OpenShell supervisor CA)."""
+    existing = os.environ.get("HTTPLIB2_CA_CERTS")
+    if existing and os.path.isfile(existing):
+        return existing
+    for env_var in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE"):
+        candidate = os.environ.get(env_var)
+        if candidate and os.path.isfile(candidate):
+            os.environ["HTTPLIB2_CA_CERTS"] = candidate
+            return candidate
+    return None
+
+
+_configure_ca_bundle()
+
+
 def build_service(api, version):
+    ca_bundle = _configure_ca_bundle()
+    if ca_bundle:
+        try:
+            import httplib2
+            httplib2.CA_CERTS = ca_bundle
+        except ImportError:
+            pass
     from googleapiclient.discovery import build
 
     return build(api, version, credentials=get_credentials())
@@ -1161,13 +1186,13 @@ def main():
     gmail = sub.add_parser("gmail")
     gmail_sub = gmail.add_subparsers(dest="action", required=True)
 
-    p = gmail_sub.add_parser("search")
-    p.add_argument("query", help="Gmail search query (e.g. 'is:unread')")
-    p.add_argument("--max", type=int, default=10)
+    p = gmail_sub.add_parser("search", aliases=["list"])
+    p.add_argument("query", nargs="?", default="in:inbox", help="Gmail search query (e.g. 'is:unread', default: 'in:inbox')")
+    p.add_argument("--max", "--limit", "--max-results", dest="max", type=int, default=10)
     p.set_defaults(func=gmail_search)
 
     p = gmail_sub.add_parser("watch", help="New inbox mail since the last watch (scheduled-job pre-check)")
-    p.add_argument("--max", type=int, default=20)
+    p.add_argument("--max", "--limit", "--max-results", dest="max", type=int, default=20)
     p.set_defaults(func=gmail_watch)
 
     p = gmail_sub.add_parser("get")
@@ -1216,7 +1241,7 @@ def main():
     p = cal_sub.add_parser("list")
     p.add_argument("--start", default="", help="Start time (ISO 8601)")
     p.add_argument("--end", default="", help="End time (ISO 8601)")
-    p.add_argument("--max", type=int, default=25)
+    p.add_argument("--max", "--limit", "--max-results", dest="max", type=int, default=25)
     p.add_argument("--calendar", default="primary")
     p.set_defaults(func=calendar_list)
 
@@ -1239,9 +1264,9 @@ def main():
     drv = sub.add_parser("drive")
     drv_sub = drv.add_subparsers(dest="action", required=True)
 
-    p = drv_sub.add_parser("search")
-    p.add_argument("query")
-    p.add_argument("--max", type=int, default=10)
+    p = drv_sub.add_parser("search", aliases=["list"])
+    p.add_argument("query", nargs="?", default="")
+    p.add_argument("--max", "--limit", "--max-results", dest="max", type=int, default=10)
     p.add_argument("--raw-query", action="store_true", help="Use query as raw Drive API query")
     p.set_defaults(func=drive_search)
 
@@ -1286,7 +1311,7 @@ def main():
     con_sub = con.add_subparsers(dest="action", required=True)
 
     p = con_sub.add_parser("list")
-    p.add_argument("--max", type=int, default=50)
+    p.add_argument("--max", "--limit", "--max-results", dest="max", type=int, default=50)
     p.set_defaults(func=contacts_list)
 
     # --- Sheets ---

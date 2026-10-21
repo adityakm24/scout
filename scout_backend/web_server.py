@@ -568,12 +568,32 @@ def _is_accepted_host(
     return host_only == bound_lc
 
 
+def _tailnet_hostname() -> str:
+    """This machine's MagicDNS name, or "" when Tailscale is off. Cached in phone.tailnet_hostname."""
+    from scout_backend.web_routers.phone import tailnet_hostname
+
+    return tailnet_hostname()
+
+
+def _host_is_accepted(host_header: str, bound_host: str, trusted_public_hosts: frozenset[str] = frozenset()) -> bool:
+    """Loopback and declared public hosts, plus this machine's own tailnet name.
+
+    Tailscale's HTTPS proxy keeps the tailnet name in Host. Any other name is still a rebinding attempt.
+    """
+    if _is_accepted_host(host_header, bound_host, trusted_public_hosts):
+        return True
+    tailnet = _tailnet_hostname()
+    if not tailnet:
+        return False
+    return _is_accepted_host(host_header, bound_host, frozenset(set(trusted_public_hosts) | {tailnet}))
+
+
 @app.middleware("http")
 async def host_header_middleware(request: Request, call_next):
     """Reject requests whose Host header doesn't match the bound interface (DNS rebinding, GHSA-ppp5-vxwm-4cf7)."""
     # app.state.bound_host is set by start_server() at listen time.
     bound_host = getattr(app.state, "bound_host", None)
-    if bound_host and not _is_accepted_host(
+    if bound_host and not _host_is_accepted(
         request.headers.get("host", ""), bound_host, getattr(app.state, "trusted_public_hosts", frozenset())
     ):
         return JSONResponse(

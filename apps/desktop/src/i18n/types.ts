@@ -981,6 +981,7 @@ export interface Translations {
     phone: {
       copied: string
       copyLink: string
+      enableServe: string
       getTailscale: string
       missing: string
       notServed: string

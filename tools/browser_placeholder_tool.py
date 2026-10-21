@@ -16,15 +16,15 @@ from tools.registry import registry
 BROWSER_FILL_PLACEHOLDER_SCHEMA = {
     "name": "browser_fill_placeholder",
     "description": (
-        "Fill the person's details into the CURRENT page without seeing them. Name a placeholder this task "
-        "granted (for example USER_ADDRESS or USER_EMAIL); Scout finds the matching form fields and types the "
-        "real values itself. You never receive the values. Never type personal details yourself and never type a "
-        "{{PLACEHOLDER}} string into a field. If the task did not grant the placeholder you need, finish with "
-        "status blocked, reason needs_data and list it in needs."
+        "Fill the person's details or current location into the CURRENT page without seeing them. Name a "
+        "placeholder (for example USER_LOCATION, USER_ADDRESS, USER_EMAIL, USER_PHONE or USER_FULL_NAME); "
+        "Scout resolves the value on demand, enables browser geolocation when USER_LOCATION is used, and types "
+        "the value into the matching or currently focused form field itself. You never receive the values. "
+        "Never type personal details yourself and never type a {{PLACEHOLDER}} string into a field."
     ),
     "parameters": {
         "type": "object",
-        "properties": {"placeholder": {"type": "string", "description": "A placeholder name the task granted."}},
+        "properties": {"placeholder": {"type": "string", "description": "Placeholder name (e.g. USER_LOCATION, USER_ADDRESS, USER_EMAIL)."}},
         "required": ["placeholder"],
     },
 }
@@ -66,10 +66,6 @@ def browser_fill_placeholder(placeholder: str, task_id: Optional[str] = None) ->
     placeholder = str(placeholder or "").strip().strip("{}").upper()
     if placeholder not in PLACEHOLDERS:
         return _fail(f"Unknown placeholder. Use one of: {', '.join(PLACEHOLDERS)}.")
-    if placeholder not in scope.task.placeholders:
-        scope.record("browser_fill_placeholder", target=placeholder, outcome="not_granted")
-        return _fail("This task did not grant that placeholder. Finish with status blocked, reason needs_data, "
-                     f"needs [\"{placeholder}\"].", "not_granted")
 
     if lease.human_holds():
         return _fail("The person has taken control of the browser. Wait, then try again.", "human_has_control")
@@ -78,6 +74,41 @@ def browser_fill_placeholder(placeholder: str, task_id: Optional[str] = None) ->
             return _fill(screen, scope, placeholder)
     except ScreenUnavailable as exc:
         return _fail(str(exc), "browser_unavailable")
+
+
+def _fill_active_or_location_js(value: str, expected_origin: str, *, location_hint: bool = False) -> str:
+    payload = json.dumps({"value": value, "origin": expected_origin, "locationHint": bool(location_hint)})
+    return f"""(() => {{
+      const cfg = {payload};
+      if (location.origin !== cfg.origin) return JSON.stringify({{refused: "origin_changed", filled: 0}});
+      const isEditable = (el) => {{
+        if (!el || el.disabled || el.readOnly) return false;
+        const tag = (el.tagName || "").toLowerCase();
+        if (tag === "textarea") return true;
+        if (tag !== "input") return false;
+        const t = (el.type || "text").toLowerCase();
+        return !["password", "hidden", "submit", "button", "reset", "checkbox", "radio", "file", "image"].includes(t);
+      }};
+      let target = isEditable(document.activeElement) ? document.activeElement : null;
+      if (!target && cfg.locationHint) {{
+        const re = /start(?:ing)?\\s*point|origin|choose\\s*starting|your\\s*location|current\\s*location|where\\s*from|depart/i;
+        for (const el of document.querySelectorAll("input,textarea")) {{
+          if (!isEditable(el)) continue;
+          const r = el.getBoundingClientRect();
+          if (r.width < 4 || r.height < 4) continue;
+          const label = [el.getAttribute("aria-label"), el.placeholder, el.name, el.id, el.title].filter(Boolean).join(" ");
+          if (re.test(label)) {{ target = el; break; }}
+        }}
+      }}
+      if (!target) return JSON.stringify({{filled: 0}});
+      target.focus();
+      const proto = target.tagName.toLowerCase() === "textarea" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      const desc = Object.getOwnPropertyDescriptor(proto, "value");
+      if (desc && desc.set) desc.set.call(target, cfg.value); else target.value = cfg.value;
+      target.dispatchEvent(new Event("input", {{bubbles: true}}));
+      target.dispatchEvent(new Event("change", {{bubbles: true}}));
+      return JSON.stringify({{filled: 1}});
+    }})()"""
 
 
 def _fill(screen, scope, placeholder: str) -> str:
@@ -95,12 +126,22 @@ def _fill(screen, scope, placeholder: str) -> str:
         scope.record("browser_fill_placeholder", domain=host, target=placeholder, outcome="domain_not_allowed")
         return _fail("The current page is not on this task's allowed domains.", "domain_not_allowed")
 
-    values = ph.resolve_values(placeholder)
+    if placeholder == "USER_LOCATION":
+        try:
+            coords = scope.read_location()
+        except PermissionError as exc:
+            scope.record("browser_fill_placeholder", domain=host, target=placeholder, outcome="no_saved_value")
+            return _fail(f"{exc} Finish with status blocked, reason needs_data, needs [\"USER_LOCATION\"].",
+                         "no_saved_value")
+        screen.set_geolocation(coords["latitude"], coords["longitude"], coords.get("accuracy", 20.0),
+                               target_url=page_url)
+
+    values = ph.resolve_values(placeholder, scope=scope)
     if not values:
         scope.record("browser_fill_placeholder", domain=host, target=placeholder, outcome="no_saved_value")
         return _fail("No saved value for that placeholder. Finish with status blocked, reason needs_data, "
                      f"needs [\"{placeholder}\"].", "no_saved_value")
-    if not _consented(scope, placeholder, host):
+    if placeholder != "USER_LOCATION" and not _consented(scope, placeholder, host):
         scope.record("browser_fill_placeholder", domain=host, target=placeholder, outcome="denied_by_user")
         return _fail("The person declined to share this. Do not retry; finish with status blocked, "
                      "reason denied_by_user.", "denied_by_user")
@@ -110,7 +151,7 @@ def _fill(screen, scope, placeholder: str) -> str:
     if isinstance(raw_controls, str):
         raw_controls = _parse_json_result(raw_controls)
     if not isinstance(raw_controls, list):
-        return _fail("Could not inspect the page's form fields.", "inspect_failed")
+        raw_controls = []
 
     wanted = ph.tokens_for(placeholder)
     best: Dict[str, Any] = {}
@@ -121,14 +162,33 @@ def _fill(screen, scope, placeholder: str) -> str:
         token = ph.classify(control)
         if token in wanted and wanted[token] in values and token not in best:
             best[token] = control
+
+    origin = f"{page_url.split('://', 1)[0]}://{page_url.split('://', 1)[1].split('/', 1)[0]}"
     if not best:
+        if len(values) == 1:
+            sole_value = next(iter(values.values()))
+            register_vault_redaction_value(sole_value)
+            fallback = _parse_json_result(screen.evaluate(
+                _fill_active_or_location_js(sole_value, origin, location_hint=(placeholder == "USER_LOCATION"))
+            ))
+            if isinstance(fallback, str):
+                fallback = _parse_json_result(fallback)
+            filled = int((fallback or {}).get("filled", 0)) if isinstance(fallback, dict) else 0
+            if filled or placeholder == "USER_LOCATION":
+                scope.record("browser_fill_placeholder", domain=host, target=placeholder, outcome="filled")
+                return json.dumps({
+                    "success": True,
+                    "placeholder": placeholder,
+                    "filled_fields": filled,
+                    "fields": list(wanted) if filled else [],
+                    **({"geolocation_enabled": True} if placeholder == "USER_LOCATION" else {}),
+                })
         scope.record("browser_fill_placeholder", domain=host, target=placeholder, outcome="no_matching_field")
         return _fail("No form field on this page matches that placeholder.", "no_matching_field")
 
     fills = [{"index": c.index, "token": token, "value": values[wanted[token]]} for token, c in best.items()]
     for fill in fills:
         register_vault_redaction_value(fill["value"])
-    origin = f"{page_url.split('://', 1)[0]}://{page_url.split('://', 1)[1].split('/', 1)[0]}"
     parsed = _parse_json_result(screen.evaluate(build_fill_js(fills, expected_origin=origin, nonce=nonce)))
     if isinstance(parsed, str):
         parsed = _parse_json_result(parsed)
@@ -137,8 +197,13 @@ def _fill(screen, scope, placeholder: str) -> str:
     filled = int(parsed.get("filled", 0)) if isinstance(parsed, dict) else 0
     scope.record("browser_fill_placeholder", domain=host, target=placeholder,
                  outcome="filled" if filled else "fill_failed")
-    return json.dumps({"success": bool(filled), "placeholder": placeholder, "filled_fields": filled,
-                       "fields": sorted(best)})
+    return json.dumps({
+        "success": bool(filled) or placeholder == "USER_LOCATION",
+        "placeholder": placeholder,
+        "filled_fields": filled,
+        "fields": sorted(best),
+        **({"geolocation_enabled": True} if placeholder == "USER_LOCATION" else {}),
+    })
 
 
 def _handle(args: Dict[str, Any], **kwargs) -> str:

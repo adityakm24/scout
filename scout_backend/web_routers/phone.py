@@ -12,6 +12,8 @@ from __future__ import annotations
 import asyncio
 import json
 import subprocess
+import threading
+import time
 from urllib.parse import quote
 
 from fastapi import APIRouter, Request
@@ -23,6 +25,9 @@ router = APIRouter()
 
 # The Mac app ships its CLI inside the bundle; Homebrew and Linux packages put it on PATH.
 _TAILSCALE_DIRS = ("/Applications/Tailscale.app/Contents/MacOS", "/opt/homebrew/bin", "/usr/local/bin")
+# `serve` prints this and then waits for the tailnet switch. The wait is not part of the request.
+_ENABLE_URL = "https://login.tailscale.com/"
+_SERVE_WAIT_S = 12
 
 
 def _tailscale() -> str | None:
@@ -33,8 +38,107 @@ def _tailscale() -> str | None:
     return mac_cli[0] if mac_cli else None
 
 
+# This machine's MagicDNS name. `tailscale serve` forwards that name in Host while the
+# backend stays bound to loopback; the host check needs the exact name, not every ts.net host.
+_TAILNET_HOST: tuple[float, str] | None = None
+_TAILNET_TTL_S = 30.0
+
+
+def tailnet_hostname() -> str:
+    global _TAILNET_HOST
+    now = time.monotonic()
+    if _TAILNET_HOST is not None and now - _TAILNET_HOST[0] < _TAILNET_TTL_S:
+        return _TAILNET_HOST[1]
+    name = ""
+    cli = _tailscale()
+    if cli:
+        status = _run(cli, "status", "--json")
+        if status.returncode == 0:
+            try:
+                info = json.loads(status.stdout or "{}")
+            except json.JSONDecodeError:
+                info = None
+            if isinstance(info, dict) and info.get("BackendState") == "Running":
+                name = str((info.get("Self") or {}).get("DNSName") or "").rstrip(".").lower()
+    _TAILNET_HOST = (now, name)
+    return name
+
+
 def _run(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(args, capture_output=True, text=True, timeout=15)
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=15, stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired as exc:
+        # status/serve can sit on a prompt. A hung CLI is a failed check, not a 500.
+        return subprocess.CompletedProcess(args, 1, _text(exc.stdout) + _text(exc.stderr), "")
+
+
+def _text(value: str | bytes | None) -> str:
+    if not value:
+        return ""
+    return value.decode("utf-8", "replace") if isinstance(value, bytes) else value
+
+
+def _serve(cli: str, port: int) -> subprocess.CompletedProcess:
+    """Publish this port. Return as soon as Tailscale says Serve is off, instead of
+    waiting out the prompt it leaves open until someone enables it in the admin console.
+    """
+    args = (cli, "serve", "--bg", "--yes", str(port))
+    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True)
+    chunks: list[str] = []
+    lock = threading.Lock()
+
+    def _read() -> None:
+        if proc.stdout is None:
+            return
+        for line in proc.stdout:
+            with lock:
+                chunks.append(line)
+
+    def _joined() -> str:
+        with lock:
+            return "".join(chunks)
+
+    reader = threading.Thread(target=_read, daemon=True)
+    reader.start()
+    deadline = time.monotonic() + _SERVE_WAIT_S
+
+    def _finish(code: int) -> subprocess.CompletedProcess:
+        reader.join(timeout=1)
+        text = _joined().strip()
+        return subprocess.CompletedProcess(args, code, text or "Tailscale did not publish an address.", "")
+
+    while time.monotonic() < deadline:
+        code = proc.poll()
+        if code is not None:
+            return _finish(code)
+        text = _joined()
+        if "not enabled" in text.lower() or _ENABLE_URL in text:
+            _stop(proc)
+            return _finish(1)
+        time.sleep(0.1)
+    _stop(proc)
+    return _finish(1)
+
+
+def _stop(proc: subprocess.Popen) -> None:
+    if proc.poll() is None:
+        try:
+            proc.kill()
+        except ProcessLookupError:
+            pass
+    proc.wait(timeout=2)
+
+
+def _serve_failure(text: str) -> dict:
+    """The sentence and, when Tailscale printed one, the page that turns Serve on."""
+    url = next((word.strip(".,)") for word in text.split() if word.strip(".,)").startswith(_ENABLE_URL)), None)
+    if url:
+        return {
+            "enable_url": url,
+            "error": f"Tailscale Serve is off for this network. Turn it on, then try again: {url}",
+        }
+    cleaned = " ".join(text.split())
+    return {"error": (cleaned or "Tailscale did not publish an address.")[-400:]}
 
 
 def _port(request: Request) -> int:
@@ -46,7 +150,12 @@ def _tailnet_state(cli: str, port: int) -> dict:
     status = _run(cli, "status", "--json")
     if status.returncode != 0:
         return {"signed_in": False}
-    info = json.loads(status.stdout or "{}")
+    try:
+        info = json.loads(status.stdout or "{}")
+    except json.JSONDecodeError:
+        return {"signed_in": False}
+    if not isinstance(info, dict):
+        return {"signed_in": False}
     host = ((info.get("Self") or {}).get("DNSName") or "").rstrip(".")
     if info.get("BackendState") != "Running" or not host:
         return {"signed_in": False}
@@ -78,14 +187,14 @@ async def phone_pairing(request: Request):
 @router.post("/api/phone/serve")
 async def phone_serve(request: Request):
     """Put this backend on the tailnet over HTTPS (`tailscale serve --bg <port>`), then pair."""
-    def _serve():
+    def _publish():
         cli = _tailscale()
         if cli is None:
             return {"tailscale": "missing", "link": None}
-        result = _run(cli, "serve", "--bg", str(_port(request)))
+        result = _serve(cli, _port(request))
         pairing = _pairing(request)
         if result.returncode != 0 and pairing["link"] is None:
-            pairing["error"] = (result.stderr or result.stdout).strip()[-400:]
+            pairing.update(_serve_failure(result.stdout or result.stderr or ""))
         return pairing
 
-    return await asyncio.to_thread(_serve)
+    return await asyncio.to_thread(_publish)

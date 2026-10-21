@@ -61,15 +61,14 @@ export function ConnectorsDirectory({
 
       {cards.length === 0 ? null : (
         <>
-          <div className="flex shrink-0 items-center gap-3 border-b border-(--ui-stroke-tertiary) pb-1.5">
-            <SearchField
-              containerClassName="min-w-0 flex-1"
-              inputClassName="flex-1"
-              onChange={query => set({ query })}
-              placeholder={copy.searchPlaceholder(cards.length)}
-              value={filter.query}
-            />
-          </div>
+          <SearchField
+            containerClassName="w-full min-w-0 shrink-0"
+            inputClassName="flex-1"
+            onChange={query => set({ query })}
+            placeholder={copy.searchPlaceholder(cards.length)}
+            value={filter.query}
+            variant="box"
+          />
 
           {showSegments || segmentFellBack || hiddenMatches > 0 ? (
             <div className="flex shrink-0 flex-wrap items-center gap-2">

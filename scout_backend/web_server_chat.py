@@ -51,13 +51,13 @@ def _ws_host_origin_reason(ws: "WebSocket") -> Optional[str]:
     bound host.  Non-web origins (packaged Electron: file://, null, app://) are
     trusted — the credential check is the real auth boundary there.
     """
-    from scout_backend.web_server import _is_accepted_host, app
+    from scout_backend.web_server import _host_is_accepted, app
     bound_host = getattr(app.state, "bound_host", None)
     if not bound_host:
         return None
     trusted_public_hosts = getattr(app.state, "trusted_public_hosts", frozenset())
     host_header = ws.headers.get("host", "")
-    if not _is_accepted_host(host_header, bound_host, trusted_public_hosts):
+    if not _host_is_accepted(host_header, bound_host, trusted_public_hosts):
         return f"host_mismatch host={host_header or '?'} bound={bound_host}"
     origin = ws.headers.get("origin", "")
     if not origin:
@@ -65,7 +65,7 @@ def _ws_host_origin_reason(ws: "WebSocket") -> Optional[str]:
     parsed = urllib.parse.urlparse(origin)
     if parsed.scheme not in {"http", "https"}:
         return None
-    if not parsed.netloc or not _is_accepted_host(parsed.netloc, bound_host, trusted_public_hosts):
+    if not parsed.netloc or not _host_is_accepted(parsed.netloc, bound_host, trusted_public_hosts):
         return f"origin_mismatch origin={origin} bound={bound_host}"
     return None
 

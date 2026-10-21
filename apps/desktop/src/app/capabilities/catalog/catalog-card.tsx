@@ -76,7 +76,7 @@ export function CatalogCard({ entry, action, accentIndex, onOpen, onCategory, on
   return (
     <article
       className={cn(
-        'group relative flex min-w-0 flex-col overflow-hidden rounded-lg border',
+        'group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border',
         CARD_ACCENTS[accentIndex % CARD_ACCENTS.length]
       )}
       data-catalog-card
@@ -92,11 +92,7 @@ export function CatalogCard({ entry, action, accentIndex, onOpen, onCategory, on
           >
             <Codicon name={catalogIcon(entry.category)} size="1.125rem" />
           </span>
-          {action && (
-            <span className="relative shrink-0 opacity-[.66] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-              {action}
-            </span>
-          )}
+          {action && <span className="relative shrink-0">{action}</span>}
         </div>
         <div className="flex min-h-0 min-w-0 flex-col gap-1">
           {/* Its ::after stretches over the whole card, so any empty spot opens the

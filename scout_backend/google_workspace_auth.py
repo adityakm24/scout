@@ -66,14 +66,23 @@ def _read_json(path: Path) -> dict:
         return {}
 
 
+def _env_client() -> Optional[dict]:
+    """The Desktop OAuth client from the profile ``.env``, when both values are set."""
+    client_id = os.environ.get("GOOGLE_WORKSPACE_CLIENT_ID", "").strip()
+    client_secret = os.environ.get("GOOGLE_WORKSPACE_CLIENT_SECRET", "").strip()
+    if not client_id.endswith(".apps.googleusercontent.com") or not client_secret:
+        return None
+    return {"client_id": client_id, "client_secret": client_secret, "token_uri": TOKEN_URI}
+
+
 def read_client(home: Path) -> Optional[dict]:
-    """``{client_id, client_secret, token_uri}`` from the stored OAuth client, or None."""
+    """``{client_id, client_secret, token_uri}`` from the stored OAuth client, or the ``.env`` pair."""
     raw = _read_json(_client_path(home))
     client = raw.get("installed") or raw.get("web") or {}
-    if not client.get("client_id") or not client.get("client_secret"):
-        return None
-    return {"client_id": client["client_id"], "client_secret": client["client_secret"],
-            "token_uri": client.get("token_uri") or TOKEN_URI}
+    if client.get("client_id") and client.get("client_secret"):
+        return {"client_id": client["client_id"], "client_secret": client["client_secret"],
+                "token_uri": client.get("token_uri") or TOKEN_URI}
+    return _env_client()
 
 
 def save_client(home: Path, client_id: str, client_secret: str) -> None:

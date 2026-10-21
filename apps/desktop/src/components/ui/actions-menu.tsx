@@ -1,6 +1,7 @@
 import type * as React from 'react'
 
 import { Codicon } from '@/components/ui/codicon'
+import { IS_PHONE } from '@/platform/phone'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -175,7 +176,7 @@ export function ActionsContextMenu({
   items,
   onCloseAutoFocus
 }: ActionsContextMenuProps) {
-  if (disabled) {
+  if (disabled || IS_PHONE) {
     return <>{children}</>
   }
 

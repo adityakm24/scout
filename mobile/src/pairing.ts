@@ -10,32 +10,59 @@ export interface Pairing {
 
 const KEY = 'scout.pairing'
 
-/** A pairing link is the renderer's own address with `?token=`: the same link opens Scout in a
- *  phone browser (src/platform/web-bridge.ts reads it there) and pairs this app. */
-export function parsePairingLink(text: string): Pairing | null {
+function decodePart(value: string): string {
   try {
-    const url = new URL(text.trim())
-    const token = url.searchParams.get('token')
-
-    if (!/^https?:$/.test(url.protocol) || !token) {
-      return null
-    }
-
-    return { appUrl: url.origin + url.pathname, baseUrl: url.origin, token }
+    return decodeURIComponent(value)
   } catch {
+    return value
+  }
+}
+
+/** The address to pair with. A `scout://pair?link=` (or Expo `exp://…/pair?link=`) wrapper carries
+ *  the https address; the address itself is `https://<machine>.<tailnet>.ts.net/app/?token=`.
+ *  Read it without `URLSearchParams`: React Native's URL drops everything after the second `=`. */
+function pairingTarget(text: string): string {
+  const trimmed = text.trim()
+  const wrapped = trimmed.match(/^[a-z][a-z0-9+.-]*:\/\/.*[?&]link=([^&#]*)/i)
+
+  if (!wrapped || /^https?:\/\//i.test(trimmed)) {
+    return trimmed
+  }
+
+  return decodePart(wrapped[1])
+}
+
+/** A pairing link is the renderer's own address with `?token=`: the same link opens Scout in a
+ *  phone browser and pairs this app. */
+export function parsePairingLink(text: string): Pairing | null {
+  const match = /^(https?:\/\/[^/?#]+)(\/[^?#]*)?(?:\?([^#]*))?/i.exec(pairingTarget(text))
+
+  if (!match?.[3]) {
     return null
   }
+
+  const token = match[3]
+    .split('&')
+    .map(part => {
+      const eq = part.indexOf('=')
+
+      return eq < 0 ? null : ([decodePart(part.slice(0, eq)), decodePart(part.slice(eq + 1))] as const)
+    })
+    .find(part => part?.[0] === 'token')?.[1]
+
+  if (!token) {
+    return null
+  }
+
+  const origin = match[1]
+  const path = match[2] || '/'
+
+  return { appUrl: origin + path, baseUrl: origin, token }
 }
 
 /** `scout://pair?link=<pairing link>` (or Expo Go's `exp://…/--/pair?link=…` in development). */
 export function pairingFromDeepLink(url: string): Pairing | null {
-  try {
-    const link = new URL(url).searchParams.get('link')
-
-    return link ? parsePairingLink(link) : null
-  } catch {
-    return null
-  }
+  return parsePairingLink(url)
 }
 
 export async function loadPairing(): Promise<Pairing | null> {

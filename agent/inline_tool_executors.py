@@ -229,6 +229,27 @@ def _setup_mcp_shim(agent, args: dict, ctx: InlineToolContext) -> Any:
     }, ctx)
 
 
+def _device_location(agent, args: dict, ctx: InlineToolContext) -> Any:
+    from tools.device_location_tool import device_location_tool
+
+    out = device_location_tool(
+        args.get("to_latitude"),
+        args.get("to_longitude"),
+        callback=getattr(agent, "device_location_callback", None),
+    )
+    try:
+        parsed = json.loads(out) if isinstance(out, str) else out
+        if isinstance(parsed, dict) and "latitude" in parsed and "longitude" in parsed:
+            agent._last_device_location = {
+                "latitude": float(parsed["latitude"]),
+                "longitude": float(parsed["longitude"]),
+                "accuracy": float(parsed.get("accuracy_m") or parsed.get("accuracy") or 20.0),
+            }
+    except Exception:
+        pass
+    return out
+
+
 # Order is the historical if/elif order of ``execute_tool_calls_sequential``.
 def _browse_task(agent, args: dict, ctx: InlineToolContext) -> Any:
     # The Browser Agent is built from the live User Agent's model runtime (agent/agent_bridge/).
@@ -273,10 +294,7 @@ INLINE_TOOL_EXECUTORS: Dict[str, InlineToolExecutor] = {
     "read_window_below": _callback_tool(
         "tools.read_window_tool", "read_window_below_tool", "read_window_below_callback",
     ),
-    "device_location": _callback_tool(
-        "tools.device_location_tool", "device_location_tool", "device_location_callback",
-        ("to_latitude", "to_latitude"), ("to_longitude", "to_longitude"),
-    ),
+    "device_location": _device_location,
     "gui_tour": _callback_tool(
         "tools.tour_tool", "tour_tool", "tour_callback",
         ("action", "action", ""), ("surface", "surface"), ("selector", "selector"), ("title", "title"),

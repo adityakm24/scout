@@ -319,3 +319,49 @@ def test_gmail_watch_wakes_the_agent_only_for_mail_it_has_not_reported(api_modul
     assert woke is True and json.loads(listing)["new_emails"][0]["subject"] == "Statement ready"
 
     assert gate()[0] is False  # already reported
+
+
+def test_build_service_bridges_ssl_cert_file_to_httplib2_ca_certs(api_module, monkeypatch, tmp_path):
+    """Inside OpenShell/egress sandboxes, SSL_CERT_FILE points to the L7 proxy CA bundle
+    while httplib2 only reads HTTPLIB2_CA_CERTS. build_service() must bridge SSL_CERT_FILE
+    to HTTPLIB2_CA_CERTS and httplib2.CA_CERTS so Gmail/Calendar calls verify TLS."""
+    import os
+
+    ca_file = tmp_path / "ca-bundle.crt"
+    ca_file.write_text("-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n", encoding="utf-8")
+    monkeypatch.delenv("HTTPLIB2_CA_CERTS", raising=False)
+    monkeypatch.setenv("SSL_CERT_FILE", str(ca_file))
+
+    fake_httplib2 = types.ModuleType("httplib2")
+    fake_httplib2.CA_CERTS = "/old/cacerts.txt"
+    monkeypatch.setitem(sys.modules, "httplib2", fake_httplib2)
+
+    fake_discovery = types.ModuleType("googleapiclient.discovery")
+    fake_discovery.build = lambda api, version, credentials=None: (api, version, os.environ.get("HTTPLIB2_CA_CERTS"))
+    fake_gapi = types.ModuleType("googleapiclient")
+    fake_gapi.discovery = fake_discovery
+    monkeypatch.setitem(sys.modules, "googleapiclient", fake_gapi)
+    monkeypatch.setitem(sys.modules, "googleapiclient.discovery", fake_discovery)
+    monkeypatch.setattr(api_module, "get_credentials", lambda: "creds")
+
+    result = api_module.build_service("gmail", "v1")
+    assert result == ("gmail", "v1", str(ca_file))
+    assert os.environ["HTTPLIB2_CA_CERTS"] == str(ca_file)
+    assert fake_httplib2.CA_CERTS == str(ca_file)
+
+
+def test_gmail_list_alias_and_limit_flag_work_like_search(api_module, monkeypatch, capsys):
+    """Models routinely invoke `scout google gmail list --limit 5`; the CLI parser
+    accepts `list` as an alias for `search`, defaults query to 'in:inbox', and
+    accepts `--limit` / `--max-results` alongside `--max`."""
+    calls = []
+    monkeypatch.setattr(
+        api_module,
+        "_message_summaries",
+        lambda query, max_results: calls.append((query, max_results)) or [{"id": "m1", "subject": "Hello"}],
+    )
+    monkeypatch.setattr(sys, "argv", ["google_api.py", "gmail", "list", "--limit", "5"])
+    api_module.main()
+    assert calls == [("in:inbox", 5)]
+    assert json.loads(capsys.readouterr().out)[0]["subject"] == "Hello"
+

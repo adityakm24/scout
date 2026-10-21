@@ -165,11 +165,14 @@ USER_BIN = "/sandbox/bin"
 _GOOGLE_SCRIPTS = Path(__file__).resolve().parents[2] / "skills" / "productivity" / "google-workspace" / "scripts"
 _SCOUT_SHIM = """#!/bin/sh
 # `scout google ...` inside the User Agent's sandbox: only the Google skill exists here.
+if [ -z "$HTTPLIB2_CA_CERTS" ] && [ -n "$SSL_CERT_FILE" ] && [ -f "$SSL_CERT_FILE" ]; then
+  export HTTPLIB2_CA_CERTS="$SSL_CERT_FILE"
+fi
 if [ "$1" = "google" ]; then shift; exec python3 /sandbox/google-workspace/scripts/google_api.py "$@"; fi
 echo "Only 'scout google' is available in this sandbox." >&2; exit 2
 """
 # Prefix for every User Agent terminal command.
-USER_SHELL_ENV = f"export PATH={USER_BIN}:$PATH SCOUT_HOME={USER_HOME}; "
+USER_SHELL_ENV = f'export PATH={USER_BIN}:$PATH SCOUT_HOME={USER_HOME} HTTPLIB2_CA_CERTS="${{HTTPLIB2_CA_CERTS:-$SSL_CERT_FILE}}"; '
 _user_ready: Optional[str] = None
 
 

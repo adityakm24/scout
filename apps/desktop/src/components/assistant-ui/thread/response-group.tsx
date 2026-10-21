@@ -121,11 +121,13 @@ function summarizeSectionProcess(messages: readonly unknown[], indices: readonly
       } else if (part.type === 'tool-call') {
         const name = typeof part.toolName === 'string' ? part.toolName : 'tool'
         if (!isTodoToolName(name) && name !== 'react_to_message') {
-          toolCount += 1
           lastToolIdx = i
-          toolNameSet.add(name)
-          if (part.result === undefined && part.completedAt === undefined) {
-            activeToolName = name
+          if (name !== 'external_action') {
+            toolCount += 1
+            toolNameSet.add(name)
+            if (part.result === undefined && part.completedAt === undefined) {
+              activeToolName = name
+            }
           }
         }
       }

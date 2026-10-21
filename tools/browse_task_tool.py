@@ -41,9 +41,10 @@ BROWSE_TASK_SCHEMA = {
                 "type": "array", "items": {"type": "string", "enum": [
                     "USER_FULL_NAME", "USER_FIRST_NAME", "USER_LAST_NAME", "USER_EMAIL", "USER_PHONE",
                     "USER_ADDRESS", "USER_ADDRESS_LINE1", "USER_ADDRESS_LINE2", "USER_CITY", "USER_REGION",
-                    "USER_POSTAL_CODE", "USER_COUNTRY",
+                    "USER_POSTAL_CODE", "USER_COUNTRY", "USER_LOCATION",
                 ]},
-                "description": "Personal details the Browser Agent may type into a form on these domains.",
+                "description": ("Personal details or live device location (USER_LOCATION) the Browser Agent may "
+                                "use on these domains."),
             },
             "result_fields": {
                 "type": "object",
@@ -65,12 +66,14 @@ BROWSE_TASK_SCHEMA = {
 
 _EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _PHONE_RE = re.compile(r"\+?\d[\d\s().-]{7,}\d")
+_DECIMAL_FLOAT_RE = re.compile(r"(?<!\d)-?\d+\.\d+(?!\.\d)")
 
 
 def _personal_detail_in_goal(goal: str) -> bool:
     """A raw email, phone number or saved profile/address value in the goal would hand it to the
     Browser Agent's model; placeholders exist so it never has to."""
-    if _EMAIL_RE.search(goal) or _PHONE_RE.search(goal):
+    scrubbed = _DECIMAL_FLOAT_RE.sub(" ", goal)
+    if _EMAIL_RE.search(goal) or _PHONE_RE.search(scrubbed):
         return True
     from agent.agent_bridge.placeholders import resolve_values
     from agent.agent_bridge.protocol import PLACEHOLDERS

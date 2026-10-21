@@ -207,3 +207,81 @@ def test_only_the_newest_screens_go_with_each_request():
     with_image = [m["tool_call_id"] for m in messages if any(p.get("type") == "image_url" for p in m["content"])]
     assert with_image == ["7", "8", "9"] and len(messages) == 10
     assert all(m["content"][0]["text"] == f"step {i}" for i, m in enumerate(messages))
+
+
+def test_decimal_coordinates_are_not_mistaken_for_phone_numbers():
+    from tools.browse_task_tool import _personal_detail_in_goal
+
+    assert not _personal_detail_in_goal(
+        "Get driving distance and time from 12.994947074019844, 77.61666617729823 to Pizza 4Ps, Indiranagar."
+    )
+    assert _personal_detail_in_goal("Text the ETA to +91 98765 43210")
+    assert _personal_detail_in_goal("Send receipt to jane.doe@example.org")
+
+
+def test_subdomain_allowlist_permits_www_and_root_redirects():
+    task = parse_browse_task({
+        **TASK_ARGS,
+        "start_url": "https://maps.google.com/maps",
+        "allowed_domains": ["maps.google.com"],
+    })
+    with browse_scope(task, "browse-maps"):
+        assert navigation_error("browse-maps", "https://www.google.com/maps/place/Pizza+4Ps") is None
+        assert navigation_error("browse-maps", "https://google.com/maps") is None
+        assert navigation_error("browse-maps", "https://evil.test/maps") is not None
+
+
+def test_browser_agent_resolves_user_location_on_demand(monkeypatch):
+    from tools import browser_placeholder_tool
+    from tools.bot_desktop import lease
+
+    calls = []
+
+    class _FakeScreen:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            pass
+
+        def url(self):
+            return "https://www.google.com/maps/dir//Pizza+4Ps"
+
+        def set_geolocation(self, lat, lon, accuracy=20.0, *, target_url=""):
+            calls.append(("geo", round(lat, 4), round(lon, 4), round(accuracy, 1), target_url))
+
+        def evaluate(self, js):
+            if "locationHint" in js:
+                calls.append(("fill_active", js))
+                return json.dumps({"filled": 1})
+            return "[]"
+
+    monkeypatch.setattr(lease, "human_holds", lambda *a, **k: False)
+    monkeypatch.setattr("agent.agent_bridge.browser_screen.BrowserScreen", _FakeScreen)
+
+    # Task did not pre-declare placeholders; Browser Agent requests USER_LOCATION when it needs it.
+    task = parse_browse_task({
+        "goal": "Get driving distance and time from current location to Pizza 4Ps Indiranagar",
+        "start_url": "https://www.google.com/maps",
+        "allowed_domains": ["google.com"],
+        "result_fields": {"distance_km": {"type": "number"}, "duration_minutes": {"type": "number"}},
+    })
+    saved = {}
+    with browse_scope(
+        task,
+        "browse-loc",
+        location_callback=lambda: json.dumps({"latitude": 12.9949, "longitude": 77.6167, "accuracy": 5.4}),
+        on_location=saved.update,
+    ) as scope:
+        raw = browser_placeholder_tool.browser_fill_placeholder("USER_LOCATION", task_id="browse-loc")
+        out = json.loads(raw)
+
+    assert out["success"] is True and out["geolocation_enabled"] is True and out["filled_fields"] == 1
+    assert "12.9949" not in raw and "77.6167" not in raw
+    assert saved["latitude"] == pytest.approx(12.9949) and saved["longitude"] == pytest.approx(77.6167)
+    assert calls[0][:4] == ("geo", 12.9949, 77.6167, 5.4)
+    assert scope.actions[-1] == {
+        "step": 1, "tool": "browser_fill_placeholder", "outcome": "filled",
+        "domain": "www.google.com", "target": "USER_LOCATION",
+    }
+

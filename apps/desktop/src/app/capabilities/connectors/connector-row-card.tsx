@@ -74,7 +74,7 @@ export function ConnectorRowCard({
   return (
     <div
       className={cn(
-        'relative flex flex-col gap-3 rounded-lg border p-4',
+        'relative flex flex-col gap-3 rounded-2xl border p-4',
         selected
           ? 'border-(--theme-primary) bg-(--ui-row-active-background)'
           : 'border-(--ui-stroke-quaternary) bg-(--ui-bg-elevated) hover:bg-(--chrome-action-hover)'

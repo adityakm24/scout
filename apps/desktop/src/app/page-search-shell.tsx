@@ -48,13 +48,15 @@ function ShellTabs({
   align?: 'center' | 'start'
 }) {
   return (
-    <ResponsiveTabs
-      align={align}
-      onChange={id => onTabChange?.(id)}
-      tabs={tabs}
-      value={activeTab ?? tabs[0]?.id ?? ''}
-      wideClassName={align === 'center' ? 'justify-center' : 'justify-start'}
-    />
+    <div className="contents" data-slot="shell-tabs">
+      <ResponsiveTabs
+        align={align}
+        onChange={id => onTabChange?.(id)}
+        tabs={tabs}
+        value={activeTab ?? tabs[0]?.id ?? ''}
+        wideClassName={align === 'center' ? 'justify-center' : 'justify-start'}
+      />
+    </div>
   )
 }
 
@@ -78,11 +80,12 @@ export function PageSearchShell({
 
   const search = !searchHidden && (
     <SearchField
-      containerClassName="max-w-[45vw]"
+      containerClassName="w-full min-w-0"
       hints={searchHints}
       onChange={onSearchChange}
       placeholder={searchPlaceholder}
       value={searchValue}
+      variant="box"
     />
   )
 
@@ -109,27 +112,25 @@ export function PageSearchShell({
       */}
       {title ? (
         <header className="shrink-0 px-6 pb-3 pt-[calc(var(--titlebar-height)+0.75rem)]">
-          <h1 className="scout-page-title m-0 text-[1.75rem] font-bold leading-tight text-foreground">{title}</h1>
-          {(hasTabs || !searchHidden || searchTrailingAction) && (
-            <div className="mt-4 flex min-w-0 flex-wrap items-center gap-3">
-              {hasTabs && (
-                <div className="flex min-w-0 items-center" data-tour="page-tabs">
-                  <ShellTabs activeTab={activeTab} align="start" onTabChange={onTabChange} tabs={tabs!} />
-                </div>
-              )}
-              <div className="ml-auto flex min-w-0 items-center justify-end gap-2">
-                {search}
-                {searchTrailingAction}
-              </div>
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <h1 className="scout-page-title m-0 text-[1.75rem] font-bold leading-tight text-foreground">{title}</h1>
+            {searchTrailingAction && (
+              <div className="flex shrink-0 items-center gap-2">{searchTrailingAction}</div>
+            )}
+          </div>
+          {hasTabs && (
+            <div className="mt-4 flex min-w-0 items-center" data-tour="page-tabs">
+              <ShellTabs activeTab={activeTab} align="start" onTabChange={onTabChange} tabs={tabs!} />
             </div>
           )}
+          {search && <div className="mt-3 w-full min-w-0">{search}</div>}
           {filters ? <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">{filters}</div> : null}
         </header>
       ) : (
         <div className="shrink-0">
-          {(hasTabs || !searchHidden) && (
+          {(hasTabs || searchTrailingAction) && (
             <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-3 pb-2 pt-[calc(var(--titlebar-height)+0.5rem)]">
-              <div className="flex min-w-0 items-center justify-start">{search}</div>
+              <span />
               {hasTabs ? (
                 <div className="flex min-w-0 items-center justify-center" data-tour="page-tabs">
                   <ShellTabs activeTab={activeTab} onTabChange={onTabChange} tabs={tabs!} />
@@ -140,6 +141,7 @@ export function PageSearchShell({
               <div className="flex min-w-0 items-center justify-end">{searchTrailingAction}</div>
             </div>
           )}
+          {search && <div className="px-3 pb-2">{search}</div>}
           {filters ? <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 pb-2">{filters}</div> : null}
         </div>
       )}

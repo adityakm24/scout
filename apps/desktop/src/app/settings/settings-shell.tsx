@@ -226,6 +226,7 @@ export function SettingsAppleShell({
     <div
       className="grid h-full min-h-0 flex-1 grid-cols-[15.75rem_minmax(0,1fr)] overflow-hidden max-[47.5rem]:grid-cols-1 max-[47.5rem]:grid-rows-[auto_minmax(0,1fr)]"
       data-overlay-split=""
+      data-searching={searching ? '' : undefined}
     >
       <aside
         className={cn(
@@ -236,13 +237,14 @@ export function SettingsAppleShell({
         data-tour="overlay-nav"
       >
         <div
-          className="relative mb-3 flex h-8 w-full cursor-text items-center rounded-lg bg-(--ui-bg-tertiary) px-2.5 text-(--ui-text-tertiary) ring-1 ring-(--ui-stroke-tertiary) transition-shadow focus-within:ring-2 focus-within:ring-[#007aff] dark:focus-within:ring-[#0a84ff]"
+          className="relative mb-3 flex h-11 w-full shrink-0 cursor-text items-center rounded-full bg-(--ui-bg-tertiary) px-4 text-(--ui-text-tertiary) ring-1 ring-(--ui-stroke-tertiary) transition-shadow focus-within:ring-2 focus-within:ring-[#007aff] dark:focus-within:ring-[#0a84ff]"
+          data-overlay-search=""
           onClick={() => searchInputRef.current?.focus()}
         >
-          <Search className="size-3.5 shrink-0" />
+          <Search className="size-4 shrink-0" />
           <input
             aria-label={t.settings.search.placeholder}
-            className="min-w-0 flex-1 bg-transparent px-2 text-[0.8125rem] text-foreground outline-none placeholder:text-(--ui-text-tertiary)"
+            className="h-full min-w-0 flex-1 appearance-none bg-transparent px-2 text-[0.875rem] text-foreground outline-none placeholder:text-(--ui-text-tertiary)"
             onChange={event => onSearchChange(event.target.value)}
             onKeyDown={event => {
               if (event.key === 'Escape' && searchQuery) {
@@ -259,7 +261,7 @@ export function SettingsAppleShell({
           {searchQuery && (
             <button
               aria-label={t.common.close}
-              className="grid size-4 shrink-0 place-items-center rounded-full bg-(--ui-text-tertiary)/30 text-foreground transition-colors hover:bg-(--ui-text-tertiary)/50"
+              className="grid size-5 shrink-0 place-items-center rounded-full bg-(--ui-text-tertiary)/30 text-foreground transition-colors hover:bg-(--ui-text-tertiary)/50"
               onClick={event => {
                 event.stopPropagation()
                 triggerHaptic('selection')
@@ -268,7 +270,7 @@ export function SettingsAppleShell({
               }}
               type="button"
             >
-              <X className="size-2.5" />
+              <X className="size-3" />
             </button>
           )}
         </div>
@@ -276,7 +278,7 @@ export function SettingsAppleShell({
         <button
           aria-current={profileOpen && !searching ? 'page' : undefined}
           className={cn(
-            'mb-3 flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors',
+            'mb-3 flex w-full shrink-0 items-center gap-2.5 rounded-2xl px-2.5 py-2 text-left transition-colors',
             profileOpen && !searching
               ? 'bg-[#007aff] text-white shadow-xs dark:bg-[#0a84ff]'
               : 'text-foreground hover:bg-(--chrome-action-hover)'
@@ -287,7 +289,7 @@ export function SettingsAppleShell({
           type="button"
         >
           <UserAvatarCircle avatar={profile.avatar} iconClass="size-4" name={displayName} sizeClass="size-9" />
-          <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold leading-tight">{displayName}</span>
+          <span className="min-w-0 flex-1 truncate text-[0.875rem] font-semibold leading-tight">{displayName}</span>
         </button>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto max-[47.5rem]:flex-row max-[47.5rem]:overflow-x-auto">
@@ -295,7 +297,7 @@ export function SettingsAppleShell({
             <button
               aria-current={item.active && !profileOpen && !searching ? 'page' : undefined}
               className={cn(
-                'flex h-8 w-full shrink-0 items-center gap-2.5 rounded-lg px-2 text-left text-[0.8125rem] transition-colors max-[47.5rem]:w-auto',
+                'flex h-9 w-full shrink-0 items-center gap-2.5 rounded-xl px-2.5 text-left text-[0.8125rem] transition-colors max-[47.5rem]:w-auto',
                 item.active && !profileOpen && !searching
                   ? 'bg-[#007aff] font-medium text-white shadow-xs dark:bg-[#0a84ff]'
                   : 'text-foreground hover:bg-(--chrome-action-hover)'
@@ -309,7 +311,7 @@ export function SettingsAppleShell({
               }}
               type="button"
             >
-              <IconTile glyph="size-3.5" icon={item.icon} id={item.id} tile="size-[1.45rem] rounded-[0.4rem]" />
+              <IconTile glyph="size-3.5" icon={item.icon} id={item.id} tile="size-[1.55rem] rounded-[0.45rem]" />
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
             </button>
           ))}
@@ -329,6 +331,7 @@ export function SettingsAppleShell({
                   {searchResults.map(entry => (
                     <button
                       className="flex min-h-11 w-full items-center gap-3 px-3.5 py-2 text-left transition-colors hover:bg-(--chrome-action-hover)"
+                      data-overlay-search-result=""
                       key={entry.id}
                       onClick={() => {
                         triggerHaptic('selection')
@@ -518,7 +521,9 @@ export function SettingsAppleShell({
                 {detailTitle ?? active.label}
               </span>
             </div>
-            <div className="min-h-0 flex-1">{detail}</div>
+            <div className="min-h-0 flex-1" data-overlay-detail="">
+              {detail}
+            </div>
           </>
         ) : (
           <div className={cn('min-h-0 flex-1 overflow-y-auto px-8 pb-16', OVERLAY_TOP_CLEARANCE)}>

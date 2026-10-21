@@ -33,6 +33,122 @@ function detectPhone(): boolean {
 
 export const IS_PHONE = detectPhone()
 
+const EDITABLE_SELECTOR =
+  'input, textarea, [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]'
+
+function targetElement(target: EventTarget | null): Element | null {
+  return target instanceof Element ? target : ((target as Node | null)?.parentElement ?? null)
+}
+
+export function isPhoneEditableTarget(target: EventTarget | null): boolean {
+  const el = targetElement(target)
+
+  return Boolean(el && ((el as HTMLElement).isContentEditable || el.closest(EDITABLE_SELECTOR)))
+}
+
+/** Block desktop right-click menus on a phone while keeping iOS's native Copy / Paste callout
+ *  inside text fields. Stopping propagation even on text fields prevents ancestor Radix context
+ *  menus (such as ZoneMenu wrapping the pane body) from opening over the composer. */
+export function suppressPhoneContextMenu(event: Event): void {
+  if (!isPhoneEditableTarget(event.target)) {
+    event.preventDefault()
+  }
+
+  event.stopPropagation()
+}
+
+/** Dismiss the software keyboard when the user drags to scroll outside the composer or focused
+ *  input. Because the outer WebView disables its own scroll view and panes scroll inner DOM
+ *  containers, iOS's native UIScrollView keyboardDismissMode does not fire automatically. */
+export function installPhoneScrollKeyboardDismiss(root: Window | Document = window): () => void {
+  let touchStart: { x: number; y: number } | null = null
+
+  const blurActiveEditable = () => {
+    const active = document.activeElement
+
+    if (active instanceof HTMLElement && isPhoneEditableTarget(active)) {
+      active.blur()
+    }
+  }
+
+  const onTouchStart = (event: Event) => {
+    const touchEvent = event as TouchEvent
+
+    if (touchEvent.touches.length !== 1) {
+      touchStart = null
+
+      return
+    }
+
+    const el = targetElement(touchEvent.target)
+
+    if (el?.closest('[data-slot="composer-dock"]') || isPhoneEditableTarget(touchEvent.target)) {
+      touchStart = null
+
+      return
+    }
+
+    const touch = touchEvent.touches[0]
+    touchStart = { x: touch.clientX, y: touch.clientY }
+  }
+
+  const onTouchMove = (event: Event) => {
+    if (!touchStart) {
+      return
+    }
+
+    const touchEvent = event as TouchEvent
+
+    if (touchEvent.touches.length !== 1) {
+      touchStart = null
+
+      return
+    }
+
+    const touch = touchEvent.touches[0]
+    const dx = touch.clientX - touchStart.x
+    const dy = touch.clientY - touchStart.y
+
+    if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) {
+      touchStart = null
+      blurActiveEditable()
+    }
+  }
+
+  const onScroll = (event: Event) => {
+    if (!touchStart) {
+      return
+    }
+
+    const el = targetElement(event.target)
+
+    if (el?.closest('[data-slot="composer-dock"]') || isPhoneEditableTarget(event.target)) {
+      return
+    }
+
+    touchStart = null
+    blurActiveEditable()
+  }
+
+  const clearTouch = () => {
+    touchStart = null
+  }
+
+  root.addEventListener('touchstart', onTouchStart, { capture: true, passive: true })
+  root.addEventListener('touchmove', onTouchMove, { capture: true, passive: true })
+  root.addEventListener('scroll', onScroll, { capture: true, passive: true })
+  root.addEventListener('touchend', clearTouch, { capture: true, passive: true })
+  root.addEventListener('touchcancel', clearTouch, { capture: true, passive: true })
+
+  return () => {
+    root.removeEventListener('touchstart', onTouchStart, true)
+    root.removeEventListener('touchmove', onTouchMove, true)
+    root.removeEventListener('scroll', onScroll, true)
+    root.removeEventListener('touchend', clearTouch, true)
+    root.removeEventListener('touchcancel', clearTouch, true)
+  }
+}
+
 if (IS_PHONE) {
   document.documentElement.dataset.phone = ''
   // Edge to edge under the notch and home bar (safe-area insets do the spacing); no
@@ -41,18 +157,8 @@ if (IS_PHONE) {
     .querySelector('meta[name="viewport"]')
     ?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover')
   trackVisibleViewport()
-  // A long-press fires contextmenu, which would open the desktop's right-click menus (tab strip:
-  // Reload / Close others / Hide tabs). Text fields keep iOS's own Copy / Paste menu.
-  document.addEventListener(
-    'contextmenu',
-    event => {
-      if (!(event.target as Element | null)?.closest?.('input, textarea, [contenteditable="true"]')) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
-    },
-    true
-  )
+  installPhoneScrollKeyboardDismiss()
+  window.addEventListener('contextmenu', suppressPhoneContextMenu, true)
 }
 
 /** Size the app to what is visible: above the keyboard while it is open, so the composer rides

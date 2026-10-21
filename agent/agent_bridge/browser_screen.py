@@ -160,6 +160,13 @@ class BrowserScreen:
         width, height = VIEWPORT
         self.call("Emulation.setDeviceMetricsOverride",
                   {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": False})
+        from agent.agent_bridge.scope import active_scope
+        if (scope := active_scope()) is not None and scope.location is not None:
+            try:
+                self.set_geolocation(scope.location["latitude"], scope.location["longitude"],
+                                     scope.location.get("accuracy", 20.0))
+            except ScreenUnavailable:
+                pass
         return self
 
     def __exit__(self, *exc: Any) -> None:
@@ -195,9 +202,42 @@ class BrowserScreen:
 
     def navigate(self, url: str) -> None:
         self.call("Page.enable")
+        from agent.agent_bridge.scope import active_scope
+        if (scope := active_scope()) is not None and scope.location is not None:
+            try:
+                self.set_geolocation(scope.location["latitude"], scope.location["longitude"],
+                                     scope.location.get("accuracy", 20.0), target_url=url)
+            except ScreenUnavailable:
+                pass
         self.call("Page.navigate", {"url": url})
         self.evaluate("new Promise(r => document.readyState === 'complete' ? r(1) : "
                       "addEventListener('load', () => r(1), {once: true}))")
+
+    def set_geolocation(self, latitude: float, longitude: float, accuracy: float = 20.0,
+                        *, target_url: str = "") -> None:
+        from urllib.parse import urlsplit
+
+        origins = {"https://www.google.com", "https://maps.google.com"}
+        for candidate in (target_url,):
+            parts = urlsplit(str(candidate or ""))
+            if parts.scheme in ("http", "https") and parts.netloc:
+                origins.add(f"{parts.scheme}://{parts.netloc}")
+        try:
+            parts = urlsplit(self.url())
+            if parts.scheme in ("http", "https") and parts.netloc:
+                origins.add(f"{parts.scheme}://{parts.netloc}")
+        except ScreenUnavailable:
+            pass
+        for origin in origins:
+            try:
+                self.call("Browser.grantPermissions", {"permissions": ["geolocation"], "origin": origin})
+            except ScreenUnavailable:
+                pass
+        self.call("Emulation.setGeolocationOverride", {
+            "latitude": float(latitude),
+            "longitude": float(longitude),
+            "accuracy": float(accuracy or 20.0),
+        })
 
     def mouse(self, kind: str, x: int, y: int, *, button: str = "none", clicks: int = 0,
               dx: float = 0, dy: float = 0) -> None:

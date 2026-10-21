@@ -108,6 +108,27 @@ describe('PendingApprovalStack', () => {
     expect(screen.queryByText(/plugin approval rule/)).toBeNull()
   })
 
+  it('renders the full email draft (To, Cc, Subject, Body) for external_action email approvals', () => {
+    $activeSessionId.set('sess-1')
+    setApprovalRequest({
+      allowPermanent: false,
+      choices: ['once', 'deny'],
+      command: 'Send an email to maharajaclub@flyai.airindia.com',
+      description:
+        'To: maharajaclub@flyai.airindia.com\nCc: ops@example.org\nSubject: Unsubscribe from marketing emails\n\nPlease remove me from your marketing email list.\n\nThank you.',
+      requestId: 'apr-email',
+      sessionId: 'sess-1'
+    })
+    render(<PendingApprovalStack />)
+
+    expect(screen.getByText('Send an email to maharajaclub@flyai.airindia.com')).toBeTruthy()
+    expect(screen.getByText('maharajaclub@flyai.airindia.com')).toBeTruthy()
+    expect(screen.getByText('ops@example.org')).toBeTruthy()
+    expect(screen.getByText('Unsubscribe from marketing emails')).toBeTruthy()
+    expect(screen.getByText(/Please remove me from your marketing email list\./)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /More approval options/ })).toBeNull()
+  })
+
   it('keeps showing the real command for ordinary dangerous-command approvals', () => {
     setRequest('chmod -R 777 /tmp/x')
     render(<PendingApprovalStack />)

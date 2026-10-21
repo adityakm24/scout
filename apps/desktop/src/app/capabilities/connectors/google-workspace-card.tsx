@@ -122,7 +122,7 @@ export function GoogleWorkspaceCard({ profile }: { profile: ProfileScope }) {
   return (
     <div
       className={cn(
-        'relative grid gap-3 rounded-lg border p-4',
+        'relative grid gap-3 rounded-2xl border p-4',
         signedIn
           ? 'border-(--ui-stroke-quaternary) bg-(--ui-bg-elevated)'
           : 'border-[color-mix(in_srgb,var(--theme-primary)_35%,transparent)] bg-[color-mix(in_srgb,var(--theme-primary)_6%,var(--ui-bg-elevated))]'

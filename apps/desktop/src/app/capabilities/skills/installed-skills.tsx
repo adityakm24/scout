@@ -93,11 +93,18 @@ export function InstalledSkills({
   }
 
   return (
-    <div className="@container/catalog flex h-full min-h-0 min-w-0 flex-col" data-catalog="skills">
-      <header
-        className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 pb-1 pt-1"
-        data-catalog-header
-      >
+    <div className="@container/catalog flex h-full min-h-0 min-w-0 flex-col gap-3 px-4 pb-2" data-catalog="skills">
+      <header className="flex shrink-0 flex-col gap-3 pt-1" data-catalog-header>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="flex-1 text-sm font-semibold text-(--ui-text-primary)">{t.skills.tabSkills}</h2>
+          <div className="flex min-w-0 items-center justify-end gap-2" data-catalog-actions>
+            {actions}
+            <Button onClick={onNewSkill} size="sm">
+              <Codicon name="add" />
+              {t.skills.newSkill}
+            </Button>
+          </div>
+        </div>
         <SearchField
           containerClassName="w-full min-w-0"
           onChange={value => onQueryChange?.(value)}
@@ -105,16 +112,9 @@ export function InstalledSkills({
           value={query ?? ''}
           variant="box"
         />
-        <div className="flex min-w-0 items-center justify-end gap-2 justify-self-end" data-catalog-actions>
-          {actions}
-          <Button onClick={onNewSkill} size="sm">
-            <Codicon name="add" />
-            {t.skills.newSkill}
-          </Button>
-        </div>
       </header>
       {notice}
-      <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">
+      <div className="flex min-h-0 flex-1 flex-col pb-3">
         {visible.length === 0 ? (
           <PanelEmpty
             action={

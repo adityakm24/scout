@@ -39,8 +39,8 @@ import { $agentIdentity } from '@/store/agent-identity'
 import { $sessions } from '@/store/session'
 import type { SessionInfo } from '@/types/scout'
 
-/** The Chats list sits over the workspace; a phone app opens on it, like Messages. */
-export const $phoneChatsOpen = atom(true)
+/** The Chats list sits over the workspace when opened; the phone launches into the conversation. */
+export const $phoneChatsOpen = atom(false)
 
 /** Settings on a phone: its section list first (the desktop's rail), a section's page after a tap. */
 export const $phoneSettingsPage = atom(false)
@@ -104,7 +104,11 @@ function useSettingsNavigation(inSettings: boolean) {
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
-      if ((event.target as Element | null)?.closest?.('[data-overlay-rail] [data-overlay-nav-item]')) {
+      const target = (event.target as Element | null)?.closest?.(
+        '[data-overlay-rail] [data-overlay-nav-item], [data-overlay-search-result]'
+      )
+
+      if (target) {
         $phoneSettingsPage.set(true)
       }
     }

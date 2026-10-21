@@ -2,6 +2,7 @@ import { capabilityScoped, type ProfileScope } from './client'
 
 /** How the phone reaches this backend (`scout_backend/web_routers/phone.py`): Tailscale's HTTPS address. */
 export interface PhonePairing {
+  enable_url?: string
   error?: string
   host?: string
   link: null | string

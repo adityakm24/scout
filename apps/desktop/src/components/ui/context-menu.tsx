@@ -3,6 +3,7 @@ import * as React from 'react'
 
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
+import { IS_PHONE } from '@/platform/phone'
 
 function ContextMenu({ ...props }: React.ComponentProps<typeof ContextMenuPrimitive.Root>) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />
@@ -17,9 +18,14 @@ function ContextMenuPortal({ ...props }: React.ComponentProps<typeof ContextMenu
  * (status bar footer); this attribute is not. */
 export const SCOUT_CONTEXT_MENU_TRIGGER_ATTR = 'data-scout-context-menu-trigger'
 
-function ContextMenuTrigger({ ...props }: React.ComponentProps<typeof ContextMenuPrimitive.Trigger>) {
+function ContextMenuTrigger({ disabled, ...props }: React.ComponentProps<typeof ContextMenuPrimitive.Trigger>) {
   return (
-    <ContextMenuPrimitive.Trigger data-slot="context-menu-trigger" {...props} data-scout-context-menu-trigger="" />
+    <ContextMenuPrimitive.Trigger
+      data-slot="context-menu-trigger"
+      disabled={IS_PHONE || disabled}
+      {...props}
+      data-scout-context-menu-trigger=""
+    />
   )
 }
 

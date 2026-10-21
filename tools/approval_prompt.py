@@ -318,6 +318,7 @@ def request_elicitation_consent(message: str, description: str, *,
         try:
             decision = _gw._await_gateway_decision(
                 session_key, notify_cb, {"command": message, "description": description,
+                                         "allow_permanent": False, "choices": ["once", "deny"],
                                          "pattern_key": "mcp_elicitation",
                                          "pattern_keys": ["mcp_elicitation"], **(payload_extra or {})},
                 surface=surface)
@@ -330,10 +331,10 @@ def request_elicitation_consent(message: str, description: str, *,
             return "cancel"  # nobody answered (timeout / prompt withdrawn) — not a user refusal
         return _consent(decision.get("choice"), "decline")
 
-    # allow_permanent=False: elicitation is a per-call confirmation — no pattern to remember.
+    # allow_permanent=False, allow_session=False: elicitation is a per-call confirmation — no pattern to remember.
     try:
         choice = prompt_dangerous_approval(message, description, timeout_seconds=timeout_seconds,
-                                           allow_permanent=False, title=title)
+                                           allow_permanent=False, allow_session=False, title=title)
     except Exception as exc:
         logger.error("Elicitation CLI prompt failed: %s", exc, exc_info=True)
         return "decline"
