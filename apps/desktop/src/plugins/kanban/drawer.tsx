@@ -1042,7 +1042,7 @@ export function TaskDrawer({
             <ErrorState title={errorMessage} />
           ) : !detail || !task ? (
             <div className="grid h-32 place-items-center">
-              <Loader type="lemniscate-bloom" />
+              <Loader />
             </div>
           ) : (
             <div className="flex min-h-0 flex-1">

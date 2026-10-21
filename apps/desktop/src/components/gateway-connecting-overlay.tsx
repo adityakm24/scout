@@ -1,17 +1,14 @@
 import { useStore } from '@nanostores/react'
 import { useEffect, useRef, useState } from 'react'
 
-import { DecodeText } from '@/components/ui/decode-text'
+import { Loader } from '@/components/ui/loader'
 import { prefersReducedMotion } from '@/hooks/use-media-query'
+import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { $desktopBoot } from '@/store/boot'
 import { $gatewaySwitching } from '@/store/gateway-switch'
 import { guidedOnboardingActive } from '@/store/onboarding-gate'
 import { $gatewayState } from '@/store/session'
-
-// Decode mechanics live in the shared <DecodeText> primitive
-// (components/ui/decode-text.tsx). "CONN" stays legible via prefix={4}.
-const TEXT = 'CONNECTING'
 
 // Exit choreography (ms): text fades down + out, hold, then the overlay fades.
 const TEXT_OUT_MS = 360
@@ -38,6 +35,7 @@ function forcedPreview(): boolean {
 }
 
 export function GatewayConnectingOverlay() {
+  const { t } = useI18n()
   const gatewayState = useStore($gatewayState)
   const boot = useStore($desktopBoot)
   const gatewaySwitching = useStore($gatewaySwitching)
@@ -156,17 +154,15 @@ export function GatewayConnectingOverlay() {
       // in styles.css.
       data-glass-opaque=""
     >
-      <DecodeText
-        active={phase === 'live' && (previewing || connecting)}
+      <div
         className={cn(
-          'pl-[0.4em] text-(--theme-primary) transition duration-300 ease-out',
-          leaving ? 'translate-y-2 opacity-0 saturate-0' : 'translate-y-0 opacity-100 saturate-100'
+          'flex flex-col items-center gap-4 transition duration-300 ease-out',
+          leaving ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
         )}
-        cursor
-        loop
-        prefix={4}
-        text={TEXT}
-      />
+      >
+        <Loader className="size-14 text-(--ui-accent)" label={t.common.connecting} />
+        <p className="m-0 text-sm text-(--ui-text-tertiary)">{t.common.connecting}</p>
+      </div>
     </div>
   )
 }

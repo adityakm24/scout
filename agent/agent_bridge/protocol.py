@@ -39,7 +39,7 @@ MAX_LIST_ITEMS = 10
 MAX_LIST_SUBFIELDS = 8
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
 _HOST_RE = re.compile(r"^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
-_CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
+_CURRENCY_RE = re.compile(r"^[A-Z]{3}( -?\d+(\.\d+)?)?$")
 _CURRENCY_SYMBOLS = {"$": "USD", "US$": "USD", "€": "EUR", "£": "GBP", "₹": "INR", "Rs": "INR", "Rs.": "INR",
                      "¥": "JPY", "₩": "KRW", "A$": "AUD", "C$": "CAD"}
 _ENUM_OPTION_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
@@ -213,59 +213,81 @@ def _as_number(value: Any) -> Optional[float]:
     return None
 
 
+def _clean_short_text(value: Any) -> Any:
+    """Whitespace collapsed and clipped to the limit. Markup and links are not scrubbed: a value
+    carrying them is dropped by ``short_text_ok``, so injected text is never laundered clean."""
+    if not isinstance(value, (str, int, float)) or isinstance(value, bool):
+        return value
+    text = " ".join(str(value).split())
+    return text if len(text) <= SHORT_TEXT_MAX else text[:SHORT_TEXT_MAX - 1].rstrip() + "…"
+
+
+def _clean_currency(value: Any) -> Any:
+    """An ISO code ("USD"), or a price as a page prints it ("$29.99", "₹2,499") as "INR 2499"."""
+    if not isinstance(value, str):
+        return value
+    text = value.strip()
+    code = next((c for sym, c in sorted(_CURRENCY_SYMBOLS.items(), key=lambda kv: -len(kv[0]))
+                 if text.startswith(sym)), None)
+    code = code or (m.group().upper() if (m := re.search(r"\b[A-Za-z]{3}\b", text)) else None)
+    amount = _as_number(text)
+    if amount is None:
+        return _CURRENCY_SYMBOLS.get(text, text.upper())
+    return f"{code or 'USD'} {amount}"
+
+
 def _check_value(name: str, spec: ResultField, value: Any, task: BrowseTask) -> Any:
-    bad = BridgeError(f"result field {name!r} is not a valid {spec.type}")
+    """The value in canonical form, or None when even cleaned it does not fit: one bad value is
+    dropped (never passed through raw) rather than sinking the whole answer."""
     if value is None:
         return None  # a field the agent could not find
     if spec.type == "boolean":
-        if not isinstance(value, bool):
-            raise bad
-    elif spec.type in ("integer", "number"):
+        return value if isinstance(value, bool) else None
+    if spec.type in ("integer", "number"):
         value = _as_number(value)
-        if value is None or abs(value) > 10**15 or (spec.type == "integer" and value != int(value)):
-            raise bad
-        value = int(value) if spec.type == "integer" else value
-    elif spec.type == "enum":
-        if value not in spec.options:
-            raise bad
-    elif spec.type == "currency":
-        if isinstance(value, str):
-            value = _CURRENCY_SYMBOLS.get(value.strip(), value.strip().upper())
-        if not isinstance(value, str) or not _CURRENCY_RE.match(value):
-            raise bad
-    elif spec.type == "date":
+        if value is None or abs(value) > 10**15:
+            return None
+        return int(round(value)) if spec.type == "integer" else value
+    if spec.type == "enum":
+        if isinstance(value, str) and value not in spec.options:
+            value = next((o for o in spec.options if o.lower() == value.strip().lower().replace(" ", "_")), None)
+        return value if value in spec.options else None
+    if spec.type == "currency":
+        value = _clean_currency(value)
+        return value if isinstance(value, str) and _CURRENCY_RE.match(value) else None
+    if spec.type == "date":
         try:
             date.fromisoformat(value)
         except (TypeError, ValueError):
-            raise bad from None
-        if len(value) != 10:
-            raise bad
-    elif spec.type == "datetime":
+            return None
+        return value if len(value) == 10 else None
+    if spec.type == "datetime":
         try:
             datetime.fromisoformat(value)
         except (TypeError, ValueError):
-            raise bad from None
-        if len(value) > 32:
-            raise bad
-    elif spec.type == "url":
+            return None
+        return value if len(value) <= 32 else None
+    if spec.type == "url":
         host = url_host(value) if isinstance(value, str) else ""
-        if not host or len(value) > 2048 or not host_allowed(host, task.allowed_domains):
-            raise BridgeError(f"result field {name!r} is not a URL on an allowed domain")
-    elif spec.type == "short_text":
-        if not short_text_ok(value):
-            raise BridgeError(f"result field {name!r} must be one line of up to {SHORT_TEXT_MAX} characters "
-                              "with no links, markup or braces")
-    elif spec.type == "list":
-        if not isinstance(value, list) or len(value) > MAX_LIST_ITEMS:
-            raise BridgeError(f"result field {name!r} must be a list of at most {MAX_LIST_ITEMS} objects")
+        return value if host and len(value) <= 2048 and host_allowed(host, task.allowed_domains) else None
+    if spec.type == "short_text":
+        value = _clean_short_text(value)
+        return value if short_text_ok(value) else None
+    if spec.type == "list":
+        if not isinstance(value, list):
+            return None
         rows = []
         for row in value:
-            if not isinstance(row, dict) or set(row) - set(spec.items):
-                raise BridgeError(f"each {name!r} item must be an object with only: {', '.join(spec.items)}")
-            checked = {k: _check_value(f"{name}.{k}", spec.items[k], v, task) for k, v in row.items()}
-            rows.append({k: v for k, v in checked.items() if v is not None})
-        return rows
-    return value
+            if not isinstance(row, dict):
+                continue
+            checked = {k: _check_value(f"{name}.{k}", spec.items[k], v, task)
+                       for k, v in row.items() if k in spec.items}
+            if row := {k: v for k, v in checked.items() if v is not None}:
+                rows.append(row)
+            if len(rows) == MAX_LIST_ITEMS:
+                break
+        return rows or None
+    return None
 
 
 def parse_browse_outcome(text: str, task: BrowseTask) -> BrowseOutcome:
@@ -288,11 +310,9 @@ def parse_browse_outcome(text: str, task: BrowseTask) -> BrowseOutcome:
     result_raw = obj.get("result") or {}
     if not isinstance(result_raw, dict):
         raise BridgeError("result must be an object")
-    unknown = set(result_raw) - set(task.result_fields)
-    if unknown:
-        raise BridgeError(f"result has fields the task did not ask for: {', '.join(sorted(unknown))}")
+    # Fields the task did not ask for are ignored; they never cross.
     result = {name: _check_value(name, task.result_fields[name], value, task)
-              for name, value in result_raw.items()}
+              for name, value in result_raw.items() if name in task.result_fields}
     return BrowseOutcome(status, reason, {k: v for k, v in result.items() if v is not None}, needs)
 
 

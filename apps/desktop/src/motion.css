@@ -541,3 +541,54 @@
 .scout-pop-in {
   animation: scout-pop-in 320ms var(--ease-spring) both;
 }
+
+/* Loader (components/ui/loader.tsx): the face breathes while its eyes glance left, right and
+ * back, blinking between looks. One 2.4s cycle; the eyes and face share it so they stay in step. */
+@keyframes scout-loader-look {
+  0%,
+  12% {
+    transform: translateX(0) scaleY(1);
+  }
+  22%,
+  36% {
+    transform: translateX(-3.5px) scaleY(1);
+  }
+  46%,
+  60% {
+    transform: translateX(3.5px) scaleY(1);
+  }
+  68% {
+    transform: translateX(0) scaleY(1);
+  }
+  72% {
+    transform: translateX(0) scaleY(0.12);
+  }
+  76%,
+  100% {
+    transform: translateX(0) scaleY(1);
+  }
+}
+
+@keyframes scout-loader-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.92;
+  }
+  50% {
+    transform: scale(0.94);
+    opacity: 1;
+  }
+}
+
+.scout-loader-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: scout-loader-look 2.4s var(--ease-out-quint) infinite;
+}
+
+.scout-loader-face {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: scout-loader-breathe 2.4s ease-in-out infinite;
+}

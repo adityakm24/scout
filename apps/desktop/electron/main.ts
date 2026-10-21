@@ -2404,7 +2404,13 @@ function emitUpdateProgress(payload) {
   }
 }
 
+// A dev run (`npm run dev`) works on a developer's git checkout: git owns it, never the updater,
+// which would reset a diverged branch to origin and park the work behind a rescue ref.
 async function checkUpdates(opts: { force?: boolean } = {}): Promise<UpdaterStatusWire> {
+  if (DEV_SERVER) {
+    return { supported: false, reason: 'dev-run', fetchedAt: Date.now() }
+  }
+
   // A packaged install delegates to the update owner named by its stamp.
   let strategy: UpdaterStrategy | null = null
 
@@ -3056,6 +3062,10 @@ async function releaseBackendLock(updateRoot: string, tag: string): Promise<{ un
 // Detection (checkUpdates / commit changelog / "N behind") stays in the UI;
 // only this apply action changed.
 async function applyUpdates(): Promise<UpdaterApplyResultWire> {
+  if (DEV_SERVER) {
+    return { ok: false, error: 'dev-run', message: 'Updates are off in a development run; use git.' }
+  }
+
   return updateOperation.apply(async (): Promise<UpdaterApplyResultWire> => {
     const packaged: UpdaterStrategy | null = await resolvePackagedUpdateStrategy()
 

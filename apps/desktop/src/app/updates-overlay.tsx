@@ -197,12 +197,7 @@ function IdleView({
   const u = t.updates
 
   if (!status && checking) {
-    return (
-      <CenteredStatus
-        icon={<Loader className="size-12" label={u.checking} type="lemniscate-bloom" />}
-        title={u.checking}
-      />
-    )
+    return <CenteredStatus icon={<Loader className="size-12" label={u.checking} />} title={u.checking} />
   }
 
   if (!status) {
@@ -499,7 +494,7 @@ function ApplyingView({
   return (
     <div className="grid gap-5 px-6 pb-6 pt-7">
       <div className="flex flex-col items-center gap-3 text-center">
-        <Loader className="size-16" label={label} type="lemniscate-bloom" />
+        <Loader className="size-16" label={label} />
 
         <DialogTitle className="text-center text-xl">{label}</DialogTitle>
         <DialogDescription className="text-center text-sm">{body}</DialogDescription>

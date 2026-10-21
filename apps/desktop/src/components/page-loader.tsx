@@ -24,10 +24,8 @@ export function PageLoader({
       <Loader
         aria-hidden="true"
         className="size-10 text-primary/70"
-        pathSteps={220}
+
         role="presentation"
-        strokeScale={0.72}
-        type="rose-curve"
       />
     </div>
   )

@@ -457,9 +457,7 @@ function Column({
       <header className="mb-1.5 flex h-5 items-center gap-1.5 px-1">
         <span className="size-1.5 rounded-full" style={{ backgroundColor: meta.tone }} />
         <Tip label={columnHelp(k, column.name)}>
-          <span className="cursor-help text-[0.6875rem] font-medium text-(--ui-text-tertiary)">
-            {label}
-          </span>
+          <span className="cursor-help text-[0.6875rem] font-medium text-(--ui-text-tertiary)">{label}</span>
         </Tip>
         <span className="text-[0.625rem] tabular-nums text-(--ui-text-quaternary)">{column.tasks.length}</span>
         <button
@@ -1386,7 +1384,7 @@ export function KanbanBoardPage() {
         </div>
       ) : !filtered ? (
         <div className="grid flex-1 place-items-center">
-          <Loader type="lemniscate-bloom" />
+          <Loader />
         </div>
       ) : total === 0 ? (
         <div className="grid flex-1 place-items-center px-4 text-center">

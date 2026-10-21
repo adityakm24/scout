@@ -811,7 +811,7 @@ function ClarifyToolSinglePending({
   if (loading) {
     return (
       <ClarifyShell aria-label={copy.loadingQuestion} className="my-1.5 grid min-h-12 place-items-center" role="status">
-        <Loader aria-hidden="true" className="size-6 text-(--ui-text-tertiary)" role="presentation" type="rose-curve" />
+        <Loader aria-hidden="true" className="size-6 text-(--ui-text-tertiary)" role="presentation" />
       </ClarifyShell>
     )
   }
@@ -1287,7 +1287,7 @@ function ClarifyToolBatchPending({
   if (questions.length === 0) {
     return (
       <ClarifyShell aria-label={copy.loadingQuestion} className="my-1.5 grid min-h-12 place-items-center" role="status">
-        <Loader aria-hidden="true" className="size-6 text-(--ui-text-tertiary)" role="presentation" type="rose-curve" />
+        <Loader aria-hidden="true" className="size-6 text-(--ui-text-tertiary)" role="presentation" />
       </ClarifyShell>
     )
   }

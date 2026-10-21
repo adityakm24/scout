@@ -23,7 +23,7 @@ export function GuideLoading() {
         {reducedMotion ? (
           <BrandMark aria-hidden="true" className="size-20" />
         ) : (
-          <Loader aria-hidden="true" className="size-24" role="presentation" type="lemniscate-bloom" />
+          <Loader aria-hidden="true" className="size-24" role="presentation" />
         )}
         <p className="text-sm text-muted-foreground">{label}</p>
       </div>

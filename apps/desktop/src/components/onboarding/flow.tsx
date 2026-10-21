@@ -278,9 +278,7 @@ function ConfirmingModelPanel({
         )}
       >
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[0.6875rem] text-muted-foreground">
-            {t.onboarding.defaultModel}
-          </span>
+          <span className="font-mono text-[0.6875rem] text-muted-foreground">{t.onboarding.defaultModel}</span>
         </div>
         <p className="font-mono text-base">
           <GlyphText text={scrambledModel} />
@@ -363,7 +361,7 @@ export function DocsLink({ children, href }: { children: React.ReactNode; href: 
 export function Status({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2.5 py-1 text-sm text-muted-foreground" role="status">
-      <Loader className="size-7" type="lemniscate-bloom" />
+      <Loader className="size-7" />
       {children}
     </div>
   )
