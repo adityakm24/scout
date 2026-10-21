@@ -14,7 +14,7 @@ import { AgentPanel } from '.'
 afterEach(cleanup)
 
 describe('agent panel', () => {
-  it('can be closed from the panel itself, and its tabs share the width', () => {
+  it('can be closed from the panel itself, and its tab labels are never cut short', () => {
     render(
       <MemoryRouter>
         <AgentPanel />
@@ -25,7 +25,8 @@ describe('agent panel', () => {
     expect(closeAgentPanel).toHaveBeenCalledOnce()
 
     for (const tab of screen.getAllByRole('tab')) {
-      expect(tab.className).toContain('flex-1')
+      expect(tab.className).toContain('whitespace-nowrap')
+      expect(tab.className).not.toContain('truncate')
     }
   })
 })

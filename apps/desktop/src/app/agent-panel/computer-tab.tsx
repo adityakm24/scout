@@ -1,5 +1,13 @@
 import { useStore } from '@nanostores/react'
-import { type KeyboardEvent, type MouseEvent, useEffect, useRef, useState, type WheelEvent } from 'react'
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+  useEffect,
+  useRef,
+  useState
+} from 'react'
 import { createPortal } from 'react-dom'
 
 import {
@@ -10,7 +18,7 @@ import {
   viewerHash
 } from '@/api/browser-screen'
 import { useI18n } from '@/i18n'
-import { ArrowsMaximize, ArrowsMinimize, Eye, Pointer } from '@/lib/icons'
+import { ArrowsMaximize, ArrowsMinimize, Eye, Keyboard, Pointer } from '@/lib/icons'
 import { resolveSiblingWsUrl } from '@/lib/sibling-ws-url'
 import { cn } from '@/lib/utils'
 import { notifyError } from '@/store/notifications'
@@ -21,6 +29,10 @@ import { type AgentCursor, BrowserFrame, type BrowserTab } from './browser-frame
 const POLL_MS = 3000
 const MOVE_THROTTLE_MS = 40
 const BUTTONS: Record<number, string> = { 0: 'left', 1: 'middle', 2: 'right' }
+// A finger that moves further than this is scrolling the page, not tapping it.
+const TAP_SLOP_PX = 8
+// Keys a phone's on-screen keyboard reports as keydown but never as text.
+const EDIT_KEYS = new Set(['Backspace', 'Enter', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'])
 
 interface Frame {
   data: string
@@ -58,6 +70,10 @@ export function ComputerTab() {
   const [full, setFull] = useState(false)
   const [tabs, setTabs] = useState<BrowserTab[]>([])
   const [cursor, setCursor] = useState<AgentCursor | null>(null)
+  // A finger on the screen: a tap clicks, a drag scrolls the page under it.
+  const touch = useRef<{ moved: boolean; x: number; y: number } | null>(null)
+  const keyboardInput = useRef<HTMLInputElement>(null)
+  const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
   const inControl = Boolean(viewer && lease?.holder === 'human' && lease.viewer_hash === viewer.hash)
 
@@ -150,7 +166,7 @@ export function ComputerTab() {
     }
   }
 
-  const point = (e: MouseEvent<HTMLImageElement> | WheelEvent<HTMLImageElement>) => {
+  const point = (e: { clientX: number; clientY: number; currentTarget: HTMLElement }) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const width = frame?.width || 1280
     const height = frame?.height || 800
@@ -184,6 +200,85 @@ export function ComputerTab() {
       clickCount: type === 'mouseMoved' ? 0 : e.detail || 1,
       modifiers: modifiers(e)
     })
+  }
+
+  const pointerDown = (e: PointerEvent<HTMLImageElement>) => {
+    if (e.pointerType === 'mouse') {
+      return mouse('mousePressed')(e)
+    }
+
+    if (inControl) {
+      e.currentTarget.setPointerCapture(e.pointerId)
+      touch.current = { moved: false, x: e.clientX, y: e.clientY }
+    }
+  }
+
+  const pointerMove = (e: PointerEvent<HTMLImageElement>) => {
+    if (e.pointerType === 'mouse') {
+      return mouse('mouseMoved')(e)
+    }
+
+    const start = touch.current
+
+    if (!inControl || !start) {
+      return
+    }
+
+    const dx = e.clientX - start.x
+    const dy = e.clientY - start.y
+
+    if (!start.moved && Math.hypot(dx, dy) < TAP_SLOP_PX) {
+      return
+    }
+
+    const now = performance.now()
+
+    if (now - lastMove.current < MOVE_THROTTLE_MS) {
+      return
+    }
+
+    lastMove.current = now
+    // The page follows the finger: dragging up scrolls down, scaled to the browser's pixels.
+    const scale = (frame?.width || 1280) / e.currentTarget.getBoundingClientRect().width
+    send({ type: 'wheel', ...point(e), deltaX: -dx * scale, deltaY: -dy * scale })
+    touch.current = { moved: true, x: e.clientX, y: e.clientY }
+  }
+
+  const pointerUp = (e: PointerEvent<HTMLImageElement>) => {
+    if (e.pointerType === 'mouse') {
+      return mouse('mouseReleased')(e)
+    }
+
+    const start = touch.current
+    touch.current = null
+
+    if (inControl && start && !start.moved) {
+      const at = { ...point(e), button: 'left', clickCount: 1, modifiers: 0 }
+      send({ type: 'mousePressed', ...at })
+      send({ type: 'mouseReleased', ...at })
+    }
+  }
+
+  // The on-screen keyboard: its text goes in as typed text, its edit keys as key presses.
+  const typed = (e: FormEvent<HTMLInputElement>) => {
+    const text = e.currentTarget.value
+
+    if (text) {
+      send({ type: 'insertText', text })
+    }
+
+    e.currentTarget.value = ''
+  }
+
+  const editKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    e.stopPropagation()
+
+    if (EDIT_KEYS.has(e.key)) {
+      e.preventDefault()
+      const press = { key: e.key, code: e.code, keyCode: e.keyCode, text: e.key === 'Enter' ? '\r' : '', modifiers: 0 }
+      send({ type: 'keyDown', ...press })
+      send({ type: 'keyUp', ...press })
+    }
   }
 
   const key = (type: 'keyDown' | 'keyUp') => (e: KeyboardEvent<HTMLDivElement>) => {
@@ -241,13 +336,15 @@ export function ComputerTab() {
         className={cn(
           'block select-none',
           'h-auto w-full',
-          size === 'full' && !inControl && 'cursor-default'
+          size === 'full' && !inControl && 'cursor-default',
+          size === 'full' && inControl && 'touch-none'
         )}
         draggable={false}
         onContextMenu={e => inControl && e.preventDefault()}
-        onMouseDown={size === 'full' ? mouse('mousePressed') : undefined}
-        onMouseMove={size === 'full' ? mouse('mouseMoved') : undefined}
-        onMouseUp={size === 'full' ? mouse('mouseReleased') : undefined}
+        onPointerCancel={() => (touch.current = null)}
+        onPointerDown={size === 'full' ? pointerDown : undefined}
+        onPointerMove={size === 'full' ? pointerMove : undefined}
+        onPointerUp={size === 'full' ? pointerUp : undefined}
         onWheel={e =>
           size === 'full' && inControl && send({ type: 'wheel', ...point(e), deltaX: e.deltaX, deltaY: e.deltaY })
         }
@@ -255,10 +352,7 @@ export function ComputerTab() {
       />
     ) : (
       <div
-        className={cn(
-          'flex aspect-[16/10] items-center justify-center text-xs text-white/50',
-          'w-full bg-[#202124]'
-        )}
+        className={cn('flex aspect-[16/10] items-center justify-center text-xs text-white/50', 'w-full bg-[#202124]')}
       >
         {copy.connecting}
       </div>
@@ -288,7 +382,7 @@ export function ComputerTab() {
             <div
               aria-label={copy.caption}
               aria-modal="true"
-              className="fixed inset-0 z-[1300] flex flex-col bg-[#141414] outline-none"
+              className="fixed inset-x-0 top-0 z-[1300] flex h-(--phone-viewport-height,100dvh) flex-col bg-[#141414] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] outline-none"
               onKeyDown={e => {
                 if (e.key === 'Escape' && !inControl) {
                   closeFull()
@@ -314,7 +408,7 @@ export function ComputerTab() {
                   <ArrowsMinimize size={18} />
                 </button>
               </div>
-              <div className="flex min-h-0 flex-1 items-center justify-center px-10">
+              <div className="flex min-h-0 flex-1 items-center justify-center px-3 sm:px-10">
                 <div className="w-full max-w-[min(100%,calc((100vh-12rem)*1.6))] overflow-hidden rounded-xl shadow-2xl">
                   <BrowserFrame cursor={cursor} interactive={inControl} onCommand={send} tabs={tabs}>
                     {stream('full')}
@@ -322,7 +416,7 @@ export function ComputerTab() {
                 </div>
               </div>
               <div className="flex shrink-0 justify-center py-5">
-                <div className="flex items-center gap-1 rounded-full bg-white p-1 pl-4 text-sm text-[#3a3a3a] shadow-xl">
+                <div className="relative flex items-center gap-1 rounded-full bg-white p-1 pl-4 text-sm text-[#3a3a3a] shadow-xl">
                   <span className="flex items-center gap-2 pr-2">
                     {inControl ? <Pointer size={16} /> : <Eye size={16} />}
                     {inControl ? copy.youreInControl : copy.watching}
@@ -332,11 +426,36 @@ export function ComputerTab() {
                     disabled={!viewer}
                     onClick={() => void toggleControl()}
                     // Fixed light/dark pair: the pill sits on the dark viewer whatever the app theme is.
-                    style={inControl ? { background: '#ececec', color: '#1f1f1f' } : { background: '#161616', color: '#fff' }}
+                    style={
+                      inControl ? { background: '#ececec', color: '#1f1f1f' } : { background: '#161616', color: '#fff' }
+                    }
                     type="button"
                   >
                     {inControl ? copy.stop : copy.takeOver}
                   </button>
+                  {inControl && coarse ? (
+                    <button
+                      aria-label={copy.keyboard}
+                      className="grid size-8 place-items-center rounded-full transition-colors hover:bg-black/5"
+                      onClick={() => keyboardInput.current?.focus()}
+                      type="button"
+                    >
+                      <Keyboard size={17} />
+                    </button>
+                  ) : null}
+                  {/* Off-screen field that raises the phone's keyboard; what is typed goes to the page. */}
+                  <input
+                    aria-hidden
+                    autoCapitalize="off"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    className="pointer-events-none absolute bottom-0 left-1/2 size-px text-base opacity-0"
+                    onInput={typed}
+                    onKeyDown={editKey}
+                    onKeyUp={e => e.stopPropagation()}
+                    ref={keyboardInput}
+                    tabIndex={-1}
+                  />
                 </div>
               </div>
             </div>,

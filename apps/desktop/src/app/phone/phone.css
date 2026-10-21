@@ -26,8 +26,8 @@
 }
 
 /* The desktop's window chrome has no place on a phone: the titlebar clusters, the pane tab
-   strip and the sidebar (the Chats list replaces it). */
-:root[data-phone] :is([data-titlebar-cluster], [data-panel-header], [data-slot='sidebar']) {
+   strip, a minimized pane's side rail and the sidebar (the Chats list replaces it). */
+:root[data-phone] :is([data-titlebar-cluster], [data-panel-header], [data-slot='pane-rail'], [data-slot='sidebar']) {
   display: none !important;
 }
 

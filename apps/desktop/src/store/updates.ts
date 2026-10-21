@@ -531,10 +531,14 @@ export interface UpdateCheckOptions {
 // running for a different target, so that target isn't silently dropped.
 let backendCheckPendingKey: string | undefined
 
+// A development renderer (vite) runs against a developer's git checkout: git owns it. Never offer an
+// update there; applying one resets a diverged branch to origin (electron/main.ts does the same).
+const DEV_RUN = import.meta.env.DEV && import.meta.env.MODE !== 'test'
+
 export async function checkBackendUpdates({
   force = false
 }: UpdateCheckOptions = {}): Promise<DesktopUpdateStatus | null> {
-  if (!isRemoteMode()) {
+  if (!isRemoteMode() || DEV_RUN) {
     return $backendUpdateStatus.get()
   }
 
@@ -592,7 +596,7 @@ export async function checkBackendUpdates({
 export async function checkUpdates({ force = false }: UpdateCheckOptions = {}): Promise<DesktopUpdateStatus | null> {
   const bridge = window.scoutDesktop?.updates
 
-  if (!bridge || $updateChecking.get()) {
+  if (!bridge || DEV_RUN || $updateChecking.get()) {
     return $updateStatus.get()
   }
 

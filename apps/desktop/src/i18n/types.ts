@@ -128,6 +128,7 @@ export interface Translations {
       open: string
       stop: string
       takeOver: string
+      keyboard: string
       takeOverFailed: string
       watching: string
       youreInControl: string

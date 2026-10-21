@@ -509,6 +509,7 @@ export function TreeGroup({
               // Strip line faces the content the zone collapsed away from.
               railSide === 'right' ? PANE_TAB_STRIP_LINE_LEFT : PANE_TAB_STRIP_LINE_RIGHT
             )}
+            data-slot="pane-rail"
             onClick={() => restoreTreePane(activeId)}
             title={t.zones.restore}
           >

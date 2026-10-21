@@ -66,6 +66,7 @@ export const en: Translations = {
       open: 'Open',
       stop: 'Stop',
       takeOver: 'Take control',
+      keyboard: 'Keyboard',
       takeOverFailed: 'Could not take control',
       watching: 'Watching',
       youreInControl: "You're in control"
