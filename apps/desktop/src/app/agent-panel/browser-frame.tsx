@@ -102,10 +102,11 @@ export function BrowserFrame({ children, compact = false, cursor, interactive, o
           >
             <Globe className="shrink-0 opacity-60" size={compact ? 11 : 13} />
             <span className="min-w-0 flex-1 truncate">{tab.title || displayUrl(tab.url) || 'New Tab'}</span>
-            {interactive && !compact ? (
+            {compact ? null : (
               <button
                 aria-label="Close tab"
-                className="grid size-4 shrink-0 place-items-center rounded-full opacity-0 transition-opacity group-hover/tab:opacity-100 hover:bg-black/10"
+                className="grid size-4 shrink-0 place-items-center rounded-full opacity-0 transition-opacity enabled:group-hover/tab:opacity-100 enabled:hover:bg-black/10 disabled:invisible"
+                disabled={!interactive}
                 onClick={event => {
                   event.stopPropagation()
                   onCommand({ type: 'close_tab', id: tab.id })
@@ -114,14 +115,20 @@ export function BrowserFrame({ children, compact = false, cursor, interactive, o
               >
                 <X size={11} />
               </button>
-            ) : null}
+            )}
           </div>
         ))}
-        {interactive && !compact ? (
-          <button aria-label="New tab" className={cn(button, 'mb-0.5 size-7')} onClick={() => onCommand({ type: 'new_tab' })} type="button">
+        {compact ? null : (
+          <button
+            aria-label="New tab"
+            className={cn(button, 'mb-0.5 size-7')}
+            disabled={!interactive}
+            onClick={() => onCommand({ type: 'new_tab' })}
+            type="button"
+          >
             <Plus size={15} />
           </button>
-        ) : null}
+        )}
       </div>
       {/* Toolbar */}
       <div className={cn('flex items-center gap-1 bg-white px-2', compact ? 'h-7' : 'h-10')}>
