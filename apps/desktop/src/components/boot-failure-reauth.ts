@@ -15,6 +15,18 @@ export function isRemoteReauthError(error: string | null | undefined): boolean {
   )
 }
 
+// The socket never opened: HTTP can still look healthy (public /api/status), so
+// quiet recovery's reload loop just flickers Connecting ↔ this error.
+export function isGatewayHandshakeError(error: string | null | undefined): boolean {
+  const text = String(error || '').toLowerCase()
+
+  return (
+    text.includes('websocket error before open') ||
+    text.includes('no websocket open within') ||
+    text.includes('websocket closed during handshake')
+  )
+}
+
 /**
  * After a healthy cold boot, main may still re-emit boot-progress errors when a
  * post-boot startScout()/ticket mint fails (liveness reset → rebuild, wake

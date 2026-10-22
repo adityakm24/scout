@@ -526,7 +526,10 @@ def _render_call_tool_result(result, server_name: str) -> str:
     used. ``structuredContent`` fills ``result`` when the blocks rendered effectively empty
     (structuredContent-only servers); ``_meta`` minus reserved keys is always surfaced."""
     if mcp_field(result, "is_error", "isError", False):
-        return tool_error(_sanitize_error(_truncate_mcp_text_result(_error_result_text(result) or "MCP tool returned an error")))
+        from tools.mcp_tool_spending import annotate_merchant_error
+
+        raw = _sanitize_error(_truncate_mcp_text_result(_error_result_text(result) or "MCP tool returned an error"))
+        return tool_error(annotate_merchant_error(server_name, raw))
     text_result, usable_parts = _render_content_blocks(result, server_name)
     structured = _capped_structured_content(result)
     meta = _strip_reserved_meta_keys(mcp_field(result, "meta", "meta"))

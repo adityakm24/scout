@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { isRemoteReauthError, shouldApplyPostBootProgressError } from './boot-failure-reauth'
+import {
+  isGatewayHandshakeError,
+  isRemoteReauthError,
+  shouldApplyPostBootProgressError
+} from './boot-failure-reauth'
 
 describe('isRemoteReauthError', () => {
   it('recognizes auth-shaped boot errors', () => {
@@ -12,6 +16,26 @@ describe('isRemoteReauthError', () => {
   it('ignores non-auth boot errors and nullish', () => {
     expect(isRemoteReauthError('Scout background process exited during startup.')).toBe(false)
     expect(isRemoteReauthError(null)).toBe(false)
+  })
+})
+
+describe('isGatewayHandshakeError', () => {
+  it('recognizes a socket that failed before it opened', () => {
+    expect(
+      isGatewayHandshakeError('Could not connect to Scout gateway (WebSocket error before open)')
+    ).toBe(true)
+    expect(isGatewayHandshakeError('Could not connect to Scout gateway (no WebSocket open within 15000 ms)')).toBe(
+      true
+    )
+    expect(
+      isGatewayHandshakeError('Could not connect to Scout gateway (WebSocket closed during handshake: code 4401)')
+    ).toBe(true)
+  })
+
+  it('ignores other boot errors', () => {
+    expect(isGatewayHandshakeError('Scout background process exited during startup.')).toBe(false)
+    expect(isGatewayHandshakeError('Your remote gateway session has expired.')).toBe(false)
+    expect(isGatewayHandshakeError(null)).toBe(false)
   })
 })
 

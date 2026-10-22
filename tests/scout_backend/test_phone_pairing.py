@@ -28,6 +28,36 @@ def _tailnet(monkeypatch, *, running=True, served_port=None):
     monkeypatch.setattr(phone, "_server", lambda: SimpleNamespace(_SESSION_TOKEN="tok/en+"))
 
 
+def test_serve_forwards_tls_terminated_tcp_so_phone_websockets_work():
+    assert phone._serve_args("/usr/bin/tailscale", 9119) == (
+        "/usr/bin/tailscale",
+        "serve",
+        "--bg",
+        "--yes",
+        "--tls-terminated-tcp",
+        "443",
+        "tcp://127.0.0.1:9119",
+    )
+
+
+def test_tls_terminated_tcp_forward_is_already_served(monkeypatch):
+    def run(*args):
+        if args[1:3] == ("status", "--json"):
+            out = {"BackendState": "Running", "Self": {"DNSName": "mac.tail1.ts.net."}}
+            return subprocess.CompletedProcess(args, 0, json.dumps(out), "")
+        forward = {"TCP": {"443": {"TCPForward": "127.0.0.1:9119", "TerminateTLS": "mac.tail1.ts.net"}}}
+        return subprocess.CompletedProcess(args, 0, json.dumps(forward), "")
+
+    monkeypatch.setattr(phone, "_tailscale", lambda: "/usr/bin/tailscale")
+    monkeypatch.setattr(phone, "_run", run)
+    monkeypatch.setattr(phone, "_server", lambda: SimpleNamespace(_SESSION_TOKEN="tok/en+"))
+
+    out = phone._pairing(_request())
+
+    assert out["tailscale"] == "ready"
+    assert out["link"] == "https://mac.tail1.ts.net/app/?token=tok%2Fen%2B"
+
+
 def test_the_link_is_the_tailnet_https_address_of_this_backend(monkeypatch):
     _tailnet(monkeypatch, served_port=9119)
 

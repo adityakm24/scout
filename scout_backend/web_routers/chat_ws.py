@@ -11,7 +11,6 @@ from typing import Optional
 from fastapi import APIRouter, WebSocket
 
 from scout_backend.web_deps import late
-from scout_backend.web_server_chat import _ws_auth_ok, _ws_request_is_allowed
 
 _log = logging.getLogger("scout_backend.web_server")
 router = APIRouter()
@@ -79,10 +78,20 @@ async def _ws_gate(ws: WebSocket, kind: str) -> Optional[tuple[str, str, str]]:
 async def _close_unless_sidecar_allowed(ws: WebSocket) -> bool:
     """Pre-accept gates for the /api/ws gateway:
     4403 when the request isn't allowed, 4401 on bad auth."""
-    if not _ws_auth_ok(ws):
+    peer = ws.client.host if ws.client else "?"
+    auth_reason, cred = _ws_auth_reason(ws)
+    if auth_reason is not None:
+        _log.warning("ws rejected reason=%s cred=%s peer=%s", auth_reason, cred, peer)
         await ws.close(code=4401)
         return False
-    if not _ws_request_is_allowed(ws):
+    host_origin_reason = _ws_host_origin_reason(ws)
+    if host_origin_reason is not None:
+        _log.warning("ws rejected reason=%s cred=%s peer=%s", host_origin_reason, cred, peer)
+        await ws.close(code=4403)
+        return False
+    client_reason = _ws_client_reason(ws)
+    if client_reason is not None:
+        _log.warning("ws rejected reason=%s cred=%s peer=%s", client_reason, cred, peer)
         await ws.close(code=4403)
         return False
     return True

@@ -11,7 +11,7 @@ import { useI18n } from '@/i18n'
 import { FileText, Loader2, RefreshCw } from '@/lib/icons'
 import { $desktopBoot } from '@/store/boot'
 
-import { isRemoteReauthError } from './boot-failure-reauth'
+import { isGatewayHandshakeError, isRemoteReauthError } from './boot-failure-reauth'
 import { useQuietRecovery } from './boot-quiet-recovery'
 
 // Recovery surface for a backend that never came up or went away. The app has one hosted
@@ -76,9 +76,13 @@ export function BootFailureOverlay() {
   }, [])
 
   // A dropped backend usually comes back on its own: reconnect quietly first, and bring up this
-  // screen only when it stays down. A rejected session can't heal that way.
+  // screen only when it stays down. A rejected session or a handshake that never opens
+  // (phone WebSocket 403 while /api/status still answers) can't heal that way.
   const { quiet } = useQuietRecovery(
-    Boolean(boot.error) && !boot.running && !isRemoteReauthError(boot.error),
+    Boolean(boot.error) &&
+      !boot.running &&
+      !isRemoteReauthError(boot.error) &&
+      !isGatewayHandshakeError(boot.error),
     restart
   )
 

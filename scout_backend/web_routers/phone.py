@@ -3,8 +3,10 @@ reaches this backend at.
 
 The phone loads Scout's screens from this backend (`/app/`, web_server_dashboard.py) and needs HTTPS
 (iOS refuses plain HTTP to anything but the phone itself), so the address is Tailscale's: `tailscale
-serve` puts the backend on the owner's tailnet at https://<machine>.<tailnet>.ts.net with a real
-certificate, reachable from their phone anywhere and from nobody else.
+serve --tls-terminated-tcp 443` puts the backend on the owner's tailnet at
+https://<machine>.<tailnet>.ts.net with a real certificate, reachable from their phone anywhere and
+from nobody else. HTTPS reverse-proxy Serve advertises HTTP/2 and drops WebSocket CONNECT (Tailscale
+#20882), so the phone's live socket never opens; TLS-terminated TCP keeps HTTP/1.1.
 """
 
 from __future__ import annotations
@@ -78,11 +80,21 @@ def _text(value: str | bytes | None) -> str:
     return value.decode("utf-8", "replace") if isinstance(value, bytes) else value
 
 
+def _serve_args(cli: str, port: int) -> tuple[str, ...]:
+    """TLS-terminated TCP to this backend: HTTPS on the tailnet, HTTP/1.1 to loopback.
+
+    `tailscale serve <port>` is an HTTP/2 reverse proxy. iOS WKWebView then uses RFC 8441
+    WebSocket CONNECT, which Serve does not bridge, and the phone sits on
+    "WebSocket error before open".
+    """
+    return (cli, "serve", "--bg", "--yes", "--tls-terminated-tcp", "443", f"tcp://127.0.0.1:{port}")
+
+
 def _serve(cli: str, port: int) -> subprocess.CompletedProcess:
     """Publish this port. Return as soon as Tailscale says Serve is off, instead of
     waiting out the prompt it leaves open until someone enables it in the admin console.
     """
-    args = (cli, "serve", "--bg", "--yes", str(port))
+    args = _serve_args(cli, port)
     proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True)
     chunks: list[str] = []
     lock = threading.Lock()
@@ -186,7 +198,7 @@ async def phone_pairing(request: Request):
 
 @router.post("/api/phone/serve")
 async def phone_serve(request: Request):
-    """Put this backend on the tailnet over HTTPS (`tailscale serve --bg <port>`), then pair."""
+    """Put this backend on the tailnet over HTTPS (`tailscale serve --tls-terminated-tcp 443`), then pair."""
     def _publish():
         cli = _tailscale()
         if cli is None:

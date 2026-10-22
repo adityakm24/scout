@@ -30,9 +30,10 @@ shows the user each order on a card they must approve before it is placed.
 
 ## How to Run
 
-The tools are named `mcp__swiggy_instamart__<tool>`. When they are not in your tool list they are
-deferred: load schemas with `tool_describe` and invoke with `tool_call`. They are never in the
-codebase or on disk, so never use `search_files` or `terminal` to look for them.
+Call `mcp__swiggy_instamart__get_addresses` directly — it stays on the live tool list. Other
+Instamart tools may be behind `tool_describe` / `tool_call`. They are never in the codebase or
+on disk: never use `search_files` or `terminal`. Missing from the list is not a restricted
+environment — invoke with `tool_call`, do not tell the user the tools are inaccessible.
 
 ## Quick Reference
 
@@ -63,6 +64,7 @@ codebase or on disk, so never use `search_files` or `terminal` to look for them.
 
 ## Pitfalls
 
+- Never invent an address id. Call `get_addresses` and use the id it returns.
 - Swiggy asks users not to have the Swiggy app open while ordering through the connector; the
   two sessions can conflict. Mention it if an order step fails unexpectedly.
 - Never retry an order the user cancelled on the order card, or one that failed, unless they ask.

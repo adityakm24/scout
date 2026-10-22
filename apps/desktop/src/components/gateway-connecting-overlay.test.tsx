@@ -146,6 +146,29 @@ describe('connecting overlay vs recovery surface', () => {
     expect(isRecoveryShown()).toBe(false)
   })
 
+  it('handshake errors skip quiet recovery so Connecting does not flicker with the error screen', async () => {
+    setGatewayState('error')
+    $desktopBoot.set({
+      ...$desktopBoot.get(),
+      error: 'Could not connect to Scout gateway (WebSocket error before open)',
+      running: false,
+      visible: true
+    })
+
+    await act(async () => {
+      render(
+        <>
+          <GatewayConnectingOverlay />
+          <BootFailureOverlay />
+        </>
+      )
+    })
+
+    expect(isConnectingShown()).toBe(false)
+    expect(screen.queryByText(/reconnecting to scout/i)).toBeNull()
+    expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy()
+  })
+
   it('FIX: confirmed reauth boot.error still surfaces the recovery overlay (not CONNECTING)', async () => {
     // Transport blips no longer set boot.error (toast + background retry).
     // Confirmed OAuth reauth still does — and that recovery surface must win

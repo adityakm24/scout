@@ -5,8 +5,10 @@
 // "not available here" through the defaults at the bottom instead of throwing.
 //
 // The backend is the page's own origin (the dev server proxies /api to it, see vite.config.ts);
-// the session token arrives once, from the native shell (`window.__SCOUT_REMOTE__`) or a
-// `?token=` link, and is kept for this origin so a reload does not need it again.
+// the session token arrives from this backend's HTML (`window.__SCOUT_SESSION_TOKEN__`), the
+// native shell (`window.__SCOUT_REMOTE__`), or a `?token=` link, and is kept for this origin
+// so a reload does not need it again. The served token wins: a backend restart mints a new
+// one, and a stale pairing token would 403 /api/ws while public /api/status still looks up.
 
 import type { ScoutApiRequest, ScoutConnection } from '@/global'
 
@@ -21,6 +23,8 @@ declare global {
   interface Window {
     /** Set by the phone app's native shell before the page loads. */
     __SCOUT_REMOTE__?: Partial<RemoteConfig>
+    /** Injected into `/app/` HTML by this backend (scout_backend/web_server_dashboard.py). */
+    __SCOUT_SESSION_TOKEN__?: string
   }
 }
 
@@ -28,6 +32,16 @@ const TOKEN_KEY = 'scout.remote.token'
 
 /** Dispatched on `window` by the phone shell with a chat's stored id as `detail`. */
 export const FOCUS_SESSION_EVENT = 'scout:focus-session'
+
+/** Live token this backend served wins over a stale native pairing token. */
+export function pickRemoteSessionToken(parts: {
+  link?: null | string
+  native?: string
+  served?: string
+  stored?: null | string
+}): string {
+  return parts.served || parts.native || parts.link || parts.stored || ''
+}
 
 function readToken(): string {
   const url = new URL(window.location.href)
@@ -39,17 +53,31 @@ function readToken(): string {
     window.history.replaceState(null, '', url.toString())
   }
 
-  const token = window.__SCOUT_REMOTE__?.token || fromLink || ''
+  const served = typeof window.__SCOUT_SESSION_TOKEN__ === 'string' ? window.__SCOUT_SESSION_TOKEN__ : ''
+  let stored: null | string = null
+
+  try {
+    stored = window.localStorage.getItem(TOKEN_KEY)
+  } catch {
+    stored = null
+  }
+
+  const token = pickRemoteSessionToken({
+    link: fromLink,
+    native: window.__SCOUT_REMOTE__?.token,
+    served,
+    stored
+  })
 
   try {
     if (token) {
       window.localStorage.setItem(TOKEN_KEY, token)
     }
-
-    return token || window.localStorage.getItem(TOKEN_KEY) || ''
   } catch {
-    return token
+    // Private mode / blocked storage: the in-memory token still authenticates this load.
   }
+
+  return token
 }
 
 function remoteConfig(): RemoteConfig {

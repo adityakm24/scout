@@ -133,6 +133,15 @@ def _core_tool_names() -> frozenset[str]:
 # answers the user's install request with a tool_search round trip.
 _DIRECT_SURFACE_TOOLSETS = frozenset({"desktop_ui", "project", "setup"})
 
+# Merchant address tools stay on the live schema. Deferred, a small model treats
+# "not in the tool list" as a restricted environment, uses ``terminal``, and invents
+# Address ID 001 from the user's words instead of calling the MCP server.
+_EAGER_MCP_ADDRESS_SUFFIXES = (
+    "list_saved_addresses",
+    "select_saved_address",
+    "get_addresses",
+)
+
 # Event-triggered tools deferred BY DEFAULT (a catalog stub suffices). Keep the curated
 # list in DEFAULT_CONFIG so config discovery and runtime behavior cannot drift. An explicit
 # ``defer`` list replaces this wholesale ([] = everything eager). ``clarify`` is deliberately
@@ -144,7 +153,8 @@ _DEFAULT_DEFERRED_TOOLS = frozenset(DEFAULT_CONFIG["tools"]["tool_search"]["defe
 def is_deferrable_tool_name(name: str, defer_tools: Optional[frozenset] = None) -> bool:
     """True if a tool is *eligible* for deferral: named in ``defer_tools`` (curated set or
     user override), OR an MCP tool, OR neither core nor a session-gated GUI surface (i.e. a
-    plugin tool). Bridge names never defer."""
+    plugin tool). Bridge names never defer. Merchant address list/select tools stay eager
+    even on ``mcp-*`` toolsets so the model can pick a saved home without inventing an id."""
     if name in BRIDGE_TOOL_NAMES:
         return False
     if defer_tools is not None and name in defer_tools:
@@ -152,8 +162,11 @@ def is_deferrable_tool_name(name: str, defer_tools: Optional[frozenset] = None) 
     if name in _core_tool_names():
         return False
     toolset = _registry_toolset(name)  # None (unregistered/malformed) never defers
-    return toolset is not None and (
-        toolset.startswith("mcp-") or toolset not in _DIRECT_SURFACE_TOOLSETS)
+    if toolset is None:
+        return False
+    if toolset.startswith("mcp-") and name.endswith(_EAGER_MCP_ADDRESS_SUFFIXES):
+        return False
+    return toolset.startswith("mcp-") or toolset not in _DIRECT_SURFACE_TOOLSETS
 
 
 def _tool_def_names(tool_defs: Iterable[Dict[str, Any]]) -> Iterable[str]:

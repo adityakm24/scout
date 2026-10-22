@@ -8,7 +8,10 @@ desktop feature exists on the phone without a second UI. Do not rebuild desktop 
   turns into the `window.scoutDesktop` bridge Electron's preload normally provides.
 - Phone-only abilities are offered to the page as `window.scoutNative.request(kind, payload)`
   (handled in `ScoutScreen.handle`): `location`, `notify`, `activity`, `watch`, `take-focus`,
-  `unpair`. Add a kind there, not a new channel.
+  `unpair`, `ws-open`, `ws-send`, `ws-close`. Add a kind there, not a new channel.
+  The page's `WebSocket` is replaced by a native HTTP/1.1 socket (`src/gateway-ws.ts`): Tailscale
+  Serve's HTTPS front speaks HTTP/2 and does not bridge WebSocket CONNECT, so WKWebView `wss://`
+  fails before open.
 - A new pairing remounts `ScoutScreen` (keyed by address + token): a WebView whose `source` is
   unchanged would keep the old token and sit on "Connecting".
 - The page owns layout; never focus inputs or open tiles/windows from code on a phone

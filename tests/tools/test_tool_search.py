@@ -166,7 +166,49 @@ class TestClassification:
         # computer_use IS in the curated defer set → behind the bridge.
         assert "computer_use" not in names
 
+    def test_merchant_address_tools_stay_eager_when_mcp_defers(self):
+        """list_saved_addresses / select_saved_address stay on the live schema.
 
+        Deferred, a small model treats "not in the tool list" as a restricted
+        environment, uses terminal, and invents Address ID 001 from chat.
+        """
+        from tools.registry import discover_builtin_tools, registry
+        from tools.tool_search import (
+            BRIDGE_TOOL_NAMES,
+            ToolSearchConfig,
+            assemble_tool_defs,
+            is_deferrable_tool_name,
+        )
+
+        discover_builtin_tools()
+        listed = "mcp__zepto__list_saved_addresses"
+        select = "mcp__zepto__select_saved_address"
+        search = "mcp__zepto__search_products"
+        instamart = "mcp__swiggy_instamart__get_addresses"
+        for name in (listed, select, search, instamart):
+            registry.register(
+                name=name,
+                handler=lambda args, **kw: "{}",
+                schema=_td(name, name)["function"],
+                toolset=("mcp-swiggy-instamart" if name == instamart else "mcp-zepto"),
+                override=True,
+            )
+
+        assert not is_deferrable_tool_name(listed)
+        assert not is_deferrable_tool_name(select)
+        assert not is_deferrable_tool_name(instamart)
+        assert is_deferrable_tool_name(search)
+
+        assembled = assemble_tool_defs(
+            [_td(name, name) for name in (listed, select, search, instamart, "terminal")],
+            context_length=200_000,
+            config=ToolSearchConfig.from_raw({"enabled": "on"}),
+        )
+        names = {td["function"]["name"] for td in assembled.tool_defs}
+        assert assembled.activated
+        assert {listed, select, instamart, "terminal"} <= names
+        assert BRIDGE_TOOL_NAMES <= names
+        assert search not in names
 
     def test_classify_keeps_unknown_in_visible(self):
         """A tool we can't classify stays visible — never silently dropped.

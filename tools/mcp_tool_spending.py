@@ -74,6 +74,54 @@ def spending_entry(server_name: str):
     return by_name.get(server_name) or by_url.get(str(config.get("url") or "").rstrip("/"))
 
 
+def _is_zepto(server_name: str) -> bool:
+    """True for the Zepto connector, including a catalog install under another config name."""
+    if server_name == "zepto":
+        return True
+    entry = spending_entry(server_name)
+    if entry is not None and getattr(entry, "name", "") == "zepto":
+        return True
+    return "mcp.zepto.co.in" in str((_server_config(server_name) or {}).get("url") or "")
+
+
+def annotate_merchant_error(server_name: str, error: str) -> str:
+    """Keep Zepto's error and name the call that actually unblocks an order.
+
+    Zepto's own ``Store not selected`` text points at ``get_location_serviceability``, which
+    a phone GPS reading will satisfy — and then the cart is for wherever the user is standing,
+    not the saved address they named. The next step is always ``select_saved_address``.
+    """
+    if not error or not _is_zepto(server_name):
+        return error
+    from tools.mcp_tool_schema import mcp_prefixed_tool_name as _mcp
+
+    listed = _mcp(server_name, "list_saved_addresses")
+    select = _mcp(server_name, "select_saved_address")
+    low = error.lower()
+    if "store not selected" in low:
+        hint = (
+            f"Call `{listed}`, then `{select}` with the address the user named — that picks the "
+            "store. Do not call get_location_serviceability with device_location GPS unless the "
+            "user typed those coordinates."
+        )
+    elif "no delivery address" in low:
+        hint = (
+            f"Call `{select}` with that addressId before create_order. Passing userAddressId on "
+            "create_order is not enough if the cart was built for another store."
+        )
+    elif "not deliverable" in low:
+        hint = (
+            f"The cart is for a different store than the delivery address. Call `{select}` for "
+            "the address the user named, then update_cart with the same items at that store, "
+            "then create_order. Do not retry create_order until view_cart shows those items."
+        )
+    else:
+        return error
+    if hint.lower() in low:
+        return error
+    return f"{error} {hint}"
+
+
 def _merchant(entry) -> str:
     return entry.spending.merchant or entry.description.split(":", 1)[0].strip() or entry.name
 

@@ -6,6 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 
 import { type ActivityUpdate, showActivity } from './activity'
+import {
+  closeAllNativeGatewaySockets,
+  closeNativeGatewaySocket,
+  GATEWAY_WS_SHIM,
+  openNativeGatewaySocket,
+  sendNativeGatewaySocket
+} from './gateway-ws'
 import type { Pairing } from './pairing'
 import { notifyLocally, setWatching, startPush } from './push'
 import { colors } from './theme'
@@ -24,6 +31,7 @@ Notifications.setNotificationHandler({
  *  abilities offered to it as `window.scoutNative`. */
 export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairing: Pairing }) {
   const webview = useRef<WebView>(null)
+  const sockets = useRef(new Map<number, WebSocket>())
   const [failed, setFailed] = useState('')
 
   // A chat whose notification was tapped before the page could listen (the tap launched the app).
@@ -41,6 +49,8 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
 
     return () => stop()
   }, [pairing])
+
+  useEffect(() => () => closeAllNativeGatewaySockets(sockets.current), [])
 
   // A tapped notification opens its chat (the page's onFocusSession, src/platform/web-bridge.ts):
   // at once when the page is running, or once it asks, when the tap launched the app.
@@ -89,6 +99,7 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
         }
       };
     })();
+    ${GATEWAY_WS_SHIM}
     true;
   `
 
@@ -170,6 +181,24 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
 
     if (kind === 'unpair') {
       onUnpair()
+
+      return true
+    }
+
+    if (kind === 'ws-open') {
+      openNativeGatewaySocket(sockets.current, () => webview.current, pairing, payload as { id?: number; url?: string })
+
+      return true
+    }
+
+    if (kind === 'ws-send') {
+      sendNativeGatewaySocket(sockets.current, payload as { data?: string; id?: number })
+
+      return true
+    }
+
+    if (kind === 'ws-close') {
+      closeNativeGatewaySocket(sockets.current, payload as { code?: number; id?: number; reason?: string })
 
       return true
     }

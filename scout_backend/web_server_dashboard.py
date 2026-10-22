@@ -219,12 +219,31 @@ def mount_spa(application: FastAPI):
     async def serve_app(full_path: str):
         index = APP_DIST / "index.html"
         file_path = APP_DIST / full_path
-        if full_path and file_path.resolve().is_relative_to(APP_DIST.resolve()) and file_path.is_file():
+        # index.html is rewritten below with the live session token; other files stay as-is.
+        if (
+            full_path
+            and full_path not in {"index.html", "index.htm"}
+            and file_path.resolve().is_relative_to(APP_DIST.resolve())
+            and file_path.is_file()
+        ):
             return FileResponse(file_path)
         if not index.is_file():
             return JSONResponse({"detail": "The Scout app is not built; run npm run build in apps/desktop."},
                                 status_code=404)
-        return FileResponse(index, headers=_NO_STORE)
+        try:
+            html = index.read_text(encoding="utf-8-sig")
+        except OSError:
+            return JSONResponse({"detail": "The Scout app is not built; run npm run build in apps/desktop."},
+                                status_code=404)
+        # Same live token the dashboard injects at `/`: the phone keeps a pairing
+        # token in native storage, and a backend restart otherwise 403s /api/ws
+        # while public /api/status still looks healthy.
+        gated = bool(getattr(application.state, "auth_required", False))
+        token_js = "" if gated else f"window.__SCOUT_SESSION_TOKEN__={json.dumps(_server()._SESSION_TOKEN)};"
+        if token_js:
+            snippet = f"<script>{token_js}</script>"
+            html = html.replace("</head>", f"{snippet}</head>", 1) if "</head>" in html else snippet + html
+        return HTMLResponse(html, headers=_NO_STORE)
 
     @application.get("/{full_path:path}")
     async def serve_spa(full_path: str, request: Request):
