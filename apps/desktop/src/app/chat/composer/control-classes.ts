@@ -11,12 +11,12 @@ export const GHOST_ICON_BTN = cn(
   'text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground'
 )
 
-// Send primary: solid high-contrast CTA circle; smoothly animates scale/opacity
-// when appearing as the user starts typing.
+// Send primary: solid high-contrast CTA circle; always visible and expands
+// smoothly when the user starts typing.
 export const PRIMARY_ICON_BTN = cn(
   'size-(--composer-control-primary-size,var(--composer-control-size)) shrink-0 rounded-full p-0',
   'bg-primary text-primary-foreground shadow-sm transition-all duration-200 ease-out hover:bg-primary/90 active:scale-95',
-  'disabled:pointer-events-none disabled:bg-foreground/20 disabled:text-background disabled:opacity-0 disabled:scale-75'
+  'disabled:pointer-events-none disabled:bg-(--ui-bg-tertiary) disabled:text-(--ui-text-tertiary) disabled:shadow-none disabled:opacity-75 disabled:scale-90'
 )
 
 /** A toggle that is currently ON — dictation, spoken replies, the wake word. */

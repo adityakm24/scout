@@ -932,7 +932,8 @@ export const en: Translations = {
       about: 'About',
       notifications: 'Notifications',
       phone: 'Phone',
-      vault: 'Passwords & Logins'
+      vault: 'Passwords & Logins',
+      version: 'Version'
     },
     plugins: {
       title: 'Desktop plugins',
@@ -1175,7 +1176,8 @@ export const en: Translations = {
       notifications: 'Desktop alerts and sounds.',
       phone: 'Use Scout on your iPhone, at home or away.',
       keybinds: 'Shortcuts, the HUD gesture, and screen capture.',
-      keys: 'Credentials for tools and for Scout itself.'
+      keys: 'Credentials for tools and for Scout itself.',
+      version: 'Current app version, build details, and update status.'
     },
     searchPlaceholder: {
       about: 'About Scout Desktop',

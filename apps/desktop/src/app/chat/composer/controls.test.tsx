@@ -104,9 +104,11 @@ describe('ComposerControls shortcut tooltips', () => {
     await expectShortcutTooltip('Stop', '↵')
   })
 
-  it('shows Ctrl+Enter for Queue as the secondary mid-turn action', async () => {
-    renderControls({ busy: true, busyAction: 'queue' })
+  it('keeps the Send button visible in a disabled state when the composer is empty and idle', () => {
+    renderControls({ busy: false, canSubmit: false, hasComposerPayload: false })
 
-    await expectShortcutTooltip('Queue message', 'Ctrl+↵')
+    const sendBtn = screen.getByLabelText('Send')
+    expect(sendBtn).toBeTruthy()
+    expect(sendBtn.hasAttribute('disabled')).toBe(true)
   })
 })

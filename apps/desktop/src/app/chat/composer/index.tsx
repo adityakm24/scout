@@ -1476,7 +1476,7 @@ export function ChatBar({
                         : 'grid-cols-[auto_1fr_auto] items-center gap-(--composer-control-gap) [grid-template-areas:"menu_input_controls"]'
                     )}
                   >
-                    <div className="flex translate-y-[3px] items-start gap-(--composer-control-gap) self-start [grid-area:menu]">
+                    <div className="flex items-center gap-(--composer-control-gap) [grid-area:menu]">
                       {contextMenu}
                       <ContribSlot area={COMPOSER_AREAS.leading} />
                     </div>

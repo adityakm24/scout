@@ -812,6 +812,7 @@ export interface Translations {
       notifications: string
       phone: string
       vault: string
+      version: string
     }
     plugins: {
       title: string

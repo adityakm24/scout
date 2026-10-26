@@ -85,7 +85,9 @@ const SECTION_TINT: Record<string, string> = {
   keybinds: '#5ac8fa',
   keys: '#eab308',
   notifications: '#ff3b30',
-  vault: '#10b981'
+  phone: '#34c759',
+  vault: '#10b981',
+  version: '#007aff'
 }
 
 function IconTile({ icon: Icon, id, tile, glyph }: { icon: IconComponent; id: string; tile: string; glyph: string }) {

@@ -1224,6 +1224,9 @@ export interface StatusResponse {
   latest_config_version: number
   release_date: string
   version: string
+  display_version?: string
+  git_commit?: string | null
+  git_branch?: string | null
 }
 
 // ── Managed local runtime (llama.cpp) ──────────────────────────

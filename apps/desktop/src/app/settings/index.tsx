@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { useI18n } from '@/i18n'
-import { Bell, Keyboard, KeyRound, Settings2, ShieldLock, Smartphone, Users, Wrench } from '@/lib/icons'
+import { Bell, Info, Keyboard, KeyRound, Settings2, ShieldLock, Smartphone, Users, Wrench } from '@/lib/icons'
 import { isEditableTarget } from '@/lib/keybinds/combo'
 import { typeToFocusChar } from '@/lib/keybinds/composer-focus-keys'
 import { $commandPaletteOpen } from '@/store/command-palette'
@@ -34,6 +34,7 @@ import { settingsSubpageForLegacyLink, settingsSubpageIcon, settingsSubpages } f
 import type { SettingsPageProps, SettingsView as SettingsViewId } from './types'
 import { useSettingsSearchCatalog } from './use-settings-search'
 import { vaultOwnerKey, VaultSettings } from './vault-settings'
+import { VersionSettings } from './version-settings'
 
 const SETTINGS_VIEWS: readonly SettingsViewId[] = [
   'account',
@@ -42,7 +43,8 @@ const SETTINGS_VIEWS: readonly SettingsViewId[] = [
   'keys',
   'vault',
   'notifications',
-  'phone'
+  'phone',
+  'version'
 ]
 
 export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: SettingsPageProps) {
@@ -227,6 +229,13 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
       id: 'keys' as SettingsViewId,
       label: t.settings.nav.apiKeys,
       onSelect: () => setActiveView('keys')
+    },
+    {
+      active: activeView === 'version',
+      icon: Info,
+      id: 'version' as SettingsViewId,
+      label: t.settings.nav.version,
+      onSelect: () => setActiveView('version')
     }
   ]
 
@@ -309,7 +318,13 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
       <SettingsBreadcrumbContext.Provider value>
         <SettingsAppleShell
           active={activeItem}
-          body={activeView === 'phone' ? <PhoneSettings /> : undefined}
+          body={
+            activeView === 'phone' ? (
+              <PhoneSettings />
+            ) : activeView === 'version' ? (
+              <VersionSettings />
+            ) : undefined
+          }
           detail={showDetail ? detail : null}
           detailTitle={activeRow?.label}
           items={shellItems}

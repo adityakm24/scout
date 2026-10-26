@@ -5,7 +5,7 @@ import { Codicon } from '@/components/ui/codicon'
 import { Tip, TipKeybindLabel } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
-import { ArrowsMaximize, ArrowsMinimize, iconSize, Layers3 } from '@/lib/icons'
+import { ArrowsMaximize, ArrowsMinimize, iconSize } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { $hudMode, closeHud, resetHudLayout } from '@/store/hud'
 
@@ -18,16 +18,11 @@ export { ACTIVE_ICON_BTN, GHOST_ICON_BTN, ICON_BTN, PRIMARY_ICON_BTN } from './c
 
 export function ComposerControls({
   busy,
-  busyAction,
   canSubmit,
-  compactModelPill = false,
   disabled,
   expanded = false,
   hasComposerPayload,
-  hideModelPill = false,
   minimal = false,
-  state,
-  onQueue,
   onToggleExpand
 }: {
   busy: boolean
@@ -50,7 +45,6 @@ export function ComposerControls({
   // Steer is just send: a payload keeps the Send affordance mid-turn. Stop
   // only when the composer is empty and a turn is running.
   const showStop = busy && !hasComposerPayload
-  const showQueueButton = busyAction !== 'stop' && hasComposerPayload
   const showSendOrStop = showStop || hasComposerPayload
 
   return (
@@ -71,56 +65,35 @@ export function ComposerControls({
             type="button"
             variant="ghost"
           >
-            {expanded ? <ArrowsMinimize className={iconSize.sm} /> : <ArrowsMaximize className={iconSize.sm} />}
+            {expanded ? <ArrowsMinimize className={iconSize.md} /> : <ArrowsMaximize className={iconSize.md} />}
           </Button>
         </Tip>
       ) : null}
-      {showQueueButton ? (
-        <Tip label={<TipKeybindLabel actionId="composer.queue" text={c.queueMessage} />} placement="control">
-          <Button
-            aria-label={c.queueMessage}
-            className={GHOST_ICON_BTN}
-            disabled={disabled}
-            onClick={onQueue}
-            size="icon"
-            type="button"
-            variant="ghost"
-          >
-            <Layers3 className={iconSize.sm} />
-          </Button>
-        </Tip>
-      ) : null}
-      <div
-        className={cn(
-          'grid items-center overflow-hidden transition-all duration-200 ease-out',
-          showSendOrStop ? 'w-(--composer-control-primary-size,var(--composer-control-size)) scale-100 opacity-100' : 'w-0 scale-50 opacity-0 pointer-events-none'
-        )}
+      <Tip
+        label={
+          showStop ? (
+            <TipKeybindLabel actionId="composer.send" text={c.stop} />
+          ) : (
+            <TipKeybindLabel actionId="composer.send" text={c.send} />
+          )
+        }
+        placement="control"
       >
-        <Tip
-          label={
-            showStop ? (
-              <TipKeybindLabel actionId="composer.send" text={c.stop} />
-            ) : (
-              <TipKeybindLabel actionId="composer.send" text={c.send} />
-            )
-          }
-          placement="control"
+        <Button
+          aria-label={showStop ? c.stop : c.send}
+          className={cn(PRIMARY_ICON_BTN, showSendOrStop ? 'scale-105' : 'scale-90')}
+          disabled={disabled || !canSubmit}
+          size="icon"
+          tabIndex={showSendOrStop ? 0 : -1}
+          type="submit"
         >
-          <Button
-            aria-label={showStop ? c.stop : c.send}
-            className={PRIMARY_ICON_BTN}
-            disabled={disabled || !canSubmit}
-            tabIndex={showSendOrStop ? 0 : -1}
-            type="submit"
-          >
-            {showStop ? (
-              <span className="block size-2.5 rounded-[0.1875rem] bg-current" />
-            ) : (
-              <Codicon name="arrow-up" size="0.875rem" />
-            )}
-          </Button>
-        </Tip>
-      </div>
+          {showStop ? (
+            <span className="block size-3 rounded-[0.2rem] bg-current" />
+          ) : (
+            <Codicon name="arrow-up" size="1.125rem" />
+          )}
+        </Button>
+      </Tip>
       {/* The way out of HUD mode, riding the controls row rather than floating
           above the bar: it costs no reserved space and sits with the other
           things you can press. */}

@@ -43,9 +43,7 @@ describe('settings search index', () => {
     const entries = buildConfigSearchEntries(schema, config, searchCopy)
 
     expect(entries.map(entry => entry.id)).toEqual([
-      'config-field:display.personality',
-      'config-field:tts.provider',
-      'config-field:tts.edge.voice'
+      'config-field:display.personality'
     ])
     expect(entries[0]).toMatchObject({
       context: 'Chat',

@@ -11,6 +11,7 @@ export type SettingsView =
   | 'notifications'
   | 'phone'
   | 'vault'
+  | 'version'
   | `config:${string}`
 
 export interface SettingsPageProps {
