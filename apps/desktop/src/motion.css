@@ -371,16 +371,15 @@
   animation: scout-pop-in 360ms var(--ease-spring) both;
 }
 
-/* The empty chat puts the composer centre stage under the greeting; the first
-   message sends it gliding down to its dock. */
+/* The composer stays anchored cleanly near the bottom of the chat */
 [data-chat-surface] [data-slot='composer-dock']:not([data-popped-out]) {
   transition: bottom 700ms var(--ease-out-expo);
 }
 [data-chat-surface]:has([data-slot='aui_intro']) [data-slot='composer-dock']:not([data-popped-out]) {
-  bottom: calc(50% - 8.625rem);
+  bottom: 1.5rem;
 }
 [data-chat-surface] [data-slot='aui_intro'] {
-  translate: 0 -2.625rem;
+  translate: 0 0;
 }
 
 /* Tab switches inside a panel fade up into place. */

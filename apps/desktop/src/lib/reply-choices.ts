@@ -53,7 +53,63 @@ export interface ReplyChoiceContext {
   userMessage?: string
 }
 
+export interface StructuredQuickReplies {
+  allow_custom_input?: boolean
+  message: string
+  options: string[]
+}
+
+/**
+ * Extracts a QuickReplies structured JSON payload if present in the text, either as raw JSON
+ * or fenced inside ```json blocks.
+ */
+export function parseStructuredQuickReplies(text: string): null | StructuredQuickReplies {
+  if (!text || typeof text !== 'string') {
+    return null
+  }
+
+  let candidate = text.trim()
+  // Check if enclosed in markdown code fences
+  const fencedMatch = candidate.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
+  if (fencedMatch && fencedMatch[1]) {
+    candidate = fencedMatch[1].trim()
+  }
+
+  if (!candidate.startsWith('{') || !candidate.endsWith('}')) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(candidate)
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      parsed.component === 'QuickReplies' &&
+      parsed.props &&
+      typeof parsed.props === 'object' &&
+      Array.isArray(parsed.props.options) &&
+      parsed.props.options.length > 0 &&
+      parsed.props.options.every((opt: unknown) => typeof opt === 'string' && opt.trim().length > 0)
+    ) {
+      return {
+        allow_custom_input: parsed.props.allow_custom_input !== false,
+        message: typeof parsed.message === 'string' ? parsed.message.trim() : '',
+        options: parsed.props.options.map((opt: string) => opt.trim())
+      }
+    }
+  } catch {
+    // Not valid JSON
+  }
+
+  return null
+}
+
 export function parseReplyChoices(markdown: string, context: ReplyChoiceContext = {}): null | string[] {
+  const structured = parseStructuredQuickReplies(markdown)
+  if (structured) {
+    return structured.options
+  }
+
   if (markdown.includes('```')) {
     return null
   }

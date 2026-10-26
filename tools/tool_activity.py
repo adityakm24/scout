@@ -26,6 +26,9 @@ def _merchant(args: Dict[str, Any]) -> str:
 _CORE: Dict[str, Callable[[Dict[str, Any]], str]] = {
     "device_location": lambda a: "Checking where you are",
     "schedule_order": lambda a: f"Scheduling your {_merchant(a)} order",
+    "start_commute_eta_sync": lambda a: f"Starting commute ETA tracking to arrival destination",
+    "cancel_commute_eta_sync": lambda a: "Stopping commute ETA tracking",
+    "get_commute_eta_sync_status": lambda a: "Checking commute ETA sync status",
     "web_search": lambda a: "Searching the web",
     "web_extract": lambda a: "Reading a web page",
     "terminal": lambda a: "Running a task on your computer",

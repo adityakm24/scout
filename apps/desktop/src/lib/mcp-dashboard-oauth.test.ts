@@ -208,7 +208,7 @@ describe('Desktop MCP client callback lifecycle', () => {
       window.scoutDesktop.getConnection = vi.fn(async () => ({
         mode: 'remote',
         baseUrl: 'http://127.0.0.1:9119'
-      })) as Window['scoutDesktop']['getConnection']
+      })) as unknown as Window['scoutDesktop']['getConnection']
       let polls = 0
       rpc.mockImplementation(async (_connection, _profile, method) => {
         if (method.endsWith('.start')) {

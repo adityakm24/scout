@@ -85,4 +85,31 @@ describe('reply choices', () => {
 
     expect(screen.queryByRole('group', { name: 'Choose one' })).toBeNull()
   })
+
+  it('renders QuickReplies structured JSON as message and clickable buttons', async () => {
+    const jsonReply = JSON.stringify({
+      message: 'Which store should we order from?',
+      component: 'QuickReplies',
+      props: {
+        options: ['Zepto (10 min)', 'Blinkit (15 min)'],
+        allow_custom_input: false
+      }
+    })
+
+    render(<Harness messages={[message('u1', 'user', 'order snacks'), message('a1', 'assistant', jsonReply)]} />)
+
+    // The message text is rendered
+    expect(await screen.findByText('Which store should we order from?')).toBeTruthy()
+
+    // The choices are rendered as buttons
+    const optBtn = await screen.findByRole('button', { name: /Zepto \(10 min\)/ })
+    expect(optBtn).toBeTruthy()
+
+    // Custom input is disallowed
+    expect(screen.queryByRole('button', { name: 'Add your own answer' })).toBeNull()
+
+    // Clicking an option sends it
+    fireEvent.click(optBtn)
+    expect($composerSendRequest.get()).toMatchObject({ target: 'main', text: 'Zepto (10 min)' })
+  })
 })

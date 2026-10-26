@@ -29,6 +29,11 @@ async def google_workspace_status(profile: Optional[str] = None):
     return await config_scoped_to_thread(profile, lambda: gws.status(get_scout_home()))
 
 
+@router.get("/api/user-profile")
+async def get_user_profile(profile: Optional[str] = None):
+    return await config_scoped_to_thread(profile, lambda: gws.user_profile(get_scout_home()))
+
+
 @router.put("/api/google-workspace/client")
 async def google_workspace_client(body: GoogleWorkspaceClient, profile: Optional[str] = None):
     profile = destructive_profile(profile, "PUT /api/google-workspace/client")

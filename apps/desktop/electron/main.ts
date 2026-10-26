@@ -5566,6 +5566,10 @@ function installDownloadHandling() {
 function installMediaPermissions() {
   // Async request handler: the prompt-style path (most platforms).
   session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback, details) => {
+    if (permission === 'geolocation') {
+      callback(true)
+      return
+    }
     callback(isMediaCapturePermission(permission, details))
   })
 
@@ -5575,6 +5579,7 @@ function installMediaPermissions() {
   // handler ever runs.
   session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
     return (
+      permission === 'geolocation' ||
       permission === 'media' ||
       (permission as string) === 'automatic-fullscreen' ||
       permission === ('audioCapture' as any) /* todo: is this needed? */ ||

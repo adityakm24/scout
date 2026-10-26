@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { useI18n } from '@/i18n'
-import { Bell, Keyboard, KeyRound, Settings2, ShieldLock, Smartphone, Wrench } from '@/lib/icons'
+import { Bell, Keyboard, KeyRound, Settings2, ShieldLock, Smartphone, Users, Wrench } from '@/lib/icons'
 import { isEditableTarget } from '@/lib/keybinds/combo'
 import { typeToFocusChar } from '@/lib/keybinds/composer-focus-keys'
 import { $commandPaletteOpen } from '@/store/command-palette'
@@ -13,6 +13,7 @@ import { $settingsScopeProfile } from '@/store/settings-scope'
 import { useRouteEnumParam } from '../hooks/use-route-enum-param'
 import { OverlayView } from '../overlays/overlay-view'
 
+import { AccountSettings } from './account-settings'
 import { AppearanceSettings } from './appearance-settings'
 import { ConfigSettings } from './config-settings'
 import { SECTIONS } from './constants'
@@ -35,6 +36,7 @@ import { useSettingsSearchCatalog } from './use-settings-search'
 import { vaultOwnerKey, VaultSettings } from './vault-settings'
 
 const SETTINGS_VIEWS: readonly SettingsViewId[] = [
+  'account',
   ...SECTIONS.map(s => `config:${s.id}` as SettingsViewId),
   'keybinds',
   'keys',
@@ -165,6 +167,13 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
   }, [])
 
   const shellItems = [
+    {
+      active: activeView === 'account',
+      icon: Users,
+      id: 'account' as SettingsViewId,
+      label: 'Account & Profile',
+      onSelect: () => setActiveView('account')
+    },
     ...SECTIONS.flatMap(section => {
       const view = `config:${section.id}` as SettingsViewId
 
@@ -257,7 +266,7 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
   ])
 
   const activeItem = shellItems.find(item => item.active) ?? shellItems[0]
-  const showDetail = activeView === 'keys' ? keysDetail !== null : Boolean(pinnedPage)
+  const showDetail = activeView === 'account' ? true : activeView === 'keys' ? keysDetail !== null : Boolean(pinnedPage)
 
   const rows =
     activeView === 'keys'
@@ -275,6 +284,8 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
 
   const detail = needsSubpageRedirect ? (
     <Navigate replace to={{ hash, pathname, search: `?${subpageSearch}` }} />
+  ) : activeView === 'account' ? (
+    <AccountSettings />
   ) : activeView === 'config:appearance' ? (
     <AppearanceSettings subpage={pinnedPage} />
   ) : activeView === 'keybinds' ? (

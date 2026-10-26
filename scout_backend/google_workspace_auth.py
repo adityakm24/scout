@@ -36,7 +36,8 @@ SERVICES: tuple = (
     ("sheets", ("https://www.googleapis.com/auth/spreadsheets",)),
     ("contacts", ("https://www.googleapis.com/auth/contacts.readonly",)),
 )
-SCOPES: List[str] = [scope for _id, scopes in SERVICES for scope in scopes]
+ID_SCOPES: tuple = ("openid", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email")
+SCOPES: List[str] = list(dict.fromkeys(ID_SCOPES + tuple(scope for _id, scopes in SERVICES for scope in scopes)))
 
 _FLOW_TTL_SECONDS = 600
 _flows: Dict[str, "_Flow"] = {}
@@ -110,15 +111,102 @@ def status(home: Path) -> Dict[str, Any]:
     }
 
 
-def _account_email(access_token: str) -> Optional[str]:
-    """The signed-in address, read through Gmail (no extra identity scope is requested)."""
+def _account_profile_info(access_token: str) -> Dict[str, Optional[str]]:
+    """The signed-in user's profile info (name, email, picture) from Google."""
     import httpx
+    info: Dict[str, Optional[str]] = {
+        "email": None,
+        "name": None,
+        "given_name": None,
+        "family_name": None,
+        "picture": None,
+    }
+    # First try OpenID /userinfo endpoint
+    try:
+        resp = httpx.get("https://openidconnect.googleapis.com/v1/userinfo",
+                         headers={"Authorization": f"Bearer {access_token}"}, timeout=15)
+        if resp.status_code == 200:
+            data = resp.json()
+            info["email"] = data.get("email")
+            info["name"] = data.get("name")
+            info["given_name"] = data.get("given_name")
+            info["family_name"] = data.get("family_name")
+            info["picture"] = data.get("picture")
+            if info["email"]:
+                return info
+    except httpx.HTTPError:
+        pass
+
+    # Fallback to Gmail profile if userinfo was unavailable
     try:
         resp = httpx.get("https://gmail.googleapis.com/gmail/v1/users/me/profile",
                          headers={"Authorization": f"Bearer {access_token}"}, timeout=15)
-        return resp.json().get("emailAddress") if resp.status_code == 200 else None
+        if resp.status_code == 200:
+            info["email"] = resp.json().get("emailAddress")
     except httpx.HTTPError:
-        return None
+        pass
+    return info
+
+
+def _account_email(access_token: str) -> Optional[str]:
+    """The signed-in address, read through Userinfo or Gmail."""
+    return _account_profile_info(access_token).get("email")
+
+
+def _sync_user_profile(home: Path, profile_info: Dict[str, Optional[str]]) -> None:
+    """Save user profile to Vault (for placeholders and browser fill) and USER.md (for agent system prompt awareness)."""
+    email = (profile_info.get("email") or "").strip()
+    full_name = (profile_info.get("name") or "").strip()
+    first_name = (profile_info.get("given_name") or "").strip()
+    last_name = (profile_info.get("family_name") or "").strip()
+    if not first_name and full_name:
+        parts = full_name.split()
+        first_name = parts[0]
+        last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+
+    # 1. Update/Add in Vault Store
+    try:
+        from agent.vault_store import get_vault_store
+        store = get_vault_store()
+        profile_item = next((m for m in store.list_items() if m.kind == "profile"), None)
+        secret_data = {
+            "full_name": full_name,
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email,
+            "phone": "",
+        }
+        if profile_item is not None:
+            store.remove_item(profile_item.id)
+        store.add_item(
+            kind="profile",
+            label=f"Google Profile ({full_name or email})",
+            secret=secret_data,
+        )
+    except Exception:
+        pass
+
+    # 2. Write to USER.md so the agent prompt is aware of the user across sessions
+    try:
+        from tools.memory_tool_store import MemoryStore
+        mem_dir = home / "memories"
+        mem_dir.mkdir(parents=True, exist_ok=True)
+        user_md = mem_dir / "USER.md"
+        existing = MemoryStore._read_file(user_md) if user_md.exists() else []
+        # Filter out previous automated Google profile entries
+        kept = [
+            e for e in existing
+            if not (e.startswith("- Name:") or e.startswith("Name:") or e.startswith("- Email:") or e.startswith("Email:"))
+        ]
+        profile_lines = []
+        if full_name:
+            profile_lines.append(f"- Name: {full_name}")
+        if email:
+            profile_lines.append(f"- Email: {email}")
+        if profile_lines:
+            MemoryStore._write_file(user_md, ["\n".join(profile_lines)] + kept)
+    except Exception:
+        pass
 
 
 def _token_payload(client: dict, grant: dict) -> dict:
@@ -183,6 +271,8 @@ class _Flow:
         if resp.status_code != 200 or "access_token" not in grant:
             raise ValueError(f"Google did not issue a token: {grant.get('error_description') or grant.get('error') or resp.status_code}")
         _write_private(_token_path(self.home), _token_payload(self.client, grant))
+        profile_info = _account_profile_info(grant["access_token"])
+        _sync_user_profile(self.home, profile_info)
 
     def _handler(self):
         flow = self
@@ -277,3 +367,34 @@ def sign_out(home: Path) -> None:
         except httpx.HTTPError:
             pass
     _token_path(home).unlink(missing_ok=True)
+
+def user_profile(home: Path) -> Dict[str, Any]:
+    """Get the active user profile (from Google sign-in and Vault)."""
+    from agent.vault_store import get_vault_store
+    from tools.memory_tool_store import MemoryStore
+
+    token = _read_json(_token_path(home))
+    signed_in = bool(token.get("refresh_token") or token.get("token"))
+    email = token.get("account") or None
+
+    name = None
+    try:
+        store = get_vault_store()
+        profile_item = next((m for m in store.list_items() if m.kind == "profile"), None)
+        if profile_item:
+            secret = store.resolve_secret(profile_item.id)
+            name = secret.get("full_name") or secret.get("first_name")
+            if not email:
+                email = secret.get("email")
+    except Exception:
+        pass
+
+    user_md = home / "memories" / "USER.md"
+    user_entries = MemoryStore._read_file(user_md) if user_md.exists() else []
+
+    return {
+        "signed_in": signed_in,
+        "email": email,
+        "name": name,
+        "user_md_entries": user_entries,
+    }

@@ -74,6 +74,11 @@ def test_browser_redirect_signs_in_and_leaves_the_skills_token(google):
     assert state["signed_in"] and state["account"] == "me@gmail.com"
     assert all(service["granted"] for service in state["services"])
 
+    # User profile is populated and USER.md created
+    profile = gws.user_profile(home)
+    assert profile["signed_in"] is True and profile["email"] == "me@gmail.com"
+    assert (home / "memories" / "USER.md").exists()
+
 
 def test_the_desktop_listener_can_relay_the_reply(google):
     """A backend on another machine can't receive the browser's redirect; the desktop app catches it

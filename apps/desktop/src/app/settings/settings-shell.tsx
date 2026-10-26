@@ -1,5 +1,6 @@
-import { type ChangeEvent, type ReactNode, type RefObject, useRef, useState } from 'react'
+import { type ChangeEvent, type ReactNode, type RefObject, useEffect, useRef, useState } from 'react'
 
+import { getUserProfile } from '@/api/google-workspace'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useI18n } from '@/i18n'
@@ -164,6 +165,31 @@ export function SettingsAppleShell({
   const [draftLastName, setDraftLastName] = useState(profile.lastName)
   const [draftAvatar, setDraftAvatar] = useState<null | string>(profile.avatar)
   const photoInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    let unmounted = false
+    void getUserProfile().then(res => {
+      if (unmounted || !res.signed_in || !res.name) return
+      const saved = readJson<Partial<StoredUserProfile>>(USER_PROFILE_STORAGE_KEY)
+      // If the user hasn't explicitly customized their local desktop profile away from default "Scout User"
+      if (!saved || !saved.firstName || (saved.firstName === 'Scout' && saved.lastName === 'User')) {
+        const parts = res.name.trim().split(/\s+/)
+        const first = parts[0] || 'Scout'
+        const last = parts.slice(1).join(' ')
+        const updated: StoredUserProfile = {
+          avatar: saved?.avatar ?? null,
+          firstName: first,
+          lastName: last
+        }
+        setProfile(updated)
+        setDraftFirstName(first)
+        setDraftLastName(last)
+      }
+    }).catch(() => {})
+    return () => {
+      unmounted = true
+    }
+  }, [])
 
   const displayName = formatFullName(profile.firstName, profile.lastName, t.settings.accountTitle)
   const draftDisplayName = formatFullName(draftFirstName, draftLastName, t.settings.accountTitle)

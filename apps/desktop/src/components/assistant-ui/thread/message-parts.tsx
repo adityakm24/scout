@@ -30,6 +30,7 @@ import { useI18n } from '@/i18n'
 import { mcpTargets, toolLabels } from '@/lib/connector-tools'
 import { generatedImageFromResult } from '@/lib/generated-images'
 import { separateGluedReasoningBlocks } from '@/lib/reasoning-blocks'
+import { parseStructuredQuickReplies } from '@/lib/reply-choices'
 import { isTodoToolName } from '@/lib/todos'
 import { isCardTool } from '@/lib/tool-render-class'
 import { useEnterAnimation } from '@/lib/use-enter-animation'
@@ -227,11 +228,18 @@ const TimelineMarkdownText: FC<TimelineTextPartProps> = ({ completedAt, timestam
     return null
   }
 
+  const structured = parseStructuredQuickReplies(text)
+  const renderedContent = structured ? (
+    structured.message ? <MarkdownTextContent isRunning={false} text={structured.message} /> : null
+  ) : (
+    <MarkdownText />
+  )
+
   if (isProcessText && turnProcess.open && messageId === turnProcess.finalMessageId) {
     return (
       <div className="my-1 border-l-2 border-(--ui-stroke-tertiary) pl-3 text-muted-foreground/90">
         <TimelineTimestamp className="mb-0.5 block" completedAt={completedAt} timestamp={timestamp} />
-        <MarkdownText />
+        {renderedContent}
       </div>
     )
   }
@@ -239,7 +247,7 @@ const TimelineMarkdownText: FC<TimelineTextPartProps> = ({ completedAt, timestam
   return (
     <>
       <TimelineTimestamp className="mb-0.5 block" completedAt={completedAt} timestamp={timestamp} />
-      <MarkdownText />
+      {renderedContent}
     </>
   )
 }

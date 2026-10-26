@@ -43,7 +43,6 @@ const SUBPAGE_ICONS: Record<string, IconComponent> = {
   appearanceTypography: CircleLetterA,
   appearanceWindowLayout: Monitor,
   appearanceChatDisplay: MessageCircle,
-  appearancePet: PawPrint,
   appearanceGeneral: Settings2,
   chatBehavior: MessageCircle,
   chatAttachments: FileImage,

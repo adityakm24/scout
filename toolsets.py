@@ -48,6 +48,8 @@ _SCOUT_CORE_TOOLS = [
     "cronjob_manage",
     # Only with a merchant that can take orders connected (check_fn), like the ha_* tools.
     "schedule_order",
+    "start_commute_eta_sync", "cancel_commute_eta_sync", "get_commute_eta_sync_status",
+    "set_saved_location", "list_saved_locations",
     "ha_list_entities", "ha_get_state", "ha_list_services", "ha_call_service",
     "kanban_show", "kanban_list",
     "kanban_complete", "kanban_block", "kanban_request_review",
@@ -140,8 +142,9 @@ TOOLSETS = {
     ),
     "cronjob": _ts(
         "Cronjob management tool - create, list, update, pause, resume, remove, and "
-        "trigger scheduled tasks; schedule an order the user approves now (when a merchant is connected)",
-        ["cronjob_manage", "schedule_order"],
+        "trigger scheduled tasks; schedule an order the user approves now (when a merchant is connected); "
+        "commute ETA-sync spatial orchestration and saved locations (Home/Work)",
+        ["cronjob_manage", "schedule_order", "start_commute_eta_sync", "cancel_commute_eta_sync", "get_commute_eta_sync_status", "set_saved_location", "list_saved_locations"],
     ),
     "file": _ts(
         "File manipulation tools: read, write, patch (with fuzzy matching), and "

@@ -698,7 +698,11 @@ PLATFORM_HINTS = {
         "height live, width from the content's first measured span — lay content flush left with no centering wrappers "
         "or it measures full-bleed. Widgets talk back: data-scout-send=\"prompt\" on any clickable element (or "
         "window.scout.send(\"prompt\")) sends that prompt as a hidden user turn — answer it by updating the widget's "
-        "file, not with prose."
+        "file, not with prose. Structured choices: When presenting distinct options or asking the user to make a choice "
+        "(e.g. grocery ordering items/cart variants, store selections, next-step decisions, or confirmations), instead of "
+        "writing long prose paragraphs, structure your response as raw JSON with the QuickReplies component: "
+        '{"message": "Brief question or introduction", "component": "QuickReplies", "props": {"options": ["Option 1", "Option 2"], "allow_custom_input": true}}. '
+        "The desktop app automatically renders the message cleanly and displays the options as interactive, clickable reply buttons."
     ),
     "api_server": (
         "You're responding through an API server. The rendering layer is unknown — assume plain text. No markdown "

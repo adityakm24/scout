@@ -138,6 +138,7 @@ import {
 import { TitlebarControls } from '../shell/titlebar-controls'
 import { WslgWindowControls } from '../shell/wslg-window-controls'
 import { UpdatesOverlay } from '../updates-overlay'
+import { GoogleAuthWelcomeDialog } from '@/components/google-auth-welcome-dialog'
 
 import { ContribWiringContext } from './context'
 import {
@@ -1224,6 +1225,7 @@ export function ContribWiring({ children }: { children: ReactNode }) {
       )}
       <SessionPickerOverlay onResume={sessionId => openSessionFromPicker(sessionId, navigate)} />
       <UpdatesOverlay />
+      <GoogleAuthWelcomeDialog />
       <GatewayConnectingOverlay />
       <BootFailureOverlay />
       <CommandPalette />

@@ -5,7 +5,7 @@ import { useComposerScope } from '@/app/chat/composer/scope'
 import { Codicon } from '@/components/ui/codicon'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
-import { parseReplyChoices } from '@/lib/reply-choices'
+import { parseReplyChoices, parseStructuredQuickReplies } from '@/lib/reply-choices'
 import { cn } from '@/lib/utils'
 import { requestComposerSend } from '@/store/composer-send'
 
@@ -62,7 +62,13 @@ export const ReplyChoices: FC = () => {
 
     const [userMessage, reply] = snapshot.split(SEP)
 
-    return parseReplyChoices(reply ?? '', { userMessage })
+    const structured = parseStructuredQuickReplies(reply ?? '')
+    if (structured) {
+      return { options: structured.options, allowCustomInput: structured.allow_custom_input }
+    }
+
+    const parsed = parseReplyChoices(reply ?? '', { userMessage })
+    return parsed ? { options: parsed, allowCustomInput: true } : null
   }, [snapshot])
 
   const showing = Boolean(choices) && !dismissed
@@ -110,9 +116,9 @@ export const ReplyChoices: FC = () => {
 
     const index = event.key.length === 1 ? event.key.toUpperCase().charCodeAt(0) - 65 : -1
 
-    if (!(event.target instanceof HTMLInputElement) && index >= 0 && index < choices.length) {
+    if (!(event.target instanceof HTMLInputElement) && index >= 0 && index < choices.options.length) {
       event.preventDefault()
-      send(choices[index])
+      send(choices.options[index])
     }
   }
 
@@ -130,7 +136,7 @@ export const ReplyChoices: FC = () => {
       ref={rootRef}
       role="group"
     >
-      {choices.map((choice, index) => {
+      {choices.options.map((choice, index) => {
         const chosen = picked === choice
 
         return (
@@ -168,48 +174,50 @@ export const ReplyChoices: FC = () => {
         )
       })}
 
-      {adding ? (
-        <form
-          className={cn(
-            PILL,
-            TINT,
-            'scout-pop-in py-1.5 pr-1.5 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--theme-primary)_20%,transparent)]'
-          )}
-          onSubmit={onSubmitOther}
-        >
-          <input
-            aria-label={copy.placeholder}
-            autoFocus
-            className="min-w-0 flex-1 bg-transparent py-1 font-medium text-foreground outline-none placeholder:text-[color-mix(in_srgb,var(--theme-primary)_60%,transparent)]"
-            disabled={picked !== null}
-            onChange={event => setDraft(event.target.value)}
-            onKeyDown={event => {
-              if (event.key === 'Escape') {
-                event.stopPropagation()
-                setAdding(false)
-              }
-            }}
-            placeholder={copy.placeholder}
-            value={draft}
-          />
-          <button
-            aria-label={copy.send}
-            className="grid size-7 shrink-0 place-items-center rounded-full bg-(--dt-primary-solid) text-(--dt-primary-solid-foreground) transition-[opacity,scale] duration-200 disabled:scale-90 disabled:opacity-0"
-            disabled={!draft.trim() || picked !== null}
-            type="submit"
+      {choices.allowCustomInput !== false && (
+        adding ? (
+          <form
+            className={cn(
+              PILL,
+              TINT,
+              'scout-pop-in py-1.5 pr-1.5 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--theme-primary)_20%,transparent)]'
+            )}
+            onSubmit={onSubmitOther}
           >
-            <Codicon name="arrow-up" size="0.8rem" />
+            <input
+              aria-label={copy.placeholder}
+              autoFocus
+              className="min-w-0 flex-1 bg-transparent py-1 font-medium text-foreground outline-none placeholder:text-[color-mix(in_srgb,var(--theme-primary)_60%,transparent)]"
+              disabled={picked !== null}
+              onChange={event => setDraft(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Escape') {
+                  event.stopPropagation()
+                  setAdding(false)
+                }
+              }}
+              placeholder={copy.placeholder}
+              value={draft}
+            />
+            <button
+              aria-label={copy.send}
+              className="grid size-7 shrink-0 place-items-center rounded-full bg-(--dt-primary-solid) text-(--dt-primary-solid-foreground) transition-[opacity,scale] duration-200 disabled:scale-90 disabled:opacity-0"
+              disabled={!draft.trim() || picked !== null}
+              type="submit"
+            >
+              <Codicon name="arrow-up" size="0.8rem" />
+            </button>
+          </form>
+        ) : (
+          <button
+            className="scout-stagger self-end px-2 text-xs font-medium text-(--theme-primary) hover:underline disabled:opacity-40"
+            disabled={picked !== null}
+            onClick={() => setAdding(true)}
+            type="button"
+          >
+            {copy.other}
           </button>
-        </form>
-      ) : (
-        <button
-          className="scout-stagger self-end px-2 text-xs font-medium text-(--theme-primary) hover:underline disabled:opacity-40"
-          disabled={picked !== null}
-          onClick={() => setAdding(true)}
-          type="button"
-        >
-          {copy.other}
-        </button>
+        )
       )}
     </div>
   )

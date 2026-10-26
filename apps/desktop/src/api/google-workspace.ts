@@ -15,8 +15,18 @@ export interface GoogleSignInResult {
   status: 'done' | 'error' | 'pending'
 }
 
+export interface UserProfileStatus {
+  email: null | string
+  name: null | string
+  signed_in: boolean
+  user_md_entries: string[]
+}
+
 const call = <T>(profile: ProfileScope | undefined, path: string, method = 'GET', body?: unknown) =>
   window.scoutDesktop.api<T>({ ...capabilityScoped(profile), path, method, ...(body === undefined ? {} : { body }) })
+
+export const getUserProfile = (profile?: ProfileScope) =>
+  call<UserProfileStatus>(profile, '/api/user-profile')
 
 export const getGoogleWorkspace = (profile?: ProfileScope) =>
   call<GoogleWorkspaceStatus>(profile, '/api/google-workspace')
