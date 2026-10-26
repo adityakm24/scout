@@ -59,28 +59,11 @@
           "enablePushNotifications": true
         }
       ],
-      "./plugins/with-scene-lifecycle"
+      "./plugins/with-scene-lifecycle",
+      "expo-status-bar"
     ],
     "backgroundColor": "#0d0f14",
     "scheme": "scout",
-    "extra": {
-      "eas": {
-        "build": {
-          "experimental": {
-            "ios": {
-              "appExtensions": [
-                {
-                  "targetName": "LiveActivity",
-                  "bundleIdentifier": "com.spaceshipresearch.scout.LiveActivity",
-                  "entitlements": {}
-                }
-              ]
-            }
-          }
-        },
-        "projectId": "384b2735-74c8-4165-8f43-902f5fd1461c"
-      }
-    },
-    "owner": "adityakm24"
+    "extra": {}
   }
 }

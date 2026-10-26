@@ -349,6 +349,37 @@ export const ENUM_OPTIONS: Record<string, string[]> = {
   'updates.non_interactive_local_changes': ['stash', 'discard']
 }
 
+export const TTS_PROVIDER_KEYS = [
+  'tts.provider',
+  'voice.auto_tts',
+  'tts.edge.voice',
+  'tts.openai.model',
+  'tts.openai.voice',
+  'tts.elevenlabs.voice_id',
+  'tts.elevenlabs.model_id',
+  'tts.xai.voice_id',
+  'tts.xai.language',
+  'tts.xai.speed',
+  'tts.xai.auto_speech_tags',
+  'tts.xai.optimize_streaming_latency',
+  'tts.xai.sample_rate',
+  'tts.xai.bit_rate',
+  'tts.minimax.model',
+  'tts.minimax.voice_id',
+  'tts.mistral.model',
+  'tts.mistral.voice_id',
+  'tts.gemini.model',
+  'tts.gemini.voice',
+  'tts.neutts.model',
+  'tts.neutts.device',
+  'tts.kittentts.model',
+  'tts.kittentts.voice',
+  'tts.piper.voice',
+  'tts.deepinfra.model',
+  'tts.deepinfra.voice',
+  'voice.client_direct'
+] as const
+
 // Per-provider speech-to-text fields. Not a Settings page (the desktop has no
 // dictation); Bot Mode's toolset config still edits them for a bot's `stt`
 // toolset through VoiceProviderFields.
@@ -731,41 +762,6 @@ export const SECTIONS: DesktopConfigSection[] = [
       'memory.memory_enabled',
       'memory.user_profile_enabled',
       'compression.enabled',
-    ]
-  },
-  {
-    id: 'voice',
-    label: 'Voice',
-    icon: Volume2,
-    keys: [
-      'tts.provider',
-      'voice.auto_tts',
-      'tts.edge.voice',
-      'tts.openai.model',
-      'tts.openai.voice',
-      'tts.elevenlabs.voice_id',
-      'tts.elevenlabs.model_id',
-      'tts.xai.voice_id',
-      'tts.xai.language',
-      'tts.xai.speed',
-      'tts.xai.auto_speech_tags',
-      'tts.xai.optimize_streaming_latency',
-      'tts.xai.sample_rate',
-      'tts.xai.bit_rate',
-      'tts.minimax.model',
-      'tts.minimax.voice_id',
-      'tts.mistral.model',
-      'tts.mistral.voice_id',
-      'tts.gemini.model',
-      'tts.gemini.voice',
-      'tts.neutts.model',
-      'tts.neutts.device',
-      'tts.kittentts.model',
-      'tts.kittentts.voice',
-      'tts.piper.voice',
-      'tts.deepinfra.model',
-      'tts.deepinfra.voice',
-      'voice.client_direct'
     ]
   },
   {

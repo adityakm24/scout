@@ -1085,6 +1085,29 @@ def _run_prompt_submit(
         "kind=%s chars=%s images=%d",
         sid, session.get("session_key") or "", getattr(agent, "session_id", "") or "",
         display_kind or "user", len(text) if isinstance(text, str) else "-", len(images))
+    try:
+        from agent.advanced_trace import emit_trace
+        _tr_peer = getattr(session.get("transport"), "_peer", "stdio/local")
+        emit_trace(
+            "user.prompt_submitted",
+            session_id=getattr(agent, "session_id", "") or session.get("session_key") or "",
+            ui_session_id=sid,
+            device_info={
+                "peer": _tr_peer,
+                "source": session.get("source") or "gui",
+                "platform": getattr(agent, "platform", "") or "desktop",
+                "cwd": session.get("cwd") or "",
+                "last_device_location": getattr(agent, "_last_device_location", None),
+            },
+            prompt_text=text,
+            display_kind=display_kind or "user",
+            images_count=len(images),
+            model=getattr(agent, "model", ""),
+            provider=getattr(agent, "provider", ""),
+            summary=f"peer={_tr_peer} model={getattr(agent, 'model', '')} prompt={text!r}",
+        )
+    except Exception:
+        pass
     if not muted:
         _emit("message.start", sid)
 
@@ -1143,12 +1166,32 @@ def _run_prompt_submit(
                 status = _result_status(st.result)
             else:
                 status = "error" if st.error_retained else "complete"
+            _turn_dur_s = time.monotonic() - _turn_started_monotonic
             logger.info(
                 "tui turn finished: ui_session=%s session_key=%s agent_session_id=%s status=%s "
                 "error_retained=%s duration=%.1fs%s",
                 sid, session.get("session_key") or "", getattr(st.agent, "session_id", "") or "",
-                status, st.error_retained, time.monotonic() - _turn_started_monotonic,
+                status, st.error_retained, _turn_dur_s,
                 st.error_detail)
+            try:
+                from agent.advanced_trace import emit_trace
+                _res_dict = st.result if isinstance(st.result, dict) else {}
+                emit_trace(
+                    "user.turn_completed",
+                    session_id=getattr(st.agent, "session_id", "") or session.get("session_key") or "",
+                    ui_session_id=sid,
+                    turn_id=_res_dict.get("turn_id"),
+                    status=status,
+                    duration_ms=int(_turn_dur_s * 1000),
+                    api_calls=_res_dict.get("api_calls"),
+                    final_response=_res_dict.get("final_response"),
+                    error=_res_dict.get("error") or st.error_detail or None,
+                    usage=_get_usage(st.agent) if st.agent else None,
+                    last_device_location=getattr(st.agent, "_last_device_location", None),
+                    summary=f"status={status} duration={_turn_dur_s:.2f}s api_calls={_res_dict.get('api_calls')} final={(_res_dict.get('final_response') or '')[:180]!r}",
+                )
+            except Exception:
+                pass
             # Backstop for turns that never reached a terminal frame.
             if st.receipt_committed:
                 _retire_turn_marker(session, st.marker_key)

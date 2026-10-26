@@ -173,12 +173,18 @@ def device_location_tool(to_latitude: Optional[float] = None, to_longitude: Opti
     # Resolve destination from to_place_name if coordinates are not explicitly passed
     if (to_latitude is None or to_longitude is None) and to_place_name:
         try:
-            from tools.commute_eta_sync_tool import resolve_saved_location
+            from tools.commute_eta_sync_tool import resolve_saved_location, geocode_address
             saved = resolve_saved_location(to_place_name)
             if saved:
                 to_latitude = saved["latitude"]
                 to_longitude = saved["longitude"]
-                result["destination_name"] = saved["name"]
+                result["destination_name"] = saved.get("address") or saved["name"]
+            else:
+                g_lat, g_lon, g_addr = geocode_address(to_place_name)
+                if g_lat is not None and g_lon is not None:
+                    to_latitude = g_lat
+                    to_longitude = g_lon
+                    result["destination_name"] = g_addr or to_place_name
         except Exception:
             pass
 
@@ -195,17 +201,18 @@ def device_location_tool(to_latitude: Optional[float] = None, to_longitude: Opti
 DEVICE_LOCATION_SCHEMA = {
     "name": "device_location",
     "description": (
-        "Get the user's current live location from the device they are chatting on (phone GPS or computer location services). "
+        "Get the user's current live location AND real-time Apple Maps live-traffic driving ETA from the device they are chatting on. "
         "Returns {latitude, longitude, address, street_name, accuracy_m, device}. "
-        "To calculate drive route and ETA, pass to_place_name (e.g. 'Condenat Work' or 'Home') or to_latitude/to_longitude: "
-        "{latitude, longitude, address, street_name, accuracy_m, device, drive: {straight_line_km, road_km_estimate, drive_minutes_estimate, method}}. "
+        "ALWAYS use this tool (NEVER use browse_task or web_search) to check traffic, route distance, or driving ETA! "
+        "Pass to_place_name (e.g. 'Condenat Work', 'Condenast Work', 'Home', or any street address) or to_latitude/to_longitude to get live traffic routing: "
+        "{latitude, longitude, address, street_name, accuracy_m, device, destination_name, drive: {straight_line_km, road_km_estimate, drive_minutes_estimate, method}}. "
         "IMPORTANT: In your final response, always refer to locations by their name/street (e.g. 'Frazer Town, Bengaluru' or 'Condé Nast, St. Mark\\'s Road'), "
         "NEVER recite raw decimal coordinates to the user. State the road distance in kilometers and estimated drive time in minutes."
     ),
     "parameters": {
         "type": "object",
         "properties": {
-            "to_place_name": {"type": "string", "description": "Name of destination place from saved locations (e.g. 'Condenat Work' or 'Home'). Coordinates will be resolved automatically."},
+            "to_place_name": {"type": "string", "description": "Name or address of destination place (e.g. 'Condenat Work', 'Condenast Work', 'Home', or any street address). Coordinates and live Apple Maps traffic ETA are resolved automatically."},
             "to_latitude": {"type": "number", "description": "Optional destination latitude coordinate."},
             "to_longitude": {"type": "number", "description": "Optional destination longitude coordinate."},
         },

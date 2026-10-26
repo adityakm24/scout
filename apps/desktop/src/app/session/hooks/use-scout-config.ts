@@ -18,7 +18,6 @@ import {
   setIntroPersonality
 } from '@/store/session'
 import { setShowToolActivityFromConfig } from '@/store/tool-activity'
-import { applyAutoSpeakFromConfig } from '@/store/voice-prefs'
 import { setChatFontFamilyFromConfig } from '@/themes/chat-font'
 
 const FAST_TIERS = new Set(['fast', 'priority', 'on'])
@@ -126,12 +125,6 @@ export function useScoutConfig({ activeSessionIdRef }: ScoutConfigOptions) {
         setShowToolActivityFromConfig(config.display?.tool_progress)
         setTerminalFontFamilyFromConfig(config.terminal?.font_family)
         setChatFontFamilyFromConfig(config.desktop?.font_family)
-
-        if (!canPublish()) {
-          return
-        }
-
-        applyAutoSpeakFromConfig(config)
       } catch {
         // Config is nice-to-have; chat still works without it.
       }

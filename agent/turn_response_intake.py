@@ -140,6 +140,46 @@ def normalize_model_response(
     # call/result rows before this turn's assistant message; no-op for ordinary providers.
     splice_provider_projection(agent, response, messages)
 
+    try:
+        from agent.advanced_trace import emit_trace
+        _tc_list = [
+            {
+                "id": getattr(tc, "id", None),
+                "name": getattr(getattr(tc, "function", None), "name", None),
+                "arguments": getattr(getattr(tc, "function", None), "arguments", None),
+            }
+            for tc in (getattr(assistant_message, "tool_calls", None) or [])
+        ]
+        _usage_summary = None
+        try:
+            _usage_summary = agent._usage_summary_for_api_request_hook(response)
+        except Exception:
+            pass
+        emit_trace(
+            "llm.api_response",
+            session_id=getattr(agent, "session_id", "") or "",
+            turn_id=turn_id,
+            api_request_id=api_request_id,
+            api_call_count=api_call_count,
+            duration_ms=int((api_duration or 0.0) * 1000),
+            model=getattr(response, "model", None) or getattr(agent, "model", ""),
+            provider=getattr(agent, "provider", ""),
+            finish_reason=finish_reason,
+            message_count=len(api_messages) if api_messages else 0,
+            assistant_content=assistant_message.content,
+            reasoning=agent._extract_reasoning(assistant_message) if hasattr(agent, "_extract_reasoning") else None,
+            tool_calls=_tc_list,
+            usage=_usage_summary,
+            summary=(
+                f"call=#{api_call_count} model={getattr(agent, 'model', '')} "
+                f"finish={finish_reason} ({int((api_duration or 0.0)*1000)}ms) "
+                f"tool_calls={[t['name'] for t in _tc_list]} "
+                f"content={(assistant_message.content or '')[:160]!r}"
+            ),
+        )
+    except Exception:
+        pass
+
     _fire_post_api_request_hook(
         agent, response, assistant_message, finish_reason, api_messages=api_messages,
         api_call_count=api_call_count, api_duration=api_duration, api_start_time=api_start_time,

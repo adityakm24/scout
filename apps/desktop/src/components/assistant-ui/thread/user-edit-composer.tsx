@@ -73,7 +73,6 @@ import { sanitizeComposerInput } from '@/lib/composer-input-sanitize'
 import { DATA_IMAGE_URL_RE } from '@/lib/embedded-images'
 import { triggerHaptic } from '@/lib/haptics'
 import { Loader2Icon } from '@/lib/icons'
-import { isMacPlatform } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 import type { ScoutGateway } from '@/scout'
 import type { ComposerAttachment } from '@/store/composer'
@@ -871,9 +870,8 @@ export const UserEditComposer: FC<UserEditComposerProps> = ({ cwd, gateway, sess
           >
             <div
               aria-label={copy.editMessage}
-              autoCapitalize="off"
-              // Match the main composer: allow macOS replacements, not spellcheck.
-              autoCorrect={isMacPlatform() ? 'on' : 'off'}
+              autoCapitalize="sentences"
+              autoCorrect="on"
               className={cn(
                 'ui-prompt-input-editor__input max-h-48 w-full resize-none overflow-y-auto bg-transparent p-0 pr-7 text-[length:var(--conversation-text-font-size)] text-foreground/95 outline-none',
                 '**:data-ref-text:cursor-default',
@@ -904,7 +902,7 @@ export const UserEditComposer: FC<UserEditComposerProps> = ({ cwd, gateway, sess
               onPaste={handlePaste}
               ref={editorRef}
               role="textbox"
-              spellCheck={false}
+              spellCheck={true}
               suppressContentEditableWarning
             />
             <ComposerDirectiveActions editorRef={editorRef} />

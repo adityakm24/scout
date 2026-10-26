@@ -233,8 +233,9 @@ def _device_location(agent, args: dict, ctx: InlineToolContext) -> Any:
     from tools.device_location_tool import device_location_tool
 
     out = device_location_tool(
-        args.get("to_latitude"),
-        args.get("to_longitude"),
+        to_latitude=args.get("to_latitude"),
+        to_longitude=args.get("to_longitude"),
+        to_place_name=args.get("to_place_name"),
         callback=getattr(agent, "device_location_callback", None),
     )
     try:
@@ -248,6 +249,21 @@ def _device_location(agent, args: dict, ctx: InlineToolContext) -> Any:
     except Exception:
         pass
     return out
+
+
+def _start_commute_eta_sync(agent, args: dict, ctx: InlineToolContext) -> Any:
+    from tools.commute_eta_sync_tool import start_commute_eta_sync
+
+    return start_commute_eta_sync(
+        destination_lat=args.get("destination_lat"),
+        destination_lng=args.get("destination_lng"),
+        destination_name=args.get("destination_name"),
+        destination_address=args.get("destination_address"),
+        target_eta_minutes=args.get("target_eta_minutes", 15),
+        transport_mode=args.get("transport_mode", "driving"),
+        action_payload=args.get("action_payload"),
+        location_callback=getattr(agent, "device_location_callback", None),
+    )
 
 
 # Order is the historical if/elif order of ``execute_tool_calls_sequential``.
@@ -295,6 +311,7 @@ INLINE_TOOL_EXECUTORS: Dict[str, InlineToolExecutor] = {
         "tools.read_window_tool", "read_window_below_tool", "read_window_below_callback",
     ),
     "device_location": _device_location,
+    "start_commute_eta_sync": _start_commute_eta_sync,
     "gui_tour": _callback_tool(
         "tools.tour_tool", "tour_tool", "tour_callback",
         ("action", "action", ""), ("surface", "surface"), ("selector", "selector"), ("title", "title"),

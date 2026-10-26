@@ -884,6 +884,8 @@ function ClarifyToolSinglePending({
               <Textarea
                 aria-current={activeIndex === choices.length || undefined}
                 aria-keyshortcuts={`${letterFor(choices.length)} ${choices.length + 1}`}
+                autoCapitalize="sentences"
+                autoCorrect="on"
                 className={CLARIFY_TEXTAREA_CLASS}
                 disabled={submitting || !ready}
                 onBlur={() => setOtherFocused(false)}
@@ -901,12 +903,15 @@ function ClarifyToolSinglePending({
                 ref={textareaRef}
                 rows={1}
                 size="sm"
+                spellCheck
                 value={draft}
               />
             </label>
           </div>
         ) : (
           <Textarea
+            autoCapitalize="sentences"
+            autoCorrect="on"
             className={CLARIFY_TEXTAREA_CLASS}
             disabled={submitting || !ready}
             onChange={event => onDraftChange(event.target.value)}
@@ -915,6 +920,7 @@ function ClarifyToolSinglePending({
             ref={textareaRef}
             rows={1}
             size="sm"
+            spellCheck
             value={draft}
           />
         )}

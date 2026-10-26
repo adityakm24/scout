@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { FREE_INPUT_KEYS, SECTIONS, STT_PROVIDER_KEYS } from './constants'
+import { FREE_INPUT_KEYS, SECTIONS, STT_PROVIDER_KEYS, TTS_PROVIDER_KEYS } from './constants'
 import { voiceProviderKeys } from './voice-provider-fields'
 
-const voiceKeys: readonly string[] = [...(SECTIONS.find(s => s.id === 'voice')?.keys ?? []), ...STT_PROVIDER_KEYS]
+const voiceKeys: readonly string[] = [
+  ...(SECTIONS.find(s => s.id === 'voice')?.keys ?? TTS_PROVIDER_KEYS),
+  ...STT_PROVIDER_KEYS
+]
 
 describe('voiceProviderKeys', () => {
   it('covers every built-in TTS provider the Capabilities picker offers', () => {

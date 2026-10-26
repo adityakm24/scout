@@ -88,6 +88,25 @@ def handle_api_error(
 
     status_code = getattr(api_error, "status_code", None)
     error_context = agent._extract_api_error_context(api_error)
+    try:
+        from agent.advanced_trace import emit_trace
+        emit_trace(
+            "llm.api_error",
+            session_id=getattr(agent, "session_id", "") or "",
+            turn_id=turn_id,
+            api_request_id=api_request_id,
+            api_call_count=api_call_count,
+            retry_count=retry_count,
+            model=getattr(agent, "model", ""),
+            provider=getattr(agent, "provider", ""),
+            status_code=status_code,
+            error_type=type(api_error).__name__,
+            error_message=str(api_error),
+            error_context=error_context,
+            summary=f"call=#{api_call_count} retry={retry_count} model={getattr(agent, 'model', '')} status={status_code} err={type(api_error).__name__}: {str(api_error)[:200]}",
+        )
+    except Exception:
+        pass
 
     # Process is exiting mid-flight: retries/rotation/fallbacks are futile and the
     # retry trace spams the shell. One log line.

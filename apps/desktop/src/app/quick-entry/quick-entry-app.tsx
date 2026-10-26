@@ -116,9 +116,9 @@ export function QuickEntryApp() {
           </span>
           <input
             aria-label="Quick Entry"
-            autoCapitalize="off"
+            autoCapitalize="sentences"
             autoComplete="off"
-            autoCorrect="off"
+            autoCorrect="on"
             disabled={!state.connected}
             onBlur={event => {
               // Moving focus to the target picker is not leaving the window.
@@ -138,7 +138,7 @@ export function QuickEntryApp() {
             }}
             placeholder={state.connected ? 'Ask Scout…' : 'Not connected — open Scout to reconnect'}
             ref={inputRef}
-            spellCheck={false}
+            spellCheck={true}
             style={{
               background: 'transparent',
               border: 'none',

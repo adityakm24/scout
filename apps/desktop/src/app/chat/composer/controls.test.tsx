@@ -17,14 +17,14 @@ function renderControls(overrides: Partial<React.ComponentProps<typeof ComposerC
   return render(
     <I18nProvider configClient={null} initialLocale="en">
       <ComposerControls
-        autoSpeak={false}
         busy={false}
         busyAction="stop"
         canSubmit={true}
         disabled={false}
+        expanded={false}
         hasComposerPayload={true}
         onQueue={vi.fn()}
-        onToggleAutoSpeak={vi.fn()}
+        onToggleExpand={vi.fn()}
         state={state}
         {...overrides}
       />
@@ -46,16 +46,16 @@ afterEach(() => {
   $hudMode.set(false)
 })
 
-describe('read-aloud toggle', () => {
-  it('reflects the preference and flips it', () => {
-    const onToggleAutoSpeak = vi.fn()
-    renderControls({ autoSpeak: true, onToggleAutoSpeak })
+describe('text expand toggle', () => {
+  it('reflects the expanded state and toggles it when typing', () => {
+    const onToggleExpand = vi.fn()
+    renderControls({ expanded: true, hasComposerPayload: true, onToggleExpand })
 
-    const toggle = screen.getByLabelText('Stop reading replies aloud')
+    const toggle = screen.getByLabelText('Collapse')
     expect(toggle.getAttribute('aria-pressed')).toBe('true')
 
     fireEvent.click(toggle)
-    expect(onToggleAutoSpeak).toHaveBeenCalledTimes(1)
+    expect(onToggleExpand).toHaveBeenCalledTimes(1)
   })
 })
 

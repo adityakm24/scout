@@ -39,7 +39,6 @@ _SCOUT_CORE_TOOLS = [
     "read_file", "write_file", "patch", "search_files",
     "vision_analyze", "image_generate",
     "skills_list", "skill_view", "skill_manage",
-    "text_to_speech",
     "todo_list", "memory",
     "planner",
     "session_search",

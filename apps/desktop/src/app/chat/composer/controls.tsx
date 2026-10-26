@@ -5,7 +5,7 @@ import { Codicon } from '@/components/ui/codicon'
 import { Tip, TipKeybindLabel } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
-import { iconSize, Layers3, Volume2, VolumeX } from '@/lib/icons'
+import { ArrowsMaximize, ArrowsMinimize, iconSize, Layers3 } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { $hudMode, closeHud, resetHudLayout } from '@/store/hud'
 
@@ -17,31 +17,31 @@ import type { ChatBarState } from './types'
 export { ACTIVE_ICON_BTN, GHOST_ICON_BTN, ICON_BTN, PRIMARY_ICON_BTN } from './control-classes'
 
 export function ComposerControls({
-  autoSpeak,
   busy,
   busyAction,
   canSubmit,
   compactModelPill = false,
   disabled,
+  expanded = false,
   hasComposerPayload,
   hideModelPill = false,
   minimal = false,
   state,
   onQueue,
-  onToggleAutoSpeak
+  onToggleExpand
 }: {
-  autoSpeak: boolean
   busy: boolean
   busyAction: 'steer' | 'queue' | 'stop'
   canSubmit: boolean
   compactModelPill?: boolean
   disabled: boolean
+  expanded?: boolean
   hasComposerPayload: boolean
   hideModelPill?: boolean
   minimal?: boolean
   state: ChatBarState
   onQueue: () => void
-  onToggleAutoSpeak: () => void
+  onToggleExpand?: () => void
 }) {
   const { t } = useI18n()
   const c = t.composer
@@ -51,16 +51,30 @@ export function ComposerControls({
   // only when the composer is empty and a turn is running.
   const showStop = busy && !hasComposerPayload
   const showQueueButton = busyAction !== 'stop' && hasComposerPayload
+  const showSendOrStop = showStop || hasComposerPayload
 
   return (
     <div className="flex min-w-0 shrink items-center gap-(--composer-control-gap)">
-      {/* At `minimal` the row is the send button and nothing else — the one
-          thing that must survive every width. */}
-      {minimal ? null : (
-        <>
-          <ReadAloudButton active={autoSpeak} disabled={disabled} onToggle={onToggleAutoSpeak} />
-        </>
-      )}
+      {/* Text expand/collapse toggle when typing */}
+      {!minimal && hasComposerPayload && onToggleExpand ? (
+        <Tip label={expanded ? c.queueCollapse : c.queueExpand} placement="control">
+          <Button
+            aria-label={expanded ? c.queueCollapse : c.queueExpand}
+            aria-pressed={expanded}
+            className={cn(GHOST_ICON_BTN, 'p-0', expanded && ACTIVE_ICON_BTN)}
+            disabled={disabled}
+            onClick={() => {
+              triggerHaptic(expanded ? 'close' : 'open')
+              onToggleExpand()
+            }}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            {expanded ? <ArrowsMinimize className={iconSize.sm} /> : <ArrowsMaximize className={iconSize.sm} />}
+          </Button>
+        </Tip>
+      ) : null}
       {showQueueButton ? (
         <Tip label={<TipKeybindLabel actionId="composer.queue" text={c.queueMessage} />} placement="control">
           <Button
@@ -76,60 +90,42 @@ export function ComposerControls({
           </Button>
         </Tip>
       ) : null}
-      <Tip
-        label={
-          showStop ? (
-            <TipKeybindLabel actionId="composer.send" text={c.stop} />
-          ) : (
-            <TipKeybindLabel actionId="composer.send" text={c.send} />
-          )
-        }
-        placement="control"
+      <div
+        className={cn(
+          'grid items-center overflow-hidden transition-all duration-200 ease-out',
+          showSendOrStop ? 'w-(--composer-control-primary-size,var(--composer-control-size)) scale-100 opacity-100' : 'w-0 scale-50 opacity-0 pointer-events-none'
+        )}
       >
-        <Button
-          aria-label={showStop ? c.stop : c.send}
-          className={PRIMARY_ICON_BTN}
-          disabled={disabled || !canSubmit}
-          type="submit"
+        <Tip
+          label={
+            showStop ? (
+              <TipKeybindLabel actionId="composer.send" text={c.stop} />
+            ) : (
+              <TipKeybindLabel actionId="composer.send" text={c.send} />
+            )
+          }
+          placement="control"
         >
-          {showStop ? (
-            <span className="block size-2.5 rounded-[0.1875rem] bg-current" />
-          ) : (
-            <Codicon name="arrow-up" size="0.875rem" />
-          )}
-        </Button>
-      </Tip>
+          <Button
+            aria-label={showStop ? c.stop : c.send}
+            className={PRIMARY_ICON_BTN}
+            disabled={disabled || !canSubmit}
+            tabIndex={showSendOrStop ? 0 : -1}
+            type="submit"
+          >
+            {showStop ? (
+              <span className="block size-2.5 rounded-[0.1875rem] bg-current" />
+            ) : (
+              <Codicon name="arrow-up" size="0.875rem" />
+            )}
+          </Button>
+        </Tip>
+      </div>
       {/* The way out of HUD mode, riding the controls row rather than floating
           above the bar: it costs no reserved space and sits with the other
           things you can press. */}
       {hudMode ? <HudWindowButtons /> : null}
     </div>
-  )
-}
-
-/** "Read replies aloud" — text-to-speech of each new reply (voice.auto_tts). */
-function ReadAloudButton({ active, disabled, onToggle }: { active: boolean; disabled: boolean; onToggle: () => void }) {
-  const { t } = useI18n()
-  const label = active ? t.composer.stopSpeakingReplies : t.composer.speakReplies
-
-  return (
-    <Tip label={label} placement="control">
-      <Button
-        aria-label={label}
-        aria-pressed={active}
-        className={cn(GHOST_ICON_BTN, 'p-0', active && ACTIVE_ICON_BTN)}
-        disabled={disabled}
-        onClick={() => {
-          triggerHaptic(active ? 'close' : 'open')
-          onToggle()
-        }}
-        size="icon"
-        type="button"
-        variant="ghost"
-      >
-        {active ? <Volume2 className={iconSize.sm} /> : <VolumeX className={iconSize.sm} />}
-      </Button>
-    </Tip>
   )
 }
 

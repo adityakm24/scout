@@ -11,14 +11,12 @@ export const GHOST_ICON_BTN = cn(
   'text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground'
 )
 
-// Send/voice-conversation primary: solid foreground-on-background circle
-// (reads as black-on-white in light mode, white-on-black in dark mode) to
-// match the reference composer's high-contrast CTA. Keeps the pill itself
-// neutral and lets the action visually dominate the row.
+// Send primary: solid high-contrast CTA circle; smoothly animates scale/opacity
+// when appearing as the user starts typing.
 export const PRIMARY_ICON_BTN = cn(
   'size-(--composer-control-primary-size,var(--composer-control-size)) shrink-0 rounded-full p-0',
-  'bg-foreground text-background hover:bg-foreground/90',
-  'disabled:bg-foreground/30 disabled:text-background disabled:opacity-100'
+  'bg-primary text-primary-foreground shadow-sm transition-all duration-200 ease-out hover:bg-primary/90 active:scale-95',
+  'disabled:pointer-events-none disabled:bg-foreground/20 disabled:text-background disabled:opacity-0 disabled:scale-75'
 )
 
 /** A toggle that is currently ON — dictation, spoken replies, the wake word. */

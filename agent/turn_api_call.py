@@ -127,6 +127,32 @@ def perform_api_call(
         if _model_request_active is not None:
             _model_request_active.set()
     try:
+        try:
+            from agent.advanced_trace import emit_trace
+            _msgs = api_kwargs.get("messages") if isinstance(api_kwargs, dict) else None
+            _last_msg = _msgs[-1] if isinstance(_msgs, list) and _msgs else None
+            emit_trace(
+                "llm.api_request",
+                session_id=getattr(agent, "session_id", "") or "",
+                turn_id=turn_id,
+                api_request_id=api_request_id,
+                api_call_count=api_call_count,
+                retry_count=retry_count,
+                model=getattr(agent, "model", ""),
+                provider=getattr(agent, "provider", ""),
+                base_url=getattr(agent, "base_url", ""),
+                api_mode=getattr(agent, "api_mode", ""),
+                streaming=_use_streaming,
+                message_count=len(_msgs) if isinstance(_msgs, list) else 0,
+                tools_count=len(api_kwargs.get("tools") or []) if isinstance(api_kwargs, dict) else 0,
+                last_message=_last_msg,
+                summary=(
+                    f"call=#{api_call_count} retry={retry_count} model={getattr(agent, 'model', '')} "
+                    f"provider={getattr(agent, 'provider', '')} msgs={len(_msgs) if isinstance(_msgs, list) else 0}"
+                ),
+            )
+        except Exception:
+            pass
         response = run_llm_execution_middleware(
             api_kwargs, _perform_api_call, original_request=_original_api_kwargs,
             task_id=effective_task_id, turn_id=turn_id, api_request_id=api_request_id,

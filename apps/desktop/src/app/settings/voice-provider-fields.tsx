@@ -15,13 +15,15 @@ import type { ScoutConfigRecord } from '@/types/scout'
 import { scoutConfigCacheWriter, useScoutConfigRecord } from '../hooks/use-config-record'
 
 import { ConfigField } from './config-field'
-import { SECTIONS, STT_PROVIDER_KEYS } from './constants'
+import { SECTIONS, STT_PROVIDER_KEYS, TTS_PROVIDER_KEYS } from './constants'
 import { diffConfig, enumOptionsFor, getNested, inferFieldSchema, setNested } from './helpers'
 
-// The curated voice keys (Settings → Voice) are the single source of which
-// per-provider fields exist; both the Voice settings page and the
-// Capabilities TTS panel derive from it so the two surfaces never drift.
-const VOICE_KEYS: readonly string[] = [...(SECTIONS.find(s => s.id === 'voice')?.keys ?? []), ...STT_PROVIDER_KEYS]
+// The curated voice keys are the single source of which
+// per-provider fields exist.
+const VOICE_KEYS: readonly string[] = [
+  ...(SECTIONS.find(s => s.id === 'voice')?.keys ?? TTS_PROVIDER_KEYS),
+  ...STT_PROVIDER_KEYS
+]
 
 export function voiceProviderKeys(section: 'tts' | 'stt', providerKey: string): string[] {
   const prefix = `${section}.${providerKey}.`

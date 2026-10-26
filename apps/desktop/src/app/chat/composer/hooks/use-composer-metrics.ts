@@ -44,7 +44,10 @@ const sameFit = (a: ComposerFit, b: ComposerFit) =>
   a.compactPill === b.compactPill && a.minimal === b.minimal && a.tight === b.tight
 
 interface UseComposerMetricsResult extends ComposerFit {
+  expanded: boolean
+  manualExpanded: boolean
   stacked: boolean
+  toggleManualExpanded: () => void
 }
 
 /**
@@ -62,6 +65,7 @@ export function useComposerMetrics({
   poppedOut
 }: UseComposerMetricsArgs): UseComposerMetricsResult {
   const [expanded, setExpanded] = useState(false)
+  const [manualExpanded, setManualExpanded] = useState(false)
   const [fit, setFit] = useState<ComposerFit>(ROOMY)
 
   // Edge signals, not the live text: these only re-render when emptiness / the
@@ -80,6 +84,7 @@ export function useComposerMetrics({
   useEffect(() => {
     if (isEmpty) {
       setExpanded(false)
+      setManualExpanded(false)
 
       return
     }
@@ -95,6 +100,10 @@ export function useComposerMetrics({
       setExpanded(true)
     }
   }, [expanded, hasHardNewline, isEmpty])
+
+  const toggleManualExpanded = useCallback(() => {
+    setManualExpanded(prev => !prev)
+  }, [])
 
   // Bucket measured heights so we only invalidate the global CSS var when
   // the size crosses a meaningful threshold. Without bucketing, the editor
@@ -224,8 +233,11 @@ export function useComposerMetrics({
   // is always compact by the time the row stacks.
   return {
     compactPill: fit.compactPill || fit.tight,
+    expanded: expanded || manualExpanded,
+    manualExpanded,
     minimal: fit.minimal,
-    stacked: expanded || fit.tight,
-    tight: fit.tight
+    stacked: expanded || manualExpanded || fit.tight,
+    tight: fit.tight,
+    toggleManualExpanded
   }
 }

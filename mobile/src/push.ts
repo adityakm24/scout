@@ -1,3 +1,4 @@
+import { requireOptionalNativeModule } from 'expo'
 import Constants from 'expo-constants'
 import * as LiveActivity from 'expo-live-activity'
 import * as Notifications from 'expo-notifications'
@@ -5,6 +6,8 @@ import * as SecureStore from 'expo-secure-store'
 import { AppState, type AppStateStatus, Platform } from 'react-native'
 
 import type { Pairing } from './pairing'
+
+const liveActivityAvailable = () => Platform.OS === 'ios' && requireOptionalNativeModule('ExpoLiveActivity') != null
 
 // Tells the paired Scout how to reach this phone once iOS or Android suspends the app
 // (scout_backend/push/): the Expo push token for notifications, Apple's tokens for the Live Activity,
@@ -181,7 +184,7 @@ export function setWatching(sessionId: string) {
 
 // Apple hands these over once, early, and only to a listener already attached: subscribe as soon
 // as the app loads, before any registration, and post what arrived once the phone is registered.
-if (Platform.OS === 'ios') {
+if (liveActivityAvailable()) {
   LiveActivity.addActivityPushToStartTokenListener(({ activityPushToStartToken }) => {
     pushToStartToken = activityPushToStartToken
     quietly(register())

@@ -1003,6 +1003,21 @@ def _begin_tool_execution(agent, ref: _ToolCallRef, display_index: int | None) -
     agent._current_tool = function_name
     agent._touch_activity(f"executing tool: {function_name}")
     _set_worker_activity_callback(agent)
+    try:
+        from agent.advanced_trace import emit_trace
+        emit_trace(
+            "tool.call_start",
+            session_id=getattr(agent, "session_id", "") or "",
+            turn_id=getattr(agent, "_current_turn_id", "") or "",
+            tool_call_id=tool_call_id,
+            tool_name=function_name,
+            arguments=display_args,
+            task_id=effective_task_id,
+            device_info={"last_device_location": getattr(agent, "_last_device_location", None)},
+            summary=f"tool={function_name} call_id={tool_call_id} args={display_args}",
+        )
+    except Exception:
+        pass
 
     if agent.tool_progress_callback:
         try:
@@ -1093,6 +1108,28 @@ def _commit_tool_result(
     agent._current_tool = None
     _status_suffix = " (error)" if is_error else ""
     agent._touch_activity(f"tool completed: {function_name} ({tool_duration:.1f}s){_status_suffix}")
+    try:
+        from agent.advanced_trace import emit_trace
+        emit_trace(
+            "tool.call_complete",
+            session_id=getattr(agent, "session_id", "") or "",
+            turn_id=getattr(agent, "_current_turn_id", "") or "",
+            tool_call_id=tool_call_id,
+            tool_name=function_name,
+            arguments=function_args,
+            result=function_result,
+            duration_ms=int((tool_duration or 0.0) * 1000),
+            is_error=is_error,
+            blocked=blocked,
+            device_info={"last_device_location": getattr(agent, "_last_device_location", None)},
+            summary=(
+                f"tool={function_name} call_id={tool_call_id} "
+                f"duration={int((tool_duration or 0.0)*1000)}ms error={is_error} "
+                f"result={str(function_result)[:240]!r}"
+            ),
+        )
+    except Exception:
+        pass
 
     persisted_result = function_result
     if _is_multimodal_tool_result(persisted_result):

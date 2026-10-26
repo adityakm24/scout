@@ -30,12 +30,29 @@ def _handle_admitted_request(req: dict) -> dict | None:
         if problem is not None:
             return _err(rid, 4000, problem)
     token = _current_rpc_method.set(method)
+    _rpc_t0 = time.time()
     try:
         response = fn(rid, params)
     except ProfileUnavailableError as exc:
         return _err(rid, 4064, str(exc))
     finally:
         _current_rpc_method.reset(token)
+    if method not in ("gateway.ping", "session.events.since", "approval.pending"):
+        try:
+            from agent.advanced_trace import emit_trace
+            emit_trace(
+                "rpc.call",
+                ui_session_id=str(params.get("session_id") or "") if isinstance(params, dict) else "",
+                rpc_id=rid,
+                method=method,
+                params=params,
+                duration_ms=int((time.time() - _rpc_t0) * 1000),
+                is_error=isinstance(response, dict) and "error" in response,
+                error=response.get("error") if isinstance(response, dict) else None,
+                summary=f"method={method} id={rid} ({int((time.time() - _rpc_t0)*1000)}ms)",
+            )
+        except Exception:
+            pass
     if contract is not None and isinstance(response, dict) and isinstance(response.get("result"), dict):
         _contracts.check_params_accepted(contract, params)
         _contracts.check_result(contract, response["result"])

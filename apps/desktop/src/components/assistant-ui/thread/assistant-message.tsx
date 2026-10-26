@@ -991,12 +991,6 @@ const AssistantActionBar: FC<MessageActionProps & { durationS?: number }> = ({
         {fullResponseAvailable && (
           <CopyButton appearance="icon" buttonSize="icon" label={copy.copyFullResponse} text={getFullResponseText} />
         )}
-        <ReadAloudButton
-          fullResponseAvailable={fullResponseAvailable}
-          getFullText={getFullResponseText}
-          getText={getMessageText}
-          messageId={messageId}
-        />
         <ActionBarPrimitive.Reload asChild>
           <TooltipIconButton
             onClick={() => {

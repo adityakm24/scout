@@ -124,9 +124,19 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
     }
 
     try {
-      reply(call.id, await handle(call.kind, call.payload))
+      const t0 = Date.now()
+      if (call.kind !== 'ws-send') {
+        console.log(`[scout-mobile-trace] -> native.request kind=${call.kind} id=${call.id} payload=${JSON.stringify(call.payload ?? null).slice(0, 300)}`)
+      }
+      const res = await handle(call.kind, call.payload)
+      if (call.kind !== 'ws-send') {
+        console.log(`[scout-mobile-trace] <- native.reply kind=${call.kind} id=${call.id} (${Date.now() - t0}ms) result=${JSON.stringify(res ?? null).slice(0, 400)}`)
+      }
+      reply(call.id, res)
     } catch (error) {
-      reply(call.id, null, error instanceof Error ? error.message : String(error))
+      const errMsg = error instanceof Error ? error.message : String(error)
+      console.warn(`[scout-mobile-trace] !! native.error kind=${call.kind} id=${call.id} error=${errMsg}`)
+      reply(call.id, null, errMsg)
     }
   }
 

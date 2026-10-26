@@ -6,9 +6,11 @@ user travel time (native on-device MapKit/GPS tracking) with live dynamic mercha
 and provides persistent named location storage (Home, Work, Gym, etc.) with automatic address geocoding.
 """
 
+import difflib
 import json
 import logging
 import math
+import re
 import time
 import urllib.parse
 import urllib.request
@@ -175,6 +177,16 @@ def resolve_saved_location(target: str) -> Optional[Dict[str, Any]]:
     for loc_key, val in locs.items():
         if key in loc_key or loc_key in key:
             return val
+    # Fuzzy token / address match (handles e.g. 'condenast work' or 'condenast st marks' -> 'condenat work')
+    tokens = [t for t in re.split(r"[\s,]+", key) if len(t) >= 3]
+    for loc_key, val in locs.items():
+        addr_lower = (val.get("address") or "").lower()
+        loc_tokens = [t for t in re.split(r"[\s,]+", f"{loc_key} {addr_lower}") if len(t) >= 3]
+        if any(t in loc_tokens for t in tokens):
+            return val
+        for t in tokens:
+            if difflib.get_close_matches(t, loc_tokens, n=1, cutoff=0.75):
+                return val
     return None
 
 
@@ -256,24 +268,25 @@ def start_commute_eta_sync(
     target_eta_minutes: int = 15,
     transport_mode: str = "driving",
     action_payload: Optional[Dict[str, Any]] = None,
+    location_callback: Optional[Any] = None,
 ) -> str:
     """Initialize the dual-timeline commute ETA tracking engine."""
     resolved_name = None
 
-    # 1. Check destination_address first
-    if (destination_lat is None or destination_lng is None) and destination_address:
-        geo_lat, geo_lng, _ = geocode_address(destination_address)
-        if geo_lat is not None and geo_lng is not None:
-            destination_lat, destination_lng = geo_lat, geo_lng
-            resolved_name = destination_address
-
-    # 2. Check saved location name (e.g. 'Home')
-    if (destination_lat is None or destination_lng is None) and destination_name:
-        saved = resolve_saved_location(destination_name)
+    # 1. Check saved location name first (or fuzzy match on destination_address)
+    if (destination_lat is None or destination_lng is None) and (destination_name or destination_address):
+        saved = resolve_saved_location(destination_name or destination_address)
         if saved:
             destination_lat = saved["latitude"]
             destination_lng = saved["longitude"]
-            resolved_name = saved["name"]
+            resolved_name = saved.get("address") or saved["name"]
+
+    # 2. Check destination_address via geocoding if still unresolved
+    if (destination_lat is None or destination_lng is None) and destination_address:
+        geo_lat, geo_lng, geo_disp = geocode_address(destination_address)
+        if geo_lat is not None and geo_lng is not None:
+            destination_lat, destination_lng = geo_lat, geo_lng
+            resolved_name = geo_disp or destination_address
 
     # 3. Default fallback to saved 'home' location
     if destination_lat is None or destination_lng is None:
@@ -303,6 +316,47 @@ def start_commute_eta_sync(
     payload = action_payload if isinstance(action_payload, dict) else {}
     sync_id = f"sync_{int(time.time())}"
 
+    live_route_info = None
+    user_eta_min = None
+    if callable(location_callback):
+        try:
+            from tools.device_location_tool import device_location_tool
+            loc_raw = device_location_tool(
+                to_latitude=dest_lat,
+                to_longitude=dest_lng,
+                callback=location_callback,
+            )
+            loc_data = json.loads(loc_raw) if isinstance(loc_raw, str) else loc_raw
+            if isinstance(loc_data, dict) and isinstance(loc_data.get("drive"), dict):
+                live_route_info = {
+                    "origin_address": loc_data.get("address"),
+                    "device": loc_data.get("device"),
+                    **loc_data["drive"],
+                }
+                user_eta_min = loc_data["drive"].get("drive_minutes_estimate")
+        except Exception:
+            pass
+
+    order_timing_advice = None
+    if user_eta_min is not None:
+        wait_min = user_eta_min - eta_min
+        if wait_min > 1:
+            order_timing_advice = (
+                f"Your live Apple Maps drive time is ~{user_eta_min} minutes ({live_route_info.get('road_km_estimate')} km) "
+                f"and delivery ETA is ~{eta_min} minutes. Order in ~{wait_min} minutes (when you are {eta_min} minutes away) "
+                f"so the order arrives right as you reach {resolved_name or destination_name or 'your destination'}."
+            )
+        elif wait_min >= -2:
+            order_timing_advice = (
+                f"Your live Apple Maps drive time is ~{user_eta_min} minutes and delivery ETA is ~{eta_min} minutes — "
+                f"place the order RIGHT NOW so both you and your delivery arrive together!"
+            )
+        else:
+            order_timing_advice = (
+                f"Your live Apple Maps drive time is ~{user_eta_min} minutes and delivery ETA is ~{eta_min} minutes — "
+                f"place the order immediately (you will arrive ~{abs(wait_min)} minutes before the delivery)."
+            )
+
     record = {
         "sync_id": sync_id,
         "status": "tracking",
@@ -311,21 +365,23 @@ def start_commute_eta_sync(
         "target_eta_minutes": eta_min,
         "transport_mode": mode,
         "action_payload": payload,
-        "last_checked_at": None,
-        "last_user_eta_minutes": None,
+        "last_checked_at": time.time() if user_eta_min is not None else None,
+        "last_user_eta_minutes": user_eta_min,
+        "live_route": live_route_info,
+        "order_timing_advice": order_timing_advice,
     }
 
     _write_active_sync(record)
 
     merchant = payload.get("merchant_provider") or payload.get("provider") or "Service"
     action = payload.get("action") or "Action"
-    dest_display = f"{record['destination']['name']} ({dest_lat:.4f}, {dest_lng:.4f})"
+    dest_display = f"{record['destination']['name']}"
 
     return json.dumps({
         "success": True,
         "sync_id": sync_id,
         "status": "tracking",
-        "message": f"Commute ETA-Sync initialized for {merchant} ({action}). Tracking user convergence toward {dest_display} with initial {eta_min}m target ETA.",
+        "message": order_timing_advice or f"Commute ETA-Sync initialized for {merchant} ({action}). Tracking user convergence toward {dest_display} with initial {eta_min}m target ETA.",
         "details": record,
     })
 
@@ -388,9 +444,11 @@ LIST_SAVED_LOCATIONS_SCHEMA = {
 START_COMMUTE_ETA_SYNC_SCHEMA = {
     "name": "start_commute_eta_sync",
     "description": (
-        "Initialize the on-device commute ETA synchronization engine. Synchronizes user travel ETA "
-        "toward destination (or saved 'Home'/'Work') with the dynamic service/delivery ETA in target_eta_minutes, "
-        "firing the requested action or prompt when the user enters the arrival convergence window."
+        "Initialize the on-device commute ETA synchronization engine OR calculate when to place a delivery order (e.g. Zepto, Swiggy, Zomato) "
+        "so that the delivery arrives right when the user reaches their destination. "
+        "Synchronizes user travel ETA toward destination (e.g. 'Condenat Work', 'Home', or any address) with the dynamic service/delivery ETA "
+        "in target_eta_minutes (for Zepto, first check mcp__zepto__get_location_serviceability for the destination coordinates and get the live ETA, "
+        "AND call device_location(to_place_name=...) to get the user's live Apple Maps driving ETA)."
     ),
     "parameters": {
         "type": "object",

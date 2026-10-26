@@ -330,6 +330,22 @@ async def handle_ws(ws: Any, *, auth_identity: dict | None = None, subprotocol: 
         disconnect_reason = "connected"
         _disable_nagle(ws)
         _log.info("ws accepted peer=%s", peer)
+        try:
+            from agent.advanced_trace import emit_trace
+            headers = dict(getattr(ws, "headers", {}) or {})
+            emit_trace(
+                "ws.client_connected",
+                device_info={
+                    "peer": peer,
+                    "user_agent": headers.get("user-agent", ""),
+                    "origin": headers.get("origin", ""),
+                    "host_header": headers.get("host", ""),
+                    "auth_identity": auth_identity,
+                },
+                summary=f"peer={peer} ua={headers.get('user-agent', '')[:120]}",
+            )
+        except Exception:
+            pass
         transport = WSTransport(ws, asyncio.get_running_loop(), peer=peer, auth_identity=auth_identity)
         # resolve_skin() is sync I/O + CPU; pooled so the read loop can drain the frontend's initial RPC burst.
         skin_payload = await asyncio.to_thread(server.resolve_skin)

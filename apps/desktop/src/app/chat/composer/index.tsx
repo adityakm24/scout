@@ -23,7 +23,6 @@ import { chatMessageText } from '@/lib/chat-messages'
 import { sanitizeComposerInput } from '@/lib/composer-input-sanitize'
 import { DATA_IMAGE_URL_RE } from '@/lib/embedded-images'
 import { triggerHaptic } from '@/lib/haptics'
-import { isMacPlatform } from '@/lib/platform'
 import { useStoreSelector, useStoresSelector } from '@/lib/use-session-slice'
 import { cn } from '@/lib/utils'
 import { sessionCompacting } from '@/store/compaction'
@@ -39,7 +38,6 @@ import { $gatewayState } from '@/store/session'
 import { $botChatSessionIds, $sessionStates, $sessionTiles, isBotChatSession } from '@/store/session-states'
 import { useForcedTextDirection } from '@/store/text-direction'
 import { $threadScrolledUpBySession } from '@/store/thread-scroll'
-import { $autoSpeakReplies } from '@/store/voice-prefs'
 import { useTheme } from '@/themes'
 
 import { AttachmentList } from './attachments'
@@ -68,7 +66,6 @@ import { useComposerMetrics } from './hooks/use-composer-metrics'
 import { useComposerPlaceholder } from './hooks/use-composer-placeholder'
 import { useComposerPopout } from './hooks/use-composer-popout'
 import { useComposerQueue } from './hooks/use-composer-queue'
-import { useComposerReadAloud } from './hooks/use-composer-read-aloud'
 import { useComposerScreenshot } from './hooks/use-composer-screenshot'
 import { useComposerSubmit } from './hooks/use-composer-submit'
 import { triggerKeyUpHandler, useComposerTrigger } from './hooks/use-composer-trigger'
@@ -110,7 +107,6 @@ import {
   resolveExactLinkPaste,
   selectionLinkLabel
 } from './url-refs'
-import { VoicePlaybackActivity } from './voice-activity'
 
 export function ChatBar({
   busy,
@@ -186,7 +182,6 @@ export function ChatBar({
     Boolean(scrollSessionId && map[scrollSessionId])
   )
 
-  const autoSpeak = useStore($autoSpeakReplies)
   const textDirection = useForcedTextDirection()
   // The turn is parked on the user (clarify / approval / sudo / secret). Esc must
   // not interrupt it — there's nothing actively running to stop, and stopping
@@ -395,7 +390,7 @@ export function ChatBar({
     return onCancel()
   }, [activeQueueSessionKeyRef, onCancel])
 
-  const { compactPill, minimal, stacked } = useComposerMetrics({
+  const { compactPill, expanded, manualExpanded, minimal, stacked, toggleManualExpanded } = useComposerMetrics({
     composerDockRef,
     composerRef,
     composerSurfaceRef,
@@ -1082,8 +1077,6 @@ export function ChatBar({
   // Same explicit-halt semantics as the Stop button: park the queue.
   useComposerEscCancel({ awaitingInput, busy, onCancel: haltRun, target: scope.target })
 
-  const handleToggleAutoSpeak = useComposerReadAloud(sessionId)
-
   const contextMenu = (
     <ContextMenu
       onInsertText={insertText}
@@ -1098,17 +1091,20 @@ export function ChatBar({
 
   const controls = (
     <ComposerControls
-      autoSpeak={autoSpeak}
       busy={busy}
       busyAction={busyAction}
       canSubmit={canSubmit}
       compactModelPill={poppedOut || compactPill}
       disabled={disabled}
+      expanded={expanded}
       hasComposerPayload={hasComposerPayload}
       hideModelPill={guidedChat}
       minimal={minimal}
       onQueue={queueDraft}
-      onToggleAutoSpeak={handleToggleAutoSpeak}
+      onToggleExpand={() => {
+        toggleManualExpanded()
+        focusInput()
+      }}
       state={state}
     />
   )
@@ -1118,13 +1114,12 @@ export function ChatBar({
       <div
         aria-disabled={inputDisabled ? true : undefined}
         aria-label={t.composer.message}
-        autoCapitalize="off"
-        // Chromium's macOS text-replacement path shares the autocorrect gate.
-        // Keeping spellcheck off below still excludes smart quotes and dashes.
-        autoCorrect={isMacPlatform() ? 'on' : 'off'}
+        autoCapitalize="sentences"
+        autoCorrect="on"
         className={cn(
-          'min-h-[1.625rem] min-h-(--composer-input-min-height) max-h-(--composer-input-max-height) cursor-text overflow-y-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] bg-transparent pb-1 pr-1 pt-1 leading-normal text-foreground outline-none disabled:cursor-not-allowed',
+          'min-h-[1.625rem] min-h-(--composer-input-min-height) max-h-(--composer-input-max-height) cursor-text overflow-y-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] bg-transparent pb-1 pr-1 pt-1 leading-normal text-foreground outline-none transition-[min-height] duration-200 ease-out disabled:cursor-not-allowed',
           '**:data-ref-text:cursor-default',
+          manualExpanded && 'min-h-24',
           stacked && 'pl-3',
           stacked ? 'w-full' : 'min-w-(--composer-input-inline-min-width) flex-1',
           // Inside the native Wayland HUD drag region: a drag region swallows
@@ -1185,7 +1180,7 @@ export function ChatBar({
         onPaste={handlePaste}
         ref={editorRef}
         role="textbox"
-        spellCheck={false}
+        spellCheck={true}
         suppressContentEditableWarning
       />
       <ComposerDirectiveActions editorRef={editorRef} />
@@ -1448,7 +1443,6 @@ export function ChatBar({
                     onUndone={clearDraft}
                     readLiveText={syncDraftFromEditor}
                   />
-                  <VoicePlaybackActivity />
                   {queueEdit && editingQueuedPrompt && (
                     <div className="flex items-center justify-between gap-2 rounded-lg border border-[color-mix(in_srgb,var(--dt-composer-ring)_32%,transparent)] bg-accent/18 px-2 py-1">
                       <div className="min-w-0 text-[0.7rem] text-muted-foreground/88">

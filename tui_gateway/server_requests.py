@@ -180,6 +180,20 @@ def send(method: str, sid: str, params: dict, *, timeout: float | None,
         return None
     req = ServerRequest(sid, method, params, qids=qids)
     _register(req)
+    _srq_started = time.time()
+    try:
+        from agent.advanced_trace import emit_trace
+        emit_trace(
+            "device.request_sent",
+            ui_session_id=sid,
+            request_id=req.id,
+            method=method,
+            params=params,
+            timeout_s=timeout,
+            summary=f"method={method} req_id={req.id} params={params}",
+        )
+    except Exception:
+        pass
     try:
         req.event.wait(timeout)
     except BaseException:
@@ -197,6 +211,22 @@ def send(method: str, sid: str, params: dict, *, timeout: float | None,
         # settlement (resolve_response / lock_answer / cancel) already popped it (#112548).
         timed_out = _open.pop(req.id, None) is req
         answered, result, locked = req.answered, req.result, dict(req.locked)
+    _srq_ms = int((time.time() - _srq_started) * 1000)
+    try:
+        from agent.advanced_trace import emit_trace
+        emit_trace(
+            "device.response_received",
+            ui_session_id=sid,
+            request_id=req.id,
+            method=method,
+            answered=answered,
+            timed_out=timed_out,
+            duration_ms=_srq_ms,
+            result=result,
+            summary=f"method={method} req_id={req.id} answered={answered} timed_out={timed_out} ({_srq_ms}ms) result={result}",
+        )
+    except Exception:
+        pass
     if answered:
         return result
     if timed_out:
