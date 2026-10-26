@@ -406,12 +406,62 @@ def cancel_commute_eta_sync() -> str:
     })
 
 
-def get_commute_eta_sync_status() -> str:
-    """Query the status of the active commute ETA sync session."""
+def get_commute_eta_sync_status(location_callback: Optional[Any] = None) -> str:
+    """Query the live status of the active commute ETA sync session and recalculate live route ETA."""
     active = _read_active_sync()
     if not active:
         return json.dumps({"active": False, "status": "idle", "message": "No commute sync is currently active."})
-    return json.dumps({"active": True, **active})
+
+    dest = active.get("destination") or {}
+    dest_lat = dest.get("lat")
+    dest_lng = dest.get("lng")
+    dest_name = dest.get("name") or "Destination"
+    eta_min = int(active.get("target_eta_minutes") or 15)
+
+    # Refresh live GPS & Apple Maps route ETA if device location callback is available
+    if callable(location_callback) and dest_lat is not None and dest_lng is not None:
+        try:
+            from tools.device_location_tool import device_location_tool
+            loc_raw = device_location_tool(
+                to_latitude=float(dest_lat),
+                to_longitude=float(dest_lng),
+                callback=location_callback,
+            )
+            loc_data = json.loads(loc_raw) if isinstance(loc_raw, str) else loc_raw
+            if isinstance(loc_data, dict) and isinstance(loc_data.get("drive"), dict):
+                live_route_info = {
+                    "origin_address": loc_data.get("address"),
+                    "device": loc_data.get("device"),
+                    **loc_data["drive"],
+                }
+                user_eta_min = loc_data["drive"].get("drive_minutes_estimate")
+                active["last_checked_at"] = time.time()
+                active["last_user_eta_minutes"] = user_eta_min
+                active["live_route"] = live_route_info
+                if user_eta_min is not None:
+                    wait_min = user_eta_min - eta_min
+                    if wait_min > 1:
+                        active["order_timing_advice"] = (
+                            f"Live update: You are currently at {loc_data.get('address') or 'your location'}, "
+                            f"~{user_eta_min} minutes ({live_route_info.get('road_km_estimate')} km) away from {dest_name}. "
+                            f"Delivery ETA is ~{eta_min} minutes — order in ~{wait_min} minutes."
+                        )
+                    elif wait_min >= -2:
+                        active["order_timing_advice"] = (
+                            f"Live update: You are ~{user_eta_min} minutes away from {dest_name} and delivery ETA is ~{eta_min} minutes — "
+                            f"place the order RIGHT NOW so it arrives right when you reach!"
+                        )
+                    else:
+                        active["order_timing_advice"] = (
+                            f"Live update: You are only ~{user_eta_min} minutes away from {dest_name} (delivery takes ~{eta_min} minutes) — "
+                            f"place the order immediately!"
+                        )
+                _write_active_sync(active)
+        except Exception:
+            pass
+
+    elapsed_min = round((time.time() - float(active.get("created_at") or time.time())) / 60.0, 1)
+    return json.dumps({"active": True, "elapsed_minutes": elapsed_min, **active})
 
 
 SET_SAVED_LOCATION_SCHEMA = {

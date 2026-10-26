@@ -266,6 +266,14 @@ def _start_commute_eta_sync(agent, args: dict, ctx: InlineToolContext) -> Any:
     )
 
 
+def _get_commute_eta_sync_status(agent, args: dict, ctx: InlineToolContext) -> Any:
+    from tools.commute_eta_sync_tool import get_commute_eta_sync_status
+
+    return get_commute_eta_sync_status(
+        location_callback=getattr(agent, "device_location_callback", None),
+    )
+
+
 # Order is the historical if/elif order of ``execute_tool_calls_sequential``.
 def _browse_task(agent, args: dict, ctx: InlineToolContext) -> Any:
     # The Browser Agent is built from the live User Agent's model runtime (agent/agent_bridge/).
@@ -312,6 +320,7 @@ INLINE_TOOL_EXECUTORS: Dict[str, InlineToolExecutor] = {
     ),
     "device_location": _device_location,
     "start_commute_eta_sync": _start_commute_eta_sync,
+    "get_commute_eta_sync_status": _get_commute_eta_sync_status,
     "gui_tour": _callback_tool(
         "tools.tour_tool", "tour_tool", "tour_callback",
         ("action", "action", ""), ("surface", "surface"), ("selector", "selector"), ("title", "title"),

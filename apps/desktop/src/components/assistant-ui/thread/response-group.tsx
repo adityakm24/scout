@@ -168,12 +168,38 @@ function summarizeSectionProcess(messages: readonly unknown[], indices: readonly
   }
 }
 
+const FRIENDLY_ACTIVE_TOOL_LABELS: Record<string, string> = {
+  device_location: 'Checking your live GPS & Apple Maps ETA…',
+  start_commute_eta_sync: 'Syncing commute ETA & delivery window…',
+  get_commute_eta_sync_status: 'Checking live commute ETA status…',
+  cancel_commute_eta_sync: 'Stopping commute ETA tracking…',
+  set_saved_location: 'Saving location…',
+  list_saved_locations: 'Checking saved locations…',
+  schedule_order: 'Scheduling your arrival-timed order…',
+  cronjob_manage: 'Checking scheduled tasks…'
+}
+
+function formatActiveToolStatus(toolName: string): string {
+  if (FRIENDLY_ACTIVE_TOOL_LABELS[toolName]) {
+    return FRIENDLY_ACTIVE_TOOL_LABELS[toolName]
+  }
+  if (toolName.startsWith('mcp__zepto__')) {
+    const sub = toolName.slice('mcp__zepto__'.length)
+    if (sub.includes('serviceab') || sub.includes('eta')) return 'Checking Zepto live delivery ETA…'
+    if (sub.includes('address')) return 'Checking saved Zepto addresses…'
+    if (sub.includes('cart')) return 'Updating your Zepto cart…'
+    if (sub.includes('search')) return 'Searching Zepto products…'
+    if (sub.includes('order')) return 'Checking your Zepto order…'
+  }
+  return `Running ${toolName}…`
+}
+
 function formatTurnProcessLabel(summary: TurnProcessSummary): string {
   const { isRunning, reasoningCount, toolCount, activeToolName } = summary
 
   if (isRunning) {
     if (activeToolName) {
-      return `Running ${activeToolName}…`
+      return formatActiveToolStatus(activeToolName)
     }
     if (reasoningCount > 0 && toolCount > 0) {
       return `Thinking & used ${toolCount} tool${toolCount === 1 ? '' : 's'}…`

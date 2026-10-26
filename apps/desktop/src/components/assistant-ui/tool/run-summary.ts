@@ -111,9 +111,25 @@ function isPending(tool: ToolCallLike): boolean {
  * the status line that covers the gap before a tool starts, so the same run is
  * described in the same words from the moment the model drafts it.
  */
+const FRIENDLY_PRESENT_VERBS: Record<string, string> = {
+  device_location: 'Checking live location',
+  start_commute_eta_sync: 'Syncing commute ETA',
+  get_commute_eta_sync_status: 'Checking commute ETA',
+  cancel_commute_eta_sync: 'Stopping commute sync',
+  set_saved_location: 'Saving location',
+  list_saved_locations: 'Checking saved locations',
+  schedule_order: 'Scheduling order'
+}
+
 export function toolPresentVerb(toolName: string): string {
   if (toolName === 'skill_view') {
     return translateNow('assistant.tool.skillActivity.loading')
+  }
+  if (FRIENDLY_PRESENT_VERBS[toolName]) {
+    return FRIENDLY_PRESENT_VERBS[toolName]
+  }
+  if (toolName.startsWith('mcp__zepto__')) {
+    return 'Checking Zepto'
   }
 
   return CATEGORY_COPY[toolCategory(toolName)].present
