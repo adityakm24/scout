@@ -177,6 +177,20 @@ def resolve_saved_location(target: str) -> Optional[Dict[str, Any]]:
     for loc_key, val in locs.items():
         if key in loc_key or loc_key in key:
             return val
+
+    # Synonyms mapping (e.g. 'office' -> 'Condenat Work', 'house' -> 'home')
+    synonyms = {
+        "office": ["work", "condenat work", "office"],
+        "workplace": ["work", "condenat work"],
+        "work": ["condenat work", "work"],
+        "house": ["home"],
+    }
+    for syn_key, candidates in synonyms.items():
+        if syn_key in key or key in syn_key:
+            for cand in candidates:
+                for loc_key, val in locs.items():
+                    if cand in loc_key:
+                        return val
     # Fuzzy token / address match (handles e.g. 'condenast work' or 'condenast st marks' -> 'condenat work')
     tokens = [t for t in re.split(r"[\s,]+", key) if len(t) >= 3]
     for loc_key, val in locs.items():
@@ -260,18 +274,46 @@ def list_saved_locations() -> str:
     })
 
 
-def _render_tracking_svg(dest_title: str, drive_min: Optional[int], zepto_min: int, wait_min: Optional[int]) -> str:
+def _render_tracking_svg(
+    dest_title: str,
+    drive_min: Optional[int],
+    zepto_min: Optional[int] = None,
+    wait_min: Optional[int] = None,
+    km_estimate: Optional[float] = None,
+) -> str:
     """Generate a lightweight, animated inline SVG tracking card (<1900 chars) for Scout Desktop."""
     drive_str = f"~{drive_min}m" if drive_min is not None else "--"
-    zepto_str = f"~{zepto_min}m"
-    if wait_min is not None:
-        order_str = f"in ~{wait_min}m" if wait_min > 0 else "NOW"
-    else:
-        order_str = "--"
-
     short_dest = dest_title.split(",")[0].strip()
     if len(short_dest) > 22:
         short_dest = short_dest[:20] + "…"
+
+    if zepto_min is not None and zepto_min > 0:
+        zepto_str = f"~{zepto_min}m"
+        order_str = f"in ~{wait_min}m" if (wait_min is not None and wait_min > 0) else ("NOW" if wait_min is not None else "--")
+        pills_svg = (
+            f'<rect width="60" height="24" rx="4" fill="#1e293b"/>'
+            f'<text x="30" y="10" fill="#94a3b8" font-size="7" text-anchor="middle">DRIVE</text>'
+            f'<text x="30" y="20" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">{drive_str}</text>'
+            f'<rect x="64" width="60" height="24" rx="4" fill="#1e293b"/>'
+            f'<text x="94" y="10" fill="#94a3b8" font-size="7" text-anchor="middle">ZEPTO</text>'
+            f'<text x="94" y="20" fill="#c084fc" font-size="9" font-weight="bold" text-anchor="middle">{zepto_str}</text>'
+            f'<rect x="128" width="68" height="24" rx="4" fill="#1e293b" stroke="#f59e0b" stroke-width="0.8"/>'
+            f'<text x="162" y="10" fill="#f59e0b" font-size="7" text-anchor="middle">ORDER IN</text>'
+            f'<text x="162" y="20" fill="#fbbf24" font-size="9" font-weight="bold" text-anchor="middle">{order_str}</text>'
+        )
+    else:
+        km_str = f"{km_estimate}km" if km_estimate else "--"
+        pills_svg = (
+            f'<rect width="68" height="24" rx="4" fill="#1e293b"/>'
+            f'<text x="34" y="10" fill="#94a3b8" font-size="7" text-anchor="middle">LIVE DRIVE</text>'
+            f'<text x="34" y="20" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">{drive_str}</text>'
+            f'<rect x="72" width="64" height="24" rx="4" fill="#1e293b"/>'
+            f'<text x="104" y="10" fill="#94a3b8" font-size="7" text-anchor="middle">DISTANCE</text>'
+            f'<text x="104" y="20" fill="#34d399" font-size="9" font-weight="bold" text-anchor="middle">{km_str}</text>'
+            f'<rect x="140" width="56" height="24" rx="4" fill="#1e293b"/>'
+            f'<text x="168" y="10" fill="#94a3b8" font-size="7" text-anchor="middle">TRAFFIC</text>'
+            f'<text x="168" y="20" fill="#facc15" font-size="9" font-weight="bold" text-anchor="middle">LIVE</text>'
+        )
 
     return (
         f"```svg\n"
@@ -282,17 +324,7 @@ def _render_tracking_svg(dest_title: str, drive_min: Optional[int], zepto_min: i
         f'</g>'
         f'<text x="32" y="17" fill="#10b981" font-size="10" font-weight="bold">TRACKING ACTIVE</text>'
         f'<text x="32" y="29" fill="#94a3b8" font-size="9">{short_dest}</text>'
-        f'<g transform="translate(260,8)">'
-        f'<rect width="60" height="24" rx="4" fill="#1e293b"/>'
-        f'<text x="30" y="10" fill="#94a3b8" font-size="7" text-anchor="middle">DRIVE</text>'
-        f'<text x="30" y="20" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">{drive_str}</text>'
-        f'<rect x="64" width="60" height="24" rx="4" fill="#1e293b"/>'
-        f'<text x="94" y="10" fill="#94a3b8" font-size="7" text-anchor="middle">ZEPTO</text>'
-        f'<text x="94" y="20" fill="#c084fc" font-size="9" font-weight="bold" text-anchor="middle">{zepto_str}</text>'
-        f'<rect x="128" width="68" height="24" rx="4" fill="#1e293b" stroke="#f59e0b" stroke-width="0.8"/>'
-        f'<text x="162" y="10" fill="#f59e0b" font-size="7" text-anchor="middle">ORDER IN</text>'
-        f'<text x="162" y="20" fill="#fbbf24" font-size="9" font-weight="bold" text-anchor="middle">{order_str}</text>'
-        f'</g>'
+        f'<g transform="translate(260,8)">{pills_svg}</g>'
         f'<g transform="translate(16,52)">'
         f'<line x2="448" stroke="#334155" stroke-width="2" stroke-dasharray="4 4"/>'
         f'<circle r="3" fill="#64748b"/>'
@@ -310,7 +342,7 @@ def start_commute_eta_sync(
     destination_lng: Optional[float] = None,
     destination_name: Optional[str] = None,
     destination_address: Optional[str] = None,
-    target_eta_minutes: int = 15,
+    target_eta_minutes: Optional[int] = None,
     transport_mode: str = "driving",
     action_payload: Optional[Dict[str, Any]] = None,
     location_callback: Optional[Any] = None,
@@ -388,21 +420,24 @@ def start_commute_eta_sync(
             user_eta_min = prev_sync["last_user_eta_minutes"]
             live_route_info = prev_sync.get("live_route")
 
-    order_timing_advice = None
+    has_target_eta = (target_eta_minutes is not None and int(target_eta_minutes) > 0)
+    eta_min = int(target_eta_minutes) if has_target_eta else None
     dest_title = resolved_name or destination_name or "your destination"
-    wait_min = (user_eta_min - eta_min) if user_eta_min is not None else None
-    svg_card = _render_tracking_svg(dest_title, user_eta_min, eta_min, wait_min)
+    km = live_route_info.get("road_km_estimate") if live_route_info else None
+    wait_min = (user_eta_min - eta_min) if (user_eta_min is not None and eta_min is not None) else None
+    svg_card = _render_tracking_svg(dest_title, user_eta_min, eta_min, wait_min, km_estimate=km)
 
-    if user_eta_min is not None:
-        km = live_route_info.get("road_km_estimate", "") if live_route_info else ""
-        km_str = f" ({km} km)" if km else ""
+    order_timing_advice = None
+    km_str = f" ({km} km)" if km else ""
+
+    if has_target_eta and user_eta_min is not None:
         if wait_min > 1:
             order_timing_advice = (
                 f"{svg_card}\n\n"
                 f"🟢 **Commute Tracking Active**\n"
                 f"• **Destination:** {dest_title}\n"
                 f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
-                f"• **Zepto Delivery ETA:** ~{eta_min} minutes\n"
+                f"• **Delivery ETA:** ~{eta_min} minutes\n"
                 f"• **Optimal Order Window:** Order in ~{wait_min} minutes (when you are {eta_min} minutes away so you arrive together)\n\n"
                 f"Background tracking is running — I will track your convergence toward {dest_title}."
             )
@@ -412,7 +447,7 @@ def start_commute_eta_sync(
                 f"🟢 **Commute Tracking Active**\n"
                 f"• **Destination:** {dest_title}\n"
                 f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
-                f"• **Zepto Delivery ETA:** ~{eta_min} minutes\n"
+                f"• **Delivery ETA:** ~{eta_min} minutes\n"
                 f"• **Optimal Order Window:** Place the order **RIGHT NOW** so both you and your delivery arrive together!"
             )
         else:
@@ -421,17 +456,34 @@ def start_commute_eta_sync(
                 f"🟢 **Commute Tracking Active**\n"
                 f"• **Destination:** {dest_title}\n"
                 f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str}\n"
-                f"• **Zepto Delivery ETA:** ~{eta_min} minutes\n"
+                f"• **Delivery ETA:** ~{eta_min} minutes\n"
                 f"• **Status:** You will arrive ~{abs(wait_min)} minutes before delivery — place the order immediately!"
             )
-    else:
+    elif has_target_eta:
         order_timing_advice = (
             f"{svg_card}\n\n"
             f"🟢 **Commute Tracking Active**\n"
             f"• **Destination:** {dest_title}\n"
-            f"• **Zepto Delivery ETA:** ~{eta_min} minutes\n"
+            f"• **Delivery ETA:** ~{eta_min} minutes\n"
             f"• **Status:** Commute convergence monitoring initialized. Live Apple Maps drive time will be updated continuously as you commute."
         )
+    else:
+        # Pure commute tracking (no merchant/delivery target)
+        if user_eta_min is not None:
+            order_timing_advice = (
+                f"{svg_card}\n\n"
+                f"🟢 **Commute Tracking Active**\n"
+                f"• **Destination:** {dest_title}\n"
+                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
+                f"• **Status:** Live commute tracking active. Monitoring your convergence toward {dest_title}."
+            )
+        else:
+            order_timing_advice = (
+                f"{svg_card}\n\n"
+                f"🟢 **Commute Tracking Active**\n"
+                f"• **Destination:** {dest_title}\n"
+                f"• **Status:** Commute tracking initialized. Updating live Apple Maps drive time."
+            )
 
     record = {
         "sync_id": sync_id,
@@ -492,7 +544,9 @@ def get_commute_eta_sync_status(location_callback: Optional[Any] = None) -> str:
     dest_lat = dest.get("lat")
     dest_lng = dest.get("lng")
     dest_name = dest.get("name") or "Destination"
-    eta_min = int(active.get("target_eta_minutes") or 15)
+    raw_target = active.get("target_eta_minutes")
+    has_target_eta = (raw_target is not None and int(raw_target) > 0)
+    eta_min = int(raw_target) if has_target_eta else None
 
     # Refresh live GPS & Apple Maps route ETA if device location callback is available
     if callable(location_callback) and dest_lat is not None and dest_lng is not None:
@@ -515,37 +569,46 @@ def get_commute_eta_sync_status(location_callback: Optional[Any] = None) -> str:
                 active["last_user_eta_minutes"] = user_eta_min
                 active["live_route"] = live_route_info
                 if user_eta_min is not None:
-                    wait_min = user_eta_min - eta_min
-                    km = live_route_info.get("road_km_estimate", "") if live_route_info else ""
+                    km = live_route_info.get("road_km_estimate") if live_route_info else None
                     km_str = f" ({km} km)" if km else ""
-                    svg_card = _render_tracking_svg(dest_name, user_eta_min, eta_min, wait_min)
-                    if wait_min > 1:
-                        active["order_timing_advice"] = (
-                            f"{svg_card}\n\n"
-                            f"🟢 **Commute Tracking Active** (Live Update)\n"
-                            f"• **Destination:** {dest_name}\n"
-                            f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
-                            f"• **Zepto Delivery ETA:** ~{eta_min} minutes\n"
-                            f"• **Optimal Order Window:** Order in ~{wait_min} minutes (when you are {eta_min} minutes away so you arrive together)\n\n"
-                            f"Background tracking is running — monitoring convergence toward {dest_name}."
-                        )
-                    elif wait_min >= -2:
-                        active["order_timing_advice"] = (
-                            f"{svg_card}\n\n"
-                            f"🟢 **Commute Tracking Active** (Live Update)\n"
-                            f"• **Destination:** {dest_name}\n"
-                            f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
-                            f"• **Zepto Delivery ETA:** ~{eta_min} minutes\n"
-                            f"• **Optimal Order Window:** Place the order **RIGHT NOW** so both you and your delivery arrive together!"
-                        )
+                    wait_min = (user_eta_min - eta_min) if has_target_eta and eta_min is not None else None
+                    svg_card = _render_tracking_svg(dest_name, user_eta_min, eta_min, wait_min, km_estimate=km)
+                    if has_target_eta and eta_min is not None:
+                        if wait_min > 1:
+                            active["order_timing_advice"] = (
+                                f"{svg_card}\n\n"
+                                f"🟢 **Commute Tracking Active** (Live Update)\n"
+                                f"• **Destination:** {dest_name}\n"
+                                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
+                                f"• **Delivery ETA:** ~{eta_min} minutes\n"
+                                f"• **Optimal Order Window:** Order in ~{wait_min} minutes (when you are {eta_min} minutes away so you arrive together)\n\n"
+                                f"Background tracking is running — monitoring convergence toward {dest_name}."
+                            )
+                        elif wait_min >= -2:
+                            active["order_timing_advice"] = (
+                                f"{svg_card}\n\n"
+                                f"🟢 **Commute Tracking Active** (Live Update)\n"
+                                f"• **Destination:** {dest_name}\n"
+                                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
+                                f"• **Delivery ETA:** ~{eta_min} minutes\n"
+                                f"• **Optimal Order Window:** Place the order **RIGHT NOW** so both you and your delivery arrive together!"
+                            )
+                        else:
+                            active["order_timing_advice"] = (
+                                f"{svg_card}\n\n"
+                                f"🟢 **Commute Tracking Active** (Live Update)\n"
+                                f"• **Destination:** {dest_name}\n"
+                                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str}\n"
+                                f"• **Delivery ETA:** ~{eta_min} minutes\n"
+                                f"• **Status:** You will arrive ~{abs(wait_min)} minutes before delivery — place the order immediately!"
+                            )
                     else:
                         active["order_timing_advice"] = (
                             f"{svg_card}\n\n"
                             f"🟢 **Commute Tracking Active** (Live Update)\n"
                             f"• **Destination:** {dest_name}\n"
-                            f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str}\n"
-                            f"• **Zepto Delivery ETA:** ~{eta_min} minutes\n"
-                            f"• **Status:** You will arrive ~{abs(wait_min)} minutes before delivery — place the order immediately!"
+                            f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
+                            f"• **Status:** Live commute tracking active. Monitoring your convergence toward {dest_name}."
                         )
                 _write_active_sync(active)
         except Exception:
@@ -554,29 +617,94 @@ def get_commute_eta_sync_status(location_callback: Optional[Any] = None) -> str:
     if not active.get("order_timing_advice") or not active["order_timing_advice"].startswith("```svg"):
         last_eta = active.get("last_user_eta_minutes")
         target_eta = active.get("target_eta_minutes")
-        wait_m = (last_eta - target_eta) if last_eta is not None and target_eta is not None else None
-        svg_card = _render_tracking_svg(dest_name, last_eta, int(target_eta or eta_min), wait_m)
-        if last_eta is not None and target_eta is not None:
+        has_t = (target_eta is not None and int(target_eta) > 0)
+        t_min = int(target_eta) if has_t else None
+        wait_m = (last_eta - t_min) if last_eta is not None and t_min is not None else None
+        live_rt = active.get("live_route") or {}
+        km_val = live_rt.get("road_km_estimate")
+        svg_card = _render_tracking_svg(dest_name, last_eta, t_min, wait_m, km_estimate=km_val)
+        if has_t and last_eta is not None and t_min is not None:
             active["order_timing_advice"] = (
                 f"{svg_card}\n\n"
                 f"🟢 **Commute Tracking Active** (Live Update)\n"
                 f"• **Destination:** {dest_name}\n"
                 f"• **Live Drive Time:** ~{last_eta} minutes\n"
-                f"• **Zepto Delivery ETA:** ~{target_eta} minutes\n"
-                f"• **Optimal Order Window:** Order in ~{wait_m} minutes (when you are {target_eta} minutes away so you arrive together)"
+                f"• **Delivery ETA:** ~{t_min} minutes\n"
+                f"• **Optimal Order Window:** Order in ~{wait_m} minutes (when you are {t_min} minutes away so you arrive together)"
+            )
+        elif last_eta is not None:
+            km_s = f" ({km_val} km)" if km_val else ""
+            active["order_timing_advice"] = (
+                f"{svg_card}\n\n"
+                f"🟢 **Commute Tracking Active** (Live Update)\n"
+                f"• **Destination:** {dest_name}\n"
+                f"• **Live Drive Time:** ~{last_eta} minutes{km_s}\n"
+                f"• **Status:** Live commute tracking active. Monitoring convergence toward {dest_name}."
             )
         else:
             active["order_timing_advice"] = (
                 f"{svg_card}\n\n"
                 f"🟢 **Commute Tracking Active** (Live Update)\n"
                 f"• **Destination:** {dest_name}\n"
-                f"• **Zepto Delivery ETA:** ~{eta_min} minutes\n"
                 f"• **Status:** Background tracking active. Updating live Apple Maps drive time."
             )
         _write_active_sync(active)
 
     elapsed_min = round((time.time() - float(active.get("created_at") or time.time())) / 60.0, 1)
     return json.dumps({"active": True, "elapsed_minutes": elapsed_min, **active})
+
+
+def set_commute_arrival_reminder(
+    minutes_before: int,
+    reminder_text: str,
+) -> str:
+    """Schedule a reminder to fire X minutes before reaching the destination during commute tracking."""
+    from planner import reminders
+    from tools.cronjob_job_args import _origin_from_env
+
+    active = _read_active_sync()
+    if not active or active.get("status") != "tracking":
+        return json.dumps({
+            "success": False,
+            "error": "No active commute tracking session found. Start commute tracking first.",
+        })
+
+    dest = active.get("destination") or {}
+    dest_name = dest.get("name") or "your destination"
+    last_eta = active.get("last_user_eta_minutes")
+    if last_eta is None:
+        last_eta = 30
+
+    last_checked = float(active.get("last_checked_at") or active.get("created_at") or time.time())
+    elapsed = (time.time() - last_checked) / 60.0
+    remaining_drive = max(0.0, float(last_eta) - elapsed)
+
+    lead_min = int(minutes_before)
+    if remaining_drive <= lead_min:
+        # User is already within the arrival threshold or has already arrived!
+        when_str = "in 1m"
+        added = reminders.add_reminder(reminder_text, when_str, actor="agent", origin=_origin_from_env(when_str))
+        return json.dumps({
+            "success": True,
+            "immediate": True,
+            "remaining_drive_minutes": round(remaining_drive, 1),
+            "message": f"You are already within {lead_min} minutes of {dest_name} (only ~{int(round(remaining_drive))}m away)! Alerting now: '{reminder_text}'.",
+            "reminder": added.get("reminder"),
+        })
+
+    fire_in = max(1, int(round(remaining_drive - lead_min)))
+    when_str = f"in {fire_in}m"
+    added = reminders.add_reminder(reminder_text, when_str, actor="agent", origin=_origin_from_env(when_str))
+    return json.dumps({
+        "success": True,
+        "scheduled": True,
+        "fires_in_minutes": fire_in,
+        "lead_minutes": lead_min,
+        "destination": dest_name,
+        "remaining_drive_minutes": round(remaining_drive, 1),
+        "message": f"Scheduled reminder to fire in {fire_in} minutes ({lead_min} minutes before reaching {dest_name}): '{reminder_text}'.",
+        "reminder": added.get("reminder"),
+    })
 
 
 SET_SAVED_LOCATION_SCHEMA = {
@@ -699,7 +827,7 @@ registry.register(
         destination_lng=args.get("destination_lng"),
         destination_name=args.get("destination_name"),
         destination_address=args.get("destination_address"),
-        target_eta_minutes=args.get("target_eta_minutes", 15),
+        target_eta_minutes=args.get("target_eta_minutes"),
         transport_mode=args.get("transport_mode", "driving"),
         action_payload=args.get("action_payload"),
     ),
@@ -720,4 +848,39 @@ registry.register(
     schema=GET_COMMUTE_ETA_SYNC_STATUS_SCHEMA,
     handler=lambda args, **kw: get_commute_eta_sync_status(),
     emoji="📍",
+)
+
+SET_COMMUTE_ARRIVAL_REMINDER_SCHEMA = {
+    "name": "set_commute_arrival_reminder",
+    "description": (
+        "Schedule a reminder that fires X minutes before arriving at the commute destination "
+        "(e.g. '5 mins before reaching NetApp, remind me to eat pasta'). "
+        "Calculates the exact fire time based on live drive time minus minutes_before. "
+        "If the user is already within X minutes of arrival or has reached, alerts immediately."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "minutes_before": {
+                "type": "integer",
+                "description": "How many minutes before reaching the destination the reminder should fire (e.g. 5 for '5 mins before reaching').",
+            },
+            "reminder_text": {
+                "type": "string",
+                "description": "The reminder notification text delivered to the user.",
+            },
+        },
+        "required": ["minutes_before", "reminder_text"],
+    },
+}
+
+registry.register(
+    name="set_commute_arrival_reminder",
+    toolset="commute",
+    schema=SET_COMMUTE_ARRIVAL_REMINDER_SCHEMA,
+    handler=lambda args, **kw: set_commute_arrival_reminder(
+        minutes_before=args.get("minutes_before", 5),
+        reminder_text=args.get("reminder_text", ""),
+    ),
+    emoji="⏰",
 )

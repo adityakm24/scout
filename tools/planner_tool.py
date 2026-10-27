@@ -31,12 +31,15 @@ PLANNER_SCHEMA = {
         "To-dos: todo_add(title, notes?, due?, priority?), todo_update(id, …changed fields), "
         "todo_complete(id), todo_reopen(id), todo_delete(id). due is a date 'YYYY-MM-DD' or ISO "
         "datetime; priority is none|low|medium|high.\n"
-        "Reminders: reminder_add(text, when) sends the user `text` at that time on the chat they "
+        "Reminders: reminder_add(text, when, minutes_before?) sends the user `text` at that time on the chat they "
         "asked from (on the desktop it shows a notification). when: 'in 30m' / 'in 2h' (one-shot, "
         "relative — prefer this for 'in N minutes'), an ISO timestamp '2026-06-01T09:00:00' "
         "(one-shot, local time), 'every day at 9am' / 'every monday 9am' / 'weekdays at 9am' "
         "(recurring). reminder_update(id, text?, when?), reminder_delete(id). The reminder text "
         "is delivered verbatim, so write it to the user ('Call mom').\n\n"
+        "CRITICAL FOR COMMUTES / ARRIVALS: When the user asks for a reminder 'X minutes before arrival / reaching [destination]', "
+        "NEVER pass when='in Xm' (which fires in X minutes from NOW)! Instead, calculate: remaining drive time minus X minutes "
+        "(e.g., if drive is 38m and reminder is 5m before, pass when='in 33m'), pass when='5m before arrival', or pass minutes_before=5.\n\n"
         "Every call returns the full current list for its kind. A `warning` in a reminder result "
         "means nothing is running to deliver it yet; pass that on to the user."
     ),
@@ -51,7 +54,8 @@ PLANNER_SCHEMA = {
             "priority": {"type": "string", "enum": ["none", "low", "medium", "high"]},
             "include_done": {"type": "boolean", "description": "todo_list: include completed items (default true)."},
             "text": {"type": "string", "description": "Reminder text delivered to the user (reminder_add, reminder_update)."},
-            "when": {"type": "string", "description": "Reminder time — see the schedule forms above."},
+            "when": {"type": "string", "description": "Reminder time — see the schedule forms above, or '5m before arrival'."},
+            "minutes_before": {"type": "integer", "description": "Optional: minutes before arriving at destination during commute tracking (e.g. 5 for '5 mins before reaching')."},
         },
         "required": ["action"],
     },
@@ -105,11 +109,84 @@ def _reminder_list(args):
 
 
 def _reminder_add(args):
+    import re
+    import time
     from planner import reminders
     from tools.cronjob_job_args import _origin_from_env
 
-    when = _require(args, "when")
-    added = reminders.add_reminder(_require(args, "text"), when, actor="agent", origin=_origin_from_env(when))
+    when = str(args.get("when") or "").strip()
+    text = _require(args, "text")
+
+    # Check for relative commute arrival timing:
+    # 1) Explicit minutes_before parameter
+    # 2) when containing "before", "left", "prior", "reaching"
+    # 3) text containing "X minutes left to..." or "X mins before..." combined with when="in Xm"
+    lead_min = None
+    if args.get("minutes_before") is not None:
+        try:
+            lead_min = int(args["minutes_before"])
+        except (ValueError, TypeError):
+            pass
+
+    when_lower = when.lower()
+    text_lower = text.lower()
+
+    if lead_min is None:
+        m = re.search(r"(\d+)\s*(?:m|min|mins|minutes)?\s*(?:before|left|prior|ahead of)", when_lower)
+        if not m and when_lower.startswith("in "):
+            m = re.search(r"(\d+)\s*(?:m|min|mins|minutes)?\s*(?:before|left to|prior to)", text_lower)
+        if m:
+            lead_min = int(m.group(1))
+
+    if lead_min is not None:
+        try:
+            from tools.commute_eta_sync_tool import _read_active_sync
+            active = _read_active_sync()
+        except Exception:
+            active = None
+
+        if active and active.get("status") == "tracking":
+            dest_name = (active.get("destination") or {}).get("name") or "destination"
+            last_eta = active.get("last_user_eta_minutes")
+            if last_eta is not None:
+                last_checked = float(active.get("last_checked_at") or active.get("created_at") or time.time())
+                elapsed = (time.time() - last_checked) / 60.0
+                remaining_drive = max(0.0, float(last_eta) - elapsed)
+
+                if remaining_drive <= lead_min:
+                    # User is already within lead window or has arrived! Fire right away.
+                    when = "in 1m"
+                    notice = (
+                        f"Notice: You are already within {lead_min} minutes of {dest_name} "
+                        f"(remaining drive: ~{int(round(remaining_drive))}m). Alerting immediately."
+                    )
+                    added = reminders.add_reminder(text, when, actor="agent", origin=_origin_from_env(when))
+                    return {
+                        **added,
+                        "commute_notice": notice,
+                        **reminders.list_reminders(),
+                        **reminders.scheduler_notice(),
+                    }
+                else:
+                    fire_in = max(1, int(round(remaining_drive - lead_min)))
+                    when = f"in {fire_in}m"
+                    notice = (
+                        f"Commute-adjusted reminder: Fires in {fire_in} minutes "
+                        f"({lead_min}m before reaching {dest_name}, total remaining drive: ~{int(round(remaining_drive))}m)."
+                    )
+                    added = reminders.add_reminder(text, when, actor="agent", origin=_origin_from_env(when))
+                    return {
+                        **added,
+                        "commute_notice": notice,
+                        **reminders.list_reminders(),
+                        **reminders.scheduler_notice(),
+                    }
+
+    if not when:
+        from planner.todos import PlannerError
+        raise PlannerError("when is required for reminder_add")
+
+    added = reminders.add_reminder(text, when, actor="agent", origin=_origin_from_env(when))
     return {**added, **reminders.list_reminders(), **reminders.scheduler_notice()}
 
 

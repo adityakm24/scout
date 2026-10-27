@@ -95,3 +95,34 @@ def test_the_agent_is_told_when_nothing_will_deliver_a_reminder(home, monkeypatc
 
     assert result["reminders"][0]["text"] == "Stretch"
     assert ("warning" in result) is (not scheduler_up)
+
+
+def test_commute_aware_arrival_reminder(home):
+    import time
+    from tools.commute_eta_sync_tool import _write_active_sync
+
+    _write_active_sync({
+        "sync_id": "test_netapp_commute",
+        "status": "tracking",
+        "created_at": time.time(),
+        "last_checked_at": time.time(),
+        "last_user_eta_minutes": 38,
+        "destination": {"name": "NetApp Hoodi", "lat": 12.9943, "lng": 77.7084},
+    })
+
+    res = _agent("reminder_add", text="Eat pasta now! 🍝", when="5 mins before arrival")
+    assert "in 33m" in res["reminder"]["when"]
+    assert "Commute-adjusted reminder" in res["commute_notice"]
+
+    # When user has already arrived / 40 minutes elapsed
+    _write_active_sync({
+        "sync_id": "test_netapp_commute",
+        "status": "tracking",
+        "created_at": time.time() - 2400,
+        "last_checked_at": time.time() - 2400,
+        "last_user_eta_minutes": 38,
+        "destination": {"name": "NetApp Hoodi", "lat": 12.9943, "lng": 77.7084},
+    })
+    res_arrived = _agent("reminder_add", text="5 minutes left to NetApp! Time to eat pasta 🍝", when="in 5m")
+    assert "in 1m" in res_arrived["reminder"]["when"]
+    assert "already within 5 minutes" in res_arrived["commute_notice"]
