@@ -26,6 +26,11 @@ Scout places it later only if the basket and total are unchanged. It never order
 
 Not for "order now": build the cart and place it with `mcp__zepto__create_order` directly.
 
+## Strict Negative Constraints
+
+- NEVER suggest, pitch, or ask the user to order, buy, deliver, or sync groceries/food/orders unless the user EXPLICITLY requested food, groceries, snacks, shopping, or ordering in their prompt!
+- When the user only asks for their ETA, drive time, commute duration, or directions (e.g. "What is my ET to work at NetApp hoodi"), answer ONLY with the drive time, distance, and live traffic. NEVER offer or ask "Would you like to sync an order to arrive when you reach...".
+
 ## Prerequisites
 
 - The `zepto` MCP server connected (`scout mcp login zepto`), with a saved home address.
@@ -53,7 +58,7 @@ Load this skill and follow the Procedure. Zepto tools may be deferred: call them
 ## Procedure
 
 1. **Home / Destination Address.** ALWAYS call `mcp__zepto__list_saved_addresses` first.
-   - **Always prompt the user to confirm/choose the destination address via `clarify`**, even if they named an address (like Office or Home) in their message. Offer the saved Zepto addresses as choices (putting the best matching address first as recommended, e.g. `["Office - Condé Nast, Saint Mark's Road", "Home - Harmony Little Nest", ...]`).
+   - **Always prompt the user to confirm/choose the destination address via `clarify`**, even if they named an address (like Office or Home) in their message. Offer the saved Zepto addresses as choices (putting the best matching address first as recommended, e.g. `["Home - 123 Main St", "Work - 456 Tech Park", ...]`).
    - Never guess coordinates or skip address confirmation. This ensures safety, avoids ordering/tracking to the wrong dark store, and gives the user certainty.
    - Once chosen/confirmed, call `mcp__zepto__select_saved_address` with that `addressId` immediately so Zepto binds the active store to that destination, and use that address's exact coordinates for drive ETA and Zepto delivery ETA.
 2. **Drive time.** `device_location` with `to_latitude` and `to_longitude` set to home. Read

@@ -90,8 +90,10 @@ async function loadIndex(): Promise<SkillIndexEntry[]> {
 
   const skills = await getSkills()
 
+  // Skills like 'zepto' that are already connected as MCP servers or auto-loaded
+  // do not need intrusive "Use skill: <name>" suggestion pills.
   index = skills
-    .filter(skill => skill.enabled && skill.name.length >= MIN_NAME_LENGTH)
+    .filter(skill => skill.enabled && skill.name.length >= MIN_NAME_LENGTH && skill.name.toLowerCase() !== 'zepto')
     .map(skill => ({
       name: skill.name,
       pattern: skillPattern(skill.name)
@@ -154,16 +156,20 @@ function argNamesSkill(arg: string, skillName: string): boolean {
  *  edited it (`skill_manage`), or the user sent its `/name` command.
  *  Exported for tests. */
 export function skillTouchedInMessages(skillName: string, messages: readonly ChatMessage[]): boolean {
-  const slash = new RegExp(`^/${escape(skillName.toLowerCase())}(?:\\s|$)`)
+  const target = skillName.toLowerCase()
+  const slash = new RegExp(`^/${escape(target)}(?:\\s|$)`)
+  const mcpPrefix = `mcp__${target}__`
 
   for (const message of messages) {
     for (const part of message.parts) {
-      if (
-        part.type === 'tool-call' &&
-        SKILL_TOOL_NAMES.has(part.toolName) &&
-        argNamesSkill(skillArgName(part), skillName)
-      ) {
-        return true
+      if (part.type === 'tool-call') {
+        const toolLower = part.toolName.toLowerCase()
+        if (toolLower.startsWith(mcpPrefix) || toolLower.includes(`__${target}__`)) {
+          return true
+        }
+        if (SKILL_TOOL_NAMES.has(part.toolName) && argNamesSkill(skillArgName(part), skillName)) {
+          return true
+        }
       }
 
       if (

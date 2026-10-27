@@ -13,6 +13,7 @@ free ones assume empty roads, which in a city is further off than a calibrated e
 import json
 import logging
 import math
+import re
 import subprocess
 import sys
 import urllib.parse
@@ -178,13 +179,20 @@ def device_location_tool(to_latitude: Optional[float] = None, to_longitude: Opti
             if saved:
                 to_latitude = saved["latitude"]
                 to_longitude = saved["longitude"]
-                result["destination_name"] = saved.get("address") or saved["name"]
+                result["destination_name"] = saved.get("name") or to_place_name
             else:
-                g_lat, g_lon, g_addr = geocode_address(to_place_name)
-                if g_lat is not None and g_lon is not None:
-                    to_latitude = g_lat
-                    to_longitude = g_lon
-                    result["destination_name"] = g_addr or to_place_name
+                m = re.match(r"^(?:my\s+)?(?:work|office|workplace)\s+(?:at|in|near)\s+(.+)$", to_place_name.strip(), re.IGNORECASE)
+                geocode_target = m.group(1).strip() if m else to_place_name.strip()
+                if geocode_target.lower() in ("work", "office", "home", "house"):
+                    result["error"] = f"No saved '{geocode_target.capitalize()}' location found. Please provide an address or landmark (or save it first by saying 'Save my {geocode_target} as <address>')."
+                else:
+                    g_lat, g_lon, g_addr = geocode_address(geocode_target)
+                    if g_lat is not None and g_lon is not None:
+                        to_latitude = g_lat
+                        to_longitude = g_lon
+                        result["destination_name"] = g_addr or geocode_target
+                    else:
+                        result["error"] = f"Could not find '{geocode_target}' on Maps. Please provide a nearby street or landmark."
         except Exception:
             pass
 
@@ -204,15 +212,21 @@ DEVICE_LOCATION_SCHEMA = {
         "Get the user's current live location AND real-time Apple Maps live-traffic driving ETA from the device they are chatting on. "
         "Returns {latitude, longitude, address, street_name, accuracy_m, device}. "
         "ALWAYS use this tool (NEVER use browse_task or web_search) to check traffic, route distance, or driving ETA! "
-        "Pass to_place_name (e.g. 'Condenat Work', 'Condenast Work', 'Home', or any street address) or to_latitude/to_longitude to get live traffic routing: "
+        "Pass to_place_name (the destination name or address requested by the user, e.g. 'NetApp Hoodi', 'Home', or any street address/place) "
+        "or to_latitude/to_longitude to get live traffic routing: "
         "{latitude, longitude, address, street_name, accuracy_m, device, destination_name, drive: {straight_line_km, road_km_estimate, drive_minutes_estimate, method}}. "
-        "IMPORTANT: In your final response, always refer to locations by their name/street (e.g. 'Frazer Town, Bengaluru' or 'Condé Nast, St. Mark\\'s Road'), "
-        "NEVER recite raw decimal coordinates to the user. State the road distance in kilometers and estimated drive time in minutes."
+        "IMPORTANT: Always pass the EXACT destination requested by the user into to_place_name (e.g. if the user says 'work at NetApp hoodi', pass 'NetApp hoodi'). "
+        "Do NOT substitute or assume a different location if the user gave a specific place name! "
+        "In your final response, always refer to locations by their name/street, NEVER recite raw decimal coordinates to the user. "
+        "State the road distance in kilometers and estimated drive time in minutes."
     ),
     "parameters": {
         "type": "object",
         "properties": {
-            "to_place_name": {"type": "string", "description": "Name or address of destination place (e.g. 'Condenat Work', 'Condenast Work', 'Home', or any street address). Coordinates and live Apple Maps traffic ETA are resolved automatically."},
+            "to_place_name": {
+                "type": "string",
+                "description": "Name or address of destination place (e.g. 'NetApp Hoodi', 'Home', or any street address/POI). Coordinates and live Apple Maps traffic ETA are resolved automatically."
+            },
             "to_latitude": {"type": "number", "description": "Optional destination latitude coordinate."},
             "to_longitude": {"type": "number", "description": "Optional destination longitude coordinate."},
         },

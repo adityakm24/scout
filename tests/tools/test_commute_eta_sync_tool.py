@@ -46,5 +46,45 @@ def test_commute_eta_sync_lifecycle(tmp_path, monkeypatch):
     assert cancel_res["status"] == "cancelled"
 
     # 5. Idle again
-    idle2 = json.loads(get_commute_eta_sync_status())
+    idle2 = json.loads(get_commute_eta_sync_tool_status := get_commute_eta_sync_status())
     assert idle2["active"] is False
+
+
+def test_resolve_saved_location_avoids_false_matches(monkeypatch):
+    from tools.commute_eta_sync_tool import resolve_saved_location
+
+    fake_locs = {
+        "home": {
+            "name": "Home",
+            "latitude": 12.9948,
+            "longitude": 77.6168,
+            "address": "Fraser Town, Bengaluru",
+        },
+        "work": {
+            "name": "Work",
+            "latitude": 12.9738,
+            "longitude": 77.6019,
+            "address": "Saint Mark's Road, Bangalore",
+        },
+    }
+    monkeypatch.setattr("tools.commute_eta_sync_tool.get_saved_locations", lambda: fake_locs)
+
+    # Specific destinations should NOT match 'work' or 'home'
+    assert resolve_saved_location("work at NetApp hoodi") is None
+    assert resolve_saved_location("NetApp hoodi") is None
+    assert resolve_saved_location("Starbucks Indiranagar") is None
+
+    # Standalone intent should match
+    res_work = resolve_saved_location("work")
+    assert res_work is not None
+    assert res_work["name"] == "Work"
+
+    res_office = resolve_saved_location("office")
+    assert res_office is not None
+    assert res_office["name"] == "Work"
+
+    res_home = resolve_saved_location("home")
+    assert res_home is not None
+    assert res_home["name"] == "Home"
+
+

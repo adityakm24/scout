@@ -260,7 +260,12 @@ CLARIFY_SCHEMA = {
         "timed_out=true, and a notice saying why, if the user stopped "
         "part-way or the prompt could not be delivered). Prefer deciding "
         "low-stakes questions yourself; don't use this for dangerous-command "
-        "confirmation (the terminal tool handles that)."
+        "confirmation (the terminal tool handles that). "
+        "CHOICES RULES: "
+        "1. Every choice MUST be a single, complete pickable option (e.g. for products, combine the "
+        "name, flavor/variant, size, and price into ONE line: 'Product (Variant, Size) — ₹Price'). "
+        "2. NEVER split item attributes into separate choices (NEVER make 'Price: ₹XX' or 'Action: Add to cart?' separate choices). "
+        "3. Tapping a product choice IS the user's action to select/add it; do NOT ask a follow-up 'Add to cart?' question."
     ),
     "parameters": {
         "type": "object",

@@ -82,18 +82,27 @@ def _decode_plus_code(code: str, ref_lat: float = 12.97, ref_lng: float = 77.59)
     return round(center_lat, 6), round(center_lng, 6)
 
 
+_GEOCODE_CACHE: Dict[str, Tuple[Optional[float], Optional[float], Optional[str]]] = {}
+
+
 def geocode_address(query: str) -> Tuple[Optional[float], Optional[float], Optional[str]]:
     """Free geocoder with Google Plus Code resolution and progressive street/area fallback."""
     import re
     if not query or not query.strip():
         return None, None, None
 
+    cache_key = query.strip().lower()
+    if cache_key in _GEOCODE_CACHE:
+        return _GEOCODE_CACHE[cache_key]
+
     # 1. Check for embedded Plus Codes (e.g. XJV8+WPW)
     plus_match = re.search(r'\b([2-9CFGHJMPQRVWX]{4,8}\+[2-9CFGHJMPQRVWX]{2,4})\b', query, re.I)
     if plus_match:
         coords = _decode_plus_code(plus_match.group(1))
         if coords:
-            return coords[0], coords[1], query.strip()
+            res = (coords[0], coords[1], query.strip())
+            _GEOCODE_CACHE[cache_key] = res
+            return res
 
     # 2. Progressive fallback candidates (strip building/apartment names that OSM map doesn't index)
     parts = [p.strip() for p in query.split(",") if p.strip()]
@@ -115,7 +124,9 @@ def geocode_address(query: str) -> Tuple[Optional[float], Optional[float], Optio
                 data = json.loads(resp.read().decode("utf-8"))
                 if data and isinstance(data, list) and len(data) > 0:
                     item = data[0]
-                    return float(item["lat"]), float(item["lon"]), item.get("display_name", "") or attempt
+                    res = (float(item["lat"]), float(item["lon"]), item.get("display_name", "") or attempt)
+                    _GEOCODE_CACHE[cache_key] = res
+                    return res
         except Exception:
             continue
 
@@ -167,40 +178,55 @@ def _save_location_record(name: str, latitude: float, longitude: float, address:
 
 
 def resolve_saved_location(target: str) -> Optional[Dict[str, Any]]:
-    """Resolve a location by name ('home', 'work', etc.) or return None."""
+    """Resolve a location by saved name ('home', 'work', etc.) or return None."""
     if not target:
         return None
-    key = target.strip().lower()
+    import unicodedata
+
+    def _normalize(text: str) -> str:
+        return "".join(c for c in unicodedata.normalize("NFD", text.lower()) if unicodedata.category(c) != "Mn")
+
+    # If user passed a phrase like 'work at NetApp hoodi' or 'office at Whitefield',
+    # they are naming a specific place, not a saved label like 'work' or 'home'.
+    m = re.match(r"^(?:my\s+)?(?:work|office|workplace)\s+(?:at|in|near)\s+(.+)$", target.strip(), re.IGNORECASE)
+    if m:
+        return None
+
+    cleaned = target.strip()
+    key = cleaned.lower()
+    key_norm = _normalize(cleaned)
+
     locs = get_saved_locations()
-    if key in locs:
-        return locs[key]
+    if not locs:
+        return None
+
+    # 1. Exact match on saved location key or name
     for loc_key, val in locs.items():
-        if key in loc_key or loc_key in key:
+        name_lower = (val.get("name") or "").lower()
+        if key in (loc_key, name_lower) or key_norm in (_normalize(loc_key), _normalize(name_lower)):
             return val
 
-    # Synonyms mapping (e.g. 'office' -> 'Condenat Work', 'house' -> 'home')
+    # 2. Standalone keywords / aliases (only when target itself is just 'work', 'office', 'home')
     synonyms = {
-        "office": ["work", "condenat work", "office"],
-        "workplace": ["work", "condenat work"],
-        "work": ["condenat work", "work"],
+        "office": ["work", "office"],
+        "workplace": ["work"],
+        "work": ["work"],
         "house": ["home"],
+        "home": ["home"],
     }
-    for syn_key, candidates in synonyms.items():
-        if syn_key in key or key in syn_key:
-            for cand in candidates:
-                for loc_key, val in locs.items():
-                    if cand in loc_key:
-                        return val
-    # Fuzzy token / address match (handles e.g. 'condenast work' or 'condenast st marks' -> 'condenat work')
-    tokens = [t for t in re.split(r"[\s,]+", key) if len(t) >= 3]
+    if key in synonyms:
+        for cand in synonyms[key]:
+            for loc_key, val in locs.items():
+                if cand in loc_key or cand in (val.get("name") or "").lower():
+                    return val
+
+    # 3. Normalized name equality
     for loc_key, val in locs.items():
-        addr_lower = (val.get("address") or "").lower()
-        loc_tokens = [t for t in re.split(r"[\s,]+", f"{loc_key} {addr_lower}") if len(t) >= 3]
-        if any(t in loc_tokens for t in tokens):
+        name_norm = _normalize(val.get("name") or "")
+        loc_norm = _normalize(loc_key)
+        if key_norm in (name_norm, loc_norm):
             return val
-        for t in tokens:
-            if difflib.get_close_matches(t, loc_tokens, n=1, cutoff=0.75):
-                return val
+
     return None
 
 

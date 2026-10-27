@@ -88,6 +88,10 @@ describe('skillTouchedInMessages', () => {
     expect(skillTouchedInMessages('pr-ready', [toolCall('skill_view', { name: 'pr-ready' })])).toBe(true)
   })
 
+  it('detects an MCP tool call for the skill', () => {
+    expect(skillTouchedInMessages('zepto', [toolCall('mcp__zepto__list_saved_addresses', {})])).toBe(true)
+  })
+
   it('detects a skill_manage touch of the skill', () => {
     expect(skillTouchedInMessages('pr-ready', [toolCall('skill_manage', { action: 'patch', name: 'pr-ready' })])).toBe(
       true

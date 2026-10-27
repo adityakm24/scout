@@ -49,14 +49,21 @@ are inaccessible.
 ## Procedure
 
 1. **Address first.** Call `mcp__zepto__list_saved_addresses` to retrieve the user's saved Zepto addresses.
-   - **Always prompt the user to confirm/choose the destination address** using `clarify` (with choices formatted as e.g. `["Office - Condé Nast, Saint Mark's Road", "Home - Harmony Little Nest", ...]`), even if the user named an address or place in their prompt. Put the best matching address first as recommended.
+   - **Always prompt the user to confirm/choose the destination address** using `clarify` (with choices formatted as e.g. `["Home - 123 Main St", "Work - 456 Tech Park", ...]`), even if the user named an address or place in their prompt. Put the best matching address first as recommended.
    - **Crucial:** Even if the user says "I want to order on Zepto" or mentions a specific destination like Office or Home, do NOT proceed without presenting the saved address choices via `clarify`. You MUST call `mcp__zepto__list_saved_addresses` first and ask them to confirm/select the destination address. This is because Zepto's inventory, stock, and dark stores depend entirely on the selected delivery address!
-   - Once chosen/confirmed, call `mcp__zepto__select_saved_address` with that `addressId` immediately. This binds Zepto's active store to that specific address and prevents ordering to the wrong default store (like Whitefield).
+   - Once chosen/confirmed, call `mcp__zepto__select_saved_address` with that `addressId` immediately. This binds Zepto's active store to that specific address and prevents ordering to the wrong default store.
    - Use `mcp__zepto__get_location_serviceability` only with the chosen address's coordinates. Phone GPS (`device_location`) is where the user is standing, not their delivery destination — never feed phone GPS to Zepto when they named or selected a saved address.
-2. **Find the item.** Search with the user's words. When results differ in size, flavour or price,
-   ask with `clarify`, passing the top three (name, pack size, price) as `choices` so the user can tap one, unless they were specific.
-3. **Add to cart.** Call `update_cart` with the `productVariantId` and `storeProductId` from the
-   search result, the quantity, `replaceCart: false`, and `deviceId: "scout"`.
+2. **Find the item and choose.** Search with the user's words.
+   - If there is a single clear match or the user was specific about the variant, add it directly to cart without asking.
+   - When results have multiple variants (flavors, pack sizes) or similar matching products to choose between, ask using `clarify`:
+     - Question: `"Which item would you like to add to your cart?"`
+     - Choices: Each choice MUST be ONE single line combining the product name, variant/flavor, pack size, and price. Example:
+       `["Fast&Up Lung Detox - Strawberry (20 tablets) — ₹336", "Fast&Up Charge Vitamin C - Orange (20 tablets) — ₹349", "OYB Multivitamin (60 tablets) — ₹247"]`
+     - **CRITICAL UI RULE:** NEVER split product details into separate choices! Never create radio options for "Price: ₹336" or "Action: Add to cart?". Every choice in the list must be a distinct, complete product.
+     - **NO EXTRA TOGGLE:** Tapping the product choice IS the user's command to add that item to their cart. NEVER ask an extra "Should I add it to cart?" question.
+3. **Add to cart immediately.** As soon as the user taps their chosen product (or if they were specific upfront):
+   - Immediately call `update_cart` with that item's `productVariantId` and `storeProductId`, the quantity, `replaceCart: false`, and `deviceId: "scout"`.
+   - Report that the item has been added and proceed to payment/checkout.
 4. **Report honestly.** This cart lives in the user's Zepto session for Scout. It may not appear
    in the Zepto app until an order is placed, so say "added to your Zepto order for Scout", not
    "added to your Zepto cart", and offer to place the order.
