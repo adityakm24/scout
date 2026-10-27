@@ -922,6 +922,7 @@ export const en: Translations = {
       providerApiKeys: 'API keys',
       providerCustomEndpoints: 'Custom Endpoints',
       providerLocalModels: 'Local Models',
+      models: 'Models',
       apiKeys: 'Tools & Keys',
       keybinds: 'Keyboard Shortcuts',
       keysTools: 'Tools',
@@ -1164,6 +1165,7 @@ export const en: Translations = {
       steps: ['Open Tailscale on your iPhone and sign in.', 'Scan this code.', 'Scout opens, connected.']
     },
     paneIntro: {
+      models: 'Choose your default LLM provider, model, and fallback models.',
       'config:chat': 'How Scout talks, reasons, and handles attachments.',
       'config:appearance': 'Light or dark, type, the window, and how chats look.',
       'config:workspace': 'Projects, the shell, and files Scout can use.',
@@ -3063,6 +3065,7 @@ export const en: Translations = {
 
   composer: {
     message: 'Message',
+    loadingModel: 'Loading model…',
     wakingProfile: profile => `Waking up ${profile}…`,
     placeholderStarting: 'Starting Scout...',
     placeholderReconnecting: 'Reconnecting to Scout…',
@@ -3744,6 +3747,8 @@ export const en: Translations = {
       search: 'Search models',
       noModels: 'No models found',
       editModels: 'Edit models…',
+      followDefault: 'Follow default model',
+      refreshModels: 'Refresh models',
       fast: 'Fast',
       free: 'free',
       cacheRead: 'cached read',
@@ -3885,6 +3890,12 @@ export const en: Translations = {
       yoloOn: 'YOLO on — auto-approving dangerous commands. Shift+click toggles globally.',
       yoloOff: 'YOLO off. Shift+click toggles globally.',
       noModel: 'no model',
+      modelNone: 'Model',
+      modelPinned: 'Pinned for this chat',
+      modelTitle: (provider, model, effort) =>
+        `${provider} · ${model}${effort ? ` (${effort})` : ''} — click to switch model`,
+      openModelPicker: 'Open model picker',
+      switchModel: (provider, model) => `Switch to ${provider} · ${model}`,
       providerModelTitle: (provider, model) => `${provider} · ${model}`
     }
   },

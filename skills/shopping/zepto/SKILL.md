@@ -1,6 +1,6 @@
 ---
 name: zepto
-description: "Order groceries on Zepto: address, cart, checkout."
+description: "Order groceries on Zepto. ALWAYS call list_saved_addresses and ask user to choose/confirm delivery address FIRST before asking for items or searching products."
 version: 1.0.0
 author: Aditya Krishnan Mohan
 license: MIT
@@ -40,18 +40,19 @@ are inaccessible.
 
 | Step | Tool |
 |---|---|
-| Saved addresses | `list_saved_addresses`, then `select_saved_address` |
-| Find items | `search_products` (one item), `search_multiple_products` (a list) |
-| Cart | `update_cart` (quantity 0 removes), `view_cart` |
-| Pay and order | `get_payment_methods`, then `create_order` (cash on delivery), `create_online_payment_order`, `create_wallet_order` or `create_upi_reserve_pay_order` |
-| After ordering | `check_payment_status`, `get_order_detail`, `list_order_history` |
+| Saved addresses | `mcp__zepto__list_saved_addresses`, then `mcp__zepto__select_saved_address` |
+| Find items | `mcp__zepto__search_products` (one item), `mcp__zepto__search_multiple_products` (a list) |
+| Cart | `mcp__zepto__update_cart` (quantity 0 removes), `mcp__zepto__view_cart` |
+| Pay and order | `mcp__zepto__get_payment_methods`, then `mcp__zepto__create_order` (cash on delivery), `mcp__zepto__create_online_payment_order`, `mcp__zepto__create_wallet_order` or `mcp__zepto__create_upi_reserve_pay_order` |
+| After ordering | `mcp__zepto__check_payment_status`, `mcp__zepto__get_order_detail`, `mcp__zepto__list_order_history` |
 
 ## Procedure
 
-1. **Address first.** Call `list_saved_addresses`. With one address, use it. With several, ask
-   which one. Then call `select_saved_address`; that also picks the store that serves it. Use
-   `get_location_serviceability` only with coordinates the user typed. Phone GPS (`device_location`)
-   is where they are standing, not a saved home — never feed it to Zepto when they named an address.
+1. **Address first.** Call `mcp__zepto__list_saved_addresses` to retrieve the user's saved Zepto addresses.
+   - **Always prompt the user to confirm/choose the destination address** using `clarify` (with choices formatted as e.g. `["Office - Condé Nast, Saint Mark's Road", "Home - Harmony Little Nest", ...]`), even if the user named an address or place in their prompt. Put the best matching address first as recommended.
+   - **Crucial:** Even if the user says "I want to order on Zepto" or mentions a specific destination like Office or Home, do NOT proceed without presenting the saved address choices via `clarify`. You MUST call `mcp__zepto__list_saved_addresses` first and ask them to confirm/select the destination address. This is because Zepto's inventory, stock, and dark stores depend entirely on the selected delivery address!
+   - Once chosen/confirmed, call `mcp__zepto__select_saved_address` with that `addressId` immediately. This binds Zepto's active store to that specific address and prevents ordering to the wrong default store (like Whitefield).
+   - Use `mcp__zepto__get_location_serviceability` only with the chosen address's coordinates. Phone GPS (`device_location`) is where the user is standing, not their delivery destination — never feed phone GPS to Zepto when they named or selected a saved address.
 2. **Find the item.** Search with the user's words. When results differ in size, flavour or price,
    ask with `clarify`, passing the top three (name, pack size, price) as `choices` so the user can tap one, unless they were specific.
 3. **Add to cart.** Call `update_cart` with the `productVariantId` and `storeProductId` from the

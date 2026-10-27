@@ -1,5 +1,3 @@
-import { REASONING_EFFORTS } from '@scout/shared'
-
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -14,8 +12,7 @@ import { Switch } from '@/components/ui/switch'
 import { useI18n } from '@/i18n'
 import { isThinkingEnabled, reasoningEffortClamp, resolveReasoningEffort } from '@/lib/reasoning-effort'
 
-// Scout's real reasoning levels live in lib/reasoning-effort; `none` is owned
-// by the Thinking toggle, not the radio.
+const MENU_REASONING_EFFORTS = ['medium'] as const
 
 /** How "fast" is achieved for a given model — two different mechanisms:
  *  - `param`: the Anthropic/OpenAI `speed=fast` request parameter.
@@ -175,8 +172,8 @@ export function ModelOptionsContent({
         <>
           <DropdownMenuSeparator className="mx-0" />
           <DropdownMenuLabel className={dropdownMenuSectionLabel}>{copy.effort}</DropdownMenuLabel>
-          <DropdownMenuRadioGroup onValueChange={value => onSetOptions({ effort: value })} value={effortValue}>
-            {REASONING_EFFORTS.map(value => (
+          <DropdownMenuRadioGroup onValueChange={value => onSetOptions({ effort: value })} value="medium">
+            {MENU_REASONING_EFFORTS.map(value => (
               <DropdownMenuRadioItem
                 className={dropdownMenuRow}
                 key={value}

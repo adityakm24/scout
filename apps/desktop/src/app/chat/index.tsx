@@ -91,6 +91,7 @@ import { useTranscriptRetention } from './use-transcript-retention'
 
 interface ChatViewProps extends Omit<React.ComponentProps<'div'>, 'onSubmit'> {
   gateway: ScoutGateway | null
+  modelMenuContent?: React.ReactNode
   modelOptionsOwnerConnectionId?: string
   modelOptionsProfile?: string
   reasoningMenuContent?: React.ReactNode
@@ -474,6 +475,7 @@ export const ChatView = memo(function ChatView(props: ChatViewProps) {
 const ChatViewContent = memo(function ChatViewContent({
   className,
   gateway,
+  modelMenuContent,
   modelOptionsOwnerConnectionId,
   modelOptionsProfile,
   reasoningMenuContent,
@@ -719,7 +721,8 @@ const ChatViewContent = memo(function ChatViewContent({
         provider: currentProvider,
         canSwitch: gatewayOpen,
         loading: !gatewayOpen || (!currentModel && !currentProvider),
-              quickModels,
+        modelMenuContent,
+        quickModels,
         reasoningMenuContent,
         supportsReasoning
       },
@@ -738,7 +741,8 @@ const ChatViewContent = memo(function ChatViewContent({
       currentModel,
       currentProvider,
       gatewayOpen,
-          quickModels,
+      modelMenuContent,
+      quickModels,
       reasoningMenuContent,
       supportsReasoning
     ]

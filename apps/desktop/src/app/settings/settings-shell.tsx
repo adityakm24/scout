@@ -84,6 +84,7 @@ const SECTION_TINT: Record<string, string> = {
   'config:workspace': '#ff9500',
   keybinds: '#5ac8fa',
   keys: '#eab308',
+  models: '#5856d6',
   notifications: '#ff3b30',
   phone: '#34c759',
   vault: '#10b981',

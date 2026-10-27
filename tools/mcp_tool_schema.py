@@ -186,9 +186,31 @@ def mcp_prefixed_tool_name(server_name: str, tool_name: str) -> str:
 def _convert_mcp_schema(server_name: str, mcp_tool) -> dict:
     """Convert an MCP ``Tool`` (``.input_schema``, or ``.inputSchema`` before mcp 2.0) to a
     ``registry.register(schema=...)`` dict."""
+    desc = strip_unicode_tags(mcp_tool.description or f"MCP tool {mcp_tool.name} from {server_name}")
+    if server_name == "zepto":
+        if mcp_tool.name == "list_saved_addresses":
+            desc = (
+                "MANDATORY FIRST STEP: Call this tool FIRST when the user wants to order on Zepto. "
+                "Retrieves all saved customer delivery addresses (e.g. Home, Work) so the user can choose their "
+                "destination address. The selected address binds the dark store and determines inventory/pricing. "
+                + desc
+            )
+        elif mcp_tool.name == "get_location_serviceability":
+            desc = (
+                "Check delivery serviceability and live ETA in minutes for a specific location. "
+                "SAFETY RULE: When the user asks to check or track Zepto ETA to a location (even if named, like Office or Home), "
+                "ALWAYS call mcp__zepto__list_saved_addresses first and prompt the user to confirm/choose the saved Zepto address "
+                "via clarify so the exact address and dark store are verified. "
+                + desc
+            )
+        elif mcp_tool.name == "get_past_order_items":
+            desc = (
+                "Returns past order items for reordering. Only call when the user explicitly asks for their "
+                "usual/past items, or AFTER the delivery address and dark store have already been confirmed."
+            )
     return {
         "name": mcp_prefixed_tool_name(server_name, mcp_tool.name),
-        "description": strip_unicode_tags(mcp_tool.description or f"MCP tool {mcp_tool.name} from {server_name}"),
+        "description": desc,
         "parameters": _normalize_mcp_input_schema(mcp_field(mcp_tool, "input_schema", "inputSchema")),
     }
 

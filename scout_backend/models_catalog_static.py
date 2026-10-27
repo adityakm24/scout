@@ -555,7 +555,7 @@ _OPENAI_FAST_MODE_PREFIXES: tuple[str, ...] = ("gpt-", "o1", "o3", "o4")
 # agentic subset of 400+ models — merging would dump everything), and providers with dedicated live-endpoint
 # branches (copilot, anthropic, ai-gateway, ollama-cloud, custom, stepfun, openai-codex).
 _MODELS_DEV_PREFERRED: frozenset[str] = frozenset({
-    "opencode-go", "opencode-zen", "kilocode", "fireworks", "mistral", "togetherai", "cohere",
+    "opencode-go", "opencode-zen", "kilocode", "fireworks", "togetherai", "cohere",
     "perplexity", "groq", "nvidia", "huggingface", "zai", "gemini", "google", "xai", "xai-oauth",
 })
 

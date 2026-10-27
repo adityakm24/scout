@@ -8,6 +8,7 @@ export type SettingsView =
   | 'account'
   | 'keybinds'
   | 'keys'
+  | 'models'
   | 'notifications'
   | 'phone'
   | 'vault'

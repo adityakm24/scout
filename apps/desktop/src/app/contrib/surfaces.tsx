@@ -25,6 +25,7 @@ import { TerminalPaneChrome } from '../right-sidebar/terminal/chrome'
 import { contributedRoutes, NEW_CHAT_ROUTE, ROUTES_AREA, sessionRoute } from '../routes'
 import { useStatusSnapshot } from '../shell/hooks/use-status-snapshot'
 import { useStatusbarItems } from '../shell/hooks/use-statusbar-items'
+import { ModelMenuPanel } from '../shell/model-menu-panel'
 import { ReasoningMenuPanel } from '../shell/reasoning-menu-panel'
 import { StatusbarControls } from '../shell/statusbar-controls'
 
@@ -123,6 +124,20 @@ export const ChatRoutesSurface = memo(function ChatRoutesSurface({
   const routeSnapshot = useContributions(ROUTES_AREA)
   const routeContributions = contributedRoutes(routeSnapshot)
 
+  const modelMenuContent = useMemo(
+    () =>
+      gatewayState === 'open' ? (
+        <ModelMenuPanel
+          gateway={gateway || undefined}
+          onSelectModel={actions.selectModel}
+          ownerConnectionId={activeConnectionId || undefined}
+          profile={activeGatewayProfile}
+          requestGateway={actions.requestGateway}
+        />
+      ) : null,
+    [actions, activeConnectionId, activeGatewayProfile, gateway, gatewayState]
+  )
+
   const reasoningMenuContent = useMemo(
     () =>
       gatewayState === 'open' ? (
@@ -142,6 +157,7 @@ export const ChatRoutesSurface = memo(function ChatRoutesSurface({
   const chatView = (
     <ChatView
       gateway={gateway}
+      modelMenuContent={modelMenuContent}
       modelOptionsOwnerConnectionId={activeConnectionId || undefined}
       modelOptionsProfile={activeGatewayProfile}
       reasoningMenuContent={reasoningMenuContent}

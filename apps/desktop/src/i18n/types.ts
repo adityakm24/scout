@@ -801,6 +801,7 @@ export interface Translations {
       providerApiKeys: string
       providerCustomEndpoints: string
       providerLocalModels: string
+      models: string
       apiKeys: string
       keybinds: string
       keysTools: string
@@ -2685,6 +2686,7 @@ export interface Translations {
 
   composer: {
     message: string
+    loadingModel: string
     wakingProfile: (profile: string) => string
     placeholderStarting: string
     placeholderReconnecting: string
@@ -3209,6 +3211,8 @@ export interface Translations {
       search: string
       noModels: string
       editModels: string
+      followDefault: string
+      refreshModels: string
       fast: string
       free: string
       cacheRead: string
@@ -3350,6 +3354,11 @@ export interface Translations {
       yoloOn: string
       yoloOff: string
       noModel: string
+      modelNone: string
+      modelPinned: string
+      modelTitle: (provider: string, model: string, effort: string) => string
+      openModelPicker: string
+      switchModel: (provider: string, model: string) => string
       providerModelTitle: (provider: string, model: string) => string
     }
   }

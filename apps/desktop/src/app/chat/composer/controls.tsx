@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { $hudMode, closeHud, resetHudLayout } from '@/store/hud'
 
 import { ACTIVE_ICON_BTN, GHOST_ICON_BTN, PRIMARY_ICON_BTN } from './control-classes'
+import { ModelPill } from './model-pill'
 import type { ChatBarState } from './types'
 
 // Re-exported: `context-menu.tsx` and other row neighbours have always reached
@@ -19,11 +20,14 @@ export { ACTIVE_ICON_BTN, GHOST_ICON_BTN, ICON_BTN, PRIMARY_ICON_BTN } from './c
 export function ComposerControls({
   busy,
   canSubmit,
+  compactModelPill = false,
   disabled,
   expanded = false,
   hasComposerPayload,
+  hideModelPill = false,
   minimal = false,
-  onToggleExpand
+  onToggleExpand,
+  state
 }: {
   busy: boolean
   busyAction: 'steer' | 'queue' | 'stop'
@@ -49,6 +53,9 @@ export function ComposerControls({
 
   return (
     <div className="flex min-w-0 shrink items-center gap-(--composer-control-gap)">
+      {!minimal && !hideModelPill ? (
+        <ModelPill compact={compactModelPill} disabled={disabled} model={state.model} />
+      ) : null}
       {/* Text expand/collapse toggle when typing */}
       {!minimal && hasComposerPayload && onToggleExpand ? (
         <Tip label={expanded ? c.queueCollapse : c.queueExpand} placement="control">

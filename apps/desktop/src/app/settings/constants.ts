@@ -218,6 +218,20 @@ export const PROVIDER_GROUPS: ProviderPrefix[] = [
     description: 'Authenticate via AWS profile + region',
     docsUrl: 'https://docs.aws.amazon.com/bedrock/latest/userguide/bedrock-regions.html',
     priority: 23
+  },
+  {
+    prefix: 'NEBIUS_',
+    name: 'Nebius Token Factory',
+    description: 'DeepSeek-V4.1-Flash-1017, DeepSeek-V4-Pro, Nemotron & open-weight models',
+    docsUrl: 'https://tokenfactory.nebius.com',
+    priority: 2
+  },
+  {
+    prefix: 'MISTRAL_',
+    name: 'Mistral AI',
+    description: 'Codestral, Ministral, and Mistral Large models',
+    docsUrl: 'https://console.mistral.ai/api-keys',
+    priority: 2
   }
 ]
 

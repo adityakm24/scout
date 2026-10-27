@@ -42,8 +42,9 @@ Load this skill and follow the Procedure. Zepto tools may be deferred: call them
 | Step | Tool |
 |---|---|
 | Home address and its coordinates | `mcp__zepto__list_saved_addresses`, then `mcp__zepto__select_saved_address` |
-| Where the user is, drive time home | `device_location` with `to_latitude` / `to_longitude` |
+| Where the user is, drive time | `device_location` with `to_latitude` / `to_longitude` |
 | Zepto's delivery time | `mcp__zepto__get_location_serviceability` (`etaMinutes` or similar) |
+| Active tracking / Commute sync | `start_commute_eta_sync` with destination coordinates and `target_eta_minutes` |
 | Usual items | `mcp__zepto__get_past_order_items` |
 | Find and add items | `mcp__zepto__search_products` / `search_multiple_products`, `mcp__zepto__update_cart` |
 | Check the basket | `mcp__zepto__view_cart` (prices in paise: ₹ = paise ÷ 100) |
@@ -51,14 +52,16 @@ Load this skill and follow the Procedure. Zepto tools may be deferred: call them
 
 ## Procedure
 
-1. **Home.** `mcp__zepto__list_saved_addresses`; take the home address (label "Home", or the one
-   memory says is home). Note its `addressId`, latitude and longitude, and call
-   `mcp__zepto__select_saved_address` with that `addressId`.
+1. **Home / Destination Address.** ALWAYS call `mcp__zepto__list_saved_addresses` first.
+   - **Always prompt the user to confirm/choose the destination address via `clarify`**, even if they named an address (like Office or Home) in their message. Offer the saved Zepto addresses as choices (putting the best matching address first as recommended, e.g. `["Office - Condé Nast, Saint Mark's Road", "Home - Harmony Little Nest", ...]`).
+   - Never guess coordinates or skip address confirmation. This ensures safety, avoids ordering/tracking to the wrong dark store, and gives the user certainty.
+   - Once chosen/confirmed, call `mcp__zepto__select_saved_address` with that `addressId` immediately so Zepto binds the active store to that destination, and use that address's exact coordinates for drive ETA and Zepto delivery ETA.
 2. **Drive time.** `device_location` with `to_latitude` and `to_longitude` set to home. Read
    `drive.drive_minutes_estimate`. If the location is refused, ask the user how long until they
    are home and use that.
-3. **Delivery time.** `mcp__zepto__get_location_serviceability` with the home coordinates; read the
+3. **Delivery time & Live Tracking.** `mcp__zepto__get_location_serviceability` with the destination coordinates; read the
    delivery ETA in minutes (assume 15 if it gives none).
+   - **Crucial for Tracking:** If the user asks to **track** (e.g. "track zepto's ETA to that location", "track my commute"), ALWAYS call `start_commute_eta_sync` with `destination_name`, `destination_lat`, `destination_lng`, and `target_eta_minutes` (Zepto's live ETA). This activates the background commute tracking engine and displays the live commute tracking status!
 4. **Basket.** For each item the user named — or their usual items from
    `mcp__zepto__get_past_order_items` when they say "my usual" — search, then add it with
    `mcp__zepto__update_cart` (`deviceId` "scout", `cartItems` with `productVariantId`,
@@ -69,8 +72,18 @@ Load this skill and follow the Procedure. Zepto tools may be deferred: call them
    has Zepto check the order first. The user approves the card, which shows the time.
 6. **Too close to home?** If `schedule_order` says the delivery would arrive after them anyway,
    place it now with `mcp__zepto__create_order` (`confirmOrder: true`; they approve the card).
-7. **Tell the user** in two short lines: what was ordered and the total; when Scout will place it
-   and when it should arrive. Say the drive time is an estimate without live traffic.
+7. **Response Formatting & Tracking Display**:
+   - When tracking is initiated (`start_commute_eta_sync`) or status is checked (`get_commute_eta_sync_status`), ALWAYS include the animated inline ```svg tracking card returned by the tool at the top of your response, followed by the structured tracking parameters:
+     ```markdown
+     <include the ```svg ... ``` block from the tool response>
+
+     🟢 **Commute Tracking Active**
+     • **Destination:** <Destination Name / Address>
+     • **Live Drive Time:** ~X minutes (Y km) via Apple Maps live traffic
+     • **Zepto Delivery ETA:** ~Z minutes
+     • **Optimal Order Window:** Order in ~W minutes (when you are Z minutes away so both arrive together)
+     ```
+   - If an order was scheduled or placed: state what was ordered, total amount, when Scout will place it, and expected arrival time.
 
 ## Pitfalls
 

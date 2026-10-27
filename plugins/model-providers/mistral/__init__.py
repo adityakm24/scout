@@ -9,6 +9,27 @@ from providers.base import ProviderProfile
 class MistralProviderProfile(ProviderProfile):
     """Mistral AI native OpenAI-compatible inference profile."""
 
+    def __post_init__(self) -> None:
+        # Mistral Chat Completions rejects `reasoning_effort` on non-Magistral models
+        # (HTTP 400 code 3051: "reasoning_effort is not enabled for this model").
+        self.model_capabilities = {
+            "codestral-latest": {"supports_reasoning": False},
+            "mistral/codestral-latest": {"supports_reasoning": False},
+            "ministral-8b-latest": {"supports_reasoning": False},
+            "ministral-14b-latest": {"supports_reasoning": False},
+            "mistral-small-latest": {"supports_reasoning": False},
+            "mistral-medium-latest": {"supports_reasoning": False},
+            "mistral-large-latest": {"supports_reasoning": False},
+            "magistral-medium-latest": {"supports_reasoning": True},
+            "magistral-small-latest": {"supports_reasoning": True},
+        }
+
+    def supported_reasoning_efforts(self, model: str | None) -> tuple[str, ...] | None:
+        model_name = (model or "").strip().rsplit("/", 1)[-1].lower()
+        if "magistral" in model_name:
+            return None
+        return ()
+
     @staticmethod
     def _needs_strip(msg: Any) -> bool:
         return isinstance(msg, dict) and msg.get("role") == "tool" and ("name" in msg or "tool_name" in msg)
@@ -32,14 +53,10 @@ mistral = MistralProviderProfile(
     base_url="https://api.mistral.ai/v1",
     models_url="https://api.mistral.ai/v1/models",
     auth_type="api_key",
-    default_aux_model="ministral-8b-latest",
+    supports_model_listing=False,
+    default_aux_model="mistral/codestral-latest",
     fallback_models=(
-        "mistral-medium-latest",
-        "mistral-small-latest",
-        "codestral-latest",
-        "ministral-14b-latest",
-        "ministral-8b-latest",
-        "magistral-medium-latest",
+        "mistral/codestral-latest",
     ),
 )
 

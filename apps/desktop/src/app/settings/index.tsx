@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { useI18n } from '@/i18n'
-import { Bell, Info, Keyboard, KeyRound, Settings2, ShieldLock, Smartphone, Users, Wrench } from '@/lib/icons'
+import { Bell, Cpu, Info, Keyboard, KeyRound, Settings2, ShieldLock, Smartphone, Users, Wrench } from '@/lib/icons'
 import { isEditableTarget } from '@/lib/keybinds/combo'
 import { typeToFocusChar } from '@/lib/keybinds/composer-focus-keys'
 import { $commandPaletteOpen } from '@/store/command-palette'
@@ -19,6 +19,7 @@ import { ConfigSettings } from './config-settings'
 import { SECTIONS } from './constants'
 import { KeybindSettings } from './keybind-settings'
 import { KeysSettings, type KeysView } from './keys-settings'
+import { ModelSettings } from './model-settings'
 import { movedSettingsTabRedirect } from './moved-tabs'
 import { NotificationsSettings } from './notifications-settings'
 import { PhoneSettings } from './phone-settings'
@@ -38,6 +39,7 @@ import { VersionSettings } from './version-settings'
 
 const SETTINGS_VIEWS: readonly SettingsViewId[] = [
   'account',
+  'models',
   ...SECTIONS.map(s => `config:${s.id}` as SettingsViewId),
   'keybinds',
   'keys',
@@ -175,6 +177,13 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
       id: 'account' as SettingsViewId,
       label: 'Account & Profile',
       onSelect: () => setActiveView('account')
+    },
+    {
+      active: activeView === 'models',
+      icon: Cpu,
+      id: 'models' as SettingsViewId,
+      label: t.settings.nav.models,
+      onSelect: () => setActiveView('models')
     },
     ...SECTIONS.flatMap(section => {
       const view = `config:${section.id}` as SettingsViewId
@@ -319,7 +328,9 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
         <SettingsAppleShell
           active={activeItem}
           body={
-            activeView === 'phone' ? (
+            activeView === 'models' ? (
+              <ModelSettings onConfigSaved={onConfigSaved} onMainModelChanged={onMainModelChanged} />
+            ) : activeView === 'phone' ? (
               <PhoneSettings />
             ) : activeView === 'version' ? (
               <VersionSettings />

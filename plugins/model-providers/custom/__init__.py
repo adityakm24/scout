@@ -69,6 +69,10 @@ class CustomProfile(ProviderProfile):
         # effort arrives here already filled by default_reasoning_config). Never emit
         # think=True (Ollama-only flag).
         if reasoning_config and isinstance(reasoning_config, dict):
+            base_url_str = str(ctx.get("base_url") or "")
+            model_name = str(ctx.get("model") or "").strip().rsplit("/", 1)[-1].lower()
+            if base_url_host_matches(base_url_str, "api.mistral.ai") and "magistral" not in model_name:
+                return extra_body, top_level
             effort = (reasoning_config.get("effort") or "").strip().lower()
             if effort == "none" or reasoning_config.get("enabled", True) is False:
                 # See #14820.

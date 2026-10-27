@@ -2525,8 +2525,10 @@ def _make_agent(
     if synthetic is not None:
         return synthetic
     from run_agent import AIAgent
-    # MCP discovery runs in a daemon thread (a dead server can't freeze the shell); the agent snapshots its tool
-    # list once, so briefly wait for in-flight discovery. Dashboard /api/ws uses mcp_startup; TUI stdio uses entry.
+    # Ensure MCP discovery has run before AIAgent snapshots its tool list.
+    with contextlib.suppress(Exception):
+        from scout_backend.mcp_startup import ensure_mcp_discovery_before_agent_build
+        ensure_mcp_discovery_before_agent_build(logger=logger)
     for _mod in ("scout_backend.mcp_startup", "tui_gateway.entry"):
         with contextlib.suppress(Exception):
             importlib.import_module(_mod).wait_for_mcp_discovery()
