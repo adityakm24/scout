@@ -5,7 +5,8 @@ import { atom } from 'nanostores'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
-import { closeAgentPanel } from '@/app/agent-panel/open'
+import { AgentPanel } from '@/app/agent-panel'
+import { $phoneAgentPanelOpen, closeAgentPanel } from '@/app/agent-panel/open'
 import { DASHBOARD_ROUTE } from '@/app/dashboard/nav'
 import { openSession } from '@/app/open-session'
 import {
@@ -70,6 +71,7 @@ export function PhoneShell() {
 
   useEffect(startPhoneActivity, [])
   const chatsOpen = useStore($phoneChatsOpen)
+  const agentPanelOpen = useStore($phoneAgentPanelOpen)
   const inChat = !chatsOpen && appViewForPath(pathname) === 'chat'
   const inSettings = !chatsOpen && routePathname(pathname) === SETTINGS_ROUTE
 
@@ -77,6 +79,7 @@ export function PhoneShell() {
 
   return (
     <>
+      {agentPanelOpen && <AgentPanel />}
       {chatsOpen && <PhoneChats />}
       {inSettings && <PhoneSettingsHeader />}
       {inChat ? <PhoneChatHeader /> : <PhoneTabBar active={activeTab(pathname, chatsOpen)} />}

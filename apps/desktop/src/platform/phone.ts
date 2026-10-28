@@ -1,4 +1,5 @@
 // Phone mode: the renderer hosted by the phone app (mobile/), or opened in a phone browser.
+import '@/app/phone/phone.css'
 // The desktop layout stays the source of every surface; phone mode swaps only the chrome
 // around them (src/app/phone/) for a native tab bar, a chats list and a conversation header.
 
@@ -151,6 +152,8 @@ export function installPhoneScrollKeyboardDismiss(root: Window | Document = wind
 
 if (IS_PHONE) {
   document.documentElement.dataset.phone = ''
+
+  void import('@/platform/phone-layout').then(({ runPhoneDeployRefresh }) => runPhoneDeployRefresh())
   // Edge to edge under the notch and home bar (safe-area insets do the spacing); no
   // pinch-zoom or double-tap zoom on an app surface.
   document

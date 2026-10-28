@@ -5,6 +5,8 @@ from tools.commute_eta_sync_tool import (
     cancel_commute_eta_sync,
     get_commute_eta_sync_status,
     _storage_path,
+    _tracking_fields,
+    _normalize_legacy_tracking,
 )
 
 def test_commute_eta_sync_lifecycle(tmp_path, monkeypatch):
@@ -86,5 +88,48 @@ def test_resolve_saved_location_avoids_false_matches(monkeypatch):
     res_home = resolve_saved_location("home")
     assert res_home is not None
     assert res_home["name"] == "Home"
+
+
+def test_tracking_fields_keep_svg_out_of_summary():
+    fields = _tracking_fields(
+        "Harmony Little Nest",
+        25,
+        15,
+        10,
+        5.2,
+        has_target_eta=True,
+        origin_address="Sindhi Colony, Bengaluru",
+    )
+    assert fields["tracking_card_markdown"].startswith("```svg")
+    assert "```svg" not in fields["tracking_summary"]
+    assert "Sindhi Colony" in fields["tracking_summary"]
+    assert fields["order_timing_advice"] == fields["tracking_summary"]
+
+
+def test_normalize_legacy_tracking_splits_combined_field():
+    legacy = {
+        "order_timing_advice": "```svg\n<svg></svg>\n```\n\n🟢 **Commute Tracking Active**\n• **Destination:** Home",
+    }
+    _normalize_legacy_tracking(legacy)
+    assert legacy["tracking_card_markdown"].startswith("```svg")
+    assert "Destination" in legacy["tracking_summary"]
+    assert "```svg" not in legacy["order_timing_advice"]
+
+
+def test_start_sync_stores_split_tracking_fields(tmp_path, monkeypatch):
+    test_storage = tmp_path / "active_sync.json"
+    monkeypatch.setattr("tools.commute_eta_sync_tool._storage_path", lambda: test_storage)
+
+    res = json.loads(
+        start_commute_eta_sync(
+            destination_lat=12.9716,
+            destination_lng=77.5946,
+            target_eta_minutes=20,
+            action_payload={"merchant_provider": "Zepto"},
+        )
+    )
+    assert res["tracking_card_markdown"].startswith("```svg")
+    assert "```svg" not in res["tracking_summary"]
+    assert res["details"]["tracking_summary"] == res["tracking_summary"]
 
 

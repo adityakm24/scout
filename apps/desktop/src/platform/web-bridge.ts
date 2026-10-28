@@ -226,6 +226,12 @@ function webBridge(config: RemoteConfig) {
       return () => window.removeEventListener(FOCUS_SESSION_EVENT, open)
     },
     openExternal: async (url: string) => {
+      if (window.scoutNative) {
+        await window.scoutNative.request('open-external', { url }).catch(() => undefined)
+
+        return
+      }
+
       window.open(url, '_blank', 'noopener,noreferrer')
     },
     notify: async ({ body, focusSessionId, sessionId, title }: ScoutNotification) => {

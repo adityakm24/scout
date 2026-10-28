@@ -25,6 +25,23 @@
   min-height: 0 !important;
 }
 
+:root[data-phone] :is([data-phone-workspace-root], [data-phone-workspace-shell], [data-chat-surface]) {
+  width: 100% !important;
+  max-width: 100vw !important;
+  min-width: 0 !important;
+}
+
+:root[data-phone] [data-chat-surface] {
+  background:
+    linear-gradient(155deg, color-mix(in srgb, #fff 4%, transparent), transparent 28%),
+    color-mix(in srgb, var(--ui-bg-chrome) 82%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent);
+}
+
+:root[data-phone] [data-phone-workspace-root] {
+  background: transparent !important;
+}
+
 /* The desktop's window chrome has no place on a phone: the titlebar clusters, the pane tab
    strip, a minimized pane's whole side slot (not just its rail: the slot keeps
    its width) and the sidebar (the Chats list replaces it). */
@@ -109,8 +126,12 @@
   display: none !important;
 }
 
-/* Scout's details (Persona, Heartbeat, Permissions, Requests) open as a full screen sheet. */
-:root[data-phone] [data-slot='agent-panel'] {
+/* Agent details are a sheet only after the user taps the name — never cover chat by default. */
+:root[data-phone]:not([data-phone-agent-open]) [data-slot='agent-panel'] {
+  display: none !important;
+}
+
+:root[data-phone][data-phone-agent-open] [data-slot='agent-panel'] {
   position: fixed;
   inset: 0;
   z-index: 75;
@@ -844,4 +865,100 @@
 
 :root[data-phone] :is([data-catalog-card], [data-slot='connector-row-card'], [data-slot='google-workspace-card']) {
   border-radius: 1.25rem;
+}
+
+/* ── Chat thread (commute cards, tools, approvals) ─────────────────────── */
+
+:root[data-phone] [data-slot='aui_thread-content'] {
+  padding-inline: 1rem;
+}
+
+:root[data-phone] [data-slot='aui_assistant-message-content'],
+:root[data-phone] [data-slot='aui_assistant-message-content'] .aui-md {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:root[data-phone] [data-slot='aui_assistant-message-content'] .aui-md [data-slot='code-card'],
+:root[data-phone] [data-slot='aui_assistant-message-content'] .aui-md [data-streamdown='code-block'] {
+  width: 100%;
+  max-width: 100%;
+}
+
+:root[data-phone] [data-slot='aui_assistant-message-content'] .aui-md [data-slot='code-card-body'] pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+:root[data-phone] [data-slot='aui_assistant-message-content'] .aui-md :where(p, li) {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+:root[data-phone] [data-slot='tool-block'],
+:root[data-phone] [data-slot='tool-approval-stack'] {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* No in-app browser on phone — hide Electron webview preview panes if any linger. */
+:root[data-phone] webview {
+  display: none !important;
+}
+
+:root[data-phone] [data-tree-split] > :has(webview) {
+  display: none !important;
+}
+
+/* The desktop layout tree still runs on phone, but every zone except the chat must
+   take zero width — otherwise a hidden sidebar or preview pane keeps its flex track
+   and crushes the thread into a sliver (vertical one-character wrapping). */
+:root[data-phone] [data-tree-group]:not([data-composer-owner]):not(:has([data-chat-surface])) {
+  display: none !important;
+  flex: 0 0 0 !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  overflow: hidden !important;
+}
+
+:root[data-phone] [data-tree-group]:has([data-chat-surface]) {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+:root[data-phone] [data-tree-split] {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+:root[data-phone] [data-tree-split] [role='separator'] {
+  display: none !important;
+}
+
+:root[data-phone] [data-preview-browser] {
+  display: none !important;
+}
+
+/* Desktop edge overlays (sessions rail, etc.) — not the phone agent sheet. */
+:root[data-phone] [data-narrow-overlay]:not(:has([data-slot='agent-panel'])) {
+  display: none !important;
+}
+
+:root[data-phone] [data-tree-group]:has([data-preview-browser]) {
+  display: none !important;
+}
+
+/* Keep-alive panes (browser previews) anchor outside the group DOM — hide by host id. */
+:root[data-phone] [data-pane-host]:not([data-pane-host='workspace']) {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
 }

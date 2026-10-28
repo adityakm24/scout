@@ -1,11 +1,8 @@
-"""Orders the user approves now and Scout places later ("arrive when I get home").
+"""Schedule a review reminder for an order the user wants later.
 
-``schedule_order`` shows the order card while the user is here, labelled with when it will be
-placed. Their approval becomes a hold on that exact order: same merchant, tool and arguments, the
-same items, a total no higher than the one they saw, valid once and only until shortly after the
-planned time. A one-shot job then places it. The spending gate (``mcp_tool_spending``) refuses every
-unattended purchase except one that a live hold still covers, checked against the basket as it is
-at that moment; a changed basket, a higher total or an expired hold stays refused.
+Scheduling never authorizes or places a purchase. At the selected time, Scout reminds the user in
+the originating chat (or the app's Bot Chat) to review the order; the user must then request it and
+approve the fresh order card. ``claim_hold`` remains for orders approved by older versions.
 """
 
 from __future__ import annotations
@@ -22,7 +19,7 @@ from tools.registry import registry, tool_error
 
 logger = logging.getLogger(__name__)
 
-# How long after the planned time a hold still lets the order through (a late scheduler tick).
+# How long an order approved by an older version remains valid after its planned time.
 HOLD_GRACE_MINUTES = 45
 _lock = threading.Lock()
 
@@ -135,18 +132,6 @@ def _clock(when) -> str:
     return when.strftime("%-I:%M %p")
 
 
-def _job_prompt(server: str, tool: str, args: dict, merchant: str, hold_id: str) -> str:
-    from tools.mcp_tool_schema import mcp_prefixed_tool_name
-
-    return (
-        f"The user approved this {merchant} order earlier and asked for it to be placed now (hold {hold_id}). "
-        f"Call the tool `{mcp_prefixed_tool_name(server, tool)}` (through tool_call if it is not listed) with "
-        f"exactly these arguments: {json.dumps(args, ensure_ascii=False)}. Make no other calls and do not "
-        "change the cart. Then reply in one short line: if it was placed, that it is ordered and what the "
-        "merchant said about arrival; if it was refused, that nothing was ordered and why."
-    )
-
-
 # Minutes between the order going in and the user arriving, so it is at the door first.
 ARRIVAL_MARGIN_MINUTES = 3
 
@@ -201,7 +186,7 @@ def _vendor_dry_run(entry, server: str, tool: str, args: dict, tool_timeout: flo
 
 def schedule_order(server: str, tool: str, arguments: Optional[dict], place_in_minutes: Any = None,
                    drive_minutes: Any = None, delivery_minutes: Any = None, tool_timeout: float = 60.0) -> str:
-    from tools.mcp_tool_spending import _merchant, _summary_text, order_summary, spending_entry
+    from tools.mcp_tool_spending import _merchant, order_summary, spending_entry
 
     entry = spending_entry(server or "")
     if entry is None:
@@ -224,65 +209,65 @@ def schedule_order(server: str, tool: str, arguments: Optional[dict], place_in_m
     if refused := _vendor_dry_run(entry, server, tool, args, tool_timeout):
         return tool_error(f"{_merchant(entry)} would not accept this order: {refused}. Fix it (for an address, use "
                           "the id from the merchant's saved addresses) and try again. Nothing was scheduled.")
-    if entry.spending.commit_flag:
-        args[entry.spending.commit_flag] = True
     summary = order_summary(entry, server, tool, args, tool_timeout)
     if not summary["items"] and summary["total"] is None:
-        return tool_error("The basket could not be read, so there is nothing to approve. Build the cart first, "
+        return tool_error("The basket could not be read, so there is nothing to schedule. Build the cart first, "
                           f"then check it with {entry.spending.preview or 'the merchant'}.")
 
     import scout_time
 
     place_at = scout_time.now() + timedelta(minutes=minutes)
     merchant = _merchant(entry)
-    label = f"{summary['label']} at {_clock(place_at)}"
-    card = {**summary, "label": label, "scheduled_for": place_at.isoformat()}
-    try:
-        from tools.approval_prompt import request_elicitation_consent
+    schedule = place_at.replace(microsecond=0).isoformat()
+    item_descriptions = [
+        f"{item['quantity']} × {str(item['name'])[:80]}"
+        for item in summary["items"][:4]
+    ]
+    if len(summary["items"]) > 4:
+        item_descriptions.append(f"and {len(summary['items']) - 4} more")
+    total = summary["total"]
+    estimate = f" Estimated total: ₹{total:g}." if isinstance(total, (int, float)) else ""
+    reminder_text = (
+        f"It's time to review your {merchant} order"
+        + (f": {', '.join(item_descriptions)}." if item_descriptions else ".")
+        + estimate
+        + " Nothing has been ordered or pre-authorized. Open Scout and ask to place it; "
+        "a fresh approval card is required before any purchase."
+    )
+    from planner import reminders
+    from tools.cronjob_job_args import _origin_from_env
 
-        answer = request_elicitation_consent(
-            _summary_text({**summary, "label": label}),
-            f"Scout will place this {merchant} order at {_clock(place_at)}, if the basket and total are unchanged.",
-            surface=f"mcp-order/{server}", title=f"{merchant}: {label}?",
-            payload_extra={"order": card, "choices": ["once", "deny"]})
-    except Exception as exc:
-        logger.error("Scheduled order: approval failed for %s/%s: %s", server, tool, exc, exc_info=True)
-        answer = "decline"
-    if answer != "accept":
-        return tool_error(f"The user did not approve the {merchant} order. Nothing is scheduled; do not retry "
-                          "unless they ask.")
-
-    hold = create_hold(server, tool, args, summary, place_at.timestamp())
-    from tools.cronjob_tools import cronjob
-
-    created = json.loads(cronjob(
-        action="create", prompt=_job_prompt(server, tool, args, merchant, hold["id"]),
-        schedule=place_at.replace(microsecond=0).isoformat(), name=f"{merchant} order at {_clock(place_at)}",
-        enabled_toolsets=[server]))
-    job_id = (created.get("job") or {}).get("job_id") or (created.get("job") or {}).get("id")
-    if not job_id:
-        return tool_error(f"The order was approved but could not be scheduled: {created.get('error') or created}. "
-                          "Nothing will be placed; tell the user.")
-    attach_job(hold["id"], job_id)
-    logger.info("Scheduled order: hold %s for %s/%s at %s (job %s)", hold["id"], server, tool, place_at, job_id)
+    origin = _origin_from_env(schedule)
+    scheduled = reminders.add_reminder(
+        reminder_text,
+        schedule,
+        actor="agent",
+        origin=origin,
+        deliver="origin" if origin else None,
+    )
+    job_id = scheduled["reminder"]["id"]
+    logger.info("Scheduled order review for %s/%s at %s (reminder %s)", server, tool, place_at, job_id)
     return json.dumps({
-        "scheduled": True, "places_at": _clock(place_at), "in_minutes": minutes, "job_id": job_id,
+        "scheduled": True, "review_at": _clock(place_at), "in_minutes": minutes, "job_id": job_id,
         "total": summary["total"], "items": [f"{i['quantity']} × {i['name']}" for i in summary["items"]],
-        "note": "Placed only if the basket and total are unchanged then. Cancel by removing the job.",
+        "purchase_authorized": False,
+        "note": "This schedules a review reminder only. Nothing will be ordered or charged; the user must "
+                "request the order at that time and approve its fresh order card.",
     }, ensure_ascii=False)
 
 
 SCHEDULE_ORDER_SCHEMA = {
     "name": "schedule_order",
     "description": (
-        "Place an order LATER instead of now — use this, not the merchant's order tool, whenever the user "
+        "Schedule a later order review instead of ordering now — use this, not the merchant's order tool, whenever the user "
         "wants it to arrive later or when they get home (\"so it's home when I am\"). First: the home "
         "address id and coordinates from the merchant's saved addresses (never invent an id), the user's "
         "drive time home from where they are now, the merchant's delivery time, and the cart built. Then "
-        "pass drive_minutes and delivery_minutes (the tool works out when to order) and the order tool's "
-        "own arguments, e.g. {userAddressId} — not the cart. The user approves the exact basket now; it is "
-        "placed then only if the basket and total are unchanged. Skill deliver-when-home has the routine. "
-        "Returns {scheduled, places_at, total, items}."
+        "pass drive_minutes and delivery_minutes (the tool works out when to review) and the order tool's "
+        "own arguments, e.g. {userAddressId} — not the cart. This creates a reminder only, never a purchase "
+        "or advance authorization. At that time, tell the user to request the order; rebuild/check the cart "
+        "and show a fresh approval card before placing anything. Skill deliver-when-home has the routine. "
+        "Returns {scheduled, review_at, total, items, purchase_authorized: false}."
     ),
     "parameters": {
         "type": "object",
@@ -293,7 +278,7 @@ SCHEDULE_ORDER_SCHEMA = {
             "drive_minutes": {"type": "number", "description": "Minutes until the user is home."},
             "delivery_minutes": {"type": "number", "description": "The merchant's delivery time in minutes."},
             "place_in_minutes": {"type": "integer",
-                                 "description": "Only without drive_minutes: minutes from now to place it."},
+                                 "description": "Only without drive_minutes: minutes from now until the review reminder."},
         },
         "required": ["server", "tool"],
     },

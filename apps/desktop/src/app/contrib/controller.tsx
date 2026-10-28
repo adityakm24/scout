@@ -47,6 +47,8 @@ import { type KeybindContribution, KEYBINDS_AREA } from '@/lib/keybinds/actions'
 import { isOnboardingEnabled } from '@/lib/onboarding-enabled'
 import { TRANSCRIPT_DIRECTIVE_AREA, type TranscriptDirectiveContribution } from '@/lib/transcript-directives'
 import { setYoloEnabled } from '@/lib/yolo-session'
+import { PhoneWorkspaceShell } from '@/app/phone/phone-chat-shell'
+import { resetPhoneLayoutShell } from '@/platform/phone-layout'
 import { IS_PHONE } from '@/platform/phone'
 import { startDesktopActivityNotifications } from '@/store/agent-activity'
 import { $connectionsRegistry } from '@/store/connection-registry-state'
@@ -486,17 +488,23 @@ discoverBundledPlugins()
 // record split shares (#108679).
 hydrateContributedPanes()
 
+if (IS_PHONE) {
+  resetPhoneLayoutShell()
+}
+
 // Session + route (page) tiles: persisted splits register panes docked beside
 // main. A popped-out Browser and the HUD have no layout tree — registering
 // tiles there would still run, and preview-tile watching would try to dock
 // into a tree this window never renders (and, in the HUD, paint a webview
 // into the transparent overlay).
 if (!isBrowserWindow() && !isHudWindow()) {
-  watchSessionTiles()
-  startUnrestoredTileTitleBackfill()
-  startTileBackendIdentityGuard()
-  watchRouteTiles()
-  watchPreviewTiles()
+  if (!IS_PHONE) {
+    watchSessionTiles()
+    startUnrestoredTileTitleBackfill()
+    startTileBackendIdentityGuard()
+    watchRouteTiles()
+    watchPreviewTiles()
+  }
 }
 
 // Mirror sidebar pins into the backend keep-flag so the auto-archive sweep
@@ -845,6 +853,29 @@ export function ContribController() {
       <ContribWiring>
         <BrowserPopoutShell />
       </ContribWiring>
+    )
+  }
+
+  if (IS_PHONE) {
+    return (
+      <SidebarProvider
+        className="h-screen min-h-0 flex-col bg-background"
+        onOpenChange={setSidebarOpen}
+        open={false}
+        style={{ '--sidebar-width': '100%' } as CSSProperties}
+      >
+        <ContribWiring>
+          <AppContextMenu />
+          <div
+            className="flex h-[var(--phone-viewport-height,100dvh)] min-h-0 w-full max-w-[100vw] flex-col overflow-hidden bg-(--ui-bg-chrome) text-(--ui-text-primary)"
+            data-contrib-shell=""
+            data-phone-workspace-root=""
+            style={{ '--titlebar-height': '0px' } as CSSProperties}
+          >
+            <PhoneWorkspaceShell />
+          </div>
+        </ContribWiring>
+      </SidebarProvider>
     )
   }
 

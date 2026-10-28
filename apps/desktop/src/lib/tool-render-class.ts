@@ -28,7 +28,15 @@ export function isFileEditTool(toolName: string): boolean {
 //
 // Everything else is ephemeral activity — reads, searches, commands — which is
 // what a run summarizes and what the live ticker cycles through.
-const CARD_TOOL_NAMES = new Set(['clarify', 'delegate_task', 'external_action', 'image_generate', 'manage_catalog'])
+const CARD_TOOL_NAMES = new Set([
+  'clarify',
+  'delegate_task',
+  'external_action',
+  'get_commute_eta_sync_status',
+  'image_generate',
+  'manage_catalog',
+  'start_commute_eta_sync'
+])
 
 // Name the run splitter uses for a manage_connections part it has classified as a card.
 export const CONNECTION_CARD_KEY = 'manage_connections:card'

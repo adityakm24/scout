@@ -363,6 +363,125 @@ def _render_tracking_svg(
     )
 
 
+def _tracking_summary_text(
+    dest_title: str,
+    user_eta_min: Optional[int],
+    eta_min: Optional[int],
+    wait_min: Optional[int],
+    km: Optional[float],
+    *,
+    live_update: bool = False,
+    has_target_eta: bool = False,
+    origin_address: Optional[str] = None,
+) -> str:
+    """Plain markdown status for commute tracking (no SVG fence)."""
+    km_str = f" ({km} km)" if km else ""
+    head = "🟢 **Commute Tracking Active**"
+    if live_update:
+        head += " (Live Update)"
+
+    loc_line = ""
+    if origin_address:
+        loc_line = f"• **Your location:** {origin_address}\n"
+
+    if has_target_eta and user_eta_min is not None and eta_min is not None:
+        if wait_min is not None and wait_min > 1:
+            return (
+                f"{head}\n"
+                f"{loc_line}"
+                f"• **Destination:** {dest_title}\n"
+                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
+                f"• **Delivery ETA:** ~{eta_min} minutes\n"
+                f"• **Optimal Order Window:** Order in ~{wait_min} minutes (when you are {eta_min} minutes away so you arrive together)\n\n"
+                f"Call `get_commute_eta_sync_status` while you move — live GPS refreshes on each check."
+            )
+        if wait_min is not None and wait_min >= -2:
+            return (
+                f"{head}\n"
+                f"{loc_line}"
+                f"• **Destination:** {dest_title}\n"
+                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
+                f"• **Delivery ETA:** ~{eta_min} minutes\n"
+                f"• **Optimal Order Window:** Place the order **RIGHT NOW** so both you and your delivery arrive together!"
+            )
+        late = abs(wait_min) if wait_min is not None else 0
+        return (
+            f"{head}\n"
+            f"{loc_line}"
+            f"• **Destination:** {dest_title}\n"
+            f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str}\n"
+            f"• **Delivery ETA:** ~{eta_min} minutes\n"
+            f"• **Status:** You will arrive ~{late} minutes before delivery — place the order immediately!"
+        )
+    if has_target_eta:
+        return (
+            f"{head}\n"
+            f"{loc_line}"
+            f"• **Destination:** {dest_title}\n"
+            f"• **Delivery ETA:** ~{eta_min} minutes\n"
+            f"• **Status:** Commute convergence monitoring initialized. Live Apple Maps drive time updates on each status check."
+        )
+    if user_eta_min is not None:
+        return (
+            f"{head}\n"
+            f"{loc_line}"
+            f"• **Destination:** {dest_title}\n"
+            f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
+            f"• **Status:** Live commute tracking active. Monitoring your convergence toward {dest_title}."
+        )
+    return (
+        f"{head}\n"
+        f"{loc_line}"
+        f"• **Destination:** {dest_title}\n"
+        f"• **Status:** Commute tracking initialized. Live Apple Maps drive time updates on each status check."
+    )
+
+
+def _tracking_fields(
+    dest_title: str,
+    user_eta_min: Optional[int],
+    eta_min: Optional[int],
+    wait_min: Optional[int],
+    km: Optional[float],
+    *,
+    live_update: bool = False,
+    has_target_eta: bool = False,
+    origin_address: Optional[str] = None,
+) -> dict[str, Optional[str]]:
+    """Split SVG card from prose so the chat UI renders one card, not a duplicated fence."""
+    summary = _tracking_summary_text(
+        dest_title,
+        user_eta_min,
+        eta_min,
+        wait_min,
+        km,
+        live_update=live_update,
+        has_target_eta=has_target_eta,
+        origin_address=origin_address,
+    )
+    return {
+        "tracking_card_markdown": _render_tracking_svg(dest_title, user_eta_min, eta_min, wait_min, km_estimate=km),
+        "tracking_summary": summary,
+        "order_timing_advice": summary,
+    }
+
+
+def _normalize_legacy_tracking(record: dict) -> None:
+    """Older sessions stored SVG + markdown in one field; split for clients and the model."""
+    if record.get("tracking_card_markdown") and record.get("tracking_summary"):
+        record["order_timing_advice"] = record["tracking_summary"]
+        return
+    advice = record.get("order_timing_advice") or ""
+    if not advice.startswith("```svg"):
+        return
+    split_at = advice.find("\n\n")
+    if split_at == -1:
+        return
+    record["tracking_card_markdown"] = advice[:split_at].strip()
+    record["tracking_summary"] = advice[split_at + 2 :].strip()
+    record["order_timing_advice"] = record["tracking_summary"]
+
+
 def start_commute_eta_sync(
     destination_lat: Optional[float] = None,
     destination_lng: Optional[float] = None,
@@ -451,65 +570,17 @@ def start_commute_eta_sync(
     dest_title = resolved_name or destination_name or "your destination"
     km = live_route_info.get("road_km_estimate") if live_route_info else None
     wait_min = (user_eta_min - eta_min) if (user_eta_min is not None and eta_min is not None) else None
-    svg_card = _render_tracking_svg(dest_title, user_eta_min, eta_min, wait_min, km_estimate=km)
-
-    order_timing_advice = None
-    km_str = f" ({km} km)" if km else ""
-
-    if has_target_eta and user_eta_min is not None:
-        if wait_min > 1:
-            order_timing_advice = (
-                f"{svg_card}\n\n"
-                f"🟢 **Commute Tracking Active**\n"
-                f"• **Destination:** {dest_title}\n"
-                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
-                f"• **Delivery ETA:** ~{eta_min} minutes\n"
-                f"• **Optimal Order Window:** Order in ~{wait_min} minutes (when you are {eta_min} minutes away so you arrive together)\n\n"
-                f"Background tracking is running — I will track your convergence toward {dest_title}."
-            )
-        elif wait_min >= -2:
-            order_timing_advice = (
-                f"{svg_card}\n\n"
-                f"🟢 **Commute Tracking Active**\n"
-                f"• **Destination:** {dest_title}\n"
-                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
-                f"• **Delivery ETA:** ~{eta_min} minutes\n"
-                f"• **Optimal Order Window:** Place the order **RIGHT NOW** so both you and your delivery arrive together!"
-            )
-        else:
-            order_timing_advice = (
-                f"{svg_card}\n\n"
-                f"🟢 **Commute Tracking Active**\n"
-                f"• **Destination:** {dest_title}\n"
-                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str}\n"
-                f"• **Delivery ETA:** ~{eta_min} minutes\n"
-                f"• **Status:** You will arrive ~{abs(wait_min)} minutes before delivery — place the order immediately!"
-            )
-    elif has_target_eta:
-        order_timing_advice = (
-            f"{svg_card}\n\n"
-            f"🟢 **Commute Tracking Active**\n"
-            f"• **Destination:** {dest_title}\n"
-            f"• **Delivery ETA:** ~{eta_min} minutes\n"
-            f"• **Status:** Commute convergence monitoring initialized. Live Apple Maps drive time will be updated continuously as you commute."
-        )
-    else:
-        # Pure commute tracking (no merchant/delivery target)
-        if user_eta_min is not None:
-            order_timing_advice = (
-                f"{svg_card}\n\n"
-                f"🟢 **Commute Tracking Active**\n"
-                f"• **Destination:** {dest_title}\n"
-                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
-                f"• **Status:** Live commute tracking active. Monitoring your convergence toward {dest_title}."
-            )
-        else:
-            order_timing_advice = (
-                f"{svg_card}\n\n"
-                f"🟢 **Commute Tracking Active**\n"
-                f"• **Destination:** {dest_title}\n"
-                f"• **Status:** Commute tracking initialized. Updating live Apple Maps drive time."
-            )
+    origin_address = live_route_info.get("origin_address") if live_route_info else None
+    tracking = _tracking_fields(
+        dest_title,
+        user_eta_min,
+        eta_min,
+        wait_min,
+        km,
+        has_target_eta=has_target_eta,
+        origin_address=origin_address,
+    )
+    order_timing_advice = tracking["tracking_summary"]
 
     record = {
         "sync_id": sync_id,
@@ -522,7 +593,7 @@ def start_commute_eta_sync(
         "last_checked_at": time.time() if user_eta_min is not None else None,
         "last_user_eta_minutes": user_eta_min,
         "live_route": live_route_info,
-        "order_timing_advice": order_timing_advice,
+        **tracking,
     }
 
     _write_active_sync(record)
@@ -536,6 +607,9 @@ def start_commute_eta_sync(
         "sync_id": sync_id,
         "status": "tracking",
         "message": order_timing_advice or f"Commute ETA-Sync initialized for {merchant} ({action}). Tracking user convergence toward {dest_display} with initial {eta_min}m target ETA.",
+        "tracking_card_markdown": tracking.get("tracking_card_markdown"),
+        "tracking_summary": tracking.get("tracking_summary"),
+        "origin_address": origin_address,
         "details": record,
     })
 
@@ -596,51 +670,27 @@ def get_commute_eta_sync_status(location_callback: Optional[Any] = None) -> str:
                 active["live_route"] = live_route_info
                 if user_eta_min is not None:
                     km = live_route_info.get("road_km_estimate") if live_route_info else None
-                    km_str = f" ({km} km)" if km else ""
                     wait_min = (user_eta_min - eta_min) if has_target_eta and eta_min is not None else None
-                    svg_card = _render_tracking_svg(dest_name, user_eta_min, eta_min, wait_min, km_estimate=km)
-                    if has_target_eta and eta_min is not None:
-                        if wait_min > 1:
-                            active["order_timing_advice"] = (
-                                f"{svg_card}\n\n"
-                                f"🟢 **Commute Tracking Active** (Live Update)\n"
-                                f"• **Destination:** {dest_name}\n"
-                                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
-                                f"• **Delivery ETA:** ~{eta_min} minutes\n"
-                                f"• **Optimal Order Window:** Order in ~{wait_min} minutes (when you are {eta_min} minutes away so you arrive together)\n\n"
-                                f"Background tracking is running — monitoring convergence toward {dest_name}."
-                            )
-                        elif wait_min >= -2:
-                            active["order_timing_advice"] = (
-                                f"{svg_card}\n\n"
-                                f"🟢 **Commute Tracking Active** (Live Update)\n"
-                                f"• **Destination:** {dest_name}\n"
-                                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
-                                f"• **Delivery ETA:** ~{eta_min} minutes\n"
-                                f"• **Optimal Order Window:** Place the order **RIGHT NOW** so both you and your delivery arrive together!"
-                            )
-                        else:
-                            active["order_timing_advice"] = (
-                                f"{svg_card}\n\n"
-                                f"🟢 **Commute Tracking Active** (Live Update)\n"
-                                f"• **Destination:** {dest_name}\n"
-                                f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str}\n"
-                                f"• **Delivery ETA:** ~{eta_min} minutes\n"
-                                f"• **Status:** You will arrive ~{abs(wait_min)} minutes before delivery — place the order immediately!"
-                            )
-                    else:
-                        active["order_timing_advice"] = (
-                            f"{svg_card}\n\n"
-                            f"🟢 **Commute Tracking Active** (Live Update)\n"
-                            f"• **Destination:** {dest_name}\n"
-                            f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
-                            f"• **Status:** Live commute tracking active. Monitoring your convergence toward {dest_name}."
+                    origin = live_route_info.get("origin_address") if live_route_info else None
+                    active.update(
+                        _tracking_fields(
+                            dest_name,
+                            user_eta_min,
+                            eta_min,
+                            wait_min,
+                            km,
+                            live_update=True,
+                            has_target_eta=has_target_eta and eta_min is not None,
+                            origin_address=origin,
                         )
+                    )
                 _write_active_sync(active)
         except Exception:
             pass
 
-    if not active.get("order_timing_advice") or not active["order_timing_advice"].startswith("```svg"):
+    _normalize_legacy_tracking(active)
+
+    if not active.get("tracking_card_markdown"):
         last_eta = active.get("last_user_eta_minutes")
         target_eta = active.get("target_eta_minutes")
         has_t = (target_eta is not None and int(target_eta) > 0)
@@ -648,36 +698,31 @@ def get_commute_eta_sync_status(location_callback: Optional[Any] = None) -> str:
         wait_m = (last_eta - t_min) if last_eta is not None and t_min is not None else None
         live_rt = active.get("live_route") or {}
         km_val = live_rt.get("road_km_estimate")
-        svg_card = _render_tracking_svg(dest_name, last_eta, t_min, wait_m, km_estimate=km_val)
-        if has_t and last_eta is not None and t_min is not None:
-            active["order_timing_advice"] = (
-                f"{svg_card}\n\n"
-                f"🟢 **Commute Tracking Active** (Live Update)\n"
-                f"• **Destination:** {dest_name}\n"
-                f"• **Live Drive Time:** ~{last_eta} minutes\n"
-                f"• **Delivery ETA:** ~{t_min} minutes\n"
-                f"• **Optimal Order Window:** Order in ~{wait_m} minutes (when you are {t_min} minutes away so you arrive together)"
+        active.update(
+            _tracking_fields(
+                dest_name,
+                last_eta,
+                t_min,
+                wait_m,
+                km_val,
+                live_update=True,
+                has_target_eta=has_t and last_eta is not None and t_min is not None,
+                origin_address=live_rt.get("origin_address"),
             )
-        elif last_eta is not None:
-            km_s = f" ({km_val} km)" if km_val else ""
-            active["order_timing_advice"] = (
-                f"{svg_card}\n\n"
-                f"🟢 **Commute Tracking Active** (Live Update)\n"
-                f"• **Destination:** {dest_name}\n"
-                f"• **Live Drive Time:** ~{last_eta} minutes{km_s}\n"
-                f"• **Status:** Live commute tracking active. Monitoring convergence toward {dest_name}."
-            )
-        else:
-            active["order_timing_advice"] = (
-                f"{svg_card}\n\n"
-                f"🟢 **Commute Tracking Active** (Live Update)\n"
-                f"• **Destination:** {dest_name}\n"
-                f"• **Status:** Background tracking active. Updating live Apple Maps drive time."
-            )
+        )
         _write_active_sync(active)
 
     elapsed_min = round((time.time() - float(active.get("created_at") or time.time())) / 60.0, 1)
-    return json.dumps({"active": True, "elapsed_minutes": elapsed_min, **active})
+    live_rt = active.get("live_route") or {}
+    return json.dumps({
+        "active": True,
+        "elapsed_minutes": elapsed_min,
+        "tracking_card_markdown": active.get("tracking_card_markdown"),
+        "tracking_summary": active.get("tracking_summary") or active.get("order_timing_advice"),
+        "origin_address": live_rt.get("origin_address"),
+        "last_checked_at": active.get("last_checked_at"),
+        **active,
+    })
 
 
 def set_commute_arrival_reminder(
@@ -763,7 +808,10 @@ LIST_SAVED_LOCATIONS_SCHEMA = {
 START_COMMUTE_ETA_SYNC_SCHEMA = {
     "name": "start_commute_eta_sync",
     "description": (
-        "Initialize the on-device commute ETA synchronization engine OR calculate when to place a delivery order (e.g. Zepto, Swiggy, Zomato) "
+        "When the user explicitly asks to track/monitor their ETA or commute, call this after the destination is known; "
+        "the app shows its tracking summary as a chat card. Tracking refreshes only when get_commute_eta_sync_status "
+        "is called, so do not promise continuous background polling. Also initialize commute ETA synchronization or "
+        "calculate when to place a delivery order (e.g. Zepto, Swiggy, Zomato) "
         "so that the delivery arrives right when the user reaches their destination. "
         "Synchronizes user travel ETA toward destination (e.g. 'Condenat Work', 'Home', or any address) with the dynamic service/delivery ETA "
         "in target_eta_minutes (for Zepto, first check mcp__zepto__get_location_serviceability for the destination coordinates and get the live ETA, "
@@ -816,7 +864,10 @@ CANCEL_COMMUTE_ETA_SYNC_SCHEMA = {
 
 GET_COMMUTE_ETA_SYNC_STATUS_SCHEMA = {
     "name": "get_commute_eta_sync_status",
-    "description": "Inspect the status and parameters of the currently running commute ETA-sync session.",
+    "description": (
+        "Refresh and inspect the active commute ETA-sync session. Calling this requests a fresh device location/route ETA; "
+        "there is no silent background poll while the app is idle."
+    ),
     "parameters": {
         "type": "object",
         "properties": {},

@@ -1,7 +1,7 @@
 import * as Location from 'expo-location'
 import * as Notifications from 'expo-notifications'
 import { useEffect, useRef, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 
@@ -73,6 +73,17 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
   // Runs before the renderer's own scripts, so its web bridge finds the backend and token.
   const bootstrap = `
     window.__SCOUT_REMOTE__ = ${JSON.stringify(pairing)};
+    try {
+      localStorage.removeItem('scout.desktop.previewTabs.v2');
+      [
+        'scout.desktop.layoutTree.v2',
+        'scout.desktop.layoutTree.v2.simple',
+        'scout.desktop.dismissedPanes.v1',
+        'scout.desktop.dismissedPanes.v1.simple',
+        'scout.desktop.paneShare.v1',
+        'scout.desktop.paneShare.v1.simple'
+      ].forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) {}
     (function () {
       // The page's own failures land in the dev server log (Metro), not an invisible console.
       function report(message) {
@@ -195,6 +206,24 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
       return true
     }
 
+    if (kind === 'open-external') {
+      const url = String((payload as { url?: string } | undefined)?.url ?? '').trim()
+
+      if (!url) {
+        throw new Error('No URL to open')
+      }
+
+      const canOpen = await Linking.canOpenURL(url)
+
+      if (!canOpen) {
+        throw new Error('This device cannot open that link')
+      }
+
+      await Linking.openURL(url)
+
+      return true
+    }
+
     if (kind === 'ws-open') {
       openNativeGatewaySocket(sockets.current, () => webview.current, pairing, payload as { id?: number; url?: string })
 
@@ -239,6 +268,8 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
     // so its tab bar and headers blur under the home bar and notch like a native app's.
     <View style={styles.screen}>
       <WebView
+        cacheEnabled={false}
+        cacheMode="LOAD_NO_CACHE"
         contentInsetAdjustmentBehavior="never"
         allowsBackForwardNavigationGestures={false}
         bounces={false}

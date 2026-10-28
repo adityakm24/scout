@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { ArrowUpRight } from '@/lib/icons'
 import { IS_MAC } from '@/lib/keybinds/combo'
+import { IS_PHONE } from '@/platform/phone'
 import { $alwaysExternalLinks } from '@/store/external-links'
 
 import { resolveBrandIcon } from './brand-icon'
@@ -244,6 +245,21 @@ export function hudForcesNativeLinks(search = typeof window === 'undefined' ? ''
   }
 }
 
+/** Payment and checkout flows need the system browser (UPI apps, saved cards, OAuth). */
+export function prefersSystemBrowserForUrl(href: string): boolean {
+  try {
+    const host = new URL(href).hostname.toLowerCase()
+
+    return (
+      host.endsWith('zepto.co.in') ||
+      /(?:^|\.)?(?:razorpay|cashfree|payu|juspay|phonepe)\./.test(host) ||
+      host.includes('payment')
+    )
+  } catch {
+    return false
+  }
+}
+
 /**
  * Where a link the user clicked should open.
  *
@@ -267,6 +283,8 @@ export function openLink(href: string, options: { native?: boolean } = {}): void
   if (
     options.native ||
     $alwaysExternalLinks.get() ||
+    IS_PHONE ||
+    prefersSystemBrowserForUrl(target) ||
     isConnectorAuthorizationLink(target) ||
     hudForcesNativeLinks() ||
     !/^https?:$/i.test(parseUrl(target)?.protocol ?? '')

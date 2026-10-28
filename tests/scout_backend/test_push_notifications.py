@@ -148,3 +148,44 @@ def test_a_task_that_reports_only_in_the_app_reaches_a_closed_phone(phone, expo_
 
     assert _by_phone(expo_outbox) == {
         "tok-iphone": [("Zepto order at 18:42", "Placed: 2 × Lays, arriving 19:05", {"jobId": "job-1"})]}
+
+
+def test_bot_chat_task_notification_opens_its_session(phone, expo_outbox):
+    phone("iphone", "ios", expo_token="tok-iphone")
+    notifier.task_result("reminder-1", "Eat pasta", "Reminder: Eat pasta", ok=True,
+                         session_id="bot-chat-1")
+    notifier._queue.join()
+
+    assert _by_phone(expo_outbox) == {
+        "tok-iphone": [("Eat pasta", "Reminder: Eat pasta",
+                        {"jobId": "reminder-1", "sessionId": "bot-chat-1"})]}
+
+
+def test_bot_chat_notification_route_resolves_compression_tip(monkeypatch, tmp_path):
+    from cron.scheduler_delivery import _bot_chat_notification_route
+    import scout_state
+
+    home = tmp_path / ".scout"
+    home.mkdir()
+    (home / "state.db").touch()
+
+    class _DB:
+        def __init__(self, *, db_path, read_only):
+            assert db_path == home / "state.db"
+            assert read_only
+
+        def get_session_by_title(self, title):
+            assert title == "Bot Chat"
+            return {"id": "bot-chat-root"}
+
+        def get_compression_tip(self, session_id):
+            assert session_id == "bot-chat-root"
+            return "bot-chat-tip"
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(scout_state, "SessionDB", _DB)
+    monkeypatch.setattr("scout_constants.get_scout_home", lambda: home)
+
+    assert _bot_chat_notification_route({"platform": "bot-chat", "chat_id": ""}) == (home, "bot-chat-tip")

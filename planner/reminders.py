@@ -84,10 +84,16 @@ def list_reminders(*, include_fired: bool = True) -> Dict[str, Any]:
 def add_reminder(text: Any, when: Any, *, actor: str = "user", origin: Optional[Dict[str, Any]] = None,
                  deliver: Optional[str] = None) -> Dict[str, Any]:
     """Schedule a reminder. ``origin`` (the chat it was asked from) makes it fire back there;
-    with no origin it stays local, where the desktop notifies."""
+    reminders created from the desktop/TUI go to the profile's Bot Chat when there is no
+    messaging origin, so the reminder is visible in a persistent app conversation."""
     from cron.jobs import create_job
 
     body = _text(text)
+    if origin is None and deliver is None:
+        from gateway.session_context import get_session_env
+
+        if get_session_env("SCOUT_SESSION_SOURCE").strip().lower() in {"desktop", "tui"}:
+            deliver = "bot-chat"
     try:
         job = create_job(
             prompt=None, schedule=_when(when), name=body[:50], deliver=deliver, origin=origin,

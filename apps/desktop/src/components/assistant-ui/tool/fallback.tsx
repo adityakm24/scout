@@ -62,6 +62,7 @@ import {
 } from '@/store/tool-view'
 
 import { isApprovalActivity, isCurrentTurnMessage } from './approval-activity'
+import { CommuteTrackingCard, commuteTrackingSummary } from './commute-tracking'
 import {
   buildToolView,
   clampForDisplay,
@@ -562,6 +563,18 @@ function ToolEntry({ part }: ToolEntryProps) {
   // in-flight writes (activity) and failures (errors) visible.
   if (isFileEdit && !isPending && view.status !== 'error' && !view.inlineDiff) {
     return null
+  }
+
+  const commuteSummary = commuteTrackingSummary(toolName, result)
+
+  if (commuteSummary) {
+    return (
+      <CommuteTrackingCard
+        dismissLabel={statusCopy.dismiss}
+        onDismiss={() => dismissToolRow(disclosureId)}
+        summary={commuteSummary}
+      />
+    )
   }
 
   return (

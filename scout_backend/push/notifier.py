@@ -225,7 +225,10 @@ def _send_task_result(job: _Send) -> None:
     _end_activities(job, away, _task_key(job.args["job_id"]), job.args["name"], job.args["ok"])
     text = plain_text(job.args["text"]) if job.settings.get("previews", True) else ""
     title = job.args["name"] if job.args["ok"] else f"{job.args['name']} didn't finish"
-    _notify(job, away, title, text or "Open Scout to see the result", {"jobId": job.args["job_id"]})
+    data = {"jobId": job.args["job_id"]}
+    if job.args.get("session_id"):
+        data["sessionId"] = job.args["session_id"]
+    _notify(job, away, title, text or "Open Scout to see the result", data)
 
 
 def _task_key(job_id: str) -> str:
@@ -258,9 +261,11 @@ def needs_you(session_id: str, title: str, body: str, chat_title: str = "", *, h
     _enqueue(_send_needs_you, home, session_id=session_id, title=title, body=body, chat_title=chat_title)
 
 
-def task_result(job_id: str, name: str, text: str, *, ok: bool) -> None:
+def task_result(job_id: str, name: str, text: str, *, ok: bool,
+                session_id: Optional[str] = None, home: Optional[Path] = None) -> None:
     """A task Scout ran on its own (a scheduled order, a one-off job) finished."""
-    _enqueue(_send_task_result, None, job_id=job_id, name=name or "Scout", text=text or "", ok=ok)
+    _enqueue(_send_task_result, home, job_id=job_id, name=name or "Scout", text=text or "", ok=ok,
+             session_id=session_id)
 
 
 def task_steps_callback(job: Dict[str, Any]) -> Optional[Callable[..., None]]:

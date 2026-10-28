@@ -149,6 +149,18 @@ describe('external link helpers', () => {
     expect($previewTabs.get()).toHaveLength(0)
   })
 
+  it('opens checkout and payment links in the OS browser on a plain click', () => {
+    const openExternal = vi.fn().mockResolvedValue(undefined)
+    installDesktopBridge({ openExternal: openExternal as unknown as Window['scoutDesktop']['openExternal'] })
+
+    render(<ExternalLink href="https://pay.razorpay.com/pl_abc123">Complete Payment</ExternalLink>)
+
+    fireEvent.click(screen.getByRole('link', { name: 'Complete Payment' }))
+
+    expect(openExternal).toHaveBeenCalledWith('https://pay.razorpay.com/pl_abc123')
+    expect($previewTabs.get()).toHaveLength(0)
+  })
+
   it('sends a plain click to the OS browser when "always external" is on', () => {
     const openExternal = vi.fn().mockResolvedValue(undefined)
     installDesktopBridge({ openExternal: openExternal as unknown as Window['scoutDesktop']['openExternal'] })

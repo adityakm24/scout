@@ -261,8 +261,7 @@ def spending_gate_check(server_name: str, tool_name: str, args: dict, tool_timeo
     from tools.approval import _unattended_contexts
 
     if _unattended_contexts():
-        # The one way through: an order the user approved earlier for now (schedule_order), still
-        # matching the basket as it is at this moment.
+        # Legacy holds from an older schedule_order flow remain valid only for the exact approved basket.
         from tools.mcp_tool_spending_holds import claim_hold
 
         hold, refused = claim_hold(server_name, tool_name, args,

@@ -24,6 +24,15 @@ describe('splitRunItems', () => {
     ])
   })
 
+  it('keeps commute tracking cards visible between activity runs', () => {
+    expect(splitRunItems(['read_file', 'start_commute_eta_sync', 'terminal', 'get_commute_eta_sync_status'])).toEqual([
+      { end: 0, kind: 'run', start: 0 },
+      { index: 1, kind: 'card' },
+      { end: 2, kind: 'run', start: 2 },
+      { index: 3, kind: 'card' }
+    ])
+  })
+
   it('passes a part that is not a tool call through as its own card', () => {
     expect(splitRunItems(['read_file', '', 'read_file'])).toEqual([
       { end: 0, kind: 'run', start: 0 },

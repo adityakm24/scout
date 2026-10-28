@@ -14,10 +14,9 @@ metadata:
 
 # Deliver When Home Skill
 
-Orders groceries or snacks from Zepto so the delivery reaches the user's home about when they do.
-It reads where the user is now, estimates the drive home, subtracts Zepto's delivery time, and
-schedules the order for the right moment. The user approves the exact basket once, up front;
-Scout places it later only if the basket and total are unchanged. It never orders without that.
+Helps time a grocery order so delivery can arrive near the user's return home. It estimates the
+drive and delivery times, then schedules a reminder to review the order at the right moment.
+Scheduling never authorizes a purchase; the user must request and approve the order when reminded.
 
 ## When to Use
 
@@ -66,42 +65,35 @@ Load this skill and follow the Procedure. Zepto tools may be deferred: call them
    are home and use that.
 3. **Delivery time & Live Tracking.** `mcp__zepto__get_location_serviceability` with the destination coordinates; read the
    delivery ETA in minutes (assume 15 if it gives none).
-   - **Crucial for Tracking:** If the user asks to **track** (e.g. "track zepto's ETA to that location", "track my commute"), ALWAYS call `start_commute_eta_sync` with `destination_name`, `destination_lat`, `destination_lng`, and `target_eta_minutes` (Zepto's live ETA). This activates the background commute tracking engine and displays the live commute tracking status!
+   - If the user asks to track their ETA/commute, call `start_commute_eta_sync` once the destination is known. When timing a delivery too, include Zepto's live ETA as `target_eta_minutes`. The app shows a commute status card in the chat. Tracking refreshes only when `get_commute_eta_sync_status` is called; do not promise continuous background polling.
 4. **Basket.** For each item the user named — or their usual items from
    `mcp__zepto__get_past_order_items` when they say "my usual" — search, then add it with
    `mcp__zepto__update_cart` (`deviceId` "scout", `cartItems` with `productVariantId`,
    `storeProductId`, `quantity`). Then `mcp__zepto__view_cart` and check it matches the request.
-5. **Schedule.** `schedule_order` with `server` "zepto", `tool` "create_order" (cash on delivery),
+5. **Schedule a review.** `schedule_order` with `server` "zepto", `tool` "create_order" (cash on delivery),
    `arguments` `{"userAddressId": "<home addressId from step 1>"}`, `drive_minutes` from step 2 and
-   `delivery_minutes` from step 3. It works out when to order (drive − delivery − 3 minutes) and
-   has Zepto check the order first. The user approves the card, which shows the time.
+   `delivery_minutes` from step 3. It works out when to review the order (drive − delivery − 3 minutes)
+   and has Zepto check the order first. This schedules a reminder only: no order is placed or authorized.
+   At the reminder, ask the user to request the order, rebuild/check the cart, and show a fresh approval
+   card before purchasing.
 6. **Too close to home?** If `schedule_order` says the delivery would arrive after them anyway,
    place it now with `mcp__zepto__create_order` (`confirmOrder: true`; they approve the card).
 7. **Response Formatting & Tracking Display**:
-   - When tracking is initiated (`start_commute_eta_sync`) or status is checked (`get_commute_eta_sync_status`), ALWAYS include the animated inline ```svg tracking card returned by the tool at the top of your response, followed by the structured tracking parameters:
-     ```markdown
-     <include the ```svg ... ``` block from the tool response>
-
-     🟢 **Commute Tracking Active**
-     • **Destination:** <Destination Name / Address>
-     • **Live Drive Time:** ~X minutes (Y km) via Apple Maps live traffic
-     • **Zepto Delivery ETA:** ~Z minutes
-     • **Optimal Order Window:** Order in ~W minutes (when you are Z minutes away so both arrive together)
-     ```
-   - If an order was scheduled or placed: state what was ordered, total amount, when Scout will place it, and expected arrival time.
+   - Commute tools return `tracking_summary`; the app renders it as a status card. Do not paste raw SVG/`tracking_card_markdown` into your response.
+   - After `start_commute_eta_sync` or `get_commute_eta_sync_status`, reply in **one or two short sentences** (e.g. tracking is on, when to order, or that live location refreshed). Mention **`origin_address`** from the tool when the user cares where GPS thinks they are.
+   - To refresh drive time and location, call **`get_commute_eta_sync_status`** again (updates on each check; there is no silent background poll while the app is idle).
+   - If an order review was scheduled: state the estimated total and review time, and make clear that nothing is ordered or pre-authorized. The reminder arrives in the app's Bot Chat; the user must request the order then and approve its fresh card.
 
 ## Pitfalls
 
 - Never invent an `addressId` or coordinates: take both from `mcp__zepto__list_saved_addresses`.
   Zepto rejects an unknown id, and `schedule_order` refuses it before the user is asked.
-- Do not call `mcp__zepto__create_order` with `confirmOrder: true` for a later order:
-  `schedule_order` places it at the time, and only if the basket and total are unchanged.
-- Do not touch the cart after scheduling. A changed basket is refused at placing time, by design;
-  if the user wants changes, update the cart and call `schedule_order` again.
+- `schedule_order` does not place the order later. At the reminder, rebuild/check the cart and get fresh
+  user approval via the normal order card.
 - If the user declines the card, nothing is scheduled. Do not retry unless they ask.
 - Quote prices in rupees, not paise.
 
 ## Verification
 
-- `schedule_order` returned `scheduled: true` with `places_at` and the total.
-- `cronjob_manage` with action `list` shows a "Zepto order at …" job.
+- `schedule_order` returned `scheduled: true`, `purchase_authorized: false`, `review_at` and the estimate.
+- `planner` with `reminder_list` shows the review reminder.

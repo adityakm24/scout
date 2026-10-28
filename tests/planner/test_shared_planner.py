@@ -67,6 +67,20 @@ def test_a_reminder_is_delivered_verbatim_without_an_agent_run(home, monkeypatch
     assert reminder["created_by"] == "agent"
 
 
+def test_desktop_reminder_is_routed_to_bot_chat(home):
+    from cron.jobs import get_job
+    from gateway.session_context import clear_session_vars, set_session_vars
+
+    tokens = set_session_vars(source="desktop", session_id="desktop-session", session_key="desktop-key")
+    try:
+        reminder = _agent("reminder_add", text="Eat pasta", when="in 30m")["reminder"]
+    finally:
+        clear_session_vars(tokens)
+
+    job = get_job(reminder["id"])
+    assert job["deliver"] == "bot-chat"
+
+
 def test_each_profile_home_owns_its_own_list(tmp_path, monkeypatch, home):
     from planner import reminders, todos
 

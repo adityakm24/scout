@@ -67,15 +67,21 @@ are inaccessible.
 4. **Report honestly.** This cart lives in the user's Zepto session for Scout. It may not appear
    in the Zepto app until an order is placed, so say "added to your Zepto order for Scout", not
    "added to your Zepto cart", and offer to place the order.
-5. **Choose how to pay.** Call `get_payment_methods`; when there is more than one, ask with
-   `clarify`. Then call that create tool with `confirmOrder: false` to get Zepto's bill and tell the
-   user the total in one line.
+5. **Choose how to pay.** Call `get_payment_methods`. If the user asked for **cash on delivery**,
+   use `create_order` when COD is listed; when Zepto marks COD unavailable for this cart, say that
+   explicitly (quote Zepto's reason) — do not silently switch to online payment. When there is more
+   than one available method, ask with `clarify`. Then call the matching create tool with
+   `confirmOrder: false` to get Zepto's bill and tell the user the total in one line.
 6. **Place the order** by calling the same create tool with `confirmOrder: true`. Scout stops that
    call and shows the user an order card (the basket, the total, the payment); the order is placed
    only if they press Approve & Pay. Do not also ask for a yes in chat — the card is the
    confirmation. If the result says they did not approve, nothing was ordered; don't retry unless
    they ask. For online payment, share the payment link and poll `check_payment_status`. Finish
    with `get_order_detail` and report the order id and ETA.
+
+For an order the user wants later, use `schedule_order` to set a review reminder. This does not
+pre-authorize or place a purchase. When the reminder arrives, rebuild/check the cart and show the
+normal fresh order card; never treat the earlier scheduling request as payment approval.
 
 ## Pitfalls
 

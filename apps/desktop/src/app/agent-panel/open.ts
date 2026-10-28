@@ -1,3 +1,5 @@
+import { atom } from 'nanostores'
+
 import { PANE_TOGGLE_REVEAL_EVENT } from '@/components/pane-shell'
 import { findGroupOfPane } from '@/components/pane-shell/tree/model'
 import {
@@ -13,10 +15,19 @@ import { IS_PHONE } from '@/platform/phone'
 /** Pane id of the agent panel (registered in app/contrib/controller.tsx). */
 export const AGENT_PANEL_ID = 'agent'
 
+export const $phoneAgentPanelOpen = atom(false)
+
 /** Show the agent panel: un-collapse its side, restore its zone and front its tab. On a narrow
  *  window the side panes are unmounted and shown by the edge overlay instead, which opens on the
  *  reveal event (components/pane-shell/tree/renderer/narrow-overlays.tsx). */
 export function openAgentPanel() {
+  if (IS_PHONE) {
+    $phoneAgentPanelOpen.set(true)
+    document.documentElement.setAttribute('data-phone-agent-open', '')
+
+    return
+  }
+
   if ($narrowViewport.get()) {
     window.dispatchEvent(new CustomEvent(PANE_TOGGLE_REVEAL_EVENT, { detail: { id: AGENT_PANEL_ID, mode: 'open' } }))
 
@@ -40,13 +51,21 @@ export function agentPanelShown(): boolean {
 /** Fold the agent panel back to its rail (its close button); on a narrow window, dismiss the
  *  edge overlay that shows it instead. */
 export function closeAgentPanel() {
+  const tree = $layoutTree.get()
+
+  if (IS_PHONE) {
+    $phoneAgentPanelOpen.set(false)
+    document.documentElement.removeAttribute('data-phone-agent-open')
+
+    return
+  }
+
   if ($narrowViewport.get()) {
     window.dispatchEvent(new CustomEvent(PANE_TOGGLE_REVEAL_EVENT, { detail: { id: AGENT_PANEL_ID, mode: 'close' } }))
 
     return
   }
 
-  const tree = $layoutTree.get()
   const group = tree ? findGroupOfPane(tree, AGENT_PANEL_ID) : null
 
   if (group) {

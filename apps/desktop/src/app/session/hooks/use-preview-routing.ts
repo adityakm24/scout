@@ -2,8 +2,10 @@ import type { GatewayEvent } from '@scout/shared'
 import { useCallback } from 'react'
 
 import { gatewayEventCompletedFileDiff } from '@/lib/gateway-events'
+import { openExternalLink } from '@/lib/external-link'
 import { normalizeOrLocalPreviewTarget } from '@/lib/local-preview'
 import { reachablePreviewUrl } from '@/lib/preview-reach'
+import { IS_PHONE } from '@/platform/phone'
 import {
   $previewTabs,
   beginPreviewServerRestart,
@@ -100,6 +102,12 @@ export function usePreviewRouting({ baseHandleGatewayEvent, currentCwd, requestG
               // the user still sees the address the agent named.
               const url = resolved.kind === 'url' ? await reachablePreviewUrl(resolved.url) : resolved.url
               const reached = url === resolved.url ? resolved : { ...resolved, label: resolved.label || target, url }
+
+              if (IS_PHONE && reached.kind === 'url') {
+                openExternalLink(reached.url)
+
+                return
+              }
 
               openPreview(renderedHtmlTarget(trimmedLabel ? { ...reached, label: trimmedLabel } : reached))
             }

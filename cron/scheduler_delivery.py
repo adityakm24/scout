@@ -1700,6 +1700,29 @@ def _unresolved_delivery_outcome(job: dict, for_failure: bool) -> Optional[str]:
     return msg
 
 
+def _bot_chat_notification_route(target: dict):
+    """Resolve the destination profile and canonical Bot Chat id for a task-result tap."""
+    from pathlib import Path
+    from scout_constants import get_scout_home
+    from scout_backend.profiles import get_profile_dir
+
+    profile = str(target.get("chat_id") or "")
+    home = (Path(get_profile_dir(profile)) if profile else get_scout_home()).resolve()
+    db_path = home / "state.db"
+    if not db_path.is_file():
+        return home, None
+
+    from scout_state import SessionDB
+
+    db = SessionDB(db_path=db_path, read_only=True)
+    try:
+        row = db.get_session_by_title("Bot Chat")
+        session_id = db.get_compression_tip(row["id"]) if row else None
+    finally:
+        db.close()
+    return home, session_id
+
+
 def _deliver_result(
     job: dict, content: str, adapters=None, loop=None, *, for_failure: bool = False
 ) -> Optional[str]:
@@ -1710,12 +1733,14 @@ def _deliver_result(
     job.pop("_bot_chat_delivery_receipts", None)
     job.pop("_notification_all_targets_suppressed", None)
     targets = _resolve_delivery_targets(job, for_failure=for_failure)
-    if not any(target["platform"] != BOT_CHAT_PLATFORM for target in targets):
-        # Only the app shows this result, so a phone whose Scout app is closed is told.
-        from scout_backend.push import notifier
-
-        notifier.task_result(str(job.get("id") or ""), str(job.get("name") or ""), content, ok=not for_failure)
+    app_only = not any(target["platform"] != BOT_CHAT_PLATFORM for target in targets)
     if not targets:
+        # A local-only result has no chat to focus; the app can still show the task notification.
+        if app_only:
+            from scout_backend.push import notifier
+
+            notifier.task_result(str(job.get("id") or ""), str(job.get("name") or ""), content,
+                                 ok=not for_failure)
         _record_delivery_verification(job, [])
         return _unresolved_delivery_outcome(job, for_failure)
 
@@ -1846,6 +1871,32 @@ def _deliver_result(
         if not delivered:
             _deliver_standalone(
                 t, cleaned_delivery_content, media_files, target_errors, delivery_errors)
+
+    if app_only:
+        from scout_backend.push import notifier
+
+        bot_chat = next((target for target in targets if target["platform"] == BOT_CHAT_PLATFORM), None)
+        if bot_chat:
+            try:
+                notification_home, session_id = _bot_chat_notification_route(bot_chat)
+            except Exception:
+                logger.warning(
+                    "Job '%s': could not resolve the Bot Chat session for its phone notification",
+                    job.get("id", "?"),
+                    exc_info=True,
+                )
+            else:
+                notifier.task_result(
+                    str(job.get("id") or ""),
+                    str(job.get("name") or ""),
+                    content,
+                    ok=not for_failure,
+                    session_id=session_id,
+                    home=notification_home,
+                )
+        else:
+            notifier.task_result(str(job.get("id") or ""), str(job.get("name") or ""), content,
+                                 ok=not for_failure)
 
     # Filter-time drops apply to every target; report them once. A run whose every target was
     # suppressed sent nothing, so there is no drop to report.

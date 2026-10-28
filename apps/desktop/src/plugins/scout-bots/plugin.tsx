@@ -26,6 +26,8 @@ import {
 } from '@scout/plugin-sdk'
 import type { ChatEmptyProps, PluginContext, ProfileGroupRoute } from '@scout/plugin-sdk'
 
+import { IS_PHONE } from '@/platform/phone'
+
 import { BOTS_AVAILABLE } from './availability'
 import { startFaceClock, stopFaceClock } from './avatar'
 import {
@@ -550,6 +552,16 @@ export default {
       let restoreDismissedOnRegister = true
 
       const syncRoutinesPane = () => {
+        // Phone is one full-width chat — no desktop-style Scheduled jobs column.
+        if (IS_PHONE) {
+          if (unregisterRoutines) {
+            unregisterRoutines()
+            unregisterRoutines = null
+          }
+
+          return
+        }
+
         if (botChatOwnsWorkspace()) {
           if (!unregisterRoutines) {
             unregisterRoutines = registerRoutinesPane(restoreDismissedOnRegister)

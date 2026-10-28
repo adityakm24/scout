@@ -10,11 +10,13 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.spaceshipresearch.scout",
       "infoPlist": {
+        "CFBundleDisplayName": "Scout",
         "NSLocationWhenInUseUsageDescription": "Scout uses your location to time deliveries and plans around where you are.",
         "NSCameraUsageDescription": "Scout uses the camera to scan the pairing code from your computer."
       }
     },
     "android": {
+      "label": "Scout",
       "adaptiveIcon": {
         "backgroundColor": "#0d0f14",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -56,10 +58,11 @@
       [
         "expo-live-activity",
         {
-          "enablePushNotifications": true
+          "enablePushNotifications": false
         }
       ],
       "./plugins/with-scene-lifecycle",
+      "./plugins/with-ios-personal-team",
       "expo-status-bar"
     ],
     "backgroundColor": "#0d0f14",

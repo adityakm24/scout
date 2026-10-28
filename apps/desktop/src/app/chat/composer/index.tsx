@@ -25,6 +25,7 @@ import { DATA_IMAGE_URL_RE } from '@/lib/embedded-images'
 import { triggerHaptic } from '@/lib/haptics'
 import { useStoreSelector, useStoresSelector } from '@/lib/use-session-slice'
 import { cn } from '@/lib/utils'
+import { IS_PHONE } from '@/platform/phone'
 import { sessionCompacting } from '@/store/compaction'
 import { browseBackward, browseForward, deriveUserHistory, isBrowsingHistory } from '@/store/composer-input-history'
 import { POPOUT_WIDTH_REM } from '@/store/composer-popout'
@@ -1098,7 +1099,7 @@ export function ChatBar({
       disabled={disabled}
       expanded={expanded}
       hasComposerPayload={hasComposerPayload}
-      hideModelPill={guidedChat}
+      hideModelPill={guidedChat || IS_PHONE}
       minimal={minimal}
       onQueue={queueDraft}
       onToggleExpand={() => {

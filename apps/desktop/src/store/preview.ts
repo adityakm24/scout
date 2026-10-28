@@ -1,8 +1,10 @@
 import { atom, computed } from 'nanostores'
 
 import { dismissTreePane, isPaneVisible } from '@/components/pane-shell/tree/store'
+import { openExternalLink } from '@/lib/external-link'
 import { readJson, writeKey } from '@/lib/storage'
 import { normalize } from '@/lib/text'
+import { IS_PHONE } from '@/platform/phone'
 
 import { $rightRailActiveTabId, type RightRailTabId, selectRightRailTab } from './layout'
 import { clearExplicitPreviewOpen, noteExplicitPreviewOpen, PREVIEW_TILE_PREFIX } from './preview-explicit'
@@ -599,6 +601,21 @@ export function setPreviewRenderMode(tabId: string, renderMode: PreviewRenderMod
  *  its target so a stale label/path can't outlive the thing it points at. The
  *  only way anything reaches a preview. */
 export function openPreview(target: PreviewTarget) {
+  if (IS_PHONE) {
+    if (target.kind === 'url') {
+      const url = target.url?.trim()
+
+      if (url && !/^about:blank$/i.test(url)) {
+        openExternalLink(url)
+      }
+
+      return
+    }
+
+    // File/artifact previews use Electron webviews — unavailable in the phone shell.
+    return
+  }
+
   const current = $previewTabs.get()
   const id = target.kind === 'url' ? browserTabId(current) : previewTabId(target)
   const index = current.findIndex(tab => tab.id === id)
@@ -723,6 +740,25 @@ export function closeRightRail() {
   clearExplicitPreviewOpen()
   $previewTabs.set([])
   selectRightRailTab(null)
+}
+
+/** Phone has no in-app browser/webview — drop persisted preview panes that trap the layout. */
+export function resetPhonePreviewShell(): void {
+  if (!IS_PHONE) {
+    return
+  }
+
+  for (const tab of $previewTabs.get()) {
+    dismissTreePane(`${PREVIEW_TILE_PREFIX}:${tab.id}`)
+  }
+
+  closeRightRail()
+
+  for (const key of Object.keys(tabsByProfile)) {
+    delete tabsByProfile[key]
+  }
+
+  writeKey(TABS_STORAGE_KEY, null)
 }
 
 export function requestPreviewReload() {
