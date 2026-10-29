@@ -2,7 +2,7 @@
 
 # Scout
 
-Scout is a personal AI assistant you talk to from the desktop app, the web app, or your phone. It remembers what matters to you, learns new skills as you use it, works with your email and calendar, runs tasks on a schedule, and asks before it does anything consequential: sending mail, spending money, changing your accounts.
+Scout is an always-on personal AI assistant built on Nous Research's **Hermes Agent** architecture, accessible from the desktop app, the web app, or your phone. It remembers what matters to you, learns new skills as you use it, works with your email and calendar, runs tasks on a schedule, and asks before it does anything consequential: sending mail, spending money, changing your accounts.
 
 Inference defaults to **Nebius Token Factory**, **NVIDIA NIM**, and **Mistral**. You can change the provider and the model. The assistant is wrapped in **NVIDIA OpenShell**, **NVIDIA NemoClaw**, and **NVIDIA NeMo Guardrails** so personal data stays in its own sandbox.
 
@@ -41,6 +41,7 @@ Heavier reasoning and fast everyday calls can be different models on the same pr
 
 ## What it can do
 
+- **Built on Hermes Agent.** Extends Nous Research's Hermes Agent architecture for robust multi-turn execution, structured tool calling, dynamic skill authoring, and background gateway scheduling.
 - **Remembers you.** Preferences, people and facts carry across conversations.
 - **Learns skills.** Reusable procedures it can write, refine and share; a library ships in `skills/`.
 - **Works with your accounts.** Gmail, Calendar and Drive through the Google Workspace skill, plus MCP connectors. Sign in from Capabilities in the app; for some services the browser opens on the computer running Scout.
@@ -92,6 +93,8 @@ So an injection that fully owns the browser still ends at the bridge: a refused 
 
 ## Running the backend
 
+### Local or Docker
+
 ```bash
 docker build -t scout .
 docker run -p 9119:9119 -v scout-data:/opt/data scout
@@ -108,6 +111,22 @@ MISTRAL_API_KEY=<your Mistral key>
 Only the key for the provider you select is required (a single `NEBIUS_API_KEY` powers both NVIDIA Nemotron and DeepSeek). Confirm in Model Settings that the provider is `nebius-token-factory` and the model is `nvidia/Nemotron-3_5-Lightning`.
 
 Outside Docker, the process entry point is `scout-server --host 0.0.0.0 --port 9119`. It serves the apps' API and the website, runs scheduled jobs, and starts the gateway for webhooks, the HTTP API and Home Assistant.
+
+### Nebius Serverless Deployment (Placeholder / Target Setup)
+
+> **[Deployment Placeholder]** Planned target configuration for hosting the Scout container backend on **Nebius Serverless** (Serverless AI Endpoints):
+
+```bash
+# Nebius Serverless endpoint target configuration (Placeholder)
+nebius ai endpoint create \
+  --name scout-backend \
+  --image <your-registry>/scout:latest \
+  --container-port 9119/http \
+  --preset 4vcpu-16gb \
+  --env NEBIUS_API_KEY=$NEBIUS_API_KEY
+```
+
+* **Target endpoint URL (Placeholder):** `https://<endpoint-placeholder>.serverless.nebius.ai:9119` (configured as backend target in `apps/desktop/backend.json` and phone app).
 
 The desktop app connects to the backend URL in `apps/desktop/backend.json`, which is fixed at build time. The phone app loads that same web UI from the backend.
 
