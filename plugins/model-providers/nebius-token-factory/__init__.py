@@ -43,6 +43,7 @@ nebius_token_factory = NebiusTokenFactoryProfile(
     default_aux_model="deepseek-ai/DeepSeek-V4.1-Flash-1017",
     fallback_models=(
         "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+        "nvidia/Nemotron-3_5-Lightning",
     ),
 )
 
