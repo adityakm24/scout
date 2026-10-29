@@ -214,11 +214,7 @@ def schedule_order(server: str, tool: str, arguments: Optional[dict], place_in_m
         return tool_error("The basket could not be read, so there is nothing to schedule. Build the cart first, "
                           f"then check it with {entry.spending.preview or 'the merchant'}.")
 
-    import scout_time
-
-    place_at = scout_time.now() + timedelta(minutes=minutes)
     merchant = _merchant(entry)
-    schedule = place_at.replace(microsecond=0).isoformat()
     item_descriptions = [
         f"{item['quantity']} × {str(item['name'])[:80]}"
         for item in summary["items"][:4]
@@ -234,9 +230,35 @@ def schedule_order(server: str, tool: str, arguments: Optional[dict], place_in_m
         + " Nothing has been ordered or pre-authorized. Open Scout and ask to place it; "
         "a fresh approval card is required before any purchase."
     )
+    if drive_minutes is not None:
+        lead_minutes = (_whole_minutes(delivery_minutes) or 15) + ARRIVAL_MARGIN_MINUTES
+        from tools.commute_eta_sync_tool import set_commute_arrival_reminder
+
+        queued = json.loads(set_commute_arrival_reminder(lead_minutes, reminder_text))
+        if not queued.get("success"):
+            return tool_error(
+                f"Start commute tracking to schedule this order review by live location. "
+                f"{queued.get('error', '')}"
+            )
+        return json.dumps({
+            "scheduled": True,
+            "location_triggered": True,
+            "review_eta_threshold_minutes": lead_minutes,
+            "estimated_in_minutes": minutes,
+            "trigger_id": queued["pending_reminders"][-1]["id"],
+            "total": summary["total"],
+            "items": [f"{i['quantity']} × {i['name']}" for i in summary["items"]],
+            "purchase_authorized": False,
+            "note": "This queues a location-triggered review reminder only. Nothing will be ordered or charged; "
+                    "the user must request the order at that time and approve its fresh order card.",
+        }, ensure_ascii=False)
+
+    import scout_time
     from planner import reminders
     from tools.cronjob_job_args import _origin_from_env
 
+    place_at = scout_time.now() + timedelta(minutes=minutes)
+    schedule = place_at.replace(microsecond=0).isoformat()
     origin = _origin_from_env(schedule)
     scheduled = reminders.add_reminder(
         reminder_text,
@@ -263,11 +285,13 @@ SCHEDULE_ORDER_SCHEMA = {
         "wants it to arrive later or when they get home (\"so it's home when I am\"). First: the home "
         "address id and coordinates from the merchant's saved addresses (never invent an id), the user's "
         "drive time home from where they are now, the merchant's delivery time, and the cart built. Then "
-        "pass drive_minutes and delivery_minutes (the tool works out when to review) and the order tool's "
+        "pass drive_minutes and delivery_minutes (requires active commute tracking and triggers review when live arrival "
+        "ETA approaches the delivery time) and the order tool's "
         "own arguments, e.g. {userAddressId} — not the cart. This creates a reminder only, never a purchase "
         "or advance authorization. At that time, tell the user to request the order; rebuild/check the cart "
         "and show a fresh approval card before placing anything. Skill deliver-when-home has the routine. "
-        "Returns {scheduled, review_at, total, items, purchase_authorized: false}."
+        "With drive_minutes, returns a location-triggered threshold and estimate; with place_in_minutes, "
+        "returns {scheduled, review_at, total, items, purchase_authorized: false}."
     ),
     "parameters": {
         "type": "object",

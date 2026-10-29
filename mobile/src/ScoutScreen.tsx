@@ -1,11 +1,16 @@
 import * as Location from 'expo-location'
 import * as Notifications from 'expo-notifications'
 import { useEffect, useRef, useState } from 'react'
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { AppState, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 
 import { type ActivityUpdate, showActivity } from './activity'
+import {
+  refreshBackgroundCommuteStatus,
+  startBackgroundCommuteTracking,
+  stopBackgroundCommuteTracking
+} from './commute-background'
 import {
   closeAllNativeGatewaySockets,
   closeNativeGatewaySocket,
@@ -51,6 +56,18 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
   }, [pairing])
 
   useEffect(() => () => closeAllNativeGatewaySockets(sockets.current), [])
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        webview.current?.injectJavaScript(
+          "window.dispatchEvent(new Event('scout:app-resumed')); true;"
+        )
+      }
+    })
+
+    return () => subscription.remove()
+  }, [])
 
   // A tapped notification opens its chat (the page's onFocusSession, src/platform/web-bridge.ts):
   // at once when the page is running, or once it asks, when the tap launched the app.
@@ -200,7 +217,39 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
       return { accuracy: coords.accuracy, latitude: coords.latitude, longitude: coords.longitude, timestamp }
     }
 
+    if (kind === 'commute-start') {
+      const { profile, syncId } = (payload ?? {}) as { profile?: string; syncId?: string }
+      if (!syncId) {
+        throw new Error('No active commute tracking session was provided.')
+      }
+
+      const status = await refreshBackgroundCommuteStatus(pairing, syncId, profile || 'current')
+      if (status.active !== true) {
+        throw new Error('This commute tracking session is no longer active.')
+      }
+      await startBackgroundCommuteTracking(pairing, syncId, profile || 'current')
+
+      return status
+    }
+
+    if (kind === 'commute-stop') {
+      const syncId = (payload as { syncId?: string } | undefined)?.syncId
+      await stopBackgroundCommuteTracking(syncId)
+
+      return true
+    }
+
+    if (kind === 'commute-status') {
+      const { profile, syncId } = (payload ?? {}) as { profile?: string; syncId?: string }
+      if (!syncId) {
+        throw new Error('No active commute tracking session was provided.')
+      }
+
+      return refreshBackgroundCommuteStatus(pairing, syncId, profile || 'current')
+    }
+
     if (kind === 'unpair') {
+      await stopBackgroundCommuteTracking()
       onUnpair()
 
       return true
@@ -282,7 +331,10 @@ export function ScoutScreen({ onUnpair, pairing }: { onUnpair: () => void; pairi
         // No web form bar (previous/next/done) over the keyboard: native apps don't have one.
         hideKeyboardAccessoryView
         onError={({ nativeEvent }) => setFailed(nativeEvent.description || 'error')}
-        onLoadEnd={() => console.log(`[scout page] loaded ${pairing.baseUrl}`)}
+        onLoadEnd={() => {
+          webview.current?.injectJavaScript("window.dispatchEvent(new Event('scout:app-resumed')); true;")
+          console.log(`[scout page] loaded ${pairing.baseUrl}`)
+        }}
         // iOS may stop a backgrounded or memory-heavy web content process; bring the page back.
         onContentProcessDidTerminate={() => {
           console.warn('[scout page] web content process ended; reloading')

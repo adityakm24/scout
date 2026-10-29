@@ -4,9 +4,12 @@ from tools.commute_eta_sync_tool import (
     start_commute_eta_sync,
     cancel_commute_eta_sync,
     get_commute_eta_sync_status,
+    set_commute_arrival_reminder,
+    update_commute_from_background_location,
     _storage_path,
     _tracking_fields,
     _normalize_legacy_tracking,
+    _write_active_sync,
 )
 
 def test_commute_eta_sync_lifecycle(tmp_path, monkeypatch):
@@ -133,3 +136,50 @@ def test_start_sync_stores_split_tracking_fields(tmp_path, monkeypatch):
     assert res["details"]["tracking_summary"] == res["tracking_summary"]
 
 
+def test_background_location_triggers_each_arrival_threshold_once(tmp_path, monkeypatch):
+    test_storage = tmp_path / "active_sync.json"
+    monkeypatch.setattr("tools.commute_eta_sync_tool._storage_path", lambda: test_storage)
+    monkeypatch.setattr("tools.cronjob_job_args._origin_from_env", lambda *_args, **_kwargs: None)
+    active = {
+        "sync_id": "sync-test",
+        "status": "tracking",
+        "created_at": 1,
+        "last_checked_at": 1,
+        "last_user_eta_minutes": 40,
+        "destination": {"name": "Home", "lat": 12.9, "lng": 77.6},
+        "target_eta_minutes": None,
+        "arrival_reminders": [],
+    }
+    _write_active_sync(active)
+    assert json.loads(set_commute_arrival_reminder(15, "Call before arriving"))["success"]
+    assert json.loads(set_commute_arrival_reminder(5, "Get ready to park"))["success"]
+
+    route_etas = iter([12, 4, 2])
+
+    def fake_location_tool(*, to_latitude, to_longitude, callback):
+        assert json.loads(callback()) == {"latitude": 12.8, "longitude": 77.5}
+        assert (to_latitude, to_longitude) == (12.9, 77.6)
+        eta = next(route_etas)
+        return json.dumps({
+            "address": "Current location",
+            "device": "iPhone",
+            "drive": {"drive_minutes_estimate": eta, "road_km_estimate": 3.2},
+        })
+
+    monkeypatch.setattr("tools.device_location_tool.device_location_tool", fake_location_tool)
+    delivered = []
+    monkeypatch.setattr(
+        "planner.reminders.add_reminder",
+        lambda text, when, **kwargs: delivered.append((text, when, kwargs))
+        or {"reminder": {"id": f"job-{len(delivered)}"}},
+    )
+
+    first = update_commute_from_background_location("sync-test", 12.8, 77.5)
+    second = update_commute_from_background_location("sync-test", 12.8, 77.5)
+    third = update_commute_from_background_location("sync-test", 12.8, 77.5)
+
+    assert [item[0] for item in delivered] == ["Call before arriving", "Get ready to park"]
+    assert all(item[1] == "in 1m" and item[2]["deliver"] == "bot-chat" for item in delivered)
+    assert len(first["triggered_reminders"]) == 1
+    assert len(second["triggered_reminders"]) == 1
+    assert third["triggered_reminders"] == []

@@ -8,7 +8,8 @@ desktop feature exists on the phone without a second UI. Do not rebuild desktop 
   turns into the `window.scoutDesktop` bridge Electron's preload normally provides.
 - Phone-only abilities are offered to the page as `window.scoutNative.request(kind, payload)`
   (handled in `ScoutScreen.handle`): `location`, `notify`, `activity`, `watch`, `take-focus`,
-  `unpair`, `ws-open`, `ws-send`, `ws-close`. Add a kind there, not a new channel.
+  `commute-start`, `commute-stop`, `commute-status`, `unpair`, `ws-open`, `ws-send`, `ws-close`.
+  Add a kind there, not a new channel.
   The page's `WebSocket` is replaced by a native HTTP/1.1 socket (`src/gateway-ws.ts`): Tailscale
   Serve's HTTPS front speaks HTTP/2 and does not bridge WebSocket CONNECT, so WKWebView `wss://`
   fails before open.
@@ -24,6 +25,20 @@ desktop feature exists on the phone without a second UI. Do not rebuild desktop 
 Dev loop: serve the renderer on the LAN from `apps/desktop` (`npx vite --host 0.0.0.0 --port 5175`;
 it proxies `/api` to the backend), run `npx expo start --lan` here, open it in Expo Go.
 Background location and geofencing need a development build (not Expo Go).
+
+Commute reminders use `src/commute-background.ts`: its top-level TaskManager task posts token-
+authenticated coordinates to the profile from the commute session. The Expo Location plugin adds
+iOS background-location mode and the Always permission rationale. iOS Keychain config uses
+`AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY` so updates can run while locked after the first unlock.
+Arrival reminders are queued until a fresh route ETA crosses their thresholds, then delivered in
+the originating chat or Bot Chat. A Release rebuild and the user's Always permission are required.
+
+For an install that launches without Metro, use a Release build so Expo embeds the JavaScript
+bundle: `npm run ios:standalone -- --device` (local iPhone) or `eas build --profile preview
+--platform ios` (internal install). The `development` EAS profile is a development client and
+intentionally shows the "No script URL provided" error when Metro is not running; start Metro with
+`npx expo start --dev-client` for that profile. Do not use the development profile as the
+standalone phone app.
 
 ## Notifications and the Live Activity while the app is closed
 

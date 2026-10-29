@@ -81,6 +81,12 @@ def test_a_hold_for_other_arguments_does_not_cover_this_call(unattended):
 def scheduling(monkeypatch):
     """schedule_order in a chat, against a merchant that validates the saved address."""
     created = []
+    active = {
+        "sync_id": "sync-order-review",
+        "status": "tracking",
+        "destination": {"name": "Home"},
+        "arrival_reminders": [],
+    }
     monkeypatch.setattr(spending, "spending_entry", lambda name: ENTRY)
     card = {**BASKET, "merchant": "Zepto", "label": "Approve & Pay", "total_is_estimate": False,
             "details": [], "preview_text": ""}
@@ -101,35 +107,38 @@ def scheduling(monkeypatch):
         lambda *a, **k: pytest.fail("scheduling must not request purchase approval up front"),
     )
     monkeypatch.setattr("tools.cronjob_job_args._origin_from_env", lambda _schedule: None)
+    monkeypatch.setattr("tools.commute_eta_sync_tool._read_active_sync", lambda: active)
+    monkeypatch.setattr("tools.commute_eta_sync_tool._write_active_sync", lambda value: active.update(value))
     monkeypatch.setattr(
         "planner.reminders.add_reminder",
         lambda text, when, **kwargs: created.append({"text": text, "when": when, **kwargs})
         or {"reminder": {"id": "review1"}},
     )
-    return created
+    return created, active
 
 
 def test_an_invented_address_is_refused_before_the_user_is_asked(scheduling):
-    created = scheduling
+    created, _active = scheduling
     error = json.loads(holds.schedule_order("zepto", "create_order", {"userAddressId": "frazer_town_home"},
                                             drive_minutes=40, delivery_minutes=11))["error"]
     assert "would not accept" in error and not created
 
 
 def test_scheduling_an_order_only_creates_a_review_reminder(scheduling):
-    created = scheduling
+    created, active = scheduling
     result = json.loads(holds.schedule_order(
         "zepto", "create_order", {"userAddressId": "addr_home", "cartItems": [{"productVariantId": "v1"}]},
         drive_minutes=40, delivery_minutes=11))
-    assert result["in_minutes"] == 40 - 11 - holds.ARRIVAL_MARGIN_MINUTES
+    assert result["estimated_in_minutes"] == 40 - 11 - holds.ARRIVAL_MARGIN_MINUTES
     assert result["purchase_authorized"] is False
-    assert result["review_at"]
-    assert result["job_id"] == "review1"
+    assert result["location_triggered"] is True
+    assert result["review_eta_threshold_minutes"] == 11 + holds.ARRIVAL_MARGIN_MINUTES
+    assert result["trigger_id"] == active["arrival_reminders"][0]["id"]
     assert holds._load() == []
-    assert len(created) == 1
-    reminder = created[0]
-    assert "2 × Lay's Magic Masala" in reminder["text"]
-    assert "Estimated total: ₹165" in reminder["text"]
-    assert "Nothing has been ordered or pre-authorized" in reminder["text"]
-    assert "fresh approval card is required" in reminder["text"]
-    assert reminder["deliver"] is None
+    assert not created
+    reminder = active["arrival_reminders"][0]
+    reminder_text = reminder["reminder_text"]
+    assert "2 × Lay's Magic Masala" in reminder_text
+    assert "Estimated total: ₹165" in reminder_text
+    assert "Nothing has been ordered or pre-authorized" in reminder_text
+    assert "fresh approval card is required" in reminder_text

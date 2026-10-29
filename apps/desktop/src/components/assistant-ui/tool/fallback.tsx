@@ -62,7 +62,7 @@ import {
 } from '@/store/tool-view'
 
 import { isApprovalActivity, isCurrentTurnMessage } from './approval-activity'
-import { CommuteTrackingCard, commuteTrackingSummary } from './commute-tracking'
+import { CommuteTrackingCard, commuteTrackingSummary, commuteTrackingSvg } from './commute-tracking'
 import {
   buildToolView,
   clampForDisplay,
@@ -363,6 +363,90 @@ function ToolEntry({ part }: ToolEntryProps) {
   // the referentially-stable args/result so the memos hold across deltas.
   const { args, completedAt, interrupted, isError, result, toolResultMetadata, timestamp, toolCallId, toolName } = part
 
+  const commuteRecord = useMemo(() => toolResultRecord({ result }), [result])
+
+  const commuteSyncId =
+    toolName === 'start_commute_eta_sync' &&
+    commuteRecord.status === 'tracking' &&
+    typeof commuteRecord.sync_id === 'string'
+      ? commuteRecord.sync_id
+      : null
+
+  const commuteProfile = typeof commuteRecord.profile === 'string' ? commuteRecord.profile : 'current'
+
+  const cancelledSyncId =
+    toolName === 'cancel_commute_eta_sync' &&
+    commuteRecord.status === 'cancelled' &&
+    typeof commuteRecord.sync_id === 'string'
+      ? commuteRecord.sync_id
+      : null
+
+  const [backgroundCommuteRecord, setBackgroundCommuteRecord] = useState<Record<string, unknown> | null>(null)
+  const [commuteTrackingNotice, setCommuteTrackingNotice] = useState('')
+  const commuteCardResult = backgroundCommuteRecord ?? result
+
+  useEffect(() => {
+    setBackgroundCommuteRecord(null)
+    setCommuteTrackingNotice('')
+  }, [result])
+
+  useEffect(() => {
+    if (!commuteSyncId || !window.scoutNative) {
+      return
+    }
+
+    let active = true
+    void window.scoutNative
+      .request<Record<string, unknown>>('commute-start', { profile: commuteProfile, syncId: commuteSyncId })
+      .then(status => {
+        if (active) {
+          setBackgroundCommuteRecord(status)
+          setCommuteTrackingNotice('Background location monitoring is active.')
+        }
+      })
+      .catch(error => {
+        if (active) {
+          setCommuteTrackingNotice(
+            error instanceof Error ? error.message : 'Background location monitoring could not start.'
+          )
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [commuteProfile, commuteSyncId])
+
+  useEffect(() => {
+    if (!cancelledSyncId || !window.scoutNative) {
+      return
+    }
+
+    void window.scoutNative
+      .request('commute-stop', { syncId: cancelledSyncId })
+      .catch(error => console.warn(`[commute] Could not stop background location: ${String(error)}`))
+  }, [cancelledSyncId])
+
+  useEffect(() => {
+    if (!commuteSyncId || !window.scoutNative) {
+      return
+    }
+
+    const refresh = () => {
+      void window.scoutNative
+        ?.request<Record<string, unknown>>('commute-status', {
+          profile: commuteProfile,
+          syncId: commuteSyncId
+        })
+        .then(setBackgroundCommuteRecord)
+        .catch(error => console.warn(`[commute] Could not refresh tracking card: ${String(error)}`))
+    }
+
+    window.addEventListener('scout:app-resumed', refresh)
+
+    return () => window.removeEventListener('scout:app-resumed', refresh)
+  }, [commuteProfile, commuteSyncId])
+
   const stablePart = useMemo<ToolPart>(
     () => ({
       args,
@@ -565,14 +649,16 @@ function ToolEntry({ part }: ToolEntryProps) {
     return null
   }
 
-  const commuteSummary = commuteTrackingSummary(toolName, result)
+  const commuteSummary = commuteTrackingSummary(toolName, commuteCardResult)
 
   if (commuteSummary) {
     return (
       <CommuteTrackingCard
         dismissLabel={statusCopy.dismiss}
         onDismiss={() => dismissToolRow(disclosureId)}
+        status={commuteTrackingNotice}
         summary={commuteSummary}
+        svg={commuteTrackingSvg(toolName, commuteCardResult)}
       />
     )
   }

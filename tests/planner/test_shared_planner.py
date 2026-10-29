@@ -111,7 +111,7 @@ def test_the_agent_is_told_when_nothing_will_deliver_a_reminder(home, monkeypatc
     assert ("warning" in result) is (not scheduler_up)
 
 
-def test_commute_aware_arrival_reminder(home):
+def test_commute_arrival_reminder_uses_live_location_threshold(home):
     import time
     from tools.commute_eta_sync_tool import _write_active_sync
 
@@ -125,18 +125,25 @@ def test_commute_aware_arrival_reminder(home):
     })
 
     res = _agent("reminder_add", text="Eat pasta now! 🍝", when="5 mins before arrival")
-    assert "in 33m" in res["reminder"]["when"]
-    assert "Commute-adjusted reminder" in res["commute_notice"]
+    assert res["location_triggered"] is True
+    assert res["pending"] is True
+    assert res["lead_minutes"] == 5
+    assert res["pending_reminders"][0]["reminder_text"] == "Eat pasta now! 🍝"
 
-    # When user has already arrived / 40 minutes elapsed
-    _write_active_sync({
-        "sync_id": "test_netapp_commute",
-        "status": "tracking",
-        "created_at": time.time() - 2400,
-        "last_checked_at": time.time() - 2400,
-        "last_user_eta_minutes": 38,
-        "destination": {"name": "NetApp Hoodi", "lat": 12.9943, "lng": 77.7084},
-    })
-    res_arrived = _agent("reminder_add", text="5 minutes left to NetApp! Time to eat pasta 🍝", when="in 5m")
-    assert "in 1m" in res_arrived["reminder"]["when"]
-    assert "already within 5 minutes" in res_arrived["commute_notice"]
+    res_second = _agent("reminder_add", text="Get ready", minutes_before=10)
+    assert len(res_second["pending_reminders"]) == 2
+    assert res_second["pending_reminders"][1]["minutes_before"] == 10
+
+
+def test_arrival_relative_reminder_requires_active_commute(home):
+    from tools.planner_tool import planner_tool
+    from tools.commute_eta_sync_tool import _write_active_sync
+
+    _write_active_sync(None)
+    result = json.loads(planner_tool({
+        "action": "reminder_add",
+        "text": "Eat pasta",
+        "when": "5 minutes before arrival",
+    }))
+    assert result["success"] is False
+    assert "Start tracking" in result["error"]

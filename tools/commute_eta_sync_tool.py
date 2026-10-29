@@ -11,7 +11,9 @@ import json
 import logging
 import math
 import re
+import threading
 import time
+import uuid
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -27,6 +29,7 @@ ROAD_DETOUR = 1.35
 CITY_DRIVE_KMH = 20.0
 CITY_TWO_WHEELER_KMH = 25.0
 WALKING_KMH = 4.5
+_BACKGROUND_LOCATION_LOCK = threading.Lock()
 
 
 def _storage_path() -> Path:
@@ -392,8 +395,8 @@ def _tracking_summary_text(
                 f"• **Destination:** {dest_title}\n"
                 f"• **Live Drive Time:** ~{user_eta_min} minutes{km_str} via Apple Maps live traffic\n"
                 f"• **Delivery ETA:** ~{eta_min} minutes\n"
-                f"• **Optimal Order Window:** Order in ~{wait_min} minutes (when you are {eta_min} minutes away so you arrive together)\n\n"
-                f"Call `get_commute_eta_sync_status` while you move — live GPS refreshes on each check."
+                f"• **Optimal Order Window:** Review in about {wait_min} minutes (when you are {eta_min} minutes away so you arrive together)\n\n"
+                f"Live route ETA refreshes from the phone's background location when Always access is enabled."
             )
         if wait_min is not None and wait_min >= -2:
             return (
@@ -419,7 +422,7 @@ def _tracking_summary_text(
             f"{loc_line}"
             f"• **Destination:** {dest_title}\n"
             f"• **Delivery ETA:** ~{eta_min} minutes\n"
-            f"• **Status:** Commute convergence monitoring initialized. Live Apple Maps drive time updates on each status check."
+            f"• **Status:** Commute convergence monitoring initialized. The phone refreshes live route ETA in the background when Always location access is enabled."
         )
     if user_eta_min is not None:
         return (
@@ -433,7 +436,7 @@ def _tracking_summary_text(
         f"{head}\n"
         f"{loc_line}"
         f"• **Destination:** {dest_title}\n"
-        f"• **Status:** Commute tracking initialized. Live Apple Maps drive time updates on each status check."
+        f"• **Status:** Commute tracking initialized. The phone can refresh live route ETA in the background when Always location access is enabled."
     )
 
 
@@ -536,7 +539,7 @@ def start_commute_eta_sync(
         mode = "driving"
 
     payload = action_payload if isinstance(action_payload, dict) else {}
-    sync_id = f"sync_{int(time.time())}"
+    sync_id = f"sync_{uuid.uuid4().hex[:12]}"
 
     live_route_info = None
     user_eta_min = None
@@ -582,9 +585,13 @@ def start_commute_eta_sync(
     )
     order_timing_advice = tracking["tracking_summary"]
 
+    from scout_constants import get_scout_home, profile_name_for_home
+
+    profile = profile_name_for_home(get_scout_home()) or "current"
     record = {
         "sync_id": sync_id,
         "status": "tracking",
+        "profile": profile,
         "created_at": time.time(),
         "destination": {"lat": dest_lat, "lng": dest_lng, "name": resolved_name or destination_name or "Destination"},
         "target_eta_minutes": eta_min,
@@ -649,6 +656,7 @@ def get_commute_eta_sync_status(location_callback: Optional[Any] = None) -> str:
     eta_min = int(raw_target) if has_target_eta else None
 
     # Refresh live GPS & Apple Maps route ETA if device location callback is available
+    live_location_refreshed = False
     if callable(location_callback) and dest_lat is not None and dest_lng is not None:
         try:
             from tools.device_location_tool import device_location_tool
@@ -665,6 +673,7 @@ def get_commute_eta_sync_status(location_callback: Optional[Any] = None) -> str:
                     **loc_data["drive"],
                 }
                 user_eta_min = loc_data["drive"].get("drive_minutes_estimate")
+                live_location_refreshed = True
                 active["last_checked_at"] = time.time()
                 active["last_user_eta_minutes"] = user_eta_min
                 active["live_route"] = live_route_info
@@ -721,6 +730,7 @@ def get_commute_eta_sync_status(location_callback: Optional[Any] = None) -> str:
         "tracking_summary": active.get("tracking_summary") or active.get("order_timing_advice"),
         "origin_address": live_rt.get("origin_address"),
         "last_checked_at": active.get("last_checked_at"),
+        "live_location_refreshed": live_location_refreshed,
         **active,
     })
 
@@ -729,9 +739,7 @@ def set_commute_arrival_reminder(
     minutes_before: int,
     reminder_text: str,
 ) -> str:
-    """Schedule a reminder to fire X minutes before reaching the destination during commute tracking."""
-    from planner import reminders
-    from tools.cronjob_job_args import _origin_from_env
+    """Queue a reminder to fire when live route ETA reaches its arrival threshold."""
 
     active = _read_active_sync()
     if not active or active.get("status") != "tracking":
@@ -740,42 +748,103 @@ def set_commute_arrival_reminder(
             "error": "No active commute tracking session found. Start commute tracking first.",
         })
 
-    dest = active.get("destination") or {}
-    dest_name = dest.get("name") or "your destination"
-    last_eta = active.get("last_user_eta_minutes")
-    if last_eta is None:
-        last_eta = 30
-
-    last_checked = float(active.get("last_checked_at") or active.get("created_at") or time.time())
-    elapsed = (time.time() - last_checked) / 60.0
-    remaining_drive = max(0.0, float(last_eta) - elapsed)
-
     lead_min = int(minutes_before)
-    if remaining_drive <= lead_min:
-        # User is already within the arrival threshold or has already arrived!
-        when_str = "in 1m"
-        added = reminders.add_reminder(reminder_text, when_str, actor="agent", origin=_origin_from_env(when_str))
-        return json.dumps({
-            "success": True,
-            "immediate": True,
-            "remaining_drive_minutes": round(remaining_drive, 1),
-            "message": f"You are already within {lead_min} minutes of {dest_name} (only ~{int(round(remaining_drive))}m away)! Alerting now: '{reminder_text}'.",
-            "reminder": added.get("reminder"),
-        })
+    if lead_min < 1:
+        return json.dumps({"success": False, "error": "minutes_before must be at least 1."})
+    text = str(reminder_text or "").strip()
+    if not text:
+        return json.dumps({"success": False, "error": "reminder_text is required."})
 
-    fire_in = max(1, int(round(remaining_drive - lead_min)))
-    when_str = f"in {fire_in}m"
-    added = reminders.add_reminder(reminder_text, when_str, actor="agent", origin=_origin_from_env(when_str))
+    pending = active.setdefault("arrival_reminders", [])
+    from tools.cronjob_job_args import _origin_from_env
+
+    reminder = {
+        "id": uuid.uuid4().hex,
+        "minutes_before": lead_min,
+        "reminder_text": text,
+        "created_at": time.time(),
+        "origin": _origin_from_env("in 1m"),
+    }
+    pending.append(reminder)
+    _write_active_sync(active)
+    destination = (active.get("destination") or {}).get("name") or "your destination"
+    last_eta = active.get("last_user_eta_minutes")
     return json.dumps({
         "success": True,
-        "scheduled": True,
-        "fires_in_minutes": fire_in,
+        "location_triggered": True,
+        "pending": True,
         "lead_minutes": lead_min,
-        "destination": dest_name,
-        "remaining_drive_minutes": round(remaining_drive, 1),
-        "message": f"Scheduled reminder to fire in {fire_in} minutes ({lead_min} minutes before reaching {dest_name}): '{reminder_text}'.",
-        "reminder": added.get("reminder"),
+        "destination": destination,
+        "remaining_drive_minutes": last_eta,
+        "pending_reminders": pending,
+        "message": (
+            f"Queued '{text}' for when the live route ETA reaches {lead_min} minutes to "
+            f"{destination}. The phone will monitor location in the background."
+        ),
     })
+
+
+def update_commute_from_background_location(
+    sync_id: str,
+    latitude: float,
+    longitude: float,
+) -> Dict[str, Any]:
+    """Refresh route ETA and fire queued reminders whose live ETA threshold was crossed."""
+    with _BACKGROUND_LOCATION_LOCK:
+        active = _read_active_sync()
+        if not active or active.get("status") != "tracking" or active.get("sync_id") != sync_id:
+            raise ValueError("This commute tracking session is no longer active.")
+
+        status = json.loads(get_commute_eta_sync_status(
+            lambda: json.dumps({"latitude": latitude, "longitude": longitude})
+        ))
+        updated = _read_active_sync()
+        if not status.get("active") or not updated or updated.get("sync_id") != sync_id:
+            raise ValueError("This commute tracking session is no longer active.")
+        if status.get("live_location_refreshed") is not True:
+            raise RuntimeError("The live route ETA could not be refreshed from this location update.")
+
+        eta = updated.get("last_user_eta_minutes")
+        if eta is None:
+            raise RuntimeError("The live route provider did not return an ETA.")
+        eta = max(0.0, float(eta))
+
+        from planner import reminders
+
+        remaining = []
+        fired = []
+        for item in updated.get("arrival_reminders", []):
+            if eta <= float(item["minutes_before"]):
+                scheduled = reminders.add_reminder(
+                    item["reminder_text"],
+                    "in 1m",
+                    actor="agent",
+                    origin=item.get("origin"),
+                    deliver="origin" if item.get("origin") else "bot-chat",
+                )
+                fired.append({
+                    "id": item["id"],
+                    "minutes_before": item["minutes_before"],
+                    "reminder": scheduled["reminder"],
+                })
+            else:
+                remaining.append(item)
+
+        updated["arrival_reminders"] = remaining
+        arrived = eta <= 0
+        if arrived:
+            updated["status"] = "arrived"
+        _write_active_sync(updated)
+
+        return {
+            "ok": True,
+            "sync_id": sync_id,
+            "eta_minutes": eta,
+            "tracking_card_markdown": updated.get("tracking_card_markdown"),
+            "tracking_summary": updated.get("tracking_summary"),
+            "triggered_reminders": fired,
+            "stop_tracking": arrived,
+        }
 
 
 SET_SAVED_LOCATION_SCHEMA = {
@@ -808,10 +877,10 @@ LIST_SAVED_LOCATIONS_SCHEMA = {
 START_COMMUTE_ETA_SYNC_SCHEMA = {
     "name": "start_commute_eta_sync",
     "description": (
-        "When the user explicitly asks to track/monitor their ETA or commute, call this after the destination is known; "
-        "the app shows its tracking summary as a chat card. Tracking refreshes only when get_commute_eta_sync_status "
-        "is called, so do not promise continuous background polling. Also initialize commute ETA synchronization or "
-        "calculate when to place a delivery order (e.g. Zepto, Swiggy, Zomato) "
+        "When the user asks to track/monitor their ETA or schedule an arrival-relative action, call this after the destination is known; "
+        "the app shows its tracking summary and SVG progress card in chat. The paired iPhone can refresh route ETA in the background "
+        "while locked after the user grants Always location access. Use location-triggered arrival reminders rather than fixed-time estimates. "
+        "For delivery orders, this only tracks timing and never authorizes or places a purchase. "
         "so that the delivery arrives right when the user reaches their destination. "
         "Synchronizes user travel ETA toward destination (e.g. 'Condenat Work', 'Home', or any address) with the dynamic service/delivery ETA "
         "in target_eta_minutes (for Zepto, first check mcp__zepto__get_location_serviceability for the destination coordinates and get the live ETA, "
@@ -865,8 +934,8 @@ CANCEL_COMMUTE_ETA_SYNC_SCHEMA = {
 GET_COMMUTE_ETA_SYNC_STATUS_SCHEMA = {
     "name": "get_commute_eta_sync_status",
     "description": (
-        "Refresh and inspect the active commute ETA-sync session. Calling this requests a fresh device location/route ETA; "
-        "there is no silent background poll while the app is idle."
+        "Refresh and inspect the active commute ETA-sync session. The paired Scout phone also refreshes "
+        "the live route in the background when location permission is enabled."
     ),
     "parameters": {
         "type": "object",
@@ -932,8 +1001,8 @@ SET_COMMUTE_ARRIVAL_REMINDER_SCHEMA = {
     "description": (
         "Schedule a reminder that fires X minutes before arriving at the commute destination "
         "(e.g. '5 mins before reaching NetApp, remind me to eat pasta'). "
-        "Calculates the exact fire time based on live drive time minus minutes_before. "
-        "If the user is already within X minutes of arrival or has reached, alerts immediately."
+        "Queues a location-triggered reminder that fires when the phone's refreshed live route ETA "
+        "reaches minutes_before. Requires active commute tracking and background location permission."
     ),
     "parameters": {
         "type": "object",

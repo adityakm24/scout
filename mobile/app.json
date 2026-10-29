@@ -12,6 +12,7 @@
       "infoPlist": {
         "CFBundleDisplayName": "Scout",
         "NSLocationWhenInUseUsageDescription": "Scout uses your location to time deliveries and plans around where you are.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Scout uses your location in the background to update commute ETAs and trigger arrival reminders, including when your phone is locked.",
         "NSCameraUsageDescription": "Scout uses the camera to scan the pairing code from your computer."
       }
     },
@@ -46,6 +47,8 @@
       [
         "expo-location",
         {
+          "isIosBackgroundLocationEnabled": true,
+          "locationAlwaysAndWhenInUsePermission": "Scout uses your location in the background to update commute ETAs and trigger arrival reminders, including when your phone is locked.",
           "locationWhenInUsePermission": "Scout uses your location to time deliveries and plans around where you are."
         }
       ],

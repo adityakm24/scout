@@ -39,8 +39,8 @@ PLANNER_SCHEMA = {
         "(recurring). reminder_update(id, text?, when?), reminder_delete(id). The reminder text "
         "is delivered verbatim, so write it to the user ('Call mom').\n\n"
         "CRITICAL FOR COMMUTES / ARRIVALS: When the user asks for a reminder 'X minutes before arrival / reaching [destination]', "
-        "NEVER pass when='in Xm' (which fires in X minutes from NOW)! Instead, calculate: remaining drive time minus X minutes "
-        "(e.g., if drive is 38m and reminder is 5m before, pass when='in 33m'), pass when='5m before arrival', or pass minutes_before=5.\n\n"
+        "use minutes_before=X or when='X minutes before arrival'. This requires active commute tracking and queues a location-triggered "
+        "reminder based on refreshed route ETA. Never convert it to a fixed clock time or 'in Xm'.\n\n"
         "Every call returns the full current list for its kind. A `warning` in a reminder result "
         "means nothing is running to deliver it yet; pass that on to the user."
     ),
@@ -55,8 +55,8 @@ PLANNER_SCHEMA = {
             "priority": {"type": "string", "enum": ["none", "low", "medium", "high"]},
             "include_done": {"type": "boolean", "description": "todo_list: include completed items (default true)."},
             "text": {"type": "string", "description": "Reminder text delivered to the user (reminder_add, reminder_update)."},
-            "when": {"type": "string", "description": "Reminder time — see the schedule forms above, or '5m before arrival'."},
-            "minutes_before": {"type": "integer", "description": "Optional: minutes before arriving at destination during commute tracking (e.g. 5 for '5 mins before reaching')."},
+            "when": {"type": "string", "description": "Reminder time — see the schedule forms above, or '5m before arrival' (location-triggered; requires active commute tracking)."},
+            "minutes_before": {"type": "integer", "description": "Optional: trigger when live route ETA reaches this many minutes before arrival (requires active commute tracking)."},
         },
         "required": ["action"],
     },
@@ -111,7 +111,6 @@ def _reminder_list(args):
 
 def _reminder_add(args):
     import re
-    import time
     from planner import reminders
     from tools.cronjob_job_args import _origin_from_env
 
@@ -140,48 +139,22 @@ def _reminder_add(args):
             lead_min = int(m.group(1))
 
     if lead_min is not None:
-        try:
-            from tools.commute_eta_sync_tool import _read_active_sync
-            active = _read_active_sync()
-        except Exception:
-            active = None
-
+        from planner.todos import PlannerError
+        from tools.commute_eta_sync_tool import _read_active_sync, set_commute_arrival_reminder
+        active = _read_active_sync()
         if active and active.get("status") == "tracking":
-            dest_name = (active.get("destination") or {}).get("name") or "destination"
-            last_eta = active.get("last_user_eta_minutes")
-            if last_eta is not None:
-                last_checked = float(active.get("last_checked_at") or active.get("created_at") or time.time())
-                elapsed = (time.time() - last_checked) / 60.0
-                remaining_drive = max(0.0, float(last_eta) - elapsed)
-
-                if remaining_drive <= lead_min:
-                    # User is already within lead window or has arrived! Fire right away.
-                    when = "in 1m"
-                    notice = (
-                        f"Notice: You are already within {lead_min} minutes of {dest_name} "
-                        f"(remaining drive: ~{int(round(remaining_drive))}m). Alerting immediately."
-                    )
-                    added = reminders.add_reminder(text, when, actor="agent", origin=_origin_from_env(when))
-                    return {
-                        **added,
-                        "commute_notice": notice,
-                        **reminders.list_reminders(),
-                        **reminders.scheduler_notice(),
-                    }
-                else:
-                    fire_in = max(1, int(round(remaining_drive - lead_min)))
-                    when = f"in {fire_in}m"
-                    notice = (
-                        f"Commute-adjusted reminder: Fires in {fire_in} minutes "
-                        f"({lead_min}m before reaching {dest_name}, total remaining drive: ~{int(round(remaining_drive))}m)."
-                    )
-                    added = reminders.add_reminder(text, when, actor="agent", origin=_origin_from_env(when))
-                    return {
-                        **added,
-                        "commute_notice": notice,
-                        **reminders.list_reminders(),
-                        **reminders.scheduler_notice(),
-                    }
+            queued = json.loads(set_commute_arrival_reminder(lead_min, text))
+            if not queued.get("success"):
+                raise PlannerError(queued.get("error", "Could not queue the arrival reminder."))
+            return {
+                **queued,
+                **reminders.list_reminders(),
+                **reminders.scheduler_notice(),
+            }
+        raise PlannerError(
+            "An arrival-relative reminder needs active commute tracking. Start tracking the destination "
+            "first so the reminder can follow live location instead of guessing a clock time."
+        )
 
     if not when:
         from planner.todos import PlannerError

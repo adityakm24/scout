@@ -65,7 +65,7 @@ Load this skill and follow the Procedure. Zepto tools may be deferred: call them
    are home and use that.
 3. **Delivery time & Live Tracking.** `mcp__zepto__get_location_serviceability` with the destination coordinates; read the
    delivery ETA in minutes (assume 15 if it gives none).
-   - If the user asks to track their ETA/commute, call `start_commute_eta_sync` once the destination is known. When timing a delivery too, include Zepto's live ETA as `target_eta_minutes`. The app shows a commute status card in the chat. Tracking refreshes only when `get_commute_eta_sync_status` is called; do not promise continuous background polling.
+   - Call `start_commute_eta_sync` once the destination is known whenever scheduling around the user's arrival. Include Zepto's live ETA as `target_eta_minutes` when timing a delivery. The phone asks for background location access and refreshes the route while locked; if the user declines Always access, explain that an arrival-triggered reminder cannot be guaranteed.
 4. **Basket.** For each item the user named — or their usual items from
    `mcp__zepto__get_past_order_items` when they say "my usual" — search, then add it with
    `mcp__zepto__update_cart` (`deviceId` "scout", `cartItems` with `productVariantId`,
@@ -81,14 +81,14 @@ Load this skill and follow the Procedure. Zepto tools may be deferred: call them
 7. **Response Formatting & Tracking Display**:
    - Commute tools return `tracking_summary`; the app renders it as a status card. Do not paste raw SVG/`tracking_card_markdown` into your response.
    - After `start_commute_eta_sync` or `get_commute_eta_sync_status`, reply in **one or two short sentences** (e.g. tracking is on, when to order, or that live location refreshed). Mention **`origin_address`** from the tool when the user cares where GPS thinks they are.
-   - To refresh drive time and location, call **`get_commute_eta_sync_status`** again (updates on each check; there is no silent background poll while the app is idle).
-   - If an order review was scheduled: state the estimated total and review time, and make clear that nothing is ordered or pre-authorized. The reminder arrives in the app's Bot Chat; the user must request the order then and approve its fresh card.
+   - The iPhone updates the tracking card when Scout returns to the foreground. Call **`get_commute_eta_sync_status`** for an immediate fresh route check while the app is open. iOS may suspend tracking after the user force-quits Scout; do not promise delivery across a force-quit.
+   - If an order review was scheduled: state the estimated total and approximate review timing, and make clear that nothing is ordered or pre-authorized. With commute tracking, the reminder fires when the refreshed route ETA approaches the delivery time, not at a fixed clock time. It arrives in the originating chat or Bot Chat; the user must request the order then and approve its fresh card.
 
 ## Pitfalls
 
 - Never invent an `addressId` or coordinates: take both from `mcp__zepto__list_saved_addresses`.
   Zepto rejects an unknown id, and `schedule_order` refuses it before the user is asked.
-- `schedule_order` does not place the order later. At the reminder, rebuild/check the cart and get fresh
+- `schedule_order` does not place the order later. With `drive_minutes`, it requires active commute tracking and queues a location-triggered review; if tracking is not active, start it first. At the reminder, rebuild/check the cart and get fresh
   user approval via the normal order card.
 - If the user declines the card, nothing is scheduled. Do not retry unless they ask.
 - Quote prices in rupees, not paise.

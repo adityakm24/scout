@@ -971,6 +971,7 @@ from scout_backend.web_routers import (  # noqa: E402
     dashboard_ui as _dashboard_ui_routes,
     phone as _phone_routes,
     push as _push_routes,
+    commute as _commute_routes,
 )
 
 app.include_router(_files_routes.router)
@@ -1003,6 +1004,7 @@ app.include_router(_analytics_routes.router)
 app.include_router(_chat_ws_routes.router)
 app.include_router(_dashboard_ui_routes.router)
 app.include_router(_push_routes.router)
+app.include_router(_commute_routes.router)
 app.include_router(_phone_routes.router)
 
 # Plugin API routes and the dashboard auth routes (/login, /auth/*, /api/auth/*)
