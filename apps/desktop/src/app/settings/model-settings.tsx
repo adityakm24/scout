@@ -1,31 +1,51 @@
 import { useStore } from '@nanostores/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-import { getGlobalModelInfo, getGlobalModelOptions, setGlobalModel } from '@/api/models'
+import { getGlobalModelInfo, getGlobalModelOptions } from '@/api/models'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import { Brain, RefreshCw } from '@/lib/icons'
 import { displayModelName, formatModelPillLabel, providerDisplayName } from '@/lib/model-status-label'
 import { cn } from '@/lib/utils'
 import { revealEnvVar, saveScoutConfig, setEnvVar } from '@/scout'
-import { $customModels, withCustomModels } from '@/store/custom-models'
+import { setMainModelAssignment } from '@/store/model-assignment'
 import { notify, notifyError } from '@/store/notifications'
 import { $settingsRequestProfile } from '@/store/settings-scope'
 
 import { scoutConfigCacheWriter, useScoutConfigRecord } from '../hooks/use-config-record'
 
 import { CONTROL_TEXT } from './constants'
-import { FallbackModelsField } from './fallback-models-field'
 import { useEnvCredentials } from './env-credentials'
+import { FallbackModelsField } from './fallback-models-field'
+
+const MODEL_PROVIDER_OPTIONS = [
+  { slug: 'nebius-token-factory', label: 'Nebius' },
+  { slug: 'nvidia', label: 'NVIDIA NIM' },
+  { slug: 'mistral', label: 'Mistral' },
+  { slug: 'custom', label: 'Other' }
+] as const
+
+const STANDARD_PROVIDER_SLUGS: Set<string> = new Set(
+  MODEL_PROVIDER_OPTIONS.filter(option => option.slug !== 'custom').map(option => option.slug)
+)
+
+function providerChoice(provider: string): string {
+  return STANDARD_PROVIDER_SLUGS.has(provider) ? provider : 'custom'
+}
 
 /** Known dev defaults — pre-fill when switching provider; config.yaml wins when it matches. */
 const PROVIDER_HINTS: Record<string, { apiKeyEnv: string; model: string }> = {
   'nebius-token-factory': {
     apiKeyEnv: 'NEBIUS_API_KEY',
-    model: 'deepseek-ai/DeepSeek-V4.1-Flash-1017'
+    model: 'nvidia/Nemotron-3_5-Lightning'
+  },
+  nvidia: {
+    apiKeyEnv: 'NVIDIA_API_KEY',
+    model: 'nvidia/llama-3.1-nemotron-70b-instruct'
   },
   mistral: {
     apiKeyEnv: 'MISTRAL_API_KEY',
@@ -74,7 +94,6 @@ export function ModelSettings({
   const m = t.settings.model
   const queryClient = useQueryClient()
   const scopeProfile = useStore($settingsRequestProfile)
-  const customModels = useStore($customModels)
   const { vars } = useEnvCredentials(scopeProfile)
 
   const modelInfoQuery = useQuery({
@@ -89,11 +108,6 @@ export function ModelSettings({
 
   const { data: configData } = useScoutConfigRecord(scopeProfile)
   const writeConfigCache = scoutConfigCacheWriter(scopeProfile)
-
-  const providers = withCustomModels(
-    (modelOptionsQuery.data?.providers ?? []).filter(provider => provider.slug),
-    customModels
-  )
 
   const activeProvider =
     modelInfoQuery.data?.provider ||
@@ -113,17 +127,13 @@ export function ModelSettings({
         : '') ||
     'mistral/codestral-latest'
 
-  const [draftProvider, setDraftProvider] = useState(activeProvider)
+  const [draftProvider, setDraftProvider] = useState(() => providerChoice(activeProvider))
   const [draftModel, setDraftModel] = useState(activeModel)
+  const [draftEndpoint, setDraftEndpoint] = useState('')
   const [draftApiKey, setDraftApiKey] = useState('')
-  const [apiKeyEnv, setApiKeyEnv] = useState(() => guessApiKeyEnv(activeProvider))
+  const [apiKeyEnv, setApiKeyEnv] = useState(() => guessApiKeyEnv(providerChoice(activeProvider)))
   const [applying, setApplying] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-
-  const providerSuggestions = useMemo(
-    () => providers.map(p => ({ slug: p.slug, label: p.name || providerDisplayName(p.slug) })),
-    [providers]
-  )
 
   const loadProviderDefaults = useCallback(
     async (providerSlug: string) => {
@@ -133,12 +143,42 @@ export function ModelSettings({
         return
       }
 
+      const modelBlock = typeof configData?.model === 'object' && configData.model
+        ? configData.model as Record<string, unknown>
+        : undefined
+
+      const configuredProvider = String(modelBlock?.provider ?? '')
+
+      if (slug === 'custom') {
+        const existingCustomEndpoint =
+          configuredProvider === 'custom' ||
+          configuredProvider === 'local' ||
+          configuredProvider.startsWith('custom:') ||
+          !STANDARD_PROVIDER_SLUGS.has(configuredProvider)
+
+        setApiKeyEnv('')
+        setDraftApiKey('')
+        setDraftEndpoint(existingCustomEndpoint ? String(modelBlock?.base_url ?? '') : '')
+        setDraftModel(prev =>
+          configuredProvider === activeProvider
+            ? activeModel ||
+              modelDefaultForProvider(configuredProvider || slug, configData as Record<string, unknown> | undefined) ||
+              prev
+            : prev ||
+              modelDefaultForProvider(configuredProvider || slug, configData as Record<string, unknown> | undefined)
+        )
+
+        return
+      }
+
       const env = guessApiKeyEnv(slug)
       setApiKeyEnv(env)
       setDraftModel(prev => {
         const fromConfig = modelDefaultForProvider(slug, configData as Record<string, unknown> | undefined)
 
-        return fromConfig || prev
+        return slug === activeProvider
+          ? activeModel || fromConfig || prev
+          : fromConfig || prev
       })
 
       if (!vars?.[env]?.is_set) {
@@ -154,21 +194,23 @@ export function ModelSettings({
         setDraftApiKey('')
       }
     },
-    [configData, scopeProfile, vars]
+    [activeModel, activeProvider, configData, scopeProfile, vars]
   )
 
   useEffect(() => {
-    setDraftProvider(activeProvider)
+    const choice = providerChoice(activeProvider)
+    setDraftProvider(choice)
     setDraftModel(activeModel)
-    setApiKeyEnv(guessApiKeyEnv(activeProvider))
-    void loadProviderDefaults(activeProvider)
+    setApiKeyEnv(guessApiKeyEnv(choice))
+    void loadProviderDefaults(choice)
   }, [activeModel, activeProvider, loadProviderDefaults])
 
   const applySelection = useCallback(async () => {
     const provider = draftProvider.trim()
     const model = draftModel.trim()
+    const isCustom = provider === 'custom'
 
-    if (!provider || !model) {
+    if (!provider || !model || (isCustom && !draftEndpoint.trim())) {
       return
     }
 
@@ -180,7 +222,14 @@ export function ModelSettings({
         await setEnvVar(apiKeyEnv, draftApiKey.trim(), scopeProfile ?? undefined)
       }
 
-      const res = await setGlobalModel(provider, model)
+      const res = isCustom
+        ? await setMainModelAssignment({
+            provider,
+            model,
+            base_url: draftEndpoint.trim(),
+            ...(draftApiKey.trim() ? { api_key: draftApiKey.trim() } : {})
+          }, scopeProfile)
+        : await setMainModelAssignment({ provider, model }, scopeProfile)
 
       onMainModelChanged?.(res.provider || provider, res.model || model)
       onConfigSaved?.()
@@ -203,6 +252,7 @@ export function ModelSettings({
   }, [
     apiKeyEnv,
     draftApiKey,
+    draftEndpoint,
     draftModel,
     draftProvider,
     m.loadFailed,
@@ -278,40 +328,66 @@ export function ModelSettings({
         <div className="flex flex-col gap-0.5">
           <h3 className="m-0 text-[0.875rem] font-semibold text-foreground">Provider, API key & model</h3>
           <p className="m-0 text-[0.78rem] text-(--ui-text-tertiary)">
-            Three fields — values pre-fill from your current config when you change provider. Edit anything, then save.
+            Choose a provider, then edit its model settings.
           </p>
         </div>
 
         <div className="grid gap-3">
           <label className="flex flex-col gap-1.5">
             <span className="text-[0.75rem] font-medium text-(--ui-text-secondary)">{m.provider}</span>
-            <Input
-              className={cn('font-mono', CONTROL_TEXT)}
-              list="scout-model-provider-suggestions"
-              onBlur={() => void loadProviderDefaults(draftProvider)}
-              onChange={event => setDraftProvider(event.target.value)}
-              placeholder="nebius-token-factory"
+            <Select
+              onValueChange={value => {
+                setDraftProvider(value)
+                void loadProviderDefaults(value)
+              }}
               value={draftProvider}
-            />
-            <datalist id="scout-model-provider-suggestions">
-              {providerSuggestions.map(row => (
-                <option key={row.slug} value={row.slug}>
-                  {row.label}
-                </option>
-              ))}
-            </datalist>
+            >
+              <SelectTrigger aria-label={m.provider} className={cn('font-mono', CONTROL_TEXT)}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MODEL_PROVIDER_OPTIONS.map(option => (
+                  <SelectItem key={option.slug} value={option.slug}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
+
+          {draftProvider === 'custom' && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[0.75rem] font-medium text-(--ui-text-secondary)">Endpoint</span>
+              <Input
+                autoComplete="url"
+                className={cn('font-mono', CONTROL_TEXT)}
+                onChange={event => setDraftEndpoint(event.target.value)}
+                placeholder="https://api.example.com/v1"
+                spellCheck={false}
+                type="url"
+                value={draftEndpoint}
+              />
+            </label>
+          )}
 
           <label className="flex flex-col gap-1.5">
             <span className="text-[0.75rem] font-medium text-(--ui-text-secondary)">
               API key
-              <span className="ms-1.5 font-mono font-normal text-(--ui-text-tertiary)">({apiKeyEnv})</span>
+              {apiKeyEnv && (
+                <span className="ms-1.5 font-mono font-normal text-(--ui-text-tertiary)">({apiKeyEnv})</span>
+              )}
             </span>
             <Input
               autoComplete="off"
               className={cn('font-mono', CONTROL_TEXT)}
               onChange={event => setDraftApiKey(event.target.value)}
-              placeholder={vars?.[apiKeyEnv]?.is_set ? 'Key saved — edit to replace' : 'Paste API key'}
+              placeholder={
+                draftProvider === 'custom'
+                  ? 'Optional — leave blank to keep saved credentials'
+                  : vars?.[apiKeyEnv]?.is_set
+                    ? 'Key saved — edit to replace'
+                    : 'Paste API key'
+              }
               spellCheck={false}
               type="password"
               value={draftApiKey}
@@ -323,7 +399,14 @@ export function ModelSettings({
             <Input
               className={cn('font-mono', CONTROL_TEXT)}
               onChange={event => setDraftModel(event.target.value)}
-              placeholder="deepseek-ai/DeepSeek-V4.1-Flash-1017"
+              placeholder={
+                draftProvider === activeProvider
+                  ? activeModel
+                  : modelDefaultForProvider(
+                      draftProvider,
+                      configData as Record<string, unknown> | undefined
+                    ) || 'Enter model ID'
+              }
               spellCheck={false}
               value={draftModel}
             />
@@ -332,7 +415,12 @@ export function ModelSettings({
 
         <div className="flex justify-end">
           <Button
-            disabled={applying || !draftProvider.trim() || !draftModel.trim()}
+            disabled={
+              applying ||
+              !draftProvider.trim() ||
+              !draftModel.trim() ||
+              (draftProvider === 'custom' && !draftEndpoint.trim())
+            }
             loading={applying}
             onClick={() => void applySelection()}
             type="button"

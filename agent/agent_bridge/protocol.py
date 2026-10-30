@@ -343,8 +343,14 @@ def outcome_schema_text(task: BrowseTask) -> str:
 
     fields = {name: describe(f) for name, f in task.result_fields.items()}
     return json.dumps({
-        "status": list(STATUSES), "reason": list(REASONS),
-        "result": fields or {}, "needs": f"optional list of placeholder names from {list(PLACEHOLDERS)}",
+        "status": {"type": "string", "enum": list(STATUSES)},
+        "reason": {"type": "string", "enum": list(REASONS)},
+        "result": fields or {},
+        "needs": {
+            "type": "array",
+            "items": {"type": "string", "enum": list(PLACEHOLDERS)},
+            "optional": True,
+        },
     }, indent=1)
 
 
