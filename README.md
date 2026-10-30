@@ -141,6 +141,10 @@ cd apps/desktop && npm run dev       # desktop app with live reload, connected t
 
 [`AGENTS.md`](AGENTS.md) describes the architecture and the rules for changing it, with a guide per area (`agent/`, `gateway/`, `tools/`, `apps/desktop/`, ...). [`CONTRIBUTING.md`](CONTRIBUTING.md) covers setup, tests and pull requests.
 
+## Team
+- https://www.linkedin.com/in/adityakrishnanmohan/
+- https://www.linkedin.com/in/lia-shabulal-930122221/
+
 ## License
 
 MIT. See [`LICENSE`](LICENSE).
